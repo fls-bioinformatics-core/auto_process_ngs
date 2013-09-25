@@ -1,0 +1,10 @@
+# Setup file for process_miseq.sh
+#
+# ARCHIVE_DIR: parent directory for holding copies of the
+# analysis directories produced by process_miseq.sh
+export ARCHIVE_DIR=/path/to/archive_dir
+#
+# SEQ_DATA_LOG: logging file
+export SEQ_DATA_LOG=/path/to/seq_data_log
+##
+#
