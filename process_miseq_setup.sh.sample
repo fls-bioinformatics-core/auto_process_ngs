@@ -6,5 +6,13 @@ export ARCHIVE_DIR=/path/to/archive_dir
 #
 # SEQ_DATA_LOG: logging file
 export SEQ_DATA_LOG=/path/to/seq_data_log
+#
+# Webserver settings
+#
+# Details of webserver where QC reports are hosted
+export QC_WEB_SERVER=qcserver.example.com
+export QC_WEB_SERVER_USER=username
+export QC_WEB_SERVER_DIR=/www/qcreports
+export QC_WEB_SERVER_URL=http://qcserver.com/qcreports
 ##
 #
