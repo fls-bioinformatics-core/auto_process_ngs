@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #######################################################################
 # Import modules that this module depends on
@@ -325,6 +325,44 @@ class general:
             make_cmd.add_args('-f',makefile)
         return make_cmd
 
+    @staticmethod
+    def ssh_command(user,server,cmd):
+        """Generate Command instance for 'ssh' to execute a remote command
+
+        Creates a Command instance to run 'ssh ... COMMAND'.
+
+        Arguments:
+          user: name of the remote user
+          server: name of the server
+          cmd: command to execute on the server via ssh
+
+        Returns:
+          Command object.
+
+        """
+        ssh_command = Command('ssh','%s@%s' % (user,server))
+        ssh_command.add_args(*cmd)
+        return ssh_command
+
+    @staticmethod
+    def scp(user,server,source,target):
+        """Generate Command instance for 'scp'
+
+        Creates a Command instance to run 'scp' to copy to another system.
+
+        Arguments:
+          user: name of the remote user
+          server: name of the server
+          source: source file on local system
+          target: target destination on remote system
+
+        Returns:
+          Command object.
+
+        """
+        scp_command = Command('scp',source,'%s@%s:%s' % (user,server,target))
+        return scp_command
+        
 
 #######################################################################
 # Tests
@@ -400,6 +438,19 @@ class TestGeneral(unittest.TestCase):
                           '-C','Unaligned',
                           '-j','12',
                           '-f','makefile'])
+
+    def test_ssh_cmd(self):
+        """Construct 'ssh' command lines
+        """
+        self.assertEqual(general.ssh_command('user','example.com',('ls','-l')).command_line,
+                         ['ssh','user@example.com','ls','-l'])
+
+    def test_scp(self):
+        """Construct 'scp' command lines
+        """
+        self.assertEqual(
+            general.scp('user','example.com','my_file','remotedir').command_line,
+            ['scp','my_file','user@example.com:remotedir'])
 
 if __name__ == "__main__":
     # Turn off most logging output for tests
