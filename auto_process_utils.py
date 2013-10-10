@@ -26,6 +26,10 @@ tree at some point.
 
 import os
 import logging
+import IlluminaData
+import Pipeline
+import qcreporter
+import bcf_utils
 
 #######################################################################
 # Classes
@@ -176,25 +180,25 @@ class AnalysisFastq:
         fields = fastq_base.split('_')
         # Deal with set number first e.g. 001
         field = fields[-1]
-        logging.debug("Test for set number %s" % field)
+        ##logging.debug("Test for set number %s" % field)
         if len(field) == 3 and field.isdigit():
             self.set_number = int(field)
             fields = fields[:-1]
         # Deal with trailing read number e.g. R1
         field = fields[-1]
-        logging.debug("Test for read number %s" % field)
+        ##logging.debug("Test for read number %s" % field)
         if len(field) == 2 and field.startswith('R'):
             self.read_number = int(field[1])
             fields = fields[:-1]
         # Deal with trailing lane number e.g. L001
         field = fields[-1]
-        logging.debug("Test for lane number %s" % field)
+        ##logging.debug("Test for lane number %s" % field)
         if len(field) == 4 and field.startswith('L') and field[1:].isdigit():
             self.lane_number = int(field[1:])
             fields = fields[:-1]
         # Deal with trailing index tag e.g. ATTGCT or ATTGCT-CCTAAG
         field = fields[-1]
-        logging.debug("Test for barcode sequence %s" % field)
+        ##logging.debug("Test for barcode sequence %s" % field)
         is_tag = True
         for f in field.split('-'):
             for c in f:
@@ -202,9 +206,9 @@ class AnalysisFastq:
         if is_tag:
             self.barcode_sequence = field
             fields = fields[:-1]
-            logging.debug("Identified barcode sequence as %s" % self.barcode_sequence)
+            ##logging.debug("Identified barcode sequence as %s" % self.barcode_sequence)
         # What's left is the name
-        logging.debug("Remaining fields: %s" % fields)
+        ##logging.debug("Remaining fields: %s" % fields)
         self.sample_name = '_'.join(fields)
 
     def __repr__(self):
@@ -230,6 +234,236 @@ class AnalysisFastq:
             if self.read_number is not None:
                 fq = "%s_R%d" % (fq,self.read_number)
         return fq
+        
+class AnalysisProject:
+    # Class describing an analysis project
+    # i.e. set of samples from a single sequencing experiment
+    # THINKS can code be shared with IlluminaProject?
+    def __init__(self,name,dirn,library_type=None,organism=None):
+        # name = project name
+        # dirn = directory path
+        self.name = name
+        self.dirn = os.path.abspath(dirn)
+        self.library_type = library_type
+        self.organism = organism
+        self.samples = []
+        self.paired_end = False
+        self.fastq_dir = None
+        self.populate()
+
+    def populate(self):
+        # Identify samples and related files and
+        # populate the data structure
+        #
+        if not os.path.exists(self.dirn):
+            # Nothing to do, yet
+            return
+        # Locate fastq files
+        self.fastq_dir = os.path.join(self.dirn,'fastqs')
+        if not os.path.exists(self.fastq_dir):
+            # If special 'fastqs' doesn't exist then
+            # look in top level of project
+            fastq_dir = self.dirn
+        # Populate from fastq file names
+        logging.debug("Acquiring fastqs...")
+        fastqs = Pipeline.GetFastqGzFiles(self.fastq_dir)
+        logging.debug("Assigning fastqs to samples...")
+        for fastq in fastqs:
+            # GetFastqGzFile returns a list of tuples
+            for fq in fastq:
+                name = AnalysisFastq(fq).sample_name
+                try:
+                    sample = self.get_sample(name)
+                except KeyError:
+                    sample = AnalysisSample(name)
+                    self.samples.append(sample)
+                sample.add_fastq(os.path.join(self.fastq_dir,fq))
+        logging.debug("Listing samples and files:")
+        for sample in self.samples:
+            logging.debug("* %s: %s" % (sample.name,sample.fastq))
+
+    def create_directory(self,illumina_project=None):
+        """Create and populate analysis directory for an IlluminaProject
+
+        Creates a new directory corresponding to the AnalysisProject
+        object, and optionally also populates with links to FASTQ files
+        from a supplied IlluminaProject object.
+
+        The directory structure it creates is:
+
+        dir/
+           fastqs/
+           logs/
+           ScriptCode/
+
+        Arguments:
+          illumina_project: (optional) populated IlluminaProject object
+            from which the analysis directory will be populated
+    
+        """
+        print "Creating analysis directory for project '%s'" % self.name
+        # Check for & create directory
+        if os.path.exists(self.dirn):
+            print "-> %s already exists" % self.dirn
+        else:
+            print "Making analysis directory %s" % self.dirn
+            bcf_utils.mkdir(self.dirn,mode=0775)
+        # Make a 'logs' directory
+        log_dir = os.path.join(self.dirn,'logs')
+        bcf_utils.mkdir(log_dir,mode=0775)
+        # Make a 'ScriptCode' directory
+        scriptcode_dir = os.path.join(self.dirn,"ScriptCode")
+        bcf_utils.mkdir(scriptcode_dir,mode=0775)
+        # Make a 'fastqs' directory
+        fastqs_dir = os.path.join(self.dirn,"fastqs")
+        bcf_utils.mkdir(fastqs_dir,mode=0775)
+        # Check for & create links to fastq files
+        if illumina_project is not None:
+            for sample in illumina_project.samples:
+                fastq_names = IlluminaData.get_unique_fastq_names(sample.fastq)
+                for fastq in sample.fastq:
+                    fastq_file = os.path.join(sample.dirn,fastq)
+                    fastq_ln = os.path.join(fastqs_dir,fastq_names[fastq])
+                    if os.path.exists(fastq_ln):
+                        logging.warning("Link %s already exists" % fastq_ln)
+                    else:
+                        logging.debug("Linking to %s" % fastq)
+                        bcf_utils.mklink(fastq_file,fastq_ln,relative=True)
+        # Populate
+        self.populate()
+
+    @property
+    def qc_dir(self):
+        # Return path to qc dir, if present
+        qc_dir = os.path.join(self.dirn,'qc')
+        if os.path.exists(qc_dir):
+            return qc_dir
+        else:
+            return None
+
+    @property
+    def qc_report(self):
+        # Create zipped QC report and return name of zip file
+        if self.qc_dir is not None and self.verify_qc():
+            return qcreporter.IlluminaQCReporter(self.dirn).zip()
+        else:
+            return None
+
+    def verify_qc(self):
+        # Verify if the QC was successful
+        if self.qc_dir is None:
+            return False
+        return qcreporter.IlluminaQCReporter(self.dirn).verify()
+
+    def get_sample(self,name):
+        """Return sample that matches 'name'
+
+        Arguments:
+          name: name of a sample
+
+        Returns:
+          AnalysisSample object with the matching name; raises
+          KeyError exception if no match is found.
+
+        """
+        for sample in self.samples:
+            if sample.name == name: return sample
+        raise KeyError, "No matching sample for '%s'" % name
+
+    def get_samples(self,pattern):
+        """Return list of sample matching pattern
+
+        Arguments:
+          pattern: simple 'glob' style pattern
+
+        Returns:
+          Python list of samples with names matching the supplied
+          pattern (or an empty list if no names match).
+
+        """
+        samples = []
+        for sample in self.samples:
+            if bcf_utils.name_matches(sample.name,pattern):
+                samples.append(sample)
+        return samples
+
+    def prettyPrintSamples(self):
+        """Return a nicely formatted string describing the sample names
+
+        Wraps a call to 'pretty_print_names' function.
+        """
+        return bcf_utils.pretty_print_names(self.samples)
+
+class AnalysisSample:
+    # Class describing an analysis sample
+    # i.e. set of fastqs from a single sample
+    # Can be paired end and have multiple fastqs per
+    # THINKS can code be shared with IlluminaSample?
+    def __init__(self,name):
+        self.name = name
+        self.fastq = []
+        self.paired_end = False
+
+    def add_fastq(self,fastq):
+        """Add a reference to a fastq file in the sample
+
+        Arguments:
+          fastq: name of the fastq file
+        """
+        self.fastq.append(fastq)
+        # Sort fastq's into order
+        self.fastq.sort()
+        # Check paired-end status
+        if not self.paired_end:
+            fq = AnalysisFastq(fastq)
+            if fq.read_number == 2:
+                self.paired_end = True
+
+    def fastq_subset(self,read_number=None,full_path=False):
+        """Return a subset of fastq files from the sample
+
+        Arguments:
+          read_number: select subset based on read_number (1 or 2)
+          full_path  : if True then fastq files will be returned
+            with the full path, if False (default) then as file
+            names only.
+
+        Returns:
+          List of fastq files matching the selection criteria.
+
+        """
+        # Build list of fastqs that match the selection criteria
+        fastqs = []
+        for fastq in self.fastq:
+            fq = AnalysisFastq(fastq)
+            if fq.read_number is None:
+                raise Exception, \
+                    "Unable to determine read number for %s" % fastq
+            if fq.read_number == read_number:
+                if full_path:
+                    fastqs.append(os.path.join(self.dirn,fastq))
+                else:
+                    fastqs.append(fastq)
+        # Sort into dictionary order and return
+        fastqs.sort()
+        return fastqs
+
+    def verify_qc(self,qc_dir,fastq):
+        """
+        """
+        verified = True
+        name = bcf_utils.rootname(os.path.basename(fastq))
+        qc_sample = qcreporter.IlluminaQCSample(name,qc_dir)
+        return qc_sample.verify()
+
+    def __repr__(self):
+        """Implement __repr__ built-in
+
+        Return string representation for the sample -
+        i.e. the sample name.
+
+        """
+        return str(self.name)
 
 #######################################################################
 # Tests

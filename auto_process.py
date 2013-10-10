@@ -30,7 +30,7 @@ each project.
 
 """
 
-__version__ = "0.0.0"
+__version__ = "0.0.1"
 
 #######################################################################
 # Imports
@@ -52,139 +52,15 @@ import JobRunner
 import Pipeline
 import bcf_utils
 import analyse_illumina_run
-import build_illumina_analysis_dir
 import qcreporter
 import bclToFastq
 import applications
 import auto_process_utils
-# Import local settings
-try:
-    import auto_process_settings
-except ImportError:
-    logging.warning("Failed to import auto_process_settings.py")
+import auto_process_settings
 
 #######################################################################
 # Classes
 #######################################################################
-
-class AnalysisProject:
-    # Class describing an analysis project
-    # i.e. set of samples from a single sequencing experiment
-    # THINKS can code be shared with IlluminaProject?
-    def __init__(self,name,dirn,library_type=None,organism=None):
-        # name = project name
-        # dirn = directory path
-        self.name = name
-        self.dirn = dirn
-        self.library_type = library_type
-        self.organism = organism
-        self.samples = []
-        self.paired_end = False
-        # Check for metadata file
-        ## NOT IMPLEMENTED ##
-        # Otherwise populate from files, using brute force
-        # approach based on names
-        print "Acquiring fastqs..."
-        fastqs = Pipeline.GetFastqGzFiles(self.dirn)
-        for fq in fastqs:
-            print "%s" % fq
-        print "Assigning fastqs to samples..."
-        for fastq in fastqs:
-            # GetFastqGzFile returns a list of tuples
-            for fq in fastq:
-                name = auto_process_utils.AnalysisFastq(fq).sample_name
-                try:
-                    sample = self.get_sample(name)
-                except KeyError:
-                    sample = AnalysisSample(name)
-                    self.samples.append(sample)
-                sample.add_fastq(fq)
-        print "Listing samples and files:"
-        for sample in self.samples:
-            print "%s: %s" % (sample.name,sample.fastq)
-
-    def get_sample(self,name):
-        """Return sample that matches 'name'
-
-        Arguments:
-          name: name of a sample
-
-        Returns:
-          AnalysisSample object with the matching name; raises
-          KeyError exception if no match is found.
-
-        """
-        for sample in self.samples:
-            if sample.name == name: return sample
-        raise KeyError, "No matching sample for '%s'" % name
-
-    def prettyPrintSamples(self):
-        """Return a nicely formatted string describing the sample names
-
-        Wraps a call to 'pretty_print_names' function.
-        """
-        return bcf_utils.pretty_print_names(self.samples)
-
-class AnalysisSample:
-    # Class describing an analysis sample
-    # i.e. set of fastqs from a single sample
-    # Can be paired end and have multiple fastqs per
-    # THINKS can code be shared with IlluminaSample?
-    def __init__(self,name):
-        self.name = name
-        self.fastq = []
-        self.paired_end = False
-
-    def add_fastq(self,fastq):
-        """Add a reference to a fastq file in the sample
-
-        Arguments:
-          fastq: name of the fastq file
-        """
-        self.fastq.append(fastq)
-        # Sort fastq's into order
-        self.fastq.sort()
-        # Check paired-end status
-        if not self.paired_end:
-            fq = auto_process_utils.AnalysisFastq(fastq)
-            if fq.read_number == 2:
-                self.paired_end = True
-
-    def fastq_subset(self,read_number=None,full_path=False):
-        """Return a subset of fastq files from the sample
-
-        Arguments:
-          read_number: select subset based on read_number (1 or 2)
-          full_path  : if True then fastq files will be returned
-            with the full path, if False (default) then as file
-            names only.
-
-        Returns:
-          List of fastq files matching the selection criteria.
-
-        """
-        # Build list of fastqs that match the selection criteria
-        fastqs = []
-        for fastq in self.fastq:
-            fq = auto_process_utils.AnalysisFastq(fastq)
-            if fq.read_number is None:
-                raise IlluminaDataException, \
-                    "Unable to determine read number for %s" % fastq
-            if fq.read_number == read_number:
-                if full_path:
-                    fastqs.append(os.path.join(self.dirn,fastq))
-                else:
-                    fastqs.append(fastq)
-        # Sort into dictionary order and return
-        fastqs.sort()
-        return fastqs
-
-    def __repr__(self):
-        """Implement __repr__ built-in
-
-        Return string representation for the sample -
-        i.e. the sample name."""
-        return str(self.name)
 
 class AutoProcess:
     # Class implementing an automatic fastq generation and QC
@@ -327,6 +203,20 @@ class AutoProcess:
             else:
                 logging.error("No info file")
 
+    def get_analysis_projects(self):
+        # Return the analysis projects in a list
+        project_metadata = TabFile.TabFile(os.path.join(analysis_dir,
+                                                        self.params.project_metadata),
+                                           first_line_is_header=True)
+        projects = []
+        for line in project_metadata:
+            name = line['Project']
+            print "Acquiring data for project %s" % name
+            projects.append(auto_process_utils.AnalysisProject(
+                name,
+                os.path.join(self.analysis_dir,name)))
+        return projects
+
     def get_primary_data(self):
         # Copy the primary sequencing data (bcl files etc) to a local area
         # using rsync
@@ -354,22 +244,25 @@ class AutoProcess:
         #
         # Directories
         analysis_dir = self.params.analysis_dir
-        primary_data = os.path.join(self.params.primary_data_dir,
-                                    os.path.basename(self.params.data_dir))
         self.params['unaligned_dir'] = 'bcl2fastq'
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
+        sample_sheet = self.params.sample_sheet
+        if self.verify_bcl_to_fastq():
+            print "Bcl to fastq outputs already present, nothing to do"
+            return
+        # Fetch primary data
+        self.get_primary_data()
+        primary_data = os.path.join(self.params.primary_data_dir,
+                                    os.path.basename(self.params.data_dir))
         # Get info about the run
         illumina_run = IlluminaData.IlluminaRun(primary_data)
+        bases_mask = self.params.bases_mask
+        nmismatches = bclToFastq.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
         print "Platform  : %s" % illumina_run.platform
         print "Bcl format: %s" % illumina_run.bcl_extension
-        # Get sample sheet and bases mask
-        sample_sheet = self.params.sample_sheet
-        bases_mask = self.params.bases_mask
         print "Sample sheet: %s" % sample_sheet
         print "Bases mask  : %s" % bases_mask
-        # Get nmismatches
-        nmismatches = bclToFastq.get_nmismatches(bases_mask)
         print "Nmismatches : %d (determined from bases mask)" % nmismatches
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
@@ -398,6 +291,8 @@ class AutoProcess:
                                                                     sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             raise Exception, "Failed to verify bcl to fastq outputs against sample sheet"
+        # Remove primary data
+        self.remove_primary_data()
         # Create a metadata file
         self.params['project_metadata'] = 'projects.info'
         metadata = get_project_metadata(illumina_data)
@@ -419,6 +314,24 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
+    def verify_bcl_to_fastq(self):
+        # Check that bcl to fastq outputs match sample sheet predictions
+        bcl_to_fastq_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
+        if not os.path.isdir(bcl_to_fastq_dir):
+            # Directory doesn't exist
+            return False
+        # Try to create an IlluminaData object
+        try:
+            illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
+                                                      unaligned_dir=self.params.unaligned_dir)
+        except IlluminaData.IlluminaDataError, ex:
+            # Failed to initialise
+            logging.debug("Failed to get information from %s: %s" % (bcl_to_fastq_dir,ex))
+            return False
+        # Do check
+        return analyse_illumina_run.verify_run_against_sample_sheet(illumina_data,
+                                                                    self.params.sample_sheet)
+
     def setup_analysis_dirs(self):
         # Construct and populate the analysis directories for each project
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
@@ -429,63 +342,122 @@ class AutoProcess:
         for line in project_metadata:
             # Look up project data
             project_name = line['Project']
-            project = illumina_data.get_project(project_name)
-            # Make the project directory
-            build_illumina_analysis_dir.create_analysis_dir(project,
-                                                            top_dir=self.analysis_dir)
-            # Add a logs subdirectory for each project
-            log_dir = os.path.join(self.analysis_dir,project_name,'logs')
-            bcf_utils.mkdir(log_dir)
+            project = auto_process_utils.AnalysisProject(project_name,
+                                                         os.path.join(self.analysis_dir,
+                                                                      project_name))
+            project.create_directory(illumina_data.get_project(project_name))
 
     def run_qc(self):
         # Run QC pipeline for all projects
         #
+        # Tests whether QC outputs already exist and only runs
+        # QC for those files where the outputs are not all present
+        #
         # Setup a pipeline runner
         qc_runner = auto_process_settings.runners.qc
-        self.pipeline = Pipeline.PipelineRunner(qc_runner)
-        # Get project data
-        project_metadata = TabFile.TabFile(os.path.join(analysis_dir,
-                                                        self.params.project_metadata),
-                                           first_line_is_header=True)
-        # Make list of project dirs
-        projects = []
-        for line in project_metadata:
-            name = line['Project']
-            print "Acquiring data for project %s" % name
-            projects.append(AnalysisProject(name,
-                                            os.path.join(self.analysis_dir,name)))
-        # Populate pipeline with fastq.gz files
+        pipeline = Pipeline.PipelineRunner(qc_runner)
+        # Get project dir data
+        projects = self.get_analysis_projects()
+        # Look for samples with no/invalid QC outputs and populate
+        # pipeline with the associated fastq.gz files
         for project in projects:
             print "*** Setting up QC for %s ***" % project.name
-            qc_log_dir = os.path.join(self.analysis_dir,project.name,'logs')
-            qc_runner.log_dir(qc_log_dir)
+            # Make the qc directory if it doesn't exist
+            qc_dir = os.path.join(project.dirn,'qc')
+            if not os.path.exists(qc_dir):
+                print "Making 'qc' subdirectory"
+                bcf_utils.mkdir(qc_dir,mode=0775)
+            # Loop over samples and queue up those where the QC
+            # isn't validated
             for sample in project.samples:
-                print "\tSetting up sample %s" % sample.name
-                group = "%s.%s" % (project.name,sample.name)
+                print "Examining files in sample %s" % sample.name
                 for fq in sample.fastq:
-                    print "\t\tAdding %s" % fq
-                    fastq = os.path.join(project.dirn,fq)
-                    label = str(auto_process_utils.AnalysisFastq(fq))
-                    self.pipeline.queueJob(project.dirn,'illumina_qc.sh',(fastq,),
-                                           label=label,group=group)
+                    if sample.verify_qc(qc_dir,fq):
+                        logging.debug("\t%s: QC verified" % fq)
+                    else:
+                        print "\t%s: setting up QC run" % fq
+                        group = "%s.%s" % (project.name,sample.name)
+                        fastq = os.path.join(project.dirn,'fastqs',fq)
+                        label = str(auto_process_utils.AnalysisFastq(fq))
+                        pipeline.queueJob(project.dirn,'illumina_qc.sh',(fastq,),
+                                          label=label,group=group)
         # Run the pipeline
-        self.pipeline.run()
+        if pipeline.nWaiting() > 0:
+            pipeline.run()
         # Verify the outputs
         for project in projects:
-            qc_reporter = qcreporter.IlluminaQCReporter(project.dirn)
-            if not qc_reporter.verify():
+            if not project.verify_qc():
                 logging.error("QC failed for one or more samples in %s" % project.name)
             else:
                 print "QC okay, generating report for %s" % project.name
-                qc_reporter.zip()
+                project.qc_report
 
-    def merge_fastqs(self):
+    def concatenate_fastqs(self):
         # Merge multiple fastq files for samples split across lanes
+        #
         raise NotImplementedError
 
     def copy_to_archive(self):
         # Copy the analysis directory and contents to an archive area
+        archive_dir = auto_process_settings.archive.dirn
+        if archive_dir is None:
+            raise Exception, "No archive directory specified in settings"
+        # Construct subdirectory structure i.e. platform and year
+        platform = self.params.platform
+        year = time.strftime("%Y")
+        archive_dir = os.path.join(archive_dir,year,platform)
+        print "Copying to archive directory: %s" % archive_dir
+        try:
+            rsync = applications.general.rsync(self.analysis_dir,archive_dir,
+                                               prune_empty_dirs=True)
+            print "Running %s" % rsync
+            status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
+        except Exception, ex:
+            logging.error("Exception rsyncing to archive: %s" % ex)
+            status = -1
+        if status != 0:
+            logging.error("Failed to rsync to archive (returned status %d)" % status)
+
+    def log_analysis(self):
+        # Add a record of the analysis to the logging file
         raise NotImplementedError
+
+    def publish_qc(self):
+        # Copy the QC reports to the webserver
+        # Get project dir data
+        if auto_process_settings.qc_web_server.server is None or \
+           auto_process_settings.qc_web_server.webdir is None:
+            raise Exception, "No server and/or directory specifed in settings"
+        user = auto_process_settings.qc_web_server.user
+        server = auto_process_settings.qc_web_server.server
+        webdir = os.path.join(auto_process_settings.qc_web_server.webdir,
+                              os.path.basename(self.analysis_dir))
+        # Get project data
+        projects = self.get_analysis_projects()
+        # Make a remote directory for the QC reports
+        try:
+            mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
+            mkdir_cmd.run_subprocess()
+        except Exception, ex:
+            raise Exception, "Exception making remote directory for QC reports: %s" % ex
+        # Deal with QC for each project
+        for project in projects:
+            if project.verify_qc():
+                try:
+                    # scp the qc zip file
+                    qc_zip = os.path.join(project.dirn,project.qc_report)
+                    scp = applications.general.scp(user,server,qc_zip,webdir)
+                    print "Running %s" % scp
+                    scp.run_subprocess()
+                    # Unpack at the other end
+                    unzip_cmd = applications.general.ssh_command(
+                        user,server,
+                        ('unzip','-q','-o','-d',webdir,
+                         os.path.join(webdir,project.qc_report)))
+                    print "Running %s" % unzip_cmd
+                    unzip_cmd.run_subprocess()
+                except Exception, ex:
+                    print "Failed to copy QC report: %s" % ex
 
 #######################################################################
 # Functions
@@ -567,11 +539,27 @@ def get_bases_mask(run_info_xml,sample_sheet_file):
                                                                   example_barcode)
     return bases_mask
 
+def list_available_commands(cmds):
+    # Pretty-print available commands
+        print ""
+        print "Available commands are:"
+        for cmd in cmds:
+            print "\t%s" % cmd
+        print ""
+
 #######################################################################
 # Main program
 #######################################################################
 
 if __name__ == "__main__":
+
+    # List of available commands
+    cmds = ['setup',
+            'make_fastqs',
+            'setup_analysis_dirs',
+            'run_qc',
+            'archive',
+            'publish_qc']
 
     # Set up option parser
     p = optparse.OptionParser(usage="%prog CMD [OPTIONS] [ARGS]",
@@ -580,12 +568,18 @@ if __name__ == "__main__":
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     if len(sys.argv) < 2:
-        p.error("Takes at least one argument (command)")
+        list_available_commands(cmds)
+        p.error("Need to supply a command")
         sys.exit()
 
     # Process command line
     cmd = sys.argv[1]
-    if cmd not in ['setup','make_fastqs','setup_analysis_dirs','run_qc']:
+    if cmd == "help":
+        list_available_commands(cmds)
+        sys.exit(0)
+    if cmd not in cmds:
+        print "Unrecognised command '%s'" % cmd
+        list_available_commands(cmds)
         p.error("Unrecognised command '%s'" % cmd)
     options,args = p.parse_args(sys.argv[2:])
 
@@ -594,7 +588,7 @@ if __name__ == "__main__":
         logging.getLogger().setLevel(logging.DEBUG)
 
     # Report name and version
-    print "%s %s" % (os.path.basename(sys.argv[0]),__version__)
+    print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
 
     # Setup the processing object and run the requested command
     if cmd == 'setup':
@@ -612,10 +606,14 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            d.get_primary_data()
             d.bcl_to_fastq()
-            d.remove_primary_data()
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
             d.run_qc()
+        elif cmd == 'concatenate_fastqs':
+            d.concatenate_fastqs()
+        elif cmd == 'archive':
+            d.copy_to_archive()
+        elif cmd == 'publish_qc':
+            d.publish_qc()
