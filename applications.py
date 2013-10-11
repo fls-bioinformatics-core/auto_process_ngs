@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Import modules that this module depends on
@@ -119,6 +119,24 @@ class Command:
         command_line = [self.command]
         command_line.extend(self.args)
         return command_line
+
+    def __contains__(self,item):
+        """Implement container functionality for 'item in x'
+
+        """
+        return (item in self.command_line)
+
+    def __getitem__(self,key):
+        """Implement container functionality for 'x[key]'
+
+        """
+        return self.command_line[key]
+
+    def __len__(self):
+        """Implement container functionality for 'len(x)'
+
+        """
+        return len(self.command_line)
 
     def __repr__(self):
         """Return the full command line as a string
