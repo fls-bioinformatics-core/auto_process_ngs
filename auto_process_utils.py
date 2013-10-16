@@ -391,15 +391,31 @@ class AnalysisProject:
         """Return a nicely formatted string describing the sample names
 
         Wraps a call to 'pretty_print_names' function.
+
         """
         return bcf_utils.pretty_print_names(self.samples)
 
 class AnalysisSample:
-    # Class describing an analysis sample
-    # i.e. set of fastqs from a single sample
-    # Can be paired end and have multiple fastqs per
-    # THINKS can code be shared with IlluminaSample?
+    """Class describing an analysis sample
+
+    An analysis sample consists of a set of fastqs file corresponding
+    to single sample.
+
+    AnalysisSample has the following properties:
+
+    name      : name of the sample
+    fastq     : list of fastq files associated with the sample
+    paired_end: True if sample is paired end, False if not
+
+    """
+
     def __init__(self,name):
+        """Create a new AnalysisSample instance
+
+        Arguments:
+          name: sample name
+
+        """
         self.name = name
         self.fastq = []
         self.paired_end = False
@@ -409,6 +425,7 @@ class AnalysisSample:
 
         Arguments:
           fastq: name of the fastq file
+
         """
         self.fastq.append(fastq)
         # Sort fastq's into order
@@ -630,6 +647,87 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+
+class TestAnalysisSample(unittest.TestCase):
+    """Tests for the AnalysisSample class
+
+    """
+
+    def test_empty_analysis_sample(self):
+        """Check empty AnalysisSample class
+        """
+        sample = AnalysisSample('PJB1-A')
+        self.assertEqual(sample.name,'PJB1-A')
+        self.assertEqual(sample.fastq,[])
+        self.assertFalse(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-A')
+
+    def test_single_end_analysis_sample(self):
+        """Check AnalysisSample class with single-end sample
+        """
+        sample = AnalysisSample('PJB1-B')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R1.fastq.gz')
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,['PJB1-B_ACAGTG_L001_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=1),
+                         ['PJB1-B_ACAGTG_L001_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=2),[])
+        self.assertFalse(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-B')
+
+    def test_single_end_analysis_sample_multiple_fastqs(self):
+        """Check AnalysisSample class with single-end sample (multiple fastqs)
+        """
+        sample = AnalysisSample('PJB1-B')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R1.fastq.gz')
+        sample.add_fastq('PJB1-B_ACAGTG_L002_R1.fastq.gz')
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,['PJB1-B_ACAGTG_L001_R1.fastq.gz',
+                                       'PJB1-B_ACAGTG_L002_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=1),
+                         ['PJB1-B_ACAGTG_L001_R1.fastq.gz',
+                          'PJB1-B_ACAGTG_L002_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=2),[])
+        self.assertFalse(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-B')
+
+    def test_paired_end_analysis_sample(self):
+        """Check AnalysisSample class with paired-end sample
+        """
+        sample = AnalysisSample('PJB1-B')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R1.fastq.gz')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R2.fastq.gz')
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,['PJB1-B_ACAGTG_L001_R1.fastq.gz',
+                                       'PJB1-B_ACAGTG_L001_R2.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=1),
+                         ['PJB1-B_ACAGTG_L001_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=2),
+                         ['PJB1-B_ACAGTG_L001_R2.fastq.gz'])
+        self.assertTrue(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-B')
+
+    def test_paired_end_analysis_sample_multiple_fastqs(self):
+        """Check AnalysisSample class with paired-end sample (multiple fastqs)
+        """
+        sample = AnalysisSample('PJB1-B')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R1.fastq.gz')
+        sample.add_fastq('PJB1-B_ACAGTG_L002_R1.fastq.gz')
+        sample.add_fastq('PJB1-B_ACAGTG_L001_R2.fastq.gz')
+        sample.add_fastq('PJB1-B_ACAGTG_L002_R2.fastq.gz')
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,['PJB1-B_ACAGTG_L001_R1.fastq.gz',
+                                       'PJB1-B_ACAGTG_L001_R2.fastq.gz',
+                                       'PJB1-B_ACAGTG_L002_R1.fastq.gz',
+                                       'PJB1-B_ACAGTG_L002_R2.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=1),
+                         ['PJB1-B_ACAGTG_L001_R1.fastq.gz',
+                          'PJB1-B_ACAGTG_L002_R1.fastq.gz'])
+        self.assertEqual(sample.fastq_subset(read_number=2),
+                         ['PJB1-B_ACAGTG_L001_R2.fastq.gz',
+                          'PJB1-B_ACAGTG_L002_R2.fastq.gz'])
+        self.assertTrue(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-B')
 
 #######################################################################
 # Main program: run tests
