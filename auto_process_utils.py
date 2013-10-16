@@ -336,12 +336,12 @@ class AnalysisProject:
           fastqs: (optional) list of fastq files to import
     
         """
-        print "Creating analysis directory for project '%s'" % self.name
+        logging.debug("Creating analysis directory for project '%s'" % self.name)
         # Check for & create directory
         if os.path.exists(self.dirn):
-            print "-> %s already exists" % self.dirn
+            logging.warning("Directory %s already exists" % self.dirn)
         else:
-            print "Making analysis directory %s" % self.dirn
+            logging.debug("Making analysis directory %s" % self.dirn)
             bcf_utils.mkdir(self.dirn,mode=0775)
         # Make a 'logs' directory
         log_dir = os.path.join(self.dirn,'logs')
