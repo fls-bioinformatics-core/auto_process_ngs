@@ -21,6 +21,8 @@ The stages are:
     make_fastqs
     setup_analysis_dirs
     run_qc
+    archive
+    publish_qc
 
 The 'setup' stage creates an analysis directory and acquires the basic
 data about the sequencing run from a source directory. Subsequent stages
@@ -30,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #######################################################################
 # Imports
@@ -251,10 +253,12 @@ class AutoProcess:
             print "Bcl to fastq outputs already present, nothing to do"
             return
         # Fetch primary data
-        self.get_primary_data()
+        if self.get_primary_data() != 0:
+            logging.error("Failed to acquire primary data")
+            raise Exception, "Failed to acquire primary data"
+        # Get info about the run
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
-        # Get info about the run
         illumina_run = IlluminaData.IlluminaRun(primary_data)
         bases_mask = self.params.bases_mask
         nmismatches = bclToFastq.get_nmismatches(bases_mask)
