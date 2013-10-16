@@ -311,8 +311,12 @@ class AnalysisProject:
         logging.debug("Listing samples and files:")
         for sample in self.samples:
             logging.debug("* %s: %s" % (sample.name,sample.fastq))
+        # Set paired_end flag for project
+        self.paired_end = True
+        for sample in self.samples:
+            self.paired_end = self.paired_end and sample.paired_end
 
-    def create_directory(self,illumina_project=None):
+    def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
 
         Creates a new directory corresponding to the AnalysisProject
@@ -329,6 +333,7 @@ class AnalysisProject:
         Arguments:
           illumina_project: (optional) populated IlluminaProject object
             from which the analysis directory will be populated
+          fastqs: (optional) list of fastq files to import
     
         """
         print "Creating analysis directory for project '%s'" % self.name
@@ -348,17 +353,22 @@ class AnalysisProject:
         fastqs_dir = os.path.join(self.dirn,"fastqs")
         bcf_utils.mkdir(fastqs_dir,mode=0775)
         # Check for & create links to fastq files
-        if illumina_project is not None:
-            for sample in illumina_project.samples:
-                fastq_names = IlluminaData.get_unique_fastq_names(sample.fastq)
-                for fastq in sample.fastq:
-                    fastq_file = os.path.join(sample.dirn,fastq)
-                    fastq_ln = os.path.join(fastqs_dir,fastq_names[fastq])
-                    if os.path.exists(fastq_ln):
-                        logging.warning("Link %s already exists" % fastq_ln)
-                    else:
-                        logging.debug("Linking to %s" % fastq)
-                        bcf_utils.mklink(fastq_file,fastq_ln,relative=True)
+        if fastqs is None:
+            # Make a list of fastqs to import from the supplied
+            # IlluminaProject object
+            fastqs = []
+            if illumina_project is not None:
+                for sample in illumina_project.samples:
+                    fastqs.append(os.path.join(sample.dirn,fastq))
+        # Get mapping to unique names    
+        fastq_names = IlluminaData.get_unique_fastq_names(fastqs)
+        for fastq in fastqs:
+            fastq_ln = os.path.join(fastqs_dir,fastq_names[fastq])
+            if os.path.exists(fastq_ln):
+                logging.warning("Link %s already exists" % fastq_ln)
+            else:
+                logging.debug("Linking to %s" % fastq)
+                bcf_utils.mklink(fastq,fastq_ln,relative=True)
         # Populate
         self.populate()
 
@@ -688,6 +698,16 @@ class TestAnalysisProject(unittest.TestCase):
         # Create a temporary directory for tests
         self.dirn = tempfile.mkdtemp(suffix='TestAnalysisProject')
 
+    def make_data_dir(self,fastq_list):
+        # Make a fake data source directory
+        self.fastqs = []
+        fake_fastqs_dir = os.path.join(self.dirn,'fake_fastqs')
+        os.mkdir(fake_fastqs_dir)
+        for fq in fastq_list:
+            fastq = os.path.join(fake_fastqs_dir,fq)
+            open(fastq,'w').close()
+            self.fastqs.append(fastq)
+
     def tearDown(self):
         # Remove the temporary test directory
         shutil.rmtree(self.dirn)
@@ -705,6 +725,34 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.paired_end)
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.platform,None)
+
+    def test_create_single_end_analysis_project(self):
+        """Check creation of new single-end AnalysisProject directory
+        """
+        self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertFalse(project.paired_end)
+
+    def test_create_paired_end_analysis_project(self):
+        """Check creation of new paired-end AnalysisProject directory
+        """
+        self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L001_R2_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertTrue(project.paired_end)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
