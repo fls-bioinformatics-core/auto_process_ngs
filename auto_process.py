@@ -404,11 +404,6 @@ class AutoProcess:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
 
-    def concatenate_fastqs(self):
-        # Merge multiple fastq files for samples split across lanes
-        #
-        raise NotImplementedError
-
     def copy_to_archive(self):
         # Copy the analysis directory and contents to an archive area
         archive_dir = auto_process_settings.archive.dirn
@@ -623,8 +618,6 @@ if __name__ == "__main__":
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
             d.run_qc()
-        elif cmd == 'concatenate_fastqs':
-            d.concatenate_fastqs()
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
