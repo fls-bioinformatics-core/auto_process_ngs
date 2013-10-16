@@ -236,25 +236,55 @@ class AnalysisFastq:
         return fq
         
 class AnalysisProject:
-    # Class describing an analysis project
-    # i.e. set of samples from a single sequencing experiment
-    # THINKS can code be shared with IlluminaProject?
-    def __init__(self,name,dirn,library_type=None,organism=None):
+    """Class describing an analysis project
+
+    Conceptually an analysis project consists of a set of samples
+    from a single sequencing experiment, plus associated data e.g.
+    QC results.
+
+    Practically an analysis project is represented by a directory
+    with a set of fastq files.
+
+    Provides the following properties:
+
+    name        : name of the project
+    dirn        : associated directory (full path)
+    library_type: library type, either None or e.g. 'RNA-seq' etc
+    platform    : sequencing platform, either None or e.g. 'miseq' etc
+    paired_end  : True if data is paired end, False if not
+    samples     : list of AnalysisSample objects
+    fastq_dir   : subdirectory holding fastq files
+
+    """
+    def __init__(self,name,dirn,library_type=None,organism=None,platform=None):
+        """Create a new AnalysisProject instance
+
+        Arguments:
+          name: name of the project
+          dirn: project directory (can be full or relative path)
+          library_type: optional, specify library type e.g. 'RNA-seq',
+            'miRNA' etc
+          organism: optional, specify organism e.g. 'Human', 'Mouse'
+            etc
+          platform: optional, specify sequencing platform e.g 'miseq'
+
+        """
         # name = project name
         # dirn = directory path
         self.name = name
         self.dirn = os.path.abspath(dirn)
         self.library_type = library_type
         self.organism = organism
+        self.platform = platform
         self.samples = []
         self.paired_end = False
         self.fastq_dir = None
         self.populate()
 
     def populate(self):
-        # Identify samples and related files and
-        # populate the data structure
-        #
+        """Populate data structure from directory contents
+
+        """
         if not os.path.exists(self.dirn):
             # Nothing to do, yet
             return
@@ -487,6 +517,8 @@ class AnalysisSample:
 #######################################################################
 
 import unittest
+import tempfile
+import shutil
 
 class TestAttributeDict(unittest.TestCase):
     """Tests for the AttributeDict class
@@ -647,6 +679,32 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+
+class TestAnalysisProject(unittest.TestCase):
+    """Tests for the AnalysisProject class
+
+    """
+    def setUp(self):
+        # Create a temporary directory for tests
+        self.dirn = tempfile.mkdtemp(suffix='TestAnalysisProject')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_empty_analysis_project(self):
+        """Check empty AnalysisProject class
+        """
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertEqual(project.dirn,dirn)
+        self.assertEqual(project.library_type,None)
+        self.assertEqual(project.organism,None)
+        self.assertEqual(project.samples,[])
+        self.assertFalse(project.paired_end)
+        self.assertEqual(project.fastq_dir,None)
+        self.assertEqual(project.platform,None)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
