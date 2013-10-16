@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Imports
@@ -214,9 +214,14 @@ class AutoProcess:
         for line in project_metadata:
             name = line['Project']
             print "Acquiring data for project %s" % name
-            projects.append(auto_process_utils.AnalysisProject(
-                name,
-                os.path.join(self.analysis_dir,name)))
+            project_dir = os.path.join(self.analysis_dir,name)
+            if os.path.isdir(project_dir):
+                projects.append(
+                    auto_process_utils.AnalysisProject(
+                        name,
+                        os.path.join(self.analysis_dir,name)))
+            else:
+                logging.warning("No directory found for project '%s'" % name)
         return projects
 
     def get_primary_data(self):
@@ -362,6 +367,9 @@ class AutoProcess:
         pipeline = Pipeline.PipelineRunner(qc_runner)
         # Get project dir data
         projects = self.get_analysis_projects()
+        # Check we have projects
+        if len(projects) == 0:
+            raise Exception, "No projects found for QC analysis"
         # Look for samples with no/invalid QC outputs and populate
         # pipeline with the associated fastq.gz files
         for project in projects:
