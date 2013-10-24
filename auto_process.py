@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Imports
@@ -156,45 +156,6 @@ class AutoProcess:
         if not os.path.exists(self.analysis_dir):
             # Create directory structure
             self.create_directory(self.analysis_dir)
-            # Identify platform
-            platform = platforms.get_sequencer_platform(data_dir)
-            print "Platform identified as '%s'" % platform
-            # Fetch SampleSheet.csv file
-            print "Acquiring sample sheet..."
-            tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
-            rsync = applications.general.rsync(os.path.join(data_dir,
-                                                            'Data/Intensities/Basecalls/SampleSheet.csv'),
-                                               self.tmp_dir)
-            status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-            custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
-            sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
-                                                    custom_sample_sheet)
-            os.remove(tmp_sample_sheet)
-            # Fetch RunInfo.xml file and get bases mask
-            print "Acquiring RunInfo.xml..."
-            tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
-            rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
-                                               self.tmp_dir)
-            status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
-            bases_mask = get_bases_mask(tmp_run_info,custom_sample_sheet)
-            print "Corrected bases mask: %s" % bases_mask
-            os.remove(tmp_run_info)
-            # Print the predicted ouputs
-            projects = sample_sheet.predict_output()
-            print "Predicted output from sample sheet:"
-            print "Project\tSample\tFastq"
-            for project in projects:
-                project_name = project[8:]
-                for sample in projects[project]:
-                    sample_name = sample[7:]
-                    for fastq_base in projects[project][sample]:
-                        print "%s\t%s\t%s" % (project_name,sample_name,fastq_base)
-            # Store the parameters
-            self.params['data_dir'] = data_dir
-            self.params['analysis_dir'] = self.analysis_dir
-            self.params['platform'] = platform
-            self.params['sample_sheet'] = custom_sample_sheet
-            self.params['bases_mask'] = bases_mask
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
@@ -203,13 +164,73 @@ class AutoProcess:
             if os.path.isfile(info_file_name):
                 self.load_parameters()
             else:
-                logging.error("No info file")
+                logging.warning("No info file found in %s" % self.analysis_dir)
+        # Identify missing data and attempt to acquire
+        # Sequencing platform
+        try:
+            platform = self.params.platform
+        except AttributeError:
+            print "Identifying platform from data directory name"
+            platform = platforms.get_sequencer_platform(data_dir)
+        print "Platform identified as '%s'" % platform
+        # Custom SampleSheet.csv file
+        try:
+            custom_sample_sheet = self.params.sample_sheet
+            sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
+        except AttributeError:
+            print "Acquiring sample sheet..."
+            tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
+            rsync = applications.general.rsync(os.path.join(data_dir,
+                                                            'Data/Intensities/BaseCalls/SampleSheet.csv'),
+                                               self.tmp_dir)
+            print "%s" % rsync
+            status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
+            custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
+            sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
+                                                    custom_sample_sheet)
+            os.remove(tmp_sample_sheet)
+        print "Sample sheet '%s'" % custom_sample_sheet
+        # Bases mask
+        try:
+            bases_mask = self.params.bases_mask
+        except AttributeError:
+            print "Acquiring RunInfo.xml to determine bases mask..."
+            tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
+            rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
+                                               self.tmp_dir)
+            status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
+            bases_mask = get_bases_mask(tmp_run_info,custom_sample_sheet)
+            os.remove(tmp_run_info)
+        print "Corrected bases mask: %s" % bases_mask
+        # Print the predicted ouputs and make a 'projects.info' metadata file
+        projects = sample_sheet.predict_output()
+        project_metadata = ProjectMetadataFile()
+        project_metadata_file = 'projects.info'
+        print "Predicted output from sample sheet:"
+        print "Project\tSample\tFastq"
+        for project in projects:
+            project_name = project[8:]
+            sample_names = []
+            for sample in projects[project]:
+                sample_name = sample[7:]
+                for fastq_base in projects[project][sample]:
+                    print "%s\t%s\t%s" % (project_name,sample_name,fastq_base)
+                sample_names.append(sample_name)
+            project_metadata.add_project(project_name,sample_names)
+        project_metadata.save(os.path.join(self.analysis_dir,project_metadata_file))
+        print "Project metadata in %s" % project_metadata_file
+        # Store the parameters
+        self.params['data_dir'] = data_dir
+        self.params['analysis_dir'] = self.analysis_dir
+        self.params['platform'] = platform
+        self.params['sample_sheet'] = custom_sample_sheet
+        self.params['bases_mask'] = bases_mask
+        self.params['project_metadata'] = project_metadata_file
 
     def get_analysis_projects(self):
         # Return the analysis projects in a list
-        project_metadata = TabFile.TabFile(os.path.join(analysis_dir,
-                                                        self.params.project_metadata),
-                                           first_line_is_header=True)
+        project_metadata = ProjectMetadataFile(os.path.join(analysis_dir,
+                                                            self.params.project_metadata))
         projects = []
         for line in project_metadata:
             name = line['Project']
@@ -302,12 +323,6 @@ class AutoProcess:
             raise Exception, "Failed to verify bcl to fastq outputs against sample sheet"
         # Remove primary data
         self.remove_primary_data()
-        # Create a metadata file
-        self.params['project_metadata'] = 'projects.info'
-        metadata = get_project_metadata(illumina_data)
-        metadata.write(os.path.join(analysis_dir,self.params.project_metadata),
-                       include_header=True)
-        print "Project metadata in %s" % self.params.project_metadata
         # Generate statistics
         self.params['stats_file'] = 'statistics.info'
         stats = illumina_data_statistics(illumina_data)
@@ -351,9 +366,18 @@ class AutoProcess:
         for line in project_metadata:
             # Look up project data
             project_name = line['Project']
+            user = line['User']
+            PI = line['PI']
+            organism = line['Organism']
+            library_type = line['Library']
             project = auto_process_utils.AnalysisProject(project_name,
                                                          os.path.join(self.analysis_dir,
-                                                                      project_name))
+                                                                      project_name),
+                                                         user=user,
+                                                         PI=PI,
+                                                         organism=organism,
+                                                         library_type=library_type,
+                                                         platform=self.params.platform)
             project.create_directory(illumina_data.get_project(project_name))
 
     def run_qc(self):
@@ -466,20 +490,37 @@ class AutoProcess:
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
 
+class ProjectMetadataFile(TabFile.TabFile):
+    def __init__(self,filen=None):
+        self.__filen = filen
+        TabFile.TabFile.__init__(self,filen=filen,
+                                 column_names=('Project',
+                                               'Samples',
+                                               'User',
+                                               'Library',
+                                               'Organism',
+                                               'PI',),
+                                 first_line_is_header=True)
+
+    def add_project(self,project_name,sample_names,user=None,
+                    library_type=None,organism=None,PI=None):
+        # Add project info to the metadata file
+        self.append(data=(project_name,
+                          bcf_utils.pretty_print_names(sample_names),
+                          '.' if user is None else user,
+                          '.' if library_type is None else library_type,
+                          '.' if organism is None else organism,
+                          '.' if PI is None else PI))
+
+    def save(self,filen=None):
+        # Save the data back to file
+        if filen is not None:
+            self.__filen = filen
+        self.write(filen=self.__filen,include_header=True)
+
 #######################################################################
 # Functions
 #######################################################################
-
-def get_project_metadata(illumina_data):
-    # Make a TSV file with information on projects
-    metadata = TabFile.TabFile(column_names=('Project',
-                                             'Samples',
-                                             'Paired_end'))
-    for project in illumina_data.projects:
-        metadata.append(data=(project.name,
-                              project.prettyPrintSamples(),
-                              'Y' if project.paired_end else 'N'))
-    return metadata
 
 def illumina_data_statistics(illumina_data):
     # Gather statistics for an Illumina run (bcl2fastq outputs)
