@@ -27,6 +27,7 @@ tree at some point.
 import os
 import logging
 import IlluminaData
+import TabFile
 import Pipeline
 import qcreporter
 import bcf_utils
@@ -256,12 +257,15 @@ class AnalysisProject:
     fastq_dir   : subdirectory holding fastq files
 
     """
-    def __init__(self,name,dirn,library_type=None,organism=None,platform=None):
+    def __init__(self,name,dirn,user=None,PI=None,library_type=None,
+                 organism=None,platform=None):
         """Create a new AnalysisProject instance
 
         Arguments:
           name: name of the project
           dirn: project directory (can be full or relative path)
+          user: optional, specify name of the user
+          PI: optional, specify name of the principal investigator
           library_type: optional, specify library type e.g. 'RNA-seq',
             'miRNA' etc
           organism: optional, specify organism e.g. 'Human', 'Mouse'
@@ -273,6 +277,8 @@ class AnalysisProject:
         # dirn = directory path
         self.name = name
         self.dirn = os.path.abspath(dirn)
+        self.user = user
+        self.PI = PI
         self.library_type = library_type
         self.organism = organism
         self.platform = platform
@@ -315,6 +321,28 @@ class AnalysisProject:
         self.paired_end = True
         for sample in self.samples:
             self.paired_end = self.paired_end and sample.paired_end
+        # Get data from info file, if present
+        if os.path.isfile(os.path.join(self.dirn,"README.info")):
+            info = TabFile.TabFile(os.path.join(self.dirn,"README.info"))
+            for line in info:
+                try:
+                    key,value = line[0],line[1]
+                    if value == '.':
+                        value = None
+                    if key == 'User':
+                        self.user = value
+                    elif key == 'PI':
+                        self.PI = value
+                    elif key == 'Organism':
+                        self.organism = value
+                    elif key == 'Library type':
+                        self.library_type = value
+                    elif key == 'Platform':
+                        self.platform = value
+                    else:
+                        logging.debug("Unrecognised key in README.info: %s" % key)
+                except IndexError:
+                    logging.warning("Bad line in README.info: %s" % line)
 
     def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
@@ -329,6 +357,8 @@ class AnalysisProject:
            fastqs/
            logs/
            ScriptCode/
+
+        It also creates an info file with metadata about the project.
 
         Arguments:
           illumina_project: (optional) populated IlluminaProject object
@@ -359,7 +389,8 @@ class AnalysisProject:
             fastqs = []
             if illumina_project is not None:
                 for sample in illumina_project.samples:
-                    fastqs.append(os.path.join(sample.dirn,fastq))
+                    for fastq in sample.fastq:
+                        fastqs.append(os.path.join(sample.dirn,fastq))
         # Get mapping to unique names    
         fastq_names = IlluminaData.get_unique_fastq_names(fastqs)
         for fastq in fastqs:
@@ -371,6 +402,24 @@ class AnalysisProject:
                 bcf_utils.mklink(fastq,fastq_ln,relative=True)
         # Populate
         self.populate()
+        # Create an info file
+        info = TabFile.TabFile()
+        info.append(data=('User','' if self.user is None else self.user))
+        info.append(data=('PI','' if self.PI is None else self.PI))
+        info.append(data=('Organism','' if self.organism is None else self.organism))
+        info.append(data=('Library type','' if self.library_type is None else self.library_type))
+        info.append(data=('Platform','' if self.platform is None else self.platform))
+        info.append(data=('Paired end','Y' if self.paired_end else 'N'))
+        description = "%d samples (%s)" % (len(self.samples),
+                                           self.prettyPrintSamples(),)
+        multiple_fastqs = False
+        for s in self.samples:
+            if len(s.fastq_subset(read_number=1)) > 1:
+                multiple_fastqs = True
+                description += " (multiple fastqs for some samples)"
+                break
+        info.append(data=('Samples',description))
+        info.write(os.path.join(self.dirn,"README.info"))
 
     @property
     def qc_dir(self):
@@ -494,9 +543,11 @@ class AnalysisSample:
         for fastq in self.fastq:
             fq = AnalysisFastq(fastq)
             if fq.read_number is None:
-                raise Exception, \
-                    "Unable to determine read number for %s" % fastq
-            if fq.read_number == read_number:
+                logging.debug("Unable to determine read number for %s, assume R1" % fastq)
+                fq_read_number = 1
+            else:
+                fq_read_number = fq.read_number
+            if fq_read_number == read_number:
                 if full_path:
                     fastqs.append(os.path.join(self.dirn,fastq))
                 else:
@@ -521,6 +572,28 @@ class AnalysisSample:
 
         """
         return str(self.name)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def bases_mask_is_paired_end(bases_mask):
+    # Determine if run is paired end based on bases mask string
+    non_index_reads = []
+    for read in bases_mask.split(','):
+        try:
+            read.index('I')
+        except ValueError:
+            non_index_reads.append(read)
+    if len(non_index_reads) == 2:
+        # Paired end
+        return True
+    elif len(non_index_reads) < 2:
+        # Single end
+        return False
+    else:
+        # An error?
+        raise Exception, "Bad bases mask '%s'?" % bases_mask
 
 #######################################################################
 # Tests
@@ -834,6 +907,24 @@ class TestAnalysisSample(unittest.TestCase):
                           'PJB1-B_ACAGTG_L002_R2.fastq.gz'])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
+
+class TestBasesMaskIsPairedEnd(unittest.TestCase):
+    """Tests for the bases_mask_is_paired_end function
+
+    """
+
+    def test_single_end_bases_mask(self):
+        """Check examples of single-ended bases masks
+        """
+        self.assertFalse(bases_mask_is_paired_end('y36'))
+        self.assertFalse(bases_mask_is_paired_end('y50,I6'))
+        self.assertFalse(bases_mask_is_paired_end('y50,I6n'))
+
+    def test_paired_end_bases_mask(self):
+        """Check examples of single-ended bases masks
+        """
+        self.assertTrue(bases_mask_is_paired_end('y101,I6n,y101'))
+        self.assertTrue(bases_mask_is_paired_end('y101,I6,I6,y101'))
 
 #######################################################################
 # Main program: run tests
