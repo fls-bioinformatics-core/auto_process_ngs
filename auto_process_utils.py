@@ -546,7 +546,7 @@ class AnalysisSample:
         """
         return str(self.name)
 
-class AnalysisProjectMetadata(AttributeDict):
+class MetadataDict(AttributeDict):
     """Class for storing metadata in an analysis project
 
     Provides a set of metadata items which are loaded from
@@ -591,8 +591,8 @@ class AnalysisProjectMetadata(AttributeDict):
 
     """
 
-    def __init__(self,filen=None):
-        """Create a new AnalysisProjectMetadata object
+    def __init__(self,attributes=dict(),filen=None):
+        """Create a new MetadataDict object
 
         By default an empty metadata object is created
         i.e. all attributes will have be None.
@@ -602,6 +602,7 @@ class AnalysisProjectMetadata(AttributeDict):
         pairs in that file.
 
         Arguments:
+          attributes: dictionary with 
           filen: (optional) name of the tab-delimited file
             with key-value pairs to load in.
 
@@ -609,18 +610,18 @@ class AnalysisProjectMetadata(AttributeDict):
         AttributeDict.__init__(self)
         self.__filen = filen
         # Set up empty metadata attributes
-        self.__attributes = { 'User':'user',
-                              'PI':'PI',
-                              'Organism':'organism',
-                              'Library type':'library_type',
-                              'Platform':'platform',
-                              'Paired end':'paired_end' }
+        self.__attributes = attributes
         for key in self.__attributes:
-            attr = self.__attributes[key]
-            self[attr] = None
+            self[key] = None
         if self.__filen:
             # Load data from external file
             load(self,self.__filen)
+
+    def __setitem__(self,key,value):
+        if key in self.__attributes:
+            AttributeDict.__setitem__(self,key,value)
+        else:
+            raise AttributeError,"Key '%s' not defined" % key
 
     def load(self,filen):
         """Load key-value pairs from a tab-delimited file
@@ -640,17 +641,23 @@ class AnalysisProjectMetadata(AttributeDict):
         metadata = TabFile.TabFile(filen)
         for line in metadata:
             try:
-                key,value = line[0],line[1]
-                if value == '.':
+                # Get data from file and convert special values
+                # to Python equivalents
+                attr,value = line[0],line[1]
+                if value == '.' or value == 'None':
                     value = None
                 elif value == 'Y' or value == 'True':
                     value = True
                 elif value == 'N' or value == 'False':
                     value = False
-                if key in self.__attributes:
-                    attr = self.__attributes[key]
-                    self[attr] = value
-                else:
+                # Locate dictionary key matching file key
+                found_key = False
+                for key in self.__attributes:
+                    if self.__attributes[key] == attr:
+                        self[key] = value
+                        found_key = True
+                        break
+                if not found_key:
                     logging.debug("Unrecognised key in %s: %s" % (filen,key))
             except IndexError:
                 logging.warning("Bad line in %s: %s" % (filen,line))
@@ -672,18 +679,99 @@ class AnalysisProjectMetadata(AttributeDict):
         """
         metadata = TabFile.TabFile()
         for key in self.__attributes:
-            attr = self.__attributes[key]
-            value = self[attr]
+            # Retrieve value and convert to appropriate
+            # format for persistent storage
+            value = self[key]
             if value is None:
                 value = '.'
             elif value is True:
                 value = 'Y'
             elif value is False:
                 value = 'N'
-            metadata.append(data=(key,value))
+            # Get the equivalent file key
+            attr = self.__attributes[key]
+            # Store in the file
+            metadata.append(data=(attr,value))
+        # Write the file
         if filen is not None:
             self.__filen = filen
         metadata.write(self.__filen)
+
+class AnalysisDirMetadata(MetadataDict):
+    """Class for storing metadata in an analysis project
+
+    Provides a set of metadata items which are loaded from
+    and saved to an external file.
+
+    The data items are:
+
+    analysis_dir: path to the analysis directory
+    data_dir: path to the directory holding the raw sequencing data
+    platform: sequencing platform e.g. 'miseq'
+    sample_sheet: path to the customised SampleSheet.csv file
+    bases_mask: bases mask string
+    project_metadata: name of the project metadata file
+    primary_data_dir: directory used to hold copies of primary data
+    unaligned_dir: output directory for bcl2fastq conversion
+    stats_file: name of file with statistics about the run
+
+    """
+    def __init__(self,filen=None):
+        """Create a new AnalysisDirMetadata object
+
+        Arguments:
+          filen: (optional) name of the tab-delimited file
+            with key-value pairs to load in.
+
+        """
+        MetadataDict.__init__(self,
+                              attributes = {
+                                  'analysis_dir':'analysis_dir',
+                                  'data_dir':'data_dir',
+                                  'platform':'platform',
+                                  'sample_sheet':'sample_sheet',
+                                  'bases_mask':'bases_mask',
+                                  'project_metadata':'project_metadata',
+                                  'primary_data_dir':'primary_data_dir',
+                                  'unaligned_dir':'unaligned_dir',
+                                  'stats_file':'stats_file'
+                              },
+                              filen=filen)
+
+class AnalysisProjectMetadata(MetadataDict):
+    """Class for storing metadata in an analysis project
+
+    Provides a set of metadata items which are loaded from
+    and saved to an external file.
+
+    The data items are:
+
+    user: the user associated with the project
+    PI: the principal investigator associated with the project
+    organism: the organism associated with the project
+    library_type: the library type e.g. 'RNA-seq'
+    platform: the platform name e.g. 'miseq'
+    paired_end: True if the data is paired end, False if not
+
+    """
+    def __init__(self,filen=None):
+        """Create a new AnalysisProjectMetadata object
+
+        Arguments:
+          filen: (optional) name of the tab-delimited file
+            with key-value pairs to load in.
+
+        """
+        MetadataDict.__init__(self,
+                              attributes = {
+                                  'user':'User',
+                                  'PI':'PI',
+                                  'organism':'Organism',
+                                  'library_type':'Library_type',
+                                  'platform':'Platform',
+                                  'paired_end':'Paired_end'
+                              },
+                              filen=filen)
 
 #######################################################################
 # Functions
@@ -1020,8 +1108,8 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 
-class TestAnalysisProjectMetadata(unittest.TestCase):
-    """Tests for the AnalysisProjectMetadata class
+class TestMetadataDict(unittest.TestCase):
+    """Tests for the MetadataDict class
 
     """
 
@@ -1032,8 +1120,86 @@ class TestAnalysisProjectMetadata(unittest.TestCase):
         if self.metadata_file is not None:
             os.remove(self.metadata_file)
 
-    def test_create_empty_metadata_object(self):
-        """Check creation of an empty metadata object
+    def test_create_metadata_object(self):
+        """Check creation of a metadata object
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        self.assertEqual(metadata.salutation,None)
+        self.assertEqual(metadata.valediction,None)
+
+    def test_set_and_get(self):
+        """Check metadata values can be stored and retrieved
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        metadata['salutation'] = "hello"
+        metadata['valediction'] = "goodbye"
+        self.assertEqual(metadata.salutation,"hello")
+        self.assertEqual(metadata.valediction,"goodbye")
+
+    def test_save_and_load(self):
+        """Check metadata can be saved to file and reloaded
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'})
+        metadata['salutation'] = "hello"
+        metadata['valediction'] = "goodbye"
+        metadata.save(self.metadata_file)
+        metadata2 = MetadataDict(attributes={'salutation':'Salutation',
+                                             'valediction': 'Valediction',
+                                             'chat': 'Chit chat'})
+        metadata2.load(self.metadata_file)
+        self.assertEqual(metadata2.salutation,"hello")
+        self.assertEqual(metadata2.valediction,"goodbye")
+        self.assertEqual(metadata2.chat,None)
+
+    def test_get_non_existent_attribute(self):
+        """Check that accessing non-existent attribute raises exception
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        self.assertRaises(AttributeError,lambda: metadata.conversation)
+
+    def test_set_non_existent_attribute(self):
+        """Check that setting non-existent attribute raises exception
+        """
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction'})
+        try:
+            metadata['conversation'] = 'hrm'
+            self.fail('AttributeError not raised')
+        except AttributeError,ex:
+            pass
+
+class TestAnalysisDirMetadata(unittest.TestCase):
+    """Tests for the AnalysisDirMetadata class
+
+    """
+
+    def test_create_analysis_dir_metadata(self):
+        """Check creation of an empty AnalysisDirMetadata object
+        """
+        metadata = AnalysisDirMetadata()
+        self.assertEqual(metadata.analysis_dir,None)
+        self.assertEqual(metadata.data_dir,None)
+        self.assertEqual(metadata.platform,None)
+        self.assertEqual(metadata.sample_sheet,None)
+        self.assertEqual(metadata.bases_mask,None)
+        self.assertEqual(metadata.primary_data_dir,None)
+        self.assertEqual(metadata.unaligned_dir,None)
+        self.assertEqual(metadata.project_metadata,None)
+        self.assertEqual(metadata.stats_file,None)
+
+class TestAnalysisProjectMetadata(unittest.TestCase):
+    """Tests for the AnalysisProjectMetadata class
+
+    """
+
+    def test_create_analysis_project_metadata(self):
+        """Check creation of an empty AnalysisProjectMetadata object
         """
         metadata = AnalysisProjectMetadata()
         self.assertEqual(metadata.user,None)
@@ -1042,44 +1208,6 @@ class TestAnalysisProjectMetadata(unittest.TestCase):
         self.assertEqual(metadata.platform,None)
         self.assertEqual(metadata.library_type,None)
         self.assertEqual(metadata.paired_end,None)
-
-    def test_set_and_get(self):
-        """Check metadata values can be stored and retrieved
-        """
-        metadata = AnalysisProjectMetadata()
-        metadata['user'] = 'Peter Briggs'
-        metadata['PI'] = 'P.Investigator'
-        metadata['organism'] = 'Mouse'
-        metadata['platform'] = 'miseq'
-        metadata['library_type'] = 'miRNA'
-        metadata['paired_end'] = True
-        self.assertEqual(metadata.user,'Peter Briggs')
-        self.assertEqual(metadata.PI,'P.Investigator')
-        self.assertEqual(metadata.organism,'Mouse')
-        self.assertEqual(metadata.platform,'miseq')
-        self.assertEqual(metadata.library_type,'miRNA')
-        self.assertEqual(metadata.paired_end,True)
-
-    def test_save_and_load(self):
-        """Check metadata can be saved to file and reloaded
-        """
-        self.metadata_file = tempfile.mkstemp()[1]
-        metadata = AnalysisProjectMetadata()
-        metadata['user'] = 'Peter Briggs'
-        metadata['PI'] = 'P.Investigator'
-        metadata['organism'] = 'Mouse'
-        metadata['platform'] = 'miseq'
-        metadata['library_type'] = 'miRNA'
-        metadata['paired_end'] = True
-        metadata.save(self.metadata_file)
-        metadata_2 = AnalysisProjectMetadata()
-        metadata_2.load(self.metadata_file)
-        self.assertEqual(metadata_2.user,'Peter Briggs')
-        self.assertEqual(metadata_2.PI,'P.Investigator')
-        self.assertEqual(metadata_2.organism,'Mouse')
-        self.assertEqual(metadata_2.platform,'miseq')
-        self.assertEqual(metadata_2.library_type,'miRNA')
-        self.assertEqual(metadata_2.paired_end,True)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
