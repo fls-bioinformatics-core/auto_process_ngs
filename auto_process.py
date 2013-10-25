@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 #######################################################################
 # Imports
@@ -70,7 +70,7 @@ class AutoProcess:
 
     def __init__(self,analysis_dir=None):
         # analysis_dir: name/path for existing analysis directory
-        self.params = auto_process_utils.AttributeDict()
+        self.params = auto_process_utils.AnalysisDirMetadata()
         self.analysis_dir = analysis_dir
         if self.analysis_dir is not None:
             self.analysis_dir = os.path.abspath(analysis_dir)
@@ -103,21 +103,13 @@ class AutoProcess:
             raise Exception, "No info file %s" % info_file_name
         # Read contents of info file and assign values
         print "Loading settings from %s" % info_file_name
-        info_file = TabFile.TabFile(info_file_name)
-        for line in info_file:
-            key = line[0]
-            value = line[1]
-            self.params[key] = value
-            print "%s\t%s" % (key,self.params[key])
+        self.params.load(info_file_name)
 
     def save_parameters(self):
         # Save parameters to info file
         #
         info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
-        info_file = TabFile.TabFile()
-        for param in self.params:
-            info_file.append(data=(param,self.params[param]))
-        info_file.write(os.path.join(self.analysis_dir,'auto_process.info'))
+        self.params.save(info_file_name)
 
     def log_path(self,*args):
         # Return path appended to log directory
@@ -167,17 +159,14 @@ class AutoProcess:
                 logging.warning("No info file found in %s" % self.analysis_dir)
         # Identify missing data and attempt to acquire
         # Sequencing platform
-        try:
-            platform = self.params.platform
-        except AttributeError:
+        platform = self.params.platform
+        if platform is None:
             print "Identifying platform from data directory name"
             platform = platforms.get_sequencer_platform(data_dir)
         print "Platform identified as '%s'" % platform
         # Custom SampleSheet.csv file
-        try:
-            custom_sample_sheet = self.params.sample_sheet
-            sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
-        except AttributeError:
+        custom_sample_sheet = self.params.sample_sheet
+        if custom_sample_sheet is None:
             print "Acquiring sample sheet..."
             tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
             rsync = applications.general.rsync(os.path.join(data_dir,
@@ -189,11 +178,11 @@ class AutoProcess:
             sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
                                                     custom_sample_sheet)
             os.remove(tmp_sample_sheet)
+        sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
         print "Sample sheet '%s'" % custom_sample_sheet
         # Bases mask
-        try:
-            bases_mask = self.params.bases_mask
-        except AttributeError:
+        bases_mask = self.params.bases_mask
+        if bases_mask is None:
             print "Acquiring RunInfo.xml to determine bases mask..."
             tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
             rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
