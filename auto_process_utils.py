@@ -277,15 +277,22 @@ class AnalysisProject:
         # dirn = directory path
         self.name = name
         self.dirn = os.path.abspath(dirn)
-        self.user = user
-        self.PI = PI
-        self.library_type = library_type
-        self.organism = organism
-        self.platform = platform
-        self.samples = []
-        self.paired_end = False
         self.fastq_dir = None
+        self.samples = []
+        self.metadata = AnalysisProjectMetadata()
+        self.metadata_file = os.path.join(self.dirn,"README.info")
         self.populate()
+        # (Re)set metadata
+        if user is not None:
+            self.metadata['user'] = user
+        if PI is not None:
+            self.metadata['PI'] = PI
+        if library_type is not None:
+            self.metadata['library_type'] = library_type
+        if organism is not None:
+            self.metadata['organism'] = organism
+        if platform is not None:
+            self.metadata['platform'] = platform
 
     def populate(self):
         """Populate data structure from directory contents
@@ -317,32 +324,14 @@ class AnalysisProject:
         logging.debug("Listing samples and files:")
         for sample in self.samples:
             logging.debug("* %s: %s" % (sample.name,sample.fastq))
-        # Set paired_end flag for project
-        self.paired_end = True
-        for sample in self.samples:
-            self.paired_end = self.paired_end and sample.paired_end
         # Get data from info file, if present
-        if os.path.isfile(os.path.join(self.dirn,"README.info")):
-            info = TabFile.TabFile(os.path.join(self.dirn,"README.info"))
-            for line in info:
-                try:
-                    key,value = line[0],line[1]
-                    if value == '.':
-                        value = None
-                    if key == 'User':
-                        self.user = value
-                    elif key == 'PI':
-                        self.PI = value
-                    elif key == 'Organism':
-                        self.organism = value
-                    elif key == 'Library type':
-                        self.library_type = value
-                    elif key == 'Platform':
-                        self.platform = value
-                    else:
-                        logging.debug("Unrecognised key in README.info: %s" % key)
-                except IndexError:
-                    logging.warning("Bad line in README.info: %s" % line)
+        if os.path.isfile(self.metadata_file):
+            self.metadata.load(self.metadata_file)
+        # Set paired_end flag for project
+        paired_end = True
+        for sample in self.samples:
+            paired_end = (paired_end and sample.paired_end)
+        self.metadata['paired_end'] = paired_end
 
     def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
@@ -402,24 +391,8 @@ class AnalysisProject:
                 bcf_utils.mklink(fastq,fastq_ln,relative=True)
         # Populate
         self.populate()
-        # Create an info file
-        info = TabFile.TabFile()
-        info.append(data=('User','' if self.user is None else self.user))
-        info.append(data=('PI','' if self.PI is None else self.PI))
-        info.append(data=('Organism','' if self.organism is None else self.organism))
-        info.append(data=('Library type','' if self.library_type is None else self.library_type))
-        info.append(data=('Platform','' if self.platform is None else self.platform))
-        info.append(data=('Paired end','Y' if self.paired_end else 'N'))
-        description = "%d samples (%s)" % (len(self.samples),
-                                           self.prettyPrintSamples(),)
-        multiple_fastqs = False
-        for s in self.samples:
-            if len(s.fastq_subset(read_number=1)) > 1:
-                multiple_fastqs = True
-                description += " (multiple fastqs for some samples)"
-                break
-        info.append(data=('Samples',description))
-        info.write(os.path.join(self.dirn,"README.info"))
+        # Save metadata
+        self.metadata.save(self.metadata_file)
 
     @property
     def qc_dir(self):
@@ -572,6 +545,145 @@ class AnalysisSample:
 
         """
         return str(self.name)
+
+class AnalysisProjectMetadata(AttributeDict):
+    """Class for storing metadata in an analysis project
+
+    Provides a set of metadata items which are loaded from
+    and saved to an external file.
+
+    The data items are:
+
+    user: the user associated with the project
+    PI: the principal investigator associated with the project
+    organism: the organism associated with the project
+    library_type: the library type e.g. 'RNA-seq'
+    platform: the platform name e.g. 'miseq'
+    paired_end: True if the data is paired end, False if not
+
+    Usage examples:
+
+    Create a new 'empty' metadata object:
+    >>> metadata = AnalysisProjectMetadata()
+ 
+    Set attributes:
+    >>> metadata['platform'] = 'miseq'
+    >>> metadata['library_type'] = 'miRNA'
+
+    Retrieve values:
+    >>> print "Platform is %s" % metadata.platform
+
+    Save to file:
+    >>> metadata.save('metadata.tsv')
+
+    Load data from a file:
+    >>> metadata = AnalysisProjectMetadata('metadata.tsv')
+    or
+    >>> metadata = AnalysisProjectMetadata()
+    >>> metadata.load('metadata.tsv')
+
+    The external file storage is intended to be readable by
+    humans so longer names are used to describe the keys; also
+    Python None values are stored as '.', and True and False
+    values are stored as 'Y' and 'N' respectively. These values
+    are automatically converted back to the Python equivalents
+    on reload.
+
+    """
+
+    def __init__(self,filen=None):
+        """Create a new AnalysisProjectMetadata object
+
+        By default an empty metadata object is created
+        i.e. all attributes will have be None.
+
+        If an input file is specified then the attributes
+        will be assigned values according to the key-value
+        pairs in that file.
+
+        Arguments:
+          filen: (optional) name of the tab-delimited file
+            with key-value pairs to load in.
+
+        """
+        AttributeDict.__init__(self)
+        self.__filen = filen
+        # Set up empty metadata attributes
+        self.__attributes = { 'User':'user',
+                              'PI':'PI',
+                              'Organism':'organism',
+                              'Library type':'library_type',
+                              'Platform':'platform',
+                              'Paired end':'paired_end' }
+        for key in self.__attributes:
+            attr = self.__attributes[key]
+            self[attr] = None
+        if self.__filen:
+            # Load data from external file
+            load(self,self.__filen)
+
+    def load(self,filen):
+        """Load key-value pairs from a tab-delimited file
+        
+        Loads the key-value pairs from a previously created
+        tab-delimited file written by the 'save' method.
+
+        Note that this overwrites any existing values
+        already assigned to keys within the metadata object.
+
+        Arguments:
+          filen: name of the tab-delimited file with key-value
+            pairs
+
+        """
+        self.__filen = filen
+        metadata = TabFile.TabFile(filen)
+        for line in metadata:
+            try:
+                key,value = line[0],line[1]
+                if value == '.':
+                    value = None
+                elif value == 'Y' or value == 'True':
+                    value = True
+                elif value == 'N' or value == 'False':
+                    value = False
+                if key in self.__attributes:
+                    attr = self.__attributes[key]
+                    self[attr] = value
+                else:
+                    logging.debug("Unrecognised key in %s: %s" % (filen,key))
+            except IndexError:
+                logging.warning("Bad line in %s: %s" % (filen,line))
+
+    def save(self,filen=None):
+        """Save metadata to tab-delimited file
+
+        Writes key-value paires to a tab-delimited file.
+        The data can be recovered using the 'load' method.
+ 
+        Note that if the specified file already exists then
+        it will be overwritten.
+
+        Arguments:
+          filen: name of the tab-delimited file with key-value
+            pairs; if None then the file specified when the
+            object was instantiated will be used instead.
+
+        """
+        metadata = TabFile.TabFile()
+        for key in self.__attributes:
+            attr = self.__attributes[key]
+            value = self[attr]
+            if value is None:
+                value = '.'
+            elif value is True:
+                value = 'Y'
+            elif value is False:
+                value = 'N'
+            metadata.append(data=(key,value))
+        if filen is not None:
+            self.__filen = filen
+        metadata.write(self.__filen)
 
 #######################################################################
 # Functions
@@ -792,12 +904,12 @@ class TestAnalysisProject(unittest.TestCase):
         project = AnalysisProject('PJB',dirn)
         self.assertEqual(project.name,'PJB')
         self.assertEqual(project.dirn,dirn)
-        self.assertEqual(project.library_type,None)
-        self.assertEqual(project.organism,None)
         self.assertEqual(project.samples,[])
-        self.assertFalse(project.paired_end)
         self.assertEqual(project.fastq_dir,None)
-        self.assertEqual(project.platform,None)
+        self.assertEqual(project.metadata.library_type,None)
+        self.assertEqual(project.metadata.organism,None)
+        self.assertFalse(project.metadata.paired_end)
+        self.assertEqual(project.metadata.platform,None)
 
     def test_create_single_end_analysis_project(self):
         """Check creation of new single-end AnalysisProject directory
@@ -810,7 +922,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
-        self.assertFalse(project.paired_end)
+        self.assertFalse(project.metadata.paired_end)
 
     def test_create_paired_end_analysis_project(self):
         """Check creation of new paired-end AnalysisProject directory
@@ -825,7 +937,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
-        self.assertTrue(project.paired_end)
+        self.assertTrue(project.metadata.paired_end)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
@@ -907,6 +1019,67 @@ class TestAnalysisSample(unittest.TestCase):
                           'PJB1-B_ACAGTG_L002_R2.fastq.gz'])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
+
+class TestAnalysisProjectMetadata(unittest.TestCase):
+    """Tests for the AnalysisProjectMetadata class
+
+    """
+
+    def setUp(self):
+        self.metadata_file = None
+
+    def tearDown(self):
+        if self.metadata_file is not None:
+            os.remove(self.metadata_file)
+
+    def test_create_empty_metadata_object(self):
+        """Check creation of an empty metadata object
+        """
+        metadata = AnalysisProjectMetadata()
+        self.assertEqual(metadata.user,None)
+        self.assertEqual(metadata.PI,None)
+        self.assertEqual(metadata.organism,None)
+        self.assertEqual(metadata.platform,None)
+        self.assertEqual(metadata.library_type,None)
+        self.assertEqual(metadata.paired_end,None)
+
+    def test_set_and_get(self):
+        """Check metadata values can be stored and retrieved
+        """
+        metadata = AnalysisProjectMetadata()
+        metadata['user'] = 'Peter Briggs'
+        metadata['PI'] = 'P.Investigator'
+        metadata['organism'] = 'Mouse'
+        metadata['platform'] = 'miseq'
+        metadata['library_type'] = 'miRNA'
+        metadata['paired_end'] = True
+        self.assertEqual(metadata.user,'Peter Briggs')
+        self.assertEqual(metadata.PI,'P.Investigator')
+        self.assertEqual(metadata.organism,'Mouse')
+        self.assertEqual(metadata.platform,'miseq')
+        self.assertEqual(metadata.library_type,'miRNA')
+        self.assertEqual(metadata.paired_end,True)
+
+    def test_save_and_load(self):
+        """Check metadata can be saved to file and reloaded
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        metadata = AnalysisProjectMetadata()
+        metadata['user'] = 'Peter Briggs'
+        metadata['PI'] = 'P.Investigator'
+        metadata['organism'] = 'Mouse'
+        metadata['platform'] = 'miseq'
+        metadata['library_type'] = 'miRNA'
+        metadata['paired_end'] = True
+        metadata.save(self.metadata_file)
+        metadata_2 = AnalysisProjectMetadata()
+        metadata_2.load(self.metadata_file)
+        self.assertEqual(metadata_2.user,'Peter Briggs')
+        self.assertEqual(metadata_2.PI,'P.Investigator')
+        self.assertEqual(metadata_2.organism,'Mouse')
+        self.assertEqual(metadata_2.platform,'miseq')
+        self.assertEqual(metadata_2.library_type,'miRNA')
+        self.assertEqual(metadata_2.paired_end,True)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
