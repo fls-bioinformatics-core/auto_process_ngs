@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 #######################################################################
 # Imports
@@ -353,12 +353,16 @@ class AutoProcess:
                                                         self.params.project_metadata),
                                            first_line_is_header=True)
         for line in project_metadata:
+            # Acquire the run name
+            run_name = os.path.basename(self.params.data_dir)
             # Look up project data
             project_name = line['Project']
             user = line['User']
             PI = line['PI']
             organism = line['Organism']
             library_type = line['Library']
+            comments = line['Comments']
+            # Create the project
             project = auto_process_utils.AnalysisProject(project_name,
                                                          os.path.join(self.analysis_dir,
                                                                       project_name),
@@ -366,6 +370,8 @@ class AutoProcess:
                                                          PI=PI,
                                                          organism=organism,
                                                          library_type=library_type,
+                                                         run=run_name,
+                                                         comments=comments,
                                                          platform=self.params.platform)
             project.create_directory(illumina_data.get_project(project_name))
 
@@ -488,18 +494,21 @@ class ProjectMetadataFile(TabFile.TabFile):
                                                'User',
                                                'Library',
                                                'Organism',
-                                               'PI',),
+                                               'PI',
+                                               'Comments'),
                                  first_line_is_header=True)
 
     def add_project(self,project_name,sample_names,user=None,
-                    library_type=None,organism=None,PI=None):
+                    library_type=None,organism=None,PI=None,
+                    comments=None):
         # Add project info to the metadata file
         self.append(data=(project_name,
                           bcf_utils.pretty_print_names(sample_names),
                           '.' if user is None else user,
                           '.' if library_type is None else library_type,
                           '.' if organism is None else organism,
-                          '.' if PI is None else PI))
+                          '.' if PI is None else PI,
+                          '.' if comments is None else comments))
 
     def save(self,filen=None):
         # Save the data back to file
