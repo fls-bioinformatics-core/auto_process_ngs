@@ -258,7 +258,7 @@ class AnalysisProject:
 
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
-                 organism=None,platform=None):
+                 organism=None,run=None,comments=None,platform=None):
         """Create a new AnalysisProject instance
 
         Arguments:
@@ -271,10 +271,11 @@ class AnalysisProject:
           organism: optional, specify organism e.g. 'Human', 'Mouse'
             etc
           platform: optional, specify sequencing platform e.g 'miseq'
+          run: optional, name of the run
+          comments: optional, free text comments associated with the
+            run
 
         """
-        # name = project name
-        # dirn = directory path
         self.name = name
         self.dirn = os.path.abspath(dirn)
         self.fastq_dir = None
@@ -283,6 +284,8 @@ class AnalysisProject:
         self.metadata_file = os.path.join(self.dirn,"README.info")
         self.populate()
         # (Re)set metadata
+        if run is not None:
+            self.metadata['run'] = run
         if user is not None:
             self.metadata['user'] = user
         if PI is not None:
@@ -293,6 +296,8 @@ class AnalysisProject:
             self.metadata['organism'] = organism
         if platform is not None:
             self.metadata['platform'] = platform
+        if comments is not None:
+            self.metadata['comments'] = comments
 
     def populate(self):
         """Populate data structure from directory contents
@@ -549,37 +554,35 @@ class AnalysisSample:
 class MetadataDict(AttributeDict):
     """Class for storing metadata in an analysis project
 
-    Provides a set of metadata items which are loaded from
-    and saved to an external file.
+    Provides storage for arbitrary data items in the form of
+    key-value pairs, which can be saved to and loaded from
+    an external file.
 
-    The data items are:
+    The data items are defined on instantiation via a dictionary
+    supplied to the 'attributes' argument. For example:
 
-    user: the user associated with the project
-    PI: the principal investigator associated with the project
-    organism: the organism associated with the project
-    library_type: the library type e.g. 'RNA-seq'
-    platform: the platform name e.g. 'miseq'
-    paired_end: True if the data is paired end, False if not
-
-    Usage examples:
-
-    Create a new 'empty' metadata object:
-    >>> metadata = AnalysisProjectMetadata()
+    Create a new metadata object:
+    >>> metadata = MetadataDict(attributes={'salutation':'Salutation',
+    ...                                     'valediction': 'Valediction'})
  
+    The dictionary keys correspond to the keys in the MetadataDict
+    object; the corresponding values are the keys that are used
+    when saving and loading the data to and from a file.
+
     Set attributes:
-    >>> metadata['platform'] = 'miseq'
-    >>> metadata['library_type'] = 'miRNA'
+    >>> metadata['salutation'] = 'hello'
+    >>> metadata['valediction'] = 'goodbye'
 
     Retrieve values:
-    >>> print "Platform is %s" % metadata.platform
+    >>> print "Salutation is %s" % metadata.salutation
 
     Save to file:
     >>> metadata.save('metadata.tsv')
 
     Load data from a file:
-    >>> metadata = AnalysisProjectMetadata('metadata.tsv')
+    >>> metadata = MetadataDict('metadata.tsv')
     or
-    >>> metadata = AnalysisProjectMetadata()
+    >>> metadata = MetadataDict()
     >>> metadata.load('metadata.tsv')
 
     The external file storage is intended to be readable by
@@ -746,12 +749,15 @@ class AnalysisProjectMetadata(MetadataDict):
 
     The data items are:
 
+    run: the name of the sequencing run
     user: the user associated with the project
     PI: the principal investigator associated with the project
     organism: the organism associated with the project
     library_type: the library type e.g. 'RNA-seq'
     platform: the platform name e.g. 'miseq'
     paired_end: True if the data is paired end, False if not
+    samples: textual description of the samples in the project
+    comments: free-text comments
 
     """
     def __init__(self,filen=None):
@@ -764,12 +770,15 @@ class AnalysisProjectMetadata(MetadataDict):
         """
         MetadataDict.__init__(self,
                               attributes = {
+                                  'run':'Run',
+                                  'platform':'Platform',
                                   'user':'User',
                                   'PI':'PI',
                                   'organism':'Organism',
                                   'library_type':'Library_type',
-                                  'platform':'Platform',
-                                  'paired_end':'Paired_end'
+                                  'paired_end':'Paired_end',
+                                  'samples':'Samples',
+                                  'comments':'Comments',
                               },
                               filen=filen)
 
@@ -1202,12 +1211,15 @@ class TestAnalysisProjectMetadata(unittest.TestCase):
         """Check creation of an empty AnalysisProjectMetadata object
         """
         metadata = AnalysisProjectMetadata()
+        self.assertEqual(metadata.run,None)
+        self.assertEqual(metadata.platform,None)
         self.assertEqual(metadata.user,None)
         self.assertEqual(metadata.PI,None)
         self.assertEqual(metadata.organism,None)
-        self.assertEqual(metadata.platform,None)
         self.assertEqual(metadata.library_type,None)
         self.assertEqual(metadata.paired_end,None)
+        self.assertEqual(metadata.samples,None)
+        self.assertEqual(metadata.comments,None)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
