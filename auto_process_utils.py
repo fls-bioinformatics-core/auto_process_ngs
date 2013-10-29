@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 """auto_process_utils
 
@@ -594,7 +594,7 @@ class MetadataDict(AttributeDict):
 
     """
 
-    def __init__(self,attributes=dict(),filen=None):
+    def __init__(self,attributes=dict(),order=None,filen=None):
         """Create a new MetadataDict object
 
         By default an empty metadata object is created
@@ -605,7 +605,7 @@ class MetadataDict(AttributeDict):
         pairs in that file.
 
         Arguments:
-          attributes: dictionary with 
+          attributes: dictionary defining metadata items
           filen: (optional) name of the tab-delimited file
             with key-value pairs to load in.
 
@@ -619,6 +619,26 @@ class MetadataDict(AttributeDict):
         if self.__filen:
             # Load data from external file
             load(self,self.__filen)
+        # Set up order of keys for output
+        if order is None:
+            self.__key_order = self.__attributes.keys()
+            self.__key_order.sort()
+        else:
+            # Use supplied key order
+            self.__key_order = []
+            for key in order:
+                if key in self.__attributes:
+                    self.__key_order.append(key)
+                else:
+                    raise KeyError,"Key '%s' not defined in attributes"
+            # Append keys not explicitly listed in the order
+            extra_keys = []
+            for key in self.__attributes:
+                if key not in self.__key_order:
+                    extra_keys.append(key)
+            if extra_keys:
+                extra_keys.sort()
+                self.__key_order.extend(extra_keys)
 
     def __setitem__(self,key,value):
         if key in self.__attributes:
@@ -681,7 +701,7 @@ class MetadataDict(AttributeDict):
 
         """
         metadata = TabFile.TabFile()
-        for key in self.__attributes:
+        for key in self.__key_order:
             # Retrieve value and convert to appropriate
             # format for persistent storage
             value = self[key]
@@ -775,11 +795,22 @@ class AnalysisProjectMetadata(MetadataDict):
                                   'user':'User',
                                   'PI':'PI',
                                   'organism':'Organism',
-                                  'library_type':'Library_type',
+                                  'library_type':'Library type',
                                   'paired_end':'Paired_end',
                                   'samples':'Samples',
                                   'comments':'Comments',
                               },
+                              order = (
+                                  'run',
+                                  'platform',
+                                  'user',
+                                  'PI',
+                                  'organism',
+                                  'library_type',
+                                  'paired_end',
+                                  'samples',
+                                  'comments',
+                              ),
                               filen=filen)
 
 #######################################################################
@@ -1182,6 +1213,37 @@ class TestMetadataDict(unittest.TestCase):
             self.fail('AttributeError not raised')
         except AttributeError,ex:
             pass
+
+    def test_specify_key_order(self):
+        """Check that specified key ordering is respected
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        expected_keys = ('Salutation',
+                         'Chit chat',
+                         'Valediction',)
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'},
+                                order=('salutation','chat','valediction'))
+        metadata.save(self.metadata_file)
+        fp = open(self.metadata_file,'rU')
+        for line,expected_key in zip(fp,expected_keys):
+            self.assertEqual(line.split('\t')[0],expected_key)
+
+    def test_implicit_key_order(self):
+        """Check that keys are implicitly ordered on output
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'})
+        expected_keys = ('Chit chat',
+                         'Salutation',
+                         'Valediction',)
+        metadata.save(self.metadata_file)
+        fp = open(self.metadata_file,'rU')
+        for line,expected_key in zip(fp,expected_keys):
+            self.assertEqual(line.split('\t')[0],expected_key)
 
 class TestAnalysisDirMetadata(unittest.TestCase):
     """Tests for the AnalysisDirMetadata class
