@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 #######################################################################
 # Imports
@@ -177,7 +177,8 @@ class AutoProcess:
             custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
             sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
                                                     custom_sample_sheet)
-            os.remove(tmp_sample_sheet)
+            print "Keeping copy of original sample sheet"
+            os.rename(tmp_sample_sheet,os.path.join(self.analysis_dir,'SampleSheet.orig.csv'))
         sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
         print "Sample sheet '%s'" % custom_sample_sheet
         # Bases mask
