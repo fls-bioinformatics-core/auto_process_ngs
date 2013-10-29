@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Import modules that this module depends on
@@ -203,7 +203,8 @@ class bcl2fastq:
     def configureBclToFastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
                             mismatches=None,
                             bases_mask=None,
-                            force=False):
+                            force=False,
+                            ignore_missing_control=False):
         """Generate Command instance for 'configureBclToFastq.pl' script
 
         Creates a Command instance to run the CASAVA 'configureBclToFastq.pl'
@@ -226,7 +227,9 @@ class bcl2fastq:
           bases_mask: optional, specify string indicating how to treat
             each cycle within each read e.g. 'y101,I6,y101'
           force: optional, if True then force overwrite of an existing
-          output directory (default is False).
+            output directory (default is False)
+          ignore_missing_control: optional, if True then interpret missing
+            control files as not-set control bits (default is False)
 
         Returns:
           Command object.
@@ -247,6 +250,8 @@ class bcl2fastq:
                 configure_cmd.add_args('--mismatches',get_nmismatches(bases_mask))
         if force:
             configure_cmd.add_args('--force')
+        if ignore_missing_control:
+            configure_cmd.add_args('--ignore-missing-control')
         return configure_cmd
 
 class general:
