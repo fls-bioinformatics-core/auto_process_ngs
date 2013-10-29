@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 #######################################################################
 # Imports
@@ -290,6 +290,7 @@ class AutoProcess:
         bcl2fastq = applications.Command('bclToFastq.py',
                                          '--use-bases-mask',bases_mask,
                                          '--nmismatches',nmismatches,
+                                         '--ignore-missing-control',
                                          primary_data,
                                          bcl2fastq_dir,
                                          sample_sheet)
