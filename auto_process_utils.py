@@ -396,6 +396,22 @@ class AnalysisProject:
                 bcf_utils.mklink(fastq,fastq_ln,relative=True)
         # Populate
         self.populate()
+        # Update metadata information summarising the samples
+        n_samples = len(self.samples)
+        if n_samples == 0:
+            sample_description = "No samples"
+        else:
+            sample_description = "%s %s" % (n_samples,
+                                            'sample' if n_samples == 1 else 'samples')
+            sample_description += " (%s" % \
+                                  bcf_utils.pretty_print_names(
+                                      [s.name for s in self.samples])
+            multiple_fastqs = reduce(lambda x,y: x and y,
+                                     [len(s.fastq) > 1 for s in self.samples])
+            if multiple_fastqs:
+                sample_description += ", multiple fastqs per sample"
+            sample_description += ")"
+        self.metadata['samples'] = sample_description
         # Save metadata
         self.metadata.save(self.metadata_file)
 
