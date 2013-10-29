@@ -20,7 +20,7 @@ configureBclToFastq.pl pipeline.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #######################################################################
 # Import modules that this module depends on
@@ -81,7 +81,8 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
                      mismatches=None,
                      bases_mask=None,
                      nprocessors=None,
-                     force=False):
+                     force=False,
+                     ignore_missing_control=False):
     """Wrapper for running the CASAVA bcl to fastq pipeline
 
     Runs the CASAVA bcl to fastq pipeline, specifically:
@@ -110,6 +111,8 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         'make' step
       force: optional, if True then force overwrite of an existing
         output directory (default is False).
+      ignore_missing_control: optional, if True then interpret missing
+        control files as not-set control bits (default is False)
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -118,12 +121,15 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
 
     """
     # Set up and run configureBclToFastq
-    configure_cmd = applications.bcl2fastq.configureBclToFastq(basecalls_dir,
-                                                               sample_sheet,
-                                                               output_dir=output_dir,
-                                                               mismatches=mismatches,
-                                                               bases_mask=bases_mask,
-                                                               force=force)
+    configure_cmd = applications.bcl2fastq.configureBclToFastq(
+        basecalls_dir,
+        sample_sheet,
+        output_dir=output_dir,
+        mismatches=mismatches,
+        bases_mask=bases_mask,
+        force=force,
+        ignore_missing_control=ignore_missing_control
+    )
     print "Running command: %s" % configure_cmd
     returncode = configure_cmd.run_subprocess()
     # Check returncode
@@ -178,6 +184,11 @@ if __name__ == '__main__':
                  "This is passed to the -j option of the 'make' step after running "
                  "configureBcltoFastq.pl (see the CASAVA user guide for details of "
                  "how -j works)")
+    p.add_option('--ignore-missing-control',action="store_true",
+                 dest="ignore_missing_control",default=False,
+                 help="interpret missing control files as not-set control bits"
+                 "(see the CASAVA user guide for details of how --ignore-missing-control "
+                 "works)")
         
     options,args = p.parse_args()
     if not (2 <= len(args) <=3):
@@ -210,6 +221,7 @@ if __name__ == '__main__':
     print "Nmismatches           : %s" % options.nmismatches
     print "Bases mask            : %s" % bases_mask
     print "Nprocessors           : %s" % options.nprocessors
+    print "Ignore missing control: %s" % options.ignore_missing_control
     # Run bclToFastq conversion
     status = run_bcl_to_fastq(illumina_run.basecalls_dir,
                               sample_sheet,
@@ -217,7 +229,8 @@ if __name__ == '__main__':
                               mismatches=options.nmismatches,
                               bases_mask=bases_mask,
                               force=True,
-                              nprocessors=None)
+                              nprocessors=options.nprocessors,
+                              ignore_missing_control=options.ignore_missing_control)
     print "bclToFastq returncode: %s" % status
     if status != 0:
         logging.error("bclToFastq failure")
