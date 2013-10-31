@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 """auto_process_utils
 
@@ -35,57 +35,6 @@ import bcf_utils
 #######################################################################
 # Classes
 #######################################################################
-
-class AttributeDict:
-    """Dictionary-like object with items accessible as attributes
-
-    AttributeDict provides a dictionary-like object where the value
-    of items can also be accessed as attributes of the object.
-
-    For example:
-
-    >>> d = AttributeDict()
-    >>> d['salutation'] = "hello"
-    >>> d.salutation
-    ... "hello"
-
-    Attributes can only be assigned by using dictionary item assignment
-    notation i.e. d['key'] = value. d.key = value doesn't work.
-
-    If the attribute doesn't match a stored item then an
-    AttributeError exception is raised.
-
-    len(d) returns the number of stored items.
-
-    The AttributeDict behaves like a dictionary for iterations, for
-    example:
-
-    >>> for attr in d:
-    >>>    print "%s = %s" % (attr,d[attr])
-
-    """
-    # Dictionary-like object that allows
-    # elements to be accessed as attributes
-    def __init__(self,**args):
-        self.__dict = dict(args)
-
-    def __getattr__(self,attr):
-        try:
-            return self.__dict[attr]
-        except KeyError:
-            raise AttributeError, "No attribute '%s'" % attr
-
-    def __getitem__(self,key):
-        return self.__dict[key]
-
-    def __setitem__(self,key,value):
-        self.__dict[key] = value
-
-    def __iter__(self):
-        return iter(self.__dict)
-
-    def __len__(self):
-        return len(self.__dict)
 
 class AnalysisFastq:
     """Class for extracting information about Fastq files
@@ -567,7 +516,7 @@ class AnalysisSample:
         """
         return str(self.name)
 
-class MetadataDict(AttributeDict):
+class MetadataDict(bcf_utils.AttributeDictionary):
     """Class for storing metadata in an analysis project
 
     Provides storage for arbitrary data items in the form of
@@ -626,7 +575,7 @@ class MetadataDict(AttributeDict):
             with key-value pairs to load in.
 
         """
-        AttributeDict.__init__(self)
+        bcf_utils.AttributeDictionary.__init__(self)
         self.__filen = filen
         # Set up empty metadata attributes
         self.__attributes = attributes
@@ -658,7 +607,7 @@ class MetadataDict(AttributeDict):
 
     def __setitem__(self,key,value):
         if key in self.__attributes:
-            AttributeDict.__setitem__(self,key,value)
+            bcf_utils.AttributeDictionary.__setitem__(self,key,value)
         else:
             raise AttributeError,"Key '%s' not defined" % key
 
@@ -858,51 +807,6 @@ def bases_mask_is_paired_end(bases_mask):
 import unittest
 import tempfile
 import shutil
-
-class TestAttributeDict(unittest.TestCase):
-    """Tests for the AttributeDict class
-
-    """
-
-    def test_set_get_items(self):
-        """Test 'set' and 'get' using dictionary notation
-        """
-        d = AttributeDict()
-        self.assertEqual(len(d),0)
-        d['salutation'] = 'hello'
-        self.assertEqual(len(d),1)
-        self.assertEqual(d["salutation"],"hello")
-
-    def test_get_attrs(self):
-        """Test 'get' using attribute notation
-        """
-        d = AttributeDict()
-        self.assertEqual(len(d),0)
-        d['salutation'] = 'hello'
-        self.assertEqual(len(d),1)
-        self.assertEqual(d.salutation,"hello")
-
-    def test_init(self):
-        """Test initialising like a standard dictionary
-        """
-        d = AttributeDict(salutation='hello',valediction='goodbye')
-        self.assertEqual(len(d),2)
-        self.assertEqual(d.salutation,"hello")
-        self.assertEqual(d.valediction,"goodbye")
-
-    def test_iter(self):
-        """Test iteration over items
-        """
-        d = AttributeDict()
-        self.assertEqual(len(d),0)
-        d['salutation'] = 'hello'
-        d['valediction'] = 'goodbye'
-        self.assertEqual(len(d),2)
-        self.assertEqual(d.salutation,"hello")
-        self.assertEqual(d.valediction,"goodbye")
-        for key in d:
-            self.assertTrue(key in ('salutation','valediction'),
-                            "%s not in list" % key)
 
 class TestAnalysisFastq(unittest.TestCase):
     """Tests for the AnalysisFastq class
