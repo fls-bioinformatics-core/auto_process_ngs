@@ -1,22 +1,22 @@
 # Settings for auto_process module
 #
 import JobRunner
-from auto_process_utils import AttributeDict
+from bcf_utils import AttributeDictionary
 #
 # Define runners for specific jobs
-runners = AttributeDict(
+runners = AttributeDictionary(
     bcl2fastq=JobRunner.SimpleJobRunner(),
     qc=JobRunner.SimpleJobRunner(),
 )
 #
 # Information for archiving analyses
-archive = AttributeDict(
+archive = AttributeDictionary(
     dirn=None,
     log=None,
 )
 #
 # Information for uploading QC reports
-qc_web_server = AttributeDict(
+qc_web_server = AttributeDictionary(
     user=None,
     server=None,
     webdir=None,
