@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 #######################################################################
 # Imports
@@ -217,9 +217,49 @@ class AutoProcess:
         self.params['bases_mask'] = bases_mask
         self.params['project_metadata'] = project_metadata_file
 
+    def setup_from_basespace(self,analysis_dir,basespace_dir='BaseSpace'):
+        # Do setup for an existing directory containing fastq files
+        # obtained from BaseSpace
+        #
+        # Assumes that the files are in a subdirectory of the analysis
+        # directory specified by the 'basespace_dir' argument, and
+        # that within that they are arranged in the structure
+        # 'Project_<name>/Sample_<name>/<fastq>'
+        self.analysis_dir = os.path.abspath(analysis_dir)
+        # Create directory structure
+        self.create_directory(self.analysis_dir)
+        # Get information
+        basespace = IlluminaData.IlluminaData(self.analysis_dir,
+                                              unaligned_dir=basespace_dir)
+        print "Identifying platform from data directory name"
+        platform = platforms.get_sequencer_platform(analysis_dir)
+        # Make a 'projects.info' metadata file
+        project_metadata = ProjectMetadataFile()
+        project_metadata_file = 'projects.info'
+        print "Project\tSample\tFastq"
+        for project in basespace.projects:
+            project_name = project.name
+            sample_names = []
+            for sample in project.samples:
+                sample_name = sample.name
+                for fastq in sample.fastq:
+                    print "%s\t%s\t%s" % (project_name,sample_name,fastq)
+                sample_names.append(sample_name)
+            project_metadata.add_project(project_name,sample_names)
+        project_metadata.save(os.path.join(self.analysis_dir,project_metadata_file))
+        print "Project metadata in %s" % project_metadata_file
+        # Store the parameters
+        self.params['analysis_dir'] = self.analysis_dir
+        self.params['unaligned_dir'] = basespace_dir
+        self.params['platform'] = platform
+        self.params['project_metadata'] = project_metadata_file
+        # Generate statistics
+        self.generate_stats()
+        print "Statistics in %s" % self.params.stats_file
+
     def get_analysis_projects(self):
         # Return the analysis projects in a list
-        project_metadata = ProjectMetadataFile(os.path.join(analysis_dir,
+        project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
                                                             self.params.project_metadata))
         projects = []
         for line in project_metadata:
@@ -315,10 +355,18 @@ class AutoProcess:
         # Remove primary data
         self.remove_primary_data()
         # Generate statistics
-        self.params['stats_file'] = 'statistics.info'
-        stats = illumina_data_statistics(illumina_data)
-        stats.write(os.path.join(analysis_dir,self.params.stats_file),
+        self.generate_stats()
+        print "Statistics in %s" % self.params.stats_file
+
+    def generate_stats(self,stats_file='statistics.info'):
+        # Generate statistics for initial fastq files from bcl2fastq
+        self.params['stats_file'] = stats_file
+        stats = illumina_data_statistics(
+            IlluminaData.IlluminaData(self.params.analysis_dir,
+                                      unaligned_dir=self.params.unaligned_dir))
+        stats.write(os.path.join(analysis_dir,stats_file),
                     include_header=True)
+        self.params['stats_file'] = stats_file
         print "Statistics in %s" % self.params.stats_file
 
     def remove_primary_data(self):
@@ -356,7 +404,10 @@ class AutoProcess:
                                            first_line_is_header=True)
         for line in project_metadata:
             # Acquire the run name
-            run_name = os.path.basename(self.params.data_dir)
+            if self.params.data_dir is not None:
+                run_name = os.path.basename(self.params.data_dir)
+            else:
+                run_name = os.path.basename(self.params.analysis_dir)
             # Look up project data
             project_name = line['Project']
             user = line['User']
@@ -536,6 +587,7 @@ def illumina_data_statistics(illumina_data):
     for project in illumina_data.projects:
         for sample in project.samples:
             for fastq in sample.fastq:
+                print "* %s" % fastq
                 fq = os.path.join(sample.dirn,fastq)
                 nreads = FASTQFile.nreads(fq)
                 fsize = os.path.getsize(fq)
@@ -595,55 +647,100 @@ def list_available_commands(cmds):
             print "\t%s" % cmd
         print ""
 
+def set_debug(flag):
+    # Turn on debug output
+    if flag:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+# Command line parsers
+
+def setup_parser():
+    p = optparse.OptionParser(usage="%prog setup [OPTIONS] DATA_DIR",
+                              version="%prog "+__version__,
+                              description="Automatically process Illumina sequence from "
+                              "DATA_DIR.")
+    p.add_option('--basespace_dir',action='store',dest='basespace_dir',default=None,
+                 help="Take fastq.gz files from BASESPACE_DIR subdirectory of "
+                 "DATA_DIR.")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
+def make_fastqs_parser():
+    p = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Automatically process Illumina sequence from "
+                              "ANALYSIS_DIR.")
+    p.add_option('--only-fetch-primary-data',action='store_true',
+                 dest='only_fetch_primary_data',default=False,
+                 help="Only fetch the primary data, don't run bcl2fastq conversion")
+    p.add_option('--keep-primary-data',action='store_true',
+                 dest='keep_primary_data',default=False,
+                 help="Don't delete the primary data at the end of processing")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
+def generic_parser():
+    p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Automatically process Illumina sequence from "
+                              "ANALYSIS_DIR.")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
 #######################################################################
 # Main program
 #######################################################################
 
 if __name__ == "__main__":
 
-    # List of available commands
-    cmds = ['setup',
-            'make_fastqs',
-            'setup_analysis_dirs',
-            'run_qc',
-            'archive',
-            'publish_qc']
-
-    # Set up option parser
-    p = optparse.OptionParser(usage="%prog CMD [OPTIONS] [ARGS]",
-                              version="%prog "+__version__,
-                              description="Automatically process Illumina sequence data")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
-    if len(sys.argv) < 2:
-        list_available_commands(cmds)
-        p.error("Need to supply a command")
-        sys.exit()
+    # Available commands and corresponding
+    cmd_parsers = bcf_utils.OrderedDictionary()
+    cmd_parsers['setup'] = setup_parser()
+    cmd_parsers['make_fastqs'] = make_fastqs_parser()
+    cmd_parsers['setup_analysis_dirs'] = generic_parser()
+    cmd_parsers['run_qc'] = generic_parser()
+    cmd_parsers['archive'] = generic_parser()
+    cmd_parsers['publish_qc'] = generic_parser()
 
     # Process command line
-    cmd = sys.argv[1]
-    if cmd == "help":
-        list_available_commands(cmds)
+    try:
+        cmd = sys.argv[1]
+    except IndexError:
+        cmd = "help"
+    if cmd == "help" or cmd == "--help" or cmd == "-h":
+        list_available_commands(cmd_parsers)
         sys.exit(0)
-    if cmd not in cmds:
-        print "Unrecognised command '%s'" % cmd
-        list_available_commands(cmds)
-        p.error("Unrecognised command '%s'" % cmd)
-    options,args = p.parse_args(sys.argv[2:])
-
-    # Debug output?
-    if options.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+    else:
+        err = None
+        if cmd not in cmd_parsers:
+            err = "Unrecognised command '%s'" % cmd
+        elif len(sys.argv) < 2:
+            err = "Need to supply a command"
+        if err is not None:
+            print err
+            list_available_commands(cmd_parsers)
+            sys.stderr.writeline(err)
+            sys.exit(1)
+    options,args = cmd_parsers[cmd].parse_args(sys.argv[2:])
 
     # Report name and version
     print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
 
+    # Turn on debugging?
+    set_debug(options.debug)
+
     # Setup the processing object and run the requested command
     if cmd == 'setup':
         if len(args) != 1:
-            p.error("Need to supply a source data location")
+            p.error("Need to supply a data source location")
         d = AutoProcess()
-        d.setup(args[0])
+        if options.basespace_dir is None:
+            d.setup(args[0])
+        else:
+            d.setup_from_basespace(args[0])
     else:
         # For other options check if an analysis
         # directory was specified
