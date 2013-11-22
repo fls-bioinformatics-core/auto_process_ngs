@@ -762,7 +762,8 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            d.bcl_to_fastq(keep_primary_data=options.keep_primary_data)
+            d.bcl_to_fastq(keep_primary_data=options.keep_primary_data,
+                           ignore_missing_bcl=options.ignore_missing_bcl)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
