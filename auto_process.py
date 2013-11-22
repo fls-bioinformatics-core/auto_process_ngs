@@ -364,7 +364,7 @@ class AutoProcess:
         stats = illumina_data_statistics(
             IlluminaData.IlluminaData(self.params.analysis_dir,
                                       unaligned_dir=self.params.unaligned_dir))
-        stats.write(os.path.join(analysis_dir,stats_file),
+        stats.write(os.path.join(self.params.analysis_dir,stats_file),
                     include_header=True)
         self.params['stats_file'] = stats_file
         print "Statistics in %s" % self.params.stats_file
