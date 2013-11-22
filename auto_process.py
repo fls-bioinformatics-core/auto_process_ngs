@@ -297,8 +297,14 @@ class AutoProcess:
             logging.error("Failed to acquire primary data (status %s)" % status)
         return status
         
-    def bcl_to_fastq(self):
+    def bcl_to_fastq(self,ignore_missing_bcl=False,keep_primary_data=False):
         # Convert bcl files to fastq
+        #
+        # Arguments:
+        # ignore_missing_bcl: if True the run bcl2fastq with --ignore-missing-bcl
+        #                     option
+        # keep_primary_data:  if True then don't remove primary data at
+        #                     the end of bcl2fastq conversion
         #
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -319,11 +325,12 @@ class AutoProcess:
         bases_mask = self.params.bases_mask
         nmismatches = bclToFastq.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
-        print "Platform  : %s" % illumina_run.platform
-        print "Bcl format: %s" % illumina_run.bcl_extension
-        print "Sample sheet: %s" % sample_sheet
-        print "Bases mask  : %s" % bases_mask
-        print "Nmismatches : %d (determined from bases mask)" % nmismatches
+        print "Platform          : %s" % illumina_run.platform
+        print "Bcl format        : %s" % illumina_run.bcl_extension
+        print "Sample sheet      : %s" % sample_sheet
+        print "Bases mask        : %s" % bases_mask
+        print "Nmismatches       : %d (determined from bases mask)" % nmismatches
+        print "Ignore missing bcl: %s" % ignore_missing_bcl
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
         runner.log_dir(self.log_dir)
@@ -331,10 +338,12 @@ class AutoProcess:
         bcl2fastq = applications.Command('bclToFastq.py',
                                          '--use-bases-mask',bases_mask,
                                          '--nmismatches',nmismatches,
-                                         '--ignore-missing-control',
-                                         primary_data,
-                                         bcl2fastq_dir,
-                                         sample_sheet)
+                                         '--ignore-missing-control')
+        if ignore_missing_bcl:
+            bcl2fastq.add_args('--ignore-missing-bcl')
+        bcl2fastq.add_args(primary_data,
+                           bcl2fastq_dir,
+                           sample_sheet)
         print "Running %s" % bcl2fastq
         bcl2fastq_job = Pipeline.Job(runner,
                                      'bclToFastq',
@@ -353,7 +362,8 @@ class AutoProcess:
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             raise Exception, "Failed to verify bcl to fastq outputs against sample sheet"
         # Remove primary data
-        self.remove_primary_data()
+        if not keep_primary_data:
+            self.remove_primary_data()
         # Generate statistics
         self.generate_stats()
         print "Statistics in %s" % self.params.stats_file
@@ -671,9 +681,10 @@ def make_fastqs_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
-    p.add_option('--only-fetch-primary-data',action='store_true',
-                 dest='only_fetch_primary_data',default=False,
-                 help="Only fetch the primary data, don't run bcl2fastq conversion")
+    p.add_option('--ignore-missing-bcl',action='store_true',
+                 dest='ignore_missing_bcl',default=False,
+                 help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
+                 "missing bcl files as no call)")
     p.add_option('--keep-primary-data',action='store_true',
                  dest='keep_primary_data',default=False,
                  help="Don't delete the primary data at the end of processing")
@@ -722,7 +733,7 @@ if __name__ == "__main__":
         if err is not None:
             print err
             list_available_commands(cmd_parsers)
-            sys.stderr.writeline(err)
+            sys.stderr.write("%s\n" % err)
             sys.exit(1)
     options,args = cmd_parsers[cmd].parse_args(sys.argv[2:])
 
@@ -751,7 +762,7 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            d.bcl_to_fastq()
+            d.bcl_to_fastq(keep_primary_data=options.keep_primary_data)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
