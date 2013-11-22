@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 #######################################################################
 # Import modules that this module depends on
@@ -204,6 +204,7 @@ class bcl2fastq:
                             mismatches=None,
                             bases_mask=None,
                             force=False,
+                            ignore_missing_bcl=False,
                             ignore_missing_control=False):
         """Generate Command instance for 'configureBclToFastq.pl' script
 
@@ -228,6 +229,8 @@ class bcl2fastq:
             each cycle within each read e.g. 'y101,I6,y101'
           force: optional, if True then force overwrite of an existing
             output directory (default is False)
+          ignore_missing_bcl: optional, if True then interpret missing bcl
+            files as no call (default is False)
           ignore_missing_control: optional, if True then interpret missing
             control files as not-set control bits (default is False)
 
@@ -250,6 +253,8 @@ class bcl2fastq:
                 configure_cmd.add_args('--mismatches',get_nmismatches(bases_mask))
         if force:
             configure_cmd.add_args('--force')
+        if ignore_missing_bcl:
+            configure_cmd.add_args('--ignore-missing-bcl')
         if ignore_missing_control:
             configure_cmd.add_args('--ignore-missing-control')
         return configure_cmd
@@ -440,6 +445,16 @@ class TestBcl2Fastq(unittest.TestCase):
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv',
                           '--fastq-cluster-count','-1'])
+        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
+                                                       'SampleSheet.csv',
+                                                       output_dir='run/bcl2fastq',
+                                                       ignore_missing_bcl=True).command_line,
+                         ['configureBclToFastq.pl',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--fastq-cluster-count','-1',
+                          '--ignore-missing-bcl'])
 
 class TestGeneral(unittest.TestCase):
 

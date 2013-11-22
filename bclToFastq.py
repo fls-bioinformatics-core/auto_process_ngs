@@ -20,7 +20,7 @@ configureBclToFastq.pl pipeline.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Import modules that this module depends on
@@ -111,6 +111,8 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         'make' step
       force: optional, if True then force overwrite of an existing
         output directory (default is False).
+      ignore_missing_bcl: optional, if True then interpret missing bcl
+        files as no call (default is False)
       ignore_missing_control: optional, if True then interpret missing
         control files as not-set control bits (default is False)
 
@@ -128,6 +130,7 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         mismatches=mismatches,
         bases_mask=bases_mask,
         force=force,
+        ignore_missing_bcl=ignore_missing_bcl,
         ignore_missing_control=ignore_missing_control
     )
     print "Running command: %s" % configure_cmd
@@ -186,8 +189,13 @@ if __name__ == '__main__':
                  "how -j works)")
     p.add_option('--ignore-missing-control',action="store_true",
                  dest="ignore_missing_control",default=False,
-                 help="interpret missing control files as not-set control bits"
+                 help="interpret missing control files as not-set control bits "
                  "(see the CASAVA user guide for details of how --ignore-missing-control "
+                 "works)")
+    p.add_option('--ignore-missing-bcl',action="store_true",
+                 dest="ignore_missing_bcl",default=False,
+                 help="interpret missing bcl files as no call "
+                 "(see the CASAVA user guide for details of how --ignore-missing-bcl "
                  "works)")
         
     options,args = p.parse_args()
@@ -221,6 +229,7 @@ if __name__ == '__main__':
     print "Nmismatches           : %s" % options.nmismatches
     print "Bases mask            : %s" % bases_mask
     print "Nprocessors           : %s" % options.nprocessors
+    print "Ignore missing bcl    : %s" % options.ignore_missing_bcl
     print "Ignore missing control: %s" % options.ignore_missing_control
     # Run bclToFastq conversion
     status = run_bcl_to_fastq(illumina_run.basecalls_dir,
@@ -230,6 +239,7 @@ if __name__ == '__main__':
                               bases_mask=bases_mask,
                               force=True,
                               nprocessors=options.nprocessors,
+                              ignore_missing_bcl=options.ignore_missing_bcl,
                               ignore_missing_control=options.ignore_missing_control)
     print "bclToFastq returncode: %s" % status
     if status != 0:
