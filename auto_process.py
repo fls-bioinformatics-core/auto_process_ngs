@@ -664,13 +664,13 @@ def set_debug(flag):
 # Command line parsers
 
 def setup_parser():
-    p = optparse.OptionParser(usage="%prog setup [OPTIONS] DATA_DIR",
+    p = optparse.OptionParser(usage="%prog setup [OPTIONS] DIR",
                               version="%prog "+__version__,
-                              description="Automatically process Illumina sequence from "
-                              "DATA_DIR.")
+                              description="Automatically process Illumina sequencing "
+                              "data from DIR.")
     p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
-                 "subdirectory of DATA_DIR with the same structure as that produced "
+                 "subdirectory of DIR with the same structure as that produced "
                  "by CASAVA/bcl2fastq).")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
