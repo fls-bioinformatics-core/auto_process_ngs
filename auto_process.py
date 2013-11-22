@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 #######################################################################
 # Imports
@@ -217,12 +217,12 @@ class AutoProcess:
         self.params['bases_mask'] = bases_mask
         self.params['project_metadata'] = project_metadata_file
 
-    def setup_from_basespace(self,analysis_dir,basespace_dir='BaseSpace'):
+    def setup_from_fastq_dir(self,analysis_dir,fastq_dir):
         # Do setup for an existing directory containing fastq files
-        # obtained from BaseSpace
+        # with the same structure as that produced by CASAVA and bcl2fastq
         #
         # Assumes that the files are in a subdirectory of the analysis
-        # directory specified by the 'basespace_dir' argument, and
+        # directory specified by the 'fastqe_dir' argument, and
         # that within that they are arranged in the structure
         # 'Project_<name>/Sample_<name>/<fastq>'
         self.analysis_dir = os.path.abspath(analysis_dir)
@@ -230,7 +230,7 @@ class AutoProcess:
         self.create_directory(self.analysis_dir)
         # Get information
         basespace = IlluminaData.IlluminaData(self.analysis_dir,
-                                              unaligned_dir=basespace_dir)
+                                              unaligned_dir=fastq_dir)
         print "Identifying platform from data directory name"
         platform = platforms.get_sequencer_platform(analysis_dir)
         # Make a 'projects.info' metadata file
@@ -250,12 +250,11 @@ class AutoProcess:
         print "Project metadata in %s" % project_metadata_file
         # Store the parameters
         self.params['analysis_dir'] = self.analysis_dir
-        self.params['unaligned_dir'] = basespace_dir
+        self.params['unaligned_dir'] = fastq_dir
         self.params['platform'] = platform
         self.params['project_metadata'] = project_metadata_file
         # Generate statistics
         self.generate_stats()
-        print "Statistics in %s" % self.params.stats_file
 
     def get_analysis_projects(self):
         # Return the analysis projects in a list
@@ -669,9 +668,10 @@ def setup_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "DATA_DIR.")
-    p.add_option('--basespace_dir',action='store',dest='basespace_dir',default=None,
-                 help="Take fastq.gz files from BASESPACE_DIR subdirectory of "
-                 "DATA_DIR.")
+    p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
+                 help="Import fastq.gz files from FASTQ_DIR (which should be a "
+                 "subdirectory of DATA_DIR with the same structure as that produced "
+                 "by CASAVA/bcl2fastq).")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -748,10 +748,10 @@ if __name__ == "__main__":
         if len(args) != 1:
             p.error("Need to supply a data source location")
         d = AutoProcess()
-        if options.basespace_dir is None:
+        if options.fastq_dir is None:
             d.setup(args[0])
         else:
-            d.setup_from_basespace(args[0])
+            d.setup_from_fastq_dir(args[0],options.fastq_dir)
     else:
         # For other options check if an analysis
         # directory was specified
