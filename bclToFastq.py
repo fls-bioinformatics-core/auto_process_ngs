@@ -82,6 +82,7 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
                      bases_mask=None,
                      nprocessors=None,
                      force=False,
+                     ignore_missing_bcl=False,
                      ignore_missing_control=False):
     """Wrapper for running the CASAVA bcl to fastq pipeline
 
