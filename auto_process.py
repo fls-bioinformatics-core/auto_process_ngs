@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 #######################################################################
 # Imports
@@ -306,14 +306,15 @@ class AutoProcess:
             logging.error("Failed to acquire primary data (status %s)" % status)
         return status
         
-    def bcl_to_fastq(self,ignore_missing_bcl=False,keep_primary_data=False):
+    def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
+                     keep_primary_data=False):
         # Convert bcl files to fastq
         #
         # Arguments:
-        # ignore_missing_bcl: if True the run bcl2fastq with --ignore-missing-bcl
-        #                     option
-        # keep_primary_data:  if True then don't remove primary data at
-        #                     the end of bcl2fastq conversion
+        # ignore_missing_bcl  : if True the run bcl2fastq with --ignore-missing-bcl
+        # ignore_missing_stats: if True the run bcl2fastq with --ignore-missing-stats
+        # keep_primary_data   : if True then don't remove primary data at
+        #                       the end of bcl2fastq conversion
         #
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -334,12 +335,13 @@ class AutoProcess:
         bases_mask = self.params.bases_mask
         nmismatches = bclToFastq.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
-        print "Platform          : %s" % illumina_run.platform
-        print "Bcl format        : %s" % illumina_run.bcl_extension
-        print "Sample sheet      : %s" % sample_sheet
-        print "Bases mask        : %s" % bases_mask
-        print "Nmismatches       : %d (determined from bases mask)" % nmismatches
-        print "Ignore missing bcl: %s" % ignore_missing_bcl
+        print "Platform            : %s" % illumina_run.platform
+        print "Bcl format          : %s" % illumina_run.bcl_extension
+        print "Sample sheet        : %s" % sample_sheet
+        print "Bases mask          : %s" % bases_mask
+        print "Nmismatches         : %d (determined from bases mask)" % nmismatches
+        print "Ignore missing bcl  : %s" % ignore_missing_bcl
+        print "Ignore missing stats: %s" % ignore_missing_bcl
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
         runner.log_dir(self.log_dir)
@@ -350,6 +352,8 @@ class AutoProcess:
                                          '--ignore-missing-control')
         if ignore_missing_bcl:
             bcl2fastq.add_args('--ignore-missing-bcl')
+        if ignore_missing_stats:
+            bcl2fastq.add_args('--ignore-missing-stats')
         bcl2fastq.add_args(primary_data,
                            bcl2fastq_dir,
                            sample_sheet)
@@ -695,6 +699,10 @@ def make_fastqs_parser():
                  dest='ignore_missing_bcl',default=False,
                  help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
                  "missing bcl files as no call)")
+    p.add_option('--ignore-missing-stats',action='store_true',
+                 dest='ignore_missing_stats',default=False,
+                 help="Use the --ignore-missing-stats option for bcl2fastq (fill in "
+                 "with zeroes when *.stats files are missing)")
     p.add_option('--keep-primary-data',action='store_true',
                  dest='keep_primary_data',default=False,
                  help="Don't delete the primary data at the end of processing")
@@ -786,7 +794,8 @@ if __name__ == "__main__":
         # Run the specified stage
         if cmd == 'make_fastqs':
             d.bcl_to_fastq(keep_primary_data=options.keep_primary_data,
-                           ignore_missing_bcl=options.ignore_missing_bcl)
+                           ignore_missing_bcl=options.ignore_missing_bcl,
+                           ignore_missing_stats=options.ignore_missing_stats)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
