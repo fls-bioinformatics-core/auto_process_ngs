@@ -204,7 +204,7 @@ class bcl2fastq:
                             mismatches=None,
                             bases_mask=None,
                             force=False,
-                            ignore_missing_bcl=False,,
+                            ignore_missing_bcl=False,
                             ignore_missing_stats=False,
                             ignore_missing_control=False):
         """Generate Command instance for 'configureBclToFastq.pl' script
