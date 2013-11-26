@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 #######################################################################
 # Import modules that this module depends on
@@ -204,7 +204,8 @@ class bcl2fastq:
                             mismatches=None,
                             bases_mask=None,
                             force=False,
-                            ignore_missing_bcl=False,
+                            ignore_missing_bcl=False,,
+                            ignore_missing_stats=False,
                             ignore_missing_control=False):
         """Generate Command instance for 'configureBclToFastq.pl' script
 
@@ -231,6 +232,8 @@ class bcl2fastq:
             output directory (default is False)
           ignore_missing_bcl: optional, if True then interpret missing bcl
             files as no call (default is False)
+          ignore_missing_stats: optional, if True then fill in with zeroes
+            when *.stats files are missing (default is False)
           ignore_missing_control: optional, if True then interpret missing
             control files as not-set control bits (default is False)
 
@@ -255,6 +258,8 @@ class bcl2fastq:
             configure_cmd.add_args('--force')
         if ignore_missing_bcl:
             configure_cmd.add_args('--ignore-missing-bcl')
+        if ignore_missing_stats:
+            configure_cmd.add_args('--ignore-missing-stats')
         if ignore_missing_control:
             configure_cmd.add_args('--ignore-missing-control')
         return configure_cmd
