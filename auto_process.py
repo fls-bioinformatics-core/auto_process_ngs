@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 #######################################################################
 # Imports
@@ -307,12 +307,14 @@ class AutoProcess:
         return status
         
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                     keep_primary_data=False):
+                     skip_rsync=False,keep_primary_data=False):
         # Convert bcl files to fastq
         #
         # Arguments:
-        # ignore_missing_bcl  : if True the run bcl2fastq with --ignore-missing-bcl
-        # ignore_missing_stats: if True the run bcl2fastq with --ignore-missing-stats
+        # ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
+        # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+        # skip_rsync          : if True then don't rsync primary data at the start of
+        #                       bcl2fastq conversion
         # keep_primary_data   : if True then don't remove primary data at
         #                       the end of bcl2fastq conversion
         #
@@ -325,12 +327,14 @@ class AutoProcess:
             print "Bcl to fastq outputs already present, nothing to do"
             return
         # Fetch primary data
-        if self.get_primary_data() != 0:
-            logging.error("Failed to acquire primary data")
-            raise Exception, "Failed to acquire primary data"
-        # Get info about the run
+        if not skip_rsync:
+            if self.get_primary_data() != 0:
+                logging.error("Failed to acquire primary data")
+                raise Exception, "Failed to acquire primary data"
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
+        # Get info about the run
+        print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
         bases_mask = self.params.bases_mask
         nmismatches = bclToFastq.get_nmismatches(bases_mask)
@@ -379,10 +383,10 @@ class AutoProcess:
             self.remove_primary_data()
         # Generate statistics
         self.generate_stats()
-        print "Statistics in %s" % self.params.stats_file
 
     def generate_stats(self,stats_file='statistics.info'):
         # Generate statistics for initial fastq files from bcl2fastq
+        print "Generating statistics:"
         self.params['stats_file'] = stats_file
         stats = illumina_data_statistics(
             IlluminaData.IlluminaData(self.params.analysis_dir,
@@ -695,6 +699,9 @@ def make_fastqs_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
+    p.add_option('--skip-rsync',action='store_true',
+                 dest='skip_rsync',default=False,
+                 help="don't rsync the primary data at the beginning of processing")
     p.add_option('--ignore-missing-bcl',action='store_true',
                  dest='ignore_missing_bcl',default=False,
                  help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
@@ -777,7 +784,8 @@ if __name__ == "__main__":
     # Setup the processing object and run the requested command
     if cmd == 'setup':
         if len(args) != 1:
-            p.error("Need to supply a data source location")
+            sys.stderr.write("Need to supply a data source location\n")
+            sys.exit(1)
         d = AutoProcess()
         if options.fastq_dir is None:
             d.setup(args[0])
@@ -793,7 +801,8 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            d.bcl_to_fastq(keep_primary_data=options.keep_primary_data,
+            d.bcl_to_fastq(skip_rsync=options.skip_rsync,
+                           keep_primary_data=options.keep_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
                            ignore_missing_stats=options.ignore_missing_stats)
         elif cmd == 'setup_analysis_dirs':
