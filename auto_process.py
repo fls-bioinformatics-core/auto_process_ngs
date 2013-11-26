@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 #######################################################################
 # Imports
@@ -256,13 +256,23 @@ class AutoProcess:
         # Generate statistics
         self.generate_stats()
 
-    def get_analysis_projects(self):
+    def get_analysis_projects(self,pattern=None):
         # Return the analysis projects in a list
+        #
+        # By default returns all projects within the analysis
+        #
+        # If the 'pattern' is not None then it should be a simple pattern
+        # used to match against available names to select a subset of
+        # projects (see bcf_utils.name_matches).
         project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
                                                             self.params.project_metadata))
         projects = []
         for line in project_metadata:
             name = line['Project']
+            if pattern is not None:
+                if not bcf_utils.name_matches(name,pattern):
+                    # Name failed to match, ignore
+                    continue
             print "Acquiring data for project %s" % name
             project_dir = os.path.join(self.analysis_dir,name)
             if os.path.isdir(project_dir):
@@ -437,7 +447,7 @@ class AutoProcess:
                                                          platform=self.params.platform)
             project.create_directory(illumina_data.get_project(project_name))
 
-    def run_qc(self):
+    def run_qc(self,projects=None):
         # Run QC pipeline for all projects
         #
         # Tests whether QC outputs already exist and only runs
@@ -447,7 +457,7 @@ class AutoProcess:
         qc_runner = auto_process_settings.runners.qc
         pipeline = Pipeline.PipelineRunner(qc_runner)
         # Get project dir data
-        projects = self.get_analysis_projects()
+        projects = self.get_analysis_projects(projects)
         # Check we have projects
         if len(projects) == 0:
             raise Exception, "No projects found for QC analysis"
@@ -692,6 +702,19 @@ def make_fastqs_parser():
                  help="Turn on debugging output from Python libraries")
     return p
 
+def run_qc_parser():
+    p = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Automatically process Illumina sequence from "
+                              "ANALYSIS_DIR.")
+    p.add_option('--projects',action='store',
+                 dest='projects',default=None,
+                 help="simple wildcard-based pattern specifying a subset of "
+                 "projects to run the QC on")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
 def generic_parser():
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
@@ -712,7 +735,7 @@ if __name__ == "__main__":
     cmd_parsers['setup'] = setup_parser()
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
     cmd_parsers['setup_analysis_dirs'] = generic_parser()
-    cmd_parsers['run_qc'] = generic_parser()
+    cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = generic_parser()
     cmd_parsers['publish_qc'] = generic_parser()
 
@@ -767,7 +790,7 @@ if __name__ == "__main__":
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
-            d.run_qc()
+            d.run_qc(projects=options.projects)
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
