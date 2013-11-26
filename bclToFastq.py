@@ -20,7 +20,7 @@ configureBclToFastq.pl pipeline.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Import modules that this module depends on
@@ -83,6 +83,7 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
                      nprocessors=None,
                      force=False,
                      ignore_missing_bcl=False,
+                     ignore_missing_stats=False,
                      ignore_missing_control=False):
     """Wrapper for running the CASAVA bcl to fastq pipeline
 
@@ -114,6 +115,8 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         output directory (default is False).
       ignore_missing_bcl: optional, if True then interpret missing bcl
         files as no call (default is False)
+      ignore_missing_stats: optional, if True then fill in with zeroes
+        when *.stats files are missing (default is False)
       ignore_missing_control: optional, if True then interpret missing
         control files as not-set control bits (default is False)
 
@@ -132,6 +135,7 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         bases_mask=bases_mask,
         force=force,
         ignore_missing_bcl=ignore_missing_bcl,
+        ignore_missing_stats=ignore_missing_stats,
         ignore_missing_control=ignore_missing_control
     )
     print "Running command: %s" % configure_cmd
@@ -188,15 +192,20 @@ if __name__ == '__main__':
                  "This is passed to the -j option of the 'make' step after running "
                  "configureBcltoFastq.pl (see the CASAVA user guide for details of "
                  "how -j works)")
-    p.add_option('--ignore-missing-control',action="store_true",
-                 dest="ignore_missing_control",default=False,
-                 help="interpret missing control files as not-set control bits "
-                 "(see the CASAVA user guide for details of how --ignore-missing-control "
-                 "works)")
     p.add_option('--ignore-missing-bcl',action="store_true",
                  dest="ignore_missing_bcl",default=False,
                  help="interpret missing bcl files as no call "
                  "(see the CASAVA user guide for details of how --ignore-missing-bcl "
+                 "works)")
+    p.add_option('--ignore-missing-stats',action="store_true",
+                 dest="ignore_missing_stats",default=False,
+                 help="fill in with zeroes when *.stats files are missing "
+                 "(see the CASAVA user guide for details of how --ignore-missing-stats "
+                 "works)")
+    p.add_option('--ignore-missing-control',action="store_true",
+                 dest="ignore_missing_control",default=False,
+                 help="interpret missing control files as not-set control bits "
+                 "(see the CASAVA user guide for details of how --ignore-missing-control "
                  "works)")
         
     options,args = p.parse_args()
@@ -231,6 +240,7 @@ if __name__ == '__main__':
     print "Bases mask            : %s" % bases_mask
     print "Nprocessors           : %s" % options.nprocessors
     print "Ignore missing bcl    : %s" % options.ignore_missing_bcl
+    print "Ignore missing stats  : %s" % options.ignore_missing_stats
     print "Ignore missing control: %s" % options.ignore_missing_control
     # Run bclToFastq conversion
     status = run_bcl_to_fastq(illumina_run.basecalls_dir,
@@ -241,6 +251,7 @@ if __name__ == '__main__':
                               force=True,
                               nprocessors=options.nprocessors,
                               ignore_missing_bcl=options.ignore_missing_bcl,
+                              ignore_missing_stats=options.ignore_missing_stats,
                               ignore_missing_control=options.ignore_missing_control)
     print "bclToFastq returncode: %s" % status
     if status != 0:
