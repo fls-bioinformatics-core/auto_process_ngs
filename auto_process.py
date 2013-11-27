@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 
 #######################################################################
 # Imports
@@ -140,7 +140,7 @@ class AutoProcess:
         # data_dir: source data directory
         # analysis_dir: corresponding analysis dir
         data_dir = data_dir.rstrip(os.sep)
-        self.analysis_dir = analysis_dir
+        self.analysis_dir = os.path.abspath(analysis_dir)
         if self.analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
                                              os.path.basename(data_dir))+'_analysis'
@@ -713,6 +713,9 @@ def setup_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequencing "
                               "data from DIR.")
+    p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
+                 help="Make new directory called ANALYSIS_DIR (otherwise default is "
+                 "'DIR_analysis')")
     p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
                  "subdirectory of DIR with the same structure as that produced "
@@ -816,7 +819,7 @@ if __name__ == "__main__":
             sys.exit(1)
         d = AutoProcess()
         if options.fastq_dir is None:
-            d.setup(args[0])
+            d.setup(args[0],analysis_dir=options.analysis_dir)
         else:
             d.setup_from_fastq_dir(args[0],options.fastq_dir)
     else:
