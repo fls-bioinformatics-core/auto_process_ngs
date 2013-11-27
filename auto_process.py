@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 #######################################################################
 # Imports
@@ -192,10 +192,8 @@ class AutoProcess:
             bases_mask = get_bases_mask(tmp_run_info,custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
-        # Print the predicted ouputs and make a 'projects.info' metadata file
+        # Print the predicted ouputs
         projects = sample_sheet.predict_output()
-        project_metadata = ProjectMetadataFile()
-        project_metadata_file = 'projects.info'
         print "Predicted output from sample sheet:"
         print "Project\tSample\tFastq"
         for project in projects:
@@ -206,16 +204,12 @@ class AutoProcess:
                 for fastq_base in projects[project][sample]:
                     print "%s\t%s\t%s" % (project_name,sample_name,fastq_base)
                 sample_names.append(sample_name)
-            project_metadata.add_project(project_name,sample_names)
-        project_metadata.save(os.path.join(self.analysis_dir,project_metadata_file))
-        print "Project metadata in %s" % project_metadata_file
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
         self.params['platform'] = platform
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
-        self.params['project_metadata'] = project_metadata_file
 
     def setup_from_fastq_dir(self,analysis_dir,fastq_dir):
         # Do setup for an existing directory containing fastq files
@@ -233,11 +227,23 @@ class AutoProcess:
                                               unaligned_dir=fastq_dir)
         print "Identifying platform from data directory name"
         platform = platforms.get_sequencer_platform(analysis_dir)
+        # Store the parameters
+        self.params['analysis_dir'] = self.analysis_dir
+        self.params['unaligned_dir'] = fastq_dir
+        self.params['platform'] = platform
+        # Generate statistics
+        self.generate_stats()
         # Make a 'projects.info' metadata file
+        self.make_project_metadata_file()
+
+    def make_project_metadata_file(self,project_metadata_file='projects.info'):
+        # Generate a project metadata file based on the fastq
+        # files and directory structure
+        illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
+                                                  unaligned_dir=self.params.unaligned_dir)
         project_metadata = ProjectMetadataFile()
-        project_metadata_file = 'projects.info'
         print "Project\tSample\tFastq"
-        for project in basespace.projects:
+        for project in illumina_data.projects:
             project_name = project.name
             sample_names = []
             for sample in project.samples:
@@ -246,15 +252,9 @@ class AutoProcess:
                     print "%s\t%s\t%s" % (project_name,sample_name,fastq)
                 sample_names.append(sample_name)
             project_metadata.add_project(project_name,sample_names)
-        project_metadata.save(os.path.join(self.analysis_dir,project_metadata_file))
-        print "Project metadata in %s" % project_metadata_file
-        # Store the parameters
-        self.params['analysis_dir'] = self.analysis_dir
-        self.params['unaligned_dir'] = fastq_dir
-        self.params['platform'] = platform
+        project_metadata.save(os.path.join(self.params.analysis_dir,project_metadata_file))
         self.params['project_metadata'] = project_metadata_file
-        # Generate statistics
-        self.generate_stats()
+        print "Project metadata in %s" % self.params.project_metadata
 
     def get_analysis_projects(self,pattern=None):
         # Return the analysis projects in a list
@@ -383,6 +383,8 @@ class AutoProcess:
             self.remove_primary_data()
         # Generate statistics
         self.generate_stats()
+        # Make a 'projects.info' metadata file
+        self.make_project_metadata_file()
 
     def generate_stats(self,stats_file='statistics.info'):
         # Generate statistics for initial fastq files from bcl2fastq
