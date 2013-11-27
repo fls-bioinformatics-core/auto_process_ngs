@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 #######################################################################
 # Imports
@@ -567,6 +567,31 @@ class AutoProcess:
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
 
+
+    def report(self):
+        # Report the contents of the run
+        # This is intended for helping with logging etc
+        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
+                                                  unaligned_dir=self.params.unaligned_dir)
+        report = []
+        # Get metadata for projects
+        project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
+                                                            self.params.project_metadata))
+        for p in project_metadata:
+            project = illumina_data.get_project(p['Project'])
+            report.append("'%s': %s, %s %s (PI: %s) (%d samples)" % \
+                          (p['Project'],
+                           p['User'],
+                           p['Organism'],
+                           p['Library'],
+                           p['PI'],
+                           len(project.samples)))
+        report = '; '.join(report)
+        # Paired end run?
+        if illumina_data.paired_end:
+            report = "Paired end: " + report
+        print report
+
 class ProjectMetadataFile(TabFile.TabFile):
     def __init__(self,filen=None):
         self.__filen = filen
@@ -755,6 +780,7 @@ if __name__ == "__main__":
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = generic_parser()
     cmd_parsers['publish_qc'] = generic_parser()
+    cmd_parsers['report'] = generic_parser()
 
     # Process command line
     try:
@@ -815,3 +841,5 @@ if __name__ == "__main__":
             d.copy_to_archive()
         elif cmd == 'publish_qc':
             d.publish_qc()
+        elif cmd == 'report':
+            d.report()
