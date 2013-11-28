@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 #######################################################################
 # Imports
@@ -307,7 +307,7 @@ class AutoProcess:
         return status
         
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                     skip_rsync=False,keep_primary_data=False):
+                     skip_rsync=False,keep_primary_data=False,generate_stats=False):
         # Convert bcl files to fastq
         #
         # Arguments:
@@ -317,6 +317,7 @@ class AutoProcess:
         #                       bcl2fastq conversion
         # keep_primary_data   : if True then don't remove primary data at
         #                       the end of bcl2fastq conversion
+        # generate_stats      : if True then (re)generate statistics file for fastqs
         #
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -324,7 +325,9 @@ class AutoProcess:
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         sample_sheet = self.params.sample_sheet
         if self.verify_bcl_to_fastq():
-            print "Bcl to fastq outputs already present, nothing to do"
+            print "Bcl to fastq outputs already present"
+            if generate_stats:
+                self.generate_stats()
             return
         # Fetch primary data
         if not skip_rsync:
@@ -743,6 +746,9 @@ def make_fastqs_parser():
     p.add_option('--keep-primary-data',action='store_true',
                  dest='keep_primary_data',default=False,
                  help="Don't delete the primary data at the end of processing")
+    p.add_option('--generate-stats',action='store_true',
+                 dest='generate_stats',default=False,
+                 help="(Re)generate statistics for fastq files")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -835,7 +841,8 @@ if __name__ == "__main__":
             d.bcl_to_fastq(skip_rsync=options.skip_rsync,
                            keep_primary_data=options.keep_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
-                           ignore_missing_stats=options.ignore_missing_stats)
+                           ignore_missing_stats=options.ignore_missing_stats,
+                           generate_stats=option.generate_stats)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
