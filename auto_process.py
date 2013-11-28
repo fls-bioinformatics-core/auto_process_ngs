@@ -842,7 +842,7 @@ if __name__ == "__main__":
                            keep_primary_data=options.keep_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
                            ignore_missing_stats=options.ignore_missing_stats,
-                           generate_stats=option.generate_stats)
+                           generate_stats=options.generate_stats)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
