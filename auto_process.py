@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.18"
+__version__ = "0.0.19"
 
 #######################################################################
 # Imports
@@ -469,14 +469,14 @@ class AutoProcess:
         #
         # Process pattern matching
         if projects is None:
-            project_pattern = None
-            sample_pattern = None
+            project_pattern = '*'
+            sample_pattern = '*'
         else:
             project_pattern = projects.split('/')[0]
             try:
                 sample_pattern = projects.split('/')[1]
             except IndexError:
-                sample_pattern = None
+                sample_pattern = '*'
         # Setup a pipeline runner
         qc_runner = auto_process_settings.runners.qc
         pipeline = Pipeline.PipelineRunner(qc_runner)
@@ -775,9 +775,12 @@ def run_qc_parser():
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
     p.add_option('--projects',action='store',
-                 dest='projects',default=None,
-                 help="simple wildcard-based pattern specifying a subset of "
-                 "projects to run the QC on")
+                 dest='project_pattern',default=None,
+                 help="simple wildcard-based pattern specifying a subset of projects "
+                 "and samples to run the QC on. PROJECT_PATTERN should be of the form "
+                 "'pname[/sname]', where 'pname' specifies a project (or set of "
+                 "projects) and 'sname' optionally specifies a sample (or set of "
+                 "samples).")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -862,7 +865,7 @@ if __name__ == "__main__":
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
-            d.run_qc(projects=options.projects)
+            d.run_qc(projects=options.project_pattern)
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
