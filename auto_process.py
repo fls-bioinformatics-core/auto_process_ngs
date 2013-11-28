@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.17"
+__version__ = "0.0.18"
 
 #######################################################################
 # Imports
@@ -466,14 +466,26 @@ class AutoProcess:
         # Tests whether QC outputs already exist and only runs
         # QC for those files where the outputs are not all present
         #
+        #
+        # Process pattern matching
+        if projects is None:
+            project_pattern = None
+            sample_pattern = None
+        else:
+            project_pattern = projects.split('/')[0]
+            try:
+                sample_pattern = projects.split('/')[1]
+            except IndexError:
+                sample_pattern = None
         # Setup a pipeline runner
         qc_runner = auto_process_settings.runners.qc
         pipeline = Pipeline.PipelineRunner(qc_runner)
         # Get project dir data
-        projects = self.get_analysis_projects(projects)
+        projects = self.get_analysis_projects(project_pattern)
         # Check we have projects
         if len(projects) == 0:
-            raise Exception, "No projects found for QC analysis"
+            logging.warning("No projects found for QC analysis")
+            return
         # Look for samples with no/invalid QC outputs and populate
         # pipeline with the associated fastq.gz files
         for project in projects:
@@ -485,7 +497,11 @@ class AutoProcess:
                 bcf_utils.mkdir(qc_dir,mode=0775)
             # Loop over samples and queue up those where the QC
             # isn't validated
-            for sample in project.samples:
+            samples = project.get_samples(sample_pattern)
+            if len(samples) == 0:
+                logging.warning("No samples found for QC analysis in project '%s'" %
+                                project.name)
+            for sample in samples:
                 print "Examining files in sample %s" % sample.name
                 for fq in sample.fastq:
                     if sample.verify_qc(qc_dir,fq):
