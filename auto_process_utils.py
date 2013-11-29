@@ -499,13 +499,32 @@ class AnalysisSample:
         fastqs.sort()
         return fastqs
 
-    def verify_qc(self,qc_dir,fastq):
+    def qc_sample(self,qc_dir,fastq):
+        """Fetch IlluminaQCSample object for a fastq file
+
+        Arguments:
+          qc_dir: name of the QC directory
+          fastq : fastq file to get the QC information for
+
+        Returns:
+          Populated IlluminaQCSample object.
+
         """
-        """
-        verified = True
         name = bcf_utils.rootname(os.path.basename(fastq))
-        qc_sample = qcreporter.IlluminaQCSample(name,qc_dir)
-        return qc_sample.verify()
+        return qcreporter.IlluminaQCSample(name,qc_dir)
+
+    def verify_qc(self,qc_dir,fastq):
+        """Check if QC completed for a fastq file
+
+        Arguments:
+          qc_dir: name of the QC directory
+          fastq : fastq file to get the QC information for
+
+        Returns:
+          True if QC completed correctly, False otherwise.
+
+        """
+        return self.qc_sample(qc_dir,fastq).verify()
 
     def __repr__(self):
         """Implement __repr__ built-in
