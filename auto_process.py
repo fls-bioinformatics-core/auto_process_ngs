@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.19"
+__version__ = "0.0.20"
 
 #######################################################################
 # Imports
@@ -239,20 +239,54 @@ class AutoProcess:
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq
         # files and directory structure
+        filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
-        project_metadata = ProjectMetadataFile()
-        print "Project\tSample\tFastq"
-        for project in illumina_data.projects:
-            project_name = project.name
-            sample_names = []
-            for sample in project.samples:
-                sample_name = sample.name
-                for fastq in sample.fastq:
-                    print "%s\t%s\t%s" % (project_name,sample_name,fastq)
-                sample_names.append(sample_name)
-            project_metadata.add_project(project_name,sample_names)
-        project_metadata.save(os.path.join(self.params.analysis_dir,project_metadata_file))
+        if not os.path.exists(filen):
+            # Create a new metadata file
+            project_metadata = ProjectMetadataFile()
+            print "Project\tSample\tFastq"
+            for project in illumina_data.projects:
+                project_name = project.name
+                sample_names = []
+                for sample in project.samples:
+                    sample_name = sample.name
+                    for fastq in sample.fastq:
+                        print "%s\t%s\t%s" % (project_name,sample_name,fastq)
+                    sample_names.append(sample_name)
+                project_metadata.add_project(project_name,sample_names)
+        else:
+            # Load existing file and check for consistency
+            print "Metadata file already exists, checking"
+            project_metadata = ProjectMetadataFile(filen)
+            # Check that each project listed actually exists
+            bad_projects = []
+            for line in project_metadata:
+                pname = line['Project']
+                try:
+                    illumina_data.get_project(pname)
+                except IlluminaDataError:
+                    # Project doesn't exist
+                    logging.warning("Project '%s' listed in metadata file doesn't exist" \
+                                    % pname)
+                    bad_projects.append(line)
+            # Remove bad projects
+            for bad_project in bad_projects:
+                del(bad_project)
+            # Check that all actual projects are listed
+            for project in illumina_data:
+                if len(project_metadata.lookup('Project',project.name)) == 0:
+                    # Project not listed, add it
+                    logging.warning("Project '%s' not listed in metadata file" % project.name)
+                    sample_names = []
+                    for sample in project.samples:
+                        sample_name = sample.name
+                        for fastq in sample.fastq:
+                            print "%s\t%s\t%s" % (project_name,sample_name,fastq)
+                        sample_names.append(sample_name)
+                    project_metadata.add_project(project_name,sample_names)
+        # Finish
+        project_metadata.save(filen)
         self.params['project_metadata'] = project_metadata_file
         print "Project metadata in %s" % self.params.project_metadata
 
@@ -326,6 +360,9 @@ class AutoProcess:
         sample_sheet = self.params.sample_sheet
         if self.verify_bcl_to_fastq():
             print "Bcl to fastq outputs already present"
+            # Check for project metadata file
+            self.make_project_metadata_file()
+            # (Re)generate stats?
             if generate_stats:
                 self.generate_stats()
             return
