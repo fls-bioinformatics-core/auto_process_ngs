@@ -507,7 +507,7 @@ class AutoProcess:
                     if sample.verify_qc(qc_dir,fq):
                         logging.debug("\t%s: QC verified" % fq)
                     else:
-                        print "\t%s: setting up QC run" % fq
+                        print "\t%s: setting up QC run" % os.path.basename(fq)
                         group = "%s.%s" % (project.name,sample.name)
                         fastq = os.path.join(project.dirn,'fastqs',fq)
                         label = str(auto_process_utils.AnalysisFastq(fq))
