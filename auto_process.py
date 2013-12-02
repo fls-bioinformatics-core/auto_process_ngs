@@ -931,6 +931,6 @@ if __name__ == "__main__":
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
-            d.publish_qc(projectss=options.project_pattern)
+            d.publish_qc(projects=options.project_pattern)
         elif cmd == 'report':
             d.report()
