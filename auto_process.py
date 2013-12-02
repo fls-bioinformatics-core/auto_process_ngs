@@ -868,7 +868,7 @@ if __name__ == "__main__":
     cmd_parsers['setup_analysis_dirs'] = generic_parser()
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = generic_parser()
-    cmd_parsers['publish_qc'] = generic_parser()
+    cmd_parsers['publish_qc'] = publish_parser()
     cmd_parsers['report'] = generic_parser()
 
     # Process command line
@@ -930,6 +930,6 @@ if __name__ == "__main__":
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
-            d.publish_qc()
+            d.publish_qc(projectss=options.project_pattern)
         elif cmd == 'report':
             d.report()
