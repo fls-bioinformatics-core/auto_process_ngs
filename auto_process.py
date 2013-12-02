@@ -833,7 +833,7 @@ def run_qc_parser():
                  help="Turn on debugging output from Python libraries")
     return p
 
-def publish_parser():
+def publish_qc_parser():
     p = optparse.OptionParser(usage="%prog publish [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
@@ -845,6 +845,7 @@ def publish_parser():
                  "single project, or a set of projects.")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
+    return p
 
 def generic_parser():
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
@@ -868,7 +869,7 @@ if __name__ == "__main__":
     cmd_parsers['setup_analysis_dirs'] = generic_parser()
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = generic_parser()
-    cmd_parsers['publish_qc'] = publish_parser()
+    cmd_parsers['publish_qc'] = publish_qc_parser()
     cmd_parsers['report'] = generic_parser()
 
     # Process command line
