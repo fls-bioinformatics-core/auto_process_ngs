@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 #######################################################################
 # Imports
@@ -503,6 +503,8 @@ class AutoProcess:
         # Tests whether QC outputs already exist and only runs
         # QC for those files where the outputs are not all present
         #
+        # projects: specify a pattern to match one or more projects to
+        # run the QC for (default is to run QC for all projects)
         #
         # Process pattern matching
         if projects is None:
@@ -586,8 +588,17 @@ class AutoProcess:
         # Add a record of the analysis to the logging file
         raise NotImplementedError
 
-    def publish_qc(self):
+    def publish_qc(self,projects=None):
         # Copy the QC reports to the webserver
+        #
+        # projects: specify a pattern to match one or more projects to
+        # publish the reports for (default is to publish all reports)
+        #
+        # Process pattern matching
+        if projects is None:
+            project_pattern = '*'
+        else:
+            project_pattern = projects
         # Get project dir data
         if auto_process_settings.qc_web_server.server is None or \
            auto_process_settings.qc_web_server.webdir is None:
@@ -597,7 +608,7 @@ class AutoProcess:
         webdir = os.path.join(auto_process_settings.qc_web_server.webdir,
                               os.path.basename(self.analysis_dir))
         # Get project data
-        projects = self.get_analysis_projects()
+        projects = self.get_analysis_projects(project_pattern)
         # Make a remote directory for the QC reports
         try:
             mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
@@ -781,7 +792,7 @@ def setup_parser():
     return p
 
 def make_fastqs_parser():
-    p = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+    p = optparse.OptionParser(usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
@@ -807,7 +818,7 @@ def make_fastqs_parser():
     return p
 
 def run_qc_parser():
-    p = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+    p = optparse.OptionParser(usage="%prog run_qc [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
@@ -821,6 +832,19 @@ def run_qc_parser():
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
+
+def publish_parser():
+    p = optparse.OptionParser(usage="%prog publish [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Automatically process Illumina sequence from "
+                              "ANALYSIS_DIR.")
+    p.add_option('--projects',action='store',
+                 dest='project_pattern',default=None,
+                 help="simple wildcard-based pattern specifying a subset of projects "
+                 "and samples to publish the QC for. PROJECT_PATTERN can specify a "
+                 "single project, or a set of projects.")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
 
 def generic_parser():
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
