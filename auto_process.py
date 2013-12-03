@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.22"
+__version__ = "0.0.23"
 
 #######################################################################
 # Imports
@@ -407,8 +407,7 @@ class AutoProcess:
                                      bcl2fastq.command,
                                      bcl2fastq.args)
         bcl2fastq_job.start()
-        while bcl2fastq_job.isRunning():
-            time.sleep(10)
+        bcl2fastq_job.wait()
         print "bcl2fastq completed"
         # Verify outputs
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
@@ -444,8 +443,7 @@ class AutoProcess:
                                             fastq_statistics.command,
                                             fastq_statistics.args)
         fastq_statistics_job.start()
-        while fastq_statistics_job.isRunning():
-            time.sleep(10)
+        fastq_statistics_job.wait()
         self.params['stats_file'] = stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
 
