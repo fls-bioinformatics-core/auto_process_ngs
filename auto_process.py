@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.24"
+__version__ = "0.0.25"
 
 #######################################################################
 # Imports
@@ -507,7 +507,7 @@ class AutoProcess:
                                                          platform=self.params.platform)
             project.create_directory(illumina_data.get_project(project_name))
 
-    def run_qc(self,projects=None):
+    def run_qc(self,projects=None,max_jobs=4):
         # Run QC pipeline for all projects
         #
         # Tests whether QC outputs already exist and only runs
@@ -528,7 +528,8 @@ class AutoProcess:
                 sample_pattern = '*'
         # Setup a pipeline runner
         qc_runner = auto_process_settings.runners.qc
-        pipeline = Pipeline.PipelineRunner(qc_runner)
+        pipeline = Pipeline.PipelineRunner(qc_runner,
+                                           max_concurrent_jobs=max_jobs)
         # Get project dir data
         projects = self.get_analysis_projects(project_pattern)
         # Check we have projects
@@ -801,6 +802,10 @@ def run_qc_parser():
                  "'pname[/sname]', where 'pname' specifies a project (or set of "
                  "projects) and 'sname' optionally specifies a sample (or set of "
                  "samples).")
+    p.add_option('--max-jobs',action='store',
+                 dest='max_jobs',default=4,
+                 help="explicitly specify maximum number of concurrent QC jobs to run "
+                 "(default: 4)")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -899,7 +904,8 @@ if __name__ == "__main__":
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
-            d.run_qc(projects=options.project_pattern)
+            d.run_qc(projects=options.project_pattern,
+                     max_jobs=options.max_jobs)
         elif cmd == 'archive':
             d.copy_to_archive()
         elif cmd == 'publish_qc':
