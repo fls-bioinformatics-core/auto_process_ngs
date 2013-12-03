@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.23"
+__version__ = "0.0.24"
 
 #######################################################################
 # Imports
@@ -140,10 +140,11 @@ class AutoProcess:
         # data_dir: source data directory
         # analysis_dir: corresponding analysis dir
         data_dir = data_dir.rstrip(os.sep)
-        self.analysis_dir = os.path.abspath(analysis_dir)
-        if self.analysis_dir is None:
+        if analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
                                              os.path.basename(data_dir))+'_analysis'
+        else:
+            self.analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
         if not os.path.exists(self.analysis_dir):
             # Create directory structure
