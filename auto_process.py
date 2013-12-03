@@ -216,15 +216,13 @@ class AutoProcess:
         # with the same structure as that produced by CASAVA and bcl2fastq
         #
         # Assumes that the files are in a subdirectory of the analysis
-        # directory specified by the 'fastqe_dir' argument, and
+        # directory specified by the 'fastq_dir' argument, and
         # that within that they are arranged in the structure
         # 'Project_<name>/Sample_<name>/<fastq>'
         self.analysis_dir = os.path.abspath(analysis_dir)
         # Create directory structure
         self.create_directory(self.analysis_dir)
         # Get information
-        basespace = IlluminaData.IlluminaData(self.analysis_dir,
-                                              unaligned_dir=fastq_dir)
         print "Identifying platform from data directory name"
         platform = platforms.get_sequencer_platform(analysis_dir)
         # Store the parameters
@@ -242,6 +240,7 @@ class AutoProcess:
         filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
+        print "Project metadata file: %s" % filen
         if not os.path.exists(filen):
             # Create a new metadata file
             project_metadata = ProjectMetadataFile()
@@ -274,7 +273,7 @@ class AutoProcess:
             for bad_project in bad_projects:
                 del(bad_project)
             # Check that all actual projects are listed
-            for project in illumina_data:
+            for project in illumina_data.projects:
                 if len(project_metadata.lookup('Project',project.name)) == 0:
                     # Project not listed, add it
                     logging.warning("Project '%s' not listed in metadata file" % project.name)
@@ -385,7 +384,7 @@ class AutoProcess:
         print "Bases mask          : %s" % bases_mask
         print "Nmismatches         : %d (determined from bases mask)" % nmismatches
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
-        print "Ignore missing stats: %s" % ignore_missing_bcl
+        print "Ignore missing stats: %s" % ignore_missing_stats
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
         runner.log_dir(self.log_dir)
