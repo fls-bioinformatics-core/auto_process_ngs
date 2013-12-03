@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 #######################################################################
 # Imports
@@ -428,15 +428,27 @@ class AutoProcess:
 
     def generate_stats(self,stats_file='statistics.info'):
         # Generate statistics for initial fastq files from bcl2fastq
-        print "Generating statistics:"
+        # Set up runner
+        runner = auto_process_settings.runners.stats
+        runner.log_dir(self.log_dir)
+        # Generate statistics
+        fastq_statistics = applications.Command('fastq_statistics.py',
+                                                '--unaligned',self.params.unaligned_dir,
+                                                '--output',
+                                                os.path.join(self.params.analysis_dir,
+                                                             stats_file),
+                                                self.params.analysis_dir)
+        print "Generating statistics: running %s" % fastq_statistics
+        fastq_statistics_job = Pipeline.Job(runner,
+                                            'fastq_statistics',
+                                            self.params.analysis_dir,
+                                            fastq_statistics.command,
+                                            fastq_statistics.args)
+        fastq_statistics_job.start()
+        while fastq_statistics_job.isRunning():
+            time.sleep(10)
         self.params['stats_file'] = stats_file
-        stats = illumina_data_statistics(
-            IlluminaData.IlluminaData(self.params.analysis_dir,
-                                      unaligned_dir=self.params.unaligned_dir))
-        stats.write(os.path.join(self.params.analysis_dir,stats_file),
-                    include_header=True)
-        self.params['stats_file'] = stats_file
-        print "Statistics in %s" % self.params.stats_file
+        print "Statistics generation completed: %s" % self.params.stats_file
 
     def remove_primary_data(self):
         # Remove primary data
@@ -693,44 +705,6 @@ class ProjectMetadataFile(TabFile.TabFile):
 #######################################################################
 # Functions
 #######################################################################
-
-def illumina_data_statistics(illumina_data):
-    # Gather statistics for an Illumina run (bcl2fastq outputs)
-    # Set up TabFile to hold the data collected
-    stats = TabFile.TabFile(column_names=('Project',
-                                          'Sample',
-                                          'Fastq',
-                                          'Size',
-                                          'Nreads',
-                                          'Paired_end'))
-    # Get number of reads and file size for each file across all
-    # projects and samples
-    for project in illumina_data.projects:
-        for sample in project.samples:
-            for fastq in sample.fastq:
-                print "* %s" % fastq
-                fq = os.path.join(sample.dirn,fastq)
-                nreads = FASTQFile.nreads(fq)
-                fsize = os.path.getsize(fq)
-                stats.append(data=(project.name,
-                                   sample,fastq,
-                                   bcf_utils.format_file_size(fsize),
-                                   nreads,
-                                   'Y' if sample.paired_end else 'N'))
-    # Gather same information for undetermined reads (if present)
-    if illumina_data.undetermined is not None:
-        for sample in illumina_data.undetermined.samples:
-            for fastq in sample.fastq:
-                fq = os.path.join(sample.dirn,fastq)
-                nreads = FASTQFile.nreads(fq)
-                fsize = os.path.getsize(fq)
-                stats.append(data=(illumina_data.undetermined.name,
-                                   sample,fastq,
-                                   bcf_utils.format_file_size(fsize),
-                                   nreads,
-                                   'Y' if sample.paired_end else 'N'))
-    # Return the data
-    return stats
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None):
     # Read sample sheet info from input_sample_sheet

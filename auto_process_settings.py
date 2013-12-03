@@ -7,6 +7,7 @@ from bcf_utils import AttributeDictionary
 runners = AttributeDictionary(
     bcl2fastq=JobRunner.SimpleJobRunner(),
     qc=JobRunner.SimpleJobRunner(),
+    stats=JobRunner.SimpleJobRunner(),
 )
 #
 # Information for archiving analyses
