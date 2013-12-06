@@ -652,7 +652,7 @@ class AutoProcess:
                     index_page.add("<td>%s</td>" % project.name)
                     index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
                                    % os.path.splitext(project.qc_report)[0])
-                    index_page.add("<td><a href='%s/qc_report.html'>[Zip]</a></td>"
+                    index_page.add("<td><a href='%s'>[Zip]</a></td>"
                                    % project.qc_report)
                     index_page.add("</tr>")
                 except Exception, ex:
