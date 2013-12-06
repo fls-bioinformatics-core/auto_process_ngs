@@ -646,11 +646,14 @@ class AutoProcess:
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
                     # Append info to the index page
-                    index_page.add("<li>%s <a href='%s/qc_report.html'>[Report]</a></li>"
-                                   % (os.path.splitext(project.qc_report)[0],project.name))
+                    index_page.add("<li>%s" % project.name)
+                    index_page.add(" <a href='%s/qc_report.html'>[Report]</a>"
+                                   % os.path.splitext(project.qc_report)[0])
+                    index_page.add(" <a href='%s/qc_report.html'>[Zip]</a></li>"
+                                   % project.qc_report)
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
-                    index_page.add("%s: missing QC report" % project.name)
+                    index_page.add("<li>%s: missing QC report</li>" % project.name)
         # Create index page and copy to server
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
