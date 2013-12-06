@@ -621,7 +621,7 @@ class AutoProcess:
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Make an index page
-        index_page = qcreporter.HtmlPageWriter("QC for %s" %
+        index_page = qcreporter.HTMLPageWriter("QC for %s" %
                                                os.path.basename(self.params.analysis_dir))
         # Make a remote directory for the QC reports
         try:
