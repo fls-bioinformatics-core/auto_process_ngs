@@ -621,8 +621,10 @@ class AutoProcess:
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Make an index page
-        index_page = qcreporter.HTMLPageWriter("QC for %s" %
-                                               os.path.basename(self.params.analysis_dir))
+        title = "QC for %s" % os.path.basename(self.params.analysis_dir)
+        index_page = qcreporter.HTMLPageWriter(title)
+        index_page.add("<h1>%s</h1>" % title)
+        index_page.add("<table>")
         # Make a remote directory for the QC reports
         try:
             mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
@@ -646,15 +648,19 @@ class AutoProcess:
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
                     # Append info to the index page
-                    index_page.add("<li>%s" % project.name)
-                    index_page.add(" <a href='%s/qc_report.html'>[Report]</a>"
+                    index_page.add("<tr>")
+                    index_page.add("<td>%s</td>" % project.name)
+                    index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
                                    % os.path.splitext(project.qc_report)[0])
-                    index_page.add(" <a href='%s/qc_report.html'>[Zip]</a></li>"
+                    index_page.add("<td><a href='%s/qc_report.html'>[Zip]</a></td>"
                                    % project.qc_report)
+                    index_page.add("</tr>")
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
-                    index_page.add("<li>%s: missing QC report</li>" % project.name)
-        # Create index page and copy to server
+                    index_page.add("<tr><td>%s</td><td>Missing</td><td>Missing</td></tr>"
+                                   % project.name)
+        # Finish index page and copy to server
+        index_page.add("</table>")
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
         scp = applications.general.scp(user,server,index_html,webdir)
