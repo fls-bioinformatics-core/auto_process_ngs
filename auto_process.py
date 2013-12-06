@@ -655,6 +655,8 @@ class AutoProcess:
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
         scp = applications.general.scp(user,server,index_html,webdir)
+        print "Running %s" % scp
+        scp.run_subprocess()
 
     def report(self):
         # Report the contents of the run
