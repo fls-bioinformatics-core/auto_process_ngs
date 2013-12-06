@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.25"
+__version__ = "0.0.26"
 
 #######################################################################
 # Imports
@@ -620,6 +620,9 @@ class AutoProcess:
                               os.path.basename(self.analysis_dir))
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
+        # Make an index page
+        index_page = qcreporter.HtmlPageWriter("QC for %s" %
+                                               os.path.basename(self.params.analysis_dir))
         # Make a remote directory for the QC reports
         try:
             mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
@@ -642,9 +645,16 @@ class AutoProcess:
                          os.path.join(webdir,project.qc_report)))
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
+                    # Append info to the index page
+                    index_page.add("%s <a href='%s/qc_report.html'>[Report]</a>"
+                                   % (project.name,project.name))
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
-
+                    index_page.add("%s: missing QC report" % project.name)
+        # Create index page and copy to server
+        index_html = os.path.join(self.tmp_dir,'index.html')
+        index_page.write(index_html)
+        scp = applications.general.scp(user,server,index_html,webdir)
 
     def report(self):
         # Report the contents of the run
