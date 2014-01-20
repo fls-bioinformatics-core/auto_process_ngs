@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #######################################################################
 # Import modules that this module depends on
@@ -94,6 +94,8 @@ class SimpleScheduler(threading.Thread):
         # Handle names
         self.__names = []
         self.__finished_names = []
+        # Handle groups
+        self.__groups = []
         # Flag controlling whether scheduler is active
         self.__active = False
 
@@ -125,6 +127,22 @@ class SimpleScheduler(threading.Thread):
         self.__job_count += 1
         return self.__job_count
 
+    @property
+    def default_runner(self):
+        """Return the default runner
+
+        """
+        return self.__runner
+
+    def has_name(self,name):
+        """Test if name has already been used
+
+        Returns True if the name already exists, False
+        otherwise.
+
+        """
+        return name in self.__names
+
     def is_empty(self):
         """Test if the scheduler has any jobs remaining
 
@@ -152,22 +170,41 @@ class SimpleScheduler(threading.Thread):
         #
         # Check names are not duplicated
         if name is not None:
-            if name in self.__names:
+            if self.has_name(name):
                 raise Exception,"Name '%s' already assigned" % name
             self.__names.append(name)
         # Check we're not waiting on a non-existent name
         for job_name in wait_for:
-            if job_name not in self.__names:
+            if not self.has_name(job_name):
                 raise Exception,"Job depends on a non-existent name '%s'" % job_name
         # Use default runner if none explicitly specified
         if runner is None:
-            runner = self.__runner
+            runner = self.default_runner
         # Schedule the job
         job = SchedulerJob(runner,args,job_number=self.job_number,
                            name=name,wait_for=wait_for)
         self.__submitted.put(job)
         logging.debug("Scheduled job #%d: \"%s\"" % (job.job_number,job))
         return job
+
+    def group(self,name):
+        """Create a group of jobs
+        
+        Arguments:
+          name
+
+        Returns:
+          Empty SchedulerGroup instance.
+
+        """
+        # Check names are not duplicated
+        if name is not None:
+            if self.has_name(name):
+                raise Exception,"Name '%s' already assigned" % name
+            self.__names.append(name)
+        new_group = SchedulerGroup(name,self.job_number,self)
+        self.__groups.append(new_group)
+        return new_group
 
     def run(self):
         """Internal: run method overriding that from base Thread class
@@ -197,12 +234,25 @@ class SimpleScheduler(threading.Thread):
                         self.__finished_names.append(job.job_name)
             # Update the list of running jobs
             self.__running = updated_running_list
+            # Check for completed groups
+            updated_group_list = []
+            for group in self.__groups:
+                if group.submitted:
+                    if group.is_running:
+                        logging.debug("Group #%s (id %s) still running" % (group.group_name,
+                                                                           group.group_id))
+                        updated_group_list.append(group)
+                    else:
+                        logging.debug("Group #%s (id %s) completed" % (group.group_name,
+                                                                       group.group_id))
+                        self.__finished_names.append(group.group_name)
+            # Update the list of groups
+            self.__groups = updated_group_list
             # Add submitted jobs to the waiting list
             while not self.__submitted.empty():
                 job = self.__submitted.get()
                 self.__scheduled.append(job)
                 logging.debug("Added job #%d (%s): \"%s\"" % (job.job_number,job.name,job))
-            # Start running jobs
             remaining_jobs = []
             for job in self.__scheduled:
                 ok_to_run = True
@@ -226,6 +276,112 @@ class SimpleScheduler(threading.Thread):
             self.__scheduled = remaining_jobs
             # Wait before going round again
             time.sleep(self.__poll_interval)
+
+class SchedulerGroup:
+    """Class providing an interface to schedule a group of jobs
+
+    SchedulerGroup instances should normally be returned by a
+    call to the 'group' method of a SimpleScheduler object.
+    The group should be populated by calling its 'add' method
+    (note that jobs are passed directly to the scheduler).
+
+    Once all jobs have been added the 'submit' method should
+    be invoked to indicate to the scheduler that the group is
+    complete. At this point no more jobs can be added to the
+    group, and the scheduler will check for when the group
+    has finished running.
+    
+    """
+
+    def __init__(self,name,group_id,parent_scheduler):
+        """Create a new SchedulerGroup instance
+
+        """
+        self.group_name = name
+        self.group_id = group_id
+        self.__scheduler = parent_scheduler
+        self.__submitted = False
+        self.__jobs = []
+
+    @property
+    def submitted(self):
+        """Test whether group has been submitted
+
+        """
+        return self.__submitted
+
+    @property
+    def is_running(self):
+        """Test whether group is running
+
+        Returns True if group was submitted and if it has jobs
+        that are still running, False if not.
+
+        """
+        if not self.submitted:
+            return False
+        for job in self.__jobs:
+            if not job.submitted:
+                return True
+            elif job.is_running:
+                return True
+        return False
+
+    def add(self,args,runner=None,name=None,wait_for=[]):
+        """Add a request to run a job
+        
+        Arguments:
+          args
+          runner
+          name
+          wait_for
+
+        Returns:
+          SchedulerJob instance for the added job.
+
+        """
+        # Check we can still add jobs
+        if self.submitted:
+            raise Exception, \
+                "Can't add job to group '%s': group already submitted" % self.group_name
+        # Submit the job to the scheduler and keep a reference
+        logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
+        job = self.__scheduler.submit(args,runner=runner,name=name,wait_for=wait_for)
+        self.__jobs.append(job)
+        return job
+
+    @property
+    def jobs(self):
+        """Return list of jobs
+
+        """
+        return self.__jobs
+
+    def submit(self):
+        """Indicate that all jobs have been added to the group
+
+        """
+        if self.submitted:
+            raise Exception, "Group '%s' already submitted" % self.group_name
+        self.__submitted = True
+
+    def wait(self,poll_interval=5):
+        """Wait for the group to complete
+
+        Arguments:
+          poll_interval: optional, number of seconds to wait in
+            between checking if the group has completed (default: 5
+            seconds)
+
+        """
+        if not self.submitted:
+            raise Exception, "Group '%s' not submitted" % self.group_name
+        logging.debug("Waiting for group '%s' (#%s)..." % (self.group_name,
+                                                           self.group_id))
+        while self.is_running:
+            time.sleep(poll_interval)
+        logging.debug("Group '%s' (#%s) finished" % (self.group_name,
+                                                     self.group_id))
 
 class SchedulerJob(Job):
     """Class providing an interface to scheduled jobs
