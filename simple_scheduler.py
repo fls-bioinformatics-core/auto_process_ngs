@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Import modules that this module depends on
@@ -187,11 +187,12 @@ class SimpleScheduler(threading.Thread):
         logging.debug("Scheduled job #%d: \"%s\"" % (job.job_number,job))
         return job
 
-    def group(self,name):
+    def group(self,name,wait_for=[]):
         """Create a group of jobs
         
         Arguments:
           name
+          wait_for
 
         Returns:
           Empty SchedulerGroup instance.
@@ -202,7 +203,7 @@ class SimpleScheduler(threading.Thread):
             if self.has_name(name):
                 raise Exception,"Name '%s' already assigned" % name
             self.__names.append(name)
-        new_group = SchedulerGroup(name,self.job_number,self)
+        new_group = SchedulerGroup(name,self.job_number,self,wait_for=wait_for)
         self.__groups.append(new_group)
         return new_group
 
@@ -293,12 +294,13 @@ class SchedulerGroup:
     
     """
 
-    def __init__(self,name,group_id,parent_scheduler):
+    def __init__(self,name,group_id,parent_scheduler,wait_for=[]):
         """Create a new SchedulerGroup instance
 
         """
         self.group_name = name
         self.group_id = group_id
+        self.waiting_for = list(wait_for)
         self.__scheduler = parent_scheduler
         self.__submitted = False
         self.__jobs = []
@@ -344,9 +346,11 @@ class SchedulerGroup:
         if self.submitted:
             raise Exception, \
                 "Can't add job to group '%s': group already submitted" % self.group_name
+        # Update list of jobs that this one needs to wait for 
+        waiting_for = self.waiting_for + list(wait_for)
         # Submit the job to the scheduler and keep a reference
         logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
-        job = self.__scheduler.submit(args,runner=runner,name=name,wait_for=wait_for)
+        job = self.__scheduler.submit(args,runner=runner,name=name,wait_for=waiting_for)
         self.__jobs.append(job)
         return job
 
@@ -398,7 +402,7 @@ class SchedulerJob(Job):
 
         self.job_number = job_number
         self.job_name = name
-        self.waiting_for = wait_for
+        self.waiting_for = list(wait_for)
         if name is None:
             name = args[0]
         Job.__init__(self,runner,name,os.getcwd(),args[0],args[1:])
