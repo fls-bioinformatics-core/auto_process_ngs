@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.26"
+__version__ = "0.0.27"
 
 #######################################################################
 # Imports
@@ -481,6 +481,18 @@ class AutoProcess:
         project_metadata = TabFile.TabFile(os.path.join(analysis_dir,
                                                         self.params.project_metadata),
                                            first_line_is_header=True)
+        # Sanity check that the project data file has been populated
+        got_project_data = True
+        for line in project_metadata:
+            for item in ('User','PI','Organism','Library',):
+                if line[item] is None:
+                    logging.warning("Missing data from %s: %s" %
+                                    (self.params.project_metadata,item))
+                    got_project_data = False
+        if not got_project_data:
+            logging.error("Missing project metadata")
+            raise Exception, "Missing project metadata"
+        # Create the projects
         for line in project_metadata:
             # Acquire the run name
             if self.params.data_dir is not None:
@@ -824,7 +836,7 @@ def run_qc_parser():
                  "projects) and 'sname' optionally specifies a sample (or set of "
                  "samples).")
     p.add_option('--max-jobs',action='store',
-                 dest='max_jobs',default=4,
+                 dest='max_jobs',default=4,type='int',
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default: 4)")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
