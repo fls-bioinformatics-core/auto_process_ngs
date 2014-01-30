@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 #######################################################################
 # Import modules that this module depends on
@@ -283,5 +283,14 @@ if __name__ == "__main__":
 
     # Set group
     if options.new_group is not None:
-        # See http://stackoverflow.com/questions/5994840/how-to-change-the-user-and-group-permissions-for-a-directory-by-name
-        raise NotImplementedError
+        print "Setting group ownership to '%s' on %s" % (options.new_group,
+                                                         data_dir.dir)
+        new_group = options.new_group
+        try:
+            gid = grp.getgrnam(new_group).gr_gid
+        except KeyError,ex:
+            logging.error("Unable to locate group '%s' on this system" % new_group)
+            sys.exit(1)
+        print "Group '%s' guid = %s" % (new_group,gid)
+        for filen in data_dir.walk:
+            os.chown(filen,-1,gid)
