@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #######################################################################
 # Import modules that this module depends on
@@ -154,8 +154,8 @@ if __name__ == "__main__":
                  help='print information about DATA_DIR')
     p.add_option('--copy-to',action='store',dest='dest_dir',default=None,
                  help='copy DATA_DIR into DEST_DIR using rsync')
-    p.add_option('--check-group',action='store',dest='check_group',default=None,
-                 help='check that files are owned by CHECK_GROUP and have group '
+    p.add_option('--check-group',action='store',dest='group',default=None,
+                 help='check that files are owned by GROUP and have group '
                  'read-write permissions')
     p.add_option('--check-symlinks',action='store_true',dest='check_symlinks',
                  help='check for broken symlinks')
@@ -189,10 +189,10 @@ if __name__ == "__main__":
         data_dir.copy(dest_dir)
 
     # Check group and permissions
-    if options.check_group:
+    if options.group:
         print "Checking group ownership for '%s' in %s" % (data_dir.dir,
-                                                           options.check_group)
-        group = options.check_group
+                                                           options.group)
+        group = options.group
         try:
             gid = grp.getgrnam(group).gr_gid
         except KeyError,ex:
@@ -202,20 +202,26 @@ if __name__ == "__main__":
         for filen in data_dir.walk:
             st = os.stat(filen)
             if st.st_gid != gid:
-                print "Wrong group:\t%s" % os.path.relpath(filen,data_dir.dir)
+                print "Wrong group (%s):\t%s" % (grp.getgrgid(st.st_gid).gr_name,
+                                                 os.path.relpath(filen,data_dir.dir))
             if not ((st.st_mode & stat.S_IRGRP) and (st.st_mode & stat.S_IWGRP)):
                 print "Not group read/writable:\t%s" % os.path.relpath(filen,data_dir.dir)
 
     # Check for temporary and hidden files/directories
     if options.check_temporary:
         print "Checking for temporary/hidden data in %s" % data_dir.dir
+        temporary = []
         for filen in data_dir.walk:
             if os.path.basename(filen).startswith('.'):
-                print "\t%s (%s)" % (os.path.relpath(filen,data_dir.dir),
-                                     bcf_utils.format_file_size(get_size(filen)))
+                temporary.append(filen)
             elif os.path.basename(filen).find('tmp') > -1:
+                temporary.append(filen)
+        if temporary:
+            for filen in temporary:
                 print "\t%s (%s)" % (os.path.relpath(filen,data_dir.dir),
                                      bcf_utils.format_file_size(get_size(filen)))
+        else:
+            print "No temporary or hidden files found"
 
     # Examine links
     if options.check_symlinks:
