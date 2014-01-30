@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 #######################################################################
 # Import modules that this module depends on
@@ -33,6 +33,7 @@ import optparse
 import logging
 import subprocess
 import bcf_utils
+import Md5sum
 
 #######################################################################
 # Classes
@@ -161,6 +162,8 @@ if __name__ == "__main__":
                  help='check for broken symlinks')
     p.add_option('--check-temporary',action='store_true',dest='check_temporary',
                  help='check for hidden and temporary data')
+    p.add_option('--md5diff',action='store',dest='ref_dir',default=None,
+                 help='compare DATA_DIR against REF_DIR using MD5 sums')
     p.add_option('--set-group',action='store',dest='new_group',default=None,
                  help='set the group ownership to NEW_GROUP')
     p.add_option('--debug',action='store_true',dest='debug',
@@ -246,19 +249,35 @@ if __name__ == "__main__":
                 absolute_links.append(link)
         print "%d symlinks examined" % nlinks
         if broken_links:
-            print "Found %d broke links:" % len(broken_links)
+            print "Found %d broken links:" % len(broken_links)
             for link in broken_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
-                                      os.path.realpath(link))
+                                      os.readlink(link))
         else:
             print "No broken links"
         if absolute_links:
             print "Found %d absolute links:" % len(absolute_links)
             for link in absolute_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
-                                      os.path.realpath(link))
+                                      os.readlink(link))
         else:
             print "No absolute links"
+
+    # Do MD5 checksum comparison with a reference directory
+    if options.ref_dir is not None:
+        ref_dir = DataDir(options.ref_dir)
+        print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
+        for ref_filen in ref_dir.files:
+            filen = os.path.join(data_dir.dir,os.path.relpath(ref_filen,ref_dir.dir))
+            if not os.path.exists(filen):
+                print "MISSING\t%s" % os.path.relpath(filen,data_dir.dir)
+            else:
+                ref_chksum = Md5sum.md5sum(ref_filen)
+                chksum = Md5sum.md5sum(filen)
+                if chksum != ref_chksum:
+                    print "FAILED\t%s" % os.path.relpath(filen,data_dir.dir)
+                else:
+                    print "OK\t%s" % os.path.relpath(filen,data_dir.dir)
 
     # Set group
     if options.new_group is not None:
