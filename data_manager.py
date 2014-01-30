@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Import modules that this module depends on
@@ -200,7 +200,7 @@ if __name__ == "__main__":
             sys.exit(1)
         print "Group '%s' guid = %s" % (group,gid)
         for filen in data_dir.walk:
-            st = os.stat(filen)
+            st = os.lstat(filen)
             if st.st_gid != gid:
                 print "Wrong group (%s):\t%s" % (grp.getgrgid(st.st_gid).gr_name,
                                                  os.path.relpath(filen,data_dir.dir))
@@ -210,13 +210,17 @@ if __name__ == "__main__":
     # Check for temporary and hidden files/directories
     if options.check_temporary:
         print "Checking for temporary/hidden data in %s" % data_dir.dir
+        nfiles = 0
         temporary = []
         for filen in data_dir.walk:
+            nfiles += 1
             if os.path.basename(filen).startswith('.'):
                 temporary.append(filen)
             elif os.path.basename(filen).find('tmp') > -1:
                 temporary.append(filen)
+        print "%d files & directories examined" % nfiles
         if temporary:
+            print "Found %d temporary/hidden data items:" % len(temporary)
             for filen in temporary:
                 print "\t%s (%s)" % (os.path.relpath(filen,data_dir.dir),
                                      bcf_utils.format_file_size(get_size(filen)))
@@ -226,23 +230,26 @@ if __name__ == "__main__":
     # Examine links
     if options.check_symlinks:
         print "Checking symlinks in %s" % data_dir.dir
+        nlinks = 0
         broken_links = []
         absolute_links = []
         for link in data_dir.symlinks:
+            nlinks += 1
             filen = os.path.realpath(link)
             if not os.path.exists(filen):
                 broken_links.append(link)
             elif os.path.isabs(filen):
                 absolute_links.append(link)
+        print "%d symlinks examined" % nlinks
         if broken_links:
-            print "Broken links:"
+            print "Found %d broke links:" % len(broken_links)
             for link in broken_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
                                       os.path.realpath(link))
         else:
             print "No broken links"
         if absolute_links:
-            print "Absolute links:"
+            print "Found %d absolute links:" % len(absolute_links)
             for link in absolute_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
                                       os.path.realpath(link))
