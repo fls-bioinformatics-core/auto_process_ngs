@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 #######################################################################
 # Import modules that this module depends on
@@ -153,6 +153,8 @@ if __name__ == "__main__":
                               "sequencing data and/or bioinformatic analyses.")
     p.add_option('--info',action='store_true',dest='info',
                  help='print information about DATA_DIR')
+    p.add_option('--find',action='store',dest='regex_pattern',default=None,
+                 help='find files that match REGEX_PATTERN')
     p.add_option('--copy-to',action='store',dest='dest_dir',default=None,
                  help='copy DATA_DIR into DEST_DIR using rsync')
     p.add_option('--check-group',action='store',dest='group',default=None,
@@ -184,6 +186,13 @@ if __name__ == "__main__":
         data_dir_size = data_dir.get_size()
         print "Size: %sK (%s)" % (data_dir_size,
                                   bcf_utils.format_file_size(data_dir_size))
+
+    # Find files matching pattern
+    if options.regex_pattern is not None:
+        print "Looking for files matching '%s' in %s" % (options.regex_pattern,
+                                                         data_dir.dir)
+        for filen in data_dir.find_files(options.regex_pattern):
+            print "%s" % os.path.relpath(filen,data_dir.dir)
 
     # Rsync to working directory
     if options.dest_dir is not None:
