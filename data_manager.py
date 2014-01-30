@@ -242,10 +242,9 @@ if __name__ == "__main__":
         absolute_links = []
         for link in data_dir.symlinks:
             nlinks += 1
-            filen = os.path.realpath(link)
-            if not os.path.exists(filen):
+            if not os.path.exists(os.path.realpath(link)):
                 broken_links.append(link)
-            elif os.path.isabs(filen):
+            elif os.path.isabs(os.readlink(link)):
                 absolute_links.append(link)
         print "%d symlinks examined" % nlinks
         if broken_links:
