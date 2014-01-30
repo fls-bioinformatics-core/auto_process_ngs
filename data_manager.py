@@ -202,7 +202,10 @@ if __name__ == "__main__":
             logging.error("Unable to locate group '%s' on this system" % group)
             sys.exit(1)
         print "Group '%s' guid = %s" % (group,gid)
+        print "** NB links will be ignored **"
         for filen in data_dir.walk:
+            if os.path.islink(filen):
+                continue
             st = os.lstat(filen)
             if st.st_gid != gid:
                 try:
