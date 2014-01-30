@@ -180,7 +180,7 @@ if __name__ == "__main__":
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    # Get initial size
+    # Get information
     if options.info:
         print "Gathering information about %s" % data_dir.dir
         data_dir_size = data_dir.get_size()
