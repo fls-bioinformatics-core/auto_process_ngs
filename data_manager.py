@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Import modules that this module depends on
@@ -202,7 +202,11 @@ if __name__ == "__main__":
         for filen in data_dir.walk:
             st = os.lstat(filen)
             if st.st_gid != gid:
-                print "Wrong group (%s):\t%s" % (grp.getgrgid(st.st_gid).gr_name,
+                try:
+                    wrong_group = grp.getgrgid(st.st_gid).gr_name
+                except KeyError:
+                    wrong_group = st.st_gid
+                print "Wrong group (%s):\t%s" % (wrong_group,
                                                  os.path.relpath(filen,data_dir.dir))
             if not ((st.st_mode & stat.S_IRGRP) and (st.st_mode & stat.S_IWGRP)):
                 print "Not group read/writable:\t%s" % os.path.relpath(filen,data_dir.dir)
