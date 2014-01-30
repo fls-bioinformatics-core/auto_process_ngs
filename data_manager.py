@@ -47,7 +47,7 @@ class DataDir:
         """
         data_dir = os.path.abspath(data_dir)
         if not os.path.isdir(data_dir):
-            raise OSError, "'%s': not a directory"
+            raise OSError, "'%s': not a directory" % data_dir
         self.__data_dir = data_dir
     @property
     def dir(self):
