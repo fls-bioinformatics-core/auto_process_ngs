@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 #######################################################################
 # Import modules that this module depends on
@@ -67,9 +67,31 @@ class DataDir:
             size += os.lstat(f).st_size
         return int(float(size)/1024)
     def copy(self,target,dry_run=False):
+        """Create a copy of dir using rsync
+
+        Creates a copy of the data directory under directory 'target',
+        using the external 'rsync' program.
+
+        The copy will be owned by the user running the operation.
+        Other rsync options are:
+
+        -r: recursive copy
+        -l: copy symbolic links as links
+        -t: preserve timestamps
+        -E: preserve executibility
+        -D: preserve devices files and special files
+        --chmod=u+rwX,g+rwX,o-w: give user and group read and write access
+
+        -p (preserve permissions) is also needed to make the --chmod
+        options stick (see rsync manpage).
+
+        Arguments:
+          target : target directory to make the copy under
+          dry_run: optional, if True then run rsync with --dry-run option
+            so no files are copied.
+
         """
-        """
-        rsync = ['rsync','-rltDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
+        rsync = ['rsync','-rpltDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
         if dry_run:
             rsync.insert(1,'--dry-run')
         logging.debug("Rsync command: %s" % rsync)
@@ -161,7 +183,7 @@ if __name__ == "__main__":
                  help='check that files are owned by GROUP and have group '
                  'read-write permissions')
     p.add_option('--check-symlinks',action='store_true',dest='check_symlinks',
-                 help='check for broken symlinks')
+                 help='check for broken and absolute symlinks')
     p.add_option('--check-temporary',action='store_true',dest='check_temporary',
                  help='check for hidden and temporary data')
     p.add_option('--md5diff',action='store',dest='ref_dir',default=None,
@@ -278,17 +300,40 @@ if __name__ == "__main__":
     if options.ref_dir is not None:
         ref_dir = DataDir(options.ref_dir)
         print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
+        md5_results = { 'bad_links': [],
+                        'missing': [],
+                        'failed': [], }
+        nfiles = 0
         for ref_filen in ref_dir.files:
+            nfiles += 1
             filen = os.path.join(data_dir.dir,os.path.relpath(ref_filen,ref_dir.dir))
             if not os.path.exists(filen):
-                print "MISSING\t%s" % os.path.relpath(filen,data_dir.dir)
+                if os.path.islink(filen):
+                    if os.path.realpath(filen) == os.path.realpath(ref_filen):
+                        print "OK_LINK\t%s" % os.path.relpath(filen,data_dir.dir)
+                    else:
+                        print "BAD_LINK\t%s" % os.path.relpath(filen,data_dir.dir)
+                        md5_results['bad_links'].append(os.path.relpath(filen,data_dir.dir))
+                else:
+                    print "MISSING\t%s" % os.path.relpath(filen,data_dir.dir)
+                    md5_results['missing'].append(os.path.relpath(filen,data_dir.dir))
             else:
                 ref_chksum = Md5sum.md5sum(ref_filen)
                 chksum = Md5sum.md5sum(filen)
                 if chksum != ref_chksum:
                     print "FAILED\t%s" % os.path.relpath(filen,data_dir.dir)
+                    md5_results['failed'].append(os.path.relpath(filen,data_dir.dir))
                 else:
                     print "OK\t%s" % os.path.relpath(filen,data_dir.dir)
+        print "Summary"
+        print "\t%d files examined" % nfiles
+        print "\tFAILED\t%d" % len(md5_results['failed'])
+        print "\tMISSING\t%d" % len(md5_results['missing'])
+        print "\tBAD_LINKS\t%d" % len(md5_results['bad_links'])
+        print "\tOK\t%d" % (nfiles \
+                            - len(md5_results['failed']) \
+                            - len(md5_results['missing'])
+                            - len(md5_results['bad_links']))
 
     # Set group
     if options.new_group is not None:
