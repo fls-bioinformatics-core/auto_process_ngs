@@ -485,7 +485,7 @@ class AutoProcess:
         got_project_data = True
         for line in project_metadata:
             for item in ('User','PI','Organism','Library',):
-                if line[item] is None:
+                if line[item] == '.':
                     logging.warning("Missing data from %s: %s" %
                                     (self.params.project_metadata,item))
                     got_project_data = False
