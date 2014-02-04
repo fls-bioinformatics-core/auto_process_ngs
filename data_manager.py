@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 #######################################################################
 # Import modules that this module depends on
@@ -347,4 +347,5 @@ if __name__ == "__main__":
             sys.exit(1)
         print "Group '%s' guid = %s" % (new_group,gid)
         for filen in data_dir.walk:
-            os.chown(filen,-1,gid)
+            if not os.path.islink(filen):
+                os.chown(filen,-1,gid)
