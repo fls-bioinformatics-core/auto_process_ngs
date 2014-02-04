@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 #######################################################################
 # Imports
@@ -680,15 +680,30 @@ class AutoProcess:
         print "Running %s" % scp
         scp.run_subprocess()
 
-    def report(self):
-        # Report the contents of the run
-        # This is intended for helping with logging etc
+    def report(self,logging=False,summary=False,full=False):
+        # Report the contents of the run in various formats
+        # Short form "logging"-style report
+        if logging:
+            report = self.report_logging_format()
+            print report
+        if summary:
+            report = self.report_summary_format()
+            print report
+        if full:
+            report = self.report_full_format()
+            print report
+
+    def report_logging_format(self):
+        # Generate short form "logging"-style report
+        # e.g. Paired end: 'PJB': Peter Briggs, Mouse ChIP-seq (PI: P Briggs) (6 samples); ...
+        #
+        # Acquire data
         illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
-        report = []
-        # Get metadata for projects
         project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
                                                             self.params.project_metadata))
+        # Generate report text
+        report = []
         for p in project_metadata:
             project = illumina_data.get_project(p['Project'])
             report.append("'%s': %s, %s %s (PI: %s) (%d samples)" % \
@@ -702,7 +717,87 @@ class AutoProcess:
         # Paired end run?
         if illumina_data.paired_end:
             report = "Paired end: " + report
-        print report
+        return report
+
+    def report_summary_format(self):
+        # Generate summary form "email"-style report for record-keeping
+        # Includes:
+        # - Platform
+        # - Run name
+        # - Researcher (aka user)
+        # - PI
+        # - Application (aka library type)
+        # - Organism
+        # - Number of samples
+        #
+        # Acquire data
+        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
+                                                  unaligned_dir=self.params.unaligned_dir)
+        project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
+                                                            self.params.project_metadata))
+        # Generate report text
+        report = []
+        report.append("Run name:\t%s" % os.path.basename(self.params.data_dir))
+        report.append("Platform:\t%s" % self.params.platform.upper())
+        report.append("")
+        report.append("%d projects:" % len(project_metadata))
+        for p in project_metadata:
+            project = illumina_data.get_project(p['Project'])
+            report.append("- %s\t(PI %s)\t%s\t(%s)\t%d samples" % \
+                          (p['User'],
+                           p['PI'] if p['PI'] != '?' else 'unknown',
+                           p['Library'],
+                           p['Organism'] if p['Organism'] != '?' else 'unknown organism',
+                           len(project.samples)))
+        report = '\n'.join(report)
+        return report
+
+    def report_full_format(self):
+        # Generate long form "full"-style report suitable for sending
+        # to bioinformaticians
+        # e.g. Peter Briggs data is now available at
+        #
+        # /path/to/data/140204_SQ12345_0001_AB12CDXYZ/PJB/
+        #
+        # The samples are:
+        #
+        # PJB1, PJBA1-4 (5 paired end samples, multiple fastqs per sample)
+        #
+        # Additionally:
+        # Some extra information.
+        #
+        # Acquire data
+        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
+                                                  unaligned_dir=self.params.unaligned_dir)
+        project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
+                                                            self.params.project_metadata))
+        # Generate report text
+        report = []
+        for p in project_metadata:
+            project = auto_process_utils.AnalysisProject(p['Project'],
+                                                         os.path.join(self.params.analysis_dir,
+                                                                      p['Project']))
+            title = "%s %s %s data from %s run %s" % \
+                          (project.metadata.user,
+                           project.metadata.library_type,
+                           project.metadata.organism,
+                           project.metadata.platform.upper(),
+                           os.path.basename(self.params.analysis_dir).split('_')[0])
+            report.append("%s\n%s\n" % (title,'-'*len(title)))
+            report.append("The data for %(user)s's %(org)s %(lib)s is now "
+                          "available at\n\n%(dirn)s\n" % \
+                          dict(user=project.metadata.user,
+                               dirn=project.dirn,
+                               org=project.metadata.organism,
+                               lib=project.metadata.library_type))
+            report.append("The samples are:\n\n%s (%d%s samples%s)" % \
+                          (project.prettyPrintSamples(),
+                           len(project.samples),
+                           " paired end" if project.metadata.paired_end else '',
+                           ", multiple fastqs per sample" if project.multiple_fastqs else ''))
+            report.append("\nAdditional comments:\n\t%s" % project.metadata.comments)
+        report = '\n'.join(report)
+        return report
 
 class ProjectMetadataFile(TabFile.TabFile):
     def __init__(self,filen=None):
@@ -858,6 +953,21 @@ def publish_qc_parser():
                  help="Turn on debugging output from Python libraries")
     return p
 
+def report_parser():
+    p  = optparse.OptionParser(usage="%prog report [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Report information on processed Illumina "
+                               "sequence data in ANALYSIS_DIR.")
+    p.add_option('--logging',action='store_true',dest='logging',default=False,
+                 help="print short report suitable for logging file")
+    p.add_option('--summary',action='store_true',dest='summary',default=False,
+                 help="print full report suitable for bioinformaticians")
+    p.add_option('--full',action='store_true',dest='full',default=False,
+                 help="print summary report suitable for record-keeping")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
 def generic_parser():
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
@@ -881,7 +991,7 @@ if __name__ == "__main__":
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = generic_parser()
     cmd_parsers['publish_qc'] = publish_qc_parser()
-    cmd_parsers['report'] = generic_parser()
+    cmd_parsers['report'] = report_parser()
 
     # Process command line
     try:
@@ -945,4 +1055,6 @@ if __name__ == "__main__":
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern)
         elif cmd == 'report':
-            d.report()
+            d.report(logging=options.logging,
+                     summary=options.summary,
+                     full=options.full)
