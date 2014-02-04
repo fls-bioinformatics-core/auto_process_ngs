@@ -206,6 +206,10 @@ class AnalysisProject:
     samples     : list of AnalysisSample objects
     fastq_dir   : subdirectory holding fastq files
 
+    
+    multiple_fastqs: True if at least one sample has more than one fastq
+                     file per read associated with it
+
     There is also a 'metadata' property with the following additional
     properties:
 
@@ -215,9 +219,6 @@ class AnalysisProject:
     library_type: library type, either None or e.g. 'RNA-seq' etc
     platform    : sequencing platform, either None or e.g. 'miseq' etc
     paired_end  : True if data is paired end, False if not
-    multiple_fastqs
-                : True if at least one sample has more than one fastq
-                  file per read associated with it
 
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
@@ -300,10 +301,6 @@ class AnalysisProject:
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
         self.metadata['paired_end'] = paired_end
-        # Set multiple_fastqs flag
-        multiple_fastqs = reduce(lambda x,y: x and y,
-                                 [len(s.fastq) > 1 for s in self.samples])
-        self.metadata['multiple_fastqs'] = multiple_fastqs
 
     def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
@@ -373,9 +370,7 @@ class AnalysisProject:
             sample_description += " (%s" % \
                                   bcf_utils.pretty_print_names(
                                       [s.name for s in self.samples])
-            multiple_fastqs = reduce(lambda x,y: x and y,
-                                     [len(s.fastq) > 1 for s in self.samples])
-            if multiple_fastqs:
+            if self.multiple_fastqs:
                 sample_description += ", multiple fastqs per sample"
             sample_description += ")"
         self.metadata['samples'] = sample_description
@@ -398,6 +393,12 @@ class AnalysisProject:
             return qcreporter.IlluminaQCReporter(self.dirn).zip()
         else:
             return None
+
+    @property
+    def multiple_fastqs(self):
+        # Determine if there are multiple fastqs per sample
+        return reduce(lambda x,y: x and y,
+                      [len(s.fastq) > 1 for s in self.samples])
 
     def verify_qc(self):
         # Verify if the QC was successful
