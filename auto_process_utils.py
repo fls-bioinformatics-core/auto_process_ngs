@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 """auto_process_utils
 
@@ -149,17 +149,21 @@ class AnalysisFastq:
         # Deal with trailing index tag e.g. ATTGCT or ATTGCT-CCTAAG
         field = fields[-1]
         ##logging.debug("Test for barcode sequence %s" % field)
-        is_tag = True
-        for f in field.split('-'):
-            for c in f:
-                is_tag = is_tag and c in 'ACGTN'
-        if is_tag:
-            self.barcode_sequence = field
-            fields = fields[:-1]
-            ##logging.debug("Identified barcode sequence as %s" % self.barcode_sequence)
+        if len(fields) > 1:
+            # This mustn't be the last field: if it is then it's
+            # not the tag - it's the name
+            is_tag = True
+            for f in field.split('-'):
+                for c in f:
+                    is_tag = is_tag and c in 'ACGTN'
+            if is_tag:
+                self.barcode_sequence = field
+                fields = fields[:-1]
+                ##logging.debug("Identified barcode sequence as %s" % self.barcode_sequence)
         # What's left is the name
         ##logging.debug("Remaining fields: %s" % fields)
         self.sample_name = '_'.join(fields)
+        assert(self.sample_name != '')
 
     def __repr__(self):
         """Implement __repr__ built-in
@@ -941,6 +945,17 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+
+    def test_sample_name_is_A(self):
+        """Samples called 'A_R1' should have the name 'A'
+        """
+        fq = AnalysisFastq('A_R1')
+        self.assertEqual(fq.sample_name,'A')
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,1)
+        self.assertEqual(fq.set_number,None)
+        self.assertEqual(str(fq),'A_R1')
 
 class TestAnalysisProject(unittest.TestCase):
     """Tests for the AnalysisProject class
