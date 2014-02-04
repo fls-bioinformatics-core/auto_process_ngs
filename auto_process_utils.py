@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 """auto_process_utils
 
@@ -203,11 +203,21 @@ class AnalysisProject:
 
     name        : name of the project
     dirn        : associated directory (full path)
+    samples     : list of AnalysisSample objects
+    fastq_dir   : subdirectory holding fastq files
+
+    There is also a 'metadata' property with the following additional
+    properties:
+
+    run         : run name
+    user        : user name
+    PI          : PI name
     library_type: library type, either None or e.g. 'RNA-seq' etc
     platform    : sequencing platform, either None or e.g. 'miseq' etc
     paired_end  : True if data is paired end, False if not
-    samples     : list of AnalysisSample objects
-    fastq_dir   : subdirectory holding fastq files
+    multiple_fastqs
+                : True if at least one sample has more than one fastq
+                  file per read associated with it
 
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
@@ -290,6 +300,10 @@ class AnalysisProject:
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
         self.metadata['paired_end'] = paired_end
+        # Set multiple_fastqs flag
+        multiple_fastqs = reduce(lambda x,y: x and y,
+                                 [len(s.fastq) > 1 for s in self.samples])
+        self.metadata['multiple_fastqs'] = multiple_fastqs
 
     def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
