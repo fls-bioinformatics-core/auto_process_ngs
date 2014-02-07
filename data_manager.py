@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 #######################################################################
 # Import modules that this module depends on
@@ -163,6 +163,120 @@ def find(dirn,regex):
                 yield f
 
 #######################################################################
+# Tests
+#######################################################################
+
+import unittest
+import tempfile
+import shutil
+import filecmp
+
+class WorkingDir:
+    """Class for building & populating arbitrary directories for tests
+    """
+    def __init__(self,parent_dir=None):
+        """Create a new TestDir instance
+        """
+        self.dirname = tempfile.mkdtemp(dir=parent_dir)
+        logging.debug("Working dir: %s" % self.dirname)
+    def rm(self):
+        """Remove the entire working directory
+        """
+        shutil.rmtree(self.dirname)
+    def mk_dir(self,*args):
+        """Make a subdirectory or series of subdirectories
+        """
+        subdir = self.dirname
+        for arg in args:
+            subdir = os.path.join(subdir,arg)
+            logging.debug("Making subdir: %s" % subdir)
+            try:
+                os.mkdir(subdir)
+            except OSError,ex:
+                if os.path.isdir(subdir): continue
+                raise ex
+        return subdir
+    def rm_dir(self,*args):
+        """Remove a subdirectory
+        """
+        subdir = os.path.join(self.dirname,*args)
+        logging.debug("Removing subdir: %s" % subdir)
+        shutil.rmtree(subdir)
+    def mk_file(self,filen,text=None):
+        """Make a file in the working directory
+        """
+        filen = os.path.join(self.dirname,filen)
+        logging.debug("Making filen: %s" % filen)
+        fp = open(filen,'w')
+        if text is not None:
+            fp.write(text)
+        fp.close()
+        return filen
+    def rm_file(self,filen):
+        """Remove a file
+        """
+        filen = os.path.join(self.dirname,filen)
+        os.remove(filen)
+    def mk_link(self,source,target):
+        """Make a symbolic link
+        """
+        source = os.path.join(self.dirname,source)
+        target = os.path.join(self.dirname,target)
+        os.symlink(source,target)
+        return target
+
+def cmp_dirs(dir1,dir2):
+    for dirpath,dirnames,filenames in os.walk(dir1):
+        for d in dirnames:
+            d2 = os.path.join(dir2,
+                              os.path.relpath(os.path.join(dirpath,d),dir1))
+            if not os.path.isdir(d2):
+                return False
+        for f in filenames:
+            f2 = os.path.join(dir2,
+                              os.path.relpath(os.path.join(dirpath,f),dir1))
+            if not os.path.isfile(f2):
+                return False
+    return True
+
+def make_languages_data_dir(wd):
+    wd.mk_dir('languages')
+    wd.mk_file('languages/hello')
+    wd.mk_file('languages/goodbye')
+    wd.mk_dir('languages/spanish')
+    wd.mk_file('languages/spanish/hola')
+    wd.mk_file('languages/spanish/adios',text="This means 'goodbye'")
+    wd.mk_dir('languages/welsh')
+    wd.mk_dir('languages/welsh/north_wales')
+    wd.mk_file('languages/welsh/north_wales/maen_ddrwg_gen_i')
+    wd.mk_dir('languages/welsh/south_wales')
+    wd.mk_file('languages/welsh/south_wales/maen_flin_da_fi')
+    return wd
+
+class TestDataDirCopy(unittest.TestCase):
+    """Tests for DataDir class 'copy' functionality
+    """
+    def setUp(self):
+        # Make a test data directory structure
+        self.wd = WorkingDir()
+        make_languages_data_dir(self.wd)
+        # Make a temporary destination
+        self.dest = WorkingDir()
+    def tearDown(self):
+        # Remove the test data directory
+        self.wd.rm()
+        self.dest.rm()
+    def test_copy(self):
+        """Check copying functionality
+        """
+        source_dirname = os.path.join(self.wd.dirname,'languages')
+        data_dir = DataDir(source_dirname)
+        data_dir.copy(self.dest.dirname)
+        target_dirname = os.path.join(self.dest.dirname,'languages')
+        self.assertTrue(cmp_dirs(source_dirname,target_dirname))
+        self.assertTrue(cmp_dirs(target_dirname,source_dirname))
+
+#######################################################################
 # Main program
 #######################################################################
 
@@ -206,7 +320,7 @@ if __name__ == "__main__":
     if options.info:
         print "Gathering information about %s" % data_dir.dir
         data_dir_size = data_dir.get_size()
-        print "Size: %sK (%s)" % (data_dir_size,
+        print "Size: %fK (%s)" % (float(data_dir_size)/1024,
                                   bcf_utils.format_file_size(data_dir_size))
 
     # Find files matching pattern
