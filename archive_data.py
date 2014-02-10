@@ -143,7 +143,8 @@ if __name__ == "__main__":
         # Schedule group name reset
         if new_group is not None:
             set_group_name="set_group.%s" % os.path.basename(data_dir)
-            job = s.submit(['data_manager.py','--set-group=%s' % new_group,data_dir],
+            job = s.submit(['data_manager.py','--set-group=%s' % new_group,
+                            os.path.join(archive_to,os.path.basename(data_dir))],
                            name=set_group_name,wait_for=(copy_name,))
             jobs[set_group_name] = job
         # Schedule MD5 check
