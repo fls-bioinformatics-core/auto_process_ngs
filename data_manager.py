@@ -131,12 +131,84 @@ class DataDir:
     def walk(self):
         """
         """
-        yeild self.dir
+        yield self.dir
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
             for f in filenames:
                 yield os.path.join(dirpath,f)
+
+class Md5Checker:
+    def __init__(self,reference,target):
+        self.reference = reference
+        self.target = target
+        self._passed = []
+        self._bad_links = []
+        self._missing_files = []
+        self._failed_md5sums = []
+        self._n_files = 0
+
+    def compare(self,verbose=True):
+        """
+        """
+        ref_dir = self.reference.dir
+        tgt_dir = self.target.dir
+        for ref_filen in self.reference.files:
+            self._n_files += 1
+            filen = os.path.join(tgt_dir,os.path.relpath(ref_filen,ref_dir))
+            rel_filen = os.path.relpath(filen,tgt_dir)
+            if not os.path.exists(filen):
+                if os.path.islink(filen):
+                    # Deal with bad links
+                    if os.readlink(filen) == os.readlink(ref_filen):
+                        self.report("OK_LINK",rel_filen,verbose)
+                    else:
+                        self.report("BAD_LINK",rel_filen,verbose)
+                        self._bad_links.append(rel_filen)
+                else:
+                    self.report("MISSING",rel_filen,verbose)
+                    self._missing_files.append(rel_filen)
+            else:
+                # Compute and compare checksums
+                ref_chksum = Md5sum.md5sum(ref_filen)
+                chksum = Md5sum.md5sum(filen)
+                if chksum != ref_chksum:
+                    self.report("FAILED",rel_filen,verbose)
+                    self._failed_md5sums.append(rel_filen)
+                else:
+                    self.report("OK",rel_filen,verbose)
+
+    def report(self,msg,filen,verbose):
+        if verbose: print "%s\t%s" % (msg,filen)
+
+    @property
+    def n_examined(self):
+        """Number of files examined
+        """
+        return self._n_files
+    @property
+    def failed_md5sums(self):
+        """List of files that failed MD5 sum checks
+        """
+        return self._failed_md5sums
+    @property
+    def missing_files(self):
+        """List of files missing from the target directory
+        """
+        return self._missing_files
+    @property
+    def bad_links(self):
+        """List of bad links
+        """
+        return self._bad_links
+    @property
+    def n_passed(self):
+        """Number of files passing checks
+        """
+        return self.n_examined \
+            - len(self.failed_md5sums) \
+            - len(self.missing_files) \
+            - len(self.bad_links)
 
 #######################################################################
 # Functions
@@ -415,40 +487,14 @@ if __name__ == "__main__":
     if options.ref_dir is not None:
         ref_dir = DataDir(options.ref_dir)
         print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
-        md5_results = { 'bad_links': [],
-                        'missing': [],
-                        'failed': [], }
-        nfiles = 0
-        for ref_filen in ref_dir.files:
-            nfiles += 1
-            filen = os.path.join(data_dir.dir,os.path.relpath(ref_filen,ref_dir.dir))
-            if not os.path.exists(filen):
-                if os.path.islink(filen):
-                    if os.path.realpath(filen) == os.path.realpath(ref_filen):
-                        print "OK_LINK\t%s" % os.path.relpath(filen,data_dir.dir)
-                    else:
-                        print "BAD_LINK\t%s" % os.path.relpath(filen,data_dir.dir)
-                        md5_results['bad_links'].append(os.path.relpath(filen,data_dir.dir))
-                else:
-                    print "MISSING\t%s" % os.path.relpath(filen,data_dir.dir)
-                    md5_results['missing'].append(os.path.relpath(filen,data_dir.dir))
-            else:
-                ref_chksum = Md5sum.md5sum(ref_filen)
-                chksum = Md5sum.md5sum(filen)
-                if chksum != ref_chksum:
-                    print "FAILED\t%s" % os.path.relpath(filen,data_dir.dir)
-                    md5_results['failed'].append(os.path.relpath(filen,data_dir.dir))
-                else:
-                    print "OK\t%s" % os.path.relpath(filen,data_dir.dir)
+        md5check = Md5Checker(ref_dir,data_dir)
+        md5check.compare()
         print "Summary"
-        print "\t%d files examined" % nfiles
-        print "\tFAILED\t%d" % len(md5_results['failed'])
-        print "\tMISSING\t%d" % len(md5_results['missing'])
-        print "\tBAD_LINKS\t%d" % len(md5_results['bad_links'])
-        print "\tOK\t%d" % (nfiles \
-                            - len(md5_results['failed']) \
-                            - len(md5_results['missing'])
-                            - len(md5_results['bad_links']))
+        print "\t%d files examined" % md5check.n_examined
+        print "\tFAILED\t%d" % len(md5check.failed_md5sums)
+        print "\tMISSING\t%d" % len(md5check.missing_files)
+        print "\tBAD_LINKS\t%d" % len(md5check.bad_links)
+        print "\tOK\t%d" % md5check.n_passed
 
     # Set group
     if options.new_group is not None:
