@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 #######################################################################
 # Import modules that this module depends on
@@ -131,6 +131,7 @@ class DataDir:
     def walk(self):
         """
         """
+        yeild self.dir
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
