@@ -108,7 +108,7 @@ if __name__ == "__main__":
     archive_dir = os.path.abspath(args[-1])
     log_dir = os.path.abspath(options.log_dir)
     new_group = options.new_group
-    print "Data dirs  : %s" % '\t\n'.join(data_dirs)
+    print "Data dirs  : %s" % '\n\t'.join(data_dirs)
     print "Archive dir: %s" % archive_dir
     print "Log dir    : %s" % log_dir
     print "New group  : %s" % new_group
