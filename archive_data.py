@@ -82,7 +82,7 @@ if __name__ == "__main__":
     p = optparse.OptionParser(usage="%prog DATA_DIR [ DATA_DIR ... ] ARCHIVE_DIR",
                               version="%prog "+__version__,
                               description="Copy multiple sequence data directories "
-                              "to ARCHIVE_DIR")
+                              "to ARCHIVE_DIR, then run MD5 checksums to verify.")
     p.add_option("--dry-run",action='store_true',dest='dry_run',
                  help="show where data would be copied but don't perform any operations")
     p.add_option("--log-dir",action='store',dest='log_dir',default=os.getcwd(),
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     archive_dir = os.path.abspath(args[-1])
     log_dir = os.path.abspath(options.log_dir)
     new_group = options.new_group
-    print "Data dirs  : %s" % data_dirs
+    print "Data dirs  : %s" % '\t\n'.join(data_dirs)
     print "Archive dir: %s" % archive_dir
     print "Log dir    : %s" % log_dir
     print "New group  : %s" % new_group
@@ -126,7 +126,7 @@ if __name__ == "__main__":
     s.start()
     # Make a job runner for computationally-intensive jobs
     if options.use_grid_engine:
-        ci_runner = JobRunner.GERunner(log_dir=log_dir)
+        ci_runner = JobRunner.GEJobRunner(log_dir=log_dir)
     else:
         ci_runner = s.default_runner
     # Dictionary to store job references
