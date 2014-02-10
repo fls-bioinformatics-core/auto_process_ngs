@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Import modules that this module depends on
@@ -150,7 +150,7 @@ class SimpleScheduler(threading.Thread):
         True otherwise.
 
         """
-        return not (self.n_waiting or self.n_running)
+        return not (self.n_waiting or self.n_running or not self.__submitted.empty())
 
     def submit(self,args,runner=None,name=None,wait_for=[]):
         """Submit a request to run a job
@@ -267,9 +267,14 @@ class SimpleScheduler(threading.Thread):
                         ok_to_run = (ok_to_run and name in self.__finished_names)
                 if ok_to_run:
                     # Start the job running
-                    job.start()
-                    self.__running.append(job)
-                    logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
+                    try:
+                        job.start()
+                        self.__running.append(job)
+                        logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
+                    except Exception,ex:
+                        logging.error("Failed to start job #%s: %s" % (job.job_number,ex))
+                        if job.job_name is not None:
+                            self.__finished_names.append(job.job_name)
                 else:
                     # Hold back for now
                     remaining_jobs.append(job)
