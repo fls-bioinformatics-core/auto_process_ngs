@@ -1,0 +1,103 @@
+#######################################################################
+# Tests for applications.py module
+#######################################################################
+from applications import *
+import unittest
+
+class TestCommand(unittest.TestCase):
+
+    def test_command_simple(self):
+        """Construct command in single call
+        """
+        cmd = Command('ls','-l','-d')
+        self.assertEqual(cmd.command,'ls')
+        self.assertEqual(cmd.args,['-l','-d'])
+        self.assertEqual(cmd.command_line,['ls','-l','-d'])
+        self.assertEqual(str(cmd),'ls -l -d')
+
+    def test_command_extended(self):
+        """Construct command in multiple calls
+        """
+        cmd = Command('ls')
+        cmd.add_args('-l','-d')
+        self.assertEqual(cmd.command,'ls')
+        self.assertEqual(cmd.args,['-l','-d'])
+        self.assertEqual(cmd.command_line,['ls','-l','-d'])
+        self.assertEqual(str(cmd),'ls -l -d')
+
+    def test_run_subprocess(self):
+        """Run command using subprocess
+        """
+        cmd = Command('ls','-l')
+        cmd.run_subprocess(log='/dev/null')
+
+class TestBcl2Fastq(unittest.TestCase):
+
+    def test_configure_bcl_to_fastq(self):
+        """Construct 'configureBclToFastq.pl' command lines
+        """
+        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
+                                                       'SampleSheet.csv').command_line,
+                         ['configureBclToFastq.pl',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','Unaligned',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--fastq-cluster-count','-1'])
+        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
+                                                       'SampleSheet.csv',
+                                                       output_dir='run/bcl2fastq').command_line,
+                         ['configureBclToFastq.pl',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--fastq-cluster-count','-1'])
+        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
+                                                       'SampleSheet.csv',
+                                                       output_dir='run/bcl2fastq',
+                                                       ignore_missing_bcl=True).command_line,
+                         ['configureBclToFastq.pl',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--fastq-cluster-count','-1',
+                          '--ignore-missing-bcl'])
+
+class TestGeneral(unittest.TestCase):
+
+    def test_rsync(self):
+        """Construct 'rsync' command lines
+        """
+        self.assertEqual(general.rsync('from','to').command_line,
+                         ['rsync','-av','from','to'])
+        self.assertEqual(general.rsync('from','user@remote.com:to').command_line,
+                         ['rsync','-av','-e','ssh','from','user@remote.com:to'])
+
+    def test_make(self):
+        """Construct 'make' command lines
+        """
+        self.assertEqual(general.make(makefile='makefile',
+                                      working_dir='Unaligned',
+                                      nprocessors='12').command_line,
+                         ['make',
+                          '-C','Unaligned',
+                          '-j','12',
+                          '-f','makefile'])
+
+    def test_ssh_cmd(self):
+        """Construct 'ssh' command lines
+        """
+        self.assertEqual(general.ssh_command('user','example.com',('ls','-l')).command_line,
+                         ['ssh','user@example.com','ls','-l'])
+
+    def test_scp(self):
+        """Construct 'scp' command lines
+        """
+        self.assertEqual(
+            general.scp('user','example.com','my_file','remotedir').command_line,
+            ['scp','my_file','user@example.com:remotedir'])
+
+if __name__ == "__main__":
+    # Turn off most logging output for tests
+    logging.getLogger().setLevel(logging.CRITICAL)
+    # Run tests
+    unittest.main()
