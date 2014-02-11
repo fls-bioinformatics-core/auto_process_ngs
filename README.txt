@@ -4,6 +4,12 @@ auto_process
 Scripts and utilities for automatic processing & management of NGS sequencing
 data.
 
+auto_process.py: Python script wrapping automatic processing and QC of
+   sequencing data.
+
+auto_process_utils.py: supporting classes and utility functions for
+   automatic processing.
+
 process_miseq.sh: simple wrapper script for auto_process_illumina.sh, to
    automatically process MiSEQ data.
    Requires settings to be added to local copy of process_miseq_setup.sh
@@ -13,3 +19,17 @@ applications.py: Python module with utilities for generating and running
    NGS-related command line programs.
 
 bclToFastq.py: run the CASAVA bcl to fastq conversion pipeline.
+
+process_miseq.sh
+----------------
+
+### Setup ###
+
+### Protocol ###
+
+auto_process.py
+---------------
+
+### Setup ###
+
+### Protocol ###
