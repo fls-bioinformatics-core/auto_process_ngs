@@ -745,7 +745,7 @@ class AutoProcess:
         report = []
         report.append("Run name :\t%s" % os.path.basename(self.params.data_dir))
         report.append("Platform :\t%s" % self.params.platform.upper())
-        report.append("Directory:\t%s" % self.params.analysis_dir
+        report.append("Directory:\t%s" % self.params.analysis_dir)
         report.append("")
         report.append("%d projects:" % len(project_metadata))
         for p in project_metadata:
