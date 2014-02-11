@@ -743,9 +743,13 @@ class AutoProcess:
                                                             self.params.project_metadata))
         # Generate report text
         report = []
-        report.append("Run name :\t%s" % os.path.basename(self.params.data_dir))
-        report.append("Platform :\t%s" % self.params.platform.upper())
-        report.append("Directory:\t%s" % self.params.analysis_dir)
+        datestamp,instrument,run_number = IlluminaData.split_run_name(self.params.data_dir)
+        report.append("% run #%s datestamped %s\n" % (self.params.platform.upper(),
+                                                      int(run_number),
+                                                      datestamp)
+        report.append("Run name : %s" % os.path.basename(self.params.data_dir))
+        report.append("Platform : %s" % self.params.platform.upper())
+        report.append("Directory: %s" % self.params.analysis_dir)
         report.append("")
         report.append("%d projects:" % len(project_metadata))
         for p in project_metadata:
