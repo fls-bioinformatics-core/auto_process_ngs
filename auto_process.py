@@ -102,7 +102,7 @@ class AutoProcess:
         if not os.path.isfile(info_file_name):
             raise Exception, "No info file %s" % info_file_name
         # Read contents of info file and assign values
-        print "Loading settings from %s" % info_file_name
+        logging.debug("Loading settings from %s" % info_file_name)
         self.params.load(info_file_name)
 
     def save_parameters(self):
@@ -117,7 +117,7 @@ class AutoProcess:
         return os.path.join(self.log_dir,*args)
 
     def __del__(self):
-        print "Saving parameters to file"
+        logging.debug("Saving parameters to file")
         self.save_parameters()
 
     @property
