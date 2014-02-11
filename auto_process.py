@@ -744,9 +744,9 @@ class AutoProcess:
         # Generate report text
         report = []
         datestamp,instrument,run_number = IlluminaData.split_run_name(self.params.data_dir)
-        report.append("% run #%s datestamped %s\n" % (self.params.platform.upper(),
-                                                      int(run_number),
-                                                      datestamp))
+        report.append("%s run #%s datestamped %s\n" % (self.params.platform.upper(),
+                                                       int(run_number),
+                                                       datestamp))
         report.append("Run name : %s" % os.path.basename(self.params.data_dir))
         report.append("Platform : %s" % self.params.platform.upper())
         report.append("Directory: %s" % self.params.analysis_dir)
