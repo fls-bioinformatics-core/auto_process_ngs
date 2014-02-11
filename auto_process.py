@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.28"
+__version__ = "0.0.29"
 
 #######################################################################
 # Imports
@@ -692,6 +692,11 @@ class AutoProcess:
         if full:
             report = self.report_full_format()
             print report
+        if not (logging or summary or full):
+            illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
+                                                      unaligned_dir=self.params.unaligned_dir)
+            for project in illumina_data.projects:
+                print "%s" % analyse_illumina_run.describe_project(project)
 
     def report_logging_format(self):
         # Generate short form "logging"-style report
@@ -724,6 +729,7 @@ class AutoProcess:
         # Includes:
         # - Platform
         # - Run name
+        # - Project subdirectory
         # - Researcher (aka user)
         # - PI
         # - Application (aka library type)
@@ -737,14 +743,16 @@ class AutoProcess:
                                                             self.params.project_metadata))
         # Generate report text
         report = []
-        report.append("Run name:\t%s" % os.path.basename(self.params.data_dir))
-        report.append("Platform:\t%s" % self.params.platform.upper())
+        report.append("Run name :\t%s" % os.path.basename(self.params.data_dir))
+        report.append("Platform :\t%s" % self.params.platform.upper())
+        report.append("Directory:\t%s" % self.params.analysis_dir
         report.append("")
         report.append("%d projects:" % len(project_metadata))
         for p in project_metadata:
             project = illumina_data.get_project(p['Project'])
-            report.append("- %s\t(PI %s)\t%s\t(%s)\t%d samples" % \
-                          (p['User'],
+            report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d samples" % \
+                          (p['Project'],
+                           p['User'],
                            p['PI'] if p['PI'] != '?' else 'unknown',
                            p['Library'],
                            p['Organism'] if p['Organism'] != '?' else 'unknown organism',
