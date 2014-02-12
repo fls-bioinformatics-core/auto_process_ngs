@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 #######################################################################
 # Import modules that this module depends on
@@ -72,6 +72,34 @@ def get_archive_dir(archive_base,data_dirname):
         archive_dir = os.path.join(archive_dir,platform)
     return archive_dir
 
+def report_completion(name,job,sched):
+    # Generic report completion of a scheduled job
+    print "Job completed: %s" % job.job_name
+
+def report_md5sums(name,job,sched):
+    # Report check of MD5sum differences
+    print "Reporting MD5sum check results from %s" % job.job_name
+    fp = open(job.log,'rU')
+    skip_first_line = True
+    for line in fp:
+        if skip_first_line:
+            skip_first_line = False
+            continue
+        elif line.strip('\n') == "Summary:":
+            break
+        elif not line.strip('\n').endswith('OK'):
+            print line.strip()
+            break
+    fp.close()
+
+def report_symlinks(name,job,sched):
+    # Report symlink checks
+    print "Reporting symlink check results from %s" % job.job_name
+    fp = open(job.log,'rU')
+    for line in fp:
+        print line.strip()
+    fp.close()    
+
 #######################################################################
 # Main program
 #######################################################################
@@ -121,16 +149,14 @@ if __name__ == "__main__":
         sys.exit()
 
     # Start scheduler
-    s = simple_scheduler.SimpleScheduler()
-    s.default_runner.log_dir(log_dir)
+    s = simple_scheduler.SimpleScheduler(runner=JobRunner.SimpleJobRunner(log_dir=log_dir,
+                                                                join_logs=True))
     s.start()
-    # Make a job runner for computationally-intensive jobs
+    # Make a job runner for computationally-intensive (CI) jobs
     if options.use_grid_engine:
         ci_runner = JobRunner.GEJobRunner(log_dir=log_dir)
     else:
         ci_runner = s.default_runner
-    # Dictionary to store job references
-    jobs = {}
     # Do copying for each directory
     for data_dir in data_dirs:
         # Schedule rsync job
@@ -139,14 +165,12 @@ if __name__ == "__main__":
         print "Starting copy of %s to %s" % (data_dir,archive_dir)
         job = s.submit(['data_manager.py','--copy-to=%s' % archive_to,data_dir],
                        name=copy_name)
-        jobs[copy_name] = job
         # Schedule group name reset
         if new_group is not None:
             set_group_name="set_group.%s" % os.path.basename(data_dir)
             job = s.submit(['data_manager.py','--set-group=%s' % new_group,
                             os.path.join(archive_to,os.path.basename(data_dir))],
                            name=set_group_name,wait_for=(copy_name,))
-            jobs[set_group_name] = job
         # Schedule MD5 check
         md5check_name="md5check.%s" % os.path.basename(data_dir)
         job = s.submit(['md5checker.py','-d',
@@ -154,24 +178,16 @@ if __name__ == "__main__":
                         os.path.join(archive_to,os.path.basename(data_dir))],
                        name=md5check_name,
                        wait_for=(copy_name,),
-                       runner=ci_runner)
-        jobs[md5check_name] = job
+                       runner=ci_runner,
+                       callbacks=(report_completion,report_md5sums))
+        # Check symlinks
+        symlink_check_name="symlinkcheck.%s" % os.path.basename(data_dir)
+        job = s.submit(['data_manager.py','--check-symlinks',
+                        os.path.join(archive_to,os.path.basename(data_dir))],
+                       name=symlink_check_name,
+                       wait_for=(copy_name,),
+                       runner=ci_runner,
+                       callbacks=(report_completion,report_symlinks))
     while not s.is_empty():
         time.sleep(5)
-    # Check MD5sums
-    for data_dir in data_dirs:
-        md5check_name="md5check.%s" % os.path.basename(data_dir)
-        job = jobs[md5check_name]
-        fp = open(job.log,'rU')
-        skip_first_line = True
-        for line in fp:
-            if skip_first_line:
-                skip_first_line = False
-                continue
-            elif line.strip('\n') == "Summary:":
-                break
-            elif not line.strip('\n').endswith('OK'):
-                logging.error("Checksums failed for %s" % data_dir)
-                break
-        fp.close()
     print "Finished"
