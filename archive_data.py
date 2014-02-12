@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 
 #######################################################################
 # Import modules that this module depends on
@@ -72,13 +72,17 @@ def get_archive_dir(archive_base,data_dirname):
         archive_dir = os.path.join(archive_dir,platform)
     return archive_dir
 
-def report_completion(name,job,sched):
-    # Generic report completion of a scheduled job
-    print "Job completed: %s" % job.job_name
+def report_completion(name,jobs,sched):
+    # Generic report completion of scheduled job(s)
+    print "Job(s) completed:"
+    for job in jobs:
+        print "\t%s" % job.job_name
 
-def report_md5sums(name,job,sched):
+def report_md5sums(name,jobs,sched):
     # Report check of MD5sum differences
-    print "Reporting MD5sum check results from %s" % job.job_name
+    assert(len(jobs) == 1)
+    job = jobs[0]
+    print "Reporting MD5sum check results from job %s" % job.job_name
     fp = open(job.log,'rU')
     skip_first_line = True
     for line in fp:
@@ -92,8 +96,10 @@ def report_md5sums(name,job,sched):
             break
     fp.close()
 
-def report_symlinks(name,job,sched):
+def report_symlinks(name,jobs,sched):
     # Report symlink checks
+    assert(len(jobs) == 1)
+    job = jobs[0]
     print "Reporting symlink check results from %s" % job.job_name
     fp = open(job.log,'rU')
     for line in fp:
@@ -188,6 +194,9 @@ if __name__ == "__main__":
                        wait_for=(copy_name,),
                        runner=ci_runner,
                        callbacks=(report_completion,report_symlinks))
+        # Final completion
+        s.callback("Finished",report_completion,wait_for=(md5check_name,
+                                                          symlink_check_name))
     while not s.is_empty():
         time.sleep(5)
     print "Finished"
