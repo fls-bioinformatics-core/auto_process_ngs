@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 #######################################################################
 # Import modules that this module depends on
@@ -96,6 +96,8 @@ class SimpleScheduler(threading.Thread):
         self.__finished_names = []
         # Handle groups
         self.__groups = []
+        # Handle callbacks
+        self.__callbacks = {}
         # Flag controlling whether scheduler is active
         self.__active = False
 
@@ -152,7 +154,7 @@ class SimpleScheduler(threading.Thread):
         """
         return not (self.n_waiting or self.n_running or not self.__submitted.empty())
 
-    def submit(self,args,runner=None,name=None,wait_for=[]):
+    def submit(self,args,runner=None,name=None,wait_for=[],callbacks=[]):
         """Submit a request to run a job
         
         Arguments:
@@ -160,6 +162,7 @@ class SimpleScheduler(threading.Thread):
           runner
           name
           wait_for
+          callbacks
 
         Returns:
           SchedulerJob instance for the submitted job.
@@ -168,11 +171,15 @@ class SimpleScheduler(threading.Thread):
         # Use a queue rather than modifying the waiting list
         # directly to try and avoid
         #
+        # Fetch a unique id number
+        job_number = self.job_number
+        # Generate a name if necessary
+        if name is None:
+            name = "%s.%s" % (str(args[0]),job_number)
         # Check names are not duplicated
-        if name is not None:
-            if self.has_name(name):
-                raise Exception,"Name '%s' already assigned" % name
-            self.__names.append(name)
+        if self.has_name(name):
+            raise Exception,"Name '%s' already assigned" % name
+        self.__names.append(name)
         # Check we're not waiting on a non-existent name
         for job_name in wait_for:
             if not self.has_name(job_name):
@@ -185,27 +192,65 @@ class SimpleScheduler(threading.Thread):
                            name=name,wait_for=wait_for)
         self.__submitted.put(job)
         logging.debug("Scheduled job #%d: \"%s\"" % (job.job_number,job))
+        # Deal with callbacks
+        for function in callbacks:
+            self.callback(function,None,wait_for=(job.job_name,))
         return job
 
-    def group(self,name,wait_for=[]):
+    def group(self,name,wait_for=[],callbacks=[]):
         """Create a group of jobs
         
         Arguments:
           name
           wait_for
+          callbacks
 
         Returns:
           Empty SchedulerGroup instance.
 
         """
+        # Fetch a unique id number
+        job_number = self.job_number
+        # Generate a name if necessary
+        if name is None:
+            name = "group.%s" % job_number
         # Check names are not duplicated
-        if name is not None:
-            if self.has_name(name):
-                raise Exception,"Name '%s' already assigned" % name
-            self.__names.append(name)
+        if self.has_name(name):
+            raise Exception,"Name '%s' already assigned" % name
+        self.__names.append(name)
         new_group = SchedulerGroup(name,self.job_number,self,wait_for=wait_for)
         self.__groups.append(new_group)
+        # Deal with callbacks
+        for function in callbacks:
+            self.callback(function,None,wait_for=(group.group_name,))
         return new_group
+
+    def callback(self,callback,name,wait_for):
+        """Add a callback function
+
+        Add a function 'callback' which will be invoked when
+        the jobs listed in 'wait_for' have completed.
+
+        The function is invoked as:
+
+           callback(name,job,sched)
+
+        where name is the submitted name, job is the
+        SchedulerJob that has completed, and sched is the
+        scheduler instance.
+
+        Arguments:
+          name
+          wait_for
+          callback
+
+        Returns:
+          SchedulerCallback instance.
+
+        """
+        new_callback = SchedulerCallback(name,callback,wait_for=wait_for)
+        self.__callbacks.append(new_callback)
+        return new_callback
 
     def run(self):
         """Internal: run method overriding that from base Thread class
@@ -233,6 +278,10 @@ class SimpleScheduler(threading.Thread):
                                                                         job))
                     if job.job_name is not None:
                         self.__finished_names.append(job.job_name)
+                    # Invoke callbacks
+                    for callback in self.__callbacks:
+                        if job.job_name in callback.waiting_for:
+                            callback.invoke(job,self)
             # Update the list of running jobs
             self.__running = updated_running_list
             # Check for completed groups
@@ -247,8 +296,19 @@ class SimpleScheduler(threading.Thread):
                         logging.debug("Group #%s (id %s) completed" % (group.group_name,
                                                                        group.group_id))
                         self.__finished_names.append(group.group_name)
+                        # Invoke callbacks
+                        for callback in self.__callbacks:
+                            if job.job_name in callback.waiting_for:
+                                callback.invoke(job,self)
             # Update the list of groups
             self.__groups = updated_group_list
+            # Clear out callbacks that are no longer waiting
+            updated_callback_list = []
+            for callback in self.__callbacks:
+                for name in callback.waiting_for:
+                    if name not in self.__finished_names:
+                        updated_callback_list.append(callback)
+            self.__callbacks = updated_callback_list
             # Add submitted jobs to the waiting list
             while not self.__submitted.empty():
                 job = self.__submitted.get()
@@ -442,6 +502,38 @@ class SchedulerJob(Job):
 
         """
         return ' '.join([str(x) for x in ([self.script,] + self.args)])
+
+class SchedulerCallback:
+    """Class providing an interface to scheduled callbacks
+
+    SchedulerJob instances should normally be returned by a
+    call to the 'submit' method of a SimpleScheduler object.
+
+    """
+
+    def __init__(self,name,function,wait_for=[]):
+        """Create a new SchedulerJob instance
+
+        """
+        self.callback_name = name
+        self.callback_function = function
+        self.waiting_for = list(wait_for)
+
+    def invoke(self,job,sched):
+        """Invoke the callback
+
+        """
+        logging.debug("Invoking callback function: %s" % self.callback_name)
+        try:
+            return self.callback_function(self.callback_name,job,sched)
+        except Exception,ex:
+            logging.error("Exception invoking callback function '%s': %s (ignored)" % \
+                          (self.callback_name,ex))
+
+#######################################################################
+# Tests
+#######################################################################
+
 
 #######################################################################
 # Main program (example)
