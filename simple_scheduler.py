@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 #######################################################################
 # Import modules that this module depends on
@@ -91,13 +91,15 @@ class SimpleScheduler(threading.Thread):
         self.__scheduled = []
         # List of running jobs
         self.__running = []
+        # Dictionary with all jobs
+        self.__jobs = dict()
         # Handle names
         self.__names = []
         self.__finished_names = []
         # Handle groups
         self.__groups = []
         # Handle callbacks
-        self.__callbacks = {}
+        self.__callbacks = []
         # Flag controlling whether scheduler is active
         self.__active = False
 
@@ -154,6 +156,15 @@ class SimpleScheduler(threading.Thread):
         """
         return not (self.n_waiting or self.n_running or not self.__submitted.empty())
 
+    def get_job(self,name):
+        """Look up and return SchedulerJob instance from name
+
+        """
+        if name in self.__jobs:
+            return self.__jobs[name]
+        else:
+            return None
+
     def submit(self,args,runner=None,name=None,wait_for=[],callbacks=[]):
         """Submit a request to run a job
         
@@ -194,7 +205,8 @@ class SimpleScheduler(threading.Thread):
         logging.debug("Scheduled job #%d: \"%s\"" % (job.job_number,job))
         # Deal with callbacks
         for function in callbacks:
-            self.callback(function,None,wait_for=(job.job_name,))
+            self.callback("callback.%s" % job.job_name,
+                          function,wait_for=(job.job_name,))
         return job
 
     def group(self,name,wait_for=[],callbacks=[]):
@@ -222,18 +234,20 @@ class SimpleScheduler(threading.Thread):
         self.__groups.append(new_group)
         # Deal with callbacks
         for function in callbacks:
-            self.callback(function,None,wait_for=(group.group_name,))
+            self.callback("callback.%s" % group.group_name,
+                          function,
+                          wait_for=(group.group_name,))
         return new_group
 
-    def callback(self,callback,name,wait_for):
+    def callback(self,name,callback,wait_for):
         """Add a callback function
 
         Add a function 'callback' which will be invoked when
-        the jobs listed in 'wait_for' have completed.
+        all the jobs listed in 'wait_for' have completed.
 
         The function is invoked as:
 
-           callback(name,job,sched)
+           callback(name,(job1,...),sched)
 
         where name is the submitted name, job is the
         SchedulerJob that has completed, and sched is the
@@ -248,6 +262,14 @@ class SimpleScheduler(threading.Thread):
           SchedulerCallback instance.
 
         """
+        # Fetch a unique id number
+        job_number = self.job_number
+        # Generate a name if necessary
+        if name is None:
+            name = "callback.%s" % job_number
+        # Check names are not duplicated
+        if self.has_name(name):
+            raise Exception,"Name '%s' already assigned" % name
         new_callback = SchedulerCallback(name,callback,wait_for=wait_for)
         self.__callbacks.append(new_callback)
         return new_callback
@@ -278,10 +300,6 @@ class SimpleScheduler(threading.Thread):
                                                                         job))
                     if job.job_name is not None:
                         self.__finished_names.append(job.job_name)
-                    # Invoke callbacks
-                    for callback in self.__callbacks:
-                        if job.job_name in callback.waiting_for:
-                            callback.invoke(job,self)
             # Update the list of running jobs
             self.__running = updated_running_list
             # Check for completed groups
@@ -296,23 +314,29 @@ class SimpleScheduler(threading.Thread):
                         logging.debug("Group #%s (id %s) completed" % (group.group_name,
                                                                        group.group_id))
                         self.__finished_names.append(group.group_name)
-                        # Invoke callbacks
-                        for callback in self.__callbacks:
-                            if job.job_name in callback.waiting_for:
-                                callback.invoke(job,self)
             # Update the list of groups
             self.__groups = updated_group_list
-            # Clear out callbacks that are no longer waiting
+            # Handle callbacks
             updated_callback_list = []
             for callback in self.__callbacks:
+                invoke_callback = True
+                callback_jobs = []
                 for name in callback.waiting_for:
-                    if name not in self.__finished_names:
-                        updated_callback_list.append(callback)
+                    if name in self.__finished_names:
+                        callback_jobs.append(self.get_job(name))
+                    else:
+                        # Waiting for at least one job
+                        invoke_callback = False
+                if invoke_callback:
+                    callback.invoke(tuple(callback_jobs),self)
+                else:
+                    updated_callback_list.append(callback)
             self.__callbacks = updated_callback_list
             # Add submitted jobs to the waiting list
             while not self.__submitted.empty():
                 job = self.__submitted.get()
                 self.__scheduled.append(job)
+                self.__jobs[job.job_name] = job
                 logging.debug("Added job #%d (%s): \"%s\"" % (job.job_number,job.name,job))
             remaining_jobs = []
             for job in self.__scheduled:
@@ -519,13 +543,13 @@ class SchedulerCallback:
         self.callback_function = function
         self.waiting_for = list(wait_for)
 
-    def invoke(self,job,sched):
+    def invoke(self,jobs,sched):
         """Invoke the callback
 
         """
         logging.debug("Invoking callback function: %s" % self.callback_name)
         try:
-            return self.callback_function(self.callback_name,job,sched)
+            return self.callback_function(self.callback_name,jobs,sched)
         except Exception,ex:
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
