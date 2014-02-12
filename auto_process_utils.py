@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 """auto_process_utils
 
@@ -397,8 +397,11 @@ class AnalysisProject:
     @property
     def multiple_fastqs(self):
         # Determine if there are multiple fastqs per sample
-        return reduce(lambda x,y: x and y,
-                      [len(s.fastq) > 1 for s in self.samples])
+        if not len(self.samples):
+            return False
+        else:
+            return reduce(lambda x,y: x and y,
+                          [len(s.fastq_subset(read_number=1)) > 1 for s in self.samples])
 
     def verify_qc(self):
         # Verify if the QC was successful
@@ -961,16 +964,17 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.set_number,None)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
 
-    def test_sample_name_is_A(self):
-        """Samples called 'A_R1' should have the name 'A'
+    def test_AGTC_sample_names(self):
+        """Handle sample names consisting of letters 'A', 'G', 'T' and 'C'
         """
-        fq = AnalysisFastq('A_R1')
-        self.assertEqual(fq.sample_name,'A')
-        self.assertEqual(fq.barcode_sequence,None)
-        self.assertEqual(fq.lane_number,None)
-        self.assertEqual(fq.read_number,1)
-        self.assertEqual(fq.set_number,None)
-        self.assertEqual(str(fq),'A_R1')
+        for name in ('A','G','T','C','AGCT'):
+            fq = AnalysisFastq('%s_R1' % name)
+            self.assertEqual(fq.sample_name,name)
+            self.assertEqual(fq.barcode_sequence,None)
+            self.assertEqual(fq.lane_number,None)
+            self.assertEqual(fq.read_number,1)
+            self.assertEqual(fq.set_number,None)
+            self.assertEqual(str(fq),'%s_R1' % name)
 
 class TestAnalysisProject(unittest.TestCase):
     """Tests for the AnalysisProject class
@@ -1002,6 +1006,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertEqual(project.dirn,dirn)
         self.assertEqual(project.samples,[])
+        self.assertFalse(project.multiple_fastqs)
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.metadata.library_type,None)
         self.assertEqual(project.metadata.organism,None)
@@ -1011,6 +1016,21 @@ class TestAnalysisProject(unittest.TestCase):
     def test_create_single_end_analysis_project(self):
         """Check creation of new single-end AnalysisProject directory
         """
+        self.make_data_dir(('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.metadata.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+
+    def test_create_single_end_analysis_project_multi_fastqs(self):
+        """Check creation of new single-end AnalysisProject directory (multi-fastq/sample)
+        """
         self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
                             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
         dirn = os.path.join(self.dirn,'PJB')
@@ -1018,11 +1038,29 @@ class TestAnalysisProject(unittest.TestCase):
         project.create_directory(fastqs=self.fastqs)
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
-        self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertTrue(project.multiple_fastqs)
         self.assertFalse(project.metadata.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-B')
 
     def test_create_paired_end_analysis_project(self):
         """Check creation of new paired-end AnalysisProject directory
+        """
+        self.make_data_dir(('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
+                            'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertTrue(project.metadata.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+
+    def test_create_paired_end_analysis_project_multi_fastqs(self):
+        """Check creation of new paired-end AnalysisProject directory (multi-fastq/sample)
         """
         self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
                             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
@@ -1034,6 +1072,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertTrue(project.multiple_fastqs)
         self.assertTrue(project.metadata.paired_end)
 
 class TestAnalysisSample(unittest.TestCase):
