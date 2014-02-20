@@ -518,6 +518,7 @@ class AutoProcess:
                                                          run=run_name,
                                                          comments=comments,
                                                          platform=self.params.platform)
+            print "Creating project: '%s'" % project_name
             project.create_directory(illumina_data.get_project(project_name))
 
     def run_qc(self,projects=None,max_jobs=4):
