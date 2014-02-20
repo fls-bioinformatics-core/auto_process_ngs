@@ -494,6 +494,7 @@ class AutoProcess:
             logging.error("Missing project metadata")
             raise Exception, "Missing project metadata"
         # Create the projects
+        n_projects = 0
         for line in project_metadata:
             # Acquire the run name
             if self.params.data_dir is not None:
@@ -520,6 +521,9 @@ class AutoProcess:
                                                          platform=self.params.platform)
             print "Creating project: '%s'" % project_name
             project.create_directory(illumina_data.get_project(project_name))
+            n_projects += 1
+        # Tell us how many were made
+        print "Created %d projects" % n_projects
 
     def run_qc(self,projects=None,max_jobs=4):
         # Run QC pipeline for all projects
