@@ -689,6 +689,7 @@ class AutoProcess:
             # Remote directory
             try:
                 mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',dirn))
+                print "Running %s" % mkdir_cmd
                 mkdir_cmd.run_subprocess()
             except Exception, ex:
                 raise Exception, "Exception making remote directory for QC reports: %s" % ex
