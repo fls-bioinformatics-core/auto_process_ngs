@@ -932,8 +932,6 @@ def setup_parser():
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
                  "subdirectory of DIR with the same structure as that produced "
                  "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
     return p
 
 def make_fastqs_parser():
@@ -958,8 +956,6 @@ def make_fastqs_parser():
     p.add_option('--generate-stats',action='store_true',
                  dest='generate_stats',default=False,
                  help="(Re)generate statistics for fastq files")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
     return p
 
 def run_qc_parser():
@@ -978,22 +974,23 @@ def run_qc_parser():
                  dest='max_jobs',default=4,type='int',
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default: 4)")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
     return p
 
 def publish_qc_parser():
-    p = optparse.OptionParser(usage="%prog publish [OPTIONS] [ANALYSIS_DIR]",
+    p = optparse.OptionParser(usage="%prog publish_qc [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
-                              description="Automatically process Illumina sequence from "
-                              "ANALYSIS_DIR.")
+                              description="Copy QC reports from ANALYSIS_DIR to local "
+                              "or remote directory (e.g. web server).")
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
                  "and samples to publish the QC for. PROJECT_PATTERN can specify a "
                  "single project, or a set of projects.")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
+    p.add_option('--target',action='store',
+                 dest='target',default=None,
+                 help="specify target directory to copy QC reports to. TARGET can be "
+                 "a local directory, or a remote location in the form "
+                 "[[user@]host:]directory. Overrides the default settings.")
     return p
 
 def archive_parser():
@@ -1009,8 +1006,6 @@ def archive_parser():
     p.add_option('--year',action='store',
                  dest='year',default=None,
                  help="specify the year e.g. '2014' (default is the current year)")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
     return p
 
 def report_parser():
@@ -1024,8 +1019,6 @@ def report_parser():
                  help="print full report suitable for bioinformaticians")
     p.add_option('--full',action='store_true',dest='full',default=False,
                  help="print summary report suitable for record-keeping")
-    p.add_option('--debug',action='store_true',dest='debug',default=False,
-                 help="Turn on debugging output from Python libraries")
     return p
 
 def generic_parser(description=None):
@@ -1034,6 +1027,10 @@ def generic_parser(description=None):
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description=description)
+    return p
+
+def add_debug_option(p):
+    # Add debug option to a parser
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -1054,7 +1051,7 @@ if __name__ == "__main__":
     cmd_parsers['publish_qc'] = publish_qc_parser()
     cmd_parsers['report'] = report_parser()
 
-    # Process command line
+    # Process major command
     try:
         cmd = sys.argv[1]
     except IndexError:
@@ -1073,7 +1070,13 @@ if __name__ == "__main__":
             list_available_commands(cmd_parsers)
             sys.stderr.write("%s\n" % err)
             sys.exit(1)
-    options,args = cmd_parsers[cmd].parse_args(sys.argv[2:])
+        p = cmd_parsers[cmd]
+
+    # Add debug option (available for all commands)
+    add_debug_option(p)
+    
+    # Process remaining command line arguments
+    options,args = p.parse_args(sys.argv[2:])
 
     # Report name and version
     print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
@@ -1115,7 +1118,8 @@ if __name__ == "__main__":
             d.copy_to_archive(platform=options.platform,
                               year=options.year)
         elif cmd == 'publish_qc':
-            d.publish_qc(projects=options.project_pattern)
+            d.publish_qc(projects=options.project_pattern,
+                         location=options.target)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
