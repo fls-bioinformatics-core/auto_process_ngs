@@ -823,6 +823,9 @@ class AutoProcess:
                 logging.warning("Exception: %s" % ex)
         else:
             run_name = os.path.basename(self.analysis_dir)
+            if run_name.endswith('_analysis'):
+                # Strip trailing _analysis
+                run_name = run_name[:-len('_analysis')
         if self.params.platform is not None:
             platform = self.params.platform.upper()
         else:
