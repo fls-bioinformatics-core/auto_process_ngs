@@ -601,8 +601,9 @@ class AutoProcess:
         if platform is None:
             platform = self.params.platform
         if platform is None:
-            raise Exception, "No platform specified"
-        year = time.strftime("%Y")
+            raise Exception, "No platform specified (use --platform option?)"
+        if year is None:
+            year = time.strftime("%Y")
         archive_dir = os.path.join(archive_dir,year,platform)
         print "Copying to archive directory: %s" % archive_dir
         try:
