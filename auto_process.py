@@ -672,7 +672,8 @@ class AutoProcess:
         index_page.addCSSRule("th    { background-color: grey;\n"
                               "        color: white;\n"
                               "        padding: 2px 5px; }")
-        index_page.addCSSRule("td    { text-align: right; \n"
+        index_page.addCSSRule("td    { text-align: left;\n"
+                              "        vertical-align: top;\n"
                               "        padding: 2px 5px;\n"
                               "        border-bottom: solid 1px lightgray; }")
         index_page.addCSSRule("p.footer { font-style: italic;\n"
@@ -680,7 +681,7 @@ class AutoProcess:
         # Build the page
         index_page.add("<h1>%s</h1>" % title)
         index_page.add("<table>")
-        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th colspan='2'>Reports</th></tr>")
+        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
         # Make a directory for the QC reports
         if not remote:
             # Local directory
@@ -703,6 +704,7 @@ class AutoProcess:
             index_page.add("<td>%s</td>" % project.metadata.organism)
             index_page.add("<td>%s</td>" % project.metadata.PI)
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
+            index_page.add("<td>%d</td>" % len(project.samples))
             # Copy QC report, if QC was verified
             if project.verify_qc():
                 # Copy the qc zip file
