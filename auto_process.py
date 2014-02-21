@@ -825,7 +825,7 @@ class AutoProcess:
             run_name = os.path.basename(self.analysis_dir)
             if run_name.endswith('_analysis'):
                 # Strip trailing _analysis
-                run_name = run_name[:-len('_analysis')
+                run_name = run_name[:-len('_analysis')]
         if self.params.platform is not None:
             platform = self.params.platform.upper()
         else:
@@ -842,7 +842,9 @@ class AutoProcess:
         report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("")
-        report.append("%d projects:" % len(project_metadata))
+        n_projects = len(project_metadata)
+        report.append("%d project%s:" % (n_projects,
+                                         '' if n_projects == 1 else 's'))
         for p in project_metadata:
             project = illumina_data.get_project(p['Project'])
             report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d samples" % \
