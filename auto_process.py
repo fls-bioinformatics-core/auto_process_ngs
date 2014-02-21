@@ -592,13 +592,16 @@ class AutoProcess:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
 
-    def copy_to_archive(self):
+    def copy_to_archive(self,platform=None,year=None):
         # Copy the analysis directory and contents to an archive area
         archive_dir = auto_process_settings.archive.dirn
         if archive_dir is None:
             raise Exception, "No archive directory specified in settings"
         # Construct subdirectory structure i.e. platform and year
-        platform = self.params.platform
+        if platform is None:
+            platform = self.params.platform
+        if platform is None:
+            raise Exception, "No platform specified"
         year = time.strftime("%Y")
         archive_dir = os.path.join(archive_dir,year,platform)
         print "Copying to archive directory: %s" % archive_dir
