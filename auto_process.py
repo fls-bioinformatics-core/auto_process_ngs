@@ -811,10 +811,14 @@ class AutoProcess:
                                                             self.params.project_metadata))
         # Generate report text
         report = []
-        datestamp,instrument,run_number = IlluminaData.split_run_name(self.params.data_dir)
-        report.append("%s run #%s datestamped %s\n" % (self.params.platform.upper(),
-                                                       int(run_number),
-                                                       datestamp))
+        try:
+            datestamp,instrument,run_number = IlluminaData.split_run_name(self.params.data_dir)
+            report.append("%s run #%s datestamped %s\n" % (self.params.platform.upper(),
+                                                           int(run_number),
+                                                           datestamp))
+        except Exception, ex:
+            logging.warning("Unable to extract information from run name: %s" % ex)
+            report.append("%s\n" % os.path.basename(self.analysis_dir))
         report.append("Run name : %s" % os.path.basename(self.params.data_dir))
         report.append("Platform : %s" % self.params.platform.upper())
         report.append("Directory: %s" % self.params.analysis_dir)
