@@ -641,7 +641,19 @@ class AutoProcess:
             dirn = auto_process_settings.qc_web_server.webdir
         else:
             user,server,dirn = auto_process_utils.split_user_host_dir(location)
+        if server is not None:
+            remote = True
+        else:
+            remote = False
         # Check the settings
+        if remote:
+            print "Copying QC to remote directory"
+            print "user:\t%s" % user
+            print "host:\t%s" % server
+            print "dirn:\t%s" % dirn
+        else:
+            print "Copying QC to local directory"
+            print "dirn:\t%s" % dirn
         if dirn is None:
             raise Exception, "No target directory specified"
         dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
@@ -670,7 +682,7 @@ class AutoProcess:
         index_page.add("<table>")
         index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th colspan='2'>Reports</th></tr>")
         # Make a directory for the QC reports
-        if server is None:
+        if not remote:
             # Local directory
             bcf_utils.mkdir(dirn)
         else:
@@ -695,7 +707,7 @@ class AutoProcess:
                 # Copy the qc zip file
                 qc_zip = os.path.join(project.dirn,project.qc_report)
                 report_copied = True
-                if server is None:
+                if not remote:
                     # Local directory
                     shutil.copy(qc_zip,dirn)
                     # Unpack
@@ -739,7 +751,7 @@ class AutoProcess:
         # Copy to server
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
-        if server is None:
+        if not remote:
             # Local directory
             shutil.copy(index_html,dirn)
         else:
