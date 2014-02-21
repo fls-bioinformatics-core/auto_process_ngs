@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.31"
+__version__ = "0.0.32"
 
 #######################################################################
 # Imports
@@ -621,25 +621,30 @@ class AutoProcess:
         # Add a record of the analysis to the logging file
         raise NotImplementedError
 
-    def publish_qc(self,projects=None):
+    def publish_qc(self,projects=None,location=None):
         # Copy the QC reports to the webserver
         #
         # projects: specify a pattern to match one or more projects to
-        # publish the reports for (default is to publish all reports)
+        #           publish the reports for (default is to publish all reports)
+        # location: override the target location specified in the settings
+        #           can be of the form '[[user@]server:]directory' 
         #
         # Process pattern matching
         if projects is None:
             project_pattern = '*'
         else:
             project_pattern = projects
-        # Get project dir data
-        if auto_process_settings.qc_web_server.server is None or \
-           auto_process_settings.qc_web_server.webdir is None:
-            raise Exception, "No server and/or directory specifed in settings"
-        user = auto_process_settings.qc_web_server.user
-        server = auto_process_settings.qc_web_server.server
-        webdir = os.path.join(auto_process_settings.qc_web_server.webdir,
-                              os.path.basename(self.analysis_dir))
+        # Get location to publish qc reports to
+        if location is None:
+            user = auto_process_settings.qc_web_server.user
+            server = auto_process_settings.qc_web_server.server
+            dirn = auto_process_settings.qc_web_server.webdir
+        else:
+            user,server,dirn = auto_process_utils.split_user_host_dir(location)
+        # Check the settings
+        if dirn is None:
+            raise Exception, "No target directory specified"
+        dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Make an index page
@@ -658,59 +663,90 @@ class AutoProcess:
         index_page.addCSSRule("td    { text-align: right; \n"
                               "        padding: 2px 5px;\n"
                               "        border-bottom: solid 1px lightgray; }")
+        index_page.addCSSRule("p.footer { font-style: italic;\n"
+                              "           font-size: 70%; }")
         # Build the page
         index_page.add("<h1>%s</h1>" % title)
         index_page.add("<table>")
         index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th colspan='2'>Reports</th></tr>")
-        # Make a remote directory for the QC reports
-        try:
-            mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
-            mkdir_cmd.run_subprocess()
-        except Exception, ex:
-            raise Exception, "Exception making remote directory for QC reports: %s" % ex
+        # Make a directory for the QC reports
+        if server is None:
+            # Local directory
+            bcf_utils.mkdir(dirn)
+        else:
+            # Remote directory
+            try:
+                mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',dirn))
+                mkdir_cmd.run_subprocess()
+            except Exception, ex:
+                raise Exception, "Exception making remote directory for QC reports: %s" % ex
         # Deal with QC for each project
         for project in projects:
+            # Initial information
+            index_page.add("<tr>")
+            index_page.add("<td>%s</td>" % project.name)
+            index_page.add("<td>%s</td>" % project.metadata.user)
+            index_page.add("<td>%s</td>" % project.metadata.library_type)
+            index_page.add("<td>%s</td>" % project.metadata.organism)
+            index_page.add("<td>%s</td>" % project.metadata.PI)
+            index_page.add("<td>%s</td>" % project.prettyPrintSamples())
+            # Copy QC report, if QC was verified
             if project.verify_qc():
-                try:
-                    # scp the qc zip file
-                    qc_zip = os.path.join(project.dirn,project.qc_report)
-                    scp = applications.general.scp(user,server,qc_zip,webdir)
-                    print "Running %s" % scp
-                    scp.run_subprocess()
-                    # Unpack at the other end
-                    unzip_cmd = applications.general.ssh_command(
-                        user,server,
-                        ('unzip','-q','-o','-d',webdir,
-                         os.path.join(webdir,project.qc_report)))
+                # Copy the qc zip file
+                qc_zip = os.path.join(project.dirn,project.qc_report)
+                report_copied = True
+                if server is None:
+                    # Local directory
+                    shutil.copy(qc_zip,dirn)
+                    # Unpack
+                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,
+                                                     os.path.join(dirn,project.qc_report))
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
-                    # Append info to the index page
-                    index_page.add("<tr>")
-                    index_page.add("<td>%s</td>" % project.name)
-                    index_page.add("<td>%s</td>" % project.metadata.user)
-                    index_page.add("<td>%s</td>" % project.metadata.library_type)
-                    index_page.add("<td>%s</td>" % project.metadata.organism)
-                    index_page.add("<td>%s</td>" % project.metadata.PI)
-                    index_page.add("<td>%s</td>" % project.prettyPrintSamples())
+                else:
+                    try:
+                        # Remote directory
+                        scp = applications.general.scp(user,server,qc_zip,dirn)
+                        print "Running %s" % scp
+                        scp.run_subprocess()
+                        # Unpack at the other end
+                        unzip_cmd = applications.general.ssh_command(
+                            user,server,
+                            ('unzip','-q','-o','-d',dirn,
+                             os.path.join(dirn,project.qc_report)))
+                        print "Running %s" % unzip_cmd
+                        unzip_cmd.run_subprocess()
+                    except Exception, ex:
+                        print "Failed to copy QC report: %s" % ex
+                        index_page.add("<tr><td>%s</td><td>Missing</td><td>Missing</td></tr>"
+                                       % project.name)
+                        report_copied = False
+                # Append info to the index page
+                if report_copied:
                     index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
                                    % os.path.splitext(project.qc_report)[0])
                     index_page.add("<td><a href='%s'>[Zip]</a></td>"
                                    % project.qc_report)
-                    index_page.add("</tr>")
-                except Exception, ex:
-                    print "Failed to copy QC report: %s" % ex
-                    index_page.add("<tr><td>%s</td><td>Missing</td><td>Missing</td></tr>"
-                                   % project.name)
+            else:
+                # QC did not run
+                index_page.add("<td colspan='2'>QC reports not available</td>")
+            # Finish table row for this project
+            index_page.add("</tr>")
         # Finish index page
         index_page.add("</table>")
-        index_page.add("<p>Report generated by auto_process.py %s on %s</p>" % \
+        index_page.add("<p class='footer'>Generated by auto_process.py %s on %s</p>" % \
                        (__version__,time.asctime()))
         # Copy to server
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
-        scp = applications.general.scp(user,server,index_html,webdir)
-        print "Running %s" % scp
-        scp.run_subprocess()
+        if server is None:
+            # Local directory
+            shutil.copy(index_html,dirn)
+        else:
+            # Remote directory
+            scp = applications.general.scp(user,server,index_html,dirn)
+            print "Running %s" % scp
+            scp.run_subprocess()
 
     def report(self,logging=False,summary=False,full=False):
         # Report the contents of the run in various formats
@@ -988,10 +1024,10 @@ def publish_qc_parser():
                  "and samples to publish the QC for. PROJECT_PATTERN can specify a "
                  "single project, or a set of projects.")
     p.add_option('--target',action='store',
-                 dest='target',default=None,
-                 help="specify target directory to copy QC reports to. TARGET can be "
-                 "a local directory, or a remote location in the form "
-                 "[[user@]host:]directory. Overrides the default settings.")
+                 dest='target_dir',default=None,
+                 help="specify target directory to copy QC reports to. TARGET_DIR can "
+                 "be a local directory, or a remote location in the form "
+                 "'[[user@]host:]directory'. Overrides the default settings.")
     return p
 
 def archive_parser():
@@ -1025,7 +1061,7 @@ def report_parser():
 def generic_parser(description=None):
     if description is None:
         description = "Automatically process Illumina sequence from ANALYSIS_DIR."
-    p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
+    p  = optparse.OptionParser(usage="%prog CMD [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description=description)
     return p
@@ -1120,7 +1156,7 @@ if __name__ == "__main__":
                               year=options.year)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
-                         location=options.target)
+                         location=options.target_dir)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
