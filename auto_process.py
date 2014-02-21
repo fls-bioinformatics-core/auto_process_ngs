@@ -639,7 +639,7 @@ class AutoProcess:
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Make an index page
-        title = "QC for %s" % os.path.basename(self.params.analysis_dir)
+        title = "QC reports for %s" % os.path.basename(self.params.analysis_dir)
         index_page = qcreporter.HTMLPageWriter(title)
         # Add CSS rules
         index_page.addCSSRule("h1 { background-color: #42AEC2;\n"
@@ -657,7 +657,7 @@ class AutoProcess:
         # Build the page
         index_page.add("<h1>%s</h1>" % title)
         index_page.add("<table>")
-        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>Reports</th></tr>")
+        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th colspan='2'>Reports</th></tr>")
         # Make a remote directory for the QC reports
         try:
             mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
