@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.29"
+__version__ = "0.0.30"
 
 #######################################################################
 # Imports
@@ -643,6 +643,7 @@ class AutoProcess:
         index_page = qcreporter.HTMLPageWriter(title)
         index_page.add("<h1>%s</h1>" % title)
         index_page.add("<table>")
+        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>Reports</th><</tr>")
         # Make a remote directory for the QC reports
         try:
             mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',webdir))
@@ -668,6 +669,11 @@ class AutoProcess:
                     # Append info to the index page
                     index_page.add("<tr>")
                     index_page.add("<td>%s</td>" % project.name)
+                    index_page.add("<td>%s</td>" % project.metadata.user)
+                    index_page.add("<td>%s</td>" % project.metadata.library_type)
+                    index_page.add("<td>%s</td>" % project.metadata.organism)
+                    index_page.add("<td>%s</td>" % project.metadata.PI)
+                    index_page.add("<td>%s</td>" % project.prettyPrintSamples())
                     index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
                                    % os.path.splitext(project.qc_report)[0])
                     index_page.add("<td><a href='%s'>[Zip]</a></td>"
@@ -905,7 +911,7 @@ def setup_parser():
     p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
                  "subdirectory of DIR with the same structure as that produced "
-                 "by CASAVA/bcl2fastq).")
+                 "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
@@ -985,11 +991,12 @@ def report_parser():
                  help="Turn on debugging output from Python libraries")
     return p
 
-def generic_parser():
+def generic_parser(description=None):
+    if description is None:
+        description = "Automatically process Illumina sequence from ANALYSIS_DIR."
     p  = optparse.OptionParser(usage="%prog setup [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
-                              description="Automatically process Illumina sequence from "
-                              "ANALYSIS_DIR.")
+                              description=description)
     p.add_option('--debug',action='store_true',dest='debug',default=False,
                  help="Turn on debugging output from Python libraries")
     return p
