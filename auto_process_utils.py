@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 """auto_process_utils
 
@@ -843,6 +843,24 @@ def bases_mask_is_paired_end(bases_mask):
         # An error?
         raise Exception, "Bad bases mask '%s'?" % bases_mask
 
+def split_user_host_dir(location):
+    # Split a location of the form [[user@]host:]dir into its
+    # user, hostname and directory components
+    try:
+        location.index(':')
+        location,dirn = location.split(':')
+        try:
+            location.index('@')
+            user,host = location.split('@')
+        except ValueError:
+            user = None
+            host = location
+    except ValueError:
+        user = None
+        host = None
+        dirn = location
+    return (user,host,dirn)
+
 #######################################################################
 # Tests
 #######################################################################
@@ -1310,6 +1328,35 @@ class TestBasesMaskIsPairedEnd(unittest.TestCase):
         """
         self.assertTrue(bases_mask_is_paired_end('y101,I6n,y101'))
         self.assertTrue(bases_mask_is_paired_end('y101,I6,I6,y101'))
+
+class TestSplitUserHostDir(unittest.TestCase):
+    """Tests for the split_user_host_dir function
+
+    """
+
+    def test_user_host_dir(self):
+        """Check we can split user@host.name:/path/to/somewhere
+        """
+        user,host,dirn = split_user_host_dir('user@host.name:/path/to/somewhere')
+        self.assertEqual(user,'user')
+        self.assertEqual(host,'host.name')
+        self.assertEqual(dirn,'/path/to/somewhere')
+
+    def test_host_dir(self):
+        """Check we can split host.name:/path/to/somewhere
+        """
+        user,host,dirn = split_user_host_dir('host.name:/path/to/somewhere')
+        self.assertEqual(user,None)
+        self.assertEqual(host,'host.name')
+        self.assertEqual(dirn,'/path/to/somewhere')
+
+    def test_dir(self):
+        """Check we can 'split' /path/to/somewhere
+        """
+        user,host,dirn = split_user_host_dir('/path/to/somewhere')
+        self.assertEqual(user,None)
+        self.assertEqual(host,None)
+        self.assertEqual(dirn,'/path/to/somewhere')
 
 #######################################################################
 # Main program: run tests
