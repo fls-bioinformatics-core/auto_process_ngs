@@ -809,18 +809,34 @@ class AutoProcess:
                                                   unaligned_dir=self.params.unaligned_dir)
         project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
                                                             self.params.project_metadata))
+        # Gather information
+        datestamp = None
+        instrument = None
+        run_number = None
+        if self.params.data_dir is not None:
+            run_name = os.path.basename(self.params.data_dir)
+            try:
+                datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
+            except Exception, ex:
+                logging.warning("Unable to extract information from run name '%s'" \
+                                % run_name)
+                logging.warning("Exception: %s" % ex)
+        else:
+            run_name = os.path.basename(self.analysis_dir)
+        if self.params.platform is not None:
+            platform = self.params.platform.upper()
+        else:
+            platform = 'unknown'
         # Generate report text
         report = []
-        try:
-            datestamp,instrument,run_number = IlluminaData.split_run_name(self.params.data_dir)
+        if datestamp and instrument and run_number:
             report.append("%s run #%s datestamped %s\n" % (self.params.platform.upper(),
                                                            int(run_number),
                                                            datestamp))
-        except Exception, ex:
-            logging.warning("Unable to extract information from run name: %s" % ex)
+        else:
             report.append("%s\n" % os.path.basename(self.analysis_dir))
-        report.append("Run name : %s" % os.path.basename(self.params.data_dir))
-        report.append("Platform : %s" % self.params.platform.upper())
+        report.append("Run name : %s" % run_name)
+        report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("")
         report.append("%d projects:" % len(project_metadata))
