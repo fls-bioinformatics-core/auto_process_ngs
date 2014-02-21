@@ -217,7 +217,9 @@ class AnalysisProject:
     user        : user name
     PI          : PI name
     library_type: library type, either None or e.g. 'RNA-seq' etc
+    organism    : organism, either None or e.g. 'Human' etc
     platform    : sequencing platform, either None or e.g. 'miseq' etc
+    comments    : additional comments, either None or else string of text
     paired_end  : True if data is paired end, False if not
 
     """
