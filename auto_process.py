@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.30"
+__version__ = "0.0.31"
 
 #######################################################################
 # Imports
@@ -996,6 +996,23 @@ def publish_qc_parser():
                  help="Turn on debugging output from Python libraries")
     return p
 
+def archive_parser():
+    p = optparse.OptionParser(usage="%prog publish [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Copy sequencing analysis data directory "
+                              "ANALYSIS_DIR to 'archive' destination.")
+    p.add_option('--platform',action='store',
+                 dest='platform',default=None,
+                 help="specify the platform e.g. 'hiseq', 'miseq' etc (overrides "
+                 "automatically determined platform, if any). Use 'other' for cases "
+                 "where the platform is unknown.")
+    p.add_option('--year',action='store',
+                 dest='year',default=None,
+                 help="specify the year e.g. '2014' (default is the current year)")
+    p.add_option('--debug',action='store_true',dest='debug',default=False,
+                 help="Turn on debugging output from Python libraries")
+    return p
+
 def report_parser():
     p  = optparse.OptionParser(usage="%prog report [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
@@ -1033,7 +1050,7 @@ if __name__ == "__main__":
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
     cmd_parsers['setup_analysis_dirs'] = generic_parser()
     cmd_parsers['run_qc'] = run_qc_parser()
-    cmd_parsers['archive'] = generic_parser()
+    cmd_parsers['archive'] = archive_parser()
     cmd_parsers['publish_qc'] = publish_qc_parser()
     cmd_parsers['report'] = report_parser()
 
@@ -1095,7 +1112,8 @@ if __name__ == "__main__":
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs)
         elif cmd == 'archive':
-            d.copy_to_archive()
+            d.copy_to_archive(platform=options.platform,
+                              year=options.year)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern)
         elif cmd == 'report':
