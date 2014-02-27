@@ -782,13 +782,10 @@ class AutoProcess:
             print "Running %s" % scp
             scp.run_subprocess()
 
-    def report(self,logging=False,summary=False,full=False,unaligned_dir=None):
+    def report(self,logging=False,summary=False,full=False):
         # Report the contents of the run in various formats
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
-        # Set internal parameters
-        if unaligned_dir is not None:
-            self.params["unaligned_dir"] = unaligned_dir
         # Short form "logging"-style report
         if logging:
             report = self.report_logging_format()
@@ -1120,10 +1117,6 @@ def report_parser():
                  help="print full report suitable for bioinformaticians")
     p.add_option('--full',action='store_true',dest='full',default=False,
                  help="print summary report suitable for record-keeping")
-    p.add_option('--unaligned',action='store',
-                 dest='unaligned_dir',default=None,
-                 help="specify name of subdirectory holding outputs from bcl2fastq "
-                 "(typically 'Unaligned')")
     return p
 
 def generic_parser(description=None):
@@ -1228,5 +1221,4 @@ if __name__ == "__main__":
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
-                     full=options.full,
-                     unaligned_dir=options.unaligned_dir)
+                     full=options.full)
