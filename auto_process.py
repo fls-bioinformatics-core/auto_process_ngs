@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.33"
+__version__ = "0.0.34"
 
 #######################################################################
 # Imports
@@ -70,8 +70,6 @@ class AutoProcess:
 
     def __init__(self,analysis_dir=None):
         # analysis_dir: name/path for existing analysis directory
-        # no_save: if True then don't save parameters back to
-        #          auto_process.info file
         #
         # Create empty parameter set
         self.params = auto_process_utils.AnalysisDirMetadata()
@@ -82,7 +80,11 @@ class AutoProcess:
         if self.analysis_dir is not None:
             # Load parameters
             self.analysis_dir = os.path.abspath(self.analysis_dir)
-            self.load_parameters()
+            try:
+                self.load_parameters()
+            except Exception, ex:
+                logging.warning("Failed to load parameters: %s (ignored)" % ex)
+                logging.warning("Not an auto_process project?")
             self.params['analysis_dir'] = self.analysis_dir
 
     def add_directory(self,sub_dir):
@@ -780,10 +782,13 @@ class AutoProcess:
             print "Running %s" % scp
             scp.run_subprocess()
 
-    def report(self,logging=False,summary=False,full=False):
+    def report(self,logging=False,summary=False,full=False,unaligned_dir=None):
         # Report the contents of the run in various formats
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
+        # Set internal parameters
+        if unaligned_dir is not None:
+            self.params["unaligned_dir"] = unaligned_dir
         # Short form "logging"-style report
         if logging:
             report = self.report_logging_format()
@@ -1115,6 +1120,10 @@ def report_parser():
                  help="print full report suitable for bioinformaticians")
     p.add_option('--full',action='store_true',dest='full',default=False,
                  help="print summary report suitable for record-keeping")
+    p.add_option('--unaligned',action='store',
+                 dest='unaligned_dir',default=None,
+                 help="specify name of subdirectory holding outputs from bcl2fastq "
+                 "(typically 'Unaligned')")
     return p
 
 def generic_parser(description=None):
@@ -1168,7 +1177,7 @@ if __name__ == "__main__":
             sys.exit(1)
         p = cmd_parsers[cmd]
 
-    # Add debug option (available for all commands)
+    # Add debug options (available for all commands)
     add_debug_option(p)
     
     # Process remaining command line arguments
@@ -1219,4 +1228,5 @@ if __name__ == "__main__":
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
-                     full=options.full)
+                     full=options.full,
+                     unaligned_dir=options.unaligned_dir)
