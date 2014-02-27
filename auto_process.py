@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.32"
+__version__ = "0.0.33"
 
 #######################################################################
 # Imports
@@ -70,10 +70,18 @@ class AutoProcess:
 
     def __init__(self,analysis_dir=None):
         # analysis_dir: name/path for existing analysis directory
+        # no_save: if True then don't save parameters back to
+        #          auto_process.info file
+        #
+        # Create empty parameter set
         self.params = auto_process_utils.AnalysisDirMetadata()
+        # Set flag to indicate whether it's okay to save parameters
+        self._save_params = False
+        # Set where the analysis directory actually is
         self.analysis_dir = analysis_dir
         if self.analysis_dir is not None:
-            self.analysis_dir = os.path.abspath(analysis_dir)
+            # Load parameters
+            self.analysis_dir = os.path.abspath(self.analysis_dir)
             self.load_parameters()
             self.params['analysis_dir'] = self.analysis_dir
 
@@ -101,6 +109,8 @@ class AutoProcess:
         info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
         if not os.path.isfile(info_file_name):
             raise Exception, "No info file %s" % info_file_name
+        # File exists so allow save back
+        self._save_params = True
         # Read contents of info file and assign values
         logging.debug("Loading settings from %s" % info_file_name)
         self.params.load(info_file_name)
@@ -108,8 +118,9 @@ class AutoProcess:
     def save_parameters(self):
         # Save parameters to info file
         #
-        info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
-        self.params.save(info_file_name)
+        if self._save_params:
+            info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
+            self.params.save(info_file_name)
 
     def log_path(self,*args):
         # Return path appended to log directory
@@ -211,6 +222,8 @@ class AutoProcess:
         self.params['platform'] = platform
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
+        # Set flag to allow parameters to be saved back
+        self._save_params = True
 
     def setup_from_fastq_dir(self,analysis_dir,fastq_dir):
         # Do setup for an existing directory containing fastq files
@@ -230,6 +243,8 @@ class AutoProcess:
         self.params['analysis_dir'] = self.analysis_dir
         self.params['unaligned_dir'] = fastq_dir
         self.params['platform'] = platform
+        # Set flag to allow parameters to be saved back
+        self._save_params = True
         # Generate statistics
         self.generate_stats()
         # Make a 'projects.info' metadata file
@@ -629,6 +644,8 @@ class AutoProcess:
         # location: override the target location specified in the settings
         #           can be of the form '[[user@]server:]directory' 
         #
+        # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
+        self._save_params = False
         # Process pattern matching
         if projects is None:
             project_pattern = '*'
@@ -765,6 +782,8 @@ class AutoProcess:
 
     def report(self,logging=False,summary=False,full=False):
         # Report the contents of the run in various formats
+        # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
+        self._save_params = False
         # Short form "logging"-style report
         if logging:
             report = self.report_logging_format()
