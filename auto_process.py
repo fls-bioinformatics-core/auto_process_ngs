@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.34"
+__version__ = "0.0.35"
 
 #######################################################################
 # Imports
@@ -609,11 +609,12 @@ class AutoProcess:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
 
-    def copy_to_archive(self,platform=None,year=None):
+    def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False):
         # Copy the analysis directory and contents to an archive area
-        archive_dir = auto_process_settings.archive.dirn
         if archive_dir is None:
-            raise Exception, "No archive directory specified in settings"
+            archive_dir = auto_process_settings.archive.dirn
+        if archive_dir is None:
+            raise Exception, "No archive directory specified (use --archive_dir option?)"
         # Construct subdirectory structure i.e. platform and year
         if platform is None:
             platform = self.params.platform
@@ -623,9 +624,12 @@ class AutoProcess:
             year = time.strftime("%Y")
         archive_dir = os.path.join(archive_dir,year,platform)
         print "Copying to archive directory: %s" % archive_dir
+        print "Platform: %s" % platform
+        print "Year    : %s" % year 
         try:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
-                                               prune_empty_dirs=True)
+                                               prune_empty_dirs=True,
+                                               dry_run=dry_run)
             print "Running %s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
         except Exception, ex:
@@ -1096,6 +1100,11 @@ def archive_parser():
                               version="%prog "+__version__,
                               description="Copy sequencing analysis data directory "
                               "ANALYSIS_DIR to 'archive' destination.")
+    p.add_option('--archive_dir',action='store',
+                 dest='archive_dir',default=None,
+                 help="specify top-level archive directory to copy data under. "
+                 "ARCHIVE_DIR can be a local directory, or a remote location in the "
+                 "form '[[user@]host:]directory'. Overrides the default settings.")
     p.add_option('--platform',action='store',
                  dest='platform',default=None,
                  help="specify the platform e.g. 'hiseq', 'miseq' etc (overrides "
@@ -1104,6 +1113,7 @@ def archive_parser():
     p.add_option('--year',action='store',
                  dest='year',default=None,
                  help="specify the year e.g. '2014' (default is the current year)")
+    add_dry_run_option(p)
     return p
 
 def report_parser():
@@ -1125,6 +1135,12 @@ def generic_parser(description=None):
     p  = optparse.OptionParser(usage="%prog CMD [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description=description)
+    return p
+
+def add_dry_run_option(p):
+    # Add --dry-run option to a parser
+    p.add_option('--dry-run',action='store_true',dest='dry_run',default=False,
+                 help="Dry run i.e. report but don't perform any actions")
     return p
 
 def add_debug_option(p):
@@ -1213,8 +1229,10 @@ if __name__ == "__main__":
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs)
         elif cmd == 'archive':
-            d.copy_to_archive(platform=options.platform,
-                              year=options.year)
+            d.copy_to_archive(archive_dir=options.archive_dir,
+                              platform=options.platform,
+                              year=options.year,
+                              dry_run=options.dry_run)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.target_dir)
