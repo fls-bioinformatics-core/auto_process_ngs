@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.35"
+__version__ = "0.0.36"
 
 #######################################################################
 # Imports
@@ -542,7 +542,7 @@ class AutoProcess:
         # Tell us how many were made
         print "Created %d projects" % n_projects
 
-    def run_qc(self,projects=None,max_jobs=4):
+    def run_qc(self,projects=None,max_jobs=4,no_ungzip_fastqs=False):
         # Run QC pipeline for all projects
         #
         # Tests whether QC outputs already exist and only runs
@@ -596,7 +596,10 @@ class AutoProcess:
                         group = "%s.%s" % (project.name,sample.name)
                         fastq = os.path.join(project.dirn,'fastqs',fq)
                         label = str(auto_process_utils.AnalysisFastq(fq))
-                        pipeline.queueJob(project.dirn,'illumina_qc.sh',(fastq,),
+                        args = list((fastq,))
+                        if no_ungzip_fastqs:
+                            args.append('--no-ungzip')
+                        pipeline.queueJob(project.dirn,'illumina_qc.sh',args,
                                           label=label,group=group)
         # Run the pipeline
         if pipeline.nWaiting() > 0:
@@ -1076,6 +1079,8 @@ def run_qc_parser():
                  dest='max_jobs',default=4,type='int',
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default: 4)")
+    p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
+                 help="don't create uncompressed copies of fastq.gz files")
     return p
 
 def publish_qc_parser():
@@ -1227,7 +1232,8 @@ if __name__ == "__main__":
             d.setup_analysis_dirs()
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
-                     max_jobs=options.max_jobs)
+                     max_jobs=options.max_jobs,
+                     no_ungzip_fastqs=options.no_ungzip_fastqs)
         elif cmd == 'archive':
             d.copy_to_archive(archive_dir=options.archive_dir,
                               platform=options.platform,
