@@ -720,9 +720,8 @@ class AutoProcess:
             project_pattern = projects
         # Get location to publish qc reports to
         if location is None:
-            user = auto_process_settings.qc_web_server.user
-            server = auto_process_settings.qc_web_server.server
-            dirn = auto_process_settings.qc_web_server.webdir
+            user,server,dirn = auto_process_utils.split_user_host_dir(
+                auto_process_settings.qc_web_server.dirn)
         else:
             user,server,dirn = auto_process_utils.split_user_host_dir(location)
         if server is not None:
@@ -782,14 +781,14 @@ class AutoProcess:
         for project in projects:
             # Get local versions of project information
             info = project.info
-            user = 'Not supplied' if info.user is None else info.user
+            project_user = 'Not supplied' if info.user is None else info.user
             library_type = 'Unknown' if info.library_type is None else info.library_type
             organism = 'Unknown' if info.organism is None else info.organism
             PI = 'Unknown' if info.PI is None else info.PI
             # Generate line in the table of projects
             index_page.add("<tr>")
             index_page.add("<td>%s</td>" % project.name)
-            index_page.add("<td>%s</td>" % user)
+            index_page.add("<td>%s</td>" % project_user)
             index_page.add("<td>%s</td>" % library_type)
             index_page.add("<td>%s</td>" % organism)
             index_page.add("<td>%s</td>" % PI)

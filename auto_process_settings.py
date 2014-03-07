@@ -11,16 +11,16 @@ runners = AttributeDictionary(
 )
 #
 # Information for archiving analyses
+# dirn should be a directory in the form [[user@]host:]path]
 archive = AttributeDictionary(
     dirn=None,
     log=None,
 )
 #
 # Information for uploading QC reports
+# dirn should be a directory in the form [[user@]host:]path]
 qc_web_server = AttributeDictionary(
-    user=None,
-    server=None,
-    webdir=None,
+    dirn=None,
     url=None,
 )
 #
