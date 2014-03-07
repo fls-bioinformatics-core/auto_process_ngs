@@ -202,14 +202,15 @@ class AutoProcess:
         # containing data from bcl2fastq
         for test_unaligned in ('bcl2fastq','Unaligned'):
             if os.path.isdir(os.path.join(self.analysis_dir,test_unaligned)):
-                print "Checking '%s' subdirectory..." % test_unaligned
+                logging.debug("Testing subdirectory '%s' to see if it has sequence data" % 
+                              test_unaligned)
                 try:
                     IlluminaData.IlluminaData(self.analysis_dir,
                                               unaligned_dir=test_unaligned)
                     print "Setting 'unaligned_dir' to %s" % test_unaligned
                     return test_unaligned
                 except IlluminaData.IlluminaDataError, ex:
-                    print "Unable to load data from %s" % test_unaligned
+                    logging.debug("Unable to load data from %s" % test_unaligned)
         # Unable to detect existing data directory
         return None
 
