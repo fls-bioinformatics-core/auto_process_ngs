@@ -3,6 +3,11 @@
 import JobRunner
 from bcf_utils import AttributeDictionary
 #
+# General parameters
+general = AttributeDictionary(
+    max_concurrent_jobs=12,
+)
+#
 # Define runners for specific jobs
 runners = AttributeDictionary(
     bcl2fastq=JobRunner.SimpleJobRunner(),

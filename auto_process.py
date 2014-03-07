@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.38"
+__version__ = "0.0.39"
 
 #######################################################################
 # Imports
@@ -1128,6 +1128,7 @@ def run_qc_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
+    max_concurrent_jobs = auto_process_settings.general.max_concurrent_jobs
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
@@ -1136,9 +1137,9 @@ def run_qc_parser():
                  "projects) and 'sname' optionally specifies a sample (or set of "
                  "samples).")
     p.add_option('--max-jobs',action='store',
-                 dest='max_jobs',default=4,type='int',
+                 dest='max_jobs',default=max_concurrent_jobs,type='int',
                  help="explicitly specify maximum number of concurrent QC jobs to run "
-                 "(default: 4)")
+                 "(default %s, change in settings file)" % max_concurrent_jobs)
     p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
                  help="don't create uncompressed copies of fastq.gz files")
     return p
