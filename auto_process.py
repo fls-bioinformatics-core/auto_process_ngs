@@ -1135,9 +1135,9 @@ def publish_qc_parser():
                  help="simple wildcard-based pattern specifying a subset of projects "
                  "and samples to publish the QC for. PROJECT_PATTERN can specify a "
                  "single project, or a set of projects.")
-    p.add_option('--target',action='store',
-                 dest='target_dir',default=None,
-                 help="specify target directory to copy QC reports to. TARGET_DIR can "
+    p.add_option('--qc_dir',action='store',
+                 dest='qc_dir',default=None,
+                 help="specify target directory to copy QC reports to. QC_DIR can "
                  "be a local directory, or a remote location in the form "
                  "'[[user@]host:]directory'. Overrides the default settings.")
     return p
@@ -1283,7 +1283,7 @@ if __name__ == "__main__":
                               dry_run=options.dry_run)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
-                         location=options.target_dir)
+                         location=options.qc_dir)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
