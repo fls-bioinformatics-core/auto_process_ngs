@@ -766,13 +766,19 @@ class AutoProcess:
                 raise Exception, "Exception making remote directory for QC reports: %s" % ex
         # Deal with QC for each project
         for project in projects:
-            # Initial information
+            # Get local versions of project information
+            info = project.metadata
+            user = 'Not supplied' if info.user is None else info.user
+            library_type = 'Unknown' if info.library_type is None else info.library_type
+            organism = 'Unknown' if info.organism is None else info.organism
+            PI = 'Unknown' if info.PI is None else info.PI
+            # Generate line in the table of projects
             index_page.add("<tr>")
             index_page.add("<td>%s</td>" % project.name)
-            index_page.add("<td>%s</td>" % project.metadata.user)
-            index_page.add("<td>%s</td>" % project.metadata.library_type)
-            index_page.add("<td>%s</td>" % project.metadata.organism)
-            index_page.add("<td>%s</td>" % project.metadata.PI)
+            index_page.add("<td>%s</td>" % user)
+            index_page.add("<td>%s</td>" % library_type)
+            index_page.add("<td>%s</td>" % organism)
+            index_page.add("<td>%s</td>" % PI)
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
             index_page.add("<td>%d</td>" % len(project.samples))
             # Copy QC report, if QC was verified
