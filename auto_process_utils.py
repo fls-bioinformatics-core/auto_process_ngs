@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 """auto_process_utils
 
@@ -847,6 +847,14 @@ def split_user_host_dir(location):
     # Split a location of the form [[user@]host:]dir into its
     # user, hostname and directory components
     try:
+        location = location.strip()
+    except AttributeError:
+        # Not a string?
+        logging.error("Bad input to split_user_host_dir: '%s'" % location)
+        return (None,None,None)
+    if not location:
+        return (None,None,None)
+    try:
         location.index(':')
         location,dirn = location.split(':')
         try:
@@ -1357,6 +1365,26 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,'/path/to/somewhere')
+
+    def test_extra_whitespace(self):
+        """Check we can handle addition leading/trailing whitespace
+        """
+        user,host,dirn = split_user_host_dir('\tuser@host.name:/path/to/somewhere  \n')
+        self.assertEqual(user,'user')
+        self.assertEqual(host,'host.name')
+        self.assertEqual(dirn,'/path/to/somewhere')
+
+    def test_bad_input(self):
+        """Check that empty string or None return sensible values
+        """
+        user,host,dirn = split_user_host_dir('')
+        self.assertEqual(user,None)
+        self.assertEqual(host,None)
+        self.assertEqual(dirn,None)
+        user,host,dirn = split_user_host_dir(None)
+        self.assertEqual(user,None)
+        self.assertEqual(host,None)
+        self.assertEqual(dirn,None)
 
 #######################################################################
 # Main program: run tests
