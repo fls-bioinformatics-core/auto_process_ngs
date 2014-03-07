@@ -141,24 +141,24 @@ class AutoProcess:
             filen = None
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
-        print "Project metadata file: %s" % filen
+        logging.debug("Project metadata file: %s" % filen)
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
-            print "Loading project metadata from existing file"
+            logging.debug("Loading project metadata from existing file")
             project_metadata = ProjectMetadataFile(filen)
         else:
             # Populate basic metadata from existing fastq files
-            print "File not found, acquiring basic data from contents of %s" % \
-                self.params.unaligned_dir
+            logging.debug("File not found, acquiring basic data from contents of %s" %
+                          self.params.unaligned_dir)
             project_metadata = ProjectMetadataFile()
-            print "Project\tSample\tFastq"
+            logging.debug("Project\tSample\tFastq")
             for project in illumina_data.projects:
                 project_name = project.name
                 sample_names = []
                 for sample in project.samples:
                     sample_name = sample.name
                     for fastq in sample.fastq:
-                        print "%s\t%s\t%s" % (project_name,sample_name,fastq)
+                        logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
                     sample_names.append(sample_name)
                 project_metadata.add_project(project_name,sample_names)
         # Perform conistency check or update
@@ -176,7 +176,7 @@ class AutoProcess:
                     bad_projects.append(line)
             # Remove bad projects
             if update:
-                print "Removing non-existent projects"
+                logging.debug("Removing non-existent projects")
                 for bad_project in bad_projects:
                     del(bad_project)
             # Check that all actual projects are listed
@@ -186,12 +186,12 @@ class AutoProcess:
                     logging.warning("Project '%s' not listed in metadata file" % project.name)
                     if update:
                         # Add line for unlisted project
-                        print "Adding basic data for project '%s'" % project.name
+                        logging.debug("Adding basic data for project '%s'" % project.name)
                         sample_names = []
                         for sample in project.samples:
                             sample_name = sample.name
                             for fastq in sample.fastq:
-                                print "%s\t%s\t%s" % (project_name,sample_name,fastq)
+                                logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
                             sample_names.append(sample_name)
                         project_metadata.add_project(project_name,sample_names)
         # Return the metadata object
@@ -350,7 +350,7 @@ class AutoProcess:
         filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         project_metadata.save(filen)
         self.params['project_metadata'] = project_metadata_file
-        print "Project metadata in %s" % self.params.project_metadata
+        print "Saving project metadata to %s" % self.params.project_metadata
 
     def get_analysis_projects(self,pattern=None):
         # Return the analysis projects in a list
@@ -959,8 +959,7 @@ class AutoProcess:
         # Acquire data
         illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
-        project_metadata = ProjectMetadataFile(os.path.join(self.analysis_dir,
-                                                            self.params.project_metadata))
+        project_metadata = self.load_project_metadata(self.params.project_metadata)
         # Generate report text
         report = []
         for p in project_metadata:
