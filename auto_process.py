@@ -425,8 +425,8 @@ class AutoProcess:
         # Directories
         analysis_dir = self.params.analysis_dir
         self.params['unaligned_dir'] = 'bcl2fastq'
-        bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         sample_sheet = self.params.sample_sheet
+        # Check for pre-existing bcl2fastq outputs
         if self.verify_bcl_to_fastq():
             print "Bcl to fastq outputs already present"
             # Check for project metadata file
@@ -435,6 +435,13 @@ class AutoProcess:
             if generate_stats:
                 self.generate_stats()
             return
+        # Check for basic information needed to do bcl2fastq conversion
+        if self.params.data_dir is None:
+            raise Exception, "No source data directory"
+        if self.params.bases_mask is None:
+            raise Exception, "No bases mask"
+        # Create bcl2fastq directory
+        bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Fetch primary data
         if not skip_rsync:
             if self.get_primary_data() != 0:
