@@ -983,7 +983,7 @@ class AutoProcess:
                           (project.info.user,
                            project.info.library_type,
                            project.info.organism,
-                           project.info.platform.upper(),
+                           self.params.platform.upper(),
                            os.path.basename(self.params.analysis_dir).split('_')[0])
             report.append("%s\n%s\n" % (title,'-'*len(title)))
             report.append("The data for %(user)s's %(org)s %(lib)s is now "
