@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 """auto_process_utils
 
@@ -277,7 +277,7 @@ class AnalysisProject:
         if not os.path.exists(self.fastq_dir):
             # If special 'fastqs' doesn't exist then
             # look in top level of project
-            fastq_dir = self.dirn
+            self.fastq_dir = self.dirn
         # Populate from fastq file names
         logging.debug("Acquiring fastqs...")
         fastqs = Pipeline.GetFastqGzFiles(self.fastq_dir)
