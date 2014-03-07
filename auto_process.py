@@ -207,7 +207,7 @@ class AutoProcess:
                 try:
                     IlluminaData.IlluminaData(self.analysis_dir,
                                               unaligned_dir=test_unaligned)
-                    print "Setting 'unaligned_dir' to %s" % test_unaligned
+                    print "Setting 'unaligned_dir' parameter to %s" % test_unaligned
                     return test_unaligned
                 except IlluminaData.IlluminaDataError, ex:
                     logging.debug("Unable to load data from %s" % test_unaligned)
