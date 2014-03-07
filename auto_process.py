@@ -540,9 +540,8 @@ class AutoProcess:
         # Construct and populate the analysis directories for each project
         illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                   unaligned_dir=self.params.unaligned_dir)
-        project_metadata = TabFile.TabFile(os.path.join(analysis_dir,
-                                                        self.params.project_metadata),
-                                           first_line_is_header=True)
+        project_metadata = self.load_project_metadata(project_metadata_file='projects.info',
+                                                      check=True)
         # Sanity check that the project data file has been populated
         got_project_data = True
         for line in project_metadata:
@@ -768,7 +767,7 @@ class AutoProcess:
         # Deal with QC for each project
         for project in projects:
             # Get local versions of project information
-            info = project.metadata
+            info = project.info
             user = 'Not supplied' if info.user is None else info.user
             library_type = 'Unknown' if info.library_type is None else info.library_type
             organism = 'Unknown' if info.organism is None else info.organism
@@ -974,24 +973,24 @@ class AutoProcess:
                                                          os.path.join(self.params.analysis_dir,
                                                                       p['Project']))
             title = "%s %s %s data from %s run %s" % \
-                          (project.metadata.user,
-                           project.metadata.library_type,
-                           project.metadata.organism,
-                           project.metadata.platform.upper(),
+                          (project.info.user,
+                           project.info.library_type,
+                           project.info.organism,
+                           project.info.platform.upper(),
                            os.path.basename(self.params.analysis_dir).split('_')[0])
             report.append("%s\n%s\n" % (title,'-'*len(title)))
             report.append("The data for %(user)s's %(org)s %(lib)s is now "
                           "available at\n\n%(dirn)s\n" % \
-                          dict(user=project.metadata.user,
+                          dict(user=project.info.user,
                                dirn=project.dirn,
-                               org=project.metadata.organism,
-                               lib=project.metadata.library_type))
+                               org=project.info.organism,
+                               lib=project.info.library_type))
             report.append("The samples are:\n\n%s (%d%s samples%s)" % \
                           (project.prettyPrintSamples(),
                            len(project.samples),
-                           " paired end" if project.metadata.paired_end else '',
+                           " paired end" if project.info.paired_end else '',
                            ", multiple fastqs per sample" if project.multiple_fastqs else ''))
-            report.append("\nAdditional comments:\n\t%s" % project.metadata.comments)
+            report.append("\nAdditional comments:\n\t%s" % project.info.comments)
         report = '\n'.join(report)
         return report
 

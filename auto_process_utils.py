@@ -210,7 +210,7 @@ class AnalysisProject:
     multiple_fastqs: True if at least one sample has more than one fastq
                      file per read associated with it
 
-    There is also a 'metadata' property with the following additional
+    There is also an 'info' property with the following additional
     properties:
 
     run         : run name
@@ -246,24 +246,24 @@ class AnalysisProject:
         self.dirn = os.path.abspath(dirn)
         self.fastq_dir = None
         self.samples = []
-        self.metadata = AnalysisProjectMetadata()
-        self.metadata_file = os.path.join(self.dirn,"README.info")
+        self.info = AnalysisProjectInfo()
+        self.info_file = os.path.join(self.dirn,"README.info")
         self.populate()
         # (Re)set metadata
         if run is not None:
-            self.metadata['run'] = run
+            self.info['run'] = run
         if user is not None:
-            self.metadata['user'] = user
+            self.info['user'] = user
         if PI is not None:
-            self.metadata['PI'] = PI
+            self.info['PI'] = PI
         if library_type is not None:
-            self.metadata['library_type'] = library_type
+            self.info['library_type'] = library_type
         if organism is not None:
-            self.metadata['organism'] = organism
+            self.info['organism'] = organism
         if platform is not None:
-            self.metadata['platform'] = platform
+            self.info['platform'] = platform
         if comments is not None:
-            self.metadata['comments'] = comments
+            self.info['comments'] = comments
 
     def populate(self):
         """Populate data structure from directory contents
@@ -296,13 +296,13 @@ class AnalysisProject:
         for sample in self.samples:
             logging.debug("* %s: %s" % (sample.name,sample.fastq))
         # Get data from info file, if present
-        if os.path.isfile(self.metadata_file):
-            self.metadata.load(self.metadata_file)
+        if os.path.isfile(self.info_file):
+            self.info.load(self.info_file)
         # Set paired_end flag for project
         paired_end = True
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
-        self.metadata['paired_end'] = paired_end
+        self.info['paired_end'] = paired_end
 
     def create_directory(self,illumina_project=None,fastqs=None):
         """Create and populate analysis directory for an IlluminaProject
@@ -375,9 +375,9 @@ class AnalysisProject:
             if self.multiple_fastqs:
                 sample_description += ", multiple fastqs per sample"
             sample_description += ")"
-        self.metadata['samples'] = sample_description
+        self.info['samples'] = sample_description
         # Save metadata
-        self.metadata.save(self.metadata_file)
+        self.info.save(self.info_file)
 
     @property
     def qc_dir(self):
@@ -769,7 +769,7 @@ class AnalysisDirMetadata(MetadataDict):
                               },
                               filen=filen)
 
-class AnalysisProjectMetadata(MetadataDict):
+class AnalysisProjectInfo(MetadataDict):
     """Class for storing metadata in an analysis project
 
     Provides a set of metadata items which are loaded from
@@ -789,7 +789,7 @@ class AnalysisProjectMetadata(MetadataDict):
 
     """
     def __init__(self,filen=None):
-        """Create a new AnalysisProjectMetadata object
+        """Create a new AnalysisProjectInfo object
 
         Arguments:
           filen: (optional) name of the tab-delimited file
@@ -1028,10 +1028,10 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples,[])
         self.assertFalse(project.multiple_fastqs)
         self.assertEqual(project.fastq_dir,None)
-        self.assertEqual(project.metadata.library_type,None)
-        self.assertEqual(project.metadata.organism,None)
-        self.assertFalse(project.metadata.paired_end)
-        self.assertEqual(project.metadata.platform,None)
+        self.assertEqual(project.info.library_type,None)
+        self.assertEqual(project.info.organism,None)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.platform,None)
 
     def test_create_single_end_analysis_project(self):
         """Check creation of new single-end AnalysisProject directory
@@ -1044,7 +1044,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
-        self.assertFalse(project.metadata.paired_end)
+        self.assertFalse(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
 
@@ -1059,7 +1059,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertTrue(project.multiple_fastqs)
-        self.assertFalse(project.metadata.paired_end)
+        self.assertFalse(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-B')
 
     def test_create_paired_end_analysis_project(self):
@@ -1075,7 +1075,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
-        self.assertTrue(project.metadata.paired_end)
+        self.assertTrue(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
 
@@ -1093,7 +1093,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
-        self.assertTrue(project.metadata.paired_end)
+        self.assertTrue(project.info.paired_end)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
@@ -1292,24 +1292,24 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.project_metadata,None)
         self.assertEqual(metadata.stats_file,None)
 
-class TestAnalysisProjectMetadata(unittest.TestCase):
-    """Tests for the AnalysisProjectMetadata class
+class TestAnalysisProjectInfo(unittest.TestCase):
+    """Tests for the AnalysisProjectInfo class
 
     """
 
     def test_create_analysis_project_metadata(self):
-        """Check creation of an empty AnalysisProjectMetadata object
+        """Check creation of an empty AnalysisProjectInfo object
         """
-        metadata = AnalysisProjectMetadata()
-        self.assertEqual(metadata.run,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.user,None)
-        self.assertEqual(metadata.PI,None)
-        self.assertEqual(metadata.organism,None)
-        self.assertEqual(metadata.library_type,None)
-        self.assertEqual(metadata.paired_end,None)
-        self.assertEqual(metadata.samples,None)
-        self.assertEqual(metadata.comments,None)
+        info = AnalysisProjectInfo()
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user,None)
+        self.assertEqual(info.PI,None)
+        self.assertEqual(info.organism,None)
+        self.assertEqual(info.library_type,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.comments,None)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
