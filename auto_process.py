@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.37"
+__version__ = "0.0.38"
 
 #######################################################################
 # Imports
@@ -89,6 +89,12 @@ class AutoProcess:
                 self.params['unaligned_dir'] = self.detect_unaligned_dir()
                 if self.params.unaligned_dir is None:
                     logging.warning("Unable to find subdirectory containing data")
+                # Attempt to detect sequencing platform
+                self.params['platform'] = platforms.get_sequencer_platform(self.analysis_dir)
+                if self.params.platform is None:
+                    logging.warning("Unable to identify platform from directory name")
+                else:
+                    print "Setting 'platform' parameter to %s" % self.params.platform
             self.params['analysis_dir'] = self.analysis_dir
 
     def add_directory(self,sub_dir):
@@ -252,6 +258,7 @@ class AutoProcess:
         if not os.path.exists(self.analysis_dir):
             # Create directory structure
             self.create_directory(self.analysis_dir)
+            self.add_directory('ScriptCode')
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
