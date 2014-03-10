@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 """auto_process_utils
 
@@ -389,12 +389,24 @@ class AnalysisProject:
             return None
 
     @property
+    def qc(self):
+        # Return IlluminaQCReporter object for this project
+        #
+        if self.qc_dir is None:
+            return None
+        else:
+            return qcreporter.IlluminaQCReporter(self.dirn)
+
+    @property
     def qc_report(self):
         # Create zipped QC report and return name of zip file
-        if self.qc_dir is not None and self.verify_qc():
-            return qcreporter.IlluminaQCReporter(self.dirn).zip()
-        else:
-            return None
+        qc_reporter = self.qc
+        try:
+            if self.verify_qc():
+                return self.qc.zip()
+        except AttributeError:
+            logging.error("Failed to generate QC report")
+        return None
 
     @property
     def multiple_fastqs(self):
@@ -407,9 +419,10 @@ class AnalysisProject:
 
     def verify_qc(self):
         # Verify if the QC was successful
-        if self.qc_dir is None:
+        try:
+            return self.qc.verify()
+        except AttributeError:
             return False
-        return qcreporter.IlluminaQCReporter(self.dirn).verify()
 
     def get_sample(self,name):
         """Return sample that matches 'name'
