@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.41"
+__version__ = "0.0.42"
 
 #######################################################################
 # Imports
@@ -426,10 +426,12 @@ class AutoProcess:
         return status
         
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                     skip_rsync=False,keep_primary_data=False,generate_stats=False):
+                     skip_rsync=False,keep_primary_data=False,generate_stats=False,
+                     nprocessors=1):
         # Convert bcl files to fastq
         #
         # Arguments:
+        # nprocessors         : number of processors to run bclToFastq.py with
         # ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
         # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
         # skip_rsync          : if True then don't rsync primary data at the start of
@@ -476,6 +478,7 @@ class AutoProcess:
         print "Sample sheet        : %s" % sample_sheet
         print "Bases mask          : %s" % bases_mask
         print "Nmismatches         : %d (determined from bases mask)" % nmismatches
+        print "Nprocessors         : %s" % nprocessors
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
         print "Ignore missing stats: %s" % ignore_missing_stats
         # Set up runner
@@ -483,6 +486,7 @@ class AutoProcess:
         runner.log_dir(self.log_dir)
         # Run bcl2fastq
         bcl2fastq = applications.Command('bclToFastq.py',
+                                         '--nprocessors',nprocessors,
                                          '--use-bases-mask',bases_mask,
                                          '--nmismatches',nmismatches,
                                          '--ignore-missing-control')
@@ -1129,9 +1133,14 @@ def make_fastqs_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
+    nprocessors = auto_process_settings.bcl2fastq.nprocessors
     p.add_option('--skip-rsync',action='store_true',
                  dest='skip_rsync',default=False,
                  help="don't rsync the primary data at the beginning of processing")
+    p.add_option('--nprocessors',action='store',
+                 dest='nprocessors',default=nprocessors,
+                 help="explicitly specify number of processors to use for bclToFastq "
+                 "(default %s, change in settings file)" % nprocessors)
     p.add_option('--ignore-missing-bcl',action='store_true',
                  dest='ignore_missing_bcl',default=False,
                  help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
@@ -1314,6 +1323,7 @@ if __name__ == "__main__":
         # Run the specified stage
         if cmd == 'make_fastqs':
             d.bcl_to_fastq(skip_rsync=options.skip_rsync,
+                           nprocessors=options.nprocessors,
                            keep_primary_data=options.keep_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
                            ignore_missing_stats=options.ignore_missing_stats,

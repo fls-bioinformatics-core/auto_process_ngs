@@ -8,6 +8,11 @@ general = AttributeDictionary(
     max_concurrent_jobs=12,
 )
 #
+# bcl2fastq
+bcl2fastq = AttributeDictionary(
+    nprocessors=1,
+)
+#
 # Define runners for specific jobs
 runners = AttributeDictionary(
     bcl2fastq=JobRunner.SimpleJobRunner(),
