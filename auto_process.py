@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.40"
+__version__ = "0.0.41"
 
 #######################################################################
 # Imports
@@ -720,13 +720,15 @@ class AutoProcess:
         # Add a record of the analysis to the logging file
         raise NotImplementedError
 
-    def publish_qc(self,projects=None,location=None):
+    def publish_qc(self,projects=None,location=None,skip_qc_verification=False):
         # Copy the QC reports to the webserver
         #
         # projects: specify a pattern to match one or more projects to
         #           publish the reports for (default is to publish all reports)
         # location: override the target location specified in the settings
-        #           can be of the form '[[user@]server:]directory' 
+        #           can be of the form '[[user@]server:]directory'
+        # skip_qc_verification: if True then don't try to verify the QC (default
+        #           is False i.e. do verify the QC)
         #
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
@@ -754,13 +756,14 @@ class AutoProcess:
         else:
             print "Copying QC to local directory"
             print "dirn:\t%s" % dirn
+        print "Skip QC verification:\t%s" % skip_qc_verification
         if dirn is None:
             raise Exception, "No target directory specified"
         dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Make an index page
-        title = "QC reports for %s" % os.path.basename(self.params.analysis_dir)
+        title = "QC reports for %s" % os.path.basename(self.analysis_dir)
         index_page = qcreporter.HTMLPageWriter(title)
         # Add CSS rules
         index_page.addCSSRule("h1 { background-color: #42AEC2;\n"
@@ -811,17 +814,25 @@ class AutoProcess:
             index_page.add("<td>%s</td>" % PI)
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
             index_page.add("<td>%d</td>" % len(project.samples))
-            # Copy QC report, if QC was verified
-            if project.verify_qc():
-                # Copy the qc zip file
+            # Create/locate and copy QC report
+            qc_zip = None
+            if skip_qc_verification:
+                # Assume an existing QC report
+                qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+                if not os.path.isfile(qc_zip):
+                    logging.error("Unable to locate %s" % qc_zip)
+                    qc_zip = None
+            elif project.qc.verify():
+                # Create new QC report only if verification succeeds
                 qc_zip = os.path.join(project.dirn,project.qc_report)
+            # Check for and copy QC report
+            if qc_zip is not None and os.path.isfile(qc_zip):
                 report_copied = True
                 if not remote:
                     # Local directory
                     shutil.copy(qc_zip,dirn)
                     # Unpack
-                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,
-                                                     os.path.join(dirn,project.qc_report))
+                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
                 else:
@@ -834,22 +845,22 @@ class AutoProcess:
                         unzip_cmd = applications.general.ssh_command(
                             user,server,
                             ('unzip','-q','-o','-d',dirn,
-                             os.path.join(dirn,project.qc_report)))
+                             os.path.join(dirn,os.path.basename(qc_zip))))
                         print "Running %s" % unzip_cmd
                         unzip_cmd.run_subprocess()
                     except Exception, ex:
                         print "Failed to copy QC report: %s" % ex
-                        index_page.add("<tr><td>%s</td><td>Missing</td><td>Missing</td></tr>"
+                        index_page.add("<td >%s</td><td>Missing</td><td>Missing</td></tr>"
                                        % project.name)
                         report_copied = False
                 # Append info to the index page
                 if report_copied:
                     index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
-                                   % os.path.splitext(project.qc_report)[0])
+                                   % project.qc.report_name)
                     index_page.add("<td><a href='%s'>[Zip]</a></td>"
-                                   % project.qc_report)
+                                   % os.path.basename(qc_zip))
             else:
-                # QC did not run
+                # QC not available
                 index_page.add("<td colspan='2'>QC reports not available</td>")
             # Finish table row for this project
             index_page.add("</tr>")
@@ -1173,6 +1184,10 @@ def publish_qc_parser():
                  help="specify target directory to copy QC reports to. QC_DIR can "
                  "be a local directory, or a remote location in the form "
                  "'[[user@]host:]directory'. Overrides the default settings.")
+    p.add_option('--skip-qc-verification',action='store_true',
+                 dest='skip_qc_verification',default=False,
+                 help="skip the verification of the QC (otherwise projects where the "
+                 "verification fails will not be included).")
     return p
 
 def archive_parser():
@@ -1316,7 +1331,8 @@ if __name__ == "__main__":
                               dry_run=options.dry_run)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
-                         location=options.qc_dir)
+                         location=options.qc_dir,
+                         skip_qc_verification=options.skip_qc_verification)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
