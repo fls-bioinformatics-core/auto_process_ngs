@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.39"
+__version__ = "0.0.40"
 
 #######################################################################
 # Imports
@@ -134,6 +134,14 @@ class AutoProcess:
             info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
             self.params.save(info_file_name)
 
+    def load_illumina_data(self):
+        # Load and return an IlluminaData object
+        if self.params.unaligned_dir is None:
+            logging.error("Unaligned directory not specified, cannot load data")
+            return None
+        return IlluminaData.IlluminaData(self.analysis_dir,
+                                         unaligned_dir=self.params.unaligned_dir)
+
     def load_project_metadata(self,project_metadata_file='projects.info',
                               check=True,update=False):
         # Load data from 'projects.info' metadata file which lists
@@ -145,18 +153,22 @@ class AutoProcess:
             filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         else:
             filen = None
-        illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
         logging.debug("Project metadata file: %s" % filen)
+        illumina_data = self.load_illumina_data()
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
             project_metadata = ProjectMetadataFile(filen)
         else:
             # Populate basic metadata from existing fastq files
-            logging.debug("File not found, acquiring basic data from contents of %s" %
-                          self.params.unaligned_dir)
             project_metadata = ProjectMetadataFile()
+            if illumina_data is None:
+                # Can't even get fastq files
+                logging.error("Can't load data for source fastqs, unable to guess projects")
+                return project_metadata
+            # Get information from fastq files
+            logging.debug("Metadata file not found, acquire basic data from contents of %s" %
+                          self.params.unaligned_dir)
             logging.debug("Project\tSample\tFastq")
             for project in illumina_data.projects:
                 project_name = project.name
@@ -168,6 +180,10 @@ class AutoProcess:
                     sample_names.append(sample_name)
                 project_metadata.add_project(project_name,sample_names)
         # Perform conistency check or update
+        if illumina_data is None:
+            logging.warning("Unaligned dir undefined, cannot do check or update")
+            check = False
+            update = False
         if check or update:
             # Check that each project listed actually exists
             bad_projects = []
@@ -175,7 +191,7 @@ class AutoProcess:
                 pname = line['Project']
                 try:
                     illumina_data.get_project(pname)
-                except IlluminaDataError:
+                except IlluminaData.IlluminaDataError:
                     # Project doesn't exist
                     logging.warning("Project '%s' listed in metadata file doesn't exist" \
                                     % pname)
@@ -487,8 +503,7 @@ class AutoProcess:
         bcl2fastq_job.wait()
         print "bcl2fastq completed"
         # Verify outputs
-        illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
+        illumina_data = self.illumina_data()
         if not analyse_illumina_run.verify_run_against_sample_sheet(illumina_data,
                                                                     sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
@@ -552,8 +567,10 @@ class AutoProcess:
 
     def setup_analysis_dirs(self):
         # Construct and populate the analysis directories for each project
-        illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
+        if self.params.unaligned_dir is None:
+            logging.error("No unaligned directory, cannot build analysis directories")
+            raise Exception,"Cannot build analysis directories"
+        illumina_data = self.load_illumina_data()
         project_metadata = self.load_project_metadata(project_metadata_file='projects.info',
                                                       check=True)
         # Sanity check that the project data file has been populated
@@ -877,8 +894,7 @@ class AutoProcess:
         # e.g. Paired end: 'PJB': Peter Briggs, Mouse ChIP-seq (PI: P Briggs) (6 samples); ...
         #
         # Acquire data
-        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
+        illumina_data = self.load_illumina_data()
         project_metadata = self.load_project_metadata(self.params.project_metadata)
         # Generate report text
         report = []
@@ -910,8 +926,7 @@ class AutoProcess:
         # - Number of samples
         #
         # Acquire data
-        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
+        illumina_data = self.load_illumina_data()
         project_metadata = self.load_project_metadata(self.params.project_metadata)
         # Gather information
         datestamp = None
@@ -976,8 +991,7 @@ class AutoProcess:
         # Some extra information.
         #
         # Acquire data
-        illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
-                                                  unaligned_dir=self.params.unaligned_dir)
+        illumina_data = self.load_illumina_data()
         project_metadata = self.load_project_metadata(self.params.project_metadata)
         # Generate report text
         report = []
