@@ -392,7 +392,7 @@ class AutoProcess:
                 if not bcf_utils.name_matches(name,pattern):
                     # Name failed to match, ignore
                     continue
-            print "Acquiring data for project %s" % name
+            logging.debug("Acquiring data for project %s" % name)
             project_dir = os.path.join(self.analysis_dir,name)
             if os.path.isdir(project_dir):
                 projects.append(
@@ -963,7 +963,7 @@ class AutoProcess:
         # Generate report text
         report = []
         if datestamp and instrument and run_number:
-            report.append("%s run #%s datestamped %s\n" % (self.params.platform.upper(),
+            report.append("%s run #%s datestamped %s\n" % (platform,
                                                            int(run_number),
                                                            datestamp))
         else:
