@@ -255,6 +255,16 @@ class AutoProcess:
         # Generate and return full path to tmp directory
         return self.add_directory('tmp')
 
+    @property
+    def readme(self):
+        # If the analysis dir contains a README file then
+        # return the full path; otherwise return None
+        readme = os.path.join(self.analysis_dir,"README.txt")
+        if os.path.isfile(readme):
+            return readme
+        else:
+            return None
+
     def setup(self,data_dir,analysis_dir=None):
         # Set up the initial analysis directory
         #
