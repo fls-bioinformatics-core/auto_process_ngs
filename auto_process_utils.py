@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 """auto_process_utils
 
@@ -391,7 +391,6 @@ class AnalysisProject:
     @property
     def qc(self):
         # Return IlluminaQCReporter object for this project
-        #
         if self.qc_dir is None:
             return None
         else:
@@ -881,6 +880,18 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
+
+def list_dirs(parent,startswith=None):
+    # Return list of subdirectories relative to 'parent'
+    # If startswith is set then return subset that starts with
+    # the specified string
+    dirs = []
+    for d in os.listdir(parent):
+        if os.path.isdir(os.path.join(parent,d)):
+            if startswith is None or d.startswith(startswith):
+                dirs.append(d)
+    dirs.sort()
+    return dirs
 
 #######################################################################
 # Tests
@@ -1398,6 +1409,64 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
+
+class TestListDirsFunction(unittest.TestCase):
+    """
+    """
+
+    def setUp(self):
+        self.parent_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.parent_dir)
+
+    def add_sub_dir(self,name):
+        # Add a subdirectory
+        os.mkdir(os.path.join(self.parent_dir,name))
+
+    def touch_file(self,name):
+        # Add an empty file
+        open(os.path.join(self.parent_dir,name),'w').close()
+
+    def test_empty_dir(self):
+        """Empty list returned when listing empty directory
+        """
+        self.assertEqual(list_dirs(self.parent_dir),[])
+
+    def test_gets_dirs(self):
+        """All subdirectories are returned
+        """
+        self.add_sub_dir('hello')
+        self.assertEqual(list_dirs(self.parent_dir),['hello'])
+        self.add_sub_dir('goodbye')
+        self.add_sub_dir('adios')
+        self.assertEqual(list_dirs(self.parent_dir),['adios','goodbye','hello'])
+        
+    def test_ignores_files(self):
+        """Only subdirectories are returned
+        """
+        self.touch_file('hello')
+        self.assertEqual(list_dirs(self.parent_dir),[])
+        self.add_sub_dir('goodbye')
+        self.add_sub_dir('adios')
+        self.assertEqual(list_dirs(self.parent_dir),['adios','goodbye'])
+
+    def test_gets_dirs_using_startswith(self):
+        """'startswith' argument returns matching subset of directories
+        """
+        self.assertEqual(list_dirs(self.parent_dir),[])
+        self.add_sub_dir('hello')
+        self.add_sub_dir('helium')
+        self.add_sub_dir('helicopter')
+        self.add_sub_dir('hermes')
+        self.add_sub_dir('goodbye')
+        self.add_sub_dir('adios')
+        self.assertEqual(list_dirs(self.parent_dir,startswith='hel'),
+                         ['helicopter','helium','hello'])
+        self.assertEqual(list_dirs(self.parent_dir,startswith='her'),
+                         ['hermes'])
+        self.assertEqual(list_dirs(self.parent_dir,startswith='helio'),
+                         [])
 
 #######################################################################
 # Main program: run tests
