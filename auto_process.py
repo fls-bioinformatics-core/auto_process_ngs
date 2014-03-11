@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.42"
+__version__ = "0.0.43"
 
 #######################################################################
 # Imports
@@ -403,14 +403,26 @@ class AutoProcess:
                     # Name failed to match, ignore
                     continue
             logging.debug("Acquiring data for project %s" % name)
-            project_dir = os.path.join(self.analysis_dir,name)
-            if os.path.isdir(project_dir):
-                projects.append(
-                    auto_process_utils.AnalysisProject(
-                        name,
-                        os.path.join(self.analysis_dir,name)))
+            # Look for a matching project directory
+            project_dir = None
+            dirs = auto_process_utils.list_dirs(self.analysis_dir,startswith=name)
+            logging.debug("Possible matching directories: %s" % dirs)
+            if len(dirs) == 1:
+                # Just a single match
+                project_dir = dirs[0]
             else:
-                logging.warning("No directory found for project '%s'" % name)
+                # Multiple matches, look for an exact match
+                for d in dirs:
+                    if d == name:
+                        project_dir = name
+                    break
+            if project_dir is None:
+                logging.error("Unable to resolve directory for project '%s'" % name)
+                logging.error("Possible dirs: %s" % dirs)
+                raise Exception("Unable to resolve directory for project '%s'" % name)
+            # Attemp to load the project data
+            project_dir = os.path.join(self.analysis_dir,project_dir)
+            projects.append(auto_process_utils.AnalysisProject(name,project_dir))
         return projects
 
     def get_primary_data(self):
