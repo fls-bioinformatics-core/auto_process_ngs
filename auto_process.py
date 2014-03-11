@@ -809,6 +809,7 @@ class AutoProcess:
                               "           font-size: 70%; }")
         # Build the page
         index_page.add("<h1>%s</h1>" % title)
+        # Table of projects
         index_page.add("<table>")
         index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
         # Make a directory for the QC reports
@@ -921,10 +922,25 @@ class AutoProcess:
             report = self.report_full_format()
             print report
         if not (logging or summary or full):
-            illumina_data = IlluminaData.IlluminaData(self.params.analysis_dir,
-                                                      unaligned_dir=self.params.unaligned_dir)
-            for project in illumina_data.projects:
-                print "%s" % analyse_illumina_run.describe_project(project)
+            # Generate a report on the contents of the data directory
+            print "Directory: %s" % self.analysis_dir
+            print "Platform : %s" % self.params.platform
+            print "Unaligned dir: %s" % self.params.unaligned_dir
+            if self.readme:
+                print "README.txt found: %s" % self.readme
+            if self.params.unaligned_dir is not None:
+                illumina_data = self.load_illumina_data()
+                print "Summary of data in 'unaligned' dir:"
+                for project in illumina_data.projects:
+                    print "- %s" % analyse_illumina_run.describe_project(project)
+            else:
+                print "No information on source fastq data (no unaligned dir found)"
+            print "Analysis projects:"
+            for project in self.get_analysis_projects():
+                print "- %s" % project.name
+                print "  Dir    : %s" % os.path.basename(project.dirn)
+                print "  Samples: %s" % project.prettyPrintSamples()
+                print "  QC     : %s" % ('ok' if project.verify_qc() else 'not verified')
 
     def report_logging_format(self):
         # Generate short form "logging"-style report
