@@ -529,7 +529,7 @@ class AutoProcess:
         bcl2fastq_job.wait()
         print "bcl2fastq completed"
         # Verify outputs
-        illumina_data = self.illumina_data()
+        illumina_data = self.load_illumina_data()
         if not analyse_illumina_run.verify_run_against_sample_sheet(illumina_data,
                                                                     sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
