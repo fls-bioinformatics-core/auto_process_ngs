@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 """auto_process_utils
 
@@ -833,6 +833,87 @@ class AnalysisProjectInfo(MetadataDict):
                               ),
                               filen=filen)
 
+class ProjectMetadataFile(TabFile.TabFile):
+    """File containing metadata about multiple projects in analysis dir
+ 
+    The file consists of a header line plus one line per project
+    with the following tab-delimited fields:
+
+    Project: name of the project
+    Samples: list/description of sample names
+    User: name(s) of the associated user(s)
+    Library: the library type
+    Organism: name(s) of the organism(s)
+    PI: name(s) of the associated principal investigator(s)
+    Comments: free text containing additional information
+              about the project
+
+    Any fields set to None will be written to file with a '.'
+    placeholder.
+
+    """
+    def __init__(self,filen=None):
+        """Create a new ProjectsMetadataFile instance
+
+        Arguments:
+          filen: (optional) name of an existing file to read
+            projects in from.
+
+        """
+        self.__filen = filen
+        TabFile.TabFile.__init__(self,filen=filen,
+                                 column_names=('Project',
+                                               'Samples',
+                                               'User',
+                                               'Library',
+                                               'Organism',
+                                               'PI',
+                                               'Comments'),
+                                 first_line_is_header=True)
+
+    def add_project(self,project_name,sample_names,user=None,
+                    library_type=None,organism=None,PI=None,
+                    comments=None):
+        """Add information about a project into the file
+
+        Arguments:
+          project_name: name of the project
+          sample_names: Python list of sample names
+          user: (optional) user name(s)
+          library_type: (optional) library type
+          organism: (optional) organism(s)
+          PI: (optional) principal investigator name(s)
+          comments: (optional) additional information about
+            the project
+
+        """
+        # Add project info to the metadata file
+        self.append(data=(project_name,
+                          bcf_utils.pretty_print_names(sample_names),
+                          '.' if user is None else user,
+                          '.' if library_type is None else library_type,
+                          '.' if organism is None else organism,
+                          '.' if PI is None else PI,
+                          '.' if comments is None else comments))
+
+    def project(self,name):
+        """Return AttributeDictionary for a project
+
+        """
+        raise NotImplementedError
+
+    def save(self,filen=None):
+        """Save the data back to file
+
+        Arguments:
+          filen: name of the file to save to (if not specified then
+            defaults to the same file as data was read in from)
+
+        """
+        if filen is not None:
+            self.__filen = filen
+        self.write(filen=self.__filen,include_header=True)
+
 #######################################################################
 # Functions
 #######################################################################
@@ -1343,6 +1424,83 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.samples,None)
         self.assertEqual(info.comments,None)
 
+class TestProjectMetadataFile(unittest.TestCase):
+    """Tests for the ProjectMetadataFile class
+
+    """
+
+    def setUp(self):
+        self.metadata_file = tempfile.mkstemp()[1]
+        self.projects = list()
+        self.lines = list()
+
+    def tearDown(self):
+        if self.metadata_file is not None:
+            os.remove(self.metadata_file)
+
+    def test_empty_project_metadata_file(self):
+        """Create and save empty ProjectMetadataFile
+        """
+        # Make an empty 'file'
+        metadata = ProjectMetadataFile()
+        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\n"
+        self.assertEqual(len(metadata),0)
+        for project in metadata:
+            self.fail()
+        # Save to an actual file and check its contents
+        metadata.save(self.metadata_file)
+        self.assertEqual(open(self.metadata_file,'r').read(),contents)
+
+    def test_create_new_project_metadata_file(self):
+        """Create and save ProjectMetadataFile with content
+        """
+        # Make new 'file' and add projects
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        metadata.add_project('Farley',['F3','F4'],
+                             user="Farley G",
+                             library_type="ChIP-seq",
+                             organism="Mouse",
+                             PI="Harley",
+                             comments="Squeak!")
+        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
+        self.assertEqual(len(metadata),2)
+        # Save to an actual file and check its contents
+        metadata.save(self.metadata_file)
+        self.assertEqual(open(self.metadata_file,'r').read(),contents)
+
+    def test_read_existing_project_metadata_file(self):
+        """Read contents from existing ProjectMetadataFile
+        """
+        # Create metadata file independently
+        data = list()
+        data.append(dict(Project="Charlie",
+                         Samples="C1-2",
+                         User="Charlie P",
+                         Library="RNA-seq",
+                         Organism="Yeast",
+                         PI="Marley",
+                         Comments="."))
+        data.append(dict(Project="Farley",
+                         Samples="F3-4",
+                         User="Farley G",
+                         Library="ChIP-seq",
+                         Organism="Mouse",
+                         PI="Harley",
+                         Comments="Squeak!"))
+        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
+        open(self.metadata_file,'w').write(contents)
+        # Load and check contents
+        metadata = ProjectMetadataFile(self.metadata_file)
+        self.assertEqual(len(metadata),2)
+        for x,y in zip(data,metadata):
+            for attr in ('Project','User','Library','Organism','PI','Comments'):
+                self.assertEqual(x[attr],y[attr])
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 
@@ -1411,7 +1569,8 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(dirn,None)
 
 class TestListDirsFunction(unittest.TestCase):
-    """
+    """Tests for the list_dirs function
+
     """
 
     def setUp(self):

@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.43"
+__version__ = "0.0.44"
 
 #######################################################################
 # Imports
@@ -158,10 +158,10 @@ class AutoProcess:
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
-            project_metadata = ProjectMetadataFile(filen)
+            project_metadata = auto_process_utils.ProjectMetadataFile(filen)
         else:
             # Populate basic metadata from existing fastq files
-            project_metadata = ProjectMetadataFile()
+            project_metadata = auto_process_utils.ProjectMetadataFile()
             if illumina_data is None:
                 # Can't even get fastq files
                 logging.error("Can't load data for source fastqs, unable to guess projects")
@@ -1073,37 +1073,6 @@ class AutoProcess:
             report.append("\nAdditional comments:\n\t%s" % project.info.comments)
         report = '\n'.join(report)
         return report
-
-class ProjectMetadataFile(TabFile.TabFile):
-    def __init__(self,filen=None):
-        self.__filen = filen
-        TabFile.TabFile.__init__(self,filen=filen,
-                                 column_names=('Project',
-                                               'Samples',
-                                               'User',
-                                               'Library',
-                                               'Organism',
-                                               'PI',
-                                               'Comments'),
-                                 first_line_is_header=True)
-
-    def add_project(self,project_name,sample_names,user=None,
-                    library_type=None,organism=None,PI=None,
-                    comments=None):
-        # Add project info to the metadata file
-        self.append(data=(project_name,
-                          bcf_utils.pretty_print_names(sample_names),
-                          '.' if user is None else user,
-                          '.' if library_type is None else library_type,
-                          '.' if organism is None else organism,
-                          '.' if PI is None else PI,
-                          '.' if comments is None else comments))
-
-    def save(self,filen=None):
-        # Save the data back to file
-        if filen is not None:
-            self.__filen = filen
-        self.write(filen=self.__filen,include_header=True)
 
 #######################################################################
 # Functions
