@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 """auto_process_utils
 
@@ -378,6 +378,13 @@ class AnalysisProject:
         self.info['samples'] = sample_description
         # Save metadata
         self.info.save(self.info_file)
+
+    @property
+    def exists(self):
+        """Check if analysis project directory already exists
+
+        """
+        return os.path.exists(self.dirn)
 
     @property
     def qc_dir(self):
@@ -962,15 +969,17 @@ def split_user_host_dir(location):
         dirn = location
     return (user,host,dirn)
 
-def list_dirs(parent,startswith=None):
+def list_dirs(parent,matches=None,startswith=None):
     # Return list of subdirectories relative to 'parent'
     # If startswith is set then return subset that starts with
     # the specified string
+    # If matches is set then return an exact match only
     dirs = []
     for d in os.listdir(parent):
         if os.path.isdir(os.path.join(parent,d)):
             if startswith is None or d.startswith(startswith):
-                dirs.append(d)
+                if matches is None or d == matches:
+                    dirs.append(d)
     dirs.sort()
     return dirs
 
@@ -1588,12 +1597,12 @@ class TestListDirsFunction(unittest.TestCase):
         open(os.path.join(self.parent_dir,name),'w').close()
 
     def test_empty_dir(self):
-        """Empty list returned when listing empty directory
+        """list_dirs returns empty list when listing empty directory
         """
         self.assertEqual(list_dirs(self.parent_dir),[])
 
     def test_gets_dirs(self):
-        """All subdirectories are returned
+        """list_dirs returns all subdirectories
         """
         self.add_sub_dir('hello')
         self.assertEqual(list_dirs(self.parent_dir),['hello'])
@@ -1602,16 +1611,26 @@ class TestListDirsFunction(unittest.TestCase):
         self.assertEqual(list_dirs(self.parent_dir),['adios','goodbye','hello'])
         
     def test_ignores_files(self):
-        """Only subdirectories are returned
+        """list_dirs ignores files and only returns subdirectories
         """
         self.touch_file('hello')
         self.assertEqual(list_dirs(self.parent_dir),[])
         self.add_sub_dir('goodbye')
         self.add_sub_dir('adios')
         self.assertEqual(list_dirs(self.parent_dir),['adios','goodbye'])
+        
+    def test_gets_dir_using_matches(self):
+        """list_dirs 'matches' argument returns a single directory
+        """
+        self.touch_file('hello')
+        self.assertEqual(list_dirs(self.parent_dir),[])
+        self.add_sub_dir('goodbye')
+        self.add_sub_dir('adios')
+        self.assertEqual(list_dirs(self.parent_dir,matches='goodbye'),['goodbye'])
+        self.assertEqual(list_dirs(self.parent_dir,matches='nothing'),[])
 
     def test_gets_dirs_using_startswith(self):
-        """'startswith' argument returns matching subset of directories
+        """list_dirs 'startswith' argument returns matching subset of directories
         """
         self.assertEqual(list_dirs(self.parent_dir),[])
         self.add_sub_dir('hello')
