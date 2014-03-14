@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.44"
+__version__ = "0.0.45"
 
 #######################################################################
 # Imports
@@ -420,10 +420,29 @@ class AutoProcess:
                 logging.error("Unable to resolve directory for project '%s'" % name)
                 logging.error("Possible dirs: %s" % dirs)
                 raise Exception("Unable to resolve directory for project '%s'" % name)
-            # Attemp to load the project data
+            # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
             projects.append(auto_process_utils.AnalysisProject(name,project_dir))
+        # Add undetermined reads directory
+        if bcf_utils.name_matches('undetermined',pattern):
+            undetermined_analysis = self.undetermined()
+            if undetermined_analysis is not None:
+                projects.append(undetermined_analysis)
         return projects
+
+    def undetermined(self):
+        # Return analysis project directory for undetermined indices
+        # or None if not found
+        dirs = auto_process_utils.list_dirs(self.analysis_dir,matches='undetermined')
+        if len(dirs) == 0:
+            logging.debug("No undetermined analysis directory found")
+            return None
+        elif len(dirs) > 1:
+            raise Exception, "Found multiple undetermined analysis directories: %s" \
+                % ' '.join(dirs)
+        # Attempt to load the analysis project data
+        undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
+        return auto_process_utils.AnalysisProject(dirs[0],undetermined_dir)
 
     def get_primary_data(self):
         # Copy the primary sequencing data (bcl files etc) to a local area
@@ -637,11 +656,30 @@ class AutoProcess:
                                                          run=run_name,
                                                          comments=comments,
                                                          platform=self.params.platform)
+            if project.exists:
+                logging.warning("Project '%s' already exists, skipping" % project.name)
+                continue
             print "Creating project: '%s'" % project_name
             project.create_directory(illumina_data.get_project(project_name))
             n_projects += 1
         # Tell us how many were made
-        print "Created %d projects" % n_projects
+        print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
+        # Also set up analysis directory for undetermined reads
+        undetermined = illumina_data.undetermined
+        if illumina_data.undetermined is not None:
+            undetermined = auto_process_utils.AnalysisProject('undetermined',
+                                                              os.path.join(self.analysis_dir,
+                                                                           'undetermined'),
+                                                              run=run_name,
+                                                              comments="Analysis of reads "
+                                                              "with undetermined indices",
+                                                              platform=self.params.platform)
+            if not undetermined.exists:
+                print "Creating directory 'undetermined' for analysing reads " \
+                "with undetermined indices"
+                undetermined.create_directory(illumina_data.undetermined)
+            else:
+                logging.warning("'undetermined' directory already exists, skipping")
 
     def run_qc(self,projects=None,max_jobs=4,no_ungzip_fastqs=False):
         # Run QC pipeline for all projects
@@ -698,7 +736,7 @@ class AutoProcess:
                         fastq = os.path.join(project.dirn,'fastqs',fq)
                         label = str(auto_process_utils.AnalysisFastq(fq))
                         args = list((fastq,))
-                        if no_ungzip_fastqs:
+                        if no_ungzip_fastqs or project.name == 'undetermined':
                             args.append('--no-ungzip')
                         pipeline.queueJob(project.dirn,'illumina_qc.sh',args,
                                           label=label,group=group)
@@ -1207,7 +1245,7 @@ def publish_qc_parser():
     return p
 
 def archive_parser():
-    p = optparse.OptionParser(usage="%prog publish [OPTIONS] [ANALYSIS_DIR]",
+    p = optparse.OptionParser(usage="%prog archive [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description="Copy sequencing analysis data directory "
                               "ANALYSIS_DIR to 'archive' destination.")
