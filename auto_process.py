@@ -224,17 +224,17 @@ class AutoProcess:
     def get_analysis_projects_from_dirs(self):
         # Return a list of analysis projects deduced from testing all
         # subdirectories of the top-level analysis directory
-        print "Testing subdirectories to determine analysis projects"
+        logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
         # Try loading each subdirectory as a project
         for dirn in auto_process_utils.list_dirs(self.analysis_dir):
             test_project = auto_process_utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
-                print "* %s: analysis directory" % dirn
+                logging.debug("* %s: analysis directory" % dirn)
                 projects.append(test_project)
             else:
-                print "* %s: rejected" % dirn
+                logging.debug("* %s: rejected" % dirn)
         return projects
 
     def detect_unaligned_dir(self):
@@ -880,14 +880,16 @@ class AutoProcess:
                 mkdir_cmd.run_subprocess()
             except Exception, ex:
                 raise Exception, "Exception making remote directory for QC reports: %s" % ex
+        # Set the string to represent "null" table entries
+        null_str = '&nbsp;'
         # Deal with QC for each project
         for project in projects:
             # Get local versions of project information
             info = project.info
-            project_user = 'Not supplied' if info.user is None else info.user
-            library_type = 'Unknown' if info.library_type is None else info.library_type
-            organism = 'Unknown' if info.organism is None else info.organism
-            PI = 'Unknown' if info.PI is None else info.PI
+            project_user = null_str if info.user is None else info.user
+            library_type = null_str if info.library_type is None else info.library_type
+            organism = null_str if info.organism is None else info.organism
+            PI = null_str if info.PI is None else info.PI
             # Generate line in the table of projects
             index_page.add("<tr>")
             index_page.add("<td>%s</td>" % project.name)
