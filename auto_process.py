@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.45"
+__version__ = "0.0.46"
 
 #######################################################################
 # Imports
@@ -160,17 +160,23 @@ class AutoProcess:
             logging.debug("Loading project metadata from existing file")
             project_metadata = auto_process_utils.ProjectMetadataFile(filen)
         else:
-            # Populate basic metadata from existing fastq files
+            # First try to populate basic metadata from existing projects
+            logging.debug("Metadata file not found, guessing basic data")
             project_metadata = auto_process_utils.ProjectMetadataFile()
-            if illumina_data is None:
-                # Can't even get fastq files
-                logging.error("Can't load data for source fastqs, unable to guess projects")
-                return project_metadata
-            # Get information from fastq files
-            logging.debug("Metadata file not found, acquire basic data from contents of %s" %
-                          self.params.unaligned_dir)
+            projects = self.get_analysis_projects_from_dirs()
+            if not projects:
+                # Get information from fastq files
+                print "!!! No existing project directories detected !!!"
+                print "Use fastq data from 'unaligned' directory"
+                if illumina_data is None:
+                    # Can't even get fastq files
+                    logging.error("Failed to load data from '%s'" %
+                                  self.params.unaligned_dir)
+                else:
+                    projects = illumina_data.projects
+            # Populate the metadata file list of projects
             logging.debug("Project\tSample\tFastq")
-            for project in illumina_data.projects:
+            for project in projects:
                 project_name = project.name
                 sample_names = []
                 for sample in project.samples:
@@ -179,19 +185,15 @@ class AutoProcess:
                         logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
                     sample_names.append(sample_name)
                 project_metadata.add_project(project_name,sample_names)
-        # Perform conistency check or update
-        if illumina_data is None:
-            logging.warning("Unaligned dir undefined, cannot do check or update")
-            check = False
-            update = False
+        # Perform consistency check or update
         if check or update:
             # Check that each project listed actually exists
             bad_projects = []
             for line in project_metadata:
                 pname = line['Project']
-                try:
-                    illumina_data.get_project(pname)
-                except IlluminaData.IlluminaDataError:
+                test_project = auto_process_utils.AnalysisProject(
+                    pname,os.path.join(self.analysis_dir,pname))
+                if not test_project.is_analysis_dir:
                     # Project doesn't exist
                     logging.warning("Project '%s' listed in metadata file doesn't exist" \
                                     % pname)
@@ -202,7 +204,7 @@ class AutoProcess:
                 for bad_project in bad_projects:
                     del(bad_project)
             # Check that all actual projects are listed
-            for project in illumina_data.projects:
+            for project in self.get_analysis_projects_from_dirs():
                 if len(project_metadata.lookup('Project',project.name)) == 0:
                     # Project not listed
                     logging.warning("Project '%s' not listed in metadata file" % project.name)
@@ -218,6 +220,22 @@ class AutoProcess:
                         project_metadata.add_project(project_name,sample_names)
         # Return the metadata object
         return project_metadata
+
+    def get_analysis_projects_from_dirs(self):
+        # Return a list of analysis projects deduced from testing all
+        # subdirectories of the top-level analysis directory
+        print "Testing subdirectories to determine analysis projects"
+        projects = []
+        # Try loading each subdirectory as a project
+        for dirn in auto_process_utils.list_dirs(self.analysis_dir):
+            test_project = auto_process_utils.AnalysisProject(
+                dirn,os.path.join(self.analysis_dir,dirn))
+            if test_project.is_analysis_dir:
+                print "* %s: analysis directory" % dirn
+                projects.append(test_project)
+            else:
+                print "* %s: rejected" % dirn
+        return projects
 
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
