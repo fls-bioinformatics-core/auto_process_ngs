@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 """auto_process_utils
 
@@ -385,6 +385,13 @@ class AnalysisProject:
 
         """
         return os.path.exists(self.dirn)
+
+    @property
+    def is_analysis_dir(self):
+        """Determine if directory really is an analysis project
+
+        """
+        return len(self.samples) > 0
 
     @property
     def qc_dir(self):
