@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 #######################################################################
 # Import modules that this module depends on
@@ -26,6 +26,7 @@ __version__ = "0.0.11"
 
 import sys
 import os
+import pwd
 import grp
 import stat
 import re
@@ -421,19 +422,35 @@ if __name__ == "__main__":
             sys.exit(1)
         print "Group '%s' guid = %s" % (group,gid)
         print "** NB links will be ignored **"
+        header = "File\tOwner\tGroup\tRW"
         for filen in data_dir.walk:
             if os.path.islink(filen):
                 continue
             st = os.lstat(filen)
-            if st.st_gid != gid:
+            wrong_group = st.st_gid != gid
+            if wrong_group:
+                logging.debug("Wrong group (%s):\t%s" % (st.st_gid,
+                                                         os.path.relpath(filen,data_dir.dir)))
+            group_read_write = (st.st_mode & stat.S_IRGRP) and (st.st_mode & stat.S_IWGRP)
+            if not group_read_write:
+                logging.debug("Not group read/writable:\t%s" %
+                              os.path.relpath(filen,data_dir.dir))
+            if wrong_group or not group_read_write:
                 try:
-                    wrong_group = grp.getgrgid(st.st_gid).gr_name
+                    group_name = grp.getgrgid(st.st_gid).gr_name
                 except KeyError:
-                    wrong_group = st.st_gid
-                print "Wrong group (%s):\t%s" % (wrong_group,
-                                                 os.path.relpath(filen,data_dir.dir))
-            if not ((st.st_mode & stat.S_IRGRP) and (st.st_mode & stat.S_IWGRP)):
-                print "Not group read/writable:\t%s" % os.path.relpath(filen,data_dir.dir)
+                    group_name = st.st_gid
+                try:
+                    owner = pwd.getpwuid(st.st_uid).pw_name
+                except KeyError:
+                    owner = st.st_uid
+                logging.debug("Owner is %s" % owner)
+                if header:
+                    print header
+                    header = None
+                print "%s\t%s\t%s\t%s" % (os.path.relpath(filen,data_dir.dir),
+                                          owner,group_name,
+                                          '' if group_read_write else 'No')
 
     # Check for temporary and hidden files/directories
     if options.check_temporary:
