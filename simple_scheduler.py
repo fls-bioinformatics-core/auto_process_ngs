@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 #######################################################################
 # Import modules that this module depends on
@@ -97,7 +97,8 @@ class SimpleScheduler(threading.Thread):
         self.__names = []
         self.__finished_names = []
         # Handle groups
-        self.__groups = []
+        self.__active_groups = []
+        self.__groups = dict()
         # Handle callbacks
         self.__callbacks = []
         # Flag controlling whether scheduler is active
@@ -162,8 +163,16 @@ class SimpleScheduler(threading.Thread):
         """
         if name in self.__jobs:
             return self.__jobs[name]
-        else:
-            return None
+        if name in self.__groups:
+            return self.__groups[name]
+        return None
+
+    def wait(self):
+        """Wait until the scheduler is empty
+
+        """
+        while not self.is_empty:
+            time.sleep(self.__poll_interval)
 
     def submit(self,args,runner=None,name=None,wait_for=[],callbacks=[]):
         """Submit a request to run a job
@@ -231,12 +240,13 @@ class SimpleScheduler(threading.Thread):
             raise Exception,"Name '%s' already assigned" % name
         self.__names.append(name)
         new_group = SchedulerGroup(name,self.job_number,self,wait_for=wait_for)
-        self.__groups.append(new_group)
+        self.__groups[name] = new_group
+        self.__active_groups.append(name)
         # Deal with callbacks
         for function in callbacks:
-            self.callback("callback.%s" % group.group_name,
+            self.callback("callback.%s" % new_group.group_name,
                           function,
-                          wait_for=(group.group_name,))
+                          wait_for=(new_group.group_name,))
         return new_group
 
     def callback(self,name,callback,wait_for):
@@ -303,30 +313,36 @@ class SimpleScheduler(threading.Thread):
             # Update the list of running jobs
             self.__running = updated_running_list
             # Check for completed groups
-            updated_group_list = []
-            for group in self.__groups:
+            updated_groups = []
+            for group_name in self.__active_groups:
+                group = self.__groups[group_name]
                 if group.submitted:
                     if group.is_running:
                         logging.debug("Group #%s (id %s) still running" % (group.group_name,
                                                                            group.group_id))
-                        updated_group_list.append(group)
+                        updated_groups.append(group_name)
                     else:
                         logging.debug("Group #%s (id %s) completed" % (group.group_name,
                                                                        group.group_id))
-                        self.__finished_names.append(group.group_name)
+                        self.__finished_names.append(group_name)
             # Update the list of groups
-            self.__groups = updated_group_list
+            self.__active_groups = updated_groups
             # Handle callbacks
             updated_callback_list = []
             for callback in self.__callbacks:
+                logging.debug("Checking %s" % callback.callback_name)
+                logging.debug("Waiting_for: %s" % callback.waiting_for)
                 invoke_callback = True
                 callback_jobs = []
                 for name in callback.waiting_for:
                     if name in self.__finished_names:
+                        logging.debug("- '%s' has finished" % name)
                         callback_jobs.append(self.get_job(name))
                     else:
                         # Waiting for at least one job
+                        logging.debug("- still waiting for '%s'" % name)
                         invoke_callback = False
+                        break
                 if invoke_callback:
                     callback.invoke(tuple(callback_jobs),self)
                 else:
