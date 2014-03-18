@@ -18,7 +18,14 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
+
+KNOWN_PLATFORMS = ['solid4',
+                   'solid5500',
+                   'illumina-ga2x',
+                   'miseq',
+                   'hiseq',
+                   'other']
 
 #######################################################################
 # Import modules that this module depends on
@@ -46,7 +53,7 @@ def extract_year_and_platform(dirname):
     dirs = os.path.abspath(dirname).split(os.sep)
     # Test for platform
     platform = dirs[-2]
-    if platform not in ('solid4','solid5500','hiseq','miseq','illumina-ga2x','other'):
+    if platform not in KNOWN_PLATFORMS:
         platform = None
         year = dirs[-2]
     else:
@@ -160,7 +167,8 @@ if __name__ == "__main__":
     s.start()
     # Make a job runner for computationally-intensive (CI) jobs
     if options.use_grid_engine:
-        ci_runner = JobRunner.GEJobRunner(log_dir=log_dir)
+        ci_runner = JobRunner.GEJobRunner(log_dir=log_dir,
+                                          ge_extra_args=['-j','y'])
     else:
         ci_runner = s.default_runner
     # Do copying for each directory
