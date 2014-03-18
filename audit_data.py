@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 
 KNOWN_PLATFORMS = ['solid4',
                    'solid5500',
@@ -130,32 +130,73 @@ class SeqDataSizes:
                 logging.debug("Deleting file %s" % job.log)
                 os.remove(job.log)
 
-    def report(self,no_header=False,pretty_print=True):
+    def report(self,no_header=False,pretty_print=True,formatter=None):
+        if formatter is None:
+            if pretty_print:
+                formatter = UsageFormatter().format
+            else:
+                formatter = UsageFormatter('bytes').format
         report = []
         if not no_header:
             report.append("#Year\tPlatform\tDirectory\tTotal Size\tFastq.gz size\tFastq size\tOther files")
-        if pretty_print:
-            report.append("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
-                self.year,
-                self.platform,
-                self.name,
-                bcf_utils.format_file_size(self.du_total),
-                bcf_utils.format_file_size(self.du_fastqgzs),
-                bcf_utils.format_file_size(self.du_fastqs),
-                bcf_utils.format_file_size(self.du_other)))
-        else:
-            report.append("%s\t%s\t%s\t%d\t%d\t%d\t%d" % (
-                self.year,
-                self.platform,
-                self.name,
-                self.du_total,
-                self.du_fastqgzs,
-                self.du_fastqs,
-                self.du_other))
+        report.append("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            self.year,
+            self.platform,
+            self.name,
+            formatter(self.du_total),
+            formatter(self.du_fastqgzs),
+            formatter(self.du_fastqs),
+            formatter(self.du_other)))
         report = '\n'.join(report)
         for subdir in self.subdirs:
-            report += '\n' + subdir.report(no_header=True,pretty_print=pretty_print)
+            report += '\n' + subdir.report(no_header=True,formatter=formatter)
         return report
+
+class UsageFormatter:
+    """Utility class for formatting disk usage sizes
+
+    Create a UsageFormatter and configure via the 'units' argument.
+
+    >>> f = UsageFormatter()
+
+    creates a formatter that returns byte values in human-reable form,
+    e.g. 4.0K, 165.0G etc.
+
+    >>> f = UsageFormatter(units='G')
+
+    creates a formatter that returns byte values in gigabytes, with no
+    trailing unit identifier.
+
+    To format values use e.g.:
+
+    >>> f.format(1022)
+
+    """
+    def __init__(self,units=None):
+        """Create a new UsageFormatter object
+
+        'units' controls how the object formats sizes:
+
+        None: returns byte values in human-reable form, with trailing
+              unit identifier e.g. 4.0K, 165.0G
+        'K','M','G','T': returns values in Kb, Mb, Gb or Tb's (no
+              trailing unit identifier)
+
+        """
+        self.__units = units
+
+    def format(self,size):
+        """Return 'size' (in bytes) in the appropriate format
+
+        """
+        if self.__units is None:
+            # Human-readable
+            return bcf_utils.format_file_size(size)
+        elif self.__units == 'bytes':
+            # Raw bytes
+            return size
+        else:
+            return bcf_utils.format_file_size(size,units=self.__units)[0:-1]
 
 #######################################################################
 # Functions
@@ -167,8 +208,11 @@ def get_total_size(du_log_file):
     """
     total_size = 0
     for line in open(du_log_file,'r'):
-        size = int(line.split()[0])
-        total_size += size
+        try:
+            size = int(line.split()[0])
+            total_size += size
+        except ValueError,ex:
+            logging.warning("Bad line in '%s': %s (ignored)" % (du_log_file,line))
     return total_size
 
 #######################################################################
@@ -190,7 +234,9 @@ if __name__ == "__main__":
                  help="specify output file to write results to (otherwise written to stdout)")
     p.add_option("--human-readable",action='store_true',dest ='human_readable',
                  default=False,help="output disk usage in human-readable format (otherwise "
-                 "output in bytes)")
+                 "output in Gb)")
+    p.add_option("--bytes",action="store_true",dest='bytes',default=False,
+                 help="output sizes in bytes, rather than Gb")
     p.add_option("--years",action="store",dest='years',default=None,
                  help="examine data for specific year(s); can be a single year, or multiple "
                  "years expressed as either a range (e.g. '2011-2013') or a comma-separated "
@@ -222,6 +268,14 @@ if __name__ == "__main__":
                                          max_concurrent=16)
     s.start()
 
+    # Formatter
+    if options.human_readable:
+        formatter = UsageFormatter()
+    elif options.bytes:
+        formatter = UsageFormatter('bytes')
+    else:
+        formatter = UsageFormatter('G')
+
     # Years and platforms
     if options.years is None:
         years = [int(time.strftime("%Y"))]
@@ -243,7 +297,7 @@ if __name__ == "__main__":
             except Exception, ex:
                 p.error("Bad year list supplied to --years option")
         else:
-            years = int(options.years)
+            years = [int(options.years)]
     if options.platforms is None:
         platforms = KNOWN_PLATFORMS
     else:
@@ -277,6 +331,8 @@ if __name__ == "__main__":
                     seqdir.get_disk_usage()
                     seqdirs.append(seqdir)
     # Wait for all data to be processed
+    # NB this could be an endless loop if something goes wrong within
+    # the processing loop...
     while not reduce(lambda x,y: x and y.has_data,seqdirs,True):
         time.sleep(5)
 
@@ -287,7 +343,7 @@ if __name__ == "__main__":
         fp = sys.stdout
     no_header = False
     for seqdir in seqdirs:
-        fp.write(seqdir.report(pretty_print=options.human_readable,no_header=no_header)+'\n')
+        fp.write(seqdir.report(formatter=formatter.format,no_header=no_header)+'\n')
         if not no_header:
             no_header = True
 
@@ -310,14 +366,8 @@ if __name__ == "__main__":
     for year in years:
         line = [str(year)]
         for platform in platforms:
-            if options.human_readable:
-                line.append(bcf_utils.format_file_size(usage[year][platform]))
-            else:
-                line.append(str(usage[year][platform]))
-        if options.human_readable:
-            line.append(bcf_utils.format_file_size(usage[year]['total']))
-        else:
-            line.append(str(usage[year]['total']))
+            line.append(formatter.format(usage[year][platform]))
+        line.append(formatter.format(usage[year]['total']))
         print '\t'.join(line)
 
         
