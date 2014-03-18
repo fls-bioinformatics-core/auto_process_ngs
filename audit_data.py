@@ -18,7 +18,14 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.0'
+__version__ = '0.0.1'
+
+KNOWN_PLATFORMS = ['solid4',
+                   'solid5500',
+                   'illumina-ga2x',
+                   'miseq',
+                   'hiseq',
+                   'other']
 
 #######################################################################
 # Import modules that this module depends on
@@ -120,8 +127,8 @@ class SeqDataSizes:
                     self.du_fastqs = size
                 else:
                     raise Exception,"Unknown job '%s'" % job.name
-        logging.debug("Deleting file %s" % job.log)
-        os.remove(job.log)
+                logging.debug("Deleting file %s" % job.log)
+                os.remove(job.log)
 
     def report(self,no_header=False,pretty_print=True):
         report = []
@@ -164,28 +171,6 @@ def get_total_size(du_log_file):
         total_size += size
     return total_size
 
-def process_directory_sizes(name,job_groups,sched):
-    """Callback function invoked when set of jobs have finished
-
-    """
-    # Get directory name from callback name
-    run = name[len('callback.'):]
-    print "### Handling %s ###" % run
-    for group in job_groups:
-        for job in group.jobs:
-            size = get_total_size(job.log)
-            if job.name.endswith("total"):
-                print "Total size: %d (%s)" % \
-                    (size,bcf_utils.format_file_size(size))
-            elif job.name.endswith("fastqgzs"):
-                print "Total size (fastq.gz's): %d (%s)" % \
-                    (size,bcf_utils.format_file_size(size))
-            elif job.name.endswith("fastqs"):
-                print "Total size (fastqs): %d (%s)" % \
-                    (size,bcf_utils.format_file_size(size))
-            else:
-                print "Unknown job '%s'" % job.name
-
 #######################################################################
 # Main program
 #######################################################################
@@ -205,7 +190,15 @@ if __name__ == "__main__":
                  help="specify output file to write results to (otherwise written to stdout)")
     p.add_option("--human-readable",action='store_true',dest ='human_readable',
                  default=False,help="output disk usage in human-readable format (otherwise "
-                 "output ib bytes)")
+                 "output in bytes)")
+    p.add_option("--years",action="store",dest='years',default=None,
+                 help="examine data for specific year(s); can be a single year, or multiple "
+                 "years expressed as either a range (e.g. '2011-2013') or a comma-separated "
+                 "list (e.g.'2010,2014'). Default is current year.")
+    p.add_option("--platforms",action="store",dest='platforms',default=None,
+                 help="examine data for specific platform(s); can be a single platform, or "
+                 "a comma-separated list. Default is all known platforms i.e. %s"
+                 % KNOWN_PLATFORMS)
     p.add_option("--debug",action='store_true',dest='debug',
                  help="turn on debugging output (nb very verbose!)")
     options,args = p.parse_args()
@@ -230,10 +223,38 @@ if __name__ == "__main__":
     s.start()
 
     # Years and platforms
-    ##years = range(2009,2014)
-    ##platforms = ['solid4','solid5500','illumina-ga2x','miseq','hiseq','other']
-    years = range(2012,2013)
-    platforms = ['illumina-ga2x','miseq']
+    if options.years is None:
+        years = [int(time.strftime("%Y"))]
+    else:
+        if '-' in options.years:
+            try:
+                years = options.years.split('-')
+                start_year = int(years[0])
+                if years[1] != '':
+                    end_year = int(years[1])
+                else:
+                    end_year = int(time.strftime("%Y"))
+                years = range(start_year,end_year+1)
+            except Exception, ex:
+                p.error("Bad year range supplied to --years option")
+        elif ',' in options.years:
+            try:
+                years = [int(x) for x in options.years.split(',')]
+            except Exception, ex:
+                p.error("Bad year list supplied to --years option")
+        else:
+            years = int(options.years)
+    if options.platforms is None:
+        platforms = KNOWN_PLATFORMS
+    else:
+        platforms = options.platforms.split(',')
+        for platform in platforms:
+            if platform not in KNOWN_PLATFORMS:
+                p.error("Unknown platform '%s' supplied to --platform option" % platform)
+
+    # Report before starting
+    print "Years:\t%s" % ','.join([str(x) for x in years])
+    print "Platforms:\t%s" % ','.join(platforms)
 
     # Process directories
     seqdirs = []
@@ -255,8 +276,6 @@ if __name__ == "__main__":
                     seqdir = SeqDataSizes(run,run_dir,s,year=year,platform=platform)
                     seqdir.get_disk_usage()
                     seqdirs.append(seqdir)
-    # Wait for scheduler to complete all jobs
-    ##s.wait()
     # Wait for all data to be processed
     while not reduce(lambda x,y: x and y.has_data,seqdirs,True):
         time.sleep(5)
