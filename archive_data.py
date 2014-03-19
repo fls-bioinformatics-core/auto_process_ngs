@@ -20,17 +20,11 @@
 
 __version__ = '0.0.4'
 
-KNOWN_PLATFORMS = ['solid4',
-                   'solid5500',
-                   'illumina-ga2x',
-                   'miseq',
-                   'hiseq',
-                   'other']
-
 #######################################################################
 # Import modules that this module depends on
 #######################################################################
 
+import platforms
 import applications
 import simple_scheduler
 import JobRunner
@@ -53,7 +47,7 @@ def extract_year_and_platform(dirname):
     dirs = os.path.abspath(dirname).split(os.sep)
     # Test for platform
     platform = dirs[-2]
-    if platform not in KNOWN_PLATFORMS:
+    if platform not in platforms.list_platforms():
         platform = None
         year = dirs[-2]
     else:
