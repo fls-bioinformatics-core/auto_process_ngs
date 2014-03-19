@@ -18,19 +18,13 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.3'
-
-KNOWN_PLATFORMS = ['solid4',
-                   'solid5500',
-                   'illumina-ga2x',
-                   'miseq',
-                   'hiseq',
-                   'other']
+__version__ = '0.0.4'
 
 #######################################################################
 # Import modules that this module depends on
 #######################################################################
 
+import platforms
 import applications
 import simple_scheduler
 import auto_process_utils
@@ -294,7 +288,7 @@ if __name__ == "__main__":
     p.add_option("--platforms",action="store",dest='platforms',default=None,
                  help="examine data for specific platform(s); can be a single platform, or "
                  "a comma-separated list. Default is all known platforms i.e. %s"
-                 % ','.join(KNOWN_PLATFORMS))
+                 % ', '.join(platforms.list_platforms()))
     p.add_option("--include-subdirs",action='store_true',dest='include_subdirs',default=False,
                  help="also collect and report disk usage information for first level of "
                  "subdirectories in each data directory")
@@ -356,11 +350,11 @@ if __name__ == "__main__":
         else:
             years = [int(options.years)]
     if options.platforms is None:
-        platforms = KNOWN_PLATFORMS
+        platforms = platforms.list_platforms()
     else:
         platforms = options.platforms.split(',')
         for platform in platforms:
-            if platform not in KNOWN_PLATFORMS:
+            if platform not in platforms.list_platforms():
                 p.error("Unknown platform '%s' supplied to --platform option" % platform)
 
     # Report before starting
