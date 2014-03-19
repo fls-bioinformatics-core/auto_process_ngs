@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 #######################################################################
 # Import modules that this module depends on
@@ -236,6 +236,13 @@ def find(dirn,regex):
             if matcher.match(f):
                 yield f
 
+def finger_user(name):
+    # Run 'finger' command and try to fetch user's real name
+    p = subprocess.Popen(['finger',name], stdout=subprocess.PIPE)
+    finger, err = p.communicate()
+    real_name = finger.split('\n')[0].split(':')[-1].strip()
+    return real_name
+
 #######################################################################
 # Tests
 #######################################################################
@@ -378,6 +385,8 @@ if __name__ == "__main__":
                  help='compare DATA_DIR against REF_DIR using MD5 sums')
     p.add_option('--set-group',action='store',dest='new_group',default=None,
                  help='set the group ownership to NEW_GROUP')
+    p.add_option('--list-users',action='store_true',dest='list_users',default=None,
+                 help='print a list of usernames associated with files')
     p.add_option('--debug',action='store_true',dest='debug',
                  help='turn on debugging output')
     
@@ -527,3 +536,21 @@ if __name__ == "__main__":
         for filen in data_dir.walk:
             if not os.path.islink(filen):
                 os.chown(filen,-1,gid)
+
+    # List users
+    if options.list_users:
+        print "Collecting list of usernames from %s" % data_dir.dir
+        users = []
+        for f in data_dir.walk:
+            st = os.lstat(f)
+            try:
+                user = pwd.getpwuid(st.st_uid).pw_name
+            except KeyError:
+                user = st.st_uid
+            if user not in users:
+                users.append(user)
+        users.sort()
+        for user in users:
+            real_name = finger_user(user)
+            print "%s\t%s" % (user,real_name)
+
