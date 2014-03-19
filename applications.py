@@ -93,7 +93,11 @@ class Command:
             self._args = []
         else:
             self._args = [str(x) for x in args]
+
     def add_args(self,*args):
+        """Append arguments to the command
+
+        """
         for arg in args:
             self._args.append(str(arg))
 
