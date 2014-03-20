@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 """auto_process_utils
 
@@ -209,6 +209,7 @@ class AnalysisProject:
     
     multiple_fastqs: True if at least one sample has more than one fastq
                      file per read associated with it
+    fastq_format: either 'fastqgz' or 'fastq'
 
     There is also an 'info' property with the following additional
     properties:
@@ -245,6 +246,7 @@ class AnalysisProject:
         self.name = name
         self.dirn = os.path.abspath(dirn)
         self.fastq_dir = None
+        self.fastq_format = None
         self.samples = []
         self.info = AnalysisProjectInfo()
         self.info_file = os.path.join(self.dirn,"README.info")
@@ -281,6 +283,15 @@ class AnalysisProject:
         # Populate from fastq file names
         logging.debug("Acquiring fastqs...")
         fastqs = Pipeline.GetFastqGzFiles(self.fastq_dir)
+        if not fastqs:
+            logging.debug("No fastq.gz files found")
+            fastqs = Pipeline.GetFastqFiles(self.fastq_dir)
+            if not fastqs:
+                logging.debug("No fastq files found")
+            else:
+                self.fastq_format = 'fastq'
+        else:
+            self.fastq_format = 'fastqgz'
         logging.debug("Assigning fastqs to samples...")
         for fastq in fastqs:
             # GetFastqGzFile returns a list of tuples
@@ -408,7 +419,8 @@ class AnalysisProject:
         if self.qc_dir is None:
             return None
         else:
-            return qcreporter.IlluminaQCReporter(self.dirn)
+            return qcreporter.IlluminaQCReporter(self.dirn,
+                                                 data_format=self.fastq_format)
 
     @property
     def qc_report(self):
