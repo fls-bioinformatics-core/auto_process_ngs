@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.47"
+__version__ = "0.0.48"
 
 #######################################################################
 # Imports
@@ -155,6 +155,7 @@ class AutoProcess:
             filen = None
         logging.debug("Project metadata file: %s" % filen)
         illumina_data = self.load_illumina_data()
+        projects_from_dirs = self.get_analysis_projects_from_dirs()
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
@@ -163,15 +164,15 @@ class AutoProcess:
             # First try to populate basic metadata from existing projects
             logging.debug("Metadata file not found, guessing basic data")
             project_metadata = auto_process_utils.ProjectMetadataFile()
-            projects = self.get_analysis_projects_from_dirs()
+            projects = projects_from_dirs
             if not projects:
                 # Get information from fastq files
-                print "!!! No existing project directories detected !!!"
-                print "Use fastq data from 'unaligned' directory"
+                logging.warning("No existing project directories detected")
+                logging.debug("Use fastq data from 'unaligned' directory")
                 if illumina_data is None:
                     # Can't even get fastq files
-                    logging.error("Failed to load data from '%s'" %
-                                  self.params.unaligned_dir)
+                    logging.warning("Failed to load fastq data from '%s'" %
+                                    self.params.unaligned_dir)
                 else:
                     projects = illumina_data.projects
             # Populate the metadata file list of projects
@@ -185,6 +186,9 @@ class AutoProcess:
                         logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
                     sample_names.append(sample_name)
                 project_metadata.add_project(project_name,sample_names)
+            # Turn off redundant checking/updating
+            check = False
+            update = False
         # Perform consistency check or update
         if check or update:
             # Check that each project listed actually exists
@@ -204,7 +208,7 @@ class AutoProcess:
                 for bad_project in bad_projects:
                     del(bad_project)
             # Check that all actual projects are listed
-            for project in self.get_analysis_projects_from_dirs():
+            for project in projects_from_dirs:
                 if len(project_metadata.lookup('Project',project.name)) == 0:
                     # Project not listed
                     logging.warning("Project '%s' not listed in metadata file" % project.name)
@@ -807,15 +811,18 @@ class AutoProcess:
         # Add a record of the analysis to the logging file
         raise NotImplementedError
 
-    def publish_qc(self,projects=None,location=None,skip_qc_verification=False):
+    def publish_qc(self,projects=None,location=None,ignore_missing_qc=False,
+                   regenerate_reports=False):
         # Copy the QC reports to the webserver
         #
         # projects: specify a pattern to match one or more projects to
         #           publish the reports for (default is to publish all reports)
         # location: override the target location specified in the settings
         #           can be of the form '[[user@]server:]directory'
-        # skip_qc_verification: if True then don't try to verify the QC (default
-        #           is False i.e. do verify the QC)
+        # ignore_missing_qc: if True then skip directories with missing QC data
+        #           or reports (otherwise raises an exception)
+        # regenerate_reports: if True then try to create reports even when they
+        #           already exist
         #
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
@@ -843,13 +850,72 @@ class AutoProcess:
         else:
             print "Copying QC to local directory"
             print "dirn:\t%s" % dirn
-        print "Skip QC verification:\t%s" % skip_qc_verification
         if dirn is None:
             raise Exception, "No target directory specified"
         dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
-        # Make an index page
+        # Check QC situation for each project
+        print "Checking QC status for each project:"
+        no_qc_projects = []
+        for project in projects:
+            if project.qc is None:
+                # No QC available, can't even report
+                logging.warning("No QC available for %s" % project.name)
+                no_qc_projects.append(project)
+            else:
+                # QC is available, check status of reports
+                generate_report = regenerate_reports
+                qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+                if os.path.isfile(qc_zip):
+                    print "Existing QC report found for %s" % project.name
+                else:
+                    # No QC report available
+                    print "No QC report found for %s" % project.name
+                    generate_report = True
+                # (Re)create report
+                if generate_report:
+                    if project.qc.verify():
+                        print "Generating report and zip file"
+                        try:
+                            project.qc.zip()
+                        except Exception, ex:
+                            logging.error("Failed to generate QC report for %s" %
+                                          project.name)
+                            qc_zip = None
+                    else:
+                        logging.error("Unable to verify QC for %s" % project.name)
+                        qc_zip = None
+                if qc_zip is None:
+                    logging.error("Failed to make QC report for %s" % project.name)
+                    no_qc_projects.append(project)
+        # Final results
+        if no_qc_projects:
+            logging.error("QC reports missing for projects: %s" %
+                          ', '.join([x.name for x in no_qc_projects]))
+            if not ignore_missing_qc:
+                raise Exception, "QC reports missing for projects: %s" % \
+                    ', '.join([x.name for x in no_qc_projects])
+        # Remove the 'bad' projects from the list before proceeding
+        for project in no_qc_projects:
+            print "Project %s will be skipped" % project.name
+            projects.remove(project)
+        if not projects:
+            logging.error("No projects with QC results to publish")
+            raise Exception, "No projects with QC results to publish"
+        # Make a directory for the QC reports
+        if not remote:
+            # Local directory
+            bcf_utils.mkdir(dirn)
+        else:
+            # Remote directory
+            try:
+                mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',dirn))
+                print "Running %s" % mkdir_cmd
+                mkdir_cmd.run_subprocess()
+            except Exception, ex:
+                raise Exception, "Exception making remote directory for QC reports: %s" % ex
+        # Start building an index page
         title = "QC reports for %s" % os.path.basename(self.analysis_dir)
         index_page = qcreporter.HTMLPageWriter(title)
         # Add CSS rules
@@ -874,18 +940,6 @@ class AutoProcess:
         index_page.add("<h2>QC Reports</h2>")
         index_page.add("<table>")
         index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
-        # Make a directory for the QC reports
-        if not remote:
-            # Local directory
-            bcf_utils.mkdir(dirn)
-        else:
-            # Remote directory
-            try:
-                mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',dirn))
-                print "Running %s" % mkdir_cmd
-                mkdir_cmd.run_subprocess()
-            except Exception, ex:
-                raise Exception, "Exception making remote directory for QC reports: %s" % ex
         # Set the string to represent "null" table entries
         null_str = '&nbsp;'
         # Deal with QC for each project
@@ -905,51 +959,39 @@ class AutoProcess:
             index_page.add("<td>%s</td>" % PI)
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
             index_page.add("<td>%d</td>" % len(project.samples))
-            # Create/locate and copy QC report
-            qc_zip = None
-            if skip_qc_verification:
-                # Assume an existing QC report
-                qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
-                if not os.path.isfile(qc_zip):
-                    logging.error("Unable to locate %s" % qc_zip)
-                    qc_zip = None
-            elif project.qc.verify():
-                # Create new QC report only if verification succeeds
-                qc_zip = os.path.join(project.dirn,project.qc_report)
-            # Check for and copy QC report
-            if qc_zip is not None and os.path.isfile(qc_zip):
-                report_copied = True
-                if not remote:
-                    # Local directory
-                    shutil.copy(qc_zip,dirn)
-                    # Unpack
-                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
+            # Locate and copy QC report
+            qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+            assert(os.path.isfile(qc_zip))
+            report_copied = True
+            if not remote:
+                # Local directory
+                shutil.copy(qc_zip,dirn)
+                # Unpack
+                unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
+                print "Running %s" % unzip_cmd
+                unzip_cmd.run_subprocess()
+            else:
+                try:
+                    # Remote directory
+                    scp = applications.general.scp(user,server,qc_zip,dirn)
+                    print "Running %s" % scp
+                    scp.run_subprocess()
+                    # Unpack at the other end
+                    unzip_cmd = applications.general.ssh_command(
+                        user,server,
+                        ('unzip','-q','-o','-d',dirn,
+                         os.path.join(dirn,os.path.basename(qc_zip))))
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
-                else:
-                    try:
-                        # Remote directory
-                        scp = applications.general.scp(user,server,qc_zip,dirn)
-                        print "Running %s" % scp
-                        scp.run_subprocess()
-                        # Unpack at the other end
-                        unzip_cmd = applications.general.ssh_command(
-                            user,server,
-                            ('unzip','-q','-o','-d',dirn,
-                             os.path.join(dirn,os.path.basename(qc_zip))))
-                        print "Running %s" % unzip_cmd
-                        unzip_cmd.run_subprocess()
-                    except Exception, ex:
-                        print "Failed to copy QC report: %s" % ex
-                        index_page.add("<td >%s</td><td>Missing</td><td>Missing</td></tr>"
-                                       % project.name)
-                        report_copied = False
-                # Append info to the index page
-                if report_copied:
-                    index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
-                                   % project.qc.report_name)
-                    index_page.add("<td><a href='%s'>[Zip]</a></td>"
-                                   % os.path.basename(qc_zip))
+                except Exception, ex:
+                    print "Failed to copy QC report: %s" % ex
+                    report_copied = False
+            # Append info to the index page
+            if report_copied:
+                index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
+                               % project.qc.report_name)
+                index_page.add("<td><a href='%s'>[Zip]</a></td>"
+                               % os.path.basename(qc_zip))
             else:
                 # QC not available
                 index_page.add("<td colspan='2'>QC reports not available</td>")
@@ -1302,7 +1344,10 @@ def publish_qc_parser():
     p = optparse.OptionParser(usage="%prog publish_qc [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description="Copy QC reports from ANALYSIS_DIR to local "
-                              "or remote directory (e.g. web server).")
+                              "or remote directory (e.g. web server). By default existing "
+                              "QC reports will be copied without further checking; if no "
+                              "report is found then QC results will be verified and a "
+                              "report generated first.")
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
@@ -1313,10 +1358,13 @@ def publish_qc_parser():
                  help="specify target directory to copy QC reports to. QC_DIR can "
                  "be a local directory, or a remote location in the form "
                  "'[[user@]host:]directory'. Overrides the default settings.")
-    p.add_option('--skip-qc-verification',action='store_true',
-                 dest='skip_qc_verification',default=False,
-                 help="skip the verification of the QC (otherwise projects where the "
-                 "verification fails will not be included).")
+    p.add_option('--ignore-missing-qc',action='store_true',
+                 dest='ignore_missing_qc',default=False,
+                 help="skip projects where QC results are missing or can't be verified, "
+                 "or where reports can't be generated.")
+    p.add_option('--regenerate-reports',action='store_true',
+                 dest='regenerate_reports',default=False,
+                 help="attempt to regenerate existing QC reports")
     return p
 
 def archive_parser():
@@ -1462,7 +1510,8 @@ if __name__ == "__main__":
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,
-                         skip_qc_verification=options.skip_qc_verification)
+                         ignore_missing_qc=options.ignore_missing_qc,
+                         regenerate_reports=options.regenerate_reports)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
