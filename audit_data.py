@@ -350,16 +350,16 @@ if __name__ == "__main__":
         else:
             years = [int(options.years)]
     if options.platforms is None:
-        platforms = platforms.list_platforms()
+        platform_list = platforms.list_platforms()
     else:
-        platforms = options.platforms.split(',')
-        for platform in platforms:
+        platform_list = options.platforms.split(',')
+        for platform in platform_list:
             if platform not in platforms.list_platforms():
                 p.error("Unknown platform '%s' supplied to --platform option" % platform)
 
     # Report before starting
     print "Years:\t%s" % ','.join([str(x) for x in years])
-    print "Platforms:\t%s" % ','.join(platforms)
+    print "Platforms:\t%s" % ','.join(platform_list)
 
     # Process directories
     seqdirs = []
@@ -369,7 +369,7 @@ if __name__ == "__main__":
             dirn = os.path.join(d,"%s" % year)
             if not os.path.isdir(dirn):
                 continue
-            for platform in platforms:
+            for platform in platform_list:
                 platform_dirn = os.path.join(dirn,platform)
                 if not os.path.isdir(platform_dirn):
                     continue
@@ -408,20 +408,20 @@ if __name__ == "__main__":
     for year in years:
         usage[year] = dict()
         usage[year]['total'] = 0
-        for platform in platforms:
+        for platform in platform_list:
             usage[year][platform] = 0
             for seqdir in seqdirs:
                 if seqdir.year == year and seqdir.platform == platform:
                     usage[year]['total'] += seqdir.du_total
                     usage[year][platform] += seqdir.du_total
     header = ['#Year']
-    for platform in platforms:
+    for platform in platform_list:
         header.append(platform)
     header.append('Total')
     print '\t'.join(header)
     for year in years:
         line = [str(year)]
-        for platform in platforms:
+        for platform in platform_list:
             line.append(formatter.format(usage[year][platform]))
         line.append(formatter.format(usage[year]['total']))
         print '\t'.join(line)
