@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 #######################################################################
 # Import modules that this module depends on
@@ -125,6 +125,13 @@ class SimpleScheduler(threading.Thread):
         return len(self.__running)
 
     @property
+    def n_finished(self):
+        """Return number of jobs that have completed
+
+        """
+        return len(self.__jobs) - self.n_waiting - self.n_running
+
+    @property
     def job_number(self):
         """Internal: increment and return job count
 
@@ -208,14 +215,21 @@ class SimpleScheduler(threading.Thread):
         if runner is None:
             runner = self.default_runner
         # Schedule the job
-        job = SchedulerJob(runner,args,job_number=self.job_number,
+        job = SchedulerJob(runner,args,job_number=job_number,
                            name=name,wait_for=wait_for)
         self.__submitted.put(job)
-        logging.debug("Scheduled job #%d: \"%s\"" % (job.job_number,job))
         # Deal with callbacks
         for function in callbacks:
             self.callback("callback.%s" % job.job_name,
                           function,wait_for=(job.job_name,))
+        if wait_for:
+            report_wait_for = " (waiting for %s)" % ', '.join(wait_for)
+        else:
+            report_wait_for = ""
+        print "Job scheduled: #%d: \"%s\"%s" % (job.job_number,
+                                                job.job_name,
+                                                report_wait_for)
+        logging.debug("%s" % job)
         return job
 
     def group(self,name,wait_for=[],callbacks=[]):
@@ -247,6 +261,8 @@ class SimpleScheduler(threading.Thread):
             self.callback("callback.%s" % new_group.group_name,
                           function,
                           wait_for=(new_group.group_name,))
+        print "Group has been added: #%d: \"%s\"" % (new_group.group_id,
+                                                     new_group.group_name)
         return new_group
 
     def callback(self,name,callback,wait_for):
@@ -296,6 +312,8 @@ class SimpleScheduler(threading.Thread):
         logging.debug("Starting simple scheduler")
         self.__active = True
         while self.__active:
+            # Flag to indicate status should be reported
+            report_status = False
             # Check for completed jobs
             updated_running_list = []
             for job in self.__running:
@@ -305,9 +323,14 @@ class SimpleScheduler(threading.Thread):
                                                                             job))
                     updated_running_list.append(job)
                 else:
+                    print "Job completed: #%s (%s) \"%s\" (%s)" % (job.job_number,
+                                                                   job.job_id,
+                                                                   job.job_name,
+                                                                   date_and_time(job.end_time))
                     logging.debug("Job #%s (id %s) completed \"%s\"" % (job.job_number,
                                                                         job.job_id,
                                                                         job))
+                    report_status = True
                     if job.job_name is not None:
                         self.__finished_names.append(job.job_name)
             # Update the list of running jobs
@@ -322,9 +345,13 @@ class SimpleScheduler(threading.Thread):
                                                                            group.group_id))
                         updated_groups.append(group_name)
                     else:
+                        print "Group completed: #%s \"%s\" (%s)" % (group.group_id,
+                                                                    group.group_name,
+                                                                    date_and_time())
                         logging.debug("Group #%s (id %s) completed" % (group.group_name,
                                                                        group.group_id))
                         self.__finished_names.append(group_name)
+                        report_status = True
             # Update the list of groups
             self.__active_groups = updated_groups
             # Handle callbacks
@@ -370,16 +397,27 @@ class SimpleScheduler(threading.Thread):
                     try:
                         job.start()
                         self.__running.append(job)
+                        print "Job started: #%d (%s): \"%s\" (%s)" % (job.job_number,
+                                                                     job.job_id,
+                                                                     job.name,
+                                                                     date_and_time(job.start_time))
                         logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
                     except Exception,ex:
                         logging.error("Failed to start job #%s: %s" % (job.job_number,ex))
                         if job.job_name is not None:
                             self.__finished_names.append(job.job_name)
+                    report_status = True
                 else:
                     # Hold back for now
                     remaining_jobs.append(job)
             # Update the scheduled job list
             self.__scheduled = remaining_jobs
+            # Report current status, if required
+            if report_status:
+                print "%s: %d running, %d waiting, %d finished" % (date_and_time(),
+                                                                   self.n_running,
+                                                                   self.n_waiting,
+                                                                   self.n_finished)
             # Wait before going round again
             time.sleep(self.__poll_interval)
 
@@ -571,6 +609,19 @@ class SchedulerCallback:
                           (self.callback_name,ex))
 
 #######################################################################
+# Functions
+#######################################################################
+
+def date_and_time(epoch=None):
+    """Return formatted date and time information
+
+    """
+    if epoch is not None:
+        return time.asctime(time.localtime(epoch))
+    else:
+        return time.asctime()
+
+#######################################################################
 # Tests
 #######################################################################
 
@@ -582,10 +633,11 @@ class SchedulerCallback:
 from applications import Command
 if __name__ == "__main__":
     # Examples
-    logging.getLogger().setLevel(logging.DEBUG)
+    ##logging.getLogger().setLevel(logging.DEBUG)
     #
     # Set up and start the scheduler
-    sched = SimpleScheduler(max_concurrent=4)
+    sched = SimpleScheduler(max_concurrent=4,
+                            runner=JobRunner.SimpleJobRunner(join_logs=True))
     sched.start()
     #
     # Add some jobs to run but don't wait
@@ -612,8 +664,6 @@ if __name__ == "__main__":
     #
     # Wait for all jobs to finish
     while not sched.is_empty():
-        print "n_waiting = %s" % sched.n_waiting
-        print "n_running = %s" % sched.n_running
         time.sleep(10)
     #
     # Stop the scheduler
