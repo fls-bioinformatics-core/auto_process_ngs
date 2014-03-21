@@ -368,6 +368,36 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertTrue(sched.is_empty())
         sched.stop()
 
+    def test_set_job_working_dir(self):
+        """Explicitly specify working directory for a job
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        job = sched.submit(['sleep','50'],wd='/tmp')
+        time.sleep(0.1)
+        self.assertEqual(job.working_dir,'/tmp')
+        job.terminate()
+        time.sleep(0.1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_set_job_working_dir_in_group(self):
+        """Explicitly specify working directory for job in a group
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        group = sched.group('grp1')
+        job = group.add(['sleep','50'],wd='/tmp')
+        group.close()
+        time.sleep(0.1)
+        self.assertEqual(job.working_dir,'/tmp')
+        job.terminate()
+        time.sleep(0.1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
 #######################################################################
 # Main program
 #######################################################################

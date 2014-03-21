@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 #######################################################################
 # Import modules that this module depends on
@@ -178,18 +178,37 @@ class SimpleScheduler(threading.Thread):
         """Wait until the scheduler is empty
 
         """
-        while not self.is_empty:
-            time.sleep(self.__poll_interval)
+        try:
+            while not self.is_empty():
+                time.sleep(self.__poll_interval)
+        except KeyboardInterrupt:
+            print "KeyboardInterrupt"
+            self.stop()
+            print "Terminating running jobs:"
+            for job in self.__running:
+                print "\t#%d (%s): \"%s\" (%s)" % (job.job_number,
+                                                   job.job_id,
+                                                   job.name,
+                                                   date_and_time(job.start_time))
+                job.terminate()
+            print "Finished"
 
-    def submit(self,args,runner=None,name=None,wait_for=[],callbacks=[]):
+    def submit(self,args,runner=None,name=None,wd=None,wait_for=[],callbacks=[]):
         """Submit a request to run a job
         
         Arguments:
-          args
-          runner
-          name
-          wait_for
-          callbacks
+          args: the command to run expressed as a list or tuple of
+                arguments
+          runner: (optional) a JobRunner instance that will be used to
+                dispatch and control the job.
+          name: (optional) a name for the job. Must be unique within
+                the scheduler instance.
+          wd:   (optional) the working directory to execute the job in;
+                defaults to the current working directory
+          wait_for: (optional) a list or tuple of job and/or group
+                names which must finish before this job can start
+          callbacks: (optional) a list or tuple of functions that will
+                be executed when the job completes.
 
         Returns:
           SchedulerJob instance for the submitted job.
@@ -216,7 +235,7 @@ class SimpleScheduler(threading.Thread):
             runner = self.default_runner
         # Schedule the job
         job = SchedulerJob(runner,args,job_number=job_number,
-                           name=name,wait_for=wait_for)
+                           name=name,working_dir=wd,wait_for=wait_for)
         self.__submitted.put(job)
         # Deal with callbacks
         for function in callbacks:
@@ -236,9 +255,12 @@ class SimpleScheduler(threading.Thread):
         """Create a group of jobs
         
         Arguments:
-          name
-          wait_for
-          callbacks
+          name: a name for the group. Must be unique within the
+                scheduler instance.
+          wait_for: (optional) a list or tuple of job and/or group
+                names which must finish before this job can start
+          callbacks: (optional) a list or tuple of functions that will
+                be executed when the job completes.
 
         Returns:
           Empty SchedulerGroup instance.
@@ -253,7 +275,7 @@ class SimpleScheduler(threading.Thread):
         if self.has_name(name):
             raise Exception,"Name '%s' already assigned" % name
         self.__names.append(name)
-        new_group = SchedulerGroup(name,self.job_number,self,wait_for=wait_for)
+        new_group = SchedulerGroup(name,job_number,self,wait_for=wait_for)
         self.__groups[name] = new_group
         self.__active_groups.append(name)
         # Deal with callbacks
@@ -443,6 +465,15 @@ class SchedulerGroup:
     def __init__(self,name,group_id,parent_scheduler,wait_for=[]):
         """Create a new SchedulerGroup instance
 
+        Arguments:
+          name: a name for the group. Must be unique within the
+                parent scheduler instance.
+          group_id: a unique id number
+          parent_scheduler: the SimpleScheduler instance that the
+                group belongs to
+          wait_for: (optional) a list or tuple of job and/or group
+                names which must finish before this job can start
+
         """
         self.group_name = name
         self.group_id = group_id
@@ -475,14 +506,20 @@ class SchedulerGroup:
                 return True
         return False
 
-    def add(self,args,runner=None,name=None,wait_for=[]):
+    def add(self,args,runner=None,name=None,wd=None,wait_for=[]):
         """Add a request to run a job
         
         Arguments:
-          args
-          runner
-          name
-          wait_for
+          args: the command to run expressed as a list or tuple of
+                arguments
+          runner: (optional) a JobRunner instance that will be used to
+                dispatch and control the job.
+          name: (optional) a name for the job. Must be unique within
+                the scheduler instance.
+          wd:   (optional) the working directory to execute the job in;
+                defaults to the current working directory
+          wait_for: (optional) a list or tuple of job and/or group
+                names which must finish before this job can start
 
         Returns:
           SchedulerJob instance for the added job.
@@ -496,7 +533,8 @@ class SchedulerGroup:
         waiting_for = self.waiting_for + list(wait_for)
         # Submit the job to the scheduler and keep a reference
         logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
-        job = self.__scheduler.submit(args,runner=runner,name=name,wait_for=waiting_for)
+        job = self.__scheduler.submit(args,runner=runner,name=name,
+                                      wd=wd,wait_for=waiting_for)
         self.__jobs.append(job)
         return job
 
@@ -541,7 +579,8 @@ class SchedulerJob(Job):
 
     """
 
-    def __init__(self,runner,args,job_number=None,name=None,wait_for=[]):
+    def __init__(self,runner,args,job_number=None,name=None,working_dir=None,
+                 wait_for=[]):
         """Create a new SchedulerJob instance
 
         """
@@ -551,7 +590,11 @@ class SchedulerJob(Job):
         self.waiting_for = list(wait_for)
         if name is None:
             name = args[0]
-        Job.__init__(self,runner,name,os.getcwd(),args[0],args[1:])
+        if working_dir is None:
+            working_dir = os.getcwd()
+        else:
+            working_dir = os.path.abspath(working_dir)
+        Job.__init__(self,runner,name,working_dir,args[0],args[1:])
 
     @property
     def is_running(self):
@@ -593,7 +636,7 @@ class SchedulerCallback:
     """
 
     def __init__(self,name,function,wait_for=[]):
-        """Create a new SchedulerJob instance
+        """Create a new SchedulerCallback instance
 
         """
         self.callback_name = name
@@ -661,8 +704,9 @@ if __name__ == "__main__":
                  wait_for=('sleeper_20',))
     #
     # Wait for all jobs to finish
-    while not sched.is_empty():
-        time.sleep(10)
+    ##while not sched.is_empty():
+    ##    time.sleep(10)
+    sched.wait()
     #
     # Stop the scheduler
     sched.stop()
