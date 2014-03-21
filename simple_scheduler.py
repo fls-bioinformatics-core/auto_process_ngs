@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 #######################################################################
 # Import modules that this module depends on
@@ -339,7 +339,7 @@ class SimpleScheduler(threading.Thread):
             updated_groups = []
             for group_name in self.__active_groups:
                 group = self.__groups[group_name]
-                if group.submitted:
+                if group.closed:
                     if group.is_running:
                         logging.debug("Group #%s (id %s) still running" % (group.group_name,
                                                                            group.group_id))
@@ -352,6 +352,9 @@ class SimpleScheduler(threading.Thread):
                                                                        group.group_id))
                         self.__finished_names.append(group_name)
                         report_status = True
+                else:
+                    logging.debug("Group #%s (id %s) waiting for more jobs" %
+                                  (group.group_name,group.group_id))
             # Update the list of groups
             self.__active_groups = updated_groups
             # Handle callbacks
@@ -429,7 +432,7 @@ class SchedulerGroup:
     The group should be populated by calling its 'add' method
     (note that jobs are passed directly to the scheduler).
 
-    Once all jobs have been added the 'submit' method should
+    Once all jobs have been added the 'close' method should
     be invoked to indicate to the scheduler that the group is
     complete. At this point no more jobs can be added to the
     group, and the scheduler will check for when the group
@@ -445,25 +448,25 @@ class SchedulerGroup:
         self.group_id = group_id
         self.waiting_for = list(wait_for)
         self.__scheduler = parent_scheduler
-        self.__submitted = False
+        self.__closed = False
         self.__jobs = []
 
     @property
-    def submitted(self):
-        """Test whether group has been submitted
+    def closed(self):
+        """Test whether group has been closed
 
         """
-        return self.__submitted
+        return self.__closed
 
     @property
     def is_running(self):
         """Test whether group is running
 
-        Returns True if group was submitted and if it has jobs
+        Returns True if group was closed and if it has jobs
         that are still running, False if not.
 
         """
-        if not self.submitted:
+        if not self.closed:
             return False
         for job in self.__jobs:
             if not job.submitted:
@@ -486,9 +489,9 @@ class SchedulerGroup:
 
         """
         # Check we can still add jobs
-        if self.submitted:
+        if self.closed:
             raise Exception, \
-                "Can't add job to group '%s': group already submitted" % self.group_name
+                "Can't add job to group '%s': group closed to new jobs" % self.group_name
         # Update list of jobs that this one needs to wait for 
         waiting_for = self.waiting_for + list(wait_for)
         # Submit the job to the scheduler and keep a reference
@@ -504,13 +507,13 @@ class SchedulerGroup:
         """
         return self.__jobs
 
-    def submit(self):
+    def close(self):
         """Indicate that all jobs have been added to the group
 
         """
-        if self.submitted:
-            raise Exception, "Group '%s' already submitted" % self.group_name
-        self.__submitted = True
+        if self.closed:
+            raise Exception, "Group '%s' already closed" % self.group_name
+        self.__closed = True
 
     def wait(self,poll_interval=5):
         """Wait for the group to complete
@@ -521,8 +524,8 @@ class SchedulerGroup:
             seconds)
 
         """
-        if not self.submitted:
-            raise Exception, "Group '%s' not submitted" % self.group_name
+        if not self.closed:
+            raise Exception, "Group '%s' not closed" % self.group_name
         logging.debug("Waiting for group '%s' (#%s)..." % (self.group_name,
                                                            self.group_id))
         while self.is_running:
@@ -620,11 +623,6 @@ def date_and_time(epoch=None):
         return time.asctime(time.localtime(epoch))
     else:
         return time.asctime()
-
-#######################################################################
-# Tests
-#######################################################################
-
 
 #######################################################################
 # Main program (example)
