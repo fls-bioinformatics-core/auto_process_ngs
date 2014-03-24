@@ -302,9 +302,13 @@ class SimpleScheduler(threading.Thread):
         scheduler instance.
 
         Arguments:
-          name
-          wait_for
-          callback
+          name: a name for the callback. Must be unique within the
+                scheduler instance; if None then a unique name will
+                be generated.
+          callback: the function that will be executed when the job
+                completes.
+          wait_for: a list or tuple of job and/or group names which
+                will trigger the callback when they finish
 
         Returns:
           SchedulerCallback instance.
