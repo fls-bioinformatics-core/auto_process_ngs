@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 #######################################################################
 # Import modules that this module depends on
@@ -106,7 +106,7 @@ class SeqDataSizes:
         job_grp.add(find_du_command(self.dirn,"*.fastq",block_size=1,
                                     apparent_size=self.apparent_size),
                     name="du.%s.fastqs" % name)
-        job_grp.submit()
+        job_grp.close()
         for subdir in self.subdirs:
             subdir.get_disk_usage()
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     # Make a job runner for computationally-intensive (CI) jobs
     if options.use_grid_engine:
         ci_runner = JobRunner.GEJobRunner(log_dir=options.log_dir,
-                                          ge_extra_args=['-j','y'])
+                                          ge_extra_args=['-j','y','-l','short'])
     else:
         ci_runner = JobRunner.SimpleJobRunner(log_dir=options.log_dir,
                                               join_logs=True)
