@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 
 #######################################################################
 # Import modules that this module depends on
@@ -128,6 +128,8 @@ if __name__ == "__main__":
     p.add_option("--use-grid-engine",action='store_true',dest='use_grid_engine',default=False,
                  help="submit computationally-intensive jobs (e.g. MD5 checksumming) "
                  "to Grid Engine")
+    p.add_option("--no-checks",action='store_true',dest="no_checks",default=False,
+                 help="only copy, don't run MD5 checksums or link checks")
     p.add_option("--debug",action='store_true',dest='debug',
                  help="turn on debugging output (nb very verbose!)")
     options,args = p.parse_args()
@@ -179,26 +181,30 @@ if __name__ == "__main__":
             job = s.submit(['data_manager.py','--set-group=%s' % new_group,
                             os.path.join(archive_to,os.path.basename(data_dir))],
                            name=set_group_name,wait_for=(copy_name,))
-        # Schedule MD5 check
-        md5check_name="md5check.%s" % os.path.basename(data_dir)
-        job = s.submit(['md5checker.py','-d',
-                        data_dir,
-                        os.path.join(archive_to,os.path.basename(data_dir))],
-                       name=md5check_name,
-                       wait_for=(copy_name,),
-                       runner=ci_runner,
-                       callbacks=(report_completion,report_md5sums))
-        # Check symlinks
-        symlink_check_name="symlinkcheck.%s" % os.path.basename(data_dir)
-        job = s.submit(['data_manager.py','--check-symlinks',
-                        os.path.join(archive_to,os.path.basename(data_dir))],
-                       name=symlink_check_name,
-                       wait_for=(copy_name,),
-                       runner=ci_runner,
-                       callbacks=(report_completion,report_symlinks))
-        # Final completion
-        s.callback("Finished",report_completion,wait_for=(md5check_name,
-                                                          symlink_check_name))
+
+        # Run checks
+        if not options.no_checks:
+            # Schedule MD5 check
+            md5check_name="md5check.%s" % os.path.basename(data_dir)
+            job = s.submit(['md5checker.py','-d',
+                            data_dir,
+                            os.path.join(archive_to,os.path.basename(data_dir))],
+                           name=md5check_name,
+                           wait_for=(copy_name,),
+                           runner=ci_runner,
+                           callbacks=(report_completion,report_md5sums))
+            # Check symlinks
+            symlink_check_name="symlinkcheck.%s" % os.path.basename(data_dir)
+            job = s.submit(['data_manager.py','--check-symlinks',
+                            os.path.join(archive_to,os.path.basename(data_dir))],
+                           name=symlink_check_name,
+                           wait_for=(copy_name,),
+                           runner=ci_runner,
+                           callbacks=(report_completion,report_symlinks))
+            # Final completion
+            s.callback("Finished",report_completion,wait_for=(md5check_name,
+                                                              symlink_check_name))
+
     while not s.is_empty():
         time.sleep(5)
     print "Finished"
