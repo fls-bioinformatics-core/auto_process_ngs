@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 #######################################################################
 # Import modules that this module depends on
@@ -82,6 +82,7 @@ class DataDir:
         -E: preserve executibility
         -D: preserve devices files and special files
         --chmod=u+rwX,g+rwX,o-w: give user and group read and write access
+        -o: preserve owner (nb superuser only)
 
         -p (preserve permissions) is also needed to make the --chmod
         options stick (see rsync manpage).
@@ -92,7 +93,7 @@ class DataDir:
             so no files are copied.
 
         """
-        rsync = ['rsync','-rpltDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
+        rsync = ['rsync','-rplotDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
         if dry_run:
             rsync.insert(1,'--dry-run')
         logging.debug("Rsync command: %s" % rsync)
