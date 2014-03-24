@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.48"
+__version__ = "0.0.49"
 
 #######################################################################
 # Imports
@@ -59,6 +59,7 @@ import bclToFastq
 import applications
 import auto_process_utils
 import auto_process_settings
+import simple_scheduler
 
 #######################################################################
 # Classes
@@ -727,16 +728,17 @@ class AutoProcess:
                 sample_pattern = projects.split('/')[1]
             except IndexError:
                 sample_pattern = '*'
-        # Setup a pipeline runner
-        qc_runner = auto_process_settings.runners.qc
-        pipeline = Pipeline.PipelineRunner(qc_runner,
-                                           max_concurrent_jobs=max_jobs)
         # Get project dir data
         projects = self.get_analysis_projects(project_pattern)
         # Check we have projects
         if len(projects) == 0:
             logging.warning("No projects found for QC analysis")
             return
+        # Set up a simple scheduler
+        qc_runner = auto_process_settings.runners.qc
+        sched = simple_scheduler.SimpleScheduler(runner=qc_runner,
+                                                 max_concurrent=max_jobs)
+        sched.start()
         # Look for samples with no/invalid QC outputs and populate
         # pipeline with the associated fastq.gz files
         for project in projects:
@@ -753,23 +755,29 @@ class AutoProcess:
                 logging.warning("No samples found for QC analysis in project '%s'" %
                                 project.name)
             for sample in samples:
+                group = None
                 print "Examining files in sample %s" % sample.name
                 for fq in sample.fastq:
                     if sample.verify_qc(qc_dir,fq):
                         logging.debug("\t%s: QC verified" % fq)
                     else:
                         print "\t%s: setting up QC run" % os.path.basename(fq)
-                        group = "%s.%s" % (project.name,sample.name)
+                        # Create a group if none exists for this sample
+                        if group is None:
+                            group = sched.group("%s.%s" % (project.name,sample.name))
+                        # Create and submit a QC job
                         fastq = os.path.join(project.dirn,'fastqs',fq)
-                        label = str(auto_process_utils.AnalysisFastq(fq))
-                        args = list((fastq,))
+                        label = "illumina_qc.%s" % str(auto_process_utils.AnalysisFastq(fq))
+                        qc_cmd = applications.Command('illumina_qc.sh',fastq)
                         if no_ungzip_fastqs or project.name == 'undetermined':
-                            args.append('--no-ungzip')
-                        pipeline.queueJob(project.dirn,'illumina_qc.sh',args,
-                                          label=label,group=group)
-        # Run the pipeline
-        if pipeline.nWaiting() > 0:
-            pipeline.run()
+                            qc_cmd.add_args('--no-ungzip')
+                        job = group.add(qc_cmd,name=label,wd=project.dirn)
+                        print "Job: %s" %  job
+                # Indicate no more jobs to add
+                if group: group.close()
+        # Wait for the scheduler to run all jobs
+        sched.wait()
+        sched.stop()
         # Verify the outputs
         for project in projects:
             if not project.verify_qc():
