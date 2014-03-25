@@ -424,12 +424,13 @@ class AutoProcess:
         # projects (see bcf_utils.name_matches).
         project_metadata = self.load_project_metadata(self.params.project_metadata)
         projects = []
+        if pattern is None:
+            pattern = '*'
         for line in project_metadata:
             name = line['Project']
-            if pattern is not None:
-                if not bcf_utils.name_matches(name,pattern):
-                    # Name failed to match, ignore
-                    continue
+            if not bcf_utils.name_matches(name,pattern):
+                # Name failed to match, ignore
+                continue
             logging.debug("Acquiring data for project %s" % name)
             # Look for a matching project directory
             project_dir = None
