@@ -350,6 +350,11 @@ class AnalysisProject:
         # Make a 'ScriptCode' directory
         scriptcode_dir = os.path.join(self.dirn,"ScriptCode")
         bcf_utils.mkdir(scriptcode_dir,mode=0775)
+        # Put a file in ScriptCode to make sure it's
+        # not pruned on subsequent rsync operations
+        fp = open(os.path.join(self.dirn,'ScriptCode','README.txt'),'w')
+        fp.write("The ScriptCode directory is a place to put custom scripts and programs")
+        fp.close()
         # Make a 'fastqs' directory
         fastqs_dir = os.path.join(self.dirn,"fastqs")
         bcf_utils.mkdir(fastqs_dir,mode=0775)

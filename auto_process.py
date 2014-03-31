@@ -313,6 +313,11 @@ class AutoProcess:
             # Create directory structure
             self.create_directory(self.analysis_dir)
             self.add_directory('ScriptCode')
+            # Put a file in ScriptCode to make sure it's
+            # not pruned on subsequent rsync operations
+            fp = open(os.path.join(self.analysis_dir,'ScriptCode','README.txt'),'w')
+            fp.write("The ScriptCode directory is a place to put custom scripts and programs")
+            fp.close()
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
