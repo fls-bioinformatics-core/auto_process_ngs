@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 #######################################################################
 # Import modules that this module depends on
@@ -64,9 +64,25 @@ class DataDir:
         """
         """
         size = 0
-        for f in self.walk:
+        for f in self.walk():
             size += os.lstat(f).st_size
         return int(float(size)/1024)
+    def walk(self,include_dirs=True):
+        """Traverse the directory, subdirectories and files
+        
+        Arguments:
+          include_dirs: if True then yield directories as well
+            as files (default)
+        
+        """
+        if include_dirs:
+            yield self.dir
+        for dirpath,dirnames,filenames in os.walk(self.dir):
+            if include_dirs:
+                for d in dirnames:
+                    yield os.path.join(dirpath,d)
+            for f in filenames:
+                yield os.path.join(dirpath,f)
     def copy(self,target,dry_run=False):
         """Create a copy of dir using rsync
 
@@ -129,88 +145,6 @@ class DataDir:
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
-    @property
-    def walk(self):
-        """
-        """
-        yield self.dir
-        for dirpath,dirnames,filenames in os.walk(self.dir):
-            for d in dirnames:
-                yield os.path.join(dirpath,d)
-            for f in filenames:
-                yield os.path.join(dirpath,f)
-
-class Md5Checker:
-    def __init__(self,reference,target):
-        self.reference = reference
-        self.target = target
-        self._passed = []
-        self._bad_links = []
-        self._missing_files = []
-        self._failed_md5sums = []
-        self._n_files = 0
-
-    def compare(self,verbose=True):
-        """
-        """
-        ref_dir = self.reference.dir
-        tgt_dir = self.target.dir
-        for ref_filen in self.reference.files:
-            self._n_files += 1
-            filen = os.path.join(tgt_dir,os.path.relpath(ref_filen,ref_dir))
-            rel_filen = os.path.relpath(filen,tgt_dir)
-            if not os.path.exists(filen):
-                if os.path.islink(filen):
-                    # Deal with bad links
-                    if os.readlink(filen) == os.readlink(ref_filen):
-                        self.report("OK_LINK",rel_filen,verbose)
-                    else:
-                        self.report("BAD_LINK",rel_filen,verbose)
-                        self._bad_links.append(rel_filen)
-                else:
-                    self.report("MISSING",rel_filen,verbose)
-                    self._missing_files.append(rel_filen)
-            else:
-                # Compute and compare checksums
-                ref_chksum = Md5sum.md5sum(ref_filen)
-                chksum = Md5sum.md5sum(filen)
-                if chksum != ref_chksum:
-                    self.report("FAILED",rel_filen,verbose)
-                    self._failed_md5sums.append(rel_filen)
-                else:
-                    self.report("OK",rel_filen,verbose)
-
-    def report(self,msg,filen,verbose):
-        if verbose: print "%s\t%s" % (msg,filen)
-
-    @property
-    def n_examined(self):
-        """Number of files examined
-        """
-        return self._n_files
-    @property
-    def failed_md5sums(self):
-        """List of files that failed MD5 sum checks
-        """
-        return self._failed_md5sums
-    @property
-    def missing_files(self):
-        """List of files missing from the target directory
-        """
-        return self._missing_files
-    @property
-    def bad_links(self):
-        """List of bad links
-        """
-        return self._bad_links
-    @property
-    def n_passed(self):
-        """Number of files passing checks
-        """
-        return self.n_examined \
-            - len(self.failed_md5sums) \
-            - len(self.missing_files) \
-            - len(self.bad_links)
 
 #######################################################################
 # Functions
@@ -244,69 +178,6 @@ def finger_user(name):
     real_name = finger.split('\n')[0].split(':')[-1].strip()
     return real_name
 
-#######################################################################
-# Tests
-#######################################################################
-
-import unittest
-import tempfile
-import shutil
-import filecmp
-
-class WorkingDir:
-    """Class for building & populating arbitrary directories for tests
-    """
-    def __init__(self,parent_dir=None):
-        """Create a new TestDir instance
-        """
-        self.dirname = tempfile.mkdtemp(dir=parent_dir)
-        logging.debug("Working dir: %s" % self.dirname)
-    def rm(self):
-        """Remove the entire working directory
-        """
-        shutil.rmtree(self.dirname)
-    def mk_dir(self,*args):
-        """Make a subdirectory or series of subdirectories
-        """
-        subdir = self.dirname
-        for arg in args:
-            subdir = os.path.join(subdir,arg)
-            logging.debug("Making subdir: %s" % subdir)
-            try:
-                os.mkdir(subdir)
-            except OSError,ex:
-                if os.path.isdir(subdir): continue
-                raise ex
-        return subdir
-    def rm_dir(self,*args):
-        """Remove a subdirectory
-        """
-        subdir = os.path.join(self.dirname,*args)
-        logging.debug("Removing subdir: %s" % subdir)
-        shutil.rmtree(subdir)
-    def mk_file(self,filen,text=None):
-        """Make a file in the working directory
-        """
-        filen = os.path.join(self.dirname,filen)
-        logging.debug("Making filen: %s" % filen)
-        fp = open(filen,'w')
-        if text is not None:
-            fp.write(text)
-        fp.close()
-        return filen
-    def rm_file(self,filen):
-        """Remove a file
-        """
-        filen = os.path.join(self.dirname,filen)
-        os.remove(filen)
-    def mk_link(self,source,target):
-        """Make a symbolic link
-        """
-        source = os.path.join(self.dirname,source)
-        target = os.path.join(self.dirname,target)
-        os.symlink(source,target)
-        return target
-
 def cmp_dirs(dir1,dir2):
     for dirpath,dirnames,filenames in os.walk(dir1):
         for d in dirnames:
@@ -321,42 +192,70 @@ def cmp_dirs(dir1,dir2):
                 return False
     return True
 
-def make_languages_data_dir(wd):
-    wd.mk_dir('languages')
-    wd.mk_file('languages/hello')
-    wd.mk_file('languages/goodbye')
-    wd.mk_dir('languages/spanish')
-    wd.mk_file('languages/spanish/hola')
-    wd.mk_file('languages/spanish/adios',text="This means 'goodbye'")
-    wd.mk_dir('languages/welsh')
-    wd.mk_dir('languages/welsh/north_wales')
-    wd.mk_file('languages/welsh/north_wales/maen_ddrwg_gen_i')
-    wd.mk_dir('languages/welsh/south_wales')
-    wd.mk_file('languages/welsh/south_wales/maen_flin_da_fi')
-    return wd
+#######################################################################
+# Tests
+#######################################################################
+import unittest
+from mock_data import TestUtils,ExampleDirLanguages
 
 class TestDataDirCopy(unittest.TestCase):
     """Tests for DataDir class 'copy' functionality
     """
     def setUp(self):
         # Make a test data directory structure
-        self.wd = WorkingDir()
-        make_languages_data_dir(self.wd)
-        # Make a temporary destination
-        self.dest = WorkingDir()
+        self.example_dir = ExampleDirLanguages()
+        self.wd = self.example_dir.create_directory()
+        self.dest = TestUtils.make_dir()
+    def tearDown(self):
+        # Remove the test data directory (and copy)
+        self.example_dir.delete_directory()
+        TestUtils.remove_dir(self.dest)
+    def test_copy(self):
+        """DataDir.copy() correctly copies directory
+
+        """
+        data_dir = DataDir(self.wd)
+        data_dir.copy(self.dest)
+        target = os.path.join(self.dest,os.path.basename(self.wd))
+        print "%s" % self.wd
+        print "%s" % self.dest
+        self.assertTrue(cmp_dirs(data_dir.dir,target))
+        self.assertTrue(cmp_dirs(target,data_dir.dir))
+
+class TestDataDirWalk(unittest.TestCase):
+    """Tests for DataDir class 'walk' functionality
+    """
+    def setUp(self):
+        # Make a test data directory structure
+        self.example_dir = ExampleDirLanguages()
+        self.wd = self.example_dir.create_directory()
     def tearDown(self):
         # Remove the test data directory
-        self.wd.rm()
-        self.dest.rm()
-    def test_copy(self):
-        """Check copying functionality
+        self.example_dir.delete_directory()
+    def test_walk(self):
+        """DataDir.walk() traverses all files and directories
+
         """
-        source_dirname = os.path.join(self.wd.dirname,'languages')
-        data_dir = DataDir(source_dirname)
-        data_dir.copy(self.dest.dirname)
-        target_dirname = os.path.join(self.dest.dirname,'languages')
-        self.assertTrue(cmp_dirs(source_dirname,target_dirname))
-        self.assertTrue(cmp_dirs(target_dirname,source_dirname))
+        filelist = self.example_dir.filelist(include_dirs=True)
+        filelist.append(self.wd)
+        data_dir = DataDir(self.wd)
+        for f in data_dir.walk():
+            self.assertTrue(f in filelist,"%s not expected" % f)
+            filelist.remove(f)
+        self.assertEqual(len(filelist),0,"Items not returned: %s" %
+                         ','.join(filelist))
+    def test_walk_no_directories(self):
+        """DataDir.walk() traverses all files and ignores directories
+
+        """
+        filelist = self.example_dir.filelist(include_dirs=False)
+        data_dir = DataDir(self.wd)
+        for f in data_dir.walk(include_dirs=False):
+            self.assertTrue(f in filelist,"%s not expected" % f)
+            filelist.remove(f)
+        self.assertEqual(len(filelist),0,"Items not returned: %s" %
+                         ','.join(filelist))
+        
 
 #######################################################################
 # Main program
@@ -433,7 +332,7 @@ if __name__ == "__main__":
         print "Group '%s' guid = %s" % (group,gid)
         print "** NB links will be ignored **"
         header = "File\tOwner\tGroup\tRW"
-        for filen in data_dir.walk:
+        for filen in data_dir.walk():
             if os.path.islink(filen):
                 continue
             st = os.lstat(filen)
@@ -467,7 +366,7 @@ if __name__ == "__main__":
         print "Checking for temporary/hidden data in %s" % data_dir.dir
         nfiles = 0
         temporary = []
-        for filen in data_dir.walk:
+        for filen in data_dir.walk():
             nfiles += 1
             if os.path.basename(filen).startswith('.'):
                 temporary.append(filen)
@@ -488,25 +387,26 @@ if __name__ == "__main__":
         nlinks = 0
         broken_links = []
         absolute_links = []
-        for link in data_dir.symlinks:
+        for link in bcf_utils.links(data_dir.dir):
             nlinks += 1
-            if not os.path.exists(os.path.realpath(link)):
+            symlink = bcf_utils.Symlink(link)
+            if symlink.is_broken:
                 broken_links.append(link)
-            elif os.path.isabs(os.readlink(link)):
+            elif symlink.is_absolute:
                 absolute_links.append(link)
         print "%d symlinks examined" % nlinks
         if broken_links:
             print "Found %d broken links:" % len(broken_links)
             for link in broken_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
-                                      os.readlink(link))
+                                      bcf_utils.Symlink(link).target)
         else:
             print "No broken links"
         if absolute_links:
             print "Found %d absolute links:" % len(absolute_links)
             for link in absolute_links:
                 print "\t%s -> %s" % (os.path.relpath(link,data_dir.dir),
-                                      os.readlink(link))
+                                      bcf_utils.Symlink(link).target)
         else:
             print "No absolute links"
 
@@ -514,14 +414,12 @@ if __name__ == "__main__":
     if options.ref_dir is not None:
         ref_dir = DataDir(options.ref_dir)
         print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
-        md5check = Md5Checker(ref_dir,data_dir)
-        md5check.compare()
-        print "Summary"
-        print "\t%d files examined" % md5check.n_examined
-        print "\tFAILED\t%d" % len(md5check.failed_md5sums)
-        print "\tMISSING\t%d" % len(md5check.missing_files)
-        print "\tBAD_LINKS\t%d" % len(md5check.bad_links)
-        print "\tOK\t%d" % md5check.n_passed
+        reporter = Md5sum.Md5CheckReporter(
+            Md5sum.Md5Checker.md5cmp_dirs(ref_dir.dir,data_dir.dir,
+                                          links=Md5sum.Md5Checker.IGNORE_LINKS),
+            verbose=True)
+        # Summarise
+        reporter.summary()
 
     # Set group
     if options.new_group is not None:
@@ -534,7 +432,7 @@ if __name__ == "__main__":
             logging.error("Unable to locate group '%s' on this system" % new_group)
             sys.exit(1)
         print "Group '%s' guid = %s" % (new_group,gid)
-        for filen in data_dir.walk:
+        for filen in data_dir.walk():
             if not os.path.islink(filen):
                 os.chown(filen,-1,gid)
 
@@ -542,7 +440,7 @@ if __name__ == "__main__":
     if options.list_users:
         print "Collecting list of usernames from %s" % data_dir.dir
         users = []
-        for f in data_dir.walk:
+        for f in data_dir.walk():
             st = os.lstat(f)
             try:
                 user = pwd.getpwuid(st.st_uid).pw_name
