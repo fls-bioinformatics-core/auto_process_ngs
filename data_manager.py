@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.17"
+__version__ = "0.0.18"
 
 #######################################################################
 # Import modules that this module depends on
@@ -339,12 +339,11 @@ if __name__ == "__main__":
                 continue
             wrong_group = (f.gid != gid)
             if wrong_group:
-                logging.debug("Wrong group (%s):\t%s" % (f.gid,
-                                                         os.path.relpath(filen,data_dir.dir)))
+                logging.debug("Wrong group (%s):\t%s" % (f.gid,f.relpath(data_dir.dir)))
             group_read_write = (f.is_group_readable and f.is_group_writable)
             if not group_read_write:
                 logging.debug("Not group read/writable:\t%s" %
-                              os.path.relpath(filen,data_dir.dir))
+                              f.relpath(data_dir.dir))
             if wrong_group or not group_read_write:
                 group_name = f.group
                 owner = f.user
@@ -352,7 +351,7 @@ if __name__ == "__main__":
                 if header:
                     print header
                     header = None
-                print "%s\t%s\t%s\t%s" % (os.path.relpath(filen,data_dir.dir),
+                print "%s\t%s\t%s\t%s" % (f.relpath(data_dir.dir),
                                           owner,group_name,
                                           '' if group_read_write else 'No')
 
@@ -427,8 +426,9 @@ if __name__ == "__main__":
             sys.exit(1)
         print "Group '%s' guid = %s" % (new_group,gid)
         for filen in data_dir.walk():
-            if not os.path.islink(filen):
-                os.chown(filen,-1,gid)
+            f = bcf_utils.PathInfo(filen)
+            if not f.is_link:
+                f.chown(group=gid)
 
     # List users
     if options.list_users:
