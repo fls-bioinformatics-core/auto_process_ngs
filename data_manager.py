@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 
 #######################################################################
 # Import modules that this module depends on
@@ -173,7 +173,12 @@ def find(dirn,regex):
 
 def finger_user(name):
     # Run 'finger' command and try to fetch user's real name
-    p = subprocess.Popen(['finger',name], stdout=subprocess.PIPE)
+    finger = bcf_utils.find_program('finger')
+    logging.debug("'finger' executable: %s" % finger)
+    if finger is None:
+        logging.debug("'finger' not located on this system")
+        return None
+    p = subprocess.Popen([finger,name], stdout=subprocess.PIPE)
     finger, err = p.communicate()
     real_name = finger.split('\n')[0].split(':')[-1].strip()
     return real_name
@@ -333,26 +338,20 @@ if __name__ == "__main__":
         print "** NB links will be ignored **"
         header = "File\tOwner\tGroup\tRW"
         for filen in data_dir.walk():
-            if os.path.islink(filen):
+            f = bcf_utils.PathInfo(filen)
+            if f.is_link:
                 continue
-            st = os.lstat(filen)
-            wrong_group = st.st_gid != gid
+            wrong_group = (f.gid != gid)
             if wrong_group:
-                logging.debug("Wrong group (%s):\t%s" % (st.st_gid,
+                logging.debug("Wrong group (%s):\t%s" % (f.gid,
                                                          os.path.relpath(filen,data_dir.dir)))
-            group_read_write = (st.st_mode & stat.S_IRGRP) and (st.st_mode & stat.S_IWGRP)
+            group_read_write = (f.is_group_readable and f.is_group_writable)
             if not group_read_write:
                 logging.debug("Not group read/writable:\t%s" %
                               os.path.relpath(filen,data_dir.dir))
             if wrong_group or not group_read_write:
-                try:
-                    group_name = grp.getgrgid(st.st_gid).gr_name
-                except KeyError:
-                    group_name = st.st_gid
-                try:
-                    owner = pwd.getpwuid(st.st_uid).pw_name
-                except KeyError:
-                    owner = st.st_uid
+                group_name = f.group
+                owner = f.user
                 logging.debug("Owner is %s" % owner)
                 if header:
                     print header
@@ -441,15 +440,11 @@ if __name__ == "__main__":
         print "Collecting list of usernames from %s" % data_dir.dir
         users = []
         for f in data_dir.walk():
-            st = os.lstat(f)
-            try:
-                user = pwd.getpwuid(st.st_uid).pw_name
-            except KeyError:
-                user = st.st_uid
+            user = bcf_utils.PathInfo(f).user
             if user not in users:
                 users.append(user)
         users.sort()
         for user in users:
             real_name = finger_user(user)
-            print "%s\t%s" % (user,real_name)
+            print "%s\t%s" % (user,'?' if real_name is None else real_name)
 
