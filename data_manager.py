@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 #######################################################################
 # Import modules that this module depends on
@@ -26,9 +26,6 @@ __version__ = "0.0.16"
 
 import sys
 import os
-import pwd
-import grp
-import stat
 import re
 import optparse
 import logging
@@ -329,9 +326,8 @@ if __name__ == "__main__":
         print "Checking group ownership for '%s' in %s" % (data_dir.dir,
                                                            options.group)
         group = options.group
-        try:
-            gid = grp.getgrnam(group).gr_gid
-        except KeyError,ex:
+        gid = bcf_utils.get_gid_from_group(group)
+        if gid is None:
             logging.error("Unable to locate group '%s' on this system" % group)
             sys.exit(1)
         print "Group '%s' guid = %s" % (group,gid)
@@ -425,9 +421,8 @@ if __name__ == "__main__":
         print "Setting group ownership to '%s' on %s" % (options.new_group,
                                                          data_dir.dir)
         new_group = options.new_group
-        try:
-            gid = grp.getgrnam(new_group).gr_gid
-        except KeyError,ex:
+        gid = bcf_utils.get_gid_from_group(new_group)
+        if gid is None:
             logging.error("Unable to locate group '%s' on this system" % new_group)
             sys.exit(1)
         print "Group '%s' guid = %s" % (new_group,gid)
