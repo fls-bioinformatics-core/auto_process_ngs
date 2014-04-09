@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.49"
+__version__ = "0.0.50"
 
 #######################################################################
 # Imports
@@ -1076,22 +1076,30 @@ class AutoProcess:
         table.append('</table>')
         return '\n'.join(table)
 
-    def report(self,logging=False,summary=False,full=False):
+    def report(self,logging=False,summary=False,full=False,projects=False):
         # Report the contents of the run in various formats
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
-        # Short form "logging"-style report
+        report = None
         if logging:
+            # Short form "logging"-style report
             report = self.report_logging_format()
-            print report
         if summary:
+            # Summary report listing projects one per line
             report = self.report_summary_format()
-            print report
         if full:
+            # More extensive report for one or 
             report = self.report_full_format()
+        if projects:
+            # Report projects one per line for injection into
+            # spreadsheet
+            report = self.report_projects()
+        # Generate the report
+        if report is not None:
             print report
-        if not (logging or summary or full):
-            # Generate a report on the contents of the data directory
+        else:
+            # Generate a verbose general report on the contents
+            # of the data directory
             print "Directory: %s" % self.analysis_dir
             print "Platform : %s" % self.params.platform
             print "Unaligned dir: %s" % self.params.unaligned_dir
@@ -1240,6 +1248,67 @@ class AutoProcess:
                            " paired end" if project.info.paired_end else '',
                            ", multiple fastqs per sample" if project.multiple_fastqs else ''))
             report.append("\nAdditional comments:\n\t%s" % project.info.comments)
+        report = '\n'.join(report)
+        return report
+
+    def report_projects(self):
+        # Generate one line per project with tab-separated data items
+        # suitable for injection into a spreadsheet:
+        #
+        # Run id e.g. HISEQ_140328
+        # Run number
+        # Source
+        # Date
+        # User
+        # PI
+        # Application
+        # Genome
+        # Platform
+        # #Samples
+        # PE (yes/no)
+        # Samples
+        #
+        # Acquire data
+        illumina_data = self.load_illumina_data()
+        project_metadata = self.load_project_metadata(self.params.project_metadata)
+        # General information
+        run_name = os.path.basename(self.analysis_dir)
+        try:
+            datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
+            run_number = run_number.lstrip('0')
+        except Exception, ex:
+            logging.warning("Unable to extract information from run name '%s'" \
+                            % run_name)
+            logging.warning("Exception: %s" % ex)
+            date_stamp = ''
+            run_number = ''
+        if self.params.platform is not None:
+            platform = self.params.platform.upper()
+        else:
+            platform = ''
+        if platform and datestamp:
+            run_id = "%s_%s" % (platform,datestamp)
+        else:
+            if run_name.endswith('_analysis'):
+                # Strip trailing _analysis
+                run_id = run_name[:-len('_analysis')]
+            else:
+                run_id = run_name
+        paired_end = 'yes' if illumina_data.paired_end else 'no'
+        report = []
+        # Generate report, one line per project
+        for p in project_metadata:
+            project_line = [run_id,run_number,'','']
+            project = illumina_data.get_project(p['Project'])
+            project_line.append('' if p['User'] == '.' else p['User'])
+            project_line.append('' if p['PI'] == '.' else p['PI'])
+            project_line.append('' if p['Library'] == '.' else p['Library'])
+            project_line.append('' if p['Organism'] == '.' else p['Organism'])
+            project_line.append(platform)
+            project_line.append(str(len(project.samples)))
+            project_line.append(paired_end)
+            project_line.append(project.prettyPrintSamples())
+            report.append('\t'.join(project_line))
         report = '\n'.join(report)
         return report
 
@@ -1411,6 +1480,9 @@ def report_parser():
                  help="print short report suitable for logging file")
     p.add_option('--summary',action='store_true',dest='summary',default=False,
                  help="print full report suitable for bioinformaticians")
+    p.add_option('--projects',action='store_true',dest='projects',default=False,
+                 help="print tab-delimited line (one per project) suitable for "
+                 "injection into a spreadsheet")
     p.add_option('--full',action='store_true',dest='full',default=False,
                  help="print summary report suitable for record-keeping")
     return p
@@ -1529,4 +1601,5 @@ if __name__ == "__main__":
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
+                     projects=options.projects,
                      full=options.full)
