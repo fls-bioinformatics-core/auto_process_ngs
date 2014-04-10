@@ -11,7 +11,8 @@ if [ $# -lt 1 ] || [ "$1" == "-h" ] || [ "$1" == "--help" ] ; then
     echo Optional CMD can be:
     echo zip: make zip archive of fastq.gzs
     echo md5sums: generate MD5sums
-    echo scp LOCATION: scp fastq.gzs to LOCATION
+    echo cp DEST: copy fastq.gzs to local DEST
+    echo scp DEST: scp fastq.gzs to remote DEST
     exit
 fi
 # Analysis dir
@@ -25,10 +26,15 @@ case "$CMD" in
 	do_md5sums=yes
 	do_zip=yes
 	;;
+    cp)
+	do_md5sums=yes
+	do_cp=cp
+	DEST=$4
+	;;
     scp)
 	do_md5sums=yes
-	do_scp=yes
-	LOCATION=$4
+	do_cp=scp
+	DEST=$4
 	;;
     md5sums)
 	do_md5sums=yes
@@ -95,11 +101,14 @@ fi
 echo Total$'\t'$size$units
 # Other info
 n_files=$(grep ^$PROJECT $STATS | wc -l)
+n_samples=$(grep ^$PROJECT $STATS | cut -f2 | sort -u | wc -l)
 n_R2=$(grep ^$PROJECT $STATS | grep _R2_ | wc -l)
-echo $n_files fastqs
 if [ $n_R2 -gt 0 ] ; then
-    echo Paired end data
+    echo $n_samples paired end samples
+else
+    echo $n_samples samples
 fi
+echo $n_files fastqs
 # Generate MD5 checksums
 if [ ! -z "$do_md5sums" ] ; then
     MD5SUMS=$PROJECT.chksums
@@ -131,15 +140,15 @@ if [ ! -z "$do_zip" ] ; then
 	echo Zip file $ZIP_FILE already exists
     fi
 fi
-# Copy files with scp
-if [ ! -z "$do_scp" ] ; then
-    if [ -z "$LOCATION" ] ; then
-	echo "Can't scp: no location supplied" >&2
+# Copy files with cp/scp
+if [ ! -z "$do_cp" ] ; then
+    if [ -z "$DEST" ] ; then
+	echo "Can't $do_cp: no location supplied" >&2
 	exit 1
     fi
-    echo Scping fastq.gz files to $LOCATION
-    find $DIR/$BCL2FASTQ_DIR/Project_$PROJECT -name "*.fastq.gz" -exec scp {} $LOCATION \;
-    scp $MD5SUMS $LOCATION
+    echo ${do_cp}ing fastq.gz files to $DEST
+    find $DIR/$BCL2FASTQ_DIR/Project_$PROJECT -name "*.fastq.gz" -exec $do_cp {} $DEST \;
+    $do_cp $MD5SUMS $DEST
     echo Done
 fi
 ##
