@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.10"
+__version__ = "0.0.11"
 
 #######################################################################
 # Import modules that this module depends on
@@ -381,6 +381,7 @@ class SimpleScheduler(threading.Thread):
                 else:
                     logging.debug("Group #%s (id %s) waiting for more jobs" %
                                   (group.group_name,group.group_id))
+                    updated_groups.append(group_name)
             # Update the list of groups
             self.__active_groups = updated_groups
             # Handle callbacks
@@ -400,6 +401,7 @@ class SimpleScheduler(threading.Thread):
                         invoke_callback = False
                         break
                 if invoke_callback:
+                    logging.debug("Invoking callback '%s'" % callback.callback_name)
                     callback.invoke(tuple(callback_jobs),self)
                 else:
                     updated_callback_list.append(callback)
@@ -555,6 +557,7 @@ class SchedulerGroup:
         """
         if self.closed:
             raise Exception, "Group '%s' already closed" % self.group_name
+        logging.debug("Group '%s' #%s closed" % (self.group_name,self.group_id))
         self.__closed = True
 
     def wait(self,poll_interval=5):

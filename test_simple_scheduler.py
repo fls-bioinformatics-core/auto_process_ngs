@@ -76,7 +76,7 @@ class CallbackTester:
             raise Exception,"call_me raised expected exception"
 
 class TestSimpleScheduler(unittest.TestCase):
-    """Unit tests for GetFastqFiles function
+    """Unit tests for SimpleScheduler class
 
     """
     def test_simple_scheduler(self):
@@ -284,6 +284,42 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertEqual(sched.n_waiting,0)
         self.assertEqual(sched.n_running,0)
         self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_wait_for_group_completion(self):
+        """Check group completion triggers start of pending job
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        # Add a group
+        group = sched.group("grp_1")
+        # Add jobs
+        time.sleep(0.1)
+        job_1 = group.add(['sleep','10'],name="sleep_10")
+        job_2 = group.add(['sleep','20'],name="sleep_20")
+        # Close the group
+        time.sleep(0.1)
+        group.close()
+        # Add a job waiting on this group
+        time.sleep(0.1)
+        job_3 = sched.submit(['sleep','50'],wait_for=("grp_1",))
+        # Check status
+        time.sleep(0.1)
+        self.assertTrue(group.is_running)
+        self.assertFalse(job_3.is_running)
+        # Finish jobs in group, wait for group to complete
+        job_1.terminate()
+        job_2.terminate()
+        time.sleep(0.1)
+        self.assertFalse(group.is_running)
+        # Check that remaining job is now running
+        time.sleep(0.1)
+        self.assertTrue(job_3.is_running)
+        # Finish
+        job_3.terminate()
+        time.sleep(0.1)
         self.assertTrue(sched.is_empty())
         sched.stop()
 
