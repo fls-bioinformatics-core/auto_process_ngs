@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.51"
+__version__ = "0.0.52"
 
 #######################################################################
 # Imports
@@ -754,6 +754,8 @@ class AutoProcess:
             if not os.path.exists(qc_dir):
                 print "Making 'qc' subdirectory"
                 bcf_utils.mkdir(qc_dir,mode=0775)
+            # Set the log directory
+            log_dir = os.path.join(project.dirn,'logs')
             # Loop over samples and queue up those where the QC
             # isn't validated
             samples = project.get_samples(sample_pattern)
@@ -770,7 +772,8 @@ class AutoProcess:
                         print "\t%s: setting up QC run" % os.path.basename(fq)
                         # Create a group if none exists for this sample
                         if group is None:
-                            group = sched.group("%s.%s" % (project.name,sample.name))
+                            group = sched.group("%s.%s" % (project.name,sample.name),
+                                                log_dir=log_dir)
                         # Create and submit a QC job
                         fastq = os.path.join(project.dirn,'fastqs',fq)
                         label = "illumina_qc.%s" % str(auto_process_utils.AnalysisFastq(fq))
