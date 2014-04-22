@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.11"
+__version__ = "0.0.12"
 
 #######################################################################
 # Import modules that this module depends on
@@ -193,7 +193,8 @@ class SimpleScheduler(threading.Thread):
                 job.terminate()
             print "Finished"
 
-    def submit(self,args,runner=None,name=None,wd=None,wait_for=[],callbacks=[]):
+    def submit(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[],
+               callbacks=[]):
         """Submit a request to run a job
         
         Arguments:
@@ -205,6 +206,7 @@ class SimpleScheduler(threading.Thread):
                 the scheduler instance.
           wd:   (optional) the working directory to execute the job in;
                 defaults to the current working directory
+          log_dir: (optional) explicitly specify directory for log files
           wait_for: (optional) a list or tuple of job and/or group
                 names which must finish before this job can start
           callbacks: (optional) a list or tuple of functions that will
@@ -235,7 +237,8 @@ class SimpleScheduler(threading.Thread):
             runner = self.default_runner
         # Schedule the job
         job = SchedulerJob(runner,args,job_number=job_number,
-                           name=name,working_dir=wd,wait_for=wait_for)
+                           name=name,working_dir=wd,log_dir=log_dir,
+                           wait_for=wait_for)
         self.__submitted.put(job)
         # Deal with callbacks
         for function in callbacks:
@@ -251,7 +254,7 @@ class SimpleScheduler(threading.Thread):
         logging.debug("%s" % job)
         return job
 
-    def group(self,name,wait_for=[],callbacks=[]):
+    def group(self,name,log_dir=None,wait_for=[],callbacks=[]):
         """Create a group of jobs
         
         Arguments:
@@ -259,6 +262,7 @@ class SimpleScheduler(threading.Thread):
                 scheduler instance.
           wait_for: (optional) a list or tuple of job and/or group
                 names which must finish before this job can start
+          log_dir: (optional) explicitly specify directory for log files
           callbacks: (optional) a list or tuple of functions that will
                 be executed when the job completes.
 
@@ -275,7 +279,8 @@ class SimpleScheduler(threading.Thread):
         if self.has_name(name):
             raise Exception,"Name '%s' already assigned" % name
         self.__names.append(name)
-        new_group = SchedulerGroup(name,job_number,self,wait_for=wait_for)
+        new_group = SchedulerGroup(name,job_number,self,log_dir=log_dir,
+                                   wait_for=wait_for)
         self.__groups[name] = new_group
         self.__active_groups.append(name)
         # Deal with callbacks
@@ -468,7 +473,7 @@ class SchedulerGroup:
     
     """
 
-    def __init__(self,name,group_id,parent_scheduler,wait_for=[]):
+    def __init__(self,name,group_id,parent_scheduler,log_dir=None,wait_for=[]):
         """Create a new SchedulerGroup instance
 
         Arguments:
@@ -477,6 +482,7 @@ class SchedulerGroup:
           group_id: a unique id number
           parent_scheduler: the SimpleScheduler instance that the
                 group belongs to
+          log_dir: (optional) explicitly specify directory for log files
           wait_for: (optional) a list or tuple of job and/or group
                 names which must finish before this job can start
 
@@ -484,6 +490,7 @@ class SchedulerGroup:
         self.group_name = name
         self.group_id = group_id
         self.waiting_for = list(wait_for)
+        self.log_dir = log_dir
         self.__scheduler = parent_scheduler
         self.__closed = False
         self.__jobs = []
@@ -512,7 +519,7 @@ class SchedulerGroup:
                 return True
         return False
 
-    def add(self,args,runner=None,name=None,wd=None,wait_for=[]):
+    def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[]):
         """Add a request to run a job
         
         Arguments:
@@ -524,6 +531,7 @@ class SchedulerGroup:
                 the scheduler instance.
           wd:   (optional) the working directory to execute the job in;
                 defaults to the current working directory
+          log_dir: (optional) explicitly specify directory for log files
           wait_for: (optional) a list or tuple of job and/or group
                 names which must finish before this job can start
 
@@ -535,12 +543,15 @@ class SchedulerGroup:
         if self.closed:
             raise Exception, \
                 "Can't add job to group '%s': group closed to new jobs" % self.group_name
+        # Deal with directory for log files
+        if log_dir is None:
+            log_dir = self.log_dir
         # Update list of jobs that this one needs to wait for 
         waiting_for = self.waiting_for + list(wait_for)
         # Submit the job to the scheduler and keep a reference
         logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
         job = self.__scheduler.submit(args,runner=runner,name=name,
-                                      wd=wd,wait_for=waiting_for)
+                                      wd=wd,log_dir=log_dir,wait_for=waiting_for)
         self.__jobs.append(job)
         return job
 
@@ -587,13 +598,14 @@ class SchedulerJob(Job):
     """
 
     def __init__(self,runner,args,job_number=None,name=None,working_dir=None,
-                 wait_for=[]):
+                 log_dir=None,wait_for=[]):
         """Create a new SchedulerJob instance
 
         """
 
         self.job_number = job_number
         self.job_name = name
+        self.log_dir = log_dir
         self.waiting_for = list(wait_for)
         if name is None:
             name = args[0]
@@ -613,6 +625,23 @@ class SchedulerJob(Job):
         """
         # Check if job is running
         return self.isRunning()
+
+    def start(self):
+        """Start the job running
+
+        Overrides the 'start' method in the base 'Job' class.
+
+        Returns:
+          Id for job
+
+        """
+        if self.log_dir is not None:
+            runner_log_dir = self.runner.log_dir
+            self.runner.set_log_dir(self.log_dir)
+        job_id = Job.start(self)
+        if self.log_dir is not None:
+            self.runner.set_log_dir(runner_log_dir)
+        return job_id
 
     def wait(self,poll_interval=5):
         """Wait for the job to complete

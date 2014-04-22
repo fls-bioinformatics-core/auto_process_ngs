@@ -15,6 +15,8 @@ class MockJobRunner(BaseJobRunner):
     def __init__(self):
         self.__jobcount = 0
         self.__jobs = dict()
+        self.__log_dirs = dict()
+        BaseJobRunner.__init__(self)
 
     def run(self,name,working_dir,script,args):
         self.__jobcount += 1
@@ -23,6 +25,7 @@ class MockJobRunner(BaseJobRunner):
                                 'working_dir': working_dir,
                                 'script': script,
                                 'args': args }
+        self.__log_dirs[job_id] = self.log_dir
         return job_id
 
     def logFile(self,job_id):
@@ -98,6 +101,28 @@ class TestSimpleScheduler(unittest.TestCase):
         sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
         sched.start()
         job = sched.submit(['sleep','50'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,1)
+        self.assertEqual(sched.n_finished,0)
+        self.assertFalse(sched.is_empty())
+        # Finish job, wait for scheduler to catch up
+        job.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertEqual(sched.n_finished,1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_run_single_job_set_log_dir(self):
+        """Run a single job and explicitly set the log directory
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        job = sched.submit(['sleep','50'],)
         # Wait for scheduler to catch up
         time.sleep(0.1)
         self.assertEqual(sched.n_waiting,0)
@@ -433,6 +458,69 @@ class TestSimpleScheduler(unittest.TestCase):
         time.sleep(0.1)
         self.assertTrue(sched.is_empty())
         sched.stop()
+
+    def test_set_job_log_dir(self):
+        """Explicitly specify log directory for a job
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        job = sched.submit(['sleep','50'],log_dir='/logs')
+        time.sleep(0.1)
+        self.assertEqual(job.log_dir,'/logs')
+        job.terminate()
+        time.sleep(0.1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_set_group_log_dir(self):
+        """Explicitly specify log directory for a group
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        group = sched.group('grp1',log_dir='/logs')
+        job = group.add(['sleep','50'])
+        group.close()
+        time.sleep(0.1)
+        self.assertEqual(job.log_dir,'/logs')
+        job.terminate()
+        time.sleep(0.1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+class TestSchedulerJob(unittest.TestCase):
+    """Unit tests for SchedulerJob class
+
+    """
+    def test_scheduler_job_basic(self):
+        """Basic test of SchedulerJob
+
+        """
+        job = SchedulerJob(MockJobRunner(),['sleep','50'])
+        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        self.assertFalse(job.is_running)
+        job.start()
+        self.assertTrue(job.is_running)
+
+    def test_scheduler_job_set_log_dir(self):
+        """Set explicit log_dir for SchedulerJob
+
+        """
+        runner = MockJobRunner()
+        self.assertEqual(runner.log_dir,None)
+        job = SchedulerJob(runner,['sleep','50'],log_dir='/logs')
+        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,'/logs')
+        self.assertFalse(job.is_running)
+        self.assertEqual(runner.log_dir,None)
+        job.start()
+        self.assertEqual(job.log_dir,'/logs')
+        self.assertTrue(job.is_running)
+        self.assertEqual(runner.log_dir,None)
 
 #######################################################################
 # Main program
