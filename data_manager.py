@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.18"
+__version__ = "0.0.19"
 
 #######################################################################
 # Import modules that this module depends on
@@ -142,6 +142,71 @@ class DataDir:
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
+
+class Counter(bcf_utils.AttributeDictionary):
+    """Generic class for counting things
+
+    The Counter class provides a generic object that can be used
+    to count discrete arbitrary quantities.
+
+    Basic usage:
+
+    >>> c = Counter() # Create a new Counter object
+    >>> c.add_quantity('cats') # Initialise counting of 'cats'
+    >>> c.add_quantity('dogs') # Initialise counting of 'dogs'
+    
+    Then to record something:
+
+    >>> c.incr('cats') # Increments the count of 'cats' by 1
+    >>> c.incr('dogs',2) # Increments the count of 'dogs' by 2
+
+    To get the count for something, do:
+
+    >>> c.cats
+    
+    or
+    
+    >>> c['dogs']
+
+    Use the 'report' method to get a summary of everything
+    counted so far.
+
+    """
+    def __init__(self):
+        """Create a new Counter instance
+
+        """
+        bcf_utils.AttributeDictionary.__init__(self)
+        self.__quantities = bcf_utils.OrderedDictionary()
+        self.__total = 0
+
+    def add_quantity(self,name,description=None):
+        """Register a quantity to be counted
+
+        """
+        if name in self:
+            raise KeyError,"'%s' already exists" % name
+        self[name] = 0
+        if description is None:
+            description = name
+        self.__quantities[name] = description
+
+    def incr(self,name,count=1):
+        """Increment a counter
+
+        """
+        self[name] += count
+        self.__total += count
+
+    def report(self):
+        """Print a report
+
+        """
+        print "Summary:"
+        if len(self) > 0:
+            for name in self.__quantities:
+                print "\t%d\t%s" % (self[name], self.__quantities[name])
+        print "Total %d" % self.__total
 
 #######################################################################
 # Functions
@@ -272,23 +337,41 @@ if __name__ == "__main__":
                               "sequencing data and/or bioinformatic analyses.")
     p.add_option('--info',action='store_true',dest='info',
                  help='print information about DATA_DIR')
-    p.add_option('--find',action='store',dest='regex_pattern',default=None,
-                 help='find files that match REGEX_PATTERN')
-    p.add_option('--copy-to',action='store',dest='dest_dir',default=None,
-                 help='copy DATA_DIR into DEST_DIR using rsync')
-    p.add_option('--check-group',action='store',dest='group',default=None,
-                 help='check that files are owned by GROUP and have group '
-                 'read-write permissions')
-    p.add_option('--check-symlinks',action='store_true',dest='check_symlinks',
-                 help='check for broken and absolute symlinks')
-    p.add_option('--check-temporary',action='store_true',dest='check_temporary',
-                 help='check for hidden and temporary data')
-    p.add_option('--md5diff',action='store',dest='ref_dir',default=None,
-                 help='compare DATA_DIR against REF_DIR using MD5 sums')
-    p.add_option('--set-group',action='store',dest='new_group',default=None,
-                 help='set the group ownership to NEW_GROUP')
-    p.add_option('--list-users',action='store_true',dest='list_users',default=None,
-                 help='print a list of usernames associated with files')
+    # Copying and managing
+    group = optparse.OptionGroup(p,"Copying and managing",
+                                 "Options for copying and managing the data directory")
+    p.add_option_group(group)
+    group.add_option('--copy-to',action='store',dest='dest_dir',default=None,
+                     help='copy DATA_DIR into DEST_DIR using rsync')
+    group.add_option('--set-group',action='store',dest='new_group',default=None,
+                     help='set the group ownership to NEW_GROUP')
+    # Checking and verifying
+    group = optparse.OptionGroup(p,"Checking and verifying",
+                                 "Options for checking and verifying the data directory "
+                                 "contents")
+    p.add_option_group(group)
+    group.add_option('--verify',action='store',dest='ref_dir',default=None,
+                     help='verify DATA_DIR against REF_DIR: report MD5 sums for '
+                     'common files, link targets for common links, and any files '
+                     'or directories missing from DATA_DIR which are present in '
+                     'REF_DIR')
+    group.add_option('--check-group',action='store',dest='group',default=None,
+                     help='check that files are owned by GROUP and have group '
+                     'read-write permissions')
+    group.add_option('--check-symlinks',action='store_true',dest='check_symlinks',
+                     help='check for broken and absolute symlinks')
+    group.add_option('--check-temporary',action='store_true',dest='check_temporary',
+                     help='check for hidden and temporary data')
+    # Acquiring information
+    group = optparse.OptionGroup(p,"Acquiring information",
+                                 "Options for acquiring information about the data "
+                                 "directory and its contents")
+    p.add_option_group(group)
+    group.add_option('--list-users',action='store_true',dest='list_users',default=None,
+                     help='print a list of usernames associated with files')
+    group.add_option('--find',action='store',dest='regex_pattern',default=None,
+                     help='find files that match REGEX_PATTERN')
+    # Debugging
     p.add_option('--debug',action='store_true',dest='debug',
                  help='turn on debugging output')
     
@@ -320,6 +403,69 @@ if __name__ == "__main__":
         dest_dir = os.path.abspath(options.dest_dir)
         print "Making a copy of %s under %s" % (data_dir.dir,dest_dir)
         data_dir.copy(dest_dir)
+
+    # Compare with a reference directory
+    if options.ref_dir is not None:
+        ref_dir = DataDir(options.ref_dir)
+        print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
+        # Set up Counter
+        counter = Counter()
+        counter.add_quantity("ok","OK")
+        counter.add_quantity("md5_differ","MD5 sums differ")
+        counter.add_quantity("links_differ","Symlinks differ")
+        counter.add_quantity("types_differ","Copy types differ from reference")
+        counter.add_quantity("missing","Missing from copy")
+        counter.add_quantity("unreadable_ref","Unreadable reference")
+        # Walk the reference directory and check against copy
+        for f in ref_dir.walk():
+            f = bcf_utils.PathInfo(f).relpath(ref_dir.dir)
+            ref = bcf_utils.PathInfo(f,basedir=ref_dir.dir)
+            cpy = bcf_utils.PathInfo(f,basedir=data_dir.dir)
+            # Check copy exists
+            if not ref.is_readable:
+                print "UNREADABLE REFERENCE: %s" % f
+                counter.incr('unreadable_ref')
+            elif not cpy.exists:
+                print "MISSING: %s" % f
+                counter.incr('missing')
+            elif ref.is_file:
+                # Check copy is the same type
+                if not cpy.is_file:
+                    print "TYPE DIFFERS (NOT FILE): %s" % ref.relpath(ref_dir.dir)
+                    counter.incr('types_differ')
+                else:
+                    # Compare MD5sums
+                    if Md5sum.Md5Checker.md5cmp_files(ref.path,cpy.path) == \
+                       Md5sum.Md5Checker.MD5_OK:
+                        print "MD5 OK: %s" % ref.relpath(ref_dir.dir)
+                        counter.incr('ok')
+                    else:
+                        print "MD5 FAILED: %s" % ref.relpath(ref_dir.dir)
+                        counter.incr('md5_differ')
+            elif ref.is_link:
+                # Check copy is the same type
+                if not cpy.is_link:
+                    print "TYPE DIFFERS (NOT SYMLINK): %s" % ref.relpath(ref_dir.dir)
+                    counter.incr('types_differ')
+                else:
+                    # Compare targets
+                    if bcf_utils.Symlink(cpy.path).target == \
+                       bcf_utils.Symlink(ref.path).target:
+                        print "SYMLINK OK: %s" % ref.relpath(ref_dir.dir)
+                        counter.incr('ok')
+                    else:
+                        print "SYMLINK DIFFER: %s" % ref.relpath(ref_dir.dir)
+                        counter.incr('links_differ')
+            elif ref.is_dir:
+                # Check copy is the same type
+                if not cpy.is_dir:
+                    print "TYPE DIFFERS (NOT DIR): %s" % ref.relpath(ref_dir.dir)
+                    counter.incr('types_differ')
+                else:
+                    print "DIR OK: %s" % ref.relpath(ref_dir.dir)
+                    counter.incr('ok')
+        # Print report
+        counter.report()
 
     # Check group and permissions
     if options.group:
@@ -403,17 +549,6 @@ if __name__ == "__main__":
                                       bcf_utils.Symlink(link).target)
         else:
             print "No absolute links"
-
-    # Do MD5 checksum comparison with a reference directory
-    if options.ref_dir is not None:
-        ref_dir = DataDir(options.ref_dir)
-        print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
-        reporter = Md5sum.Md5CheckReporter(
-            Md5sum.Md5Checker.md5cmp_dirs(ref_dir.dir,data_dir.dir,
-                                          links=Md5sum.Md5Checker.IGNORE_LINKS),
-            verbose=True)
-        # Summarise
-        reporter.summary()
 
     # Set group
     if options.new_group is not None:
