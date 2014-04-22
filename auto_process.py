@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.50"
+__version__ = "0.0.51"
 
 #######################################################################
 # Imports
@@ -558,7 +558,7 @@ class AutoProcess:
         print "Ignore missing stats: %s" % ignore_missing_stats
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
-        runner.log_dir(self.log_dir)
+        runner.set_log_dir(self.log_dir)
         # Run bcl2fastq
         bcl2fastq = applications.Command('bclToFastq.py',
                                          '--nprocessors',nprocessors,
@@ -599,7 +599,7 @@ class AutoProcess:
         # Generate statistics for initial fastq files from bcl2fastq
         # Set up runner
         runner = auto_process_settings.runners.stats
-        runner.log_dir(self.log_dir)
+        runner.set_log_dir(self.log_dir)
         # Generate statistics
         fastq_statistics = applications.Command('fastq_statistics.py',
                                                 '--unaligned',self.params.unaligned_dir,
