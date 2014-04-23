@@ -318,20 +318,6 @@ def finger_user(name):
     real_name = finger.split('\n')[0].split(':')[-1].strip()
     return real_name
 
-def cmp_dirs(dir1,dir2):
-    for dirpath,dirnames,filenames in os.walk(dir1):
-        for d in dirnames:
-            d2 = os.path.join(dir2,
-                              os.path.relpath(os.path.join(dirpath,d),dir1))
-            if not os.path.isdir(d2):
-                return False
-        for f in filenames:
-            f2 = os.path.join(dir2,
-                              os.path.relpath(os.path.join(dirpath,f),dir1))
-            if not os.path.isfile(f2):
-                return False
-    return True
-
 #######################################################################
 # Tests
 #######################################################################
@@ -354,13 +340,30 @@ class TestDataDirCopy(unittest.TestCase):
         """DataDir.copy() correctly copies directory
 
         """
+        # Make a copy
         data_dir = DataDir(self.wd)
         data_dir.copy(self.dest)
+        # Compare contents one way
         target = os.path.join(self.dest,os.path.basename(self.wd))
-        print "%s" % self.wd
-        print "%s" % self.dest
-        self.assertTrue(cmp_dirs(data_dir.dir,target))
-        self.assertTrue(cmp_dirs(target,data_dir.dir))
+        for dirpath,dirnames,filenames in os.walk(self.wd):
+            for d in dirnames:
+                d2 = os.path.join(target,
+                                  os.path.relpath(os.path.join(dirpath,d),self.wd))
+                self.assertTrue(os.path.isdir(d2))
+            for f in filenames:
+                f2 = os.path.join(target,
+                                  os.path.relpath(os.path.join(dirpath,f),self.wd))
+                self.assertTrue(os.path.isfile(f2))
+        # Compare contents the other way
+        for dirpath,dirnames,filenames in os.walk(target):
+            for d in dirnames:
+                d2 = os.path.join(self.wd,
+                                  os.path.relpath(os.path.join(dirpath,d),target))
+                self.assertTrue(os.path.isdir(d2))
+            for f in filenames:
+                f2 = os.path.join(self.wd,
+                                  os.path.relpath(os.path.join(dirpath,f),target))
+                self.assertTrue(os.path.isfile(f2))
 
 class TestDataDirWalk(unittest.TestCase):
     """Tests for DataDir class 'walk' functionality
