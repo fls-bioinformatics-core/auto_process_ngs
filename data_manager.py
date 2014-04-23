@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.19"
+__version__ = "0.0.20"
 
 #######################################################################
 # Import modules that this module depends on
@@ -142,6 +142,73 @@ class DataDir:
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
+    def verify(self,dirn):
+        """Verify another data directory using this one as a reference
+
+        Returns
+          Counter object.
+
+        """
+        # Set up DataDir instance for target directory
+        data_dir = DataDir(dirn)
+        # Set up result counter
+        result = Counter()
+        result.add_quantity("ok","OK")
+        result.add_quantity("md5_failed","MD5 sum checks failed")
+        result.add_quantity("links_differ","Symlinks differ")
+        result.add_quantity("types_differ","Copy types differ from reference")
+        result.add_quantity("missing","Missing from copy")
+        result.add_quantity("unreadable_ref","Unreadable reference")
+        # Walk the reference directory and check against copy
+        for f in self.walk():
+            f = bcf_utils.PathInfo(f).relpath(self.dir)
+            ref = bcf_utils.PathInfo(f,basedir=self.dir)
+            cpy = bcf_utils.PathInfo(f,basedir=data_dir.dir)
+            # Check copy exists
+            if not ref.is_readable:
+                print "UNREADABLE REFERENCE: %s" % f
+                result.incr('unreadable_ref')
+            elif not cpy.exists:
+                print "MISSING: %s" % f
+                result.incr('missing')
+            elif ref.is_file:
+                # Check copy is the same type
+                if not cpy.is_file:
+                    print "TYPE DIFFERS (NOT FILE): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    # Compare MD5sums
+                    if Md5sum.Md5Checker.md5cmp_files(ref.path,cpy.path) == \
+                       Md5sum.Md5Checker.MD5_OK:
+                        print "MD5 OK: %s" % ref.relpath(self.dir)
+                        result.incr('ok')
+                    else:
+                        print "MD5 FAILED: %s" % ref.relpath(self.dir)
+                        result.incr('md5_failed')
+            elif ref.is_link:
+                # Check copy is the same type
+                if not cpy.is_link:
+                    print "TYPE DIFFERS (NOT SYMLINK): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    # Compare targets
+                    if bcf_utils.Symlink(cpy.path).target == \
+                       bcf_utils.Symlink(ref.path).target:
+                        print "SYMLINK OK: %s" % ref.relpath(self.dir)
+                        result.incr('ok')
+                    else:
+                        print "SYMLINK DIFFERS: %s" % ref.relpath(self.dir)
+                        result.incr('links_differ')
+            elif ref.is_dir:
+                # Check copy is the same type
+                if not cpy.is_dir:
+                    print "TYPE DIFFERS (NOT DIR): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    print "DIR OK: %s" % ref.relpath(self.dir)
+                    result.incr('ok')
+        # Finished
+        return result
 
 class Counter(bcf_utils.AttributeDictionary):
     """Generic class for counting things
@@ -198,6 +265,12 @@ class Counter(bcf_utils.AttributeDictionary):
         self[name] += count
         self.__total += count
 
+    def total(self):
+        """Return total counts
+
+        """
+        return self.__total
+
     def report(self):
         """Print a report
 
@@ -206,7 +279,7 @@ class Counter(bcf_utils.AttributeDictionary):
         if len(self) > 0:
             for name in self.__quantities:
                 print "\t%d\t%s" % (self[name], self.__quantities[name])
-        print "Total %d" % self.__total
+        print "Total %d" % self.total()
 
 #######################################################################
 # Functions
@@ -322,7 +395,308 @@ class TestDataDirWalk(unittest.TestCase):
             filelist.remove(f)
         self.assertEqual(len(filelist),0,"Items not returned: %s" %
                          ','.join(filelist))
-        
+
+class TestDataDirVerify(unittest.TestCase):
+    """Tests for the DataDir class 'verify' functionality
+    """
+    def setUp(self):
+        # Make a test and reference data directory structures
+        self.example_dir = ExampleDirLanguages()
+        self.reference = ExampleDirLanguages()
+        self.wd = self.example_dir.create_directory()
+        self.ref = self.reference.create_directory()
+    def tearDown(self):
+        # Remove the test data directories
+        self.example_dir.delete_directory()
+        self.reference.delete_directory()
+    def test_verify_exact_copy(self):
+        """DataDir.verify() confirms exact match for exact copy
+
+        """
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+    def test_verify_missing_file(self):
+        """DataDir.verify() confirms missing file in copy
+
+        """
+        # Remove a file from the copy
+        os.remove(self.example_dir.path("hello"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_verify_missing_empty_dir(self):
+        """DataDir.verify() confirms missing empty directory in copy
+
+        """
+        # Add an empty directory to the reference
+        self.reference.add_dir("empty")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_verify_missing_dir(self):
+        """DataDir.verify() confirms missing directory in copy
+
+        """
+        # Remove a directory (and its files) from the copy
+        os.remove(self.example_dir.path("countries/spain"))
+        os.remove(self.example_dir.path("countries/north_wales"))
+        os.remove(self.example_dir.path("countries/south_wales"))
+        os.remove(self.example_dir.path("countries/iceland"))
+        os.rmdir(self.example_dir.path("countries"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,5)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_verify_missing_symlink(self):
+        """DataDir.verify() confirms missing symlink in copy
+
+        """
+        # Remove a symlink from the copy
+        os.remove(self.example_dir.path("hi"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_verify_replace_file_with_directory(self):
+        """DataDir.verify() confirms file replaced with a directory
+
+        """
+        # Make a file in the reference and a directory in the copy
+        # with the same name
+        self.reference.add_file("bonjour","Hello!")
+        self.example_dir.add_dir("bonjour")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_replace_file_with_symlink(self):
+        """DataDir.verify() confirms file replaced with a symlink
+
+        """
+        # Make a file in the reference and a symlink in the copy
+        # with the same name
+        self.reference.add_file("bonjour","Hello!")
+        self.example_dir.add_link("bonjour","hello")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_replace_symlink_with_file(self):
+        """DataDir.verify() confirms symlink replaced with a file
+
+        """
+        # Make a symlink in the reference and a file in the copy
+        # with the same name
+        self.reference.add_link("bonjour","hello")
+        self.example_dir.add_file("bonjour","Hello!")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_replace_symlink_with_directory(self):
+        """DataDir.verify() confirms symlink replaced with a directory
+
+        """
+        # Make a symlink in the reference and a directory in the copy
+        # with the same name
+        self.reference.add_link("bonjour","hello")
+        self.example_dir.add_dir("bonjour")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_replace_directory_with_file(self):
+        """DataDir.verify() confirms directory replaced with a file
+
+        """
+        # Make a directory in the reference and a file in the copy
+        # with the same name
+        self.reference.add_dir("bonjour")
+        self.example_dir.add_file("bonjour","Hello!")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_replace_directory_with_symlink(self):
+        """DataDir.verify() confirms directory replaced with a symlink
+
+        """
+        # Make a directory in the reference and a symlink in the copy
+        # with the same name
+        self.reference.add_dir("bonjour")
+        self.example_dir.add_link("bonjour","hello")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_verify_md5sums_differ(self):
+        """DataDir.verify() confirms files with different MD5 sums
+
+        """
+        # Change content of file in copy
+        open(self.example_dir.path("icelandic/takk_fyrir"),'w').write("Thanking you")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,1)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.md5_failed+result.ok,result.total())
+    def test_verify_symlink_targets_differ(self):
+        """DataDir.verify() confirms symlinks with different targets
+
+        """
+        # Change link target in copy
+        os.remove(self.example_dir.path("hi"))
+        os.symlink(self.example_dir.path("goodbye"),
+                   self.example_dir.path("hi"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,1)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.links_differ+result.ok,result.total())
+    def test_verify_broken_symlinks_ok(self):
+        """DataDir.verify() confirms matching broken symlinks
+
+        """
+        # Make matching broken links in reference and copy
+        self.reference.add_link("broken.txt","missing.txt")
+        self.example_dir.add_link("broken.txt","missing.txt")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+    def test_verify_unreadable_reference(self):
+        """DataDir.verify() confirms unreadable reference file
+
+        """
+        # Make an unreadable file in the reference
+        os.chmod(self.reference.path("hello"),0000)
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        os.chmod(self.reference.path("hello"),0644)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,1)
+        self.assertEqual(result.unreadable_ref+result.ok,result.total())
+    def test_verify_unreadable_copy(self):
+        """DataDir.verify() confirms unreadable copy
+
+        """
+        # Make an unreadable file in the reference
+        os.chmod(self.example_dir.path("hello"),0000)
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        os.chmod(self.example_dir.path("hello"),0644)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,1)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.md5_failed+result.ok,result.total())
 
 #######################################################################
 # Main program
@@ -404,68 +778,13 @@ if __name__ == "__main__":
         print "Making a copy of %s under %s" % (data_dir.dir,dest_dir)
         data_dir.copy(dest_dir)
 
-    # Compare with a reference directory
+    # Verify against a reference directory
     if options.ref_dir is not None:
-        ref_dir = DataDir(options.ref_dir)
-        print "Comparing %s with reference data directory %s" % (data_dir.dir,ref_dir.dir)
-        # Set up Counter
-        counter = Counter()
-        counter.add_quantity("ok","OK")
-        counter.add_quantity("md5_differ","MD5 sums differ")
-        counter.add_quantity("links_differ","Symlinks differ")
-        counter.add_quantity("types_differ","Copy types differ from reference")
-        counter.add_quantity("missing","Missing from copy")
-        counter.add_quantity("unreadable_ref","Unreadable reference")
-        # Walk the reference directory and check against copy
-        for f in ref_dir.walk():
-            f = bcf_utils.PathInfo(f).relpath(ref_dir.dir)
-            ref = bcf_utils.PathInfo(f,basedir=ref_dir.dir)
-            cpy = bcf_utils.PathInfo(f,basedir=data_dir.dir)
-            # Check copy exists
-            if not ref.is_readable:
-                print "UNREADABLE REFERENCE: %s" % f
-                counter.incr('unreadable_ref')
-            elif not cpy.exists:
-                print "MISSING: %s" % f
-                counter.incr('missing')
-            elif ref.is_file:
-                # Check copy is the same type
-                if not cpy.is_file:
-                    print "TYPE DIFFERS (NOT FILE): %s" % ref.relpath(ref_dir.dir)
-                    counter.incr('types_differ')
-                else:
-                    # Compare MD5sums
-                    if Md5sum.Md5Checker.md5cmp_files(ref.path,cpy.path) == \
-                       Md5sum.Md5Checker.MD5_OK:
-                        print "MD5 OK: %s" % ref.relpath(ref_dir.dir)
-                        counter.incr('ok')
-                    else:
-                        print "MD5 FAILED: %s" % ref.relpath(ref_dir.dir)
-                        counter.incr('md5_differ')
-            elif ref.is_link:
-                # Check copy is the same type
-                if not cpy.is_link:
-                    print "TYPE DIFFERS (NOT SYMLINK): %s" % ref.relpath(ref_dir.dir)
-                    counter.incr('types_differ')
-                else:
-                    # Compare targets
-                    if bcf_utils.Symlink(cpy.path).target == \
-                       bcf_utils.Symlink(ref.path).target:
-                        print "SYMLINK OK: %s" % ref.relpath(ref_dir.dir)
-                        counter.incr('ok')
-                    else:
-                        print "SYMLINK DIFFER: %s" % ref.relpath(ref_dir.dir)
-                        counter.incr('links_differ')
-            elif ref.is_dir:
-                # Check copy is the same type
-                if not cpy.is_dir:
-                    print "TYPE DIFFERS (NOT DIR): %s" % ref.relpath(ref_dir.dir)
-                    counter.incr('types_differ')
-                else:
-                    print "DIR OK: %s" % ref.relpath(ref_dir.dir)
-                    counter.incr('ok')
+        print "Verifying %s against reference directory %s" % (data_dir.dir,
+                                                               options.ref_dir)
+        result = DataDir(options.ref_dir).verify(data_dir.dir)
         # Print report
-        counter.report()
+        result.report()
 
     # Check group and permissions
     if options.group:
