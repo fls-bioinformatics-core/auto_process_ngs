@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 #######################################################################
 # Import modules that this module depends on
@@ -114,6 +114,7 @@ class DataDir:
         logging.debug("Rsync exit status: %s" % status)
         if status:
             raise Exception, "rsync exit code %s (failure)" % status
+        return status
     def find_files(self,regex):
         """
         """
@@ -342,7 +343,9 @@ class TestDataDirCopy(unittest.TestCase):
         """
         # Make a copy
         data_dir = DataDir(self.wd)
-        data_dir.copy(self.dest)
+        status = data_dir.copy(self.dest)
+        # Check return status
+        self.assertEqual(status,0)
         # Compare contents one way
         target = os.path.join(self.dest,os.path.basename(self.wd))
         for dirpath,dirnames,filenames in os.walk(self.wd):
@@ -779,7 +782,8 @@ if __name__ == "__main__":
     if options.dest_dir is not None:
         dest_dir = os.path.abspath(options.dest_dir)
         print "Making a copy of %s under %s" % (data_dir.dir,dest_dir)
-        data_dir.copy(dest_dir)
+        status = data_dir.copy(dest_dir)
+        print "Copy completed with status %s" % status
 
     # Verify against a reference directory
     if options.ref_dir is not None:
@@ -788,11 +792,14 @@ if __name__ == "__main__":
         result = DataDir(options.ref_dir).verify(data_dir.dir)
         # Print report
         result.report()
+        status = 0 if result.total() == result.ok else 1
+        print "Verification completed with status %s" % status
 
     # Check group and permissions
     if options.group:
         print "Checking group ownership for '%s' in %s" % (data_dir.dir,
                                                            options.group)
+        status = 0
         group = options.group
         gid = bcf_utils.get_gid_from_group(group)
         if gid is None:
@@ -813,6 +820,7 @@ if __name__ == "__main__":
                 logging.debug("Not group read/writable:\t%s" %
                               f.relpath(data_dir.dir))
             if wrong_group or not group_read_write:
+                status = 1
                 group_name = f.group
                 owner = f.user
                 logging.debug("Owner is %s" % owner)
@@ -822,6 +830,7 @@ if __name__ == "__main__":
                 print "%s\t%s\t%s\t%s" % (f.relpath(data_dir.dir),
                                           owner,group_name,
                                           '' if group_read_write else 'No')
+        print "Group/permissions check completed with status %s" % status
 
     # Check for temporary and hidden files/directories
     if options.check_temporary:
