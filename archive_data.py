@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 #######################################################################
 # Import modules that this module depends on
@@ -55,11 +55,15 @@ class DataArchiver:
         # Set up scheduler
         self._sched = simple_scheduler.SimpleScheduler(runner=self._runner)
 
-    def add_data_dir(self,data_dir):
-        if data_dir not in self._data_dirs:
-            self._data_dirs.append(data_dir)
-        else:
-            sys.stderr.write("%s already set up to be archived" % data_dir)
+    def add_data_dir(self,dirn):
+        data_dir = bcf_utils.AttributeDictionary()
+        data_dir['name'] = os.path.basename(dirn)
+        data_dir['dirn'] = os.path.abspath(dirn)
+        data_dir['result'] = bcf_utils.AttributeDictionary(completed=1,
+                                                           copy_status=None,
+                                                           group_status=None,
+                                                           verify_status=None)
+        self._data_dirs.append(data_dir)
 
     def archive_dirs(self):
         # Check for data_manger
@@ -70,28 +74,35 @@ class DataArchiver:
         # Set up archive jobs
         for data_dir in self._data_dirs:
             # Schedule copy
-            archive_to = get_archive_dir(self._archive_dir,data_dir)
-            copy_name="copy.%s" % os.path.basename(data_dir)
-            print "Starting copy of %s to %s" % (data_dir,self._archive_dir)
-            job = self._sched.submit(['data_manager.py','--copy-to=%s' % archive_to,data_dir],
-                                     name=copy_name)
+            archive_to = get_archive_dir(self._archive_dir,data_dir.dirn)
+            print "Setting up archiving of  %s to %s" % (data_dir.dirn,self._archive_dir)
+            group = self._sched.group(data_dir.name,
+                                      callbacks=(self.archiving_complete,))
+            copy_name="copy.%s" % data_dir.name
+            job = group.add(['data_manager.py','--copy-to=%s' % archive_to,data_dir.dirn],
+                            name=copy_name)
             # Schedule group name reset
             if self._new_group is not None:
-                set_group_name="set_group.%s" % os.path.basename(data_dir)
-                job = self._sched.submit(['data_manager.py','--set-group=%s' % self._new_group,
-                                          os.path.join(archive_to,os.path.basename(data_dir))],
-                                         name=set_group_name,wait_for=(copy_name,))
+                set_group_name="set_group.%s" % data_dir.name
+                job = group.add(['data_manager.py','--set-group=%s' % self._new_group,
+                                 os.path.join(archive_to,data_dir.name)],
+                                name=set_group_name,wait_for=(copy_name,))
+                # Verify group name reset
+                check_group_name="check_group.%s" % data_dir.name
+                job = group.add(['data_manager.py','--check-group=%s' % self._new_group,
+                                 os.path.join(archive_to,data_dir.name)],
+                                name=check_group_name,wait_for=(set_group_name,))
 
             # Run verification
-            verify_name="verify.%s" % os.path.basename(data_dir)
-            job = self._sched.submit(['data_manager.py','--verify=%s' % data_dir,
-                                      os.path.join(archive_to,os.path.basename(data_dir))],
-                                     name=verify_name,
-                                     wait_for=(copy_name,),
-                                     callbacks=(self.verification_complete,))
+            verify_name="verify.%s" % data_dir.name
+            job = group.add(['data_manager.py','--verify=%s' % data_dir.dirn,
+                             os.path.join(archive_to,data_dir.name)],
+                            name=verify_name,
+                            wait_for=(copy_name,))
+            group.close()
             # Final completion
-            self._sched.callback("Finished",self.report_job_complete,
-                                 wait_for=(verify_name,))
+            ##self._sched.callback("Finished",self.report_job_complete,
+            ##                     wait_for=(verify_name,))
             # Wait for all jobs to complete
             self._sched.wait()
 
@@ -101,16 +112,66 @@ class DataArchiver:
         for job in jobs:
             print "\t%s" % job.job_name
 
-    def verification_complete(self,name,jobs,sched):
-        # Callback handler for verification
-        assert(len(jobs) == 1)
-        job = jobs[0]
-        print "Processing verification results from job %s" % job.job_name
-        fp = open(job.log,'rU')
-        for line in fp:
-            if line.startswith('\t'):
-                print line.strip()
-        fp.close()
+    def archiving_complete(self,name,groups,sched):
+        # Callback handler for completion of archiving operations
+        assert(len(groups) == 1)
+        group = groups[0]
+        # Locate the matching data dir
+        name = group.group_name
+        data_dir = None
+        for d in self._data_dirs:
+            if name == d.name:
+                data_dir = d
+        assert(data_dir is not None)
+        data_dir.result['completed'] = 0
+        # Check the operations
+        print "Checking results from archiving operations for '%s':" % data_dir.dirn
+        for job in group.jobs:
+            print "\t%s" % job.job_name
+            if job.job_name.startswith("copy."):
+                # Check copy operation
+                fp = open(job.log,'rU')
+                for line in fp:
+                    if line.startswith("Copy completed with status "):
+                        data_dir.result['copy_status'] = int(line.split()[-1])
+                        break
+                    ##print line.strip()
+                fp.close()
+            elif job.job_name.startswith("check_group."):
+                # Check group setting operation
+                fp = open(job.log,'rU')
+                for line in fp:
+                    if line.startswith("Group/permissions check completed with status "):
+                        data_dir.result['group_status'] = int(line.split()[-1])
+                        break
+                    ##print line.strip()
+                fp.close()
+            elif job.job_name.startswith("verify."):
+                # Check verification operation
+                fp = open(job.log,'rU')
+                for line in fp:
+                    if line.startswith("Verification completed with status "):
+                        data_dir.result['verify_status'] = int(line.split()[-1])
+                        break
+                    ##print line.strip()
+                fp.close()
+
+    def report(self,report_file=None):
+        # Report the results
+        if report_file is None:
+            fp = sys.stdout
+        else:
+            print "Writing report to %s" % report_file
+            fp = open(report_file,'w')
+        for data_dir in self._data_dirs:
+            fp.write("Data_dir: %s\n" % data_dir.name)
+            status = 0
+            for op_status in ('completed','copy_status','group_status','verify_status'):
+                if data_dir.result[op_status] is not None:
+                    fp.write("\t%s\t%s\n" % (op_status,
+                                             'FAILED' if data_dir.result[op_status] else 'ok'))
+                    if data_dir.result[op_status]: status = 1
+            fp.write("Archiving status\t%s\n" % ('FAILED' if status else 'ok'))
 
 #######################################################################
 # Functions
@@ -160,11 +221,13 @@ class TestDataArchiver(unittest.TestCase):
         self.example_dir = ExampleDirLanguages()
         self.data_dir = self.example_dir.create_directory()
         self.archive_dir = TestUtils.make_dir()
+        self.log_dir = TestUtils.make_dir()
 
     def tearDown(self):
         # Remove the test data directory (and copy)
         self.example_dir.delete_directory()
         TestUtils.remove_dir(self.archive_dir)
+        TestUtils.remove_dir(self.log_dir)
 
     def check_directory_contents(self,dir1,dir2):
         # Check that contents of dir1 are also in dir2
@@ -205,7 +268,7 @@ class TestDataArchiver(unittest.TestCase):
         dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
         self.assertFalse(os.path.exists(dest_dir))
         # Run the archiver
-        archiver = DataArchiver(self.archive_dir)
+        archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
         archiver.archive_dirs()
         # Check the copy
@@ -235,7 +298,7 @@ class TestDataArchiver(unittest.TestCase):
         dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
         self.assertFalse(os.path.exists(dest_dir))
         # Run the archiver
-        archiver = DataArchiver(self.archive_dir,new_group=new_group)
+        archiver = DataArchiver(self.archive_dir,new_group=new_group,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
         archiver.archive_dirs()
         # Check the copy
@@ -295,11 +358,13 @@ if __name__ == "__main__":
                  "to cwd)")
     p.add_option("--set-group",action='store',dest='new_group',default=None,
                  help="set group to NEW_GROUP on all copied files")
-    p.add_option("--use-grid-engine",action='store_true',dest='use_grid_engine',default=False,
-                 help="submit computationally-intensive jobs (e.g. MD5 checksumming) "
-                 "to Grid Engine")
+    #p.add_option("--use-grid-engine",action='store_true',dest='use_grid_engine',default=False,
+    #             help="submit computationally-intensive jobs (e.g. MD5 checksumming) "
+    #             "to Grid Engine")
     p.add_option("--no-checks",action='store_true',dest="no_checks",default=False,
                  help="only copy, don't run MD5 checksums or link checks")
+    p.add_option("--report",action='store',dest="report_file",default=None,
+                 help="write final report to REPORT_FILE (otherwise write to stdout)")
     p.add_option("--debug",action='store_true',dest='debug',
                  help="turn on debugging output (nb very verbose!)")
     options,args = p.parse_args()
@@ -315,11 +380,16 @@ if __name__ == "__main__":
     archive_dir = os.path.abspath(args[-1])
     log_dir = os.path.abspath(options.log_dir)
     new_group = options.new_group
+    if options.report_file is not None:
+        report_file = os.path.abspath(options.report_file)
+    else:
+        report_file = None
     print "Data dirs  : %s" % '\n\t'.join(data_dirs)
     print "Archive dir: %s" % archive_dir
     print "Log dir    : %s" % log_dir
     print "New group  : %s" % new_group
-    print "Use GE     : %s" % options.use_grid_engine
+    print "Report file: %s" % report_file
+    ##print "Use GE     : %s" % options.use_grid_engine
 
     if options.dry_run:
         # Just print what would be archived where
@@ -335,8 +405,9 @@ if __name__ == "__main__":
     ##    ci_runner = s.default_runner
 
     # Construct, populate and run archiver
-    archiver = DataArchiver(archive_dir,new_group=new_group)
+    archiver = DataArchiver(archive_dir,new_group=new_group,log_dir=log_dir)
     for data_dir in data_dirs:
         archiver.add_data_dir(data_dir)
     archiver.archive_dirs()
+    archiver.report(report_file=report_file)
     print "Archiving complete"
