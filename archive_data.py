@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.6'
+__version__ = '0.1.0'
 
 #######################################################################
 # Import modules that this module depends on
@@ -28,11 +28,89 @@ import platforms
 import applications
 import simple_scheduler
 import JobRunner
+import bcf_utils
 import logging
 import optparse
 import sys
 import os
 import time
+
+#######################################################################
+# Classes
+#######################################################################
+
+class DataArchiver:
+    # Class to handle archiving and verification
+
+    def __init__(self,archive_dir,new_group=None,log_dir=None):
+        # Top-level archive dir
+        self._archive_dir = archive_dir
+        # List of data directories
+        self._data_dirs = []
+        # Other options
+        self._new_group = new_group
+        self._log_dir = log_dir
+        # Set up runner(s)
+        self._runner = JobRunner.SimpleJobRunner(join_logs=True,log_dir=log_dir)
+        # Set up scheduler
+        self._sched = simple_scheduler.SimpleScheduler(runner=self._runner)
+
+    def add_data_dir(self,data_dir):
+        if data_dir not in self._data_dirs:
+            self._data_dirs.append(data_dir)
+        else:
+            sys.stderr.write("%s already set up to be archived" % data_dir)
+
+    def archive_dirs(self):
+        # Check for data_manger
+        if bcf_utils.find_program('data_manager.py') is None:
+            raise Exception,"data_manager.py not found"
+        # Start scheduler
+        self._sched.start()
+        # Set up archive jobs
+        for data_dir in self._data_dirs:
+            # Schedule copy
+            archive_to = get_archive_dir(self._archive_dir,data_dir)
+            copy_name="copy.%s" % os.path.basename(data_dir)
+            print "Starting copy of %s to %s" % (data_dir,self._archive_dir)
+            job = self._sched.submit(['data_manager.py','--copy-to=%s' % archive_to,data_dir],
+                                     name=copy_name)
+            # Schedule group name reset
+            if self._new_group is not None:
+                set_group_name="set_group.%s" % os.path.basename(data_dir)
+                job = self._sched.submit(['data_manager.py','--set-group=%s' % self._new_group,
+                                          os.path.join(archive_to,os.path.basename(data_dir))],
+                                         name=set_group_name,wait_for=(copy_name,))
+
+            # Run verification
+            verify_name="verify.%s" % os.path.basename(data_dir)
+            job = self._sched.submit(['data_manager.py','--verify=%s' % data_dir,
+                                      os.path.join(archive_to,os.path.basename(data_dir))],
+                                     name=verify_name,
+                                     wait_for=(copy_name,),
+                                     callbacks=(self.verification_complete,))
+            # Final completion
+            self._sched.callback("Finished",self.report_job_complete,
+                                 wait_for=(verify_name,))
+            # Wait for all jobs to complete
+            self._sched.wait()
+
+    def report_job_complete(self,name,jobs,sched):
+        # Generic report completion of scheduled job(s)
+        print "Job(s) completed:"
+        for job in jobs:
+            print "\t%s" % job.job_name
+
+    def verification_complete(self,name,jobs,sched):
+        # Callback handler for verification
+        assert(len(jobs) == 1)
+        job = jobs[0]
+        print "Processing verification results from job %s" % job.job_name
+        fp = open(job.log,'rU')
+        for line in fp:
+            if line.startswith('\t'):
+                print line.strip()
+        fp.close()
 
 #######################################################################
 # Functions
@@ -57,13 +135,6 @@ def extract_year_and_platform(dirname):
         year = None
     return (year,platform)
 
-def test_extract_year_and_platform():
-    assert(extract_year_and_platform('/no/year/or/platform/data')==(None,None))
-    assert(extract_year_and_platform('/year/2012/data')==('2012',None))
-    assert(extract_year_and_platform('/year/2012/solid4/data')==('2012','solid4'))
-    assert(extract_year_and_platform('/year/20121/solid4/data')==(None,'solid4'))
-    assert(extract_year_and_platform('/year/2012/nonesense/data')==(None,None))
-
 def get_archive_dir(archive_base,data_dirname):
     year,platform = extract_year_and_platform(data_dirname)
     archive_dir = archive_base
@@ -73,39 +144,62 @@ def get_archive_dir(archive_base,data_dirname):
         archive_dir = os.path.join(archive_dir,platform)
     return archive_dir
 
-def report_completion(name,jobs,sched):
-    # Generic report completion of scheduled job(s)
-    print "Job(s) completed:"
-    for job in jobs:
-        print "\t%s" % job.job_name
+#######################################################################
+# Tests
+#######################################################################
+import unittest
+from mock_data import TestUtils,ExampleDirLanguages
 
-def report_md5sums(name,jobs,sched):
-    # Report check of MD5sum differences
-    assert(len(jobs) == 1)
-    job = jobs[0]
-    print "Reporting MD5sum check results from job %s" % job.job_name
-    fp = open(job.log,'rU')
-    skip_first_line = True
-    for line in fp:
-        if skip_first_line:
-            skip_first_line = False
-            continue
-        elif line.strip('\n') == "Summary:":
-            break
-        elif not line.strip('\n').endswith('OK'):
-            print line.strip()
-            break
-    fp.close()
+class TestDataArchiver(unittest.TestCase):
+    """Tests for DataArchiver class
+    """
+    def setUp(self):
+        # Make a test data directory structure
+        self.example_dir = ExampleDirLanguages()
+        self.data_dir = self.example_dir.create_directory()
+        self.archive_dir = TestUtils.make_dir()
 
-def report_symlinks(name,jobs,sched):
-    # Report symlink checks
-    assert(len(jobs) == 1)
-    job = jobs[0]
-    print "Reporting symlink check results from %s" % job.job_name
-    fp = open(job.log,'rU')
-    for line in fp:
-        print line.strip()
-    fp.close()    
+    def tearDown(self):
+        # Remove the test data directory (and copy)
+        self.example_dir.delete_directory()
+        TestUtils.remove_dir(self.archive_dir)
+
+    def test_archive_data(self):
+        """DataArchiver copies and verifies data directory
+
+        """
+        # Initial checks
+        if bcf_utils.find_program('data_manager.py') is None:
+            raise unittest.SkipTest("'data_manager.py' not found, test cannot run")
+        dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
+        self.assertFalse(os.path.exists(dest_dir))
+        # Run the archiver
+        archiver = DataArchiver(self.archive_dir)
+        archiver.add_data_dir(self.data_dir)
+        archiver.archive_dirs()
+        # Check the copy
+        self.assertTrue(os.path.exists(dest_dir))
+        for dirpath,dirnames,filenames in os.walk(self.data_dir):
+            for d in dirnames:
+                d2 = os.path.join(dest_dir,
+                                  os.path.relpath(os.path.join(dirpath,d),self.data_dir))
+                self.assertTrue(os.path.isdir(d2))
+            for f in filenames:
+                f2 = os.path.join(dest_dir,
+                                  os.path.relpath(os.path.join(dirpath,f),self.data_dir))
+                self.assertTrue(os.path.isfile(f2))
+
+class TestExtractYearAndPlatformFunction(unittest.TestCase):
+    """Tests for test_extract_year_and_platform() function
+    """
+    def test_extract_year_and_platform(self):
+        """extract_year_and_platform extracts year and platform data correctly
+        """
+        self.assertEqual(extract_year_and_platform('/no/year/or/platform/data'),(None,None))
+        self.assertEqual(extract_year_and_platform('/year/2012/data'),('2012',None))
+        self.assertEqual(extract_year_and_platform('/year/2012/solid4/data'),('2012','solid4'))
+        self.assertEqual(extract_year_and_platform('/year/20121/solid4/data'),(None,'solid4'))
+        self.assertEqual(extract_year_and_platform('/year/2012/nonesense/data'),(None,None))
 
 #######################################################################
 # Main program
@@ -151,50 +245,22 @@ if __name__ == "__main__":
     print "New group  : %s" % new_group
     print "Use GE     : %s" % options.use_grid_engine
 
-    # Dry run: just display where data dirs would be copied to
     if options.dry_run:
+        # Just print what would be archived where
         for data_dir in data_dirs:
             print "%s -> %s" % (data_dir,get_archive_dir(archive_dir,data_dir))
         sys.exit()
 
-    # Start scheduler
-    s = simple_scheduler.SimpleScheduler(runner=JobRunner.SimpleJobRunner(log_dir=log_dir,
-                                                                join_logs=True))
-    s.start()
     # Make a job runner for computationally-intensive (CI) jobs
-    if options.use_grid_engine:
-        ci_runner = JobRunner.GEJobRunner(log_dir=log_dir,
-                                          ge_extra_args=['-j','y'])
-    else:
-        ci_runner = s.default_runner
-    # Do copying for each directory
+    ##if options.use_grid_engine:
+    ##    ci_runner = JobRunner.GEJobRunner(log_dir=log_dir,
+    ##                                      ge_extra_args=['-j','y'])
+    ##else:
+    ##    ci_runner = s.default_runner
+
+    # Construct, populate and run archiver
+    archiver = DataArchiver(archive_dir,new_group=new_group)
     for data_dir in data_dirs:
-        # Schedule rsync job
-        archive_to = get_archive_dir(archive_dir,data_dir)
-        copy_name="copy.%s" % os.path.basename(data_dir)
-        print "Starting copy of %s to %s" % (data_dir,archive_dir)
-        job = s.submit(['data_manager.py','--copy-to=%s' % archive_to,data_dir],
-                       name=copy_name)
-        # Schedule group name reset
-        if new_group is not None:
-            set_group_name="set_group.%s" % os.path.basename(data_dir)
-            job = s.submit(['data_manager.py','--set-group=%s' % new_group,
-                            os.path.join(archive_to,os.path.basename(data_dir))],
-                           name=set_group_name,wait_for=(copy_name,))
-
-        # Run checks
-        if not options.no_checks:
-            # Schedule MD5 check and symlink check
-            check_name="check.%s" % os.path.basename(data_dir)
-            job = s.submit(['data_manager.py','--verify=%s' % data_dir
-                            os.path.join(archive_to,os.path.basename(data_dir))],
-                           name=check_name,
-                           wait_for=(copy_name,),
-                           runner=ci_runner,
-                           callbacks=(report_completion,))
-            # Final completion
-            s.callback("Finished",report_completion,wait_for=(check_name,))
-
-    while not s.is_empty():
-        time.sleep(5)
-    print "Finished"
+        archiver.add_data_dir(data_dir)
+    archiver.archive_dirs()
+    print "Archiving complete"
