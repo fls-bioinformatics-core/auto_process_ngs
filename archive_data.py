@@ -148,6 +148,8 @@ def get_archive_dir(archive_base,data_dirname):
 # Tests
 #######################################################################
 import unittest
+import pwd
+import grp
 from mock_data import TestUtils,ExampleDirLanguages
 
 class TestDataArchiver(unittest.TestCase):
@@ -164,13 +166,42 @@ class TestDataArchiver(unittest.TestCase):
         self.example_dir.delete_directory()
         TestUtils.remove_dir(self.archive_dir)
 
-    def test_archive_data(self):
-        """DataArchiver copies and verifies data directory
+    def check_directory_contents(self,dir1,dir2):
+        # Check that contents of dir1 are also in dir2
+        # Checks that file and directory names match
+        for dirpath,dirnames,filenames in os.walk(dir1):
+            for d in dirnames:
+                d2 = os.path.join(dir2,os.path.relpath(os.path.join(dirpath,d),dir1))
+                self.assertTrue(os.path.isdir(d2))
+            for f in filenames:
+                f2 = os.path.join(dir2,os.path.relpath(os.path.join(dirpath,f),dir1))
+                self.assertTrue(os.path.isfile(f2))
+
+    def check_directory_group(self,dirn,group):
+        # Check that contents of dirn belong to specified group
+        gid = bcf_utils.get_gid_from_group(group)
+        ##print "Checking: group %s GID %s" % (group,gid)
+        for dirpath,dirnames,filenames in os.walk(dirn):
+            for d in dirnames:
+                d2 = os.path.join(dirpath,d)
+                if os.path.islink(d2):
+                    # Ignore links
+                    continue
+                ##print "%s/ %s" % (d2,bcf_utils.PathInfo(d2).gid)
+                self.assertEqual(bcf_utils.PathInfo(d2).gid,gid)
+            for f in filenames:
+                f2 = os.path.join(dirpath,f)
+                if os.path.islink(f2):
+                    # Ignore links
+                    continue
+                ##print "%s %s" % (f2,bcf_utils.PathInfo(f2).gid)
+                self.assertEqual(bcf_utils.PathInfo(f2).gid,gid)
+
+    def test_archive_single_data_dir(self):
+        """DataArchiver copies and verifies single data directory
 
         """
         # Initial checks
-        if bcf_utils.find_program('data_manager.py') is None:
-            raise unittest.SkipTest("'data_manager.py' not found, test cannot run")
         dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
         self.assertFalse(os.path.exists(dest_dir))
         # Run the archiver
@@ -179,27 +210,72 @@ class TestDataArchiver(unittest.TestCase):
         archiver.archive_dirs()
         # Check the copy
         self.assertTrue(os.path.exists(dest_dir))
-        for dirpath,dirnames,filenames in os.walk(self.data_dir):
-            for d in dirnames:
-                d2 = os.path.join(dest_dir,
-                                  os.path.relpath(os.path.join(dirpath,d),self.data_dir))
-                self.assertTrue(os.path.isdir(d2))
-            for f in filenames:
-                f2 = os.path.join(dest_dir,
-                                  os.path.relpath(os.path.join(dirpath,f),self.data_dir))
-                self.assertTrue(os.path.isfile(f2))
+        self.check_directory_contents(self.data_dir,dest_dir)
+
+    def test_archive_data_dir_set_group(self):
+        """DataArchiver sets group when copying data directory
+
+        """
+        # Get a list of groups
+        current_user = pwd.getpwuid(os.getuid()).pw_name
+        groups = [g.gr_gid for g in grp.getgrall() if current_user in g.gr_mem]
+        if len(groups) < 2:
+            raise unittest.SkipTest("user '%s' must be in at least two groups" % current_user)
+        # Get a second group
+        gid = bcf_utils.PathInfo(self.archive_dir).gid
+        new_gid = None
+        for group in groups:
+            if group != gid:
+                new_gid = group
+                break
+        self.assertNotEqual(new_gid,gid)
+        new_group = bcf_utils.get_group_from_gid(new_gid)
+        ##print "Group %s GID %s" % (new_group,new_gid)
+        # Initial checks
+        dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
+        self.assertFalse(os.path.exists(dest_dir))
+        # Run the archiver
+        archiver = DataArchiver(self.archive_dir,new_group=new_group)
+        archiver.add_data_dir(self.data_dir)
+        archiver.archive_dirs()
+        # Check the copy
+        self.assertTrue(os.path.exists(dest_dir))
+        self.check_directory_contents(self.data_dir,dest_dir)
+        self.check_directory_group(dest_dir,new_group)
 
 class TestExtractYearAndPlatformFunction(unittest.TestCase):
-    """Tests for test_extract_year_and_platform() function
+    """Tests for extract_year_and_platform() function
     """
     def test_extract_year_and_platform(self):
         """extract_year_and_platform extracts year and platform data correctly
         """
-        self.assertEqual(extract_year_and_platform('/no/year/or/platform/data'),(None,None))
-        self.assertEqual(extract_year_and_platform('/year/2012/data'),('2012',None))
-        self.assertEqual(extract_year_and_platform('/year/2012/solid4/data'),('2012','solid4'))
-        self.assertEqual(extract_year_and_platform('/year/20121/solid4/data'),(None,'solid4'))
-        self.assertEqual(extract_year_and_platform('/year/2012/nonesense/data'),(None,None))
+        self.assertEqual(extract_year_and_platform('/no/year/or/platform/data'),
+                         (None,None))
+        self.assertEqual(extract_year_and_platform('/year/2012/data'),
+                         ('2012',None))
+        self.assertEqual(extract_year_and_platform('/year/2012/solid4/data'),
+                         ('2012','solid4'))
+        self.assertEqual(extract_year_and_platform('/year/20121/solid4/data'),
+                         (None,'solid4'))
+        self.assertEqual(extract_year_and_platform('/year/2012/nonesense/data'),
+                         (None,None))
+
+class TestGetArchiveDirFunction(unittest.TestCase):
+    """Tests for get_archive_dir() function
+    """
+    def test_get_archive_dir(self):
+        """get_archive_dir returns correct archive directory
+        """
+        self.assertEqual(get_archive_dir('/mnt/archive','/no/year/or/platform/data_dir'),
+                         '/mnt/archive')
+        self.assertEqual(get_archive_dir('/mnt/archive','/year/2012/data_dir'),
+                         '/mnt/archive/2012')
+        self.assertEqual(get_archive_dir('/mnt/archive','/year/2012/solid4/data'),
+                         '/mnt/archive/2012/solid4')
+        self.assertEqual(get_archive_dir('/mnt/archive','/year/20121/solid4/data'),
+                         '/mnt/archive/solid4')
+        self.assertEqual(get_archive_dir('/mnt/archive','/year/2012/nonesense/data'),
+                         '/mnt/archive')
 
 #######################################################################
 # Main program
