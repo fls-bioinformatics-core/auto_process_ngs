@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 #######################################################################
 # Import modules that this module depends on
@@ -184,26 +184,16 @@ if __name__ == "__main__":
 
         # Run checks
         if not options.no_checks:
-            # Schedule MD5 check
-            md5check_name="md5check.%s" % os.path.basename(data_dir)
-            job = s.submit(['md5checker.py','-d',
-                            data_dir,
+            # Schedule MD5 check and symlink check
+            check_name="check.%s" % os.path.basename(data_dir)
+            job = s.submit(['data_manager.py','--verify=%s' % data_dir
                             os.path.join(archive_to,os.path.basename(data_dir))],
-                           name=md5check_name,
+                           name=check_name,
                            wait_for=(copy_name,),
                            runner=ci_runner,
-                           callbacks=(report_completion,report_md5sums))
-            # Check symlinks
-            symlink_check_name="symlinkcheck.%s" % os.path.basename(data_dir)
-            job = s.submit(['data_manager.py','--check-symlinks',
-                            os.path.join(archive_to,os.path.basename(data_dir))],
-                           name=symlink_check_name,
-                           wait_for=(copy_name,),
-                           runner=ci_runner,
-                           callbacks=(report_completion,report_symlinks))
+                           callbacks=(report_completion,))
             # Final completion
-            s.callback("Finished",report_completion,wait_for=(md5check_name,
-                                                              symlink_check_name))
+            s.callback("Finished",report_completion,wait_for=(check_name,))
 
     while not s.is_empty():
         time.sleep(5)
