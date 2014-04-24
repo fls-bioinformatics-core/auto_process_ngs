@@ -712,8 +712,6 @@ if __name__ == "__main__":
                               description="Sequence data and analysis curation utility. "
                               "DATA_DIR should be a top-level directory holding "
                               "sequencing data and/or bioinformatic analyses.")
-    p.add_option('--info',action='store_true',dest='info',
-                 help='print information about DATA_DIR')
     # Copying and managing
     group = optparse.OptionGroup(p,"Copying and managing",
                                  "Options for copying and managing the data directory")
@@ -744,6 +742,8 @@ if __name__ == "__main__":
                                  "Options for acquiring information about the data "
                                  "directory and its contents")
     p.add_option_group(group)
+    group.add_option('--info',action='store_true',dest='info',
+                 help='print general information about DATA_DIR')
     group.add_option('--list-users',action='store_true',dest='list_users',default=None,
                      help='print a list of usernames associated with files')
     group.add_option('--find',action='store',dest='regex_pattern',default=None,
