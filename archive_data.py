@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 #######################################################################
 # Import modules that this module depends on
@@ -103,8 +103,8 @@ class DataArchiver:
             # Final completion
             ##self._sched.callback("Finished",self.report_job_complete,
             ##                     wait_for=(verify_name,))
-            # Wait for all jobs to complete
-            self._sched.wait()
+        # Wait for all jobs to complete
+        self._sched.wait()
 
     def report_job_complete(self,name,jobs,sched):
         # Generic report completion of scheduled job(s)
