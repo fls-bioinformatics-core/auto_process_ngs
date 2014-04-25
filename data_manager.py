@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.21"
+__version__ = "0.0.22"
 
 #######################################################################
 # Import modules that this module depends on
@@ -106,11 +106,17 @@ class DataDir:
             so no files are copied.
 
         """
-        rsync = ['rsync','-rplotDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
+        rsync = ['rsync','-vrplotDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
         if dry_run:
             rsync.insert(1,'--dry-run')
         logging.debug("Rsync command: %s" % rsync)
-        status = subprocess.call(rsync)
+        try:
+            # Use 'check_call' as we want to see output from rsync
+            status = subprocess.check_call(rsync)
+        except subprocess.CalledProcessError,ex:
+            # Non-zero exit status
+            print "%s" % ex
+            status = ex.returncode
         logging.debug("Rsync exit status: %s" % status)
         if status:
             raise Exception, "rsync exit code %s (failure)" % status
