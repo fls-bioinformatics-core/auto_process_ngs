@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.22"
+__version__ = "0.0.23"
 
 #######################################################################
 # Import modules that this module depends on
@@ -80,7 +80,7 @@ class DataDir:
                     yield os.path.join(dirpath,d)
             for f in filenames:
                 yield os.path.join(dirpath,f)
-    def copy(self,target,dry_run=False):
+    def copy(self,target,dry_run=False,verbose=False):
         """Create a copy of dir using rsync
 
         Creates a copy of the data directory under directory 'target',
@@ -104,22 +104,32 @@ class DataDir:
           target : target directory to make the copy under
           dry_run: optional, if True then run rsync with --dry-run option
             so no files are copied.
+          verbose: optional, if True then run rsync with -v option
 
         """
-        rsync = ['rsync','-vrplotDE','--chmod=u+rwX,g+rwX,o-w',self.dir,target]
+        rsync_options = '-rplotDE'
+        if verbose:
+            rsync_options += 'v'
+            stdout = None
+        else:
+            # Assign stdout to /dev/null so that even error messages
+            # will be suppressed
+            # This is useful for nosetests, which uses cIOString to
+            # capture stdout and so can break when combined with output
+            # stream reassignment in subprocess
+            stdout = open('/dev/null','w')
+        rsync = ['rsync',rsync_options,'--chmod=u+rwX,g+rwX,o-w',self.dir,target]
         if dry_run:
             rsync.insert(1,'--dry-run')
         logging.debug("Rsync command: %s" % rsync)
         try:
             # Use 'check_call' as we want to see output from rsync
-            status = subprocess.check_call(rsync)
+            status = subprocess.check_call(rsync,stdout=stdout,stderr=stdout)
         except subprocess.CalledProcessError,ex:
             # Non-zero exit status
             print "%s" % ex
             status = ex.returncode
         logging.debug("Rsync exit status: %s" % status)
-        if status:
-            raise Exception, "rsync exit code %s (failure)" % status
         return status
     def find_files(self,regex):
         """
@@ -340,6 +350,8 @@ class TestDataDirCopy(unittest.TestCase):
         self.wd = self.example_dir.create_directory()
         self.dest = TestUtils.make_dir()
     def tearDown(self):
+        # Make sure file is readable
+        os.chmod(self.example_dir.path("hello"),0644)
         # Remove the test data directory (and copy)
         self.example_dir.delete_directory()
         TestUtils.remove_dir(self.dest)
@@ -373,6 +385,17 @@ class TestDataDirCopy(unittest.TestCase):
                 f2 = os.path.join(self.wd,
                                   os.path.relpath(os.path.join(dirpath,f),target))
                 self.assertTrue(os.path.isfile(f2))
+    def test_copy_unreadable_file(self):
+        """DataDir.copy() reports failure for unreadable source file
+
+        """
+        # Make an unreadable file in the reference
+        os.chmod(self.example_dir.path("hello"),0000)
+        # Make a copy
+        data_dir = DataDir(self.wd)
+        status = data_dir.copy(self.dest)
+        # Check return status
+        self.assertEqual(status,23)
 
 class TestDataDirWalk(unittest.TestCase):
     """Tests for DataDir class 'walk' functionality
@@ -788,7 +811,7 @@ if __name__ == "__main__":
     if options.dest_dir is not None:
         dest_dir = os.path.abspath(options.dest_dir)
         print "Making a copy of %s under %s" % (data_dir.dir,dest_dir)
-        status = data_dir.copy(dest_dir)
+        status = data_dir.copy(dest_dir,verbose=True)
         print "Copy completed with status %s" % status
 
     # Verify against a reference directory
