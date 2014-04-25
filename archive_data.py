@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 #######################################################################
 # Import modules that this module depends on
@@ -156,6 +156,15 @@ class DataArchiver:
                     ##print line.strip()
                 fp.close()
 
+    def result(self,data_dir):
+        # Fetch the results for the specified data dir
+        result = None
+        for d in self._data_dirs:
+            if d.dirn == data_dir or d.name == data_dir:
+                return d.result
+        # Didn't find the data dir
+        raise KeyError,"Couldn't find '%s'" % data_dir
+
     def report(self,report_file=None):
         # Report the results
         if report_file is None:
@@ -274,6 +283,11 @@ class TestDataArchiver(unittest.TestCase):
         # Check the copy
         self.assertTrue(os.path.exists(dest_dir))
         self.check_directory_contents(self.data_dir,dest_dir)
+        # Check the status of each operation
+        self.assertEqual(archiver.result(self.data_dir).completed,0)
+        self.assertEqual(archiver.result(self.data_dir).copy_status,0)
+        self.assertEqual(archiver.result(self.data_dir).group_status,None)
+        self.assertEqual(archiver.result(self.data_dir).verify_status,0)
 
     def test_archive_data_dir_set_group(self):
         """DataArchiver sets group when copying data directory
@@ -305,6 +319,33 @@ class TestDataArchiver(unittest.TestCase):
         self.assertTrue(os.path.exists(dest_dir))
         self.check_directory_contents(self.data_dir,dest_dir)
         self.check_directory_group(dest_dir,new_group)
+        # Check the status of each operation
+        self.assertEqual(archiver.result(self.data_dir).completed,0)
+        self.assertEqual(archiver.result(self.data_dir).copy_status,0)
+        self.assertEqual(archiver.result(self.data_dir).group_status,0)
+        self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+
+    def test_archive_single_data_dir_with_unreadable_file(self):
+        """DataArchiver reports failure when copying directory with unreadable file
+
+        """
+        # Remove read permission from a file in source dir
+        os.chmod(self.example_dir.path('hello'),0244)
+        # Initial checks
+        dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
+        self.assertFalse(os.path.exists(dest_dir))
+        # Run the archiver
+        archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
+        archiver.add_data_dir(self.data_dir)
+        archiver.archive_dirs()
+        # Check the copy
+        self.assertTrue(os.path.exists(dest_dir))
+        ##self.check_directory_contents(self.data_dir,dest_dir)
+        # Check the status of each operation
+        self.assertEqual(archiver.result(self.data_dir).completed,0)
+        self.assertEqual(archiver.result(self.data_dir).copy_status,23)
+        self.assertEqual(archiver.result(self.data_dir).group_status,None)
+        self.assertEqual(archiver.result(self.data_dir).verify_status,1)
 
 class TestExtractYearAndPlatformFunction(unittest.TestCase):
     """Tests for extract_year_and_platform() function
