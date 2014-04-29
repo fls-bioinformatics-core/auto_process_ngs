@@ -18,14 +18,13 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 #######################################################################
 # Import modules that this module depends on
 #######################################################################
 
 import platforms
-import applications
 import simple_scheduler
 import JobRunner
 import bcf_utils
@@ -53,7 +52,8 @@ class DataArchiver:
         # Set up runner(s)
         self._runner = JobRunner.SimpleJobRunner(join_logs=True,log_dir=log_dir)
         # Set up scheduler
-        self._sched = simple_scheduler.SimpleScheduler(runner=self._runner)
+        self._sched = simple_scheduler.SimpleScheduler(runner=self._runner,
+                                                       max_concurrent=4)
 
     def add_data_dir(self,dirn):
         data_dir = bcf_utils.AttributeDictionary()
