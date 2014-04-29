@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 #######################################################################
 # Import modules that this module depends on
@@ -72,15 +72,22 @@ class DataArchiver:
         # Start scheduler
         self._sched.start()
         # Set up archive jobs
+        previous_copy = None
         for data_dir in self._data_dirs:
             # Schedule copy
             archive_to = get_archive_dir(self._archive_dir,data_dir.dirn)
             print "Setting up archiving of  %s to %s" % (data_dir.dirn,self._archive_dir)
             group = self._sched.group(data_dir.name,
                                       callbacks=(self.archiving_complete,))
+            # Set up copy operation
             copy_name="copy.%s" % data_dir.name
+            wait_for = []
+            if previous_copy is not None:
+                # Copy jobs should run sequentially
+                wait_for.append(previous_copy)
+                previous_copy = copy_name
             job = group.add(['data_manager.py','--copy-to=%s' % archive_to,data_dir.dirn],
-                            name=copy_name)
+                            name=copy_name,wait_for=wait_for)
             # Schedule group name reset
             if self._new_group is not None:
                 set_group_name="set_group.%s" % data_dir.name
@@ -231,10 +238,17 @@ class TestDataArchiver(unittest.TestCase):
         self.data_dir = self.example_dir.create_directory()
         self.archive_dir = TestUtils.make_dir()
         self.log_dir = TestUtils.make_dir()
+        # Placeholders for additional data structures
+        # These should be set in the tests where multiple
+        # directories are required
+        self.example_dir2 = None
+        self.data_dir2 = None
 
     def tearDown(self):
         # Remove the test data directory (and copy)
         self.example_dir.delete_directory()
+        if self.example_dir2 is not None:
+            self.example_dir2.delete_directory()
         TestUtils.remove_dir(self.archive_dir)
         TestUtils.remove_dir(self.log_dir)
 
@@ -288,6 +302,38 @@ class TestDataArchiver(unittest.TestCase):
         self.assertEqual(archiver.result(self.data_dir).copy_status,0)
         self.assertEqual(archiver.result(self.data_dir).group_status,None)
         self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+
+    def test_archive_multiple_data_dirs(self):
+        """DataArchiver copies and verifies multiple data directories
+
+        """
+        # Make additional data dir
+        self.example_dir2 = ExampleDirLanguages()
+        self.data_dir2 = self.example_dir2.create_directory()
+        # Initial checks
+        dest_dir = os.path.join(self.archive_dir,os.path.basename(self.data_dir))
+        self.assertFalse(os.path.exists(dest_dir))
+        dest_dir2 = os.path.join(self.archive_dir,os.path.basename(self.data_dir2))
+        self.assertFalse(os.path.exists(dest_dir2))
+        # Run the archiver
+        archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
+        archiver.add_data_dir(self.data_dir)
+        archiver.add_data_dir(self.data_dir2)
+        archiver.archive_dirs()
+        # Check the copies
+        self.assertTrue(os.path.exists(dest_dir))
+        self.check_directory_contents(self.data_dir,dest_dir)
+        self.assertTrue(os.path.exists(dest_dir2))
+        self.check_directory_contents(self.data_dir,dest_dir2)
+        # Check the status of each operation
+        self.assertEqual(archiver.result(self.data_dir).completed,0)
+        self.assertEqual(archiver.result(self.data_dir).copy_status,0)
+        self.assertEqual(archiver.result(self.data_dir).group_status,None)
+        self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+        self.assertEqual(archiver.result(self.data_dir2).completed,0)
+        self.assertEqual(archiver.result(self.data_dir2).copy_status,0)
+        self.assertEqual(archiver.result(self.data_dir2).group_status,None)
+        self.assertEqual(archiver.result(self.data_dir2).verify_status,0)
 
     def test_archive_data_dir_set_group(self):
         """DataArchiver sets group when copying data directory
