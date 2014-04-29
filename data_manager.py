@@ -430,6 +430,21 @@ class TestDataDirWalk(unittest.TestCase):
             filelist.remove(f)
         self.assertEqual(len(filelist),0,"Items not returned: %s" %
                          ','.join(filelist))
+    def test_walk_includes_hidden_files_and_directories(self):
+        """DataDir.walk() finds 'hidden' files and directories
+
+        """
+        self.example_dir.add_file(".hidden_file")
+        self.example_dir.add_dir(".hidden_dir")
+        self.example_dir.add_file(".hidden_dir/test")
+        filelist = self.example_dir.filelist(include_dirs=True)
+        filelist.append(self.wd)
+        data_dir = DataDir(self.wd)
+        for f in data_dir.walk():
+            self.assertTrue(f in filelist,"%s not expected" % f)
+            filelist.remove(f)
+        self.assertEqual(len(filelist),0,"Items not returned: %s" %
+                         ','.join(filelist))
 
 class TestDataDirVerify(unittest.TestCase):
     """Tests for the DataDir class 'verify' functionality
@@ -732,6 +747,26 @@ class TestDataDirVerify(unittest.TestCase):
         self.assertEqual(result.missing,0)
         self.assertEqual(result.unreadable_ref,0)
         self.assertEqual(result.md5_failed+result.ok,result.total())
+    def test_verify_hidden_files_directories_and_symlinks(self):
+        """DataDir.verify() confirms 'hidden' files, directories and links
+
+        """
+        # Make hidden file, directory and symlink
+        self.reference.add_dir(".hidden")
+        self.reference.add_file(".hidden/file")
+        self.reference.add_file(".hiding")
+        self.reference.add_link(".hiding2","hello")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.verify(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.md5_failed,0)
+        self.assertEqual(result.links_differ,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,4)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.ok+result.missing,result.total())
 
 #######################################################################
 # Main program
