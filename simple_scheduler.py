@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.13"
+__version__ = "0.0.14"
 
 #######################################################################
 # Import modules that this module depends on
@@ -194,14 +194,6 @@ class SimpleScheduler(threading.Thread):
                 matches.append(self.__jobs[name])
         matches.sort(lambda x,y: cmp(x.name,y.name))
         return matches
-
-    def get_job(self,name):
-        """Look up and return SchedulerJob instance from name
-
-        DEPRECATED use lookup instead.
-
-        """
-        return self.lookup(name)
 
     def wait(self):
         """Wait until the scheduler is empty
@@ -429,7 +421,7 @@ class SimpleScheduler(threading.Thread):
                 for name in callback.waiting_for:
                     if name in self.__finished_names:
                         logging.debug("- '%s' has finished" % name)
-                        callback_jobs.append(self.get_job(name))
+                        callback_jobs.append(self.lookup(name))
                     else:
                         # Waiting for at least one job
                         logging.debug("- still waiting for '%s'" % name)
