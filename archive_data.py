@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 
 #######################################################################
 # Import modules that this module depends on
@@ -85,7 +85,7 @@ class DataArchiver:
             if previous_copy is not None:
                 # Copy jobs should run sequentially
                 wait_for.append(previous_copy)
-                previous_copy = copy_name
+            previous_copy = copy_name
             job = group.add(['data_manager.py','--copy-to=%s' % archive_to,data_dir.dirn],
                             name=copy_name,wait_for=wait_for)
             # Schedule group name reset
