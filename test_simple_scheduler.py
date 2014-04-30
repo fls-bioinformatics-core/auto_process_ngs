@@ -489,6 +489,66 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertTrue(sched.is_empty())
         sched.stop()
 
+    def test_simple_scheduler_lookup(self):
+        """Lookup groups and jobs by name
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        group = sched.group('grp1')
+        job_1 = group.add(['sleep','10'],name='sleep_10')
+        group.close()
+        job_2 = sched.submit(['sleep','20'],name='sleep_20')
+        job_3 = sched.submit(['sleep','30'],name='sleep_30')
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Try lookups
+        self.assertEqual(sched.lookup('grp1'),group)
+        self.assertEqual(sched.lookup('sleep_10'),job_1)
+        self.assertEqual(sched.lookup('sleep_20'),job_2)
+        self.assertEqual(sched.lookup('sleep_30'),job_3)
+        self.assertEqual(sched.lookup('sleep_40'),None)
+        # Finish jobs, wait for scheduler to catch up
+        job_1.terminate()
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        sched.stop()
+
+    def test_simple_scheduler_find(self):
+        """Find groups and jobs by simple name matching
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        group = sched.group('grp1')
+        job_1 = group.add(['sleep','10'],name='sleep_10')
+        group.close()
+        job_2 = sched.submit(['sleep','20'],name='sleep_20')
+        job_3 = sched.submit(['sleep','30'],name='sleep_30')
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Try lookups
+        self.assertEqual(sched.find('grp1'),[group,])
+        self.assertEqual(sched.find('sleep_10'),[job_1,])
+        self.assertEqual(sched.find('sleep_20'),[job_2,])
+        self.assertEqual(sched.find('sleep_30'),[job_3,])
+        self.assertEqual(sched.find('sleep_.*'),[job_1,job_2,job_3])
+        self.assertEqual(sched.find('.*'),[group,job_1,job_2,job_3])
+        self.assertEqual(sched.find('sleep_40'),[])
+        # Finish jobs, wait for scheduler to catch up
+        job_1.terminate()
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        sched.stop()
+
 class TestSchedulerJob(unittest.TestCase):
     """Unit tests for SchedulerJob class
 

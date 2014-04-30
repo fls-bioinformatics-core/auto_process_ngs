@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.12"
+__version__ = "0.0.13"
 
 #######################################################################
 # Import modules that this module depends on
@@ -29,6 +29,7 @@ import JobRunner
 from Pipeline import Job
 import time
 import os
+import re
 import threading
 import Queue
 import logging
@@ -164,8 +165,10 @@ class SimpleScheduler(threading.Thread):
         """
         return not (self.n_waiting or self.n_running or not self.__submitted.empty())
 
-    def get_job(self,name):
-        """Look up and return SchedulerJob instance from name
+    def lookup(self,name):
+        """Look up and return SchedulerJob or SchedulerGroup instance
+
+        Returns None if no matching instance was found.
 
         """
         if name in self.__jobs:
@@ -173,6 +176,32 @@ class SimpleScheduler(threading.Thread):
         if name in self.__groups:
             return self.__groups[name]
         return None
+
+    def find(self,pattern):
+        """Lookup groups and jobs from regex pattern matching
+
+        Returns a list of jobs with names that match the supplied
+        pattern (or an empty list if no matches were found).
+
+        """
+        matches = []
+        regex = re.compile(pattern)
+        for name in self.__groups:
+            if regex.match(name):
+                matches.append(self.__groups[name])
+        for name in self.__jobs:
+            if regex.match(name):
+                matches.append(self.__jobs[name])
+        matches.sort(lambda x,y: cmp(x.name,y.name))
+        return matches
+
+    def get_job(self,name):
+        """Look up and return SchedulerJob instance from name
+
+        DEPRECATED use lookup instead.
+
+        """
+        return self.lookup(name)
 
     def wait(self):
         """Wait until the scheduler is empty
@@ -240,6 +269,7 @@ class SimpleScheduler(threading.Thread):
                            name=name,working_dir=wd,log_dir=log_dir,
                            wait_for=wait_for)
         self.__submitted.put(job)
+        self.__jobs[job.job_name] = job
         # Deal with callbacks
         for function in callbacks:
             self.callback("callback.%s" % job.job_name,
@@ -415,7 +445,6 @@ class SimpleScheduler(threading.Thread):
             while not self.__submitted.empty():
                 job = self.__submitted.get()
                 self.__scheduled.append(job)
-                self.__jobs[job.job_name] = job
                 logging.debug("Added job #%d (%s): \"%s\"" % (job.job_number,job.name,job))
             remaining_jobs = []
             for job in self.__scheduled:
@@ -494,6 +523,10 @@ class SchedulerGroup:
         self.__scheduler = parent_scheduler
         self.__closed = False
         self.__jobs = []
+
+    @property
+    def name(self):
+        return self.group_name
 
     @property
     def closed(self):
@@ -614,6 +647,10 @@ class SchedulerJob(Job):
         else:
             working_dir = os.path.abspath(working_dir)
         Job.__init__(self,runner,name,working_dir,args[0],args[1:])
+
+    @property 
+    def name(self):
+        return self.job_name
 
     @property
     def is_running(self):
