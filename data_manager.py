@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.23"
+__version__ = "0.0.24"
 
 #######################################################################
 # Import modules that this module depends on
@@ -223,6 +223,65 @@ class DataDir:
                     result.incr('types_differ')
                 else:
                     print "DIR OK: %s" % ref.relpath(self.dir)
+                    result.incr('ok')
+        # Finished
+        return result
+    def diff(self,dirn):
+        """Check whether files & directories are present in another directory
+ 
+        Uses this directory as a reference and checks whether files,
+        directories and links are also present in the copy.
+
+        Use 'verify' method for a more rigorous verification which checks MD5
+        sums etc.
+
+        Returns
+          Counter object.
+
+        """
+        # Set up DataDir instance for target directory
+        data_dir = DataDir(dirn)
+        # Set up result counter
+        result = Counter()
+        result.add_quantity("ok","OK")
+        result.add_quantity("missing","Missing from copy")
+        result.add_quantity("types_differ","Copy types differ from reference")
+        result.add_quantity("unreadable_ref","Unreadable reference")
+        # Walk the reference directory and check against copy
+        for f in self.walk():
+            f = bcf_utils.PathInfo(f).relpath(self.dir)
+            ref = bcf_utils.PathInfo(f,basedir=self.dir)
+            cpy = bcf_utils.PathInfo(f,basedir=data_dir.dir)
+            # Check copy exists
+            if not ref.is_readable:
+                print "UNREADABLE REFERENCE: %s" % f
+                result.incr('unreadable_ref')
+            elif not cpy.exists:
+                print "MISSING: %s" % f
+                result.incr('missing')
+            elif ref.is_file:
+                # Check copy is the same type
+                if not cpy.is_file:
+                    print "TYPE DIFFERS (NOT FILE): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    print "OK: %s" % ref.relpath(self.dir)
+                    result.incr('ok')
+            elif ref.is_link:
+                # Check copy is the same type
+                if not cpy.is_link:
+                    print "TYPE DIFFERS (NOT SYMLINK): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    print "OK: %s" % ref.relpath(self.dir)
+                    result.incr('ok')
+            elif ref.is_dir:
+                # Check copy is the same type
+                if not cpy.is_dir:
+                    print "TYPE DIFFERS (NOT DIR): %s" % ref.relpath(self.dir)
+                    result.incr('types_differ')
+                else:
+                    print "OK: %s" % ref.relpath(self.dir)
                     result.incr('ok')
         # Finished
         return result
@@ -768,6 +827,197 @@ class TestDataDirVerify(unittest.TestCase):
         self.assertEqual(result.unreadable_ref,0)
         self.assertEqual(result.ok+result.missing,result.total())
 
+class TestDataDirDiff(unittest.TestCase):
+    """Tests for the DataDir class 'diff' functionality
+    """
+    def setUp(self):
+        # Make a test and reference data directory structures
+        self.example_dir = ExampleDirLanguages()
+        self.reference = ExampleDirLanguages()
+        self.wd = self.example_dir.create_directory()
+        self.ref = self.reference.create_directory()
+    def tearDown(self):
+        # Remove the test data directories
+        self.example_dir.delete_directory()
+        self.reference.delete_directory()
+    def test_diff_exact_copy(self):
+        """DataDir.diff() confirms exact match for exact copy
+
+        """
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertEqual(result.ok,result.total())
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.unreadable_ref,0)
+    def test_diff_missing_file(self):
+        """DataDir.diff() confirms missing file in copy
+
+        """
+        # Remove a file from the copy
+        os.remove(self.example_dir.path("hello"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_diff_missing_empty_dir(self):
+        """DataDir.diff() confirms missing empty directory in copy
+
+        """
+        # Add an empty directory to the reference
+        self.reference.add_dir("empty")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_diff_missing_dir(self):
+        """DataDir.diff() confirms missing directory in copy
+
+        """
+        # Remove a directory (and its files) from the copy
+        os.remove(self.example_dir.path("countries/spain"))
+        os.remove(self.example_dir.path("countries/north_wales"))
+        os.remove(self.example_dir.path("countries/south_wales"))
+        os.remove(self.example_dir.path("countries/iceland"))
+        os.rmdir(self.example_dir.path("countries"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,5)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_diff_missing_symlink(self):
+        """DataDir.diff() confirms missing symlink in copy
+
+        """
+        # Remove a symlink from the copy
+        os.remove(self.example_dir.path("hi"))
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,0)
+        self.assertEqual(result.missing,1)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.missing+result.ok,result.total())
+    def test_diff_replace_file_with_directory(self):
+        """DataDir.diff() confirms file replaced with a directory
+
+        """
+        # Make a file in the reference and a directory in the copy
+        # with the same name
+        self.reference.add_file("bonjour","Hello!")
+        self.example_dir.add_dir("bonjour")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_diff_replace_file_with_symlink(self):
+        """DataDir.diff() confirms file replaced with a symlink
+
+        """
+        # Make a file in the reference and a symlink in the copy
+        # with the same name
+        self.reference.add_file("bonjour","Hello!")
+        self.example_dir.add_link("bonjour","hello")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_diff_replace_symlink_with_file(self):
+        """DataDir.diff() confirms symlink replaced with a file
+
+        """
+        # Make a symlink in the reference and a file in the copy
+        # with the same name
+        self.reference.add_link("bonjour","hello")
+        self.example_dir.add_file("bonjour","Hello!")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_diff_replace_symlink_with_directory(self):
+        """DataDir.diff() confirms symlink replaced with a directory
+
+        """
+        # Make a symlink in the reference and a directory in the copy
+        # with the same name
+        self.reference.add_link("bonjour","hello")
+        self.example_dir.add_dir("bonjour")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_diff_replace_directory_with_file(self):
+        """DataDir.diff() confirms directory replaced with a file
+
+        """
+        # Make a directory in the reference and a file in the copy
+        # with the same name
+        self.reference.add_dir("bonjour")
+        self.example_dir.add_file("bonjour","Hello!")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+    def test_diff_replace_directory_with_symlink(self):
+        """DataDir.diff() confirms directory replaced with a symlink
+
+        """
+        # Make a directory in the reference and a symlink in the copy
+        # with the same name
+        self.reference.add_dir("bonjour")
+        self.example_dir.add_link("bonjour","hello")
+        # Do the verification
+        ref_dir = DataDir(self.ref)
+        result = ref_dir.diff(self.wd)
+        self.assertTrue(result.total() > 0)
+        self.assertNotEqual(result.ok,result.total())
+        self.assertEqual(result.types_differ,1)
+        self.assertEqual(result.missing,0)
+        self.assertEqual(result.unreadable_ref,0)
+        self.assertEqual(result.types_differ+result.ok,result.total())
+
 #######################################################################
 # Main program
 #######################################################################
@@ -797,6 +1047,11 @@ if __name__ == "__main__":
                      'common files, link targets for common links, and any files '
                      'or directories missing from DATA_DIR which are present in '
                      'REF_DIR')
+    group.add_option('--diff',action='store',dest='diff_dir',default=None,
+                     help='check whether DATA_DIR contains files, directories and '
+                     'symlinks in DIFF_DIR. Only lists missing items, not whether '
+                     'common items are the same - use --verify for more rigorous '
+                     'checking')
     group.add_option('--check-group',action='store',dest='group',default=None,
                      help='check that files are owned by GROUP and have group '
                      'read-write permissions')
@@ -848,6 +1103,17 @@ if __name__ == "__main__":
         print "Making a copy of %s under %s" % (data_dir.dir,dest_dir)
         status = data_dir.copy(dest_dir,verbose=True)
         print "Copy completed with status %s" % status
+
+    # Diff against a reference directory
+    if options.diff_dir is not None:
+        print "Diffing %s against reference directory %s" % (data_dir.dir,
+                                                             options.diff_dir)
+        result = DataDir(options.diff_dir).diff(data_dir.dir)
+        # Print report
+        result.report()
+        status = 0 if result.total() == result.ok else 1
+        print "Diff completed with status %s" % status
+        
 
     # Verify against a reference directory
     if options.ref_dir is not None:
