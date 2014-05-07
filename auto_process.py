@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.52"
+__version__ = "0.0.53"
 
 #######################################################################
 # Imports
@@ -53,7 +53,6 @@ import FASTQFile
 import JobRunner
 import Pipeline
 import bcf_utils
-import analyse_illumina_run
 import qcreporter
 import bclToFastq
 import applications
@@ -583,8 +582,8 @@ class AutoProcess:
         print "bcl2fastq completed"
         # Verify outputs
         illumina_data = self.load_illumina_data()
-        if not analyse_illumina_run.verify_run_against_sample_sheet(illumina_data,
-                                                                    sample_sheet):
+        if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
+                                                            sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             raise Exception, "Failed to verify bcl to fastq outputs against sample sheet"
         # Remove primary data
@@ -641,7 +640,7 @@ class AutoProcess:
             logging.debug("Failed to get information from %s: %s" % (bcl_to_fastq_dir,ex))
             return False
         # Do check
-        return analyse_illumina_run.verify_run_against_sample_sheet(illumina_data,
+        return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                                     self.params.sample_sheet)
 
     def setup_analysis_dirs(self):
@@ -1112,7 +1111,7 @@ class AutoProcess:
                 illumina_data = self.load_illumina_data()
                 print "Summary of data in 'unaligned' dir:"
                 for project in illumina_data.projects:
-                    print "- %s" % analyse_illumina_run.describe_project(project)
+                    print "- %s" % IlluminaData.describe_project(project)
             else:
                 print "No information on source fastq data (no unaligned dir found)"
             print "Analysis projects:"
