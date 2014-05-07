@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.53"
+__version__ = "0.0.54"
 
 #######################################################################
 # Imports
@@ -53,8 +53,7 @@ import FASTQFile
 import JobRunner
 import Pipeline
 import bcf_utils
-import qcreporter
-import bclToFastq
+import htmlpagewriter
 import applications
 import auto_process_utils
 import auto_process_settings
@@ -933,7 +932,7 @@ class AutoProcess:
                 raise Exception, "Exception making remote directory for QC reports: %s" % ex
         # Start building an index page
         title = "QC reports for %s" % os.path.basename(self.analysis_dir)
-        index_page = qcreporter.HTMLPageWriter(title)
+        index_page = htmlpagewriter.HTMLPageWriter(title)
         # Add CSS rules
         index_page.addCSSRule("h1 { background-color: #42AEC2;\n"
                               "     color: white;\n"
