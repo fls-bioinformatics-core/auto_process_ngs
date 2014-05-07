@@ -58,6 +58,7 @@ import applications
 import auto_process_utils
 import auto_process_settings
 import simple_scheduler
+import bclToFastq
 
 #######################################################################
 # Classes
