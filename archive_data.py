@@ -221,11 +221,16 @@ class DataArchiver:
         for data_dir in self._data_dirs:
             fp.write("Data_dir: %s\n" % data_dir.name)
             status = 0
+            n_ops = 0
             for op_status in ('completed','copy_status','group_status','verify_status'):
                 if data_dir.result[op_status] is not None:
+                    n_ops += 1
                     fp.write("\t%s\t%s\n" % (op_status,
                                              'FAILED' if data_dir.result[op_status] else 'ok'))
                     if data_dir.result[op_status]: status = 1
+            if n_ops < 1:
+                # No operations completed?
+                status = 1
             fp.write("Archiving status\t%s\n" % ('FAILED' if status else 'ok'))
 
 #######################################################################
