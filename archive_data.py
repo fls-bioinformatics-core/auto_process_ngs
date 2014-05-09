@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 #######################################################################
 # Import modules that this module depends on
@@ -113,7 +113,7 @@ class DataArchiver:
     def schedule_group_reset(self,data_dir):
         print "Setting up group name reset on copy of %s in %s" % (data_dir.dirn,
                                                                    self._archive_dir)
-        archive_to =_archive_dir(self._archive_dir,data_dir.dirn)
+        archive_to = get_archive_dir(self._archive_dir,data_dir.dirn)
         # Fetch the group to contain this operation
         group = self._sched.lookup(data_dir.name)
         # Schedule group name reset
