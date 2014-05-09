@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 #######################################################################
 # Import modules that this module depends on
@@ -83,6 +83,8 @@ class DataArchiver:
             group.close()
         # Wait for all jobs to complete
         self._sched.wait()
+        # Return overall status
+        return self.status
 
     def check_dirs(self):
         # Check for data_manger
@@ -97,6 +99,8 @@ class DataArchiver:
             group.close()
         # Wait for all jobs to complete
         self._sched.wait()
+        # Return overall status
+        return self.status
 
     def schedule_copy(self,data_dir):
         print "Setting up archiving of  %s to %s" % (data_dir.dirn,self._archive_dir)
@@ -211,6 +215,41 @@ class DataArchiver:
         # Didn't find the data dir
         raise KeyError,"Couldn't find '%s'" % data_dir
 
+    def status_for(self,data_dir,fp=None):
+        # Return the status for a specified data directory
+        # Optionally also print a report
+        if fp is not None:
+            fp.write("Data_dir: %s\n" % data_dir.name)
+        status = 0
+        n_ops = 0
+        # Check status of each operation
+        for op_status in ('completed','copy_status','group_status','verify_status'):
+            if data_dir.result[op_status] is not None:
+                n_ops += 1
+                if data_dir.result[op_status]:
+                    status = 1
+                if fp is not None:
+                    fp.write("\t%s\t%s\n" % (op_status,
+                                             'FAILED' if data_dir.result[op_status] else 'ok'))
+        if n_ops < 1:
+            # No operations completed?
+            status = 1
+        if fp is not None:
+            fp.write("Archiving status\t%s\n" % ('FAILED' if status else 'ok'))
+        # Return status
+        return status
+
+    @property
+    def status(self):
+        # Report the status
+        if not self._sched.is_empty():
+            print "Archiver is still running"
+            return -1
+        for data_dir in self._data_dirs:
+            if self.status_for(data_dir) != 0:
+                return 1
+        return 0
+
     def report(self,report_file=None):
         # Report the results
         if report_file is None:
@@ -219,19 +258,7 @@ class DataArchiver:
             print "Writing report to %s" % report_file
             fp = open(report_file,'w')
         for data_dir in self._data_dirs:
-            fp.write("Data_dir: %s\n" % data_dir.name)
-            status = 0
-            n_ops = 0
-            for op_status in ('completed','copy_status','group_status','verify_status'):
-                if data_dir.result[op_status] is not None:
-                    n_ops += 1
-                    fp.write("\t%s\t%s\n" % (op_status,
-                                             'FAILED' if data_dir.result[op_status] else 'ok'))
-                    if data_dir.result[op_status]: status = 1
-            if n_ops < 1:
-                # No operations completed?
-                status = 1
-            fp.write("Archiving status\t%s\n" % ('FAILED' if status else 'ok'))
+            self.status_for(data_dir,fp) != 0
 
 #######################################################################
 # Functions
@@ -337,7 +364,7 @@ class TestDataArchiver(unittest.TestCase):
         # Run the archiver
         archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
-        archiver.archive_dirs()
+        status = archiver.archive_dirs()
         # Check the copy
         self.assertTrue(os.path.exists(dest_dir))
         self.check_directory_contents(self.data_dir,dest_dir)
@@ -346,6 +373,9 @@ class TestDataArchiver(unittest.TestCase):
         self.assertEqual(archiver.result(self.data_dir).copy_status,0)
         self.assertEqual(archiver.result(self.data_dir).group_status,None)
         self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+        # Check the overall status
+        self.assertEqual(status,0)
+        self.assertEqual(archiver.status,0)
 
     def test_archive_multiple_data_dirs(self):
         """DataArchiver copies and verifies multiple data directories
@@ -363,7 +393,7 @@ class TestDataArchiver(unittest.TestCase):
         archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
         archiver.add_data_dir(self.data_dir2)
-        archiver.archive_dirs()
+        status = archiver.archive_dirs()
         # Check the copies
         self.assertTrue(os.path.exists(dest_dir))
         self.check_directory_contents(self.data_dir,dest_dir)
@@ -379,6 +409,9 @@ class TestDataArchiver(unittest.TestCase):
         self.assertEqual(archiver.result(self.data_dir2).copy_status,0)
         self.assertEqual(archiver.result(self.data_dir2).group_status,None)
         self.assertEqual(archiver.result(self.data_dir2).verify_status,0)
+        # Check the overall status
+        self.assertEqual(status,0)
+        self.assertEqual(archiver.status,0)
 
     def test_archive_data_dir_set_group(self):
         """DataArchiver sets group when copying data directory
@@ -405,7 +438,7 @@ class TestDataArchiver(unittest.TestCase):
         # Run the archiver
         archiver = DataArchiver(self.archive_dir,new_group=new_group,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
-        archiver.archive_dirs()
+        status = archiver.archive_dirs()
         # Check the copy
         self.assertTrue(os.path.exists(dest_dir))
         self.check_directory_contents(self.data_dir,dest_dir)
@@ -415,6 +448,9 @@ class TestDataArchiver(unittest.TestCase):
         self.assertEqual(archiver.result(self.data_dir).copy_status,0)
         self.assertEqual(archiver.result(self.data_dir).group_status,0)
         self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+        # Check the overall status
+        self.assertEqual(status,0)
+        self.assertEqual(archiver.status,0)
 
     def test_archive_single_data_dir_with_unreadable_file(self):
         """DataArchiver reports failure when copying directory with unreadable file
@@ -428,7 +464,7 @@ class TestDataArchiver(unittest.TestCase):
         # Run the archiver
         archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
-        archiver.archive_dirs()
+        status = archiver.archive_dirs()
         # Check the copy
         self.assertTrue(os.path.exists(dest_dir))
         ##self.check_directory_contents(self.data_dir,dest_dir)
@@ -437,6 +473,9 @@ class TestDataArchiver(unittest.TestCase):
         self.assertEqual(archiver.result(self.data_dir).copy_status,23)
         self.assertEqual(archiver.result(self.data_dir).group_status,None)
         self.assertEqual(archiver.result(self.data_dir).verify_status,1)
+        # Check the overall status
+        self.assertEqual(status,1)
+        self.assertEqual(archiver.status,1)
 
     def test_check_single_data_dir(self):
         """DataArchiver verifies single data directory (no copy)
@@ -451,12 +490,15 @@ class TestDataArchiver(unittest.TestCase):
         # Run the archiver checks
         archiver = DataArchiver(self.archive_dir,log_dir=self.log_dir)
         archiver.add_data_dir(self.data_dir)
-        archiver.check_dirs()
+        status = archiver.check_dirs()
         # Check the status of each operation
         self.assertEqual(archiver.result(self.data_dir).completed,0)
         self.assertEqual(archiver.result(self.data_dir).copy_status,None)
         self.assertEqual(archiver.result(self.data_dir).group_status,None)
         self.assertEqual(archiver.result(self.data_dir).verify_status,0)
+        # Check the overall status
+        self.assertEqual(status,0)
+        self.assertEqual(archiver.status,0)
 
 class TestExtractYearAndPlatformFunction(unittest.TestCase):
     """Tests for extract_year_and_platform() function
@@ -555,8 +597,9 @@ if __name__ == "__main__":
     for data_dir in data_dirs:
         archiver.add_data_dir(data_dir)
     if not options.only_checks:
-        archiver.archive_dirs()
+        status = archiver.archive_dirs()
     else:
-        archiver.check_dirs()
+        status = archiver.check_dirs()
     archiver.report(report_file=report_file)
-    print "Archiving complete"
+    print "Archiving complete%s" % (" (FAILED)" if status != 0 else "")
+    sys.exit(status)
