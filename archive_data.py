@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 
 #######################################################################
 # Import modules that this module depends on
@@ -51,8 +51,16 @@ class DataArchiver:
         self._log_dir = log_dir
         # Set up runner(s)
         self._runner = JobRunner.SimpleJobRunner(join_logs=True,log_dir=log_dir)
+        # Set up a custom reporter for the scheduler
+        reporter = simple_scheduler.SchedulerReporter(
+            job_start="%(time_stamp)s: started operation '%(job_name)s'",
+            job_end="%(time_stamp)s: finished operation '%(job_name)s'",
+            group_added="*** Setting up operations for %(group_name)s ***",
+            group_end="*** Completed operations for %(group_name)s ***"
+        )
         # Set up and start scheduler
         self._sched = simple_scheduler.SimpleScheduler(runner=self._runner,
+                                                       reporter=reporter,
                                                        max_concurrent=4)
         self._sched.start()
 
@@ -103,7 +111,7 @@ class DataArchiver:
         return self.status
 
     def schedule_copy(self,data_dir):
-        print "Setting up archiving of  %s to %s" % (data_dir.dirn,self._archive_dir)
+        print "Setting up copying of %s to %s" % (data_dir.dirn,self._archive_dir)
         archive_to = get_archive_dir(self._archive_dir,data_dir.dirn)
         # Fetch the group to contain this operation
         group = self._sched.lookup(data_dir.name)
@@ -172,16 +180,16 @@ class DataArchiver:
         assert(data_dir is not None)
         data_dir.result['completed'] = 0
         # Check the operations
-        print "Checking results from archiving operations for '%s':" % data_dir.dirn
+        logging.debug("Checking results from archiving operations for '%s':" % data_dir.dirn)
         for job in group.jobs:
-            print "\t%s" % job.job_name
+            logging.debug("\t%s" % job.job_name)
             if job.job_name.startswith("copy."):
                 # Check copy operation
                 fp = open(job.log,'rU')
                 for line in fp:
                     if line.startswith("Copy completed with status "):
                         data_dir.result['copy_status'] = int(line.split()[-1])
-                        print "\tCopy status:\t%s" % data_dir.result.copy_status
+                        logging.debug("\tCopy status:\t%s" % data_dir.result.copy_status)
                         break
                     ##print line.strip()
                 fp.close()
@@ -191,7 +199,7 @@ class DataArchiver:
                 for line in fp:
                     if line.startswith("Group/permissions check completed with status "):
                         data_dir.result['group_status'] = int(line.split()[-1])
-                        print "\tGroup check:\t%s" % data_dir.result.group_status
+                        logging.debug("\tGroup check:\t%s" % data_dir.result.group_status)
                         break
                     ##print line.strip()
                 fp.close()
@@ -201,7 +209,7 @@ class DataArchiver:
                 for line in fp:
                     if line.startswith("Verification completed with status "):
                         data_dir.result['verify_status'] = int(line.split()[-1])
-                        print "\tVerify status:\t%s" % data_dir.result.verify_status
+                        logging.debug("\tVerify status:\t%s" % data_dir.result.verify_status)
                         break
                     ##print line.strip()
                 fp.close()
@@ -219,11 +227,11 @@ class DataArchiver:
         # Return the status for a specified data directory
         # Optionally also print a report
         if fp is not None:
-            fp.write("Data_dir: %s\n" % data_dir.name)
+            fp.write("*** Status for %s ***\n" % data_dir.name)
         status = 0
         n_ops = 0
         # Check status of each operation
-        for op_status in ('completed','copy_status','group_status','verify_status'):
+        for op_status in ('copy_status','group_status','verify_status','completed'):
             if data_dir.result[op_status] is not None:
                 n_ops += 1
                 if data_dir.result[op_status]:
@@ -234,8 +242,9 @@ class DataArchiver:
         if n_ops < 1:
             # No operations completed?
             status = 1
+            fp.write("\tNo operations were completed\n")
         if fp is not None:
-            fp.write("Archiving status\t%s\n" % ('FAILED' if status else 'ok'))
+            fp.write("\tArchiving status\t%s\n" % ('FAILED' if status else 'OK'))
         # Return status
         return status
 
@@ -243,7 +252,7 @@ class DataArchiver:
     def status(self):
         # Report the status
         if not self._sched.is_empty():
-            print "Archiver is still running"
+            logging.warning("Archiver is still running")
             return -1
         for data_dir in self._data_dirs:
             if self.status_for(data_dir) != 0:
@@ -577,11 +586,14 @@ if __name__ == "__main__":
         report_file = os.path.abspath(options.report_file)
     else:
         report_file = None
+    print "Settings"
+    print "-"*80
     print "Data dirs  : %s" % '\n\t'.join(data_dirs)
     print "Archive dir: %s" % archive_dir
     print "Log dir    : %s" % log_dir
     print "New group  : %s" % new_group
     print "Report file: %s" % report_file
+    print "-"*80
 
     if options.no_checks and options.only_checks:
         p.error("--no-checks and --only-checks cannot be specified togther")
@@ -601,5 +613,5 @@ if __name__ == "__main__":
     else:
         status = archiver.check_dirs()
     archiver.report(report_file=report_file)
-    print "Archiving complete%s" % (" (FAILED)" if status != 0 else "")
+    print "Archiving complete (%s)" % ("FAILED" if status != 0 else "OK")
     sys.exit(status)
