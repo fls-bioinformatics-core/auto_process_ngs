@@ -19,7 +19,7 @@ programs
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.14"
+__version__ = "0.0.15"
 
 #######################################################################
 # Import modules that this module depends on
@@ -29,6 +29,7 @@ import JobRunner
 from Pipeline import Job
 import time
 import os
+import sys
 import re
 import threading
 import Queue
@@ -62,12 +63,17 @@ class SimpleScheduler(threading.Thread):
     
     """
 
-    def __init__(self,runner=JobRunner.SimpleJobRunner(),max_concurrent=None,
+    def __init__(self,
+                 runner=JobRunner.SimpleJobRunner(),
+                 reporter=None,
+                 max_concurrent=None,
                  poll_interval=5):
         """Create a new SimpleScheduler instance
 
         Arguments:
           runner: optional, default job runner to use
+          reporter: optional, custom SchedulerReporter instance to use
+            for messaging when jobs, groups etc are started and finished
           max_concurrent: optional, maximum number of concurrent
             processes the scheduler will run (default: no limit)
           poll_interval: optional, number of seconds to wait in
@@ -104,6 +110,10 @@ class SimpleScheduler(threading.Thread):
         self.__callbacks = []
         # Flag controlling whether scheduler is active
         self.__active = False
+        # Default reporter
+        if reporter is None:
+            reporter = default_scheduler_reporter()
+        self.__reporter = reporter
 
     def stop(self):
         """Stop the scheduler
@@ -266,13 +276,7 @@ class SimpleScheduler(threading.Thread):
         for function in callbacks:
             self.callback("callback.%s" % job.job_name,
                           function,wait_for=(job.job_name,))
-        if wait_for:
-            report_wait_for = " (waiting for %s)" % ', '.join(wait_for)
-        else:
-            report_wait_for = ""
-        print "Job scheduled: #%d: \"%s\"%s" % (job.job_number,
-                                                job.job_name,
-                                                report_wait_for)
+        self.__reporter.job_scheduled(job)
         logging.debug("%s" % job)
         return job
 
@@ -310,8 +314,7 @@ class SimpleScheduler(threading.Thread):
             self.callback("callback.%s" % new_group.group_name,
                           function,
                           wait_for=(new_group.group_name,))
-        print "Group has been added: #%d: \"%s\"" % (new_group.group_id,
-                                                     new_group.group_name)
+        self.__reporter.group_added(new_group)
         return new_group
 
     def callback(self,name,callback,wait_for):
@@ -376,10 +379,7 @@ class SimpleScheduler(threading.Thread):
                                                                             job))
                     updated_running_list.append(job)
                 else:
-                    print "Job completed: #%s (%s) \"%s\" (%s)" % (job.job_number,
-                                                                   job.job_id,
-                                                                   job.job_name,
-                                                                   date_and_time(job.end_time))
+                    self.__reporter.job_end(job)
                     logging.debug("Job #%s (id %s) completed \"%s\"" % (job.job_number,
                                                                         job.job_id,
                                                                         job))
@@ -398,9 +398,7 @@ class SimpleScheduler(threading.Thread):
                                                                            group.group_id))
                         updated_groups.append(group_name)
                     else:
-                        print "Group completed: #%s \"%s\" (%s)" % (group.group_id,
-                                                                    group.group_name,
-                                                                    date_and_time())
+                        self.__reporter.group_end(group)
                         logging.debug("Group #%s (id %s) completed" % (group.group_name,
                                                                        group.group_id))
                         self.__finished_names.append(group_name)
@@ -454,10 +452,7 @@ class SimpleScheduler(threading.Thread):
                     try:
                         job.start()
                         self.__running.append(job)
-                        print "Job started: #%d (%s): \"%s\" (%s)" % (job.job_number,
-                                                                     job.job_id,
-                                                                     job.name,
-                                                                     date_and_time(job.start_time))
+                        self.__reporter.job_start(job)
                         logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
                     except Exception,ex:
                         logging.error("Failed to start job #%s: %s" % (job.job_number,ex))
@@ -471,10 +466,7 @@ class SimpleScheduler(threading.Thread):
             self.__scheduled = remaining_jobs
             # Report current status, if required
             if report_status:
-                print "%s: %d running, %d waiting, %d finished" % (date_and_time(),
-                                                                   self.n_running,
-                                                                   self.n_waiting,
-                                                                   self.n_finished)
+                self.__reporter.scheduler_status(self)
             # Wait before going round again
             time.sleep(self.__poll_interval)
 
@@ -719,6 +711,201 @@ class SchedulerCallback:
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
 
+class SchedulerReporter:
+    """Class to report on scheduler operations
+
+    SimpleScheduler calls methods of the SchedulerReporter when
+    jobs are scheduled, started and finished, when groups are
+    added and finished, and to report the status of the scheduler.
+
+    The methods look for associated template format strings which
+    are then used to create and output strings.
+
+    Templates are added and modified via the 'set_template' method.
+    Templates should be Python format strings which should process
+    a dictionary of values.
+
+    Template name     Used when           Available dictionary keys
+    ---------------------------------------------------------------
+    job_scheduled     Job is submitted    job_name, job_number,job_id,
+                                          waiting_for, time_stamp
+    job_start         Job starts running  as 'job_scheduled'
+    job_end           Job finishes        as 'job_scheduled'
+    group_added       Group is created    group_name, group_id, time_stamp
+    group_end         Group completes     as 'group_added'
+    scheduler_status  Need status         n_running, n_waiting, n_finished
+
+    An example template string for a job could be:
+
+    'Job %(job_name)s: %(job_id)d'
+
+    The purpose of the SchedulerReporter class to provide a way to
+    customise reporting of the standard scheduler operations when
+    used in an application.
+
+    """
+    def __init__(self,fp=sys.stdout,**args):
+        """Create new SchedulerReporter instance
+
+        Arguments
+          fp: optional, if provided then must be a file-like
+              object opened for writing (defaults to stdout)
+          args: optional keyword-value pairs, where 'value'
+              defines a template for the name provided by
+              'keyword'
+
+        """
+        self.__template_list = ['job_scheduled',
+                                'job_start',
+                                'job_end',
+                                'group_added',
+                                'group_start',
+                                'group_end',
+                                'scheduler_status']
+        self.__templates = {}
+        self.__fp = fp
+        for name in args:
+            self.set_template(name,args[name])
+
+    def _scheduler_dict(self,sched):
+        """Return dictionary of keywords derived from scheduler instance
+
+        Arguments:
+          sched: SimpleScheduler instance
+
+        Returns:
+          Dictionary containing appropriate keywords
+
+        """
+        return { 'n_running'  : sched.n_running,
+                 'n_waiting'  : sched.n_waiting,
+                 'n_finished' : sched.n_finished,
+                 'time_stamp' : date_and_time() }
+
+    def _job_dict(self,job):
+        """Return dictionary of keywords derived from job instance
+
+        Arguments:
+          job: SchedulerJob instance
+
+        Returns:
+          Dictionary containing appropriate keywords
+
+        """
+        return { 'job_number' : job.job_number,
+                 'job_name'   : job.job_name,
+                 'job_id'     : job.job_id,
+                 'waiting_for': ', '.join(["'%s'" % s for s in job.waiting_for]) if job.waiting_for else '',
+                 'time_stamp' : date_and_time() }
+
+    def _group_dict(self,group):
+        """Return dictionary of keywords derived from group instance
+
+        Arguments:
+          group: SchedulerGroup instance
+
+        Returns:
+          Dictionary containing appropriate keywords
+
+        """
+        return { 'group_name' : group.group_name,
+                 'group_id'   : group.group_id,
+                 'time_stamp' : date_and_time() }
+
+    def scheduler_status(self,sched):
+        """Write report string for scheduler status
+
+        Arguments:
+          sched: SimpleScheduler instance
+
+        """
+        self._report('scheduler_status',**self._scheduler_dict(sched))
+
+    def job_scheduled(self,job):
+        """Write report string when a job is scheduled
+
+        Arguments:
+          job: SchedulerJob instance
+
+        """
+        self._report('job_scheduled',**self._job_dict(job))
+
+    def job_start(self,job):
+        """Write report string when a job starts
+
+        Arguments:
+          job: SchedulerJob instance
+
+        """
+        self._report('job_start',**self._job_dict(job))
+
+    def job_end(self,job):
+        """Write report string when a job ends
+
+        Arguments:
+          job: SchedulerJob instance
+
+        """
+        self._report('job_end',**self._job_dict(job))
+
+    def group_added(self,group):
+        """Write report string when a group is added
+
+        Arguments:
+          group: SchedulerGroup instance
+
+        """
+        self._report('group_added',**self._group_dict(group))
+
+    def group_end(self,group):
+        """Write report string when a group ends
+
+        Arguments:
+          group: SchedulerGroup instance
+
+        """
+        self._report('group_end',**self._group_dict(group))
+
+    def set_template(self,name,template):
+        """Associate a template string with an operation
+
+        Arguments:
+          name: operation name e.g. 'job_start'
+          template: associated template string, or None to
+            suppress reporting of the operation
+
+        """
+        if name not in self.__template_list:
+            raise KeyError,"SchedulerReporter: name '%s' not defined" % name
+        if not template.endswith('\n'):
+            template += '\n'
+        self.__templates[name] = template
+
+    def _report(self,name,**args):
+        """Generate and write report string for operation
+
+        Internal function that should not be called directly.
+        If a matching template isn't found, or if an exception
+        occurs when attempting to generate the report string,
+        then write nothing.
+
+        The result is written to the stream specified when the
+        SchedulerReporter instance was created.
+
+        Arguments:
+          name: operation name e.g. 'job_start'
+          args: keyword-value pairs from appropriate dictionary
+
+        """
+        try:
+            template = self.__templates[name]
+            if template is None:
+                return
+            self.__fp.write(template % args)
+        except KeyError,ex:
+            logging.debug("SchedulerReporter: exception '%s' (ignored)" % ex)
+            return
+
 #######################################################################
 # Functions
 #######################################################################
@@ -731,6 +918,20 @@ def date_and_time(epoch=None):
         return time.asctime(time.localtime(epoch))
     else:
         return time.asctime()
+
+def default_scheduler_reporter():
+    """Return a default SchedulerReporter object
+
+    """
+    return SchedulerReporter(
+        scheduler_status="%(time_stamp)s: %(n_running)d running, %(n_waiting)d waiting, %(n_finished)d finished",
+        job_scheduled="Job scheduled: #%(job_number)d: \"%(job_name)s\" (%(time_stamp)s)",
+        job_start="Job started: #%(job_number)d (%(job_id)s): \"%(job_name)s\" (%(time_stamp)s)",
+        job_end="Job completed: #%(job_number)d (%(job_id)s): \"%(job_name)s\" (%(time_stamp)s)",
+
+        group_added="Group has been added: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)",
+        group_end="Group completed: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)"
+    )
 
 #######################################################################
 # Main program (example)

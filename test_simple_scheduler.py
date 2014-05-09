@@ -2,7 +2,9 @@
 # Tests for simple_scheduler.py module
 #######################################################################
 import unittest
+import cStringIO
 import os
+import sys
 import time
 import logging
 from JobRunner import BaseJobRunner
@@ -581,6 +583,97 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertEqual(job.log_dir,'/logs')
         self.assertTrue(job.is_running)
         self.assertEqual(runner.log_dir,None)
+
+class TestSchedulerReporter(unittest.TestCase):
+    """Unit tests for SchedulerReporter class
+
+    """
+    def test_empty_scheduler_reporter(self):
+        """'Empty' SchedulerReporter returns no output for scheduler status
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(fp=fp)
+        sched = SimpleScheduler()
+        reporter.scheduler_status(sched)
+        self.assertEqual('',fp.getvalue())
+
+    def test_scheduler_reporter_scheduler_status(self):
+        """SchedulerReporter returns correct output for scheduler status
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(fp=fp,scheduler_status="%(n_running)s jobs")
+        sched = SimpleScheduler()
+        reporter.scheduler_status(sched)
+        self.assertEqual('0 jobs\n',fp.getvalue())
+
+    def test_scheduler_reporter_job_scheduled(self):
+        """SchedulerReporter returns correct output when job is scheduled
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(
+            fp=fp,
+            job_scheduled="Job scheduled: #%(job_number)d: \"%(job_name)s\""
+        )
+        job = SchedulerJob(MockJobRunner(),['sleep','50'],
+                           job_number=2,name='test',wait_for=[])
+        reporter.job_scheduled(job)
+        self.assertEqual('Job scheduled: #2: "test"\n',fp.getvalue())
+
+    def test_scheduler_reporter_job_start(self):
+        """SchedulerReporter returns correct output when job is started
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(
+            fp=fp,
+            job_start="Job started: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
+        )
+        job = SchedulerJob(MockJobRunner(),['sleep','50'],
+                           job_number=2,name='test',wait_for=[])
+        job.start()
+        reporter.job_start(job)
+        self.assertEqual('Job started: #2 (1): "test"\n',fp.getvalue())
+
+    def test_scheduler_reporter_job_end(self):
+        """SchedulerReporter returns correct output when job ends
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(
+            fp=fp,
+            job_end="Job completed: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
+        )
+        job = SchedulerJob(MockJobRunner(),['sleep','50'],
+                           job_number=2,name='test',wait_for=[])
+        job.start()
+        job.terminate()
+        reporter.job_end(job)
+        self.assertEqual('Job completed: #2 (1): "test"\n',fp.getvalue())
+
+    def test_scheduler_reporter_group_added(self):
+        """SchedulerReporter returns correct output when group is added
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(
+            fp=fp,
+            group_added="Group has been added: #%(group_id)d: \"%(group_name)s\""
+        )
+        group = SchedulerGroup('test',1,SimpleScheduler())
+        reporter.group_added(group)
+        self.assertEqual('Group has been added: #1: "test"\n',fp.getvalue())
+
+    def test_scheduler_reporter_group_end(self):
+        """SchedulerReporter returns correct output when group finishes
+        """
+        fp = cStringIO.StringIO()
+        reporter = SchedulerReporter(
+            fp=fp,
+            group_end="Group completed: #%(group_id)d: \"%(group_name)s\""
+        )
+        group = SchedulerGroup('test',1,SimpleScheduler())
+        job = group.add(['sleep','50'],name='sleep',wait_for=[])
+        group.close()
+        job.terminate()
+        reporter.group_end(group)
+        self.assertEqual('Group completed: #1: "test"\n',fp.getvalue())
 
 #######################################################################
 # Main program
