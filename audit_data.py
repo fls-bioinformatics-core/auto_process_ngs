@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.5'
+__version__ = '0.0.6'
 
 #######################################################################
 # Import modules that this module depends on
@@ -26,7 +26,6 @@ __version__ = '0.0.5'
 
 import platforms
 import applications
-import simple_scheduler
 import auto_process_utils
 import JobRunner
 import bcf_utils
@@ -35,16 +34,14 @@ import optparse
 import sys
 import os
 import time
+import data_manager
 
 #######################################################################
 # Classes
 #######################################################################
 
 class SeqDataSizes:
-    """Class for acquiring & storing sequence data size (i.e disk usage) info
-
-    """
-    def __init__(self,name,dirn,sched,year=None,platform=None,is_subdir=False,
+    def __init__(self,name,dirn,year=None,platform=None,is_subdir=False,
                  include_subdirs=True,apparent_size=False):
         """Create a new SeqDataDirectorySizes object
 
@@ -55,7 +52,6 @@ class SeqDataSizes:
         """
         self.name = name
         self.dirn = dirn
-        self.scheduler = sched
         self.year = year
         self.platform = platform
         self.du_total = None
@@ -91,41 +87,10 @@ class SeqDataSizes:
         return has_data
 
     def get_disk_usage(self):
-        if self.is_subdir:
-            name = "%s.%s" % (os.path.basename(os.path.dirname(self.dirn)),self.name)
-        else:
-            name = self.name
-        job_grp = self.scheduler.group(name,callbacks=(self.process_directory_sizes,))
-        job_grp.add(du_command(self.dirn,block_size=1,
-                               summarize=True,
-                               apparent_size=self.apparent_size),
-                    name="du.%s.total" % name)
-        job_grp.add(find_du_command(self.dirn,"*.fastq.gz",block_size=1,
-                                    apparent_size=self.apparent_size),
-                    name="du.%s.fastqgzs" % name)
-        job_grp.add(find_du_command(self.dirn,"*.fastq",block_size=1,
-                                    apparent_size=self.apparent_size),
-                    name="du.%s.fastqs" % name)
-        job_grp.close()
-        for subdir in self.subdirs:
-            subdir.get_disk_usage()
-
-    def process_directory_sizes(self,name,job_groups,sched):
-        # Callback function
-        logging.debug("### Handling %s ###" % name)
-        for group in job_groups:
-            for job in group.jobs:
-                size = get_total_size(job.log)
-                if job.name.endswith("total"):
-                    self.du_total = size
-                elif job.name.endswith("fastqgzs"):
-                    self.du_fastqgzs = size
-                elif job.name.endswith("fastqs"):
-                    self.du_fastqs = size
-                else:
-                    raise Exception,"Unknown job '%s'" % job.name
-                logging.debug("Deleting file %s" % job.log)
-                os.remove(job.log)
+        d = data_manager.DataDir(self.dirn)
+        self.du_total = d.get_size()
+        self.du_fastqs = d.get_size(pattern='.*\.fastq$')
+        self.du_fastqgzs = d.get_size(pattern='.*\.fastq.gz$')
 
     def report(self,no_header=False,pretty_print=True,formatter=None):
         if formatter is None:
@@ -199,65 +164,7 @@ class UsageFormatter:
 # Functions
 #######################################################################
 
-def du_command(f,summarize=False,block_size=1024,apparent_size=False):
-    """Construct command line to run 'du' command
-
-    Arguments:
-      f: file (or directory) to run 'du' on
-      summarize: if True then display only total size for supplied
-        file/directory (du's --summarize/-s option)
-      block_size: specify block size for reporting (du's --block-size=/-B
-        option)
-      apparent_size: if True then report apparent sizes from du (du's
-        --apparent-size option)
-
-    Returns:
-      Command object with du command set up as requested.
-
-    """
-    du = applications.Command('du')
-    if summarize:
-        du.add_args('-s')
-    if apparent_size:
-        du.add_args('--apparent-size')
-    du.add_args('--block-size=%d' % block_size,f)
-    return du
-
-def find_du_command(dirn,pattern,block_size=1024,apparent_size=True):
-    """Construct command line to run 'find ... -name ... -exec du ...'
-
-    Arguments:
-      dirn: starting directory to run 'find' from
-      pattern: pattern to supply to find's -name option
-      block_size: specify block size for reporting (du's --block-size=/-B
-        option)
-      apparent_size: if True then report apparent sizes from du (du's
-        --apparent-size option)
-
-    Returns:
-      Command object with find command set up as requested.
-
-    """
-    find_du = applications.Command('find',dirn,
-                                   '-name','"%s"' % pattern,
-                                   '-exec','du','--block-size=%d' % block_size)
-    if apparent_size:
-        find_du.add_args('--apparent-size')
-    find_du.add_args('{}','\;')
-    return find_du
-
-def get_total_size(du_log_file):
-    """Read 'du' output from log_file and return the total 
-
-    """
-    total_size = 0
-    for line in open(du_log_file,'r'):
-        try:
-            size = int(line.split()[0])
-            total_size += size
-        except ValueError,ex:
-            logging.warning("Bad line in '%s': %s (ignored)" % (du_log_file,line))
-    return total_size
+# None defined
 
 #######################################################################
 # Main program
@@ -272,8 +179,6 @@ if __name__ == "__main__":
     p.add_option("--log-dir",action='store',dest='log_dir',default=os.getcwd(),
                  help="write log files from archiving operations to LOG_DIR (defaults "
                  "to cwd)")
-    p.add_option("--use-grid-engine",action='store_true',dest='use_grid_engine',default=False,
-                 help="submit 'du' jobs to Grid Engine")
     p.add_option("-o","--output-file",action='store',dest ='output_file',default=None,
                  help="specify output file to write results to (otherwise written to stdout)")
     p.add_option("--human-readable",action='store_true',dest ='human_readable',
@@ -305,19 +210,6 @@ if __name__ == "__main__":
     # Debugging output
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-
-    # Make a job runner for computationally-intensive (CI) jobs
-    if options.use_grid_engine:
-        ci_runner = JobRunner.GEJobRunner(log_dir=options.log_dir,
-                                          ge_extra_args=['-j','y','-l','short'])
-    else:
-        ci_runner = JobRunner.SimpleJobRunner(log_dir=options.log_dir,
-                                              join_logs=True)
-
-    # Start scheduler
-    s = simple_scheduler.SimpleScheduler(runner=ci_runner,
-                                         max_concurrent=16)
-    s.start()
 
     # Formatter
     if options.human_readable:
@@ -366,6 +258,7 @@ if __name__ == "__main__":
     for d in args:
         print "Processing %s..." % d
         for year in years:
+            print "- Year %s" % year
             dirn = os.path.join(d,"%s" % year)
             if not os.path.isdir(dirn):
                 continue
@@ -373,24 +266,19 @@ if __name__ == "__main__":
                 platform_dirn = os.path.join(dirn,platform)
                 if not os.path.isdir(platform_dirn):
                     continue
-                print "%s" % platform_dirn
+                print "-- Platform %s" % platform
                 # Get all the directories for this year/platform combination
                 for run in auto_process_utils.list_dirs(platform_dirn):
-                    print "%s" % run
+                    print "--- Run %s" % run
                     run_dir = os.path.join(platform_dirn,run)
                     if os.path.islink(run_dir):
                         logging.warning("%s: is link, ignoring" % run_dir)
                     else:
-                        seqdir = SeqDataSizes(run,run_dir,s,year=year,platform=platform,
+                        seqdir = SeqDataSizes(run,run_dir,year=year,platform=platform,
                                               include_subdirs=options.include_subdirs,
                                               apparent_size=options.apparent_size)
                         seqdir.get_disk_usage()
                         seqdirs.append(seqdir)
-    # Wait for all data to be processed
-    # NB this could be an endless loop if something goes wrong within
-    # the processing loop...
-    while not reduce(lambda x,y: x and y.has_data,seqdirs,True):
-        time.sleep(5)
 
     # Report usage for all directories
     if options.output_file is not None:
@@ -425,6 +313,3 @@ if __name__ == "__main__":
             line.append(formatter.format(usage[year][platform]))
         line.append(formatter.format(usage[year]['total']))
         print '\t'.join(line)
-
-        
-
