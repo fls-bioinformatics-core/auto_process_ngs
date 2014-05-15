@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.24"
+__version__ = "0.0.25"
 
 #######################################################################
 # Import modules that this module depends on
@@ -52,34 +52,75 @@ class DataDir:
         """
         """
         return self.__data_dir
-    @property
-    def platform(self):
-        """
-        """
-        raise NotImplementedError
-    def get_size(self):
-        """
+    def get_size(self,pattern=None,block_size=1,human_readable=False):
+        """Return the total size of some or all files
+
+        By default this returns the total size of the data dir
+        in bytes.
+
+        Specifying a regex pattern restricts the total to be
+        only those files and directories which match the pattern.
+
+        The format of the output value can be modified by
+        adjusting the block_size (e.g. 1024 == Kb, 1024*1024 == Mb
+        etc) or by setting the human_readable flag to True, in
+        which case the value will be expressed in the most
+        appropriate units (and with the units appended).
+
+        Note: values returned by this method seem most closely to
+        match the output of the 'du --apparent-size' command,
+        although they don't appear to match exactly.
+
+        Arguments:
+          pattern: if not None, restrict examined files and
+            directories to those matching the supplied regex
+            pattern (default is to include all files and dirs)
+          block_size: report size as number of blocks of
+            'block_size' bytes (default is 1)
+          human_readable: report size in appropriate units,
+            with unit identifier appended e.g. 1G
+
+        Returns
+          Total size for specified files/dirs in request units.
+
         """
         size = 0
-        for f in self.walk():
+        for f in self.walk(pattern=pattern):
             size += os.lstat(f).st_size
-        return int(float(size)/1024)
-    def walk(self,include_dirs=True):
+        #return int(float(size)/1024)
+        if human_readable:
+            # Format into human-readable format
+            return bcf_utils.format_file_size(size)
+        else:
+            # Return number of blocks, rounded
+            # up or down to nearest integer
+            return int(round(float(size)/float(block_size)))
+    def walk(self,include_dirs=True,pattern=None):
         """Traverse the directory, subdirectories and files
         
         Arguments:
           include_dirs: if True then yield directories as well
             as files (default)
+          pattern: if not None then specifies a regular expression
+            pattern which restricts the set of yielded files and
+            directories to a subset of those which match the
+            pattern
         
         """
+        if pattern is not None:
+            matcher = re.compile(pattern)
         if include_dirs:
             yield self.dir
         for dirpath,dirnames,filenames in os.walk(self.dir):
             if include_dirs:
                 for d in dirnames:
-                    yield os.path.join(dirpath,d)
+                    d1 = os.path.join(dirpath,d)
+                    if pattern is None or matcher.match(d1):
+                        yield d1
             for f in filenames:
-                yield os.path.join(dirpath,f)
+                f1 = os.path.join(dirpath,f)
+                if pattern is None or matcher.match(f1):
+                    yield f1
     def copy(self,target,dry_run=False,verbose=False):
         """Create a copy of dir using rsync
 
