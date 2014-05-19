@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.7'
+__version__ = '0.0.8'
 
 #######################################################################
 # Import modules that this module depends on
@@ -42,12 +42,11 @@ import data_manager
 
 class SeqDataSizes:
     def __init__(self,name,dirn,year=None,platform=None,is_subdir=False,
-                 include_subdirs=True,apparent_size=False):
+                 include_subdirs=True):
         """Create a new SeqDataDirectorySizes object
 
         name: name for the object
         dirn: path to the directory
-        sched: SimpleScheduler instance
 
         """
         self.name = name
@@ -57,14 +56,12 @@ class SeqDataSizes:
         self.du_total = None
         self.du_fastqs = None
         self.du_fastqgzs = None
-        self.apparent_size=apparent_size
         self.is_subdir = is_subdir
         self.include_subdirs = include_subdirs
         self.subdirs = []
         if not is_subdir and include_subdirs:
             for d in auto_process_utils.list_dirs(self.dirn):
                 self.subdirs.append(SeqDataSizes(d,os.path.join(self.dirn,d),
-                                                 self.scheduler,
                                                  year=self.year,
                                                  platform=self.platform,
                                                  is_subdir=True))
@@ -91,6 +88,8 @@ class SeqDataSizes:
         self.du_total = d.get_size()
         self.du_fastqs = d.get_size(pattern='.*\.fastq$')
         self.du_fastqgzs = d.get_size(pattern='.*\.fastq.gz$')
+        for subdir in self.subdirs:
+            subdir.get_disk_usage()
 
     def report(self,no_header=False,pretty_print=True,formatter=None):
         if formatter is None:
@@ -243,10 +242,6 @@ if __name__ == "__main__":
     p.add_option("--include-subdirs",action='store_true',dest='include_subdirs',default=False,
                  help="also collect and report disk usage information for first level of "
                  "subdirectories in each data directory")
-    p.add_option("--apparent-size",action='store_true',dest='apparent_size',default=False,
-                 help="report apparent sizes, rather than disk usage. Although the apparent "
-                 "size is usually  smaller, it may be larger due to holes in ('sparse') "
-                 "files, internal fragmentation, indirect blocks, etc")
     p.add_option("--plot",action='store',dest='plot_file',default=None,
                  help="plot a stacked barchart of the usage and output as a PNG to PLOT_FILE")
     p.add_option("--debug",action='store_true',dest='debug',
@@ -323,8 +318,7 @@ if __name__ == "__main__":
                         logging.warning("%s: is link, ignoring" % run_dir)
                     else:
                         seqdir = SeqDataSizes(run,run_dir,year=year,platform=platform,
-                                              include_subdirs=options.include_subdirs,
-                                              apparent_size=options.apparent_size)
+                                              include_subdirs=options.include_subdirs)
                         seqdir.get_disk_usage()
                         seqdirs.append(seqdir)
 
