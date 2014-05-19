@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.8'
+__version__ = '0.0.9'
 
 #######################################################################
 # Import modules that this module depends on
@@ -56,6 +56,7 @@ class SeqDataSizes:
         self.du_total = None
         self.du_fastqs = None
         self.du_fastqgzs = None
+        self.du_solid = None
         self.is_subdir = is_subdir
         self.include_subdirs = include_subdirs
         self.subdirs = []
@@ -69,25 +70,16 @@ class SeqDataSizes:
     @property
     def du_other(self):
         try:
-            return self.du_total - self.du_fastqs - self.du_fastqgzs
+            return self.du_total - self.du_fastqs - self.du_fastqgzs - self.du_solid
         except TypeError:
             return None
-
-    @property
-    def has_data(self):
-        has_data = self.du_total is not None and \
-                   self.du_fastqs is not None and \
-                   self.du_fastqgzs is not None
-        if not self.is_subdir and self.include_subdirs:
-            for subdir in self.subdirs:
-                has_data = has_data and subdir.has_data
-        return has_data
 
     def get_disk_usage(self):
         d = data_manager.DataDir(self.dirn)
         self.du_total = d.get_size()
         self.du_fastqs = d.get_size(pattern='.*\.fastq$')
         self.du_fastqgzs = d.get_size(pattern='.*\.fastq.gz$')
+        self.du_solid = d.get_size(pattern='.*\.(csfasta|qual)$')
         for subdir in self.subdirs:
             subdir.get_disk_usage()
 
@@ -99,15 +91,16 @@ class SeqDataSizes:
                 formatter = UsageFormatter('bytes').format
         report = []
         if not no_header:
-            report.append("#Year\tPlatform\tDirectory\tTotal Size\tFastq.gz size\tFastq size\tOther files")
-        report.append("%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
+            report.append("#Year\tPlatform\tDirectory\tCsfasta/qual\tFastq.gz\tFastq\tOther\tTotal Size")
+        report.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
             self.year,
             self.platform,
             self.name,
-            formatter(self.du_total),
+            formatter(self.du_solid),
             formatter(self.du_fastqgzs),
             formatter(self.du_fastqs),
-            formatter(self.du_other)))
+            formatter(self.du_other),
+            formatter(self.du_total)))
         report = '\n'.join(report)
         for subdir in self.subdirs:
             report += '\n' + subdir.report(no_header=True,formatter=formatter)
