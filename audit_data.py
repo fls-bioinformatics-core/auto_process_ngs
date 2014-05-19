@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.6'
+__version__ = '0.0.7'
 
 #######################################################################
 # Import modules that this module depends on
@@ -164,7 +164,53 @@ class UsageFormatter:
 # Functions
 #######################################################################
 
-# None defined
+def plot_usage_data(usage_data,show=False,out_file="audit_data.png"):
+    # Create a stacked bar plot
+    import numpy as np
+    # Need to specify a non-interactive backend
+    import matplotlib
+    matplotlib.use('Agg')
+    # Import pyplot
+    import matplotlib.pyplot as plt
+    # Make the stacked bar plot
+    ind = np.arange(len(years))    # the x locations for the groups
+    width = 0.70       # the width of the bars: can also be len(x) sequence
+    colours = ['blue',
+               'orange',
+               'yellow',
+               'maroon',
+               'green',
+               'cyan',
+               'black']
+    data = {}
+    for platform in platform_list:
+        data[platform] = []
+        for year in years:
+            data[platform].append(usage_data[year][platform])
+    plots = {}
+    culmulative = []
+    for i,platform in enumerate(platform_list):
+        if not culmulative:
+            plots[platform] = plt.bar(ind,data[platform],width,color=colours[i],
+                                      linewidth=0)
+            for j,year in enumerate(years):
+                culmulative.append(data[platform][j])
+        else:
+            plots[platform] = plt.bar(ind,data[platform],width,color=colours[i],
+                                      linewidth=0,
+                                      bottom=culmulative)
+            for j,year in enumerate(years):
+                culmulative[j] += data[platform][j]
+
+    plt.ylabel('Usage (Gb)')
+    plt.title('Year')
+    plt.xticks(ind+width/2.,years)
+    plt.yticks(np.arange(0.,16000,2000))
+    legend = plt.legend([plots[p][0] for p in platform_list],platform_list)
+    legend.draw_frame(False)
+    plt.savefig(out_file,format='png')
+    if show:
+        plt.show()
 
 #######################################################################
 # Main program
@@ -201,6 +247,8 @@ if __name__ == "__main__":
                  help="report apparent sizes, rather than disk usage. Although the apparent "
                  "size is usually  smaller, it may be larger due to holes in ('sparse') "
                  "files, internal fragmentation, indirect blocks, etc")
+    p.add_option("--plot",action='store',dest='plot_file',default=None,
+                 help="plot a stacked barchart of the usage and output as a PNG to PLOT_FILE")
     p.add_option("--debug",action='store_true',dest='debug',
                  help="turn on debugging output (nb very verbose!)")
     options,args = p.parse_args()
@@ -313,3 +361,7 @@ if __name__ == "__main__":
             line.append(formatter.format(usage[year][platform]))
         line.append(formatter.format(usage[year]['total']))
         print '\t'.join(line)
+
+    # Make a stacked bar char plot
+    if options.plot_file is not None:
+        plot_usage_data(usage,out_file=options.plot_file)
