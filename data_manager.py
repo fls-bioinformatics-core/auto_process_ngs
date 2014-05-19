@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.25"
+__version__ = "0.0.26"
 
 #######################################################################
 # Import modules that this module depends on
@@ -110,7 +110,8 @@ class DataDir:
         if pattern is not None:
             matcher = re.compile(pattern)
         if include_dirs:
-            yield self.dir
+            if pattern is None or matcher.match(self.dir):
+                yield self.dir
         for dirpath,dirnames,filenames in os.walk(self.dir):
             if include_dirs:
                 for d in dirnames:
