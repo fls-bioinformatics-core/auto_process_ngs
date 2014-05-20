@@ -211,7 +211,9 @@ class AutoProcess:
             for project in projects_from_dirs:
                 if len(project_metadata.lookup('Project',project.name)) == 0:
                     # Project not listed
-                    logging.warning("Project '%s' not listed in metadata file" % project.name)
+                    if project.name != 'undetermined':
+                        logging.warning("Project '%s' not listed in metadata file" %
+                                        project.name)
                     if update:
                         # Add line for unlisted project
                         logging.debug("Adding basic data for project '%s'" % project.name)
