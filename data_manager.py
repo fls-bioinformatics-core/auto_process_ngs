@@ -211,7 +211,7 @@ class DataDir:
         """
         users = []
         for f in self.walk():
-            user = bcf_utils.PathInfo(f).user
+            user = str(bcf_utils.PathInfo(f).user)
             if user not in users:
                 users.append(user)
         users.sort()
