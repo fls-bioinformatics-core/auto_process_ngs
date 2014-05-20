@@ -210,7 +210,7 @@ class DataDir:
 
         """
         users = []
-        for f in data_dir.walk():
+        for f in self.walk():
             user = bcf_utils.PathInfo(f).user
             if user not in users:
                 users.append(user)
