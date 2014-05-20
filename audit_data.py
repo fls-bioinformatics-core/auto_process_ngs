@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = '0.0.9'
+__version__ = '0.0.10'
 
 #######################################################################
 # Import modules that this module depends on
@@ -27,7 +27,6 @@ __version__ = '0.0.9'
 import platforms
 import applications
 import auto_process_utils
-import JobRunner
 import bcf_utils
 import logging
 import optparse
@@ -35,6 +34,7 @@ import sys
 import os
 import time
 import data_manager
+import simple_xls
 
 #######################################################################
 # Classes
@@ -57,6 +57,11 @@ class SeqDataSizes:
         self.du_fastqs = None
         self.du_fastqgzs = None
         self.du_solid = None
+        self.du_bam = None
+        self.du_compressed_bams = None
+        self.du_sams = None
+        self.du_compressed_sams = None
+        self.du_beds = None
         self.is_subdir = is_subdir
         self.include_subdirs = include_subdirs
         self.subdirs = []
@@ -68,11 +73,47 @@ class SeqDataSizes:
                                                  is_subdir=True))
 
     @property
+    def parent_dir(self):
+        """Return the 'parent' directory
+
+        For non-subdir instances, the parent directory is the directory
+        above the run directory, with the platform and year stripped off
+        (if provided).
+
+        For subdir instances, the parent directory is the basename of the
+        parent run directory.
+
+        """
+        parent = os.path.dirname(self.dirn)
+        if self.is_subdir:
+            parent = os.path.basename(parent)
+        else:
+            if self.platform is not None and parent.endswith(self.platform):
+                parent = parent[:-len(self.platform)].rstrip(os.sep)
+                if self.year is not None and parent.endswith(str(year)):
+                    parent = parent[:-len(str(year))].rstrip(os.sep)
+        return parent
+
+    @property
     def du_other(self):
         try:
-            return self.du_total - self.du_fastqs - self.du_fastqgzs - self.du_solid
+            return (self.du_total -
+                    self.du_fastqs -
+                    self.du_fastqgzs - 
+                    self.du_solid -
+                    self.du_bams -
+                    self.du_compressed_bams -
+                    self.du_sams -
+                    self.du_compressed_sams -
+                    self.du_beds)
         except TypeError:
             return None
+
+    @property
+    def users(self):
+        """
+        """
+        return data_manager.DataDir(self.dirn).users
 
     def get_disk_usage(self):
         d = data_manager.DataDir(self.dirn)
@@ -80,31 +121,35 @@ class SeqDataSizes:
         self.du_fastqs = d.get_size(pattern='.*\.fastq$')
         self.du_fastqgzs = d.get_size(pattern='.*\.fastq.gz$')
         self.du_solid = d.get_size(pattern='.*\.(csfasta|qual)$')
+        self.du_bams = d.get_size(pattern='.*\.bam$')
+        self.du_sams = d.get_size(pattern='.*\.sam$')
+        self.du_compressed_bams = d.get_size(pattern='.*\.bam\.(gz|bz2)$')
+        self.du_compressed_sams = d.get_size(pattern='.*\.sam\.(gz|bz2)$')
+        self.du_beds = d.get_size(pattern='.*\.bed$')
         for subdir in self.subdirs:
             subdir.get_disk_usage()
 
-    def report(self,no_header=False,pretty_print=True,formatter=None):
-        if formatter is None:
-            if pretty_print:
-                formatter = UsageFormatter().format
-            else:
-                formatter = UsageFormatter('bytes').format
-        report = []
-        if not no_header:
-            report.append("#Year\tPlatform\tDirectory\tCsfasta/qual\tFastq.gz\tFastq\tOther\tTotal Size")
-        report.append("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s" % (
-            self.year,
-            self.platform,
-            self.name,
-            formatter(self.du_solid),
-            formatter(self.du_fastqgzs),
-            formatter(self.du_fastqs),
-            formatter(self.du_other),
-            formatter(self.du_total)))
-        report = '\n'.join(report)
-        for subdir in self.subdirs:
-            report += '\n' + subdir.report(no_header=True,formatter=formatter)
-        return report
+    def dataline(self,formatter):
+        if not self.is_subdir:
+            dataline = [self.year,
+                        self.platform,
+                        self.parent_dir,
+                        self.name]
+        else:
+            dataline = ['','','',self.name]
+        dataline.extend([formatter.format(self.du_solid),
+                         formatter.format(self.du_fastqgzs),
+                         formatter.format(self.du_fastqs),
+                         formatter.format(self.du_compressed_bams),
+                         formatter.format(self.du_bams),
+                         formatter.format(self.du_compressed_sams),
+                         formatter.format(self.du_sams),
+                         formatter.format(self.du_beds),
+                         formatter.format(self.du_other),
+                         formatter.format(self.du_total)])
+        if self.is_subdir:
+            dataline.append(', '.join(self.users))
+        return dataline
 
 class UsageFormatter:
     """Utility class for formatting disk usage sizes
@@ -155,6 +200,28 @@ class UsageFormatter:
 #######################################################################
 # Functions
 #######################################################################
+
+def get_seqdir_dataline(seqdir,formatter):
+    if not seqdir.is_subdir:
+        dataline = [seqdir.year,
+                    seqdir.platform,
+                    seqdir.parent_dir,
+                    seqdir.name]
+    else:
+        dataline = ['','','',seqdir.name]
+    dataline.extend([formatter.format(seqdir.du_solid),
+                     formatter.format(seqdir.du_fastqgzs),
+                     formatter.format(seqdir.du_fastqs),
+                     formatter.format(seqdir.du_compressed_bams),
+                     formatter.format(seqdir.du_bams),
+                     formatter.format(seqdir.du_compressed_sams),
+                     formatter.format(seqdir.du_sams),
+                     formatter.format(seqdir.du_beds),
+                     formatter.format(seqdir.du_other),
+                     formatter.format(seqdir.du_total)])
+    if seqdir.is_subdir:
+        dataline.append(', '.join(seqdir.users))
+    return dataline
 
 def plot_usage_data(usage_data,show=False,out_file="audit_data.png"):
     # Create a stacked bar plot
@@ -315,18 +382,7 @@ if __name__ == "__main__":
                         seqdir.get_disk_usage()
                         seqdirs.append(seqdir)
 
-    # Report usage for all directories
-    if options.output_file is not None:
-        fp = open(options.output_file,'w')
-    else:
-        fp = sys.stdout
-    no_header = False
-    for seqdir in seqdirs:
-        fp.write(seqdir.report(formatter=formatter.format,no_header=no_header)+'\n')
-        if not no_header:
-            no_header = True
-
-    # Report usage by year and platform
+    # Calculate totals for each year
     usage = dict()
     for year in years:
         usage[year] = dict()
@@ -337,17 +393,45 @@ if __name__ == "__main__":
                 if seqdir.year == year and seqdir.platform == platform:
                     usage[year]['total'] += seqdir.du_total
                     usage[year][platform] += seqdir.du_total
+
+    # Report usage
+    xls = simple_xls.XLSWorkBook("Usage stats")
+    header_style = simple_xls.XLSStyle(bold=True)
+    # Summary of all years and platforms
+    summary = xls.add_work_sheet("Summary")
     header = ['#Year']
     for platform in platform_list:
         header.append(platform)
     header.append('Total')
-    print '\t'.join(header)
+    summary.insert_row(1,header,style=header_style)
     for year in years:
-        line = [str(year)]
+        line = [year]
         for platform in platform_list:
             line.append(formatter.format(usage[year][platform]))
         line.append(formatter.format(usage[year]['total']))
-        print '\t'.join(line)
+        summary.append_row(data=line)
+    print summary.render_as_text()
+    # Detailed breakdown
+    for year in years:
+        report = xls.add_work_sheet(year)
+        report.insert_row(1,data=['#Year','Platform','Directory','Run',
+                                  'Csfasta/qual',
+                                  'Fastq.gz','Fastq',
+                                  'Bam.(gz|bz2)','Bam',
+                                  'Sam.(gz|bz2)','Sam',
+                                  'Bed','Other',
+                                  'Total Size (GB)'],
+                          style=header_style)
+        for seqdir in seqdirs:
+            if seqdir.year != year:
+                continue
+            report.append_row(data=seqdir.dataline(formatter))
+            for subdir in seqdir.subdirs:
+                report.append_row(data=subdir.dataline(formatter))
+            report.append_row(data=('.',))
+        print report.render_as_text()
+    # Save to file
+    xls.save_as_xls("usage_stats.xls")
 
     # Make a stacked bar char plot
     if options.plot_file is not None:
