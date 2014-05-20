@@ -18,7 +18,7 @@
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.26"
+__version__ = "0.0.27"
 
 #######################################################################
 # Import modules that this module depends on
@@ -201,6 +201,21 @@ class DataDir:
         for dirpath,dirnames,filenames in os.walk(self.dir):
             for d in dirnames:
                 yield os.path.join(dirpath,d)
+    @property
+    def users(self):
+        """Return list of user names for this directory
+
+        Walks the directory structure and returns a list of all
+        user names which own files and/or directories within it.
+
+        """
+        users = []
+        for f in data_dir.walk():
+            user = bcf_utils.PathInfo(f).user
+            if user not in users:
+                users.append(user)
+        users.sort()
+        return users
     def verify(self,dirn):
         """Verify another data directory using this one as a reference
 
@@ -1271,13 +1286,7 @@ if __name__ == "__main__":
     # List users
     if options.list_users:
         print "Collecting list of usernames from %s" % data_dir.dir
-        users = []
-        for f in data_dir.walk():
-            user = bcf_utils.PathInfo(f).user
-            if user not in users:
-                users.append(user)
-        users.sort()
-        for user in users:
+        for user in data_dir.users:
             real_name = finger_user(user)
             print "%s\t%s" % (user,'?' if real_name is None else real_name)
 
