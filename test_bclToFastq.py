@@ -16,6 +16,7 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('y101,I6,y101'),1)
         self.assertEqual(get_nmismatches('y250,I8,I8,y250'),1)
         self.assertEqual(get_nmismatches('y250,I6nn,I6nn,y250'),1)
+        self.assertEqual(get_nmismatches('y250,I6n2,I6n2,y250'),1)
         self.assertEqual(get_nmismatches('y250,I16'),1)
 
 # Run tests

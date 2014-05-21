@@ -20,7 +20,7 @@ configureBclToFastq.pl pipeline.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 #######################################################################
 # Import modules that this module depends on
@@ -69,6 +69,11 @@ def get_nmismatches(bases_mask):
     """
     for read in bases_mask.split(','):
         if read.startswith('I'):
+            try:
+                i = read.index('n')
+                read = read[:i]
+            except ValueError:
+                pass
             index_length = int(read[1:].rstrip('n'))
             if index_length >= 6:
                 return 1
@@ -138,6 +143,9 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
         ignore_missing_stats=ignore_missing_stats,
         ignore_missing_control=ignore_missing_control
     )
+    if not configure_cmd.has_exe:
+        logging.error("'%s' missing, cannot run" % configure_cmd.command)
+        return -1
     print "Running command: %s" % configure_cmd
     returncode = configure_cmd.run_subprocess()
     # Check returncode
@@ -156,6 +164,9 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
     make_cmd = applications.general.make(makefile=makefile,
                                          working_dir=output_dir,
                                          nprocessors=nprocessors)
+    if not make_cmd.has_exe:
+        logging.error("'%s' missing, cannot run" % make_cmd.command)
+        return -1
     print "Running command: %s" % make_cmd
     returncode = make_cmd.run_subprocess()
     # Check returncode
