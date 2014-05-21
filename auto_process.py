@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.54"
+__version__ = "0.0.55"
 
 #######################################################################
 # Imports
@@ -503,7 +503,8 @@ class AutoProcess:
         
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                      skip_rsync=False,keep_primary_data=False,generate_stats=False,
-                     nprocessors=1):
+                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
+                     bases_mask=None):
         # Convert bcl files to fastq
         #
         # Arguments:
@@ -515,10 +516,26 @@ class AutoProcess:
         # keep_primary_data   : if True then don't remove primary data at
         #                       the end of bcl2fastq conversion
         # generate_stats      : if True then (re)generate statistics file for fastqs
+        # unaligned_dir       : if set then use this as the output directory for
+        #                       bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
+        #                       an alternative is already specified in the config file)
+        # sample_sheet        : if set then use this as the input samplesheet
+        # bases_mask          : if set then use this as an alternative bases mask setting
         #
         # Directories
         analysis_dir = self.params.analysis_dir
-        self.params['unaligned_dir'] = 'bcl2fastq'
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        elif self.params['unaligned_dir'] is None:
+            self.params['unaligned_dir'] = 'bcl2fastq'
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        if not os.path.isabs(sample_sheet):
+            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
+        if not os.path.isfile(sample_sheet):
+            raise Exception("Missing sample sheet '%s'" % sample_sheet)
+        self.params['sample_sheet'] = sample_sheet
         sample_sheet = self.params.sample_sheet
         # Check for pre-existing bcl2fastq outputs
         if self.verify_bcl_to_fastq():
@@ -529,10 +546,15 @@ class AutoProcess:
             if generate_stats:
                 self.generate_stats()
             return
+        # Bases mask
+        if bases_mask is None:
+            bases_mask = self.params.bases_mask
+        else:
+            self.params['bases_mask'] = bases_mask
         # Check for basic information needed to do bcl2fastq conversion
         if self.params.data_dir is None:
             raise Exception, "No source data directory"
-        if self.params.bases_mask is None:
+        if bases_mask is None:
             raise Exception, "No bases mask"
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
@@ -546,7 +568,6 @@ class AutoProcess:
         # Get info about the run
         print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
-        bases_mask = self.params.bases_mask
         nmismatches = bclToFastq.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
         print "Platform            : %s" % illumina_run.platform
@@ -557,6 +578,7 @@ class AutoProcess:
         print "Nprocessors         : %s" % nprocessors
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
         print "Ignore missing stats: %s" % ignore_missing_stats
+        print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
         runner = auto_process_settings.runners.bcl2fastq
         runner.set_log_dir(self.log_dir)
@@ -583,11 +605,15 @@ class AutoProcess:
         bcl2fastq_job.wait()
         print "bcl2fastq completed"
         # Verify outputs
-        illumina_data = self.load_illumina_data()
+        try:
+            illumina_data = self.load_illumina_data()
+        except IlluminaData.IlluminaDataError,ex:
+            logging.error("Unable to find outputs from bclToFastq (%s)" % ex)
+            return
         if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
-            raise Exception, "Failed to verify bcl to fastq outputs against sample sheet"
+            return
         # Remove primary data
         if not keep_primary_data:
             self.remove_primary_data()
@@ -645,8 +671,11 @@ class AutoProcess:
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                                     self.params.sample_sheet)
 
-    def setup_analysis_dirs(self):
+    def setup_analysis_dirs(self,ignore_missing_metadata=False):
         # Construct and populate the analysis directories for each project
+        # ignore_missing_metadata: if set True then make projects even if
+        #                          metadata hasn't been set (defaults to False
+        #                          i.e. stop if metadata isn't set)
         if self.params.unaligned_dir is None:
             logging.error("No unaligned directory, cannot build analysis directories")
             raise Exception,"Cannot build analysis directories"
@@ -663,8 +692,11 @@ class AutoProcess:
                                      line['Project'],item))
                     got_project_data = False
         if not got_project_data:
-            logging.error("Missing project metadata")
-            raise Exception, "Missing project metadata"
+            if ignore_missing_metadata:
+                logging.warning("Missing project metadata")
+            else:
+                logging.error("Missing project metadata")
+                raise Exception, "Missing project metadata"
         # Create the projects
         n_projects = 0
         for line in project_metadata:
@@ -1383,9 +1415,19 @@ def make_fastqs_parser():
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
     nprocessors = auto_process_settings.bcl2fastq.nprocessors
-    p.add_option('--skip-rsync',action='store_true',
-                 dest='skip_rsync',default=False,
-                 help="don't rsync the primary data at the beginning of processing")
+    p.add_option('--output-dir',action='store',
+                 dest='unaligned_dir',default=None,
+                 help="explicitly set the output (sub)directory for bcl-to-fastq "
+                 "conversion (overrides default)")
+    p.add_option('--use-bases-mask',action="store",
+                 dest="bases_mask",default=None,
+                 help="explicitly set the bases-mask string to indicate how each "
+                 "cycle should be used in the bcl-to-fastq conversion (overrides "
+                 "default)")
+    p.add_option('--sample-sheet',action="store",
+                 dest="sample_sheet",default=None,
+                 help="use an alternative sample sheet to the default "
+                 "'custom_SampleSheet.csv' created on setup.")
     p.add_option('--nprocessors',action='store',
                  dest='nprocessors',default=nprocessors,
                  help="explicitly specify number of processors to use for bclToFastq "
@@ -1398,12 +1440,26 @@ def make_fastqs_parser():
                  dest='ignore_missing_stats',default=False,
                  help="Use the --ignore-missing-stats option for bcl2fastq (fill in "
                  "with zeroes when *.stats files are missing)")
+    p.add_option('--skip-rsync',action='store_true',
+                 dest='skip_rsync',default=False,
+                 help="don't rsync the primary data at the beginning of processing")
     p.add_option('--keep-primary-data',action='store_true',
                  dest='keep_primary_data',default=False,
                  help="Don't delete the primary data at the end of processing")
     p.add_option('--generate-stats',action='store_true',
                  dest='generate_stats',default=False,
                  help="(Re)generate statistics for fastq files")
+    return p
+
+def setup_analysis_dirs_parser():
+    p = optparse.OptionParser(usage="%prog setup_analysis_dirs [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Create analysis subdirectories for projects "
+                              "defined in projects.info file in ANALYSIS_DIR.")
+    p.add_option('--ignore-missing-metadata',action='store_true',
+                 dest='ignore_missing_metadata',default=False,
+                 help="force creation of project directories even if metadata is not "
+                 "set (default is to fail if metadata is missing)")
     return p
 
 def run_qc_parser():
@@ -1521,7 +1577,7 @@ if __name__ == "__main__":
     cmd_parsers = bcf_utils.OrderedDictionary()
     cmd_parsers['setup'] = setup_parser()
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
-    cmd_parsers['setup_analysis_dirs'] = generic_parser()
+    cmd_parsers['setup_analysis_dirs'] = setup_analysis_dirs_parser()
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = archive_parser()
     cmd_parsers['publish_qc'] = publish_qc_parser()
@@ -1585,9 +1641,13 @@ if __name__ == "__main__":
                            keep_primary_data=options.keep_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
                            ignore_missing_stats=options.ignore_missing_stats,
-                           generate_stats=options.generate_stats)
+                           generate_stats=options.generate_stats,
+                           unaligned_dir=options.unaligned_dir,
+                           sample_sheet=options.sample_sheet,
+                           bases_mask=options.bases_mask)
         elif cmd == 'setup_analysis_dirs':
-            d.setup_analysis_dirs()
+                 d.setup_analysis_dirs(ignore_missing_metadata=
+                                       options.ignore_missing_metadata)
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
