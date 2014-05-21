@@ -70,7 +70,7 @@ echo $BCL2FASTQ_DIR
 # List all project names
 if [ -z "$PROJECT" ] ; then
     echo Projects:
-    find $DIR/$BCL2FASTQ_DIR -maxdepth 1 -name "Project_*" -type d -exec basename {} \; | sed 's/^Project_//'
+    find -H $DIR/$BCL2FASTQ_DIR -maxdepth 1 -name "Project_*" -type d -exec basename {} \; | sed 's/^Project_//'
     exit
 fi
 echo -n Checking for project $PROJECT...
