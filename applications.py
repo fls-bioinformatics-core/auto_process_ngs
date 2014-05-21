@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 #######################################################################
 # Import modules that this module depends on
@@ -123,6 +123,13 @@ class Command:
         command_line = [self.command]
         command_line.extend(self.args)
         return command_line
+
+    @property
+    def has_exe(self):
+        """Check if the command executable exists
+
+        """
+        return (bcf_utils.find_program(self.command) is not None)
 
     def __contains__(self,item):
         """Implement container functionality for 'item in x'

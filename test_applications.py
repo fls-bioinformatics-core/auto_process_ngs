@@ -25,11 +25,29 @@ class TestCommand(unittest.TestCase):
         self.assertEqual(cmd.command_line,['ls','-l','-d'])
         self.assertEqual(str(cmd),'ls -l -d')
 
+    def test_command_handles_forward_slash(self):
+        """Check forward slash is handled correctly
+        """
+        cmd = Command('find','-name','"*"','-exec','grep','"hello"','{}','\;')
+        self.assertEqual(cmd.command,'find')
+        self.assertEqual(cmd.args,['-name','"*"','-exec','grep','"hello"','{}','\;'])
+        self.assertEqual(cmd.command_line,['find','-name','"*"','-exec',
+                                           'grep','"hello"','{}','\;'])
+        self.assertEqual(str(cmd),'find -name "*" -exec grep "hello" {} \;')
+
     def test_run_subprocess(self):
         """Run command using subprocess
         """
         cmd = Command('ls','-l')
         cmd.run_subprocess(log='/dev/null')
+
+    def test_has_exe(self):
+        """Check 'has_exe' property works
+        """
+        cmd = Command('ls','-l')
+        self.assertTrue(cmd.has_exe)
+        cmd = Command('cannot_possibly_exist_3')
+        self.assertFalse(cmd.has_exe)
 
 class TestBcl2Fastq(unittest.TestCase):
 
