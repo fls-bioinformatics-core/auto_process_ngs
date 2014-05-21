@@ -15,9 +15,9 @@ bcl2fastq = AttributeDictionary(
 #
 # Define runners for specific jobs
 runners = AttributeDictionary(
-    bcl2fastq=JobRunner.SimpleJobRunner(),
-    qc=JobRunner.SimpleJobRunner(),
-    stats=JobRunner.SimpleJobRunner(),
+    bcl2fastq=JobRunner.SimpleJobRunner(join_logs=True),
+    qc=JobRunner.SimpleJobRunner(join_logs=True),
+    stats=JobRunner.SimpleJobRunner(join_logs=True),
 )
 #
 # Information for archiving analyses
