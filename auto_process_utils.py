@@ -1438,6 +1438,20 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.project_metadata,None)
         self.assertEqual(metadata.stats_file,None)
 
+    def test_handle_analysis_dir_metadata(self):
+        """Check creation of an empty AnalysisDirMetadata object
+        """
+        metadata = AnalysisDirMetadata()
+        self.assertEqual(metadata.analysis_dir,None)
+        self.assertEqual(metadata.data_dir,None)
+        self.assertEqual(metadata.platform,None)
+        self.assertEqual(metadata.sample_sheet,None)
+        self.assertEqual(metadata.bases_mask,None)
+        self.assertEqual(metadata.primary_data_dir,None)
+        self.assertEqual(metadata.unaligned_dir,None)
+        self.assertEqual(metadata.project_metadata,None)
+        self.assertEqual(metadata.stats_file,None)
+
 class TestAnalysisProjectInfo(unittest.TestCase):
     """Tests for the AnalysisProjectInfo class
 
