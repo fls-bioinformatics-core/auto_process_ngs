@@ -32,7 +32,7 @@ each project.
 
 """
 
-__version__ = "0.0.55"
+__version__ = "0.0.56"
 
 #######################################################################
 # Imports
@@ -82,9 +82,9 @@ class AutoProcess:
             self.analysis_dir = os.path.abspath(self.analysis_dir)
             try:
                 self.load_parameters()
-            except Exception, ex:
+            except MissingInfoFileException, ex:
                 logging.warning("Failed to load parameters: %s (ignored)" % ex)
-                logging.warning("Not an auto_process project?")
+                logging.warning("Perhaps this is not an auto_process project?")
                 # Attempt to detect existing data directory
                 self.params['unaligned_dir'] = self.detect_unaligned_dir()
                 if self.params.unaligned_dir is None:
@@ -95,6 +95,10 @@ class AutoProcess:
                     logging.warning("Unable to identify platform from directory name")
                 else:
                     print "Setting 'platform' parameter to %s" % self.params.platform
+            except Exception, ex:
+                logging.error("Failed to load parameters: %s" % ex)
+                logging.error("Stopping")
+                sys.exit(1)
             self.params['analysis_dir'] = self.analysis_dir
 
     def add_directory(self,sub_dir):
@@ -120,12 +124,12 @@ class AutoProcess:
         # check for info file
         info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
         if not os.path.isfile(info_file_name):
-            raise Exception, "No info file %s" % info_file_name
-        # File exists so allow save back
-        self._save_params = True
+            raise MissingInfoFileException, "No info file %s" % info_file_name
         # Read contents of info file and assign values
         logging.debug("Loading settings from %s" % info_file_name)
         self.params.load(info_file_name)
+        # File exists and can be read so allow save back
+        self._save_params = True
 
     def save_parameters(self):
         # Save parameters to info file
@@ -1347,6 +1351,14 @@ class AutoProcess:
             report.append('\t'.join(project_line))
         report = '\n'.join(report)
         return report
+
+#######################################################################
+# Custom exceptions
+#######################################################################
+
+class MissingInfoFileException(Exception):
+    """Used to indicate missing auto_process.info file
+    """
 
 #######################################################################
 # Functions
