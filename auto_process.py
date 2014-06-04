@@ -19,6 +19,8 @@ The stages are:
 
     setup
     make_fastqs
+    merge_fastq_dirs
+    update_fastq_stats
     setup_analysis_dirs
     run_qc
     archive
@@ -32,7 +34,7 @@ each project.
 
 """
 
-__version__ = "0.0.56"
+__version__ = "0.0.57"
 
 #######################################################################
 # Imports
@@ -674,6 +676,102 @@ class AutoProcess:
         # Do check
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                                     self.params.sample_sheet)
+
+    def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=True):
+        # Combine multiple output directories from bcl2fastq into
+        # a single directory
+        # It is intended to combine the output from multiple runs
+        # of bcl2fastq into a single 'unaligned'-equivalent directory
+        # It operates in an automatic mode and should detect
+        # additional 'unaligned' dirs on its own.
+        # 
+        # primary_unaligned_dir: the 'unaligned' dir that data from
+        #                        from all others will be put into
+        # dry_run: if True then just report operations
+        #
+        if primary_unaligned_dir is None:
+            raise Exception,"Primary unaligned dir not defined"
+        # Collect unaligned dirs
+        print "Collecting bcl2fastq directories"
+        primary_illumina_data = None
+        unaligned_dirs = {}
+        for dirn in auto_process_utils.list_dirs(self.analysis_dir):
+            try:
+                illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
+                                                          unaligned_dir=dirn)
+                if dirn == primary_unaligned_dir:
+                    print "* %s (primary dir)" % dirn
+                    primary_illumina_data = illumina_data
+                else:
+                    print "* %s" % dirn
+                    unaligned_dirs[dirn] = illumina_data
+            except Exception, ex:
+                logging.debug("Rejecting %s: %s" % (dirn,ex))
+        # Check primary unaligned dir
+        if primary_illumina_data is None:
+            raise Exception, "Primary dir '%s' doesn't exist, or doesn't contain data?" % \
+                primary_unaligned_dir
+        # Is there anything to do?
+        if not unaligned_dirs:
+            print "No extra bcl2fastq output directories found, nothing to do"
+            return
+        # Make a directory to move replaced data to
+        if not dry_run:
+            unaligned_backup = self.add_directory("save.%s" % 
+                                                  os.path.basename(primary_unaligned_dir))
+        # Examine each additional directory and move data as required
+        for unaligned_dir in unaligned_dirs:
+            # Deal with projects
+            print "Importing projects from %s:" % unaligned_dir
+            illumina_data = unaligned_dirs[unaligned_dir]
+            for project in illumina_data.projects:
+                try:
+                    primary_project = primary_illumina_data.get_project(project.name)
+                    print "- '%s' will be replaced by version from %s" % (project.name,
+                                                                          unaligned_dir)
+                    if not dry_run:
+                        backup_dirn = os.path.join(unaligned_backup,
+                                                   "save.%s" % os.path.basename(project.dirn))
+                        print "- moving %s to %s" % (primary_project.dirn,
+                                                     backup_dirn)
+                        shutil.move(primary_project.dirn,backup_dirn)
+                except IlluminaData.IlluminaDataError:
+                    print "- '%s' will be imported from %s"  % (project.name,
+                                                                unaligned_dir)
+                if not dry_run:
+                    print "- moving %s to %s" % (project.dirn,
+                                                 primary_unaligned_dir)
+                    shutil.move(project.dirn,primary_unaligned_dir)
+            # Deal with undetermined indices
+            if illumina_data.undetermined is not None:
+                print "Importing undetermined indices data from %s:" % unaligned_dir
+                for lane in illumina_data.undetermined.samples:
+                    primary_lane = None
+                    for lane0 in primary_illumina_data.undetermined.samples:
+                        if lane.name == lane0.name:
+                            primary_lane = lane0
+                            break
+                    # Finished looking for existing data
+                    if primary_lane is not None:
+                        print "- '%s' will be replaced by version from %s" % (lane.name,
+                                                                              unaligned_dir)
+                        if not dry_run:
+                                backup_dirn = os.path.join(
+                                    unaligned_backup,
+                                    "save.%s" % os.path.basename(
+                                        primary_illumina_data.undetermined.dirn))
+                                print "- moving %s to %s" % (primary_lane.dirn,
+                                                             backup_dirn)
+                                shutil.move(primary_lane.dirn,backup_dirn)
+                    else:
+                        print "- '%s' will be imported from %s"  % (lane.name,
+                                                                    unaligned_dir)
+                    if not dry_run:
+                        print "- moving %s to %s" % \
+                            (lane.dirn,primary_illumina_data.undetermined.dirn)
+                        shutil.move(lane.dirn,primary_illumina_data.undetermined.dirn)
+            else:
+                print "No undetermined indices found"
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False):
         # Construct and populate the analysis directories for each project
@@ -1424,8 +1522,8 @@ def setup_parser():
 def make_fastqs_parser():
     p = optparse.OptionParser(usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
-                              description="Automatically process Illumina sequence from "
-                              "ANALYSIS_DIR.")
+                              description="Generate fastq files from raw bcl files "
+                              "produced by Illumina sequencer within ANALYSIS_DIR.")
     nprocessors = auto_process_settings.bcl2fastq.nprocessors
     p.add_option('--output-dir',action='store',
                  dest='unaligned_dir',default=None,
@@ -1461,6 +1559,22 @@ def make_fastqs_parser():
     p.add_option('--generate-stats',action='store_true',
                  dest='generate_stats',default=False,
                  help="(Re)generate statistics for fastq files")
+    return p
+
+def merge_fastq_dirs_parser():
+    p = optparse.OptionParser(usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Automatically merge fastq directories froms "
+                              "multiple bcl-to-fastq runs within ANALYSIS_DIR. Use this "
+                              "command if 'make_fastqs' step was run multiple times to "
+                              "process subsets of lanes.")
+    nprocessors = auto_process_settings.bcl2fastq.nprocessors
+    p.add_option('--primary-unaligned-dir',action='store',
+                 dest='unaligned_dir',default='bcl2fastq',
+                 help="merge fastqs from additional bcl-to-fastq directories into "
+                 "UNALIGNED_DIR. Original data will be moved out of the way first. "
+                 "Defaults to 'bcl2fastq'.")
+    add_dry_run_option(p)
     return p
 
 def setup_analysis_dirs_parser():
@@ -1559,10 +1673,10 @@ def report_parser():
                  help="print summary report suitable for record-keeping")
     return p
 
-def generic_parser(description=None):
+def generic_parser(cmd,description=None):
     if description is None:
         description = "Automatically process Illumina sequence from ANALYSIS_DIR."
-    p  = optparse.OptionParser(usage="%prog CMD [OPTIONS] [ANALYSIS_DIR]",
+    p  = optparse.OptionParser(usage="%prog "+cmd+" [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
                               description=description)
     return p
@@ -1589,6 +1703,10 @@ if __name__ == "__main__":
     cmd_parsers = bcf_utils.OrderedDictionary()
     cmd_parsers['setup'] = setup_parser()
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
+    cmd_parsers['merge_fastq_dirs'] = merge_fastq_dirs_parser()
+    cmd_parsers['update_fastq_stats'] = generic_parser('update_fastq_stats',
+                                                       "(Re)generate statistics for fastq "
+                                                       "files produced from 'make_fastqs'.")
     cmd_parsers['setup_analysis_dirs'] = setup_analysis_dirs_parser()
     cmd_parsers['run_qc'] = run_qc_parser()
     cmd_parsers['archive'] = archive_parser()
@@ -1657,9 +1775,14 @@ if __name__ == "__main__":
                            unaligned_dir=options.unaligned_dir,
                            sample_sheet=options.sample_sheet,
                            bases_mask=options.bases_mask)
+        elif cmd == 'merge_fastq_dirs':
+            d.merge_fastq_dirs(options.unaligned_dir,
+                               dry_run=options.dry_run)
+        elif cmd == 'update_fastq_stats':
+            d.generate_stats()
         elif cmd == 'setup_analysis_dirs':
-                 d.setup_analysis_dirs(ignore_missing_metadata=
-                                       options.ignore_missing_metadata)
+            d.setup_analysis_dirs(ignore_missing_metadata=
+                                  options.ignore_missing_metadata)
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
