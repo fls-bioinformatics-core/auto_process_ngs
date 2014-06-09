@@ -1233,7 +1233,7 @@ class AutoProcess:
         table = ['<table class="per_lane_stats">']
         per_lane_stats = TabFile.TabFile(per_lane_stats_file,first_line_is_header=True)
         html_line = ['<tr>']
-        for field in stats.header():
+        for field in per_lane_stats.header():
             html_line.append("<th>%s</th>" % field)
         html_line.append('</tr>')
         table.append(''.join(html_line))
