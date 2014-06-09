@@ -34,7 +34,7 @@ each project.
 
 """
 
-__version__ = "0.0.57"
+__version__ = "0.0.58"
 
 #######################################################################
 # Imports
@@ -639,7 +639,8 @@ class AutoProcess:
                                                 '--output',
                                                 os.path.join(self.params.analysis_dir,
                                                              stats_file),
-                                                self.params.analysis_dir)
+                                                self.params.analysis_dir,
+                                                '--force')
         print "Generating statistics: running %s" % fastq_statistics
         fastq_statistics_job = Pipeline.Job(runner,
                                             'fastq_statistics',
