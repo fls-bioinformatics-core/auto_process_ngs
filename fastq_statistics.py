@@ -19,7 +19,7 @@ Generate statistics for fastq files for an Illumina sequencing run.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #######################################################################
 # Import modules that this module depends on
@@ -149,6 +149,9 @@ def sequencer_stats(stats):
 
 if __name__ == '__main__':
 
+    # Set up logger formatting
+    logging.basicConfig(format='%(levelname)s %(message)s')
+
     # Process command line
     p = optparse.OptionParser(usage="%prog [OPTIONS] ILLUMINA_RUN_DIR",
                               version="%prog "+__version__,
@@ -161,19 +164,24 @@ if __name__ == '__main__':
     p.add_option("--unaligned",action="store",dest="unaligned_dir",default="Unaligned",
                  help="specify an alternative name for the 'Unaligned' directory "
                  "containing the fastq.gz files")
-    
+    p.add_option("--force",action="store_true",dest="force",default=False,
+                 help="force regeneration of statistics from fastq files")
     options,args = p.parse_args()
     if len(args) != 1:
         p.error("expects a single argument (input directory)")
 
     # Get the raw data
+    stats = None
     filein = os.path.join(args[0],'statistics.info')
     if os.path.isfile(filein):
         # Existing statistics file detected, read data from here
         logging.warning("Existing statistics file detected")
-        stats = TabFile.TabFile(filen=filein,first_line_is_header=True)
-    else:
-        # Create statistics from raw files
+        if not options.force:
+            stats = TabFile.TabFile(filen=filein,first_line_is_header=True)
+        else:
+            logging.warning("--force specified, statistics will be regenerated")
+    if stats is None:
+        # (Re)create statistics from raw files
         try:
             illumina_data = IlluminaData.IlluminaData(args[0],
                                                       unaligned_dir=options.unaligned_dir)
@@ -182,10 +190,11 @@ if __name__ == '__main__':
             sys.exit(1)
         # Generate statistics for fastq files
         stats = fastq_statistics(illumina_data)
+        # Write out
         stats.write(options.stats_file,include_header=True)
-        print "Statistics written to %s" % options.stats_file
+    print "Statistics written to %s" % options.stats_file
     # Per-lane sequencer statistics
-    seq_stats_file = 'sequencer_stats.info'
+    seq_stats_file = 'per_lane_stats.info'
     seqstats = sequencer_stats(stats)
     seqstats.write(seq_stats_file,include_header=True)
     print "Per-lane sequencer stats written to %s" % seq_stats_file
