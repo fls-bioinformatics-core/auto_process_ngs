@@ -19,8 +19,6 @@ The stages are:
 
     setup
     make_fastqs
-    merge_fastq_dirs
-    update_fastq_stats
     setup_analysis_dirs
     run_qc
     archive
@@ -32,9 +30,18 @@ should be run in sequence to create fastq files, set up analysis
 directories for each project, and run QC scripts for each sample in
 each project.
 
+Additional commands are available:
+
+    clone
+    merge_fastq_dirs
+    update_fastq_stats
+
+but these are not part of the standard workflow - they are used for
+special cases and testing.
+
 """
 
-__version__ = "0.0.59"
+__version__ = "0.0.60"
 
 #######################################################################
 # Imports
@@ -291,6 +298,17 @@ class AutoProcess:
         return self.add_directory('tmp')
 
     @property
+    def script_code_dir(self):
+        # Generate and return full path to ScriptCode directory
+        script_code = self.add_directory('ScriptCode')
+        # Put a README file in ScriptCode to make sure it's
+        # not pruned on subsequent rsync operations
+        readme = os.path.join(script_code,'README.txt')
+        if not os.path.exists(readme):
+            open(readme,'w').write("The ScriptCode directory is a "
+                                   "place to put custom scripts and programs\n")
+
+    @property
     def readme(self):
         # If the analysis dir contains a README file then
         # return the full path; otherwise return None
@@ -319,12 +337,8 @@ class AutoProcess:
         if not os.path.exists(self.analysis_dir):
             # Create directory structure
             self.create_directory(self.analysis_dir)
-            self.add_directory('ScriptCode')
-            # Put a file in ScriptCode to make sure it's
-            # not pruned on subsequent rsync operations
-            fp = open(os.path.join(self.analysis_dir,'ScriptCode','README.txt'),'w')
-            fp.write("The ScriptCode directory is a place to put custom scripts and programs")
-            fp.close()
+            self.log_dir
+            self.script_code_dir
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
@@ -414,6 +428,43 @@ class AutoProcess:
         self.generate_stats()
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
+
+    def clone(self,clone_dir,copy_fastqs=False):
+        # "Clone" (i.e. copy) to new directory 'clone_dir'
+        # By default this is done by linking to the bcl2fastq dir; set
+        # 'copy_fastqs' to True to make copies instead
+        clone_dir = os.path.abspath(clone_dir)
+        if os.path.exists(clone_dir):
+            # Directory already exists
+            logging.warning("Target directory '%s' already exists" % clone_dir)
+            raise Exception("Clone failed, target directory already exists")
+        self.create_directory(clone_dir)
+        # Copy info file
+        info_file = os.path.join(self.analysis_dir,'auto_process.info')
+        if not os.path.exists(info_file):
+            raise Exception("Clone failed, no info file %s" % info_file)
+        shutil.copy(info_file,os.path.join(clone_dir,'auto_process.info'))
+        # Link to or copy fastqs
+        unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
+        clone_unaligned_dir = os.path.join(clone_dir,
+                                           os.path.basename(self.params.unaligned_dir))
+        if not copy_fastqs:
+            # Link to unaligned dir
+            os.symlink(unaligned_dir,clone_unaligned_dir)
+        else:
+            # Copy unaligned dir
+            shutil.copytree(unaligned_dir,clone_unaligned_dir)
+        # Copy additional files, if found
+        for f in (self.params.sample_sheet,
+                  self.params.stats_file,
+                  self.params.project_metadata):
+            srcpath = os.path.join(self.analysis_dir,f)
+            if os.path.exists(srcpath):
+                shutil.copy(srcpath,clone_dir)
+        # Basic set of subdirectories
+        d = AutoProcess(analysis_dir=clone_dir)
+        d.log_dir
+        d.script_code_dir
 
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq
@@ -1553,6 +1604,18 @@ def setup_parser():
                  "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
     return p
 
+def clone_parser():
+    p = optparse.OptionParser(usage="%prog clone [OPTIONS] DIR CLONE_DIR",
+                              version="%prog "+__version__,
+                              description="Make a copy of an existing auto_processed analysis "
+                              "directory DIR, in a new directory CLONE_DIR. The clone will "
+                              "not include any project directories, but will copy the "
+                              "projects.info file.")
+    p.add_option('--copy-fastqs',action='store_true',dest='copy_fastqs',default=False,
+                 help="Copy fastq.gz files from DIR into DIR2 (default is to make a "
+                 "link to the bcl-to-fastq directory)")
+    return p
+
 def make_fastqs_parser():
     p = optparse.OptionParser(usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
@@ -1736,6 +1799,7 @@ if __name__ == "__main__":
     # Available commands and corresponding
     cmd_parsers = bcf_utils.OrderedDictionary()
     cmd_parsers['setup'] = setup_parser()
+    cmd_parsers['clone'] = clone_parser()
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
     cmd_parsers['merge_fastq_dirs'] = merge_fastq_dirs_parser()
     cmd_parsers['update_fastq_stats'] = generic_parser('update_fastq_stats',
@@ -1790,6 +1854,13 @@ if __name__ == "__main__":
             d.setup(args[0],analysis_dir=options.analysis_dir)
         else:
             d.setup_from_fastq_dir(args[0],options.fastq_dir)
+    elif cmd == 'clone':
+        if len(args) != 2:
+            sys.stderr.write("Need to supply an existing analysis dir and directory for "
+                             "the copy\n")
+            sys.exit(1)
+        d = AutoProcess(args[0])
+        d.clone(args[1],copy_fastqs=options.copy_fastqs)
     else:
         # For other options check if an analysis
         # directory was specified
