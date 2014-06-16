@@ -1549,7 +1549,7 @@ class AutoProcess:
                 run_id = run_name
         if self.params.run_number is not None:
             run_number = self.params.run_number
-        if self.source is not None:
+        if self.params.source is not None:
             data_source = self.params.source
         else:
             data_source = ''
