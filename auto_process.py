@@ -41,7 +41,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.60"
+__version__ = "0.0.61"
 
 #######################################################################
 # Imports
@@ -982,7 +982,8 @@ class AutoProcess:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
 
-    def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False):
+    def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
+                        chmod=None,group=None):
         # Copy the analysis directory and contents to an archive area
         if archive_dir is None:
             archive_dir = auto_process_settings.archive.dirn
@@ -1002,7 +1003,8 @@ class AutoProcess:
         try:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
                                                prune_empty_dirs=True,
-                                               dry_run=dry_run)
+                                               dry_run=dry_run,
+                                               chmod=chmod)
             print "Running %s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
         except Exception, ex:
@@ -1010,6 +1012,21 @@ class AutoProcess:
             status = -1
         if status != 0:
             logging.error("Failed to rsync to archive (returned status %d)" % status)
+        # Set the group (local copies only)
+        if group is not None:
+            user,server,dirn = auto_process_utils.split_user_host_dir(archive_dir)
+            if user is None and server is None:
+                # Local archive
+                print "Setting group of archived files to '%s'" % group
+                gid = bcf_utils.get_gid_from_group(group)
+                if gid is None:
+                    logging.error("Failed to get gid for group '%s'" % group)
+                else:
+                    for f in bcf_utils.walk(
+                            os.path.join(dirn,os.path.basename(self.analysis_dir)),
+                            include_dirs=True):
+                        logging.debug("Updating group for %s" % f)
+                        os.lchown(f,-1,gid)
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
@@ -1751,6 +1768,14 @@ def archive_parser():
     p.add_option('--year',action='store',
                  dest='year',default=None,
                  help="specify the year e.g. '2014' (default is the current year)")
+    default_group = auto_process_settings.archive.group
+    p.add_option('--group',action='store',dest='group',default=default_group,
+                 help="specify the name of group for the archived files NB only works "
+                 "when the archive is a local directory (default: %s)" % default_group)
+    default_chmod = auto_process_settings.archive.chmod
+    p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
+                 help="specify chmod operations for the archived files (default: "
+                 "%s)" % default_chmod)
     add_dry_run_option(p)
     return p
 
@@ -1896,7 +1921,9 @@ if __name__ == "__main__":
             d.copy_to_archive(archive_dir=options.archive_dir,
                               platform=options.platform,
                               year=options.year,
-                              dry_run=options.dry_run)
+                              dry_run=options.dry_run,
+                              group=options.group,
+                              chmod=options.chmod)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,

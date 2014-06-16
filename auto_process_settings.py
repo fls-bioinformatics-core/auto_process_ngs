@@ -25,6 +25,8 @@ runners = AttributeDictionary(
 archive = AttributeDictionary(
     dirn=None,
     log=None,
+    group=None,
+    chmod=None
 )
 #
 # Information for uploading QC reports
