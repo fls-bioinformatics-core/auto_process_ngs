@@ -18,6 +18,7 @@ processing and QC'ing Illumina sequencing data.
 The stages are:
 
     setup
+    config
     make_fastqs
     setup_analysis_dirs
     run_qc
@@ -41,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.62"
+__version__ = "0.0.63"
 
 #######################################################################
 # Imports
@@ -476,6 +477,20 @@ class AutoProcess:
         d = AutoProcess(analysis_dir=clone_dir)
         d.log_dir
         d.script_code_dir
+
+    def show_settings(self):
+        # Print the current settings
+        print "Settings in auto_process.info:"
+        for p in self.params:
+            print "%s: %s" % (p,self.params[p])
+
+    def set_param(self,key,value):
+        # Set an analysis directory parameter
+        if key in self.params:
+            print "Setting parameter '%s' to '%s'" % (key,value)
+            self.params[key] = value
+        else:
+            raise KeyError("Parameter 'key' not found" % key)
 
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq
@@ -1652,6 +1667,18 @@ def clone_parser():
                  "link to the bcl-to-fastq directory)")
     return p
 
+def config_parser():
+    p  = optparse.OptionParser(usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
+                               version="%prog "+__version__,
+                               description="Query and configure automatic processing "
+                               "parameters and settings for ANALYSIS_DIR.")
+    p.add_option('--set',action='store',dest='key_value',default=None,
+                 help="Set the value of a parameter. KEY_VALUE should be of the form "
+                 "'<param>=<value>'.")
+    p.add_option('--show',action='store_true',dest='show',default=False,
+                 help="Show the values of parameters and settings")
+    return p
+
 def make_fastqs_parser():
     p = optparse.OptionParser(usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
                               version="%prog "+__version__,
@@ -1844,6 +1871,7 @@ if __name__ == "__main__":
     cmd_parsers = bcf_utils.OrderedDictionary()
     cmd_parsers['setup'] = setup_parser()
     cmd_parsers['clone'] = clone_parser()
+    cmd_parsers['config'] = config_parser()
     cmd_parsers['make_fastqs'] = make_fastqs_parser()
     cmd_parsers['merge_fastq_dirs'] = merge_fastq_dirs_parser()
     cmd_parsers['update_fastq_stats'] = generic_parser('update_fastq_stats',
@@ -1936,6 +1964,17 @@ if __name__ == "__main__":
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
                      no_ungzip_fastqs=options.no_ungzip_fastqs)
+        elif cmd == 'config':
+            if options.show:
+                d.show_settings()
+            elif options.key_value is not None:
+                try:
+                    i = options.key_value.index('=')
+                    key = options.key_value[:i]
+                    value = options.key_value[i+1:].strip('"')
+                    d.set_param(key,value)
+                except ValueError:
+                    logging.error("Can't process '%s'" % options.key_value)
         elif cmd == 'archive':
             d.copy_to_archive(archive_dir=options.archive_dir,
                               platform=options.platform,
