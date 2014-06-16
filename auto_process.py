@@ -41,7 +41,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.61"
+__version__ = "0.0.62"
 
 #######################################################################
 # Imports
@@ -355,6 +355,16 @@ class AutoProcess:
             print "Identifying platform from data directory name"
             platform = platforms.get_sequencer_platform(data_dir)
         print "Platform identified as '%s'" % platform
+        # Run number
+        try:
+            datestamp,instrument,run_number = IlluminaData.split_run_name(
+                os.path.basename(self.analysis_dir))
+            run_number = run_number.lstrip('0')
+        except Exception, ex:
+            logging.warning("Unable to extract information from run name '%s'" \
+                            % run_name)
+            logging.warning("Exception: %s" % ex)
+            run_number = ''
         # Custom SampleSheet.csv file
         custom_sample_sheet = self.params.sample_sheet
         if custom_sample_sheet is None:
@@ -399,6 +409,7 @@ class AutoProcess:
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
         self.params['platform'] = platform
+        self.params['run_number'] = run_number
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
         # Set flag to allow parameters to be saved back
@@ -1419,6 +1430,8 @@ class AutoProcess:
             platform = self.params.platform.upper()
         else:
             platform = 'unknown'
+        if self.params.run_number is not None:
+            run_number = self.params.run_number
         # Generate report text
         report = []
         if datestamp and instrument and run_number:
@@ -1534,11 +1547,17 @@ class AutoProcess:
                 run_id = run_name[:-len('_analysis')]
             else:
                 run_id = run_name
+        if self.params.run_number is not None:
+            run_number = self.params.run_number
+        if self.source is not None:
+            data_source = self.params.source
+        else:
+            data_source = ''
         paired_end = 'yes' if illumina_data.paired_end else 'no'
         report = []
         # Generate report, one line per project
         for p in project_metadata:
-            project_line = [run_id,run_number,'','']
+            project_line = [run_id,run_number,data_source,'']
             project = illumina_data.get_project(p['Project'])
             project_line.append('' if p['User'] == '.' else p['User'])
             project_line.append('' if p['PI'] == '.' else p['PI'])

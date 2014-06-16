@@ -808,7 +808,9 @@ class AnalysisDirMetadata(MetadataDict):
                                   'project_metadata':'project_metadata',
                                   'primary_data_dir':'primary_data_dir',
                                   'unaligned_dir':'unaligned_dir',
-                                  'stats_file':'stats_file'
+                                  'stats_file':'stats_file',
+                                  'source': 'source',
+                                  'run_number': 'run_number',
                               },
                               filen=filen)
 
