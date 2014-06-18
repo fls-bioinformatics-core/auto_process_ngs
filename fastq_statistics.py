@@ -19,7 +19,7 @@ Generate statistics for fastq files for an Illumina sequencing run.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
 
 #######################################################################
 # Import modules that this module depends on
@@ -120,7 +120,7 @@ def sequencer_stats(stats):
                                                     'Assigned reads',
                                                     'Unassigned reads'))
     # Get the data for each lane
-    for lane in xrange(1,8):
+    for lane in xrange(1,9):
         data = []
         pattern = "_L00%d_R1_001.fastq.gz" % lane
         total_reads = 0
