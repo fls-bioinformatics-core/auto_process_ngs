@@ -1572,7 +1572,7 @@ class AutoProcess:
         report = []
         # Generate report, one line per project
         for p in project_metadata:
-            project_line = [run_id,run_number,data_source,'']
+            project_line = [run_id,str(run_number),data_source,'']
             project = illumina_data.get_project(p['Project'])
             project_line.append('' if p['User'] == '.' else p['User'])
             project_line.append('' if p['PI'] == '.' else p['PI'])
