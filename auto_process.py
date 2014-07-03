@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.64"
+__version__ = "0.0.65"
 
 #######################################################################
 # Imports
@@ -590,7 +590,7 @@ class AutoProcess:
         return status
         
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                     skip_rsync=False,keep_primary_data=False,generate_stats=False,
+                     skip_rsync=False,remove_primary_data=False,generate_stats=False,
                      nprocessors=1,unaligned_dir=None,sample_sheet=None,
                      bases_mask=None):
         # Convert bcl files to fastq
@@ -601,8 +601,8 @@ class AutoProcess:
         # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
         # skip_rsync          : if True then don't rsync primary data at the start of
         #                       bcl2fastq conversion
-        # keep_primary_data   : if True then don't remove primary data at
-        #                       the end of bcl2fastq conversion
+        # remove_primary_data : if True then remove primary data at the end of bcl2fastq
+        #                       conversion (default is to keep it)
         # generate_stats      : if True then (re)generate statistics file for fastqs
         # unaligned_dir       : if set then use this as the output directory for
         #                       bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
@@ -703,7 +703,7 @@ class AutoProcess:
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             return
         # Remove primary data
-        if not keep_primary_data:
+        if remove_primary_data:
             self.remove_primary_data()
         # Generate statistics
         self.generate_stats()
@@ -1035,7 +1035,9 @@ class AutoProcess:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
                                                prune_empty_dirs=True,
                                                dry_run=dry_run,
-                                               chmod=chmod)
+                                               chmod=chmod,
+                                               extra_options=['--exclude=primary_data',
+                                                              '--exclude=save.*'])
             print "Running %s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
         except Exception, ex:
@@ -1718,12 +1720,18 @@ def make_fastqs_parser():
     p.add_option('--skip-rsync',action='store_true',
                  dest='skip_rsync',default=False,
                  help="don't rsync the primary data at the beginning of processing")
-    p.add_option('--keep-primary-data',action='store_true',
-                 dest='keep_primary_data',default=False,
-                 help="Don't delete the primary data at the end of processing")
+    p.add_option('--remove-primary-data',action='store_true',
+                 dest='remove_primary_data',default=False,
+                 help="Delete the primary data at the end of processing")
     p.add_option('--generate-stats',action='store_true',
                  dest='generate_stats',default=False,
                  help="(Re)generate statistics for fastq files")
+    deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option('--keep-primary-data',action='store_true',
+                          dest='keep_primary_data',default=False,
+                          help="Don't delete the primary data at the end of processing "
+                          "(does nothing; primary data is kept by default)")
+    p.add_option_group(deprecated)
     return p
 
 def merge_fastq_dirs_parser():
@@ -1950,7 +1958,7 @@ if __name__ == "__main__":
         if cmd == 'make_fastqs':
             d.bcl_to_fastq(skip_rsync=options.skip_rsync,
                            nprocessors=options.nprocessors,
-                           keep_primary_data=options.keep_primary_data,
+                           remove_primary_data=options.remove_primary_data,
                            ignore_missing_bcl=options.ignore_missing_bcl,
                            ignore_missing_stats=options.ignore_missing_stats,
                            generate_stats=options.generate_stats,
