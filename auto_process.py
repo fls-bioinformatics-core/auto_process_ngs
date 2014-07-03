@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.63"
+__version__ = "0.0.64"
 
 #######################################################################
 # Imports
@@ -380,9 +380,13 @@ class AutoProcess:
             sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
                                                     custom_sample_sheet)
             print "Keeping copy of original sample sheet"
-            os.rename(tmp_sample_sheet,os.path.join(self.analysis_dir,'SampleSheet.orig.csv'))
+            original_sample_sheet = os.path.join(self.analysis_dir,'SampleSheet.orig.csv')
+            os.rename(tmp_sample_sheet,original_sample_sheet)
+        iem_sample_sheet = IlluminaData.IEMSampleSheet(original_sample_sheet)
         sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
         print "Sample sheet '%s'" % custom_sample_sheet
+        # Assay type (= kit)
+        assay = iem_sample_sheet.header['Assay']
         # Bases mask
         bases_mask = self.params.bases_mask
         if bases_mask is None:
@@ -413,6 +417,7 @@ class AutoProcess:
         self.params['run_number'] = run_number
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
+        self.params['assay'] = assay
         # Set flag to allow parameters to be saved back
         self._save_params = True
 

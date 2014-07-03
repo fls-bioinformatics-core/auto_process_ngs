@@ -811,6 +811,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'stats_file':'stats_file',
                                   'source': 'source',
                                   'run_number': 'run_number',
+                                  'assay': 'assay'
                               },
                               filen=filen)
 
