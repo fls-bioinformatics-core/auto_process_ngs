@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.65"
+__version__ = "0.0.66"
 
 #######################################################################
 # Imports
@@ -592,7 +592,7 @@ class AutoProcess:
     def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                      skip_rsync=False,remove_primary_data=False,generate_stats=False,
                      nprocessors=1,unaligned_dir=None,sample_sheet=None,
-                     bases_mask=None):
+                     bases_mask=None,stats_file=None):
         # Convert bcl files to fastq
         #
         # Arguments:
@@ -609,6 +609,8 @@ class AutoProcess:
         #                       an alternative is already specified in the config file)
         # sample_sheet        : if set then use this as the input samplesheet
         # bases_mask          : if set then use this as an alternative bases mask setting
+        # stats_file          : if set then use this as the name of the output stats
+        #                       file.
         #
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -632,7 +634,7 @@ class AutoProcess:
             self.make_project_metadata_file()
             # (Re)generate stats?
             if generate_stats:
-                self.generate_stats()
+                self.generate_stats(stats_file)
             return
         # Bases mask
         if bases_mask is None:
@@ -706,13 +708,18 @@ class AutoProcess:
         if remove_primary_data:
             self.remove_primary_data()
         # Generate statistics
-        self.generate_stats()
+        self.generate_stats(stats_file)
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
 
-    def generate_stats(self,stats_file='statistics.info'):
+    def generate_stats(self,stats_file=None):
         # Generate statistics for initial fastq files from bcl2fastq
         # Set up runner
+        if stats_file is None:
+            if self.params['stats_file'] is not None:
+                stats_file = self.params['stats_file']
+            else:
+                stats_file='statistics.info'
         runner = auto_process_settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Generate statistics
@@ -1726,6 +1733,10 @@ def make_fastqs_parser():
     p.add_option('--generate-stats',action='store_true',
                  dest='generate_stats',default=False,
                  help="(Re)generate statistics for fastq files")
+    p.add_option('--stats-file',action='store',
+                 dest='stats_file',default=None,
+                 help="Specify output file for fastq statistics")
+    add_no_save_option(p)
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
     deprecated.add_option('--keep-primary-data',action='store_true',
                           dest='keep_primary_data',default=False,
@@ -1964,7 +1975,8 @@ if __name__ == "__main__":
                            generate_stats=options.generate_stats,
                            unaligned_dir=options.unaligned_dir,
                            sample_sheet=options.sample_sheet,
-                           bases_mask=options.bases_mask)
+                           bases_mask=options.bases_mask,
+                           stats_file=options.stats_file)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
                                dry_run=options.dry_run)
