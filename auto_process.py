@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.66"
+__version__ = "0.0.67"
 
 #######################################################################
 # Imports
@@ -78,8 +78,10 @@ class AutoProcess:
     # Class implementing an automatic fastq generation and QC
     # processing procedure
 
-    def __init__(self,analysis_dir=None):
+    def __init__(self,analysis_dir=None,allow_save_params=True):
         # analysis_dir: name/path for existing analysis directory
+        # allow_save_params: if True then allow updates to parameters
+        #                    to be saved back to the metadata file
         #
         # Create empty parameter set
         self.params = auto_process_utils.AnalysisDirMetadata()
@@ -91,7 +93,7 @@ class AutoProcess:
             # Load parameters
             self.analysis_dir = os.path.abspath(self.analysis_dir)
             try:
-                self.load_parameters()
+                self.load_parameters(allow_save=allow_save_params)
             except MissingInfoFileException, ex:
                 logging.warning("Failed to load parameters: %s (ignored)" % ex)
                 logging.warning("Perhaps this is not an auto_process project?")
@@ -128,8 +130,10 @@ class AutoProcess:
                     print "Making %s" % dir_path
                     bcf_utils.mkdir(dir_path)
 
-    def load_parameters(self):
+    def load_parameters(self,allow_save=True):
         # Get parameters from info file
+        # allow_save: if True then allow params to be saved back to
+        #             the info file (otherwise don't allow save)
         #
         # check for info file
         info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
@@ -138,8 +142,8 @@ class AutoProcess:
         # Read contents of info file and assign values
         logging.debug("Loading settings from %s" % info_file_name)
         self.params.load(info_file_name)
-        # File exists and can be read so allow save back
-        self._save_params = True
+        # File exists and can be read so set flag accordingly
+        self._save_params = allow_save
 
     def save_parameters(self):
         # Save parameters to info file
@@ -1873,6 +1877,12 @@ def generic_parser(cmd,description=None):
                               description=description)
     return p
 
+def add_no_save_option(p):
+    # Add --no-save option to a parser
+    p.add_option('--no-save',action='store_true',dest='no_save',default=False,
+                 help="Don't save parameter changes to the auto_process.info file")
+    return p
+
 def add_dry_run_option(p):
     # Add --dry-run option to a parser
     p.add_option('--dry-run',action='store_true',dest='dry_run',default=False,
@@ -1940,6 +1950,12 @@ if __name__ == "__main__":
     # Turn on debugging?
     set_debug(options.debug)
 
+    # Allow saving of parameters?
+    try:
+        allow_save = not options.no_save
+    except AttributeError:
+        allow_save = True
+
     # Setup the processing object and run the requested command
     if cmd == 'setup':
         if len(args) != 1:
@@ -1964,7 +1980,7 @@ if __name__ == "__main__":
             analysis_dir = args[0]
         else:
             analysis_dir = os.getcwd()
-        d = AutoProcess(analysis_dir)
+        d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         # Run the specified stage
         if cmd == 'make_fastqs':
             d.bcl_to_fastq(skip_rsync=options.skip_rsync,
