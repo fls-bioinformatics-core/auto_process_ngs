@@ -1502,7 +1502,7 @@ class AutoProcess:
         report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("Endedness: %s" % \
-                      'Paired end' if illumina_data.paired_end else 'Single end')
+                      ('Paired end' if illumina_data.paired_end else 'Single end'))
         report.append("Kit/assay: %s" % self.params.assay)
         report.append("")
         n_projects = len(project_metadata)
@@ -1569,7 +1569,7 @@ class AutoProcess:
             # Additional information
             report.append("\nAdditional information:\n")
             report.append("Endedness:\t%s" % \
-                          'Paired end' if illumina_data.paired_end else 'Single end')
+                          ('Paired end' if illumina_data.paired_end else 'Single end'))
             report.append("Kit/assay:\t%s" % self.params.assay)
             report.append("Comments :\t%s" % project.info.comments)
         report = '\n'.join(report)
