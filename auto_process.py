@@ -1210,15 +1210,15 @@ class AutoProcess:
         # General info
         index_page.add("<h2>General information</h2>")
         index_page.add("<table>")
-        index_page.add("<tr><td class='param'>Run name</td><td>%s</td>" %
+        index_page.add("<tr><td class='param'>Run name</td><td>%s</td></tr>" %
                        os.path.basename(self.analysis_dir))
-        index_page.add("<tr><td class='param'>Run number</td><td>%s</td>" %
+        index_page.add("<tr><td class='param'>Run number</td><td>%s</td></tr>" %
                        self.params.run_number)
-        index_page.add("<tr><td class='param'>Platform</td><td>%s</td>" %
+        index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
                        self.params.platform)
-        index_page.add("<tr><td class='param'>Endedness</td><td>%s</td>" %
-                       'Paired end' if illumina_data.paired_end else 'Single end')
-        index_page.add("<tr><td class='param'>Kit/assay</td><td>%s</td>" %
+        index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
+                       ('Paired end' if illumina_data.paired_end else 'Single end'))
+        index_page.add("<tr><td class='param'>Kit/assay</td><td>%s</td></tr>" %
                        self.params.assay)
         index_page.add("</table>")
         # Table of projects
