@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.67"
+__version__ = "0.0.68"
 
 #######################################################################
 # Imports
@@ -1118,6 +1118,8 @@ class AutoProcess:
         if dirn is None:
             raise Exception, "No target directory specified"
         dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
+        # Get general data
+        illumina_data = self.load_illumina_data()
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Check QC situation for each project
@@ -1197,10 +1199,28 @@ class AutoProcess:
                               "        vertical-align: top;\n"
                               "        padding: 2px 5px;\n"
                               "        border-bottom: solid 1px lightgray; }")
+        index_page.addCSSRule("td.param { background-color: grey;\n"
+                              "           color: white;\n"
+                              "           padding: 2px 5px;\n"
+                              "           font-weight: bold; }")
         index_page.addCSSRule("p.footer { font-style: italic;\n"
                               "           font-size: 70%; }")
         # Build the page
         index_page.add("<h1>%s</h1>" % title)
+        # General info
+        index_page.add("<h2>General information</h2>")
+        index_page.add("<table>")
+        index_page.add("<tr><td class='param'>Run name</td><td>%s</td>" %
+                       os.path.basename(self.analysis_dir))
+        index_page.add("<tr><td class='param'>Run number</td><td>%s</td>" %
+                       self.params.run_number)
+        index_page.add("<tr><td class='param'>Platform</td><td>%s</td>" %
+                       self.params.platform)
+        index_page.add("<tr><td class='param'>Endedness</td><td>%s</td>" %
+                       'Paired end' if illumina_data.paired_end else 'Single end')
+        index_page.add("<tr><td class='param'>Kit/assay</td><td>%s</td>" %
+                       self.params.assay)
+        index_page.add("</table>")
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
         index_page.add("<table>")
@@ -1414,17 +1434,22 @@ class AutoProcess:
         report = []
         for p in project_metadata:
             project = illumina_data.get_project(p['Project'])
-            report.append("'%s': %s, %s %s (PI: %s) (%d samples)" % \
+            report.append("'%s': %s, %s %s (PI: %s) (%d sample%s)" % \
                           (p['Project'],
                            p['User'],
                            p['Organism'],
                            p['Library'],
                            p['PI'],
-                           len(project.samples)))
+                           len(project.samples),
+                           's' if len(project.samples) > 1 else ''
+                       ))
         report = '; '.join(report)
         # Paired end run?
         if illumina_data.paired_end:
             report = "Paired end: " + report
+        # Assay type?
+        if self.params.assay is not None:
+            report += " (%s)" % self.params.assay
         return report
 
     def report_summary_format(self):
@@ -1476,19 +1501,23 @@ class AutoProcess:
         report.append("Run name : %s" % run_name)
         report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
+        report.append("Endedness: %s" % \
+                      'Paired end' if illumina_data.paired_end else 'Single end')
+        report.append("Kit/assay: %s" % self.params.assay)
         report.append("")
         n_projects = len(project_metadata)
         report.append("%d project%s:" % (n_projects,
                                          '' if n_projects == 1 else 's'))
         for p in project_metadata:
             project = illumina_data.get_project(p['Project'])
-            report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d samples" % \
+            report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d sample%s" % \
                           (p['Project'],
                            p['User'],
                            p['PI'] if p['PI'] != '?' else 'unknown',
                            p['Library'],
                            p['Organism'] if p['Organism'] != '?' else 'unknown organism',
-                           len(project.samples)))
+                           len(project.samples),
+                           's' if len(project.samples) > 1 else ''))
         report = '\n'.join(report)
         return report
 
@@ -1515,6 +1544,7 @@ class AutoProcess:
             project = auto_process_utils.AnalysisProject(p['Project'],
                                                          os.path.join(self.params.analysis_dir,
                                                                       p['Project']))
+            # Title
             title = "%s %s %s data from %s run %s" % \
                           (project.info.user,
                            project.info.library_type,
@@ -1522,18 +1552,26 @@ class AutoProcess:
                            self.params.platform.upper(),
                            os.path.basename(self.params.analysis_dir).split('_')[0])
             report.append("%s\n%s\n" % (title,'-'*len(title)))
+            # Location
             report.append("The data for %(user)s's %(org)s %(lib)s is now "
                           "available at\n\n%(dirn)s\n" % \
                           dict(user=project.info.user,
                                dirn=project.dirn,
                                org=project.info.organism,
                                lib=project.info.library_type))
-            report.append("The samples are:\n\n%s (%d%s samples%s)" % \
+            # Samples
+            report.append("The samples are:\n\n%s (%d%s sample%s%s)" % \
                           (project.prettyPrintSamples(),
                            len(project.samples),
                            " paired end" if project.info.paired_end else '',
+                           's' if len(project.samples) > 1 else '',
                            ", multiple fastqs per sample" if project.multiple_fastqs else ''))
-            report.append("\nAdditional comments:\n\t%s" % project.info.comments)
+            # Additional information
+            report.append("\nAdditional information:\n")
+            report.append("Endedness:\t%s" % \
+                          'Paired end' if illumina_data.paired_end else 'Single end')
+            report.append("Kit/assay:\t%s" % self.params.assay)
+            report.append("Comments :\t%s" % project.info.comments)
         report = '\n'.join(report)
         return report
 
