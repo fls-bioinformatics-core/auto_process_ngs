@@ -1740,45 +1740,57 @@ def make_fastqs_parser():
                               version="%prog "+__version__,
                               description="Generate fastq files from raw bcl files "
                               "produced by Illumina sequencer within ANALYSIS_DIR.")
-    nprocessors = auto_process_settings.bcl2fastq.nprocessors
-    p.add_option('--output-dir',action='store',
-                 dest='unaligned_dir',default=None,
-                 help="explicitly set the output (sub)directory for bcl-to-fastq "
-                 "conversion (overrides default)")
-    p.add_option('--use-bases-mask',action="store",
-                 dest="bases_mask",default=None,
-                 help="explicitly set the bases-mask string to indicate how each "
-                 "cycle should be used in the bcl-to-fastq conversion (overrides "
-                 "default)")
-    p.add_option('--sample-sheet',action="store",
-                 dest="sample_sheet",default=None,
-                 help="use an alternative sample sheet to the default "
-                 "'custom_SampleSheet.csv' created on setup.")
-    p.add_option('--nprocessors',action='store',
-                 dest='nprocessors',default=nprocessors,
-                 help="explicitly specify number of processors to use for bclToFastq "
-                 "(default %s, change in settings file)" % nprocessors)
-    p.add_option('--ignore-missing-bcl',action='store_true',
-                 dest='ignore_missing_bcl',default=False,
-                 help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
-                 "missing bcl files as no call)")
-    p.add_option('--ignore-missing-stats',action='store_true',
-                 dest='ignore_missing_stats',default=False,
-                 help="Use the --ignore-missing-stats option for bcl2fastq (fill in "
-                 "with zeroes when *.stats files are missing)")
-    p.add_option('--skip-rsync',action='store_true',
-                 dest='skip_rsync',default=False,
-                 help="don't rsync the primary data at the beginning of processing")
-    p.add_option('--remove-primary-data',action='store_true',
-                 dest='remove_primary_data',default=False,
-                 help="Delete the primary data at the end of processing")
-    p.add_option('--generate-stats',action='store_true',
-                 dest='generate_stats',default=False,
-                 help="(Re)generate statistics for fastq files")
-    p.add_option('--stats-file',action='store',
-                 dest='stats_file',default=None,
-                 help="Specify output file for fastq statistics")
+    # General options
     add_no_save_option(p)
+    # Primary data management
+    primary_data = optparse.OptionGroup(p,'Primary data management')
+    primary_data.add_option('--skip-rsync',action='store_true',
+                            dest='skip_rsync',default=False,
+                            help="don't rsync the primary data at the beginning of processing")
+    primary_data.add_option('--remove-primary-data',action='store_true',
+                            dest='remove_primary_data',default=False,
+                            help="Delete the primary data at the end of processing (default "
+                            "is to keep data)")
+    p.add_option_group(primary_data)
+    # Options to control bcl2fastq
+    nprocessors = auto_process_settings.bcl2fastq.nprocessors
+    bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
+    bcl_to_fastq.add_option('--output-dir',action='store',
+                            dest='unaligned_dir',default=None,
+                            help="explicitly set the output (sub)directory for bcl-to-fastq "
+                            "conversion (overrides default)")
+    bcl_to_fastq.add_option('--use-bases-mask',action="store",
+                            dest="bases_mask",default=None,
+                            help="explicitly set the bases-mask string to indicate how each "
+                            "cycle should be used in the bcl-to-fastq conversion (overrides "
+                            "default)")
+    bcl_to_fastq.add_option('--sample-sheet',action="store",
+                            dest="sample_sheet",default=None,
+                            help="use an alternative sample sheet to the default "
+                            "'custom_SampleSheet.csv' created on setup.")
+    bcl_to_fastq.add_option('--nprocessors',action='store',
+                            dest='nprocessors',default=nprocessors,
+                            help="explicitly specify number of processors to use for "
+                            "bclToFastq (default %s, change in settings file)" % nprocessors)
+    bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
+                            dest='ignore_missing_bcl',default=False,
+                            help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
+                            "missing bcl files as no call)")
+    bcl_to_fastq.add_option('--ignore-missing-stats',action='store_true',
+                            dest='ignore_missing_stats',default=False,
+                            help="Use the --ignore-missing-stats option for bcl2fastq (fill "
+                            "in with zeroes when *.stats files are missing)")
+    p.add_option_group(bcl_to_fastq)
+    # Statistics
+    statistics = optparse.OptionGroup(p,'Statistics generation')
+    statistics.add_option('--stats-file',action='store',
+                          dest='stats_file',default=None,
+                          help="Specify output file for fastq statistics")
+    statistics.add_option('--generate-stats',action='store_true',
+                          dest='generate_stats',default=False,
+                          help="(Re)generate statistics for fastq files")
+    p.add_option_group(statistics)
+    # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
     deprecated.add_option('--keep-primary-data',action='store_true',
                           dest='keep_primary_data',default=False,
