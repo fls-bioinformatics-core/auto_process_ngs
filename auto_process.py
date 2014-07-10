@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.68"
+__version__ = "0.0.69"
 
 #######################################################################
 # Imports
@@ -593,10 +593,11 @@ class AutoProcess:
             logging.error("Failed to acquire primary data (status %s)" % status)
         return status
         
-    def bcl_to_fastq(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                     skip_rsync=False,remove_primary_data=False,generate_stats=False,
-                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
-                     bases_mask=None,stats_file=None):
+    def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
+                    skip_rsync=False,remove_primary_data=False,generate_stats=True,
+                    nprocessors=1,unaligned_dir=None,sample_sheet=None,
+                    bases_mask=None,stats_file=None,skip_bcl2fastq=False,
+                    only_fetch_primary_data=False):
         # Convert bcl files to fastq
         #
         # Arguments:
@@ -615,6 +616,56 @@ class AutoProcess:
         # bases_mask          : if set then use this as an alternative bases mask setting
         # stats_file          : if set then use this as the name of the output stats
         #                       file.
+        # skip_bcl2fastq      : if True then don't perform fastq generation
+        # only_fetch_primary_data: if True then fetch primary data, don't do anything else
+        #
+        # Check for pre-existing bcl2fastq outputs
+        if self.verify_bcl_to_fastq():
+            print "Bcl to fastq outputs already present"
+            # Check for project metadata file
+            self.make_project_metadata_file()
+            # (Re)generate stats?
+            if generate_stats:
+                self.generate_stats(stats_file)
+            return
+        # Fetch primary data
+        if not skip_rsync:
+            if self.get_primary_data() != 0:
+                logging.error("Failed to acquire primary data")
+                raise Exception, "Failed to acquire primary data"
+            if options.only_fetch_primary_data:
+                return
+        # Run bcl_to_fastq
+        if not skip_bcl2fastq:
+            self.bcl_to_fastq(unaligned_dir=unaligned_dir,
+                              sample_sheet=sample_sheet,
+                              bases_mask=bases_mask,
+                              ignore_missing_bcl=ignore_missing_bcl,
+                              ignore_missing_stats=ignore_missing_stats,
+                              nprocessors=nprocessors)
+        # Generate statistics
+        if generate_stats:
+            self.generate_stats(stats_file)
+        # Make a 'projects.info' metadata file
+        self.make_project_metadata_file()
+        # Remove primary data
+        if remove_primary_data:
+            self.remove_primary_data()
+
+    def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
+                     ignore_missing_bcl=False,ignore_missing_stats=False,
+                     nprocessors=1,):
+        # Convert bcl files to fastq
+        #
+        # Arguments:
+        # unaligned_dir       : if set then use this as the output directory for
+        #                       bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
+        #                       an alternative is already specified in the config file)
+        # sample_sheet        : if set then use this as the input samplesheet
+        # bases_mask          : if set then use this as an alternative bases mask setting
+        # ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
+        # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+        # nprocessors         : number of processors to run bclToFastq.py with
         #
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -631,15 +682,9 @@ class AutoProcess:
             raise Exception("Missing sample sheet '%s'" % sample_sheet)
         self.params['sample_sheet'] = sample_sheet
         sample_sheet = self.params.sample_sheet
-        # Check for pre-existing bcl2fastq outputs
-        if self.verify_bcl_to_fastq():
-            print "Bcl to fastq outputs already present"
-            # Check for project metadata file
-            self.make_project_metadata_file()
-            # (Re)generate stats?
-            if generate_stats:
-                self.generate_stats(stats_file)
-            return
+        # Examine primary data
+        primary_data = os.path.join(self.params.primary_data_dir,
+                                    os.path.basename(self.params.data_dir))
         # Bases mask
         if bases_mask is None:
             bases_mask = self.params.bases_mask
@@ -652,13 +697,6 @@ class AutoProcess:
             raise Exception, "No bases mask"
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
-        # Fetch primary data
-        if not skip_rsync:
-            if self.get_primary_data() != 0:
-                logging.error("Failed to acquire primary data")
-                raise Exception, "Failed to acquire primary data"
-        primary_data = os.path.join(self.params.primary_data_dir,
-                                    os.path.basename(self.params.data_dir))
         # Get info about the run
         print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
@@ -708,13 +746,6 @@ class AutoProcess:
                                                             sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             return
-        # Remove primary data
-        if remove_primary_data:
-            self.remove_primary_data()
-        # Generate statistics
-        self.generate_stats(stats_file)
-        # Make a 'projects.info' metadata file
-        self.make_project_metadata_file()
 
     def generate_stats(self,stats_file=None):
         # Generate statistics for initial fastq files from bcl2fastq
@@ -755,6 +786,9 @@ class AutoProcess:
 
     def verify_bcl_to_fastq(self):
         # Check that bcl to fastq outputs match sample sheet predictions
+        if self.params.unaligned_dir is None:
+            logging.debug("Bcl2fastq output directory not defined")
+            return False
         bcl_to_fastq_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         if not os.path.isdir(bcl_to_fastq_dir):
             # Directory doesn't exist
@@ -1744,6 +1778,10 @@ def make_fastqs_parser():
     add_no_save_option(p)
     # Primary data management
     primary_data = optparse.OptionGroup(p,'Primary data management')
+    primary_data.add_option('--only-fetch-primary-data',action='store_true',
+                            dest='only_fetch_primary_data',default=False,
+                            help="only fetch the primary data, don't perform any other "
+                            "operations")
     primary_data.add_option('--skip-rsync',action='store_true',
                             dest='skip_rsync',default=False,
                             help="don't rsync the primary data at the beginning of processing")
@@ -1755,6 +1793,9 @@ def make_fastqs_parser():
     # Options to control bcl2fastq
     nprocessors = auto_process_settings.bcl2fastq.nprocessors
     bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
+    bcl_to_fastq.add_option('--skip-bcl2fastq',action='store_true',
+                            dest='skip_bcl2fastq',default=False,
+                            help="don't run the Fastq generation step")
     bcl_to_fastq.add_option('--output-dir',action='store',
                             dest='unaligned_dir',default=None,
                             help="explicitly set the output (sub)directory for bcl-to-fastq "
@@ -1774,28 +1815,35 @@ def make_fastqs_parser():
                             "bclToFastq (default %s, change in settings file)" % nprocessors)
     bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
                             dest='ignore_missing_bcl',default=False,
-                            help="Use the --ignore-missing-bcl option for bcl2fastq (treat "
+                            help="use the --ignore-missing-bcl option for bcl2fastq (treat "
                             "missing bcl files as no call)")
     bcl_to_fastq.add_option('--ignore-missing-stats',action='store_true',
                             dest='ignore_missing_stats',default=False,
-                            help="Use the --ignore-missing-stats option for bcl2fastq (fill "
+                            help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
     p.add_option_group(bcl_to_fastq)
     # Statistics
     statistics = optparse.OptionGroup(p,'Statistics generation')
     statistics.add_option('--stats-file',action='store',
                           dest='stats_file',default=None,
-                          help="Specify output file for fastq statistics")
-    statistics.add_option('--generate-stats',action='store_true',
-                          dest='generate_stats',default=False,
-                          help="(Re)generate statistics for fastq files")
+                          help="specify output file for fastq statistics")
+    statistics.add_option('--no-stats',action='store_true',
+                          dest='no_stats',default=False,
+                          help="don't generate statistics file; use 'update_fastq_stats' "
+                          "command to (re)generate statistics")
     p.add_option_group(statistics)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
     deprecated.add_option('--keep-primary-data',action='store_true',
                           dest='keep_primary_data',default=False,
-                          help="Don't delete the primary data at the end of processing "
-                          "(does nothing; primary data is kept by default)")
+                          help="don't delete the primary data at the end of processing "
+                          "(does nothing; primary data is kept by default unless "
+                          "--remove-primary-data is specified)")
+    deprecated.add_option('--generate-stats',action='store_true',
+                          dest='generate_stats',default=False,
+                          help="(re)generate statistics for fastq files (does nothing; "
+                          "statistics are generated by default unless suppressed by "
+                          "--no-stats)")
     p.add_option_group(deprecated)
     return p
 
@@ -2033,16 +2081,18 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            d.bcl_to_fastq(skip_rsync=options.skip_rsync,
-                           nprocessors=options.nprocessors,
-                           remove_primary_data=options.remove_primary_data,
-                           ignore_missing_bcl=options.ignore_missing_bcl,
-                           ignore_missing_stats=options.ignore_missing_stats,
-                           generate_stats=options.generate_stats,
-                           unaligned_dir=options.unaligned_dir,
-                           sample_sheet=options.sample_sheet,
-                           bases_mask=options.bases_mask,
-                           stats_file=options.stats_file)
+            d.make_fastqs(skip_rsync=options.skip_rsync,
+                          nprocessors=options.nprocessors,
+                          remove_primary_data=options.remove_primary_data,
+                          ignore_missing_bcl=options.ignore_missing_bcl,
+                          ignore_missing_stats=options.ignore_missing_stats,
+                          generate_stats=(not options.no_stats),
+                          unaligned_dir=options.unaligned_dir,
+                          sample_sheet=options.sample_sheet,
+                          bases_mask=options.bases_mask,
+                          stats_file=options.stats_file,
+                          skip_bcl2fastq=options.skip_bcl2fastq,
+                          only_fetch_primary_data=options.only_fetch_primary_data)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
                                dry_run=options.dry_run)
