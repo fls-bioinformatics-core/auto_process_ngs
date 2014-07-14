@@ -33,6 +33,19 @@ Copy the results to the 'archive' location:
 Handling problem situations
 ---------------------------
 
+### Missing SampleSheet.csv ###
+
+By default the original sample sheet file is assumed to be in the directory
+
+   <RUN_DIR>/Data/Intensities/BaseCalls/SampleSheet.csv
+
+If this isn't found then the `setup` command will fail.
+
+To address this, use the `--sample-sheet` option for `setup` to explicitly
+specify the location and name of a non-default sample sheet. (If there is
+no sample sheet at all then you will need to fabricate one first, then use
+this option to import it on setup.)
+
 ### Incomplete run with missing cycles ###
 
 If the sequencing run didn't complete then later cycles in the run won't be

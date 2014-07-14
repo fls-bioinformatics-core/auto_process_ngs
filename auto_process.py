@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.69"
+__version__ = "0.0.70"
 
 #######################################################################
 # Imports
@@ -323,7 +323,7 @@ class AutoProcess:
         else:
             return None
 
-    def setup(self,data_dir,analysis_dir=None):
+    def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         # Set up the initial analysis directory
         #
         # This does all the initialisation of the analysis directory
@@ -332,6 +332,8 @@ class AutoProcess:
         # Arguments:
         # data_dir: source data directory
         # analysis_dir: corresponding analysis dir
+        # sample_sheet: name and location of non-default sample sheet
+        #               file
         data_dir = data_dir.rstrip(os.sep)
         if analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
@@ -374,10 +376,13 @@ class AutoProcess:
         custom_sample_sheet = self.params.sample_sheet
         if custom_sample_sheet is None:
             print "Acquiring sample sheet..."
-            tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
-            rsync = applications.general.rsync(os.path.join(data_dir,
-                                                            'Data/Intensities/BaseCalls/SampleSheet.csv'),
-                                               self.tmp_dir)
+            if sample_sheet is None:
+                sample_sheet = os.path.join(data_dir,
+                                            'Data/Intensities/BaseCalls/SampleSheet.csv')
+                tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
+            else:
+                tmp_sample_sheet = os.path.join(self.tmp_dir,os.path.basename(sample_sheet))
+            rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
             custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
@@ -1736,13 +1741,16 @@ def setup_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequencing "
                               "data from DIR.")
-    p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
-                 help="Make new directory called ANALYSIS_DIR (otherwise default is "
-                 "'DIR_analysis')")
+    p.add_option('--sample-sheet',action='store',dest='sample_sheet',default=None,
+                 help="Copy sample sheet file from name and location SAMPLE_SHEET "
+                 "(default is to look for SampleSheet.csv inside DIR)")
     p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
                  "subdirectory of DIR with the same structure as that produced "
                  "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
+    p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
+                 help="Make new directory called ANALYSIS_DIR (otherwise default is "
+                 "'DIR_analysis')")
     return p
 
 def clone_parser():
@@ -2061,7 +2069,9 @@ if __name__ == "__main__":
             sys.exit(1)
         d = AutoProcess()
         if options.fastq_dir is None:
-            d.setup(args[0],analysis_dir=options.analysis_dir)
+            d.setup(args[0],
+                    analysis_dir=options.analysis_dir,
+                    sample_sheet=options.sample_sheet)
         else:
             d.setup_from_fastq_dir(args[0],options.fastq_dir)
     elif cmd == 'clone':
