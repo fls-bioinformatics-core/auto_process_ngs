@@ -1770,9 +1770,9 @@ def config_parser():
                                version="%prog "+__version__,
                                description="Query and configure automatic processing "
                                "parameters and settings for ANALYSIS_DIR.")
-    p.add_option('--set',action='store',dest='key_value',default=None,
+    p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
-                 "'<param>=<value>'.")
+                 "'<param>=<value>'. Multiple --set options can be specified.")
     p.add_option('--show',action='store_true',dest='show',default=False,
                  help="Show the values of parameters and settings")
     return p
@@ -2119,13 +2119,14 @@ if __name__ == "__main__":
             if options.show:
                 d.show_settings()
             elif options.key_value is not None:
-                try:
-                    i = options.key_value.index('=')
-                    key = options.key_value[:i]
-                    value = options.key_value[i+1:].strip('"')
-                    d.set_param(key,value)
-                except ValueError:
-                    logging.error("Can't process '%s'" % options.key_value)
+                for key_value in options.key_value:
+                    try:
+                        i = key_value.index('=')
+                        key = key_value[:i]
+                        value = key_value[i+1:].strip("'").strip('"')
+                        d.set_param(key,value)
+                    except ValueError:
+                        logging.error("Can't process '%s'" % options.key_value)
         elif cmd == 'archive':
             d.copy_to_archive(archive_dir=options.archive_dir,
                               platform=options.platform,
