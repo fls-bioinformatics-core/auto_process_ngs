@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.71"
+__version__ = "0.0.72"
 
 #######################################################################
 # Imports
@@ -579,8 +579,8 @@ class AutoProcess:
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,generate_stats=True,
                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
-                    bases_mask=None,stats_file=None,skip_bcl2fastq=False,
-                    only_fetch_primary_data=False):
+                    bases_mask=None,stats_file=None,barcodes_report=None,
+                    skip_bcl2fastq=False,only_fetch_primary_data=False):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -606,6 +606,8 @@ class AutoProcess:
           bases_mask          : if set then use this as an alternative bases mask setting
           stats_file          : if set then use this as the name of the output stats
                                 file.
+          barcodes_report     : if set then use this as the name of the report file for
+                                barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
 
@@ -639,7 +641,7 @@ class AutoProcess:
         if generate_stats:
             self.generate_stats(stats_file)
         # Count and report barcode sequences
-        self.report_barcodes()
+        self.report_barcodes(barcodes_report)
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
         # Remove primary data
@@ -816,21 +818,31 @@ class AutoProcess:
         self.params['stats_file'] = stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
 
-    def report_barcodes(self):
+    def report_barcodes(self,report_file=None):
         """Count and report barcode sequences in FASTQs for each lane
 
         Runs the 'count_barcodes.py' program to count unique barcode index
         sequences for all FASTQ files in each lane.
 
+        Arguments:
+          report_file: (optional) specify the name and path of
+            the report file; otherwise this defaults to a file called
+            'index_sequences.report'.
+
         """
-        # Output file
-        barcodes_file = os.path.join(self.analysis_dir,'barcodes.out')
+        # Output files
+        if report_file is None:
+            barcode_report = os.path.join(self.analysis_dir,'index_sequences.report')
+        else:
+            barcode_report = report_file
+        barcode_counts = os.path.join(self.analysis_dir,'index_sequences.counts')
         # Set up runner
         runner = auto_process_settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Run count_barcodes.py
         count_barcodes = applications.Command('count_barcodes.py',
-                                              '-o',barcodes_file,
+                                              '-o',barcode_counts,
+                                              '-r',barcode_report,
                                                 os.path.join(self.analysis_dir,
                                                              self.params.unaligned_dir))
         print "Counting barcode index sequences: running %s" % count_barcodes    
@@ -1907,6 +1919,9 @@ def make_fastqs_parser():
                           dest='no_stats',default=False,
                           help="don't generate statistics file; use 'update_fastq_stats' "
                           "command to (re)generate statistics")
+    statistics.add_option('--barcodes-report',action='store',
+                          dest='barcodes_report',default=None,
+                          help="specify output file for barcode analysis report")
     p.add_option_group(statistics)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
@@ -2169,6 +2184,7 @@ if __name__ == "__main__":
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
                           stats_file=options.stats_file,
+                          barcodes_report=options.barcodes_report,
                           skip_bcl2fastq=options.skip_bcl2fastq,
                           only_fetch_primary_data=options.only_fetch_primary_data)
         elif cmd == 'merge_fastq_dirs':
