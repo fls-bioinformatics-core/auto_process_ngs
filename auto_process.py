@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.70"
+__version__ = "0.0.71"
 
 #######################################################################
 # Imports
@@ -638,6 +638,8 @@ class AutoProcess:
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file)
+        # Count and report barcode sequences
+        self.report_barcodes()
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
         # Remove primary data
@@ -813,6 +815,32 @@ class AutoProcess:
         fastq_statistics_job.wait()
         self.params['stats_file'] = stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
+
+    def report_barcodes(self):
+        """Count and report barcode sequences in FASTQs for each lane
+
+        Runs the 'count_barcodes.py' program to count unique barcode index
+        sequences for all FASTQ files in each lane.
+
+        """
+        # Output file
+        barcodes_file = os.path.join(self.analysis_dir,'barcodes.out')
+        # Set up runner
+        runner = auto_process_settings.runners.stats
+        runner.set_log_dir(self.log_dir)
+        # Run count_barcodes.py
+        count_barcodes = applications.Command('count_barcodes.py',
+                                              '-o',barcodes_file,
+                                                os.path.join(self.analysis_dir,
+                                                             self.params.unaligned_dir))
+        print "Counting barcode index sequences: running %s" % count_barcodes    
+        count_barcodes_job = simple_scheduler.SchedulerJob(runner,
+                                                           count_barcodes.command_line,
+                                                           name='count_barcodes',
+                                                           working_dir=self.analysis_dir)
+        count_barcodes_job.start()
+        count_barcodes_job.wait()
+        print "Barcode counting completed"
 
     def remove_primary_data(self):
         """Remove primary data
