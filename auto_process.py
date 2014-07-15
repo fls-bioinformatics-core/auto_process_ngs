@@ -575,54 +575,41 @@ class AutoProcess:
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return auto_process_utils.AnalysisProject(dirs[0],undetermined_dir)
-
-    def get_primary_data(self):
-        # Copy the primary sequencing data (bcl files etc) to a local area
-        # using rsync
-        data_dir = self.params.data_dir
-        self.params["primary_data_dir"] = self.add_directory('primary_data')
-        try:
-            rsync = applications.general.rsync(data_dir,self.params.primary_data_dir,
-                                               prune_empty_dirs=True,
-                                               extra_options=('--include=*/',
-                                                              '--include=Data/**',
-                                                              '--include=RunInfo.xml',
-                                                              '--include=SampleSheet.csv',
-                                                              '--exclude=*'))
-            print "Running %s" % rsync
-            status = rsync.run_subprocess(log=self.log_path('rsync.primary_data.log'))
-        except Exception, ex:
-            logging.error("Exception getting primary data: %s" % ex)
-            status = -1
-        if status != 0:
-            logging.error("Failed to acquire primary data (status %s)" % status)
-        return status
         
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,generate_stats=True,
                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,stats_file=None,skip_bcl2fastq=False,
                     only_fetch_primary_data=False):
-        # Convert bcl files to fastq
-        #
-        # Arguments:
-        # nprocessors         : number of processors to run bclToFastq.py with
-        # ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
-        # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
-        # skip_rsync          : if True then don't rsync primary data at the start of
-        #                       bcl2fastq conversion
-        # remove_primary_data : if True then remove primary data at the end of bcl2fastq
-        #                       conversion (default is to keep it)
-        # generate_stats      : if True then (re)generate statistics file for fastqs
-        # unaligned_dir       : if set then use this as the output directory for
-        #                       bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
-        #                       an alternative is already specified in the config file)
-        # sample_sheet        : if set then use this as the input samplesheet
-        # bases_mask          : if set then use this as an alternative bases mask setting
-        # stats_file          : if set then use this as the name of the output stats
-        #                       file.
-        # skip_bcl2fastq      : if True then don't perform fastq generation
-        # only_fetch_primary_data: if True then fetch primary data, don't do anything else
+        """Create and summarise FASTQ files
+
+        Wrapper for operations related to FASTQ file generation and analysis.
+        The operations are typically:
+ 
+        - get primary data (BCL files)
+        - run bcl-to-fastq conversion
+        - generate statistics
+
+        Arguments:
+          nprocessors         : number of processors to run bclToFastq.py with
+          ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
+          ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+          skip_rsync          : if True then don't rsync primary data at the start of
+                                bcl2fastq conversion
+          remove_primary_data : if True then remove primary data at the end of bcl2fastq
+                                conversion (default is to keep it)
+          generate_stats      : if True then (re)generate statistics file for fastqs
+          unaligned_dir       : if set then use this as the output directory for
+                                bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
+                                an alternative is already specified in the config file)
+          sample_sheet        : if set then use this as the input samplesheet
+          bases_mask          : if set then use this as an alternative bases mask setting
+          stats_file          : if set then use this as the name of the output stats
+                                file.
+          skip_bcl2fastq      : if True then don't perform fastq generation
+          only_fetch_primary_data: if True then fetch primary data, don't do anything else
+
+        """
         #
         # Check for pre-existing bcl2fastq outputs
         if self.verify_bcl_to_fastq():
@@ -657,21 +644,52 @@ class AutoProcess:
         if remove_primary_data:
             self.remove_primary_data()
 
+    def get_primary_data(self):
+        """Acquire the primary sequencing data (i.e. BCL files)
+
+        Copies the primary sequencing data (bcl files etc) to a local area
+        using rsync.
+
+        """
+        data_dir = self.params.data_dir
+        self.params["primary_data_dir"] = self.add_directory('primary_data')
+        try:
+            rsync = applications.general.rsync(data_dir,self.params.primary_data_dir,
+                                               prune_empty_dirs=True,
+                                               extra_options=('--include=*/',
+                                                              '--include=Data/**',
+                                                              '--include=RunInfo.xml',
+                                                              '--include=SampleSheet.csv',
+                                                              '--exclude=*'))
+            print "Running %s" % rsync
+            status = rsync.run_subprocess(log=self.log_path('rsync.primary_data.log'))
+        except Exception, ex:
+            logging.error("Exception getting primary data: %s" % ex)
+            status = -1
+        if status != 0:
+            logging.error("Failed to acquire primary data (status %s)" % status)
+        return status
+
     def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      nprocessors=1,):
-        # Convert bcl files to fastq
-        #
-        # Arguments:
-        # unaligned_dir       : if set then use this as the output directory for
-        #                       bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
-        #                       an alternative is already specified in the config file)
-        # sample_sheet        : if set then use this as the input samplesheet
-        # bases_mask          : if set then use this as an alternative bases mask setting
-        # ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
-        # ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
-        # nprocessors         : number of processors to run bclToFastq.py with
-        #
+        """Generate FASTQ files from the raw BCL files
+
+        Performs FASTQ generation from raw BCL files produced by an Illumina
+        sequencer, by running the external 'bclToFastq.py' program (which
+        wraps the 'configureBclToFastq' and 'make' steps).
+
+        Arguments:
+          unaligned_dir: if set then use this as the output directory for
+            bcl-to-fastq conversion. Default is 'bcl2fastq' (unless an
+            alternative is already specified in the settings)
+          sample_sheet: if set then use this as the input sample sheet file
+          bases_mask: if set then use this as an alternative bases mask setting
+          ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
+          ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+          nprocessors: number of processors to run bclToFastq.py with
+        
+        """
         # Directories
         analysis_dir = self.params.analysis_dir
         if unaligned_dir is not None:
@@ -753,13 +771,28 @@ class AutoProcess:
             return
 
     def generate_stats(self,stats_file=None):
-        # Generate statistics for initial fastq files from bcl2fastq
-        # Set up runner
+        """Generate statistics for FASTQ files
+
+        Generates statistics for all FASTQ files found in the
+        'unaligned' directory, by running the 'fastq_statistics.py'
+        program.
+
+        Arguments
+          stats_file: (optional) specify the name and path of
+            a non-default file to write the statistics to.
+            Otherwise the name is taken from the settings for the
+            analysis project; if this is not defined then it
+            defaults to a file called 'stats.info' in the analysis
+            directory.
+
+        """
+        # Get file name
         if stats_file is None:
             if self.params['stats_file'] is not None:
                 stats_file = self.params['stats_file']
             else:
                 stats_file='statistics.info'
+        # Set up runner
         runner = auto_process_settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Generate statistics
@@ -782,7 +815,9 @@ class AutoProcess:
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def remove_primary_data(self):
-        # Remove primary data
+        """Remove primary data
+
+        """
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
         if os.path.isdir(primary_data):
@@ -790,7 +825,12 @@ class AutoProcess:
             shutil.rmtree(primary_data)
 
     def verify_bcl_to_fastq(self):
-        # Check that bcl to fastq outputs match sample sheet predictions
+        """Check that bcl to fastq outputs match sample sheet predictions
+
+        Returns:
+          True if outputs match sample sheet, False otherwise.
+ 
+        """
         if self.params.unaligned_dir is None:
             logging.debug("Bcl2fastq output directory not defined")
             return False
