@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.73"
+__version__ = "0.0.74"
 
 #######################################################################
 # Imports
@@ -322,6 +322,69 @@ class AutoProcess:
         else:
             return None
 
+    @property
+    def run_reference_id(self):
+        """Return a run reference id e.g. 'HISEQ_140701/242#22'
+
+        The run reference code is a code that identifies the sequencing
+        run, and has the general form:
+
+        PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
+
+        - PLATFORM is always uppercased e.g. HISEQ, MISEQ, GA2X
+        - DATESTAMP is the YYMMDD code e.g. 140701
+        - INSTRUMENT_RUN_NUMBER is the run number that forms part of the
+          run directory e.g. for '140701_SN0123_0045_000000000-A1BCD'
+          it is '45'
+        - FACILITY_RUN_NUMBER is the run number that has been assigned
+          by the facility
+
+        Note that the instrument run number is only used if it differs
+        from the facility run number.
+
+        """
+        # Extract information from run name
+        run_name = os.path.basename(self.analysis_dir)
+        try:
+            datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
+            run_number = run_number.lstrip('0')
+        except Exception, ex:
+            logging.warning("Unable to extract information from run name '%s'" \
+                            % run_name)
+            logging.warning("Exception: %s" % ex)
+            date_stamp = None
+            run_number = None
+        # Platform
+        if self.params.platform is not None:
+            platform = self.params.platform.upper()
+        else:
+            platform = None
+        # Facility run number
+        if self.params.run_number is not None:
+            facility_run_number = self.params.run_number
+        else:
+            facility_run_number = None
+        # Construct the reference id
+        if platform is not None:
+            run_id = platform
+            if datestamp is not None:
+                run_id += "_%s" % datestamp
+            if run_number is not None:
+                try:
+                    if int(run_number) != int(facility_run_number):
+                        run_id += "/%s" % run_number
+                except ValueError:
+                    run_id += "/%s" % run_number
+            if facility_run_number is not None:
+                run_id += "#%s" % facility_run_number
+        else:
+            if run_name.endswith('_analysis'):
+                # Strip trailing _analysis
+                run_id = run_name[:-len('_analysis')]
+            else:
+                run_id = run_name
+        return run_id
+
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         # Set up the initial analysis directory
         #
@@ -494,8 +557,13 @@ class AutoProcess:
     def show_settings(self):
         # Print the current settings
         print "Settings in auto_process.info:"
+        settings = bcf_utils.OrderedDictionary()
+        settings['Run reference'] = self.run_reference_id
         for p in self.params:
-            print "%s: %s" % (p,self.params[p])
+            settings[p] = self.params[p]
+        field_width = max([len(s) for s in settings])
+        for p in settings:
+            print "%s: %s" % (p+' '*(field_width-len(p)),settings[p])
 
     def set_param(self,key,value):
         # Set an analysis directory parameter
@@ -1520,8 +1588,9 @@ class AutoProcess:
         else:
             # Generate a verbose general report on the contents
             # of the data directory
-            print "Directory: %s" % self.analysis_dir
-            print "Platform : %s" % self.params.platform
+            print "Run ref      : %s" % self.run_reference_id
+            print "Directory    : %s" % self.analysis_dir
+            print "Platform     : %s" % self.params.platform
             print "Unaligned dir: %s" % self.params.unaligned_dir
             if self.readme:
                 print "README.txt found: %s" % self.readme
@@ -1573,6 +1642,7 @@ class AutoProcess:
         # Includes:
         # - Platform
         # - Run name
+        # - Run reference id
         # - Project subdirectory
         # - Researcher (aka user)
         # - PI
@@ -1608,6 +1678,7 @@ class AutoProcess:
             run_number = self.params.run_number
         # Generate report text
         report = []
+        # Report header
         if datestamp and instrument and run_number:
             report.append("%s run #%s datestamped %s\n" % (platform,
                                                            int(run_number),
@@ -1615,27 +1686,50 @@ class AutoProcess:
         else:
             report.append("%s\n" % os.path.basename(self.analysis_dir))
         report.append("Run name : %s" % run_name)
+        report.append("Reference: %s" % self.run_reference_id)
         report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("Endedness: %s" % \
                       ('Paired end' if illumina_data.paired_end else 'Single end'))
         report.append("Kit/assay: %s" % self.params.assay)
         report.append("")
+        # Projects
         n_projects = len(project_metadata)
         report.append("%d project%s:" % (n_projects,
                                          '' if n_projects == 1 else 's'))
+        comments = bcf_utils.OrderedDictionary()
         for p in project_metadata:
+            project_data = dict()
+            for item in ('Project','User','PI','Library','Organism'):
+                project_data[item] = p[item] if p[item] not in ('.','?') else \
+                                     '<unknown %s>' % item.lower()
             project = illumina_data.get_project(p['Project'])
             report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d sample%s" % \
-                          (p['Project'],
-                           p['User'],
-                           p['PI'] if p['PI'] != '?' else 'unknown',
-                           p['Library'],
-                           p['Organism'] if p['Organism'] != '?' else 'unknown organism',
+                          (project_data['Project'],
+                           project_data['User'],
+                           project_data['PI'],
+                           project_data['Library'],
+                           project_data['Organism'],
                            len(project.samples),
                            's' if len(project.samples) > 1 else ''))
-        report = '\n'.join(report)
-        return report
+            if p['Comments'] not in ('.','?'):
+                comments[p['Project']] = p['Comments']
+        # Additional comments/notes
+        if comments:
+            width = max([len(x) for x in comments])
+            report.append("")
+            report.append("Additional notes/comments:")
+            for project in comments:
+                first_line = True
+                for line in bcf_utils.split_into_lines(comments[project],50):
+                    if first_line:
+                        report.append("\t%s%s: %s" % (project,
+                                                      ' '*(width-len(project)),
+                                                      line))
+                        first_line = False
+                    else:
+                        report.append("\t%s: %s" % (' '*width,line))
+        return '\n'.join(report)
 
     def report_full_format(self):
         # Generate long form "full"-style report suitable for sending
@@ -1726,14 +1820,7 @@ class AutoProcess:
             platform = self.params.platform.upper()
         else:
             platform = ''
-        if platform and datestamp:
-            run_id = "%s_%s" % (platform,datestamp)
-        else:
-            if run_name.endswith('_analysis'):
-                # Strip trailing _analysis
-                run_id = run_name[:-len('_analysis')]
-            else:
-                run_id = run_name
+        run_id = self.run_reference_id
         if self.params.run_number is not None:
             run_number = self.params.run_number
         if self.params.source is not None:
@@ -1850,8 +1937,12 @@ def config_parser():
     p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
-    p.add_option('--show',action='store_true',dest='show',default=False,
-                 help="Show the values of parameters and settings")
+    # Deprecated options
+    deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option('--show',action='store_true',dest='show',default=False,
+                          help="Show the values of parameters and settings (does "
+                          "nothing; use 'config' with no options to display settings)")
+    p.add_option_group(deprecated)
     return p
 
 def make_fastqs_parser():
@@ -2197,9 +2288,7 @@ if __name__ == "__main__":
                      max_jobs=options.max_jobs,
                      no_ungzip_fastqs=options.no_ungzip_fastqs)
         elif cmd == 'config':
-            if options.show:
-                d.show_settings()
-            elif options.key_value is not None:
+            if options.key_value is not None:
                 for key_value in options.key_value:
                     try:
                         i = key_value.index('=')
@@ -2208,6 +2297,8 @@ if __name__ == "__main__":
                         d.set_param(key,value)
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
+            else:
+                d.show_settings()
         elif cmd == 'archive':
             d.copy_to_archive(archive_dir=options.archive_dir,
                               platform=options.platform,
