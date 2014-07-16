@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.72"
+__version__ = "0.0.73"
 
 #######################################################################
 # Imports
@@ -61,7 +61,6 @@ import platforms
 import TabFile
 import FASTQFile
 import JobRunner
-import Pipeline
 import bcf_utils
 import htmlpagewriter
 import applications
@@ -755,11 +754,10 @@ class AutoProcess:
                            bcl2fastq_dir,
                            sample_sheet)
         print "Running %s" % bcl2fastq
-        bcl2fastq_job = Pipeline.Job(runner,
-                                     'bclToFastq',
-                                     os.getcwd(),
-                                     bcl2fastq.command,
-                                     bcl2fastq.args)
+        bcl2fastq_job = simple_scheduler.SchedulerJob(runner,
+                                                      bcl2fastq.command_line,
+                                                      name='bclToFastq',
+                                                      working_dir=os.getcwd())
         bcl2fastq_job.start()
         bcl2fastq_job.wait()
         print "bcl2fastq completed"
@@ -808,11 +806,10 @@ class AutoProcess:
                                                 self.params.analysis_dir,
                                                 '--force')
         print "Generating statistics: running %s" % fastq_statistics
-        fastq_statistics_job = Pipeline.Job(runner,
-                                            'fastq_statistics',
-                                            self.params.analysis_dir,
-                                            fastq_statistics.command,
-                                            fastq_statistics.args)
+        fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
+                                                             fastq_statistics.command_line,
+                                                             name='fastq_statistics',
+                                                             working_dir=self.analysis_dir)
         fastq_statistics_job.start()
         fastq_statistics_job.wait()
         self.params['stats_file'] = stats_file
