@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.74"
+__version__ = "0.0.75"
 
 #######################################################################
 # Imports
@@ -704,6 +704,8 @@ class AutoProcess:
                               ignore_missing_bcl=ignore_missing_bcl,
                               ignore_missing_stats=ignore_missing_stats,
                               nprocessors=nprocessors)
+            if not self.verify_bcl_to_fastq():
+                raise Exception, "Bcl2fastq failed to produce expected outputs"
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file)
