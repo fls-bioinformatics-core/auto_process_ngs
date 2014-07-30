@@ -1727,7 +1727,7 @@ class AutoProcess:
             report.append("Additional notes/comments:")
             for project in comments:
                 first_line = True
-                for line in bcf_utils.split_into_lines(comments[project],50):
+                for line in bcf_utils.split_into_lines(comments[project],80):
                     if first_line:
                         report.append("\t%s%s: %s" % (project,
                                                       ' '*(width-len(project)),
