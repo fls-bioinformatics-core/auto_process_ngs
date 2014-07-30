@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.75"
+__version__ = "0.0.76"
 
 #######################################################################
 # Imports
@@ -644,9 +644,10 @@ class AutoProcess:
         return auto_process_utils.AnalysisProject(dirs[0],undetermined_dir)
         
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
-                    skip_rsync=False,remove_primary_data=False,generate_stats=True,
+                    skip_rsync=False,remove_primary_data=False,
                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
-                    bases_mask=None,stats_file=None,barcodes_report=None,
+                    bases_mask=None,generate_stats=True,stats_file=None,
+                    report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False):
         """Create and summarise FASTQ files
 
@@ -673,7 +674,9 @@ class AutoProcess:
           bases_mask          : if set then use this as an alternative bases mask setting
           stats_file          : if set then use this as the name of the output stats
                                 file.
-          barcodes_report     : if set then use this as the name of the report file for
+          report_barcodes     : if True then analyse barcodes in outputs (default is False
+                                i.e. don't do barcode analyses)
+          barcodes_file       : if set then use this as the name of the report file for
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
@@ -710,7 +713,8 @@ class AutoProcess:
         if generate_stats:
             self.generate_stats(stats_file)
         # Count and report barcode sequences
-        self.report_barcodes(barcodes_report)
+        if report_barcodes:
+            self.report_barcodes(barcodes_file)
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
         # Remove primary data
@@ -2009,8 +2013,12 @@ def make_fastqs_parser():
                           dest='no_stats',default=False,
                           help="don't generate statistics file; use 'update_fastq_stats' "
                           "command to (re)generate statistics")
-    statistics.add_option('--barcodes-report',action='store',
-                          dest='barcodes_report',default=None,
+    statistics.add_option('--report-barcodes',action='store_true',
+                          dest='report_barcodes',default=False,
+                          help="analyse and report barcode indices for all lanes after "
+                          "generating fastq files")
+    statistics.add_option('--barcodes-file',action='store',
+                          dest='barcodes_file',default=None,
                           help="specify output file for barcode analysis report")
     p.add_option_group(statistics)
     # Deprecated options
@@ -2274,7 +2282,8 @@ if __name__ == "__main__":
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
                           stats_file=options.stats_file,
-                          barcodes_report=options.barcodes_report,
+                          report_barcodes=options.report_barcodes,
+                          barcodes_file=options.barcodes_file,
                           skip_bcl2fastq=options.skip_bcl2fastq,
                           only_fetch_primary_data=options.only_fetch_primary_data)
         elif cmd == 'merge_fastq_dirs':
