@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.15"
+__version__ = "0.0.16"
 
 """auto_process_utils
 
@@ -923,7 +923,7 @@ class ProjectMetadataFile(TabFile.TabFile):
         """
         # Add project info to the metadata file
         self.append(data=(project_name,
-                          bcf_utils.pretty_print_names(sample_names),
+                          ','.join(sample_names),
                           '.' if user is None else user,
                           '.' if library_type is None else library_type,
                           '.' if organism is None else organism,
