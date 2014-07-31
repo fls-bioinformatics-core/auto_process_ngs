@@ -42,7 +42,7 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.76"
+__version__ = "0.0.77"
 
 #######################################################################
 # Imports
@@ -67,7 +67,7 @@ import applications
 import auto_process_utils
 import auto_process_settings
 import simple_scheduler
-import bclToFastq
+import bcl2fastq_utils
 
 #######################################################################
 # Classes
@@ -800,7 +800,7 @@ class AutoProcess:
         # Get info about the run
         print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
-        nmismatches = bclToFastq.get_nmismatches(bases_mask)
+        nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
         print "Platform            : %s" % illumina_run.platform
         print "Bcl format          : %s" % illumina_run.bcl_extension

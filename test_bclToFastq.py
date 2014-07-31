@@ -3,7 +3,7 @@
 #######################################################################
 
 import unittest
-from bclToFastq import get_nmismatches
+from bcl2fastq_utils import get_nmismatches
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
