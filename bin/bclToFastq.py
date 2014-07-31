@@ -34,11 +34,10 @@ import logging
 import optparse
 import subprocess
 
-# Put ../share onto Python search path for modules
-SHARE_DIR = os.path.abspath(
-    os.path.normpath(
-        os.path.join(os.path.dirname(sys.argv[0]),'..','share')))
-sys.path.append(SHARE_DIR)
+# Extend Python search path for local modules
+sys.path.append(
+    os.path.abspath(os.path.normpath(
+        os.path.join(os.path.dirname(sys.argv[0]),'..','auto_process'))))
 import IlluminaData
 import applications
 
