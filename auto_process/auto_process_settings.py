@@ -1,5 +1,7 @@
 # Settings for auto_process module
 #
+import os
+import sys
 import JobRunner
 from bcf_utils import AttributeDictionary
 #
@@ -37,7 +39,13 @@ qc_web_server = AttributeDictionary(
 )
 #
 # Import site-specific settings from local version
-try:
-    from auto_process_settings_local import *
-except ImportError,ex:
-    print "Unable to import local settings: %s" % ex
+__install_path = os.path.abspath(os.path.normpath(
+    os.path.join(os.path.dirname(sys.argv[0]),'..')))
+if os.path.exists(os.path.join(__install_path,'auto_process_settings_local.py')):
+    try:
+        sys.path.append(__install_path)
+        from auto_process_settings_local import *
+    except ImportError,ex:
+        print "Unable to import local settings from %s: %s" % (__install_path,ex)
+else:
+    print "No local settings file in %s" % __install_path
