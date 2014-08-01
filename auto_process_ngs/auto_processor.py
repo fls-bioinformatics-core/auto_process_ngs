@@ -29,7 +29,7 @@ import bcf_utils
 import htmlpagewriter
 import applications
 import auto_process_utils
-import auto_process_settings
+import settings
 import simple_scheduler
 import bcl2fastq_utils
 
@@ -808,7 +808,7 @@ class AutoProcess:
         print "Ignore missing stats: %s" % ignore_missing_stats
         print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
-        runner = auto_process_settings.runners.bcl2fastq
+        runner = settings.runners.bcl2fastq
         runner.set_log_dir(self.log_dir)
         # Run bcl2fastq
         bcl2fastq = applications.Command('bclToFastq.py',
@@ -865,7 +865,7 @@ class AutoProcess:
             else:
                 stats_file='statistics.info'
         # Set up runner
-        runner = auto_process_settings.runners.stats
+        runner = settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Generate statistics
         fastq_statistics = applications.Command('fastq_statistics.py',
@@ -904,7 +904,7 @@ class AutoProcess:
             barcode_report = report_file
         barcode_counts = os.path.join(self.analysis_dir,'index_sequences.counts')
         # Set up runner
-        runner = auto_process_settings.runners.stats
+        runner = settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Run count_barcodes.py
         count_barcodes = applications.Command('count_barcodes.py',
@@ -1156,7 +1156,7 @@ class AutoProcess:
             logging.warning("No projects found for QC analysis")
             return
         # Set up a simple scheduler
-        qc_runner = auto_process_settings.runners.qc
+        qc_runner = settings.runners.qc
         sched = simple_scheduler.SimpleScheduler(runner=qc_runner,
                                                  max_concurrent=max_jobs)
         sched.start()
@@ -1214,7 +1214,7 @@ class AutoProcess:
                         chmod=None,group=None):
         # Copy the analysis directory and contents to an archive area
         if archive_dir is None:
-            archive_dir = auto_process_settings.archive.dirn
+            archive_dir = settings.archive.dirn
         if archive_dir is None:
             raise Exception, "No archive directory specified (use --archive_dir option?)"
         # Construct subdirectory structure i.e. platform and year
@@ -1285,7 +1285,7 @@ class AutoProcess:
         # Get location to publish qc reports to
         if location is None:
             user,server,dirn = auto_process_utils.split_user_host_dir(
-                auto_process_settings.qc_web_server.dirn)
+                settings.qc_web_server.dirn)
         else:
             user,server,dirn = auto_process_utils.split_user_host_dir(location)
         if server is not None:
