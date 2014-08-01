@@ -263,6 +263,7 @@ class Parsers:
                      "(default %s, change in settings file)" % max_concurrent_jobs)
         p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
                      help="don't create uncompressed copies of fastq.gz files")
+        self.add_debug_option(p)
         return p
     @classmethod
     def publish_qc_parser(self):
@@ -357,6 +358,7 @@ class Parsers:
         p  = optparse.OptionParser(usage="%prog "+cmd+" [OPTIONS] [ANALYSIS_DIR]",
                                    version="%prog "+__version__,
                                    description=description)
+        self.add_debug_option(p)
         return p
     @classmethod
     def add_no_save_option(self,p):
