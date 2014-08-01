@@ -28,7 +28,7 @@ import JobRunner
 import bcf_utils
 import htmlpagewriter
 import applications
-import auto_process_utils
+import utils
 import settings
 import simple_scheduler
 import bcl2fastq_utils
@@ -79,7 +79,7 @@ class AutoProcess:
         #                    to be saved back to the metadata file
         #
         # Create empty parameter set
-        self.params = auto_process_utils.AnalysisDirMetadata()
+        self.params = utils.AnalysisDirMetadata()
         # Set flag to indicate whether it's okay to save parameters
         self._save_params = False
         # Set where the analysis directory actually is
@@ -172,11 +172,11 @@ class AutoProcess:
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
-            project_metadata = auto_process_utils.ProjectMetadataFile(filen)
+            project_metadata = utils.ProjectMetadataFile(filen)
         else:
             # First try to populate basic metadata from existing projects
             logging.debug("Metadata file not found, guessing basic data")
-            project_metadata = auto_process_utils.ProjectMetadataFile()
+            project_metadata = utils.ProjectMetadataFile()
             projects = projects_from_dirs
             if not projects:
                 # Get information from fastq files
@@ -208,7 +208,7 @@ class AutoProcess:
             bad_projects = []
             for line in project_metadata:
                 pname = line['Project']
-                test_project = auto_process_utils.AnalysisProject(
+                test_project = utils.AnalysisProject(
                     pname,os.path.join(self.analysis_dir,pname))
                 if not test_project.is_analysis_dir:
                     # Project doesn't exist
@@ -246,8 +246,8 @@ class AutoProcess:
         logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
         # Try loading each subdirectory as a project
-        for dirn in auto_process_utils.list_dirs(self.analysis_dir):
-            test_project = auto_process_utils.AnalysisProject(
+        for dirn in utils.list_dirs(self.analysis_dir):
+            test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
                 logging.debug("* %s: analysis directory" % dirn)
@@ -600,7 +600,7 @@ class AutoProcess:
             logging.debug("Acquiring data for project %s" % name)
             # Look for a matching project directory
             project_dir = None
-            dirs = auto_process_utils.list_dirs(self.analysis_dir,startswith=name)
+            dirs = utils.list_dirs(self.analysis_dir,startswith=name)
             logging.debug("Possible matching directories: %s" % dirs)
             if len(dirs) == 1:
                 # Just a single match
@@ -617,7 +617,7 @@ class AutoProcess:
                 raise Exception("Unable to resolve directory for project '%s'" % name)
             # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
-            projects.append(auto_process_utils.AnalysisProject(name,project_dir))
+            projects.append(utils.AnalysisProject(name,project_dir))
         # Add undetermined reads directory
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
@@ -628,7 +628,7 @@ class AutoProcess:
     def undetermined(self):
         # Return analysis project directory for undetermined indices
         # or None if not found
-        dirs = auto_process_utils.list_dirs(self.analysis_dir,matches='undetermined')
+        dirs = utils.list_dirs(self.analysis_dir,matches='undetermined')
         if len(dirs) == 0:
             logging.debug("No undetermined analysis directory found")
             return None
@@ -637,7 +637,7 @@ class AutoProcess:
                 % ' '.join(dirs)
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
-        return auto_process_utils.AnalysisProject(dirs[0],undetermined_dir)
+        return utils.AnalysisProject(dirs[0],undetermined_dir)
         
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
@@ -975,7 +975,7 @@ class AutoProcess:
         print "Collecting bcl2fastq directories"
         primary_illumina_data = None
         unaligned_dirs = {}
-        for dirn in auto_process_utils.list_dirs(self.analysis_dir):
+        for dirn in utils.list_dirs(self.analysis_dir):
             try:
                 illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                           unaligned_dir=dirn)
@@ -1095,16 +1095,16 @@ class AutoProcess:
             library_type = line['Library']
             comments = line['Comments']
             # Create the project
-            project = auto_process_utils.AnalysisProject(project_name,
-                                                         os.path.join(self.analysis_dir,
-                                                                      project_name),
-                                                         user=user,
-                                                         PI=PI,
-                                                         organism=organism,
-                                                         library_type=library_type,
-                                                         run=run_name,
-                                                         comments=comments,
-                                                         platform=self.params.platform)
+            project = utils.AnalysisProject(project_name,
+                                            os.path.join(self.analysis_dir,
+                                                         project_name),
+                                            user=user,
+                                            PI=PI,
+                                            organism=organism,
+                                            library_type=library_type,
+                                            run=run_name,
+                                            comments=comments,
+                                            platform=self.params.platform)
             if project.exists:
                 logging.warning("Project '%s' already exists, skipping" % project.name)
                 continue
@@ -1116,13 +1116,13 @@ class AutoProcess:
         # Also set up analysis directory for undetermined reads
         undetermined = illumina_data.undetermined
         if illumina_data.undetermined is not None:
-            undetermined = auto_process_utils.AnalysisProject('undetermined',
-                                                              os.path.join(self.analysis_dir,
-                                                                           'undetermined'),
-                                                              run=run_name,
-                                                              comments="Analysis of reads "
-                                                              "with undetermined indices",
-                                                              platform=self.params.platform)
+            undetermined = utils.AnalysisProject('undetermined',
+                                                 os.path.join(self.analysis_dir,
+                                                              'undetermined'),
+                                                 run=run_name,
+                                                 comments="Analysis of reads "
+                                                 "with undetermined indices",
+                                                 platform=self.params.platform)
             if not undetermined.exists:
                 print "Creating directory 'undetermined' for analysing reads " \
                 "with undetermined indices"
@@ -1191,7 +1191,7 @@ class AutoProcess:
                                                 log_dir=log_dir)
                         # Create and submit a QC job
                         fastq = os.path.join(project.dirn,'fastqs',fq)
-                        label = "illumina_qc.%s" % str(auto_process_utils.AnalysisFastq(fq))
+                        label = "illumina_qc.%s" % str(utils.AnalysisFastq(fq))
                         qc_cmd = applications.Command('illumina_qc.sh',fastq)
                         if no_ungzip_fastqs or project.name == 'undetermined':
                             qc_cmd.add_args('--no-ungzip')
@@ -1244,7 +1244,7 @@ class AutoProcess:
             logging.error("Failed to rsync to archive (returned status %d)" % status)
         # Set the group (local copies only)
         if group is not None:
-            user,server,dirn = auto_process_utils.split_user_host_dir(archive_dir)
+            user,server,dirn = utils.split_user_host_dir(archive_dir)
             if user is None and server is None:
                 # Local archive
                 print "Setting group of archived files to '%s'" % group
@@ -1284,10 +1284,10 @@ class AutoProcess:
             project_pattern = projects
         # Get location to publish qc reports to
         if location is None:
-            user,server,dirn = auto_process_utils.split_user_host_dir(
+            user,server,dirn = utils.split_user_host_dir(
                 settings.qc_web_server.dirn)
         else:
-            user,server,dirn = auto_process_utils.split_user_host_dir(location)
+            user,server,dirn = utils.split_user_host_dir(location)
         if server is not None:
             remote = True
         else:
@@ -1753,9 +1753,9 @@ class AutoProcess:
         # Generate report text
         report = []
         for p in project_metadata:
-            project = auto_process_utils.AnalysisProject(p['Project'],
-                                                         os.path.join(self.params.analysis_dir,
-                                                                      p['Project']))
+            project = utils.AnalysisProject(p['Project'],
+                                            os.path.join(self.params.analysis_dir,
+                                                         p['Project']))
             # Title
             title = "%s %s %s data from %s run %s" % \
                           (project.info.user,

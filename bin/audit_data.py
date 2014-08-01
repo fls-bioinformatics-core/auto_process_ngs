@@ -26,7 +26,7 @@ __version__ = '0.0.10'
 
 import platforms
 import applications
-import auto_process_utils
+import utils
 import bcf_utils
 import logging
 import optparse
@@ -66,7 +66,7 @@ class SeqDataSizes:
         self.include_subdirs = include_subdirs
         self.subdirs = []
         if not is_subdir and include_subdirs:
-            for d in auto_process_utils.list_dirs(self.dirn):
+            for d utils.list_dirs(self.dirn):
                 self.subdirs.append(SeqDataSizes(d,os.path.join(self.dirn,d),
                                                  year=self.year,
                                                  platform=self.platform,
@@ -371,7 +371,7 @@ if __name__ == "__main__":
                     continue
                 print "-- Platform %s" % platform
                 # Get all the directories for this year/platform combination
-                for run in auto_process_utils.list_dirs(platform_dirn):
+                for run in utils.list_dirs(platform_dirn):
                     print "--- Run %s" % run
                     run_dir = os.path.join(platform_dirn,run)
                     if os.path.islink(run_dir):
