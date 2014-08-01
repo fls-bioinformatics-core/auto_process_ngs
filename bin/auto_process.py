@@ -61,34 +61,6 @@ from auto_process_ngs.auto_processor import AutoProcess
 # Functions
 #######################################################################
 
-def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None):
-    # Read sample sheet info from input_sample_sheet
-    # Do clean up
-    # Write to output_sample_sheet (if specified)
-    # Return CasavaSampleSheet object
-    sample_sheet = IlluminaData.get_casava_sample_sheet(input_sample_sheet)
-    for line in sample_sheet:
-        if not line['SampleProject']:
-            line['SampleProject'] = line['SampleID']
-    sample_sheet.fix_illegal_names()
-    sample_sheet.fix_duplicated_names()
-    if output_sample_sheet is not None:
-        sample_sheet.write(output_sample_sheet)
-    return sample_sheet
-
-def get_bases_mask(run_info_xml,sample_sheet_file):
-    # Return bases mask string generated from data in RunInfo.xml and
-    # sample sheet files
-    # Get initial bases mask
-    bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
-    print "Bases mask: %s (from RunInfo.xml)" % bases_mask
-    # Update bases mask from sample sheet
-    example_barcode = IlluminaData.get_casava_sample_sheet(sample_sheet_file)[0]['Index']
-    bases_mask = IlluminaData.fix_bases_mask(bases_mask,example_barcode)
-    print "Bases mask: %s (updated for barcode sequence '%s')" % (bases_mask,
-                                                                  example_barcode)
-    return bases_mask
-
 def list_available_commands(cmds):
     # Pretty-print available commands
         print ""

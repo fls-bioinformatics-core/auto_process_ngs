@@ -34,38 +34,6 @@ import simple_scheduler
 import bcl2fastq_utils
 
 #######################################################################
-# Functions
-#######################################################################
-
-def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None):
-    # Read sample sheet info from input_sample_sheet
-    # Do clean up
-    # Write to output_sample_sheet (if specified)
-    # Return CasavaSampleSheet object
-    sample_sheet = IlluminaData.get_casava_sample_sheet(input_sample_sheet)
-    for line in sample_sheet:
-        if not line['SampleProject']:
-            line['SampleProject'] = line['SampleID']
-    sample_sheet.fix_illegal_names()
-    sample_sheet.fix_duplicated_names()
-    if output_sample_sheet is not None:
-        sample_sheet.write(output_sample_sheet)
-    return sample_sheet
-
-def get_bases_mask(run_info_xml,sample_sheet_file):
-    # Return bases mask string generated from data in RunInfo.xml and
-    # sample sheet files
-    # Get initial bases mask
-    bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
-    print "Bases mask: %s (from RunInfo.xml)" % bases_mask
-    # Update bases mask from sample sheet
-    example_barcode = IlluminaData.get_casava_sample_sheet(sample_sheet_file)[0]['Index']
-    bases_mask = IlluminaData.fix_bases_mask(bases_mask,example_barcode)
-    print "Bases mask: %s (updated for barcode sequence '%s')" % (bases_mask,
-                                                                  example_barcode)
-    return bases_mask
-
-#######################################################################
 # Classes
 #######################################################################
 
@@ -444,8 +412,8 @@ class AutoProcess:
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
             custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
-            sample_sheet = make_custom_sample_sheet(tmp_sample_sheet,
-                                                    custom_sample_sheet)
+            sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(tmp_sample_sheet,
+                                                                    custom_sample_sheet)
             print "Keeping copy of original sample sheet"
             original_sample_sheet = os.path.join(self.analysis_dir,'SampleSheet.orig.csv')
             os.rename(tmp_sample_sheet,original_sample_sheet)
@@ -462,7 +430,7 @@ class AutoProcess:
             rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
                                                self.tmp_dir)
             status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
-            bases_mask = get_bases_mask(tmp_run_info,custom_sample_sheet)
+            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
         # Print the predicted ouputs
