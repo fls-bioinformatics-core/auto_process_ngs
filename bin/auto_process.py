@@ -54,8 +54,8 @@ import subprocess
 import logging
 import optparse
 import bcf_utils
-import auto_process_settings
-from auto_processor import AutoProcess
+import auto_process_ngs.auto_process_settings
+from auto_process_ngs.auto_processor import AutoProcess
 
 #######################################################################
 # Functions
@@ -171,7 +171,7 @@ def make_fastqs_parser():
                             "is to keep data)")
     p.add_option_group(primary_data)
     # Options to control bcl2fastq
-    nprocessors = auto_process_settings.bcl2fastq.nprocessors
+    nprocessors = auto_process_ngs.auto_process_settings.bcl2fastq.nprocessors
     bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
     bcl_to_fastq.add_option('--skip-bcl2fastq',action='store_true',
                             dest='skip_bcl2fastq',default=False,
@@ -241,7 +241,7 @@ def merge_fastq_dirs_parser():
                               "multiple bcl-to-fastq runs within ANALYSIS_DIR. Use this "
                               "command if 'make_fastqs' step was run multiple times to "
                               "process subsets of lanes.")
-    nprocessors = auto_process_settings.bcl2fastq.nprocessors
+    nprocessors = auto_process_ngs.auto_process_settings.bcl2fastq.nprocessors
     p.add_option('--primary-unaligned-dir',action='store',
                  dest='unaligned_dir',default='bcl2fastq',
                  help="merge fastqs from additional bcl-to-fastq directories into "
@@ -266,7 +266,7 @@ def run_qc_parser():
                               version="%prog "+__version__,
                               description="Automatically process Illumina sequence from "
                               "ANALYSIS_DIR.")
-    max_concurrent_jobs = auto_process_settings.general.max_concurrent_jobs
+    max_concurrent_jobs = auto_process_ngs.auto_process_settings.general.max_concurrent_jobs
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
@@ -327,11 +327,11 @@ def archive_parser():
     p.add_option('--year',action='store',
                  dest='year',default=None,
                  help="specify the year e.g. '2014' (default is the current year)")
-    default_group = auto_process_settings.archive.group
+    default_group = auto_process_ngs.auto_process_settings.archive.group
     p.add_option('--group',action='store',dest='group',default=default_group,
                  help="specify the name of group for the archived files NB only works "
                  "when the archive is a local directory (default: %s)" % default_group)
-    default_chmod = auto_process_settings.archive.chmod
+    default_chmod = auto_process_ngs.auto_process_settings.archive.chmod
     p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
                  help="specify chmod operations for the archived files (default: "
                  "%s)" % default_chmod)
