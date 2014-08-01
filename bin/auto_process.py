@@ -415,7 +415,7 @@ class Commands:
 # Functions
 #######################################################################
 
-def list_available_commands(cmds):
+def list_available_commands():
     """Pretty-print available commands
     """
     print ""
