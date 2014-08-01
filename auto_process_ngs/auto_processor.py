@@ -693,7 +693,7 @@ class AutoProcess:
             if self.get_primary_data() != 0:
                 logging.error("Failed to acquire primary data")
                 raise Exception, "Failed to acquire primary data"
-            if options.only_fetch_primary_data:
+            if only_fetch_primary_data:
                 return
         # Run bcl_to_fastq
         if not skip_bcl2fastq:
