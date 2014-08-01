@@ -395,7 +395,7 @@ class AutoProcess:
             run_number = run_number.lstrip('0')
         except Exception, ex:
             logging.warning("Unable to extract information from run name '%s'" \
-                            % run_name)
+                            % os.path.basename(self.analysis_dir))
             logging.warning("Exception: %s" % ex)
             run_number = ''
         # Custom SampleSheet.csv file
