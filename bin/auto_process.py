@@ -42,8 +42,6 @@ special cases and testing.
 
 """
 
-__version__ = "0.0.78"
-
 #######################################################################
 # Imports
 #######################################################################
@@ -56,6 +54,8 @@ import optparse
 import bcf_utils
 import auto_process_ngs.settings
 from auto_process_ngs.auto_processor import AutoProcess
+
+__version__ = auto_process_ngs.settings.version
 
 #######################################################################
 # Functions
