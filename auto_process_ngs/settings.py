@@ -22,7 +22,9 @@ if not os.path.exists(__config_file):
         open(__config_file,'w').write(open(__sample_config_file,'r').read())
     except Exception,ex:
         raise Exception,"Failed to create settings file: %s" % ex
-    print "Created new file %s" % __config_file
+    logging.warning("Created new file %s" % __config_file)
+    logging.warning("Edit configuration settings and rerun")
+    sys.exit(1)
 #
 # Import site-specific settings from local version
 config = AutoProcessConfigParser()
