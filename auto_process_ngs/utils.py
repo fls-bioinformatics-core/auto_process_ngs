@@ -999,11 +999,10 @@ def fetch_runner(definition):
     if definition.startswith('SimpleJobRunner'):
         return JobRunner.SimpleJobRunner(join_logs=True)
     elif definition.startswith('GEJobRunner'):
-        return JobRunner.GEJobRunner(join_logs=True)
+        return JobRunner.GEJobRunner()
     elif definition.startswith('GEJobRunner(') and runner.endswith(')'):
         ge_extra_args = definition[len('GEJobRunner(')+1:len(runner)].split(' ')
-        return JobRunner.GEJobRunner(join_logs=True,
-                                     ge_extra_args=ge_extra_args)
+        return JobRunner.GEJobRunner(ge_extra_args=ge_extra_args)
     raise Exception,"Unrecognised runner: %s" % runner
 
 def bases_mask_is_paired_end(bases_mask):
