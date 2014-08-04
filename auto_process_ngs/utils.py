@@ -28,13 +28,41 @@ import os
 import logging
 import IlluminaData
 import TabFile
+import JobRunner
 import Pipeline
 import qcreporter
 import bcf_utils
+from ConfigParser import ConfigParser,NoOptionError
 
 #######################################################################
 # Classes
 #######################################################################
+
+class AutoProcessConfigParser(ConfigParser):
+    """Wraps ConfigParser to set defaults for missing options
+
+    Implements a wrapper for ConfigParser:
+
+    - 'get' and 'getint' methods take a 'default' argument, which
+      is returned if the specified option is missing from the file
+    - implements a 'getrunner' method that returns a JobRunner
+      instance based on a specification string.
+
+    """
+    def __init__(self):
+        ConfigParser.__init__(self)
+    def get(self,section,option,default=None):
+        try:
+            return ConfigParser.get(self,section,option)
+        except NoOptionError:
+            return default
+    def getint(self,section,option,default):
+        try:
+            return ConfigParser.getint(self,section,option)
+        except NoOptionError:
+            return default
+    def getrunner(self,section,option,default):
+        return fetch_runner(self.get(section,option,default))
 
 class AnalysisFastq:
     """Class for extracting information about Fastq files
@@ -951,6 +979,32 @@ class ProjectMetadataFile(TabFile.TabFile):
 #######################################################################
 # Functions
 #######################################################################
+
+def fetch_runner(definition):
+    """Return job runner instance based on a definition string
+
+    Given a definition string, returns an appropriate runner
+    instance.
+
+    Definitions are of the form:
+
+      RunnerName[(args)]
+
+    RunnerName can be 'SimpleJobRunner' or 'GEJobRunner'.
+    If '(args)' are also supplied then these are passed to
+    the job runner on instantiation (only works for
+    GE runners).
+
+    """
+    if definition.startswith('SimpleJobRunner'):
+        return JobRunner.SimpleJobRunner(join_logs=True)
+    elif definition.startswith('GEJobRunner'):
+        return JobRunner.GEJobRunner(join_logs=True)
+    elif definition.startswith('GEJobRunner(') and runner.endswith(')'):
+        ge_extra_args = definition[len('GEJobRunner(')+1:len(runner)].split(' ')
+        return JobRunner.GEJobRunner(join_logs=True,
+                                     ge_extra_args=ge_extra_args)
+    raise Exception,"Unrecognised runner: %s" % runner
 
 def bases_mask_is_paired_end(bases_mask):
     # Determine if run is paired end based on bases mask string
