@@ -1561,22 +1561,30 @@ class AutoProcess:
             print "Run ref      : %s" % self.run_reference_id
             print "Directory    : %s" % self.analysis_dir
             print "Platform     : %s" % self.params.platform
+            print "Kit/assay    : %s" % self.params.assay
             print "Unaligned dir: %s" % self.params.unaligned_dir
             if self.readme:
                 print "README.txt found: %s" % self.readme
             if self.params.unaligned_dir is not None:
                 illumina_data = self.load_illumina_data()
-                print "Summary of data in 'unaligned' dir:"
+                print "\nSummary of data in '%s' dir:\n" % self.params.unaligned_dir
                 for project in illumina_data.projects:
                     print "- %s" % IlluminaData.describe_project(project)
             else:
                 print "No information on source fastq data (no unaligned dir found)"
-            print "Analysis projects:"
+            print "\nAnalysis projects:"
             for project in self.get_analysis_projects():
-                print "- %s" % project.name
-                print "  Dir    : %s" % os.path.basename(project.dirn)
-                print "  Samples: %s" % project.prettyPrintSamples()
-                print "  QC     : %s" % ('ok' if project.verify_qc() else 'not verified')
+                print "\n- %s" % project.name
+                print "  %s" % ('-'*len(project.name),)
+                print "  User    : %s" % project.info.user
+                print "  PI      : %s" % project.info.PI
+                print "  Library : %s" % project.info.library_type
+                print "  Organism: %s" % project.info.organism
+                print "  Dir     : %s" % os.path.basename(project.dirn)
+                print "  #samples: %s" % len(project.samples)
+                print "  Samples : %s" % project.prettyPrintSamples()
+                print "  QC      : %s" % ('ok' if project.verify_qc() else 'not verified')
+                print "  Comments: %s" % (project.info.comments)
 
     def report_logging_format(self):
         # Generate short form "logging"-style report
