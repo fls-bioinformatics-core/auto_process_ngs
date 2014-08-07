@@ -1,0 +1,417 @@
+#!/bin/python
+#
+# Barcode splitter
+#
+# Split reads into fastq files based on matching barcode (index) sequences
+#
+# Calculate Hamming distance between two strings
+#
+# http://en.wikipedia.org/wiki/Hamming_distance
+#
+import itertools
+class HammingMetrics:
+    @classmethod
+    def hamming_distance(self,s1,s2):
+        #Return the Hamming distance between equal-length sequences
+        if len(s1) != len(s2):
+            raise ValueError("Undefined for sequences of unequal length")
+        return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
+    @classmethod
+    def hamming_distance_with_N(self,s1,s2):
+        #Return the Hamming distance between equal-length sequences
+        # modified version where N's don't match anything (not even other N's)
+        if len(s1) != len(s2):
+            raise ValueError("Undefined for sequences of unequal length")
+        return sum((ch1 != ch2 or ch1 == 'N' or ch2 == 'N') \
+                   for ch1, ch2 in itertools.izip(s1, s2))
+
+class HammingLookup:
+    def __init__(self,hamming_func=HammingMetrics.hamming_distance):
+        self._hamming = hamming_func
+        self._distances = dict()
+    def dist(self,s1,s2):
+        try:
+            return self._distances[s1][s2]
+        except KeyError:
+            try:
+                return self._distances[s2][s1]
+            except KeyError:
+                pass
+        if s1 not in self._distances:
+            self._distances[s1] = dict()
+        self._distances[s1][s2] = self._hamming(s1,s2)
+        return self._distances[s1][s2]
+
+class BarcodeMatcher:
+    def __init__(self,index_seqs,max_dist=0):
+        self._hamming = HammingLookup()
+        self._index_seqs = list(index_seqs)
+        self._max_dist = max_dist
+        for i,seq1 in enumerate(self._index_seqs):
+            for seq2 in self._index_seqs[i+1:]:
+                if self._hamming.dist(seq1,seq2) <= max_dist:
+                    raise Exception,"Index sequence ambiguity: '%s' and '%s' are too " \
+                    "similar (differ by %d bases, must be > %d)" % \
+                    (seq1,seq2,self._hamming.dist(seq1,seq2),max_dist)
+        self._index_seqs.sort()
+    def match(self,seq):
+        for index_seq in self._index_seqs:
+            logging.debug("%s, %s" % (index_seq,seq))
+            if self._hamming.dist(index_seq,seq) <= self._max_dist:
+                return index_seq
+        return None
+    @property
+    def sequences(self):
+        return self._index_seqs
+
+class OutputFiles:
+    def __init__(self,base_dir=None):
+        self._fp = dict()
+        self._file = dict()
+        self._base_dir = base_dir
+    def open(self,name,filen):
+        if self._base_dir is not None:
+            filen = os.path.join(self._base_dir,filen)
+        else:
+            filen = os.path.abspath(filen)
+        self._file[name] = filen
+        self._fp[name] = open(filen,'w')
+    def write(self,name,s):
+        self._fp[name].write("%s\n" % s)
+    def file_name(self,name):
+        return self._file[name]
+    def close(self,name=None):
+        if name is not None:
+            self._fp[name].close()
+        else:
+            for name in self._fp:
+                self._fp[name].close()
+
+def split_single_end(matcher,fastqs,output_dir=None):
+    fp = OutputFiles(base_dir=output_dir)
+    for barcode in matcher.sequences:
+        fp.open(barcode,"%s.fastq" % barcode)
+    fp.open('undetermined',"undetermined.fastq")
+    # Filter reads
+    nread = 0
+    for fastq in fastqs:
+        print "Processing reads from %s" % fastq
+        for read in FASTQFile.FastqIterator(fastq):
+            nread += 1
+            print read
+            seq = read.seqid.index_sequence
+            if not seq:
+                logging.error("No index sequence for read!")
+                sys.exit(1)
+            assigned_index = matcher.match(seq)
+            # Read not assigned
+            if assigned_index is None:
+                assigned_index = 'undetermined'
+            logging.debug("Assigned read #%d to %s" % (nread,assigned_index))
+            fp.write(assigned_index,read)
+    print "Finished (%d reads processed)" % nread
+
+def split_paired_end(matcher,fastq_pairs,output_dir=None):
+    fp = OutputFiles(base_dir=output_dir)
+    for barcode in matcher.sequences:
+        fp.open((barcode,'R1'),"%s_R1.fastq" % barcode)
+        fp.open((barcode,'R2'),"%s_R2.fastq" % barcode)
+    fp.open(('undetermined','R1'),"undetermined_R1.fastq")
+    fp.open(('undetermined','R2'),"undetermined_R2.fastq")
+    # Filter reads
+    nread = 0
+    for fq_r1,fq_r2 in fastq_pairs:
+        print "Processing reads from fastq pair %s %s" % (fq_r1,fq_r2)
+        for read1,read2 in itertools.izip(FASTQFile.FastqIterator(fq_r1),
+                                          FASTQFile.FastqIterator(fq_r2)):
+            nread += 1
+            seq = read1.seqid.index_sequence
+            if not seq:
+                logging.error("No index sequence for read!")
+                sys.exit(1)
+            if seq != read2.seqid.index_sequence:
+                raise Exception,"Index sequence mismatch between R1 and R2 reads"
+            assigned_index = matcher.match(seq)
+            # Read not assigned
+            if assigned_index is None:
+                assigned_index = 'undetermined'
+            logging.debug("Assigned read #%d to %s" % (nread,assigned_index))
+            fp.write((assigned_index,'R1'),read1)
+            fp.write((assigned_index,'R2'),read2)
+    print "Finished (%d read pairs processed)" % nread
+
+import unittest
+class TestHammingMetrics(unittest.TestCase):
+    def test_hamming_exact(self):
+        self.assertEqual(HammingMetrics.hamming_distance('AGGTCTA','AGGTCTA'),0)
+    def test_hamming_one_mismatch(self):
+        self.assertEqual(HammingMetrics.hamming_distance('AGGTCTA','ACGTCTA'),1)
+    def test_hamming_two_mismatches(self):
+        self.assertEqual(HammingMetrics.hamming_distance('AGGTCTA','ACCTCTA'),2)
+class TestHammingWithN(unittest.TestCase):
+    def test_hamming_with_N_exact(self):
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('AGGTCTA','AGGTCTA'),0)
+    def test_hamming_with_N_one_mismatch(self):
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('AGGTCTA','ACGTCTA'),1)
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('ACNTCTA','ACGTCTA'),1)
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('ACNTCTA','ACNTCTA'),1)
+    def test_hamming_with_N_two_mismatches(self):
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('AGGTCTA','ACCTCTA'),2)
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('ANNTCTA','ACCTCTA'),2)
+        self.assertEqual(HammingMetrics.hamming_distance_with_N('ANNTCTA','ANNTCTA'),2)
+    def test_hamming_different_lengths(self):
+        self.assertRaises(ValueError,HammingMetrics.hamming_distance_with_N,
+                          'AGGTCTAA','AGGTCTA')
+
+class TestBarcodeMatcher(unittest.TestCase):
+    def test_barcodematcher_exact_match(self):
+        b = BarcodeMatcher(('TTGCTA','AGGTCT'))
+        self.assertEqual(b.match('AGGTCT'),'AGGTCT')
+        self.assertEqual(b.match('TTGCTA'),'TTGCTA')
+        self.assertEqual(b.match('CGGTCT'),None)
+        self.assertEqual(b.match('CGTTCT'),None)
+    def test_barcodematcher_one_mismatch(self):
+        b = BarcodeMatcher(('TTGCTA','AGGTCT'),max_dist=1)
+        self.assertEqual(b.match('AGGTCT'),'AGGTCT')
+        self.assertEqual(b.match('TTGCTA'),'TTGCTA')
+        self.assertEqual(b.match('CGGTCT'),'AGGTCT')
+        self.assertEqual(b.match('CGTTCT'),None)
+    def test_barcodematcher_two_mismatches(self):
+        b = BarcodeMatcher(('TTGCTA','AGGTCT'),max_dist=2)
+        self.assertEqual(b.match('AGGTCT'),'AGGTCT')
+        self.assertEqual(b.match('TTGCTA'),'TTGCTA')
+        self.assertEqual(b.match('CGGTCT'),'AGGTCT')
+        self.assertEqual(b.match('CGTTCT'),'AGGTCT')
+    def test_barcodematcher_list_sequences(self):
+        b = BarcodeMatcher(('TTGCTA','AGGTCT','GCCTAT'))
+        self.assertEqual(b.sequences,['AGGTCT','GCCTAT','TTGCTA'])
+    def test_barcodematcher_ambigiuous_sequences(self):
+        self.assertRaises(Exception,BarcodeMatcher,('AGGTCTA','AGGTCTA'))
+        self.assertRaises(Exception,BarcodeMatcher,('AGGTCTC','AGGTCTA'),max_dist=1)
+        self.assertRaises(Exception,BarcodeMatcher,('AGGTCCC','AGGTCTA'),max_dist=2)
+
+import tempfile
+import shutil
+import os
+class TestOutputFiles(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_outputfile')
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_outputfiles(self):
+        out = OutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt'))
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_outputfiles_with_basedir(self):
+        out = OutputFiles(self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+
+fastq_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
+TTTACAACTAGCTTCTCTTTTTCTT
++
+>AA?131@C1FCGGGG1BFFGF1F3
+@MISEQ:34:000000000-A7PHP:1:1101:16449:1793 1:N:0:TAAGGCGA
+TCCCCAGTCTCAGCCCTACTCCACT
++
+11>>>11CDFFFBCGGG1AFE11AB
+@MISEQ:34:000000000-A7PHP:1:1101:15171:1796 1:N:0:GCCTTACC
+CCACCACGCCTGGCTAATTTTTTTT
++
+1>1>>AAAAAFAGGGGBFGGGGGG0
+@MISEQ:34:000000000-A7PHP:1:1101:18777:1797 1:N:0:TAAGNNNA
+CAGCAATATACACTTCACTCTGCAT
++
+111>>1FBFFFFGGGGCBGEG3A3D
+@MISEQ:34:000000000-A7PHP:1:1101:18622:1812 1:N:0:TAAGGCGA
+GATAAAGACAGAGTCTTAATTAAAC
++
+11>1>11DFFCFFDGGGB3BF313A
+"""
+
+fastq_r2 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 2:N:0:TAAGGCGA
+CTTCTTCTTTTTTTTTTTGTCTATC
++
+1>11>13BBD111AAE00/B2B222
+@MISEQ:34:000000000-A7PHP:1:1101:16449:1793 2:N:0:TAAGGCGA
+TTTTTTTTCTTTTTTTTTTCCTTTT
++
+11>>1>110B3BF1A00/A01B22B
+@MISEQ:34:000000000-A7PHP:1:1101:15171:1796 2:N:0:GCCTTACC
+TTTCTATTCTCCTTCTCATAAAAAA
++
+111113333B311B1B133331110
+@MISEQ:34:000000000-A7PHP:1:1101:18777:1797 2:N:0:TAAGNNNA
+TTTTTTTTTCTTCTATTCTCAGATG
++
+1>1>111100BB3B3B22B222121
+@MISEQ:34:000000000-A7PHP:1:1101:18622:1812 2:N:0:TAAGGCGA
+TTTTTTTTCCATCTTTTTTAATTTT
++
+>1>111>1013B1BF3BFE01BB22
+"""
+
+class TestSplitSingleEnd(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_split_single_end')
+        # Test file
+        self.fastq = os.path.join(self.wd,'test.fq')
+        open(self.fastq,'w').write(fastq_r1)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_split_single_end(self):
+        matcher = BarcodeMatcher(('TAAGGCGA','GCCTTACC'))
+        split_single_end(matcher,(self.fastq,),output_dir=self.wd)
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'TAAGGCGA.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'GCCTTACC.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'undetermined.fastq')))
+        self.assertEqual(open(os.path.join(self.wd,'TAAGGCGA.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
+TTTACAACTAGCTTCTCTTTTTCTT
++
+>AA?131@C1FCGGGG1BFFGF1F3
+@MISEQ:34:000000000-A7PHP:1:1101:16449:1793 1:N:0:TAAGGCGA
+TCCCCAGTCTCAGCCCTACTCCACT
++
+11>>>11CDFFFBCGGG1AFE11AB
+@MISEQ:34:000000000-A7PHP:1:1101:18622:1812 1:N:0:TAAGGCGA
+GATAAAGACAGAGTCTTAATTAAAC
++
+11>1>11DFFCFFDGGGB3BF313A
+""")
+        self.assertEqual(open(os.path.join(self.wd,'GCCTTACC.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:15171:1796 1:N:0:GCCTTACC
+CCACCACGCCTGGCTAATTTTTTTT
++
+1>1>>AAAAAFAGGGGBFGGGGGG0
+""")
+        self.assertEqual(open(os.path.join(self.wd,'undetermined.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:18777:1797 1:N:0:TAAGNNNA
+CAGCAATATACACTTCACTCTGCAT
++
+111>>1FBFFFFGGGGCBGEG3A3D
+""")
+
+class TestSplitPairedEnd(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_split_paired_end')
+        # Test file
+        self.fastq_r1 = os.path.join(self.wd,'test_r1.fq')
+        self.fastq_r2 = os.path.join(self.wd,'test_r2.fq')
+        open(self.fastq_r1,'w').write(fastq_r1)
+        open(self.fastq_r2,'w').write(fastq_r2)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_split_paired_end(self):
+        matcher = BarcodeMatcher(('TAAGGCGA','GCCTTACC'))
+        split_paired_end(matcher,((self.fastq_r1,self.fastq_r2),),output_dir=self.wd)
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'TAAGGCGA_R1.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'TAAGGCGA_R2.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'GCCTTACC_R1.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'GCCTTACC_R2.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'undetermined_R1.fastq')))
+        self.assertTrue(os.path.exists(os.path.join(self.wd,'undetermined_R2.fastq')))
+        self.assertEqual(open(os.path.join(self.wd,'TAAGGCGA_R1.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
+TTTACAACTAGCTTCTCTTTTTCTT
++
+>AA?131@C1FCGGGG1BFFGF1F3
+@MISEQ:34:000000000-A7PHP:1:1101:16449:1793 1:N:0:TAAGGCGA
+TCCCCAGTCTCAGCCCTACTCCACT
++
+11>>>11CDFFFBCGGG1AFE11AB
+@MISEQ:34:000000000-A7PHP:1:1101:18622:1812 1:N:0:TAAGGCGA
+GATAAAGACAGAGTCTTAATTAAAC
++
+11>1>11DFFCFFDGGGB3BF313A
+""")
+        self.assertEqual(open(os.path.join(self.wd,'TAAGGCGA_R2.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 2:N:0:TAAGGCGA
+CTTCTTCTTTTTTTTTTTGTCTATC
++
+1>11>13BBD111AAE00/B2B222
+@MISEQ:34:000000000-A7PHP:1:1101:16449:1793 2:N:0:TAAGGCGA
+TTTTTTTTCTTTTTTTTTTCCTTTT
++
+11>>1>110B3BF1A00/A01B22B
+@MISEQ:34:000000000-A7PHP:1:1101:18622:1812 2:N:0:TAAGGCGA
+TTTTTTTTCCATCTTTTTTAATTTT
++
+>1>111>1013B1BF3BFE01BB22
+""")
+        self.assertEqual(open(os.path.join(self.wd,'GCCTTACC_R1.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:15171:1796 1:N:0:GCCTTACC
+CCACCACGCCTGGCTAATTTTTTTT
++
+1>1>>AAAAAFAGGGGBFGGGGGG0
+""")
+        self.assertEqual(open(os.path.join(self.wd,'GCCTTACC_R2.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:15171:1796 2:N:0:GCCTTACC
+TTTCTATTCTCCTTCTCATAAAAAA
++
+111113333B311B1B133331110
+""")
+        self.assertEqual(open(os.path.join(self.wd,'undetermined_R1.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:18777:1797 1:N:0:TAAGNNNA
+CAGCAATATACACTTCACTCTGCAT
++
+111>>1FBFFFFGGGGCBGEG3A3D
+""")
+        self.assertEqual(open(os.path.join(self.wd,'undetermined_R2.fastq'),'r').read(),
+                         """@MISEQ:34:000000000-A7PHP:1:1101:18777:1797 2:N:0:TAAGNNNA
+TTTTTTTTTCTTCTATTCTCAGATG
++
+1>1>111100BB3B3B22B222121
+""")
+
+import FASTQFile
+import optparse
+import logging
+import sys
+
+if __name__ == "__main__":
+    p = optparse.OptionParser(usage="\n\t%prog FASTQ [FASTQ...]\n\t%prog -p FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]",
+                              description="Split reads from one or more input Fastq files "
+                              "into new Fastqs based on matching supplied barcodes.")
+    p.add_option('-b','--barcode',action='append',dest='index_seq',
+                 help="specify index sequence to filter using")
+    p.add_option('--mismatches',action='store',dest='n_mismatches',type='int',default=0,
+                 help="maximum number of differing bases to allow for two index sequences "
+                 "to count as a match. Default is zero i.e. exact matches only")
+    p.add_option('-p','--paired-end',action='store_true',dest='paired_end',
+                 help="input arguments are pairs of Fastq files")
+    options,args = p.parse_args()
+    if options.index_seq is None:
+        p.error("No index sequences specified")
+    if len(args) == 0:
+        p.error("No input files specified")
+    # Set up
+    matcher = BarcodeMatcher(options.index_seq,
+                             max_dist=options.n_mismatches)
+    if not options.paired_end:
+        split_single_end(matcher,args)
+    else:
+        fastq_pairs = [x.split(',') for x in args] 
+        split_paired_end(matcher,fastq_pairs)
+
+    
