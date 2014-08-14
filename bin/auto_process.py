@@ -10,7 +10,7 @@
 #########################################################################
 
 """
-First attempt at an automated data processing & QC pipeline in Python
+Automated data processing & QC pipeline for Illumina sequence data
 
 Implements a program for automating stages of a standard protocol for
 processing and QC'ing Illumina sequencing data.
@@ -34,6 +34,7 @@ each project.
 Additional commands are available:
 
     clone
+    analyse_barcodes
     merge_fastq_dirs
     update_fastq_stats
 
@@ -228,6 +229,24 @@ class Parsers:
         self.add_debug_option(p)
         return p
     @classmethod
+    def analyse_barcodes_parser(self):
+        """Create a parser for the 'analyse_barcodes' command
+        """
+        p = optparse.OptionParser(usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
+                                  version="%prog "+__version__,
+                                  description="Analyse barcode sequences for fastq files "
+                                  "in specified lanes in ANALYSIS_DIR, and report the most "
+                                  "common barcodes found across all reads from each lane.")
+        p.add_option('--unaligned-dir',action='store',
+                     dest='unaligned_dir',default='bcl2fastq',
+                     help="explicitly set the (sub)directory with bcl-to-fastq outputs")
+        p.add_option('--lanes',action='store',
+                     dest='lanes',default=None,
+                     help="specify which lanes to analyse barcodes for (default is to do "
+                     "analysis for all lanes).")
+        self.add_debug_option(p)
+        return p
+    @classmethod
     def setup_analysis_dirs_parser(self):
         """Create a parser for the 'setup_analysis_dirs' command
         """
@@ -397,6 +416,7 @@ class Commands:
     commands['update_fastq_stats']  = Parsers.generic_parser('update_fastq_stats',
                                                              "(Re)generate statistics for fastq "
                                                              "files produced from 'make_fastqs'.")
+    commands['analyse_barcodes']    = Parsers.analyse_barcodes_parser()
     commands['setup_analysis_dirs'] = Parsers.setup_analysis_dirs_parser()
     commands['run_qc']              = Parsers.run_qc_parser()
     commands['archive']             = Parsers.archive_parser()
@@ -519,6 +539,13 @@ if __name__ == "__main__":
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
             d.generate_stats()
+        elif cmd == 'analyse_barcodes':
+            if options.lanes is not None:
+                lanes = options.lanes.split(',')
+            else:
+                lanes = None
+            d.analyse_barcodes(unaligned_dir=options.unaligned_dir,
+                               lanes=lanes)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
                                   options.ignore_missing_metadata)
