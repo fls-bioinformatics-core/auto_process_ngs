@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 import FASTQFile
 import IlluminaData
@@ -74,6 +74,26 @@ def nreads(counts):
     """
     return sum([counts[x] for x in counts])
 
+def nmismatches(seq1,seq2,truncate=True):
+    """Return the number of mismatches between seq1 and seq2
+
+    Return the number of mismatches between two sequences
+    seq1 and seq2.
+
+    If 'truncate' is True then the sequences are truncated
+    before comparison, otherwise the mismatch counting is
+    undefined and raises a ValueError.
+
+    """
+    if len(seq1) != len(seq2):
+        if truncate:
+            new_len = min(len(seq1),len(seq2))
+            seq1 = seq1[:new_len]
+            seq2 = seq2[:new_len]
+        else:
+            raise ValueError("mismatches undefined for sequences of unequal length")
+    return sum(c1 != c2 for c1,c2 in zip(seq1,seq2))
+
 def report(counts,nseqs=20,exclude_ns=False,fp=None):
     """Print a summary of the most numerous barcode sequences
 
@@ -98,6 +118,41 @@ def report(counts,nseqs=20,exclude_ns=False,fp=None):
     for i,seq in enumerate(seqs[:nseqs]):
         fp.write("% 8d\t%s\t% 8d\t% 5.1f%%\n" % \
                  (i+1,seq,counts[seq],float(counts[seq])/n*100.0))
+
+def match_barcodes(counts,barcodes,nseqs=20,max_mismatches=3,fp=None):
+    """Find best matches for a set of supplied barcodes
+
+    Arguments:
+      counts: 'counts' dictionary returned by 'count_barcodes'
+        nseqs: number of barcode sequences to report
+      barcodes: dictionary with keys as barcodes and
+        corresponding values as sample names
+      nseqs: number of top barcode sequences to try and match
+      max_mismatches: maximum number of mismatches to allow
+        when reporting matches (will be corrected to allow
+        for differing barcode lengths)
+      fp: specify output stream to write report to (default
+        is to use stdout)
+
+    """
+    if fp is None: fp = sys.stdout
+    fp.write("\nBest matches to supplied barcode sequences:\n")
+    seqs = ordered_seqs(counts)[:nseqs]
+    for barcode in barcodes:
+        matches = {}
+        for seq in seqs:
+            matches[seq] = nmismatches(barcode,seq)
+        # Sort into order of least to most mismatches
+        ordered_matches = sorted(matches.keys(),
+                                 cmp=lambda x,y: cmp(matches[x],matches[y]))
+        # Maximum number of mismatches
+        n_mismatches = max_mismatches + abs(len(barcode) - len(seqs[0]))
+        # Report top matches i.e. lowest number of mismatches
+        line = ["%s:%s" % (barcodes[barcode],barcode)]
+        for seq in ordered_matches:
+            if matches[seq] <= n_mismatches:
+                line.append("%s (%d/%d)" % (seq,matches[seq],counts[seq]))
+        fp.write("%s\n" % '\t'.join(line))
 
 def output(counts,filen):
     """Write all sequences to a file
@@ -135,10 +190,19 @@ if __name__ == '__main__':
                  "used again in another run by specifying the '-c' option. NB if input "
                  "is a directory then this will be used as the base name for per-lane "
                  "count files")
+    p.add_option('-l','--lanes',action='store',dest='lanes',default=None,
+                 help="when processing a directory, specify one or more lane numbers to "
+                 "report barcodes for (default is to process all lanes)")
     p.add_option('-r','--report',action='store',dest='report_file',default=None,
                  help="write report to REPORT_FILE (otherwise write to stdout)")
+    p.add_option('-s','--sample-sheet',action='store',dest='sample_sheet',default=None,
+                 help="report best matches against barcodes in SAMPLE_SHEET")
+    p.add_option('-m','--mismatches',action='store',dest='mismatches',default=3,type='int',
+                 help="maximum number of mismatches to use when report best matches against "
+                 "barcodes from SAMPLE_SHEET (default is 3). Note that this is corrected "
+                 "to allow for differences in sequence lengths.")
     options,args = p.parse_args()
-    # Check arguments and acquire fastqs
+    # Check arguments
     if not args:
         p.error("Need to supply at least one input Fastq file, a bclToFastq output "
                 "directory, or a counts file from a previous run (if using -c)")
@@ -147,6 +211,10 @@ if __name__ == '__main__':
         fp = open(options.report_file,'w')
     else:
         fp = sys.stdout
+    if options.sample_sheet is not None:
+        print "Loading sample sheet data from %s" % options.sample_sheet
+        sample_sheet = IlluminaData.get_casava_sample_sheet(options.sample_sheet)
+    # Process according to inputs
     if options.counts_file_in:
         # Use counts from a previously generated file
         print "Loading counts from %s" % args[0]
@@ -156,6 +224,17 @@ if __name__ == '__main__':
             count = int(line.split('\t')[2])
             counts[seq] = count
         report(counts,nseqs=options.n,fp=fp)
+        # Match barcodes to index sequences in sample sheet
+        if options.sample_sheet:
+            barcodes = dict()
+            lanes = [int(lane) for lane in options.lanes.split(',')]
+            for line in sample_sheet:
+                if line['Lane'] in lanes:
+                    barcodes[line['Index']] = line['SampleID']
+            match_barcodes(counts,barcodes,
+                           nseqs=options.n,
+                           max_mismatches=options.mismatches,
+                           fp=fp)
     elif len(args) == 1 and os.path.isdir(args[0]):
         # Dealing with a bclToFastq output dir
         illumina_data = IlluminaData.IlluminaData(os.path.dirname(args[0]),
@@ -178,7 +257,12 @@ if __name__ == '__main__':
                     fastq_in_lane[lane].append(f)
         lanes = fastq_in_lane.keys()
         lanes.sort()
-        print "Lanes: %s" % lanes
+        print "Found lanes: %s" % lanes
+        # Discard lanes not specified on the command line
+        if options.lanes is not None:
+            lanes = filter(lambda x: True if str(x) in options.lanes.split(',') else False,
+                           lanes)
+            print "Using lanes: %s" % lanes
         # Count barcodes in each lane
         for lane in lanes:
             fp.write("*** Counting barcodes in lane %d ***\n" % lane)
@@ -191,11 +275,20 @@ if __name__ == '__main__':
                                                lane,
                                                os.path.splitext(options.counts_file)[1])
                 output(counts,counts_file)
+            # Match barcodes to index sequences in sample sheet
+            if options.sample_sheet:
+                barcodes = dict()
+                for line in sample_sheet:
+                    if line['Lane'] == lane:
+                        barcodes[line['Index']] = line['SampleID']
+                match_barcodes(counts,barcodes,
+                               nseqs=options.n,
+                               max_mismatches=options.mismatches,
+                               fp=fp)
     else:
         # One or more fastq files
         counts = count_barcodes(args)
         report(counts,nseqs=options.n,fp=fp)
         if options.counts_file:
             output(counts,options.counts_file)
-    
-    
+
