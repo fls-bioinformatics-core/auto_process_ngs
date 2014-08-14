@@ -1,6 +1,6 @@
 # Settings for auto_process module
 #
-version = "0.0.79"
+version = "0.0.80"
 
 import os
 import sys
@@ -43,7 +43,7 @@ bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
 #
 # Define runners for specific jobs
 runners = AttributeDictionary()
-for name in ('bcl2fastq','qc','stats'):
+for name in ('bcl2fastq','qc','stats',):
     runners[name] = config.getrunner('runners',name,general.default_runner)
 #
 # Information for archiving analyses
