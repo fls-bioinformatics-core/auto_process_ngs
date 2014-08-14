@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 import FASTQFile
 import IlluminaData
@@ -276,8 +276,10 @@ if __name__ == '__main__':
             barcodes = dict()
             lanes = [int(lane) for lane in options.lanes.split(',')]
             for line in sample_sheet:
-                if line['Lane'] in lanes:
-                    barcodes[line['Index']] = line['SampleID']
+                # Fix dual index barcodes
+                seq = ''.join(line['Index'].split('-'))
+                # Store sample name against index sequence
+                barcodes[seq] = line['SampleID']
             match_barcodes(counts,barcodes,
                            nseqs=options.n,
                            max_mismatches=options.mismatches,
@@ -328,7 +330,10 @@ if __name__ == '__main__':
                 barcodes = dict()
                 for line in sample_sheet:
                     if line['Lane'] == lane:
-                        barcodes[line['Index']] = line['SampleID']
+                        # Fix dual index barcodes
+                        seq = ''.join(line['Index'].split('-'))
+                        # Store sample name against index sequence
+                        barcodes[seq] = line['SampleID']
                 match_barcodes(counts,barcodes,
                                nseqs=options.n,
                                max_mismatches=options.mismatches,
