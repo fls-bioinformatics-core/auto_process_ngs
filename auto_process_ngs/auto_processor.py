@@ -115,13 +115,15 @@ class AutoProcess:
             info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
             self.params.save(info_file_name)
 
-    def load_illumina_data(self):
+    def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
-        if self.params.unaligned_dir is None:
+        if unaligned_dir is None:
+            unaligned_dir = self.params.unaligned_dir
+        if unaligned_dir is None:
             logging.error("Unaligned directory not specified, cannot load data")
             return None
         return IlluminaData.IlluminaData(self.analysis_dir,
-                                         unaligned_dir=self.params.unaligned_dir)
+                                         unaligned_dir=unaligned_dir)
 
     def load_project_metadata(self,project_metadata_file='projects.info',
                               check=True,update=False):
@@ -852,6 +854,81 @@ class AutoProcess:
         fastq_statistics_job.wait()
         self.params['stats_file'] = stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
+
+    def analyse_barcodes(self,unaligned_dir=None,lanes=None,runner=None):
+        """Analyse the barcode sequences for FASTQs for each specified lane
+
+        Run 'count_barcodes.py' for one or more lanes, to analyse the
+        barcode index sequences in each lane.
+
+        Arguments:
+          unaligned_dir: if set then use this as the output directory for
+            bcl-to-fastq conversion. Default is 'bcl2fastq' (unless an
+            alternative is already specified in the settings)
+          lanes: a list of lane numbers (integers) to perform the analysis
+            for. Default is to analyse all lanes.
+          runner: set a non-default job runner.
+        
+        """
+        # Sort out parameters
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        elif self.params['unaligned_dir'] is None:
+            self.params['unaligned_dir'] = 'bcl2fastq'
+        # Load data and determine lanes
+        illumina_data = self.load_illumina_data(unaligned_dir=unaligned_dir)
+        lane_numbers = []
+        for s in illumina_data.undetermined.samples:
+            for f in s.fastq_subset(read_number=1,full_path=True):
+                lane = str(IlluminaData.IlluminaFastq(f).lane_number)
+            if lane not in lane_numbers:
+                lane_numbers.append(lane)
+        lane_numbers.sort()
+        print "Found lanes: %s" % ','.join(lane_numbers)
+        if lanes is None:
+            lanes = lane_numbers
+        else:
+            lanes.sort()
+        # Check there are some lanes to examine
+        if len(lanes) == 0:
+            print "No lanes specified/found: nothing to do"
+            return
+        # Create a subdirectory for barcode analysis
+        output_dir = self.add_directory('barcode_analysis')
+        # Base name for output counts
+        counts_base = os.path.join(output_dir,'counts')
+        # Schedule the jobs
+        # Use the stats runner for now
+        runner = settings.runners.stats
+        runner.set_log_dir(self.log_dir)
+        sched = simple_scheduler.SimpleScheduler(
+            runner=runner,
+            max_concurrent=settings.general.max_concurrent_jobs)
+        sched.start()
+        for lane in lanes:
+            print "Starting analysis of barcodes for lane %s" % lane
+            # Initial command
+            barcode_cmd = applications.Command('count_barcodes.py',
+                                               '-l',lane,
+                                               '-r',os.path.join(output_dir,
+                                                                 'report.lane%s' % lane),
+                                               '-s',self.params.sample_sheet,
+                                               '-t',0.01)
+            # Look for an existing counts file
+            counts_file = "%s.lane%s" % (counts_base,lane)
+            if os.path.exists(counts_file):
+                print "Using counts from existing file %s" % counts_file
+                barcode_cmd.add_args('-c',counts_file)
+            else:
+                barcode_cmd.add_args('-o',counts_base)
+            # Finish command and submit
+            barcode_cmd.add_args(os.path.join(self.analysis_dir,
+                                              unaligned_dir))
+            sched.submit(barcode_cmd,
+                         name='analyse_barcodes.lane%s' % lane)
+        # Wait for the scheduler to run all jobs
+        sched.wait()
+        sched.stop()
 
     def report_barcodes(self,report_file=None):
         """Count and report barcode sequences in FASTQs for each lane
