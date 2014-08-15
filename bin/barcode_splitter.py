@@ -1,24 +1,47 @@
-#!/bin/python
+#!/bin/env python
 #
-# Barcode splitter
+#     barcode_splitter.py: split reads into fastq files
+#     Copyright (C) University of Manchester 2014 Peter Briggs
 #
-# Split reads into fastq files based on matching barcode (index) sequences
+#########################################################################
 #
-# Calculate Hamming distance between two strings
+# barcode_splitter.py
 #
-# http://en.wikipedia.org/wiki/Hamming_distance
-#
+#########################################################################
+
+"""
+barcode_splitter.py
+
+Split reads into fastq files based on matching barcode (index) sequences
+
+"""
+
+__version__ = "0.0.1"
+
+#########################################################################
+# Classes
+#########################################################################
+
 import itertools
 class HammingMetrics:
+    """Calculate Hamming distances between two strings
+    
+    http://en.wikipedia.org/wiki/Hamming_distance
+    
+    """
     @classmethod
     def hamming_distance(self,s1,s2):
-        #Return the Hamming distance between equal-length sequences
+        """Return the Hamming distance between equal-length sequences
+
+        """
         if len(s1) != len(s2):
             raise ValueError("Undefined for sequences of unequal length")
         return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
     @classmethod
     def hamming_distance_with_N(self,s1,s2):
-        #Return the Hamming distance between equal-length sequences
+        """Return the Hamming distance between equal-length sequences
+
+        """
         # modified version where N's don't match anything (not even other N's)
         if len(s1) != len(s2):
             raise ValueError("Undefined for sequences of unequal length")
@@ -26,6 +49,8 @@ class HammingMetrics:
                    for ch1, ch2 in itertools.izip(s1, s2))
 
 class HammingLookup:
+    """
+    """
     def __init__(self,hamming_func=HammingMetrics.hamming_distance):
         self._hamming = hamming_func
         self._distances = dict()
@@ -43,6 +68,8 @@ class HammingLookup:
         return self._distances[s1][s2]
 
 class BarcodeMatcher:
+    """
+    """
     def __init__(self,index_seqs,max_dist=0):
         self._hamming = HammingLookup()
         self._index_seqs = list(index_seqs)
@@ -65,6 +92,8 @@ class BarcodeMatcher:
         return self._index_seqs
 
 class OutputFiles:
+    """
+    """
     def __init__(self,base_dir=None):
         self._fp = dict()
         self._file = dict()
@@ -88,6 +117,8 @@ class OutputFiles:
                 self._fp[name].close()
 
 def split_single_end(matcher,fastqs,output_dir=None):
+    """
+    """
     fp = OutputFiles(base_dir=output_dir)
     for barcode in matcher.sequences:
         fp.open(barcode,"%s.fastq" % barcode)
@@ -112,6 +143,8 @@ def split_single_end(matcher,fastqs,output_dir=None):
     print "Finished (%d reads processed)" % nread
 
 def split_paired_end(matcher,fastq_pairs,output_dir=None):
+    """
+    """
     fp = OutputFiles(base_dir=output_dir)
     for barcode in matcher.sequences:
         fp.open((barcode,'R1'),"%s_R1.fastq" % barcode)
@@ -384,34 +417,43 @@ TTTTTTTTTCTTCTATTCTCAGATG
 1>1>111100BB3B3B22B222121
 """)
 
+#######################################################################
+# Main program
+#######################################################################
+
 import FASTQFile
 import optparse
 import logging
 import sys
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="\n\t%prog FASTQ [FASTQ...]\n\t%prog -p FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]",
+    p = optparse.OptionParser(usage="\n\t%prog FASTQ [FASTQ...]\n"
+                              "\t%prog -p FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]",
                               description="Split reads from one or more input Fastq files "
-                              "into new Fastqs based on matching supplied barcodes.")
-    p.add_option('-b','--barcode',action='append',dest='index_seq',
-                 help="specify index sequence to filter using")
-    p.add_option('--mismatches',action='store',dest='n_mismatches',type='int',default=0,
-                 help="maximum number of differing bases to allow for two index sequences "
-                 "to count as a match. Default is zero i.e. exact matches only")
+                              "into new Fastqs based on matching supplied barcodes. Input "
+                              "Fastqs can be ")
     p.add_option('-p','--paired-end',action='store_true',dest='paired_end',
                  help="input arguments are pairs of Fastq files")
+    p.add_option('-b','--barcode',action='append',dest='index_seq',
+                 help="specify index sequence to filter using")
+    p.add_option('-m','--mismatches',action='store',dest='n_mismatches',type='int',default=0,
+                 help="maximum number of differing bases to allow for two index sequences "
+                 "to count as a match. Default is zero i.e. exact matches only")
+    p.add_option('-o','--output-dir',action='store',dest='out_dir',
+                 help="specify directory for output split Fastqs")
+
     options,args = p.parse_args()
     if options.index_seq is None:
         p.error("No index sequences specified")
     if len(args) == 0:
         p.error("No input files specified")
-    # Set up
+
     matcher = BarcodeMatcher(options.index_seq,
                              max_dist=options.n_mismatches)
     if not options.paired_end:
-        split_single_end(matcher,args)
+        split_single_end(matcher,args,output_dir=options.out_dir)
     else:
         fastq_pairs = [x.split(',') for x in args] 
-        split_paired_end(matcher,fastq_pairs)
+        split_paired_end(matcher,fastq_pairs,output_dir=options.out_dir)
 
     
