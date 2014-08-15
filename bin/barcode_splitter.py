@@ -61,7 +61,7 @@ class HammingMetrics:
 class HammingLookup:
     """
     """
-    def __init__(self,hamming_func=HammingMetrics.hamming_distance_truncate):
+    def __init__(self,hamming_func=HammingMetrics.hamming_distance):
         self._hamming = hamming_func
         self._distances = dict()
     def dist(self,s1,s2):
@@ -81,7 +81,7 @@ class BarcodeMatcher:
     """
     """
     def __init__(self,index_seqs,max_dist=0):
-        self._hamming = HammingLookup(hamming_func=HammingMetrics.)
+        self._hamming = HammingLookup(hamming_func=HammingMetrics.hamming_distance_truncate)
         self._index_seqs = list(index_seqs)
         self._max_dist = max_dist
         for i,seq1 in enumerate(self._index_seqs):
