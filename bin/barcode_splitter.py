@@ -16,7 +16,7 @@ Split reads into fastq files based on matching barcode (index) sequences
 
 """
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 #########################################################################
 # Classes
@@ -38,6 +38,16 @@ class HammingMetrics:
             raise ValueError("Undefined for sequences of unequal length")
         return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
     @classmethod
+    def hamming_distance_truncate(self,s1,s2):
+        """Return the Hamming distance between non-equal-length sequences
+
+        """
+        if len(s1) != len(s2):
+            l = min(len(s1),len(s2))
+            s1 = s1[:l]
+            s2 = s2[:l]
+        return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
+    @classmethod
     def hamming_distance_with_N(self,s1,s2):
         """Return the Hamming distance between equal-length sequences
 
@@ -51,7 +61,7 @@ class HammingMetrics:
 class HammingLookup:
     """
     """
-    def __init__(self,hamming_func=HammingMetrics.hamming_distance):
+    def __init__(self,hamming_func=HammingMetrics.hamming_distance_truncate):
         self._hamming = hamming_func
         self._distances = dict()
     def dist(self,s1,s2):
@@ -71,7 +81,7 @@ class BarcodeMatcher:
     """
     """
     def __init__(self,index_seqs,max_dist=0):
-        self._hamming = HammingLookup()
+        self._hamming = HammingLookup(hamming_func=HammingMetrics.)
         self._index_seqs = list(index_seqs)
         self._max_dist = max_dist
         for i,seq1 in enumerate(self._index_seqs):
