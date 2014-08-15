@@ -16,7 +16,7 @@ Split reads into fastq files based on matching barcode (index) sequences
 
 """
 
-__version__ = "0.0.2"
+__version__ = "0.0.3"
 
 #########################################################################
 # Classes
@@ -126,13 +126,18 @@ class OutputFiles:
             for name in self._fp:
                 self._fp[name].close()
 
-def split_single_end(matcher,fastqs,output_dir=None):
+def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
     """
     """
+    if base_name is None:
+        base_name = ''
+    else:
+        base_name = "%s." % base_name
     fp = OutputFiles(base_dir=output_dir)
     for barcode in matcher.sequences:
-        fp.open(barcode,"%s.fastq" % barcode)
-    fp.open('undetermined',"undetermined.fastq")
+        fp.open(barcode,"%s%s.fastq" % (base_name,barcode))
+    if 
+    fp.open('undetermined',"%sundetermined.fastq" % base_name)
     # Filter reads
     nread = 0
     for fastq in fastqs:
@@ -152,15 +157,19 @@ def split_single_end(matcher,fastqs,output_dir=None):
             fp.write(assigned_index,read)
     print "Finished (%d reads processed)" % nread
 
-def split_paired_end(matcher,fastq_pairs,output_dir=None):
+def split_paired_end(matcher,fastq_pairs,base_name=None,output_dir=None):
     """
     """
+    if base_name is None:
+        base_name = ''
+    else:
+        base_name = "%s." % base_name
     fp = OutputFiles(base_dir=output_dir)
     for barcode in matcher.sequences:
-        fp.open((barcode,'R1'),"%s_R1.fastq" % barcode)
-        fp.open((barcode,'R2'),"%s_R2.fastq" % barcode)
-    fp.open(('undetermined','R1'),"undetermined_R1.fastq")
-    fp.open(('undetermined','R2'),"undetermined_R2.fastq")
+        fp.open((barcode,'R1'),"%s%s_R1.fastq" % (base_name,barcode))
+        fp.open((barcode,'R2'),"%s%s_R2.fastq" % (base_name,barcode))
+    fp.open(('undetermined','R1'),"%sundetermined_R1.fastq" % base_name)
+    fp.open(('undetermined','R2'),"%sundetermined_R2.fastq" % base_name)
     # Filter reads
     nread = 0
     for fq_r1,fq_r2 in fastq_pairs:
@@ -449,6 +458,8 @@ if __name__ == "__main__":
     p.add_option('-m','--mismatches',action='store',dest='n_mismatches',type='int',default=0,
                  help="maximum number of differing bases to allow for two index sequences "
                  "to count as a match. Default is zero i.e. exact matches only")
+    p.add_option('-n','--name',action='store',dest='base_name',default=None,
+                 help="basename to use for output files")
     p.add_option('-o','--output-dir',action='store',dest='out_dir',
                  help="specify directory for output split Fastqs")
 
@@ -461,9 +472,13 @@ if __name__ == "__main__":
     matcher = BarcodeMatcher(options.index_seq,
                              max_dist=options.n_mismatches)
     if not options.paired_end:
-        split_single_end(matcher,args,output_dir=options.out_dir)
+        split_single_end(matcher,args,
+                         base_name=options.base_name,
+                         output_dir=options.out_dir)
     else:
         fastq_pairs = [x.split(',') for x in args] 
-        split_paired_end(matcher,fastq_pairs,output_dir=options.out_dir)
+        split_paired_end(matcher,fastq_pairs,
+                         base_name=options.base_name,
+                         output_dir=options.out_dir)
 
     
