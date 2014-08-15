@@ -136,7 +136,6 @@ def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
     fp = OutputFiles(base_dir=output_dir)
     for barcode in matcher.sequences:
         fp.open(barcode,"%s%s.fastq" % (base_name,barcode))
-    if 
     fp.open('undetermined',"%sundetermined.fastq" % base_name)
     # Filter reads
     nread = 0
