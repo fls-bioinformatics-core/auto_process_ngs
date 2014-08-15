@@ -506,7 +506,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                              organism="Mouse",
                              PI="Harley",
                              comments="Squeak!")
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
         self.assertEqual(len(metadata),2)
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
