@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 import FASTQFile
 import IlluminaData
@@ -173,7 +173,9 @@ def match_barcodes(counts,samples,nseqs=20,fp=None,
             matches[seq] = nmismatches(barcode,seq)
         # Sort into order of least to most mismatches
         ordered_matches = sorted(matches.keys(),
-                                 cmp=lambda x,y: cmp(matches[x],matches[y]))
+                                 cmp=lambda x,y: cmp(matches[x],matches[y]
+                                                     if matches[x] != matches[y]
+                                                     else cmp(counts[x],counts[y])))
         best_match = ordered_matches[0]
         # Maximum number of mismatches
         n_mismatches = max(max_mismatches + abs(len(barcode) - len(best_match)),
@@ -186,8 +188,9 @@ def match_barcodes(counts,samples,nseqs=20,fp=None,
                   counts[best_match],
                   percent_reads(counts[best_match],n)))
         for seq in ordered_matches[1:]:
-            if (cutoff is not None and percent_reads(counts[seq],n) < cutoff) or \
-                matches[seq] <= n_mismatches:
+            if matches[seq] > 0 and \
+               ((cutoff is not None and percent_reads(counts[seq],n) < cutoff) or \
+               matches[seq] <= n_mismatches):
                 # Stop reporting
                 break
             fp.write("%s\t%15s\t%s\t[%d]\t% 10d\t% 5.1f%%\n" % 
@@ -241,9 +244,12 @@ if __name__ == '__main__':
     p.add_option('-s','--sample-sheet',action='store',dest='sample_sheet',default=None,
                  help="report best matches against barcodes in SAMPLE_SHEET")
     p.add_option('-m','--mismatches',action='store',dest='mismatches',default=3,type='int',
-                 help="maximum number of mismatches to use when report best matches against "
-                 "barcodes from SAMPLE_SHEET (default is 3). Note that this is corrected "
-                 "to allow for differences in sequence lengths.")
+                 help="maximum number of mismatches to use when reporting best matches "
+                 "against barcodes from SAMPLE_SHEET (default is 3). Note that this is "
+                 "corrected to allow for differences in sequence lengths.")
+    p.add_option('-T','--truncate',action='store',dest='length',default=0,type='int',
+                 help="truncate sample sheet sequences to LENGTH bases when reporting best "
+                 "matches against barcodes from SAMPLE_SHEET.")
     p.add_option('-t','--threshold',action='store',dest='cutoff',default=None,type='float',
                  help="percentage or fraction of reads that a sequence must appear in "
                  "to be reported; sequences appearing fewer times will not be reported "
@@ -258,9 +264,27 @@ if __name__ == '__main__':
         fp = open(options.report_file,'w')
     else:
         fp = sys.stdout
+    # Handle input sample sheet
     if options.sample_sheet is not None:
         print "Loading sample sheet data from %s" % options.sample_sheet
         sample_sheet = IlluminaData.get_casava_sample_sheet(options.sample_sheet)
+        if options.length > 0:
+            print "Truncating barcode sequences to length %d" % options.length
+            for line in sample_sheet:
+                # Code duplicated from genomics/prep_sample_sheet.py
+                barcode = line['Index']
+                try:
+                    i = barcode.index('-')
+                    # Dual index barcode
+                    if i >= length:
+                        barcode = barcode[:options.length]
+                    else:
+                        barcode = barcode[:options.length+1]
+                except ValueError:
+                    # No hyphen: single index barcode
+                    barcode = barcode[:options.length]
+                print "%s -> %s" % (line['Index'],barcode)
+                line['Index'] = barcode
     # Process according to inputs
     if options.counts_file_in:
         # Use counts from a previously generated file
