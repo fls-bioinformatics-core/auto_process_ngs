@@ -5,6 +5,7 @@
 import unittest
 import tempfile
 import shutil
+from JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -606,6 +607,34 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
+
+class TestFetchRunnerFunction(unittest.TestCase):
+    """Tests for the fetch_runner function
+    """
+
+    def test_fetch_simple_job_runner(self):
+        """fetch_runner returns a SimpleJobRunner
+        """
+        runner = fetch_runner("SimpleJobRunner")
+        self.assertTrue(isinstance(runner,SimpleJobRunner))
+
+    def test_fetch_ge_job_runner(self):
+        """fetch_runner returns a GEJobRunner
+        """
+        runner = fetch_runner("GEJobRunner")
+        self.assertTrue(isinstance(runner,GEJobRunner))
+
+    def test_fetch_ge_job_runner_with_extra_args(self):
+        """fetch_runner returns a GEJobRunner with additional arguments
+        """
+        runner = fetch_runner("GEJobRunner(-j y)")
+        self.assertTrue(isinstance(runner,GEJobRunner))
+        self.assertEqual(runner.ge_extra_args,['-j','y'])
+
+    def test_fetch_bad_runner_raises_exception(self):
+        """fetch_runner raises exception for unknown runner
+        """
+        self.assertRaises(Exception,fetch_runner,"SimpleRunner")
 
 class TestListDirsFunction(unittest.TestCase):
     """Tests for the list_dirs function
