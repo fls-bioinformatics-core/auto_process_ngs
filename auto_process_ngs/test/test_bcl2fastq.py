@@ -1,9 +1,9 @@
 #######################################################################
-# Tests for bclToFastq.py module
+# Tests for bcl2fastq_utils.py module
 #######################################################################
 
 import unittest
-from bcl2fastq_utils import get_nmismatches
+from auto_process_ngs.bcl2fastq_utils import get_nmismatches
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
@@ -19,10 +19,3 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('y250,I6n2,I6n2,y250'),1)
         self.assertEqual(get_nmismatches('y250,I16'),1)
 
-# Run tests
-if __name__ == "__main__":
-    # Turn off most logging output for tests
-    import logging
-    logging.getLogger().setLevel(logging.CRITICAL)
-    # Run tests
-    unittest.main()

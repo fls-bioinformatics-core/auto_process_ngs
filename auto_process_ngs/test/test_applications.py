@@ -1,7 +1,7 @@
 #######################################################################
 # Tests for applications.py module
 #######################################################################
-from applications import *
+from auto_process_ngs.applications import *
 import unittest
 
 class TestCommand(unittest.TestCase):
@@ -114,8 +114,3 @@ class TestGeneral(unittest.TestCase):
             general.scp('user','example.com','my_file','remotedir').command_line,
             ['scp','my_file','user@example.com:remotedir'])
 
-if __name__ == "__main__":
-    # Turn off most logging output for tests
-    logging.getLogger().setLevel(logging.CRITICAL)
-    # Run tests
-    unittest.main()

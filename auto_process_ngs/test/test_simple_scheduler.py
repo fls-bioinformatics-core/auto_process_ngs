@@ -8,7 +8,7 @@ import sys
 import time
 import logging
 from JobRunner import BaseJobRunner
-from simple_scheduler import *
+from auto_process_ngs.simple_scheduler import *
 
 class MockJobRunner(BaseJobRunner):
     """Mock job runner implementation of BaseJobRunner
@@ -674,13 +674,3 @@ class TestSchedulerReporter(unittest.TestCase):
         job.terminate()
         reporter.group_end(group)
         self.assertEqual('Group completed: #1: "test"\n',fp.getvalue())
-
-#######################################################################
-# Main program
-#######################################################################
-
-if __name__ == "__main__":
-    # Turn off most logging output for tests
-    logging.getLogger().setLevel(logging.CRITICAL)
-    # Run tests
-    unittest.main()
