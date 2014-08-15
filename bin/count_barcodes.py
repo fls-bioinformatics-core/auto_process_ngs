@@ -276,7 +276,7 @@ if __name__ == '__main__':
                 try:
                     i = barcode.index('-')
                     # Dual index barcode
-                    if i >= length:
+                    if i >= options.length:
                         barcode = barcode[:options.length]
                     else:
                         barcode = barcode[:options.length+1]
