@@ -855,7 +855,8 @@ class AutoProcess:
         self.params['stats_file'] = stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
 
-    def analyse_barcodes(self,unaligned_dir=None,lanes=None,runner=None):
+    def analyse_barcodes(self,unaligned_dir=None,lanes=None,truncate_barcodes=None,
+                         runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
         Run 'count_barcodes.py' for one or more lanes, to analyse the
@@ -867,10 +868,14 @@ class AutoProcess:
             alternative is already specified in the settings)
           lanes: a list of lane numbers (integers) to perform the analysis
             for. Default is to analyse all lanes.
+          truncate_barcodes: if set then truncate barcode sequences to the
+            specified length for analysis
           runner: set a non-default job runner.
         
         """
         # Sort out parameters
+        if runner is not None:
+            raise NotImplementedError("Non-default runner specification not implemented")
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
@@ -914,6 +919,9 @@ class AutoProcess:
                                                                  'report.lane%s' % lane),
                                                '-s',self.params.sample_sheet,
                                                '-t',0.01)
+            # Truncate barcodes
+            if truncate_barcodes is not None:
+                barcode_cmd.add_args('-T',truncate_barcodes)
             # Look for an existing counts file
             counts_file = "%s.lane%s" % (counts_base,lane)
             if os.path.exists(counts_file):

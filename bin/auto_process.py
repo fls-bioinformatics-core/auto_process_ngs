@@ -232,7 +232,7 @@ class Parsers:
     def analyse_barcodes_parser(self):
         """Create a parser for the 'analyse_barcodes' command
         """
-        p = optparse.OptionParser(usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
+        p = optparse.OptionParser(usage="%prog analyse_barcodes [OPTIONS] [ANALYSIS_DIR]",
                                   version="%prog "+__version__,
                                   description="Analyse barcode sequences for fastq files "
                                   "in specified lanes in ANALYSIS_DIR, and report the most "
@@ -244,6 +244,10 @@ class Parsers:
                      dest='lanes',default=None,
                      help="specify which lanes to analyse barcodes for (default is to do "
                      "analysis for all lanes).")
+        p.add_option('--truncate',action='store',
+                     dest='length',default=None,type='int',
+                     help="truncate sample sheet barcodes to LENGTH for barcode analysis "
+                     "(default is to use full barcodes)")
         self.add_debug_option(p)
         return p
     @classmethod
@@ -545,7 +549,8 @@ if __name__ == "__main__":
             else:
                 lanes = None
             d.analyse_barcodes(unaligned_dir=options.unaligned_dir,
-                               lanes=lanes)
+                               lanes=lanes,
+                               truncate_barcodes=options.length)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
                                   options.ignore_missing_metadata)
