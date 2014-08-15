@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 import FASTQFile
 import IlluminaData
@@ -136,6 +136,35 @@ def report(counts,nseqs=20,exclude_ns=False,fp=None,
             break
         fp.write("% 8d\t%s\t% 8d\t% 5.1f%%\n" % \
                  (i+1,seq,counts[seq],percent_reads(counts[seq],n)))
+
+def get_barcodes_from_sample_sheet(sample_sheet,lanes,length=None):
+    """Get a dictionary of barcode sequences from a sample sheet
+
+    Arguments:
+      sample_sheet: CasavaSampleSheet object
+      lanes: list of lanes to get barcodes for
+      length: (optional) if set then truncate barcodes to
+        the specified length
+
+    Returns:
+      Dictionary with barcode sequences for keys, and sample names
+      as the corresponding values.
+
+    """
+    # Filter by lane
+    barcodes = dict()
+    for line in sample_sheet:
+        if line['Lane'] in lanes:
+            # Get sample name
+            sample_id = line['SampleID']
+            # Fix dual index barcodes
+            seq = ''.join(line['Index'].split('-'))
+            # Truncate barcode
+            if length is not None:
+                seq = seq[:length]
+            # Store sample name against index sequence
+            barcodes[seq] = sample_id
+    return barcodes
 
 def match_barcodes(counts,samples,nseqs=20,fp=None,
                    max_mismatches=3,cutoff=None):
@@ -268,23 +297,6 @@ if __name__ == '__main__':
     if options.sample_sheet is not None:
         print "Loading sample sheet data from %s" % options.sample_sheet
         sample_sheet = IlluminaData.get_casava_sample_sheet(options.sample_sheet)
-        if options.length > 0:
-            print "Truncating barcode sequences to length %d" % options.length
-            for line in sample_sheet:
-                # Code duplicated from genomics/prep_sample_sheet.py
-                barcode = line['Index']
-                try:
-                    i = barcode.index('-')
-                    # Dual index barcode
-                    if i >= options.length:
-                        barcode = barcode[:options.length]
-                    else:
-                        barcode = barcode[:options.length+1]
-                except ValueError:
-                    # No hyphen: single index barcode
-                    barcode = barcode[:options.length]
-                print "%s -> %s" % (line['Index'],barcode)
-                line['Index'] = barcode
     # Process according to inputs
     if options.counts_file_in:
         # Use counts from a previously generated file
@@ -297,13 +309,10 @@ if __name__ == '__main__':
         report(counts,nseqs=options.n,cutoff=options.cutoff,fp=fp)
         # Match barcodes to index sequences in sample sheet
         if options.sample_sheet:
-            barcodes = dict()
             lanes = [int(lane) for lane in options.lanes.split(',')]
-            for line in sample_sheet:
-                # Fix dual index barcodes
-                seq = ''.join(line['Index'].split('-'))
-                # Store sample name against index sequence
-                barcodes[seq] = line['SampleID']
+            barcodes = get_barcodes_from_sample_sheet(sample_sheet,
+                                                      lanes=lanes,
+                                                      length=options.length)
             match_barcodes(counts,barcodes,
                            nseqs=options.n,
                            max_mismatches=options.mismatches,
@@ -351,13 +360,9 @@ if __name__ == '__main__':
                 output(counts,counts_file)
             # Match barcodes to index sequences in sample sheet
             if options.sample_sheet:
-                barcodes = dict()
-                for line in sample_sheet:
-                    if line['Lane'] == lane:
-                        # Fix dual index barcodes
-                        seq = ''.join(line['Index'].split('-'))
-                        # Store sample name against index sequence
-                        barcodes[seq] = line['SampleID']
+                barcodes = get_barcodes_from_sample_sheet(sample_sheet,
+                                                          lanes=lanes,
+                                                          length=options.length)
                 match_barcodes(counts,barcodes,
                                nseqs=options.n,
                                max_mismatches=options.mismatches,
