@@ -19,7 +19,7 @@ Generate statistics for fastq files for an Illumina sequencing run.
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.4"
+__version__ = "0.1.0"
 
 #######################################################################
 # Import modules that this module depends on
@@ -39,12 +39,92 @@ import IlluminaData
 import TabFile
 import FASTQFile
 import bcf_utils
+from multiprocessing import Pool
 
 #######################################################################
 # Functions
 #######################################################################
 
-def fastq_statistics(illumina_data):
+class FastqStats:
+    """Container for storing data for a Fastq file
+
+    This is a convenience wrapper for holding together data
+    for a fastq file (full path, associated project and sample
+    names, number of reads and filesize), for use with the
+    'get_stats_for_file' and 'map' functions.
+
+    """
+    def __init__(self,fastq,project,sample):
+        self.fastq = fastq
+        self.project = project
+        self.sample = sample
+        self.nreads = None
+        self.fsize = None
+    @property
+    def name(self):
+        return os.path.basename(self.fastq)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def get_fastqs(illumina_data):
+    """Get a list of fastq files from an Illumina run
+
+    Given a directory with fastq(.gz) files arranged in the same
+    structure as the output from bcl2fastq (i.e. subdirectory
+    'Unaligned', then project directories within this called
+    'Project_<NAME>', each containing sample directories called
+    'Sample_<NAME>', and each of these containing fastq files),
+    return a list of FastqStats objects representing each of the
+    fastq files.
+
+    Arguments:
+      illumina_data: populated IlluminaData object describing the
+        run.
+
+    Returns:
+      List of populated FastqStats objects.
+
+    """
+    fastqs = []
+    for project in illumina_data.projects:
+        for sample in project.samples:
+            for fastq in sample.fastq:
+                fastqs.append(FastqStats(os.path.join(sample.dirn,fastq),
+                                         project.name,
+                                         sample.name))
+    # Gather same information for undetermined reads (if present)
+    if illumina_data.undetermined is not None:
+        for lane in illumina_data.undetermined.samples:
+            for fastq in lane.fastq:
+                fastqs.append(FastqStats(os.path.join(lane.dirn,fastq),
+                                         illumina_data.undetermined.name,
+                                         lane.name))
+    return fastqs
+
+def get_stats_for_file(fq):
+    """Generate statistics for a single fastq file
+
+    Given a FastqStats object, set the 'nreads' property to
+    the number of reads and the 'fsize' property to the file
+    size for the corresponding fastq file.
+
+    Arguments:
+      fq: FastqStats object with 'fastq' property set to the
+        full path for a Fastq file
+
+    Returns:
+      Input FastqStats object with the 'nreads' and 'fsize'
+      properties set.
+
+    """
+    print "* %s" % fq.name
+    fq.nreads = FASTQFile.nreads(fq.fastq)
+    fq.fsize = os.path.getsize(fq.fastq)
+    return fq
+
+def fastq_statistics(illumina_data,n_processors=1):
     """Generate statistics for fastq outputs from an Illumina run
 
     Given a directory with fastq(.gz) files arranged in the same
@@ -57,45 +137,37 @@ def fastq_statistics(illumina_data):
     Arguments:
       illumina_data: populated IlluminaData object describing the
         run.
+      n_processors: number of processors to use (if 1>1 then uses
+        the multiprocessing library to run the statistics gathering
+        using multiple cores).
 
     Returns:
       Populated TabFile object containing the statistics.
 
     """
-    # Set up TabFile to hold the data collected
     stats = TabFile.TabFile(column_names=('Project',
                                           'Sample',
                                           'Fastq',
                                           'Size',
                                           'Nreads',
                                           'Paired_end'))
-    # Get number of reads and file size for each file across all
-    # projects and samples
-    for project in illumina_data.projects:
-        for sample in project.samples:
-            for fastq in sample.fastq:
-                print "* %s" % fastq
-                fq = os.path.join(sample.dirn,fastq)
-                nreads = FASTQFile.nreads(fq)
-                fsize = os.path.getsize(fq)
-                stats.append(data=(project.name,
-                                   sample,fastq,
-                                   bcf_utils.format_file_size(fsize),
-                                   nreads,
-                                   'Y' if sample.paired_end else 'N'))
-    # Gather same information for undetermined reads (if present)
-    if illumina_data.undetermined is not None:
-        for sample in illumina_data.undetermined.samples:
-            for fastq in sample.fastq:
-                fq = os.path.join(sample.dirn,fastq)
-                nreads = FASTQFile.nreads(fq)
-                fsize = os.path.getsize(fq)
-                stats.append(data=(illumina_data.undetermined.name,
-                                   sample,fastq,
-                                   bcf_utils.format_file_size(fsize),
-                                   nreads,
-                                   'Y' if sample.paired_end else 'N'))
-    # Return the data
+    fastqs = get_fastqs(illumina_data)
+    if n_processors > 1:
+        # Multiple cores
+        pool = Pool(n_processors)
+        results = pool.map(get_stats_for_file,fastqs)
+        pool.close()
+        pool.join()
+    else:
+        # Single core
+        results = map(get_stats_for_file,fastqs)
+    for fastq in results:
+        stats.append(data=(fastq.project,
+                           fastq.sample,
+                           fastq.name,
+                           bcf_utils.format_file_size(fastq.fsize),
+                           fastq.nreads,
+                           'Y' if illumina_data.paired_end else 'N'))
     return stats
 
 def sequencer_stats(stats):
@@ -164,6 +236,8 @@ if __name__ == '__main__':
     p.add_option("--unaligned",action="store",dest="unaligned_dir",default="Unaligned",
                  help="specify an alternative name for the 'Unaligned' directory "
                  "containing the fastq.gz files")
+    p.add_option("--nprocessors",action="store",dest="n",default=1,type='int',
+                 help="spread work across N processors/cores (default is 1)")
     p.add_option("--force",action="store_true",dest="force",default=False,
                  help="force regeneration of statistics from fastq files")
     options,args = p.parse_args()
@@ -189,8 +263,7 @@ if __name__ == '__main__':
             logging.error("Failed to get data from %s: %s" % (args[0],ex))
             sys.exit(1)
         # Generate statistics for fastq files
-        stats = fastq_statistics(illumina_data)
-        # Write out
+        stats = fastq_statistics(illumina_data,n_processors=options.n)
         stats.write(options.stats_file,include_header=True)
     print "Statistics written to %s" % options.stats_file
     # Per-lane sequencer statistics
