@@ -204,9 +204,9 @@ class AutoProcess:
                         for sample in project.samples:
                             sample_name = sample.name
                             for fastq in sample.fastq:
-                                logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
+                                logging.debug("%s\t%s\t%s" % (project.name,sample_name,fastq))
                             sample_names.append(sample_name)
-                        project_metadata.add_project(project_name,sample_names)
+                        project_metadata.add_project(project.name,sample_names)
         # Return the metadata object
         return project_metadata
 
