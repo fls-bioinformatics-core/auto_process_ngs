@@ -1,6 +1,6 @@
 # Settings for auto_process module
 #
-version = "0.0.81"
+version = "0.0.82"
 
 import os
 import sys
@@ -40,6 +40,10 @@ general['max_concurrent_jobs'] = config.getint('general','max_concurrent_jobs',1
 # bcl2fastq
 bcl2fastq = AttributeDictionary()
 bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
+#
+# fastq_stats
+fastq_stats = AttributeDictionary()
+fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
 #
 # Define runners for specific jobs
 runners = AttributeDictionary()

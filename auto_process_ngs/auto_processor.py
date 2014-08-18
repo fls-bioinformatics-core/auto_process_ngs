@@ -812,7 +812,8 @@ class AutoProcess:
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             return
 
-    def generate_stats(self,stats_file=None):
+    def generate_stats(self,stats_file=None,unaligned_dir=None,nprocessors=None,
+                       runner=None):
         """Generate statistics for FASTQ files
 
         Generates statistics for all FASTQ files found in the
@@ -826,6 +827,12 @@ class AutoProcess:
             analysis project; if this is not defined then it
             defaults to a file called 'stats.info' in the analysis
             directory.
+          unaligned_dir: (optional) where to look for Fastq files
+            from bcl2fastq
+          nprocessors: (optional) number of cores to use when
+            running 'fastq_statistics.py'
+          runner: (optional) specify a non-default job runner to
+            use for fastq_statistics.py.
 
         """
         # Get file name
@@ -835,8 +842,14 @@ class AutoProcess:
             else:
                 stats_file='statistics.info'
         # Set up runner
-        runner = settings.runners.stats
-        runner.set_log_dir(self.log_dir)
+        if runner is not None:
+            runner = utils.fetch_runner(runner)
+        else:
+            runner = settings.runners.stats
+            runner.set_log_dir(self.log_dir)
+        # Number of cores
+        if nprocessors is None:
+            nprocessors = settings.fastq_stats.nprocessors
         # Generate statistics
         fastq_statistics = applications.Command('fastq_statistics.py',
                                                 '--unaligned',self.params.unaligned_dir,
@@ -844,7 +857,9 @@ class AutoProcess:
                                                 os.path.join(self.params.analysis_dir,
                                                              stats_file),
                                                 self.params.analysis_dir,
+                                                '--nprocessors',nprocessors,
                                                 '--force')
+        
         print "Generating statistics: running %s" % fastq_statistics
         fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
                                                              fastq_statistics.command_line,

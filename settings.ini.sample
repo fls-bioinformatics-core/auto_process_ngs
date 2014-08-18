@@ -9,6 +9,10 @@ max_concurrent_jobs = 12
 [bcl2fastq]
 nprocessors = 1
 
+# fastq_stats settings
+[fastq_stats]
+nprocessors = 1
+
 # Define runners for specific jobs
 [runners]
 bcl2fastq = SimpleJobRunner

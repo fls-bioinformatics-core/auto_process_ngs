@@ -210,12 +210,33 @@ class Parsers:
         p.add_option_group(deprecated)
         return p
     @classmethod
+    def update_fastq_stats_parser(self):
+        """Create a parser for the 'update_fastq_stats' command
+        """
+        p = optparse.OptionParser(usage="%prog update_fastq_stats [OPTIONS] [ANALYSIS_DIR]",
+                                  version="%prog "+__version__,
+                                  description="(Re)generate statistics for fastq "
+                                  "files produced from 'make_fastqs'.")
+        nprocessors = auto_process_ngs.settings.fastq_stats.nprocessors
+        p.add_option('--unaligned-dir',action='store',
+                     dest='unaligned_dir',default='bcl2fastq',
+                     help="explicitly set the (sub)directory with bcl-to-fastq outputs")
+        p.add_option('--nprocessors',action='store',
+                     dest='nprocessors',default=nprocessors,
+                     help="explicitly specify number of processors to use for "
+                     "fastq generation (default %s, change in settings file)" % nprocessors)
+        p.add_option('--runner',action='store',
+                     dest='runner',default=None,
+                     help="explicitly specify runner definition (e.g. 'GEJobRunner(-j y)')")
+        self.add_debug_option(p)
+        return p
+    @classmethod
     def merge_fastq_dirs_parser(self):
         """Create a parser for the 'merge_fastq_dirs' command
         """
         p = optparse.OptionParser(usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
                                   version="%prog "+__version__,
-                                  description="Automatically merge fastq directories froms "
+                                  description="Automatically merge fastq directories from "
                                   "multiple bcl-to-fastq runs within ANALYSIS_DIR. Use this "
                                   "command if 'make_fastqs' step was run multiple times to "
                                   "process subsets of lanes.")
@@ -417,9 +438,7 @@ class Commands:
     commands['config']              = Parsers.config_parser()
     commands['make_fastqs']         = Parsers.make_fastqs_parser()
     commands['merge_fastq_dirs']    = Parsers.merge_fastq_dirs_parser()
-    commands['update_fastq_stats']  = Parsers.generic_parser('update_fastq_stats',
-                                                             "(Re)generate statistics for fastq "
-                                                             "files produced from 'make_fastqs'.")
+    commands['update_fastq_stats']  = Parsers.update_fastq_stats_parser()
     commands['analyse_barcodes']    = Parsers.analyse_barcodes_parser()
     commands['setup_analysis_dirs'] = Parsers.setup_analysis_dirs_parser()
     commands['run_qc']              = Parsers.run_qc_parser()
@@ -542,7 +561,9 @@ if __name__ == "__main__":
             d.merge_fastq_dirs(options.unaligned_dir,
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
-            d.generate_stats()
+            d.generate_stats(unaligned_dir=options.unaligned_dir,
+                             nprocessors=options.nprocessors,
+                             runner=options.runner)
         elif cmd == 'analyse_barcodes':
             if options.lanes is not None:
                 lanes = options.lanes.split(',')
