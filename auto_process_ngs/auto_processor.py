@@ -650,7 +650,7 @@ class AutoProcess:
         """
         #
         # Check for pre-existing bcl2fastq outputs
-        if self.verify_bcl_to_fastq():
+        if self.verify_bcl_to_fastq(unaligned_dir=unaligned_dir):
             print "Bcl to fastq outputs already present"
             # Check for project metadata file
             self.make_project_metadata_file()
@@ -984,31 +984,40 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
-    def verify_bcl_to_fastq(self):
+    def verify_bcl_to_fastq(self,unaligned_dir=None):
         """Check that bcl to fastq outputs match sample sheet predictions
+
+        Arguments:
+          unaligned_dir
 
         Returns:
           True if outputs match sample sheet, False otherwise.
  
         """
-        if self.params.unaligned_dir is None:
-            logging.debug("Bcl2fastq output directory not defined")
-            return False
-        bcl_to_fastq_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
+        if unaligned_dir is None:
+            if self.params.unaligned_dir is not None:
+                unaligned_dir = self.params.unaligned_dir
+            else:
+                logging.debug("Bcl2fastq output directory not defined")
+                return False
+        else:
+            logging.warning("Checking custom bcl2fastq output directory '%s'" %
+                            unaligned_dir)
+        bcl_to_fastq_dir = os.path.join(self.analysis_dir,unaligned_dir)
         if not os.path.isdir(bcl_to_fastq_dir):
             # Directory doesn't exist
             return False
         # Try to create an IlluminaData object
         try:
             illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
-                                                      unaligned_dir=self.params.unaligned_dir)
+                                                      unaligned_dir=unaligned_dir)
         except IlluminaData.IlluminaDataError, ex:
             # Failed to initialise
             logging.debug("Failed to get information from %s: %s" % (bcl_to_fastq_dir,ex))
             return False
         # Do check
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
-                                                                    self.params.sample_sheet)
+                                                            self.params.sample_sheet)
 
     def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=True):
         # Combine multiple output directories from bcl2fastq into
