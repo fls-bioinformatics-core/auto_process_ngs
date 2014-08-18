@@ -846,6 +846,8 @@ class AutoProcess:
             if self.params.unaligned_dir is None:
                 self.params['unaligned_dir'] = 'bcl2fastq'
             unaligned_dir = self.params.unaligned_dir
+        if not os.path.exists(os.path.join(self.params.analysis_dir,unaligned_dir)):
+            logging.error("Unaligned dir '%s' not found" % unaligned_dir)
         # Set up runner
         if runner is not None:
             runner = utils.fetch_runner(runner)
@@ -857,7 +859,7 @@ class AutoProcess:
             nprocessors = settings.fastq_stats.nprocessors
         # Generate statistics
         fastq_statistics = applications.Command('fastq_statistics.py',
-                                                '--unaligned',self.params.unaligned_dir,
+                                                '--unaligned',unaligned_dir,
                                                 '--output',
                                                 os.path.join(self.params.analysis_dir,
                                                              stats_file),
