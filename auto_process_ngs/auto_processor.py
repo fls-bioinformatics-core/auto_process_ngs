@@ -841,6 +841,11 @@ class AutoProcess:
                 stats_file = self.params['stats_file']
             else:
                 stats_file='statistics.info'
+        # Sort out unaligned_dir
+        if unaligned_dir is None:
+            if self.params.unaligned_dir is None:
+                self.params['unaligned_dir'] = 'bcl2fastq'
+            unaligned_dir = self.params.unaligned_dir
         # Set up runner
         if runner is not None:
             runner = utils.fetch_runner(runner)
