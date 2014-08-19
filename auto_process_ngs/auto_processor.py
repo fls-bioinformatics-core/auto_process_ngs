@@ -337,7 +337,7 @@ class AutoProcess:
                 run_id += "_%s" % datestamp
             if run_number is not None:
                 try:
-                    if int(run_number) != int(facility_run_number):
+                    if run_number.lstrip('0') != facility_run_number.lstrip('0'):
                         run_id += "/%s" % run_number
                 except ValueError:
                     run_id += "/%s" % run_number
@@ -1775,7 +1775,7 @@ class AutoProcess:
         # Report header
         if datestamp and instrument and run_number:
             report.append("%s run #%s datestamped %s\n" % (platform,
-                                                           int(run_number),
+                                                           run_number,
                                                            datestamp))
         else:
             report.append("%s\n" % os.path.basename(self.analysis_dir))
