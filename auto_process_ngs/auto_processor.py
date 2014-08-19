@@ -313,7 +313,7 @@ class AutoProcess:
         run_name = os.path.basename(self.analysis_dir)
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-            run_number = run_number.lstrip('0')
+            run_number = str(run_number).lstrip('0')
         except Exception, ex:
             logging.warning("Unable to extract information from run name '%s'" \
                             % run_name)
