@@ -313,13 +313,15 @@ class AutoProcess:
         run_name = os.path.basename(self.analysis_dir)
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-            run_number = str(run_number).lstrip('0')
+            run_number = run_number
         except Exception, ex:
             logging.warning("Unable to extract information from run name '%s'" \
                             % run_name)
             logging.warning("Exception: %s" % ex)
             date_stamp = None
             run_number = None
+        if run_number is not None:
+            run_number = str(run_number).lstrip('0')
         # Platform
         if self.params.platform is not None:
             platform = self.params.platform.upper()
@@ -327,7 +329,7 @@ class AutoProcess:
             platform = None
         # Facility run number
         if self.params.run_number is not None:
-            facility_run_number = self.params.run_number
+            facility_run_number = str(self.params.run_number)
         else:
             facility_run_number = None
         # Construct the reference id
@@ -337,7 +339,7 @@ class AutoProcess:
                 run_id += "_%s" % datestamp
             if run_number is not None:
                 try:
-                    if run_number.lstrip('0') != facility_run_number.lstrip('0'):
+                    if run_number != facility_run_number:
                         run_id += "/%s" % run_number
                 except ValueError:
                     run_id += "/%s" % run_number
