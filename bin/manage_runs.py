@@ -232,15 +232,16 @@ if __name__ == "__main__":
         # Generate MD5 sums
         if not options.dry_run:
             print "Generating MD5 sums"
-        md5_file = 'checksums.md5'
-        fp = open(md5_file,'w')
-        for fq in fastqs:
-            chksum = Md5sum.md5sum(fq)
-            fp.write("%s  %s\n" % (chksum,os.path.basename(fq)))
-        # Copy them
+            md5_file = 'checksums.md5'
+            fp = open(md5_file,'w')
+            for fq in fastqs:
+                chksum = Md5sum.md5sum(fq)
+                fp.write("%s  %s\n" % (chksum,os.path.basename(fq)))
+            fp.close()
+        # Copy the fastqs
         print "Copying fastqs"
         for fq in fastqs:
-            print "%s" % fq
+            print "%s" % os.path.basename(fq)
             if not options.dry_run:
                 copy_to_dest(fq,args[1])
         if not options.dry_run:
