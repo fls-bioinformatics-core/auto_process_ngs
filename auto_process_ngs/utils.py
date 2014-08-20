@@ -216,6 +216,69 @@ class AnalysisFastq:
             if self.read_number is not None:
                 fq = "%s_R%d" % (fq,self.read_number)
         return fq
+
+class AnalysisDir:
+    """Class describing an analysis directory
+
+    Conceptually an analysis directory maps onto a sequencing run.
+    It consists of one or more sets of samples from that run,
+    which are represented by subdirectories.
+
+    It is also possible to have one or more subdirectories containing
+    outputs from the CASAVA or bclToFastq processing software.
+
+    """
+    def __init__(self,analysis_dir):
+        """Create a new AnalsysDir instance for a specified directory
+
+        Arguments:
+          analysis_dir: name (and path) to analysis directory
+
+        """
+        # Store location
+        self._analysis_dir = os.path.abspath(analysis_dir)
+        self._name = os.path.basename(analysis_dir)
+        self._bcl2fastq_dirs = []
+        self._project_dirs = []
+        self.sequencing_data = []
+        self.projects = []
+        # Look for outputs from bclToFastq and analysis projects
+        logging.debug("Examining subdirectories of %s" % self._analysis_dir)
+        for dirn in list_dirs(self._analysis_dir):
+            # Look for sequencing data
+            try:
+                data = IlluminaData.IlluminaData(self._analysis_dir,
+                                                 unaligned_dir=dirn)
+                logging.debug("- %s: sequencing data" % dirn)
+                self._bcl2fastq_dirs.append(dirn)
+                self.sequencing_data.append(data)
+                continue
+            except IlluminaData.IlluminaDataError, ex:
+                pass
+            # Look for analysis data
+            data = AnalysisProject(self._name,
+                                   os.path.join(self._analysis_dir,dirn))
+            if data.is_analysis_dir:
+                logging.debug("- %s: project directory" % dirn)
+                self._project_dirs.append(dirn)
+                self.projects.append(data)
+                continue
+            # Unidentified contents
+            logging.debug("- %s: unknown" % dirn)
+
+    @property
+    def n_projects(self):
+        """Return number of projects found
+
+        """
+        return len(self.projects)
+
+    @property
+    def n_sequencing_data(self):
+        """Return number of sequencing data dirs found
+
+        """
+        return len(self.sequencing_data)
         
 class AnalysisProject:
     """Class describing an analysis project
