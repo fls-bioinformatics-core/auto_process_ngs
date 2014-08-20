@@ -128,10 +128,26 @@ if __name__ == "__main__":
         # Report projects from sequencing data
         if analysis_dir.n_sequencing_data:
             for data in analysis_dir.sequencing_data:
-                print "Sequencing data projects found in '%s':" % \
+                print "Sequencing data projects found in '%s':\n" % \
                     os.path.basename(data.unaligned_dir)
+                print "Project_name\t#smpl\tSample_names"
                 for project in data.projects:
-                    print "%s" % project.name
+                    line = [project.name,
+                            len(project.samples),
+                            project.prettyPrintSamples()]
+                    print "%s" % '\t'.join([str(x) for x in line])
+                print ""
+        # Report analysis project directories
+        if analysis_dir.n_projects:
+            print "Putative analysis project directories:\n"
+            print "Project_name\t#smpl\tQC?\tSample_names"
+            for project in analysis_dir.projects:
+                line = [project.name,
+                        len(project.samples),
+                        ('ok' if project.verify_qc() else '?'),
+                        project.prettyPrintSamples()]
+                print "%s" % '\t'.join([str(x) for x in line])
+            print ""
     elif cmd == 'copy':
         # Copy fastqs
         if len(args) != 2:
