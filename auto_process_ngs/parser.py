@@ -4,7 +4,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.1"
+__version__ = "0.0.2"
 
 """parser
 
@@ -99,12 +99,18 @@ class CommandParser:
         If 'version' isn't specified then the version
         supplied to the CommandParser object will be used.
 
+        Returns:
+          OptionParser object for the command.
+
         """
+        if cmd in self._commands:
+            raise Exception("Command '%s' already defined" % cmd)
         if 'version' not in args:
             args['version'] = self._version
         p = optparse.OptionParser(**args)
         self._commands[cmd] = p
         self._help[cmd] = help
+        return p
 
     def parser_for(self,cmd):
         """Return optionparser for specified command
@@ -160,9 +166,9 @@ class CommandParser:
 
         """
         if cmd in ('-h','--help','help'):
-            print "Usage: %s COMMAND [options] [args...]\n" % self._name
+            print "Usage: %s COMMAND [options] [args...]" % self._name
             if self._description is not None:
-                print "%s\n" % self._description
+                print "\n%s" % self._description
             print "%s" % self.print_available_commands()
             sys.exit(0)
         if cmd in ('--version'):
@@ -180,20 +186,40 @@ class CommandParser:
     def print_available_commands(self):
         """Pretty-print available commands
 
+        Returns a 'pretty-printed' string for all options and commands,
+        with standard whitespace formatting.
+
         """
-        lines = ["Options:"]
+        lines = ["\nOptions:"]
         # Add generic commands
         if self._version is not None:
-            lines.append("  --version    show program's version number and exit")
-            lines.append("  -h, --help   show this help message and exit")
+            lines.append(self.print_command("--version",
+                                            "show program's version number and exit"))
+            lines.append(self.print_command("-h, --help, help",
+                                            "show this help message and exit"))
         # Add custom commands
-        lines.append("\nAvailable commands:\n  help")
+        lines.append("\nAvailable commands:")
         for cmd in self.list_commands():
-            help_txt = self._help[cmd]
-            lines.append("  %s%s" % (cmd,
-                                     ('' if help_txt is None else "\t%s" % help_txt)))
+            lines.append(self.print_command(cmd,self._help[cmd]))
         lines.append("")
         return '\n'.join(lines)
+
+    def print_command(self,cmd,message=None):
+        """Print a line for a single command
+
+        Returns a 'pretty-printed' line for the specified command
+        and text, with standard whitespace formatting.
+
+        """
+        text = ['  ',cmd]
+        width = 22
+        if len(cmd) < width:
+            text.append(' '*(width-len(cmd)))
+        else:
+            text.append('\n  '+' '*width)
+        if message is not None:
+            text.append(message)
+        return ''.join(text)
 
 def add_no_save_option(parser):
     """Add a '--no-save' option to a parser
