@@ -256,8 +256,7 @@ class AnalysisDir:
             except IlluminaData.IlluminaDataError, ex:
                 pass
             # Look for analysis data
-            data = AnalysisProject(self._name,
-                                   os.path.join(self._analysis_dir,dirn))
+            data = AnalysisProject(dirn,os.path.join(self._analysis_dir,dirn))
             if data.is_analysis_dir:
                 logging.debug("- %s: project directory" % dirn)
                 self._project_dirs.append(dirn)
