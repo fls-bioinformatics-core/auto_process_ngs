@@ -36,6 +36,12 @@ __version__ = settings.version
 #######################################################################
 
 def get_projects(seq_data,pattern=None):
+    """Get list of projects
+
+    Returns a list of IlluminaProject objects from the supplied
+    IlluminaData object.
+
+    """
     projects = []
     for p in seq_data.projects:
         if bcf_utils.name_matches(p.name,pattern):
@@ -43,6 +49,12 @@ def get_projects(seq_data,pattern=None):
     return projects
 
 def get_samples(seq_data,project_pattern=None,sample_pattern=None):
+    """Get list of samples
+
+    Returns a list of IlluminaSample objects from the supplied
+    IlluminaData object.
+
+    """
     samples = []
     for p in get_projects(seq_data,pattern=project_pattern):
         for s in p.samples:
@@ -51,6 +63,12 @@ def get_samples(seq_data,project_pattern=None,sample_pattern=None):
     return samples
 
 def get_fastqs(seq_data,project_pattern=None,sample_pattern=None):
+    """Get list of fastq files
+
+    Returns a list of Fastq files from the supplied IlluminaData
+    object.
+
+    """
     fastqs = []
     for s in get_samples(seq_data,
                          project_pattern=project_pattern,
@@ -58,6 +76,18 @@ def get_fastqs(seq_data,project_pattern=None,sample_pattern=None):
         for fastq in s.fastq:
             fastqs.append(os.path.join(s.dirn,fastq))
     return fastqs
+
+def fastqs_are_linked(analysis_project):
+    """Report if fastq's in an AnalysisProject are symlinks
+
+    """
+    for sample in analysis_project.samples:
+        for fq in sample.fastq:
+            fastq = os.path.join(analysis_project.dirn,sample.name,fq)
+            if os.path.islink(fastq):
+                return os.readlink(fastq)
+    # No links detected
+    return None
 
 def copy_to_dest(f,dirn):
     """Copy a file to a local or remote destination
@@ -108,6 +138,8 @@ if __name__ == "__main__":
     p.parser_for('copy').add_option('--projects',action='store',dest='projects',default=None,
                                     help="Restrict copying to projects matching the "
                                     "supplied pattern")
+    p.parser_for('copy').add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
+                                    help="Only copy fastqs from the specified FASTQ_DIR")
     add_dry_run_option(p.parser_for('copy'))
     add_debug_option(p.parser_for('copy'))
     # Process the command line
@@ -140,11 +172,13 @@ if __name__ == "__main__":
         # Report analysis project directories
         if analysis_dir.n_projects:
             print "Putative analysis project directories:\n"
-            print "Project_name\t#smpl\tQC?\tSample_names"
+            print "Project_name\t#smpl\tQC?\tFq_are_lns\tSample_names"
             for project in analysis_dir.projects:
+                fq_target = fastqs_are_linked(project)
                 line = [project.name,
                         len(project.samples),
                         ('ok' if project.verify_qc() else '?'),
+                        ('yes' if fq_target is not None else 'no'),
                         project.prettyPrintSamples()]
                 print "%s" % '\t'.join([str(x) for x in line])
             print ""
@@ -170,10 +204,24 @@ if __name__ == "__main__":
                 sample_pattern = options.projects.split('/')[1]
             except IndexError:
                 sample_pattern = '*'
-        for data in analysis_dir.sequencing_data:
-            fastqs = get_fastqs(data,project_pattern=project_pattern,
-                                sample_pattern=sample_pattern)
-        # File sizes
+        # Restrict to a subset of fastq dirs
+        if options.fastq_dir is None:
+            sequencing_data = analysis_dir.sequencing_data
+        else:
+            sequencing_data = []
+            for data in analysis_dir.sequencing_data:
+                if os.path.basename(data.unaligned_dir) == options.fastq_dir:
+                    sequencing_data.append(data)
+        # Look for fastqs
+        fastqs = []
+        for data in sequencing_data:
+            print "%s" % data.unaligned_dir
+            fastqs.extend(get_fastqs(data,project_pattern=project_pattern,
+                                     sample_pattern=sample_pattern))
+        if not fastqs:
+            logging.error("No matching Fastqs found")
+            sys.exit(1)
+        # Report file sizes
         total_size = 0
         for fq in fastqs:
             fsize = os.lstat(fq).st_size
@@ -182,13 +230,23 @@ if __name__ == "__main__":
                               bcf_utils.format_file_size(fsize))
         print "Total: %s" % bcf_utils.format_file_size(total_size)
         # Generate MD5 sums
+        if not options.dry_run:
+            print "Generating MD5 sums"
+        md5_file = 'checksums.md5'
+        fp = open(md5_file,'w')
         for fq in fastqs:
             chksum = Md5sum.md5sum(fq)
-            print "%s  %s" % (chksum,os.path.basename(fq))
+            fp.write("%s  %s\n" % (chksum,os.path.basename(fq)))
         # Copy them
+        print "Copying fastqs"
         for fq in fastqs:
+            print "%s" % fq
             if not options.dry_run:
                 copy_to_dest(fq,args[1])
-            else:
-                print "%s" % fq
+        if not options.dry_run:
+            print "Copying MD5 checksum file"
+            copy_to_dest(md5_file,args[1])
+        
+        
+        
 
