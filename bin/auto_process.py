@@ -22,8 +22,9 @@ The stages are:
     make_fastqs
     setup_analysis_dirs
     run_qc
-    archive
     publish_qc
+    archive
+    report
 
 The 'setup' stage creates an analysis directory and acquires the basic
 data about the sequencing run from a source directory. Subsequent stages
@@ -55,6 +56,10 @@ import optparse
 import bcf_utils
 import auto_process_ngs.settings
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.parser import CommandParser
+from auto_process_ngs.parser import add_debug_option
+from auto_process_ngs.parser import add_no_save_option
+from auto_process_ngs.parser import add_dry_run_option
 
 __version__ = auto_process_ngs.settings.version
 
@@ -64,408 +69,318 @@ __version__ = auto_process_ngs.settings.version
 
 # Command line parsers
 
-class Parsers:
-    """Static class defining parsers for various commands
+def add_setup_command(cmdparser):
+    """Create a parser for the 'setup' command
     """
-    @classmethod
-    def setup_parser(self):
-        """Create a parser for the 'setup' command
-        """
-        p = optparse.OptionParser(usage="%prog setup [OPTIONS] DIR",
-                                  version="%prog "+__version__,
-                                  description="Set up automatic processing of Illumina "
-                                  "sequencing data from DIR.")
-        p.add_option('--sample-sheet',action='store',dest='sample_sheet',default=None,
-                     help="Copy sample sheet file from name and location SAMPLE_SHEET "
-                     "(default is to look for SampleSheet.csv inside DIR)")
-        p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
-                     help="Import fastq.gz files from FASTQ_DIR (which should be a "
-                     "subdirectory of DIR with the same structure as that produced "
-                     "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
-        p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
-                     help="Make new directory called ANALYSIS_DIR (otherwise default is "
-                     "'DIR_analysis')")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def clone_parser(self):
-        """Create a parser for the 'clone' command
-        """
-        p = optparse.OptionParser(usage="%prog clone [OPTIONS] DIR CLONE_DIR",
-                                  version="%prog "+__version__,
-                                  description="Make a copy of an existing auto_processed analysis "
-                                  "directory DIR, in a new directory CLONE_DIR. The clone will "
-                                  "not include any project directories, but will copy the "
-                                  "projects.info file.")
-        p.add_option('--copy-fastqs',action='store_true',dest='copy_fastqs',default=False,
-                     help="Copy fastq.gz files from DIR into DIR2 (default is to make a "
-                     "link to the bcl-to-fastq directory)")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def config_parser(self):
-        """Create a parser for the 'config' command
-        """
-        p  = optparse.OptionParser(usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
-                                   version="%prog "+__version__,
-                                   description="Query and configure automatic processing "
-                                   "parameters and settings for ANALYSIS_DIR.")
-        p.add_option('--set',action='append',dest='key_value',default=None,
-                     help="Set the value of a parameter. KEY_VALUE should be of the form "
-                    "'<param>=<value>'. Multiple --set options can be specified.")
-        self.add_debug_option(p)
-        # Deprecated options
-        deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
-        deprecated.add_option('--show',action='store_true',dest='show',default=False,
-                              help="Show the values of parameters and settings (does "
-                              "nothing; use 'config' with no options to display settings)")
-        p.add_option_group(deprecated)
-        return p
-    @classmethod
-    def make_fastqs_parser(self):
-        """Create a parser for the 'make_fastqs' command
-        """
-        p = optparse.OptionParser(usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Generate fastq files from raw bcl files "
-                                  "produced by Illumina sequencer within ANALYSIS_DIR.")
-        # General options
-        self.add_no_save_option(p)
-        self.add_debug_option(p)
-        # Primary data management
-        primary_data = optparse.OptionGroup(p,'Primary data management')
-        primary_data.add_option('--only-fetch-primary-data',action='store_true',
-                                dest='only_fetch_primary_data',default=False,
-                                help="only fetch the primary data, don't perform any other "
-                                "operations")
-        primary_data.add_option('--skip-rsync',action='store_true',
-                                dest='skip_rsync',default=False,
-                                help="don't rsync the primary data at the beginning of processing")
-        primary_data.add_option('--remove-primary-data',action='store_true',
-                                dest='remove_primary_data',default=False,
-                                help="Delete the primary data at the end of processing (default "
-                                "is to keep data)")
-        p.add_option_group(primary_data)
-        # Options to control bcl2fastq
-        nprocessors = auto_process_ngs.settings.bcl2fastq.nprocessors
-        bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
-        bcl_to_fastq.add_option('--skip-bcl2fastq',action='store_true',
-                                dest='skip_bcl2fastq',default=False,
-                                help="don't run the Fastq generation step")
-        bcl_to_fastq.add_option('--output-dir',action='store',
-                                dest='unaligned_dir',default=None,
-                                help="explicitly set the output (sub)directory for bcl-to-fastq "
-                                "conversion (overrides default)")
-        bcl_to_fastq.add_option('--use-bases-mask',action="store",
-                                dest="bases_mask",default=None,
-                                help="explicitly set the bases-mask string to indicate how each "
-                                "cycle should be used in the bcl-to-fastq conversion (overrides "
-                                "default)")
-        bcl_to_fastq.add_option('--sample-sheet',action="store",
-                                dest="sample_sheet",default=None,
-                                help="use an alternative sample sheet to the default "
-                                "'custom_SampleSheet.csv' created on setup.")
-        bcl_to_fastq.add_option('--nprocessors',action='store',
-                                dest='nprocessors',default=nprocessors,
-                                help="explicitly specify number of processors to use for "
-                                "bclToFastq (default %s, change in settings file)" % nprocessors)
-        bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
-                                dest='ignore_missing_bcl',default=False,
-                                help="use the --ignore-missing-bcl option for bcl2fastq (treat "
-                                "missing bcl files as no call)")
-        bcl_to_fastq.add_option('--ignore-missing-stats',action='store_true',
-                                dest='ignore_missing_stats',default=False,
-                                help="use the --ignore-missing-stats option for bcl2fastq (fill "
-                                "in with zeroes when *.stats files are missing)")
-        p.add_option_group(bcl_to_fastq)
-        # Statistics
-        statistics = optparse.OptionGroup(p,'Statistics generation')
-        statistics.add_option('--stats-file',action='store',
-                              dest='stats_file',default=None,
-                              help="specify output file for fastq statistics")
-        statistics.add_option('--no-stats',action='store_true',
-                              dest='no_stats',default=False,
-                              help="don't generate statistics file; use 'update_fastq_stats' "
-                              "command to (re)generate statistics")
-        statistics.add_option('--report-barcodes',action='store_true',
-                              dest='report_barcodes',default=False,
-                              help="analyse and report barcode indices for all lanes after "
-                              "generating fastq files")
-        statistics.add_option('--barcodes-file',action='store',
-                              dest='barcodes_file',default=None,
-                              help="specify output file for barcode analysis report")
-        p.add_option_group(statistics)
-        # Deprecated options
-        deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
-        deprecated.add_option('--keep-primary-data',action='store_true',
-                              dest='keep_primary_data',default=False,
-                              help="don't delete the primary data at the end of processing "
-                              "(does nothing; primary data is kept by default unless "
-                              "--remove-primary-data is specified)")
-        deprecated.add_option('--generate-stats',action='store_true',
-                              dest='generate_stats',default=False,
+    p = cmdparser.add_command('setup',help="Set up a new analysis directory",
+                              usage="%prog setup [OPTIONS] DIR",
+                              description="Set up automatic processing of Illumina "
+                              "sequencing data from DIR.")
+    p.add_option('--sample-sheet',action='store',dest='sample_sheet',default=None,
+                 help="Copy sample sheet file from name and location SAMPLE_SHEET "
+                 "(default is to look for SampleSheet.csv inside DIR)")
+    p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
+                 help="Import fastq.gz files from FASTQ_DIR (which should be a "
+                 "subdirectory of DIR with the same structure as that produced "
+                 "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
+    p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
+                 help="Make new directory called ANALYSIS_DIR (otherwise default is "
+                 "'DIR_analysis')")
+    add_debug_option(p)
+
+def add_config_command(cmdparser):
+    """Create a parser for the 'config' command
+    """
+    p  = cmdparser.add_command('config',help="Query and configure parameters",
+                               usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
+                               description="Query and configure automatic processing "
+                               "parameters and settings for ANALYSIS_DIR.")
+    p.add_option('--set',action='append',dest='key_value',default=None,
+                 help="Set the value of a parameter. KEY_VALUE should be of the form "
+                 "'<param>=<value>'. Multiple --set options can be specified.")
+    add_debug_option(p)
+    # Deprecated options
+    deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option('--show',action='store_true',dest='show',default=False,
+                          help="Show the values of parameters and settings (does "
+                          "nothing; use 'config' with no options to display settings)")
+    p.add_option_group(deprecated)
+
+def add_make_fastqs_command(cmdparser):
+    """Create a parser for the 'make_fastqs' command
+    """
+    p = cmdparser.add_command('make_fastqs',help="Run Fastq generation",
+                              usage="%prog make_fastqs [OPTIONS] [ANALYSIS_DIR]",
+                              description="Generate fastq files from raw bcl files "
+                              "produced by Illumina sequencer within ANALYSIS_DIR.")
+    # General options
+    add_no_save_option(p)
+    add_debug_option(p)
+    # Primary data management
+    primary_data = optparse.OptionGroup(p,'Primary data management')
+    primary_data.add_option('--only-fetch-primary-data',action='store_true',
+                            dest='only_fetch_primary_data',default=False,
+                            help="only fetch the primary data, don't perform any other "
+                            "operations")
+    primary_data.add_option('--skip-rsync',action='store_true',
+                            dest='skip_rsync',default=False,
+                            help="don't rsync the primary data at the beginning of processing")
+    primary_data.add_option('--remove-primary-data',action='store_true',
+                            dest='remove_primary_data',default=False,
+                            help="Delete the primary data at the end of processing (default "
+                            "is to keep data)")
+    p.add_option_group(primary_data)
+    # Options to control bcl2fastq
+    nprocessors = auto_process_ngs.settings.bcl2fastq.nprocessors
+    bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
+    bcl_to_fastq.add_option('--skip-bcl2fastq',action='store_true',
+                            dest='skip_bcl2fastq',default=False,
+                            help="don't run the Fastq generation step")
+    bcl_to_fastq.add_option('--output-dir',action='store',
+                            dest='unaligned_dir',default=None,
+                            help="explicitly set the output (sub)directory for bcl-to-fastq "
+                            "conversion (overrides default)")
+    bcl_to_fastq.add_option('--use-bases-mask',action="store",
+                            dest="bases_mask",default=None,
+                            help="explicitly set the bases-mask string to indicate how each "
+                            "cycle should be used in the bcl-to-fastq conversion (overrides "
+                            "default)")
+    bcl_to_fastq.add_option('--sample-sheet',action="store",
+                            dest="sample_sheet",default=None,
+                            help="use an alternative sample sheet to the default "
+                            "'custom_SampleSheet.csv' created on setup.")
+    bcl_to_fastq.add_option('--nprocessors',action='store',
+                            dest='nprocessors',default=nprocessors,
+                            help="explicitly specify number of processors to use for "
+                            "bclToFastq (default %s, change in settings file)" % nprocessors)
+    bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
+                            dest='ignore_missing_bcl',default=False,
+                            help="use the --ignore-missing-bcl option for bcl2fastq (treat "
+                            "missing bcl files as no call)")
+    bcl_to_fastq.add_option('--ignore-missing-stats',action='store_true',
+                            dest='ignore_missing_stats',default=False,
+                            help="use the --ignore-missing-stats option for bcl2fastq (fill "
+                            "in with zeroes when *.stats files are missing)")
+    p.add_option_group(bcl_to_fastq)
+    # Statistics
+    statistics = optparse.OptionGroup(p,'Statistics generation')
+    statistics.add_option('--stats-file',action='store',
+                          dest='stats_file',default=None,
+                          help="specify output file for fastq statistics")
+    statistics.add_option('--no-stats',action='store_true',
+                          dest='no_stats',default=False,
+                          help="don't generate statistics file; use 'update_fastq_stats' "
+                          "command to (re)generate statistics")
+    statistics.add_option('--report-barcodes',action='store_true',
+                          dest='report_barcodes',default=False,
+                          help="analyse and report barcode indices for all lanes after "
+                          "generating fastq files")
+    statistics.add_option('--barcodes-file',action='store',
+                          dest='barcodes_file',default=None,
+                          help="specify output file for barcode analysis report")
+    p.add_option_group(statistics)
+    # Deprecated options
+    deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option('--keep-primary-data',action='store_true',
+                          dest='keep_primary_data',default=False,
+                          help="don't delete the primary data at the end of processing "
+                          "(does nothing; primary data is kept by default unless "
+                          "--remove-primary-data is specified)")
+    deprecated.add_option('--generate-stats',action='store_true',
+                          dest='generate_stats',default=False,
                               help="(re)generate statistics for fastq files (does nothing; "
-                              "statistics are generated by default unless suppressed by "
-                              "--no-stats)")
-        p.add_option_group(deprecated)
-        return p
-    @classmethod
-    def update_fastq_stats_parser(self):
-        """Create a parser for the 'update_fastq_stats' command
-        """
-        p = optparse.OptionParser(usage="%prog update_fastq_stats [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="(Re)generate statistics for fastq "
-                                  "files produced from 'make_fastqs'.")
-        nprocessors = auto_process_ngs.settings.fastq_stats.nprocessors
-        p.add_option('--unaligned-dir',action='store',
-                     dest='unaligned_dir',default='bcl2fastq',
-                     help="explicitly set the (sub)directory with bcl-to-fastq outputs")
-        p.add_option('--nprocessors',action='store',
-                     dest='nprocessors',default=nprocessors,
-                     help="explicitly specify number of processors to use for "
-                     "fastq generation (default %s, change in settings file)" % nprocessors)
-        p.add_option('--runner',action='store',
-                     dest='runner',default=None,
-                     help="explicitly specify runner definition (e.g. 'GEJobRunner(-j y)')")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def merge_fastq_dirs_parser(self):
-        """Create a parser for the 'merge_fastq_dirs' command
-        """
-        p = optparse.OptionParser(usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Automatically merge fastq directories from "
-                                  "multiple bcl-to-fastq runs within ANALYSIS_DIR. Use this "
-                                  "command if 'make_fastqs' step was run multiple times to "
-                                  "process subsets of lanes.")
-        nprocessors = auto_process_ngs.settings.bcl2fastq.nprocessors
-        p.add_option('--primary-unaligned-dir',action='store',
-                     dest='unaligned_dir',default='bcl2fastq',
-                     help="merge fastqs from additional bcl-to-fastq directories into "
-                     "UNALIGNED_DIR. Original data will be moved out of the way first. "
-                     "Defaults to 'bcl2fastq'.")
-        self.add_dry_run_option(p)
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def analyse_barcodes_parser(self):
-        """Create a parser for the 'analyse_barcodes' command
-        """
-        p = optparse.OptionParser(usage="%prog analyse_barcodes [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Analyse barcode sequences for fastq files "
-                                  "in specified lanes in ANALYSIS_DIR, and report the most "
-                                  "common barcodes found across all reads from each lane.")
-        p.add_option('--unaligned-dir',action='store',
-                     dest='unaligned_dir',default='bcl2fastq',
-                     help="explicitly set the (sub)directory with bcl-to-fastq outputs")
-        p.add_option('--lanes',action='store',
-                     dest='lanes',default=None,
-                     help="specify which lanes to analyse barcodes for (default is to do "
-                     "analysis for all lanes).")
-        p.add_option('--truncate',action='store',
-                     dest='length',default=None,type='int',
-                     help="truncate sample sheet barcodes to LENGTH for barcode analysis "
-                     "(default is to use full barcodes)")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def setup_analysis_dirs_parser(self):
-        """Create a parser for the 'setup_analysis_dirs' command
-        """
-        p = optparse.OptionParser(usage="%prog setup_analysis_dirs [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Create analysis subdirectories for projects "
-                                  "defined in projects.info file in ANALYSIS_DIR.")
-        p.add_option('--ignore-missing-metadata',action='store_true',
-                     dest='ignore_missing_metadata',default=False,
-                     help="force creation of project directories even if metadata is not "
-                     "set (default is to fail if metadata is missing)")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def run_qc_parser(self):
-        """Create a parser for the 'run_qc' command
-        """
-        p = optparse.OptionParser(usage="%prog run_qc [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Automatically process Illumina sequence from "
-                                  "ANALYSIS_DIR.")
-        max_concurrent_jobs = auto_process_ngs.settings.general.max_concurrent_jobs
-        p.add_option('--projects',action='store',
-                     dest='project_pattern',default=None,
-                     help="simple wildcard-based pattern specifying a subset of projects "
-                     "and samples to run the QC on. PROJECT_PATTERN should be of the form "
-                     "'pname[/sname]', where 'pname' specifies a project (or set of "
-                     "projects) and 'sname' optionally specifies a sample (or set of "
-                     "samples).")
-        p.add_option('--max-jobs',action='store',
-                     dest='max_jobs',default=max_concurrent_jobs,type='int',
-                     help="explicitly specify maximum number of concurrent QC jobs to run "
-                     "(default %s, change in settings file)" % max_concurrent_jobs)
-        p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
-                     help="don't create uncompressed copies of fastq.gz files")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def publish_qc_parser(self):
-        """Create a parser for the 'publish_qc' command
-        """
-        p = optparse.OptionParser(usage="%prog publish_qc [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Copy QC reports from ANALYSIS_DIR to local "
-                                  "or remote directory (e.g. web server). By default existing "
-                                  "QC reports will be copied without further checking; if no "
-                                  "report is found then QC results will be verified and a "
-                                  "report generated first.")
-        p.add_option('--projects',action='store',
-                     dest='project_pattern',default=None,
-                     help="simple wildcard-based pattern specifying a subset of projects "
-                     "and samples to publish the QC for. PROJECT_PATTERN can specify a "
-                     "single project, or a set of projects.")
-        p.add_option('--qc_dir',action='store',
-                     dest='qc_dir',default=None,
-                     help="specify target directory to copy QC reports to. QC_DIR can "
-                     "be a local directory, or a remote location in the form "
-                     "'[[user@]host:]directory'. Overrides the default settings.")
-        p.add_option('--ignore-missing-qc',action='store_true',
-                     dest='ignore_missing_qc',default=False,
-                     help="skip projects where QC results are missing or can't be verified, "
-                     "or where reports can't be generated.")
-        p.add_option('--regenerate-reports',action='store_true',
-                     dest='regenerate_reports',default=False,
-                     help="attempt to regenerate existing QC reports")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def archive_parser(self):
-        """Create a parser for the 'archive' command
-        """
-        p = optparse.OptionParser(usage="%prog archive [OPTIONS] [ANALYSIS_DIR]",
-                                  version="%prog "+__version__,
-                                  description="Copy sequencing analysis data directory "
-                                  "ANALYSIS_DIR to 'archive' destination.")
-        p.add_option('--archive_dir',action='store',
-                     dest='archive_dir',default=None,
-                     help="specify top-level archive directory to copy data under. "
-                     "ARCHIVE_DIR can be a local directory, or a remote location in the "
-                     "form '[[user@]host:]directory'. Overrides the default settings.")
-        p.add_option('--platform',action='store',
-                     dest='platform',default=None,
-                     help="specify the platform e.g. 'hiseq', 'miseq' etc (overrides "
-                     "automatically determined platform, if any). Use 'other' for cases "
-                     "where the platform is unknown.")
-        p.add_option('--year',action='store',
-                     dest='year',default=None,
-                     help="specify the year e.g. '2014' (default is the current year)")
-        default_group = auto_process_ngs.settings.archive.group
-        p.add_option('--group',action='store',dest='group',default=default_group,
-                     help="specify the name of group for the archived files NB only works "
-                     "when the archive is a local directory (default: %s)" % default_group)
-        default_chmod = auto_process_ngs.settings.archive.chmod
-        p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
-                     help="specify chmod operations for the archived files (default: "
-                     "%s)" % default_chmod)
-        self.add_dry_run_option(p)
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def report_parser(self,):
-        p  = optparse.OptionParser(usage="%prog report [OPTIONS] [ANALYSIS_DIR]",
-                                   version="%prog "+__version__,
-                                   description="Report information on processed Illumina "
-                                   "sequence data in ANALYSIS_DIR.")
-        p.add_option('--logging',action='store_true',dest='logging',default=False,
-                     help="print short report suitable for logging file")
-        p.add_option('--summary',action='store_true',dest='summary',default=False,
-                     help="print full report suitable for bioinformaticians")
-        p.add_option('--projects',action='store_true',dest='projects',default=False,
-                     help="print tab-delimited line (one per project) suitable for "
-                     "injection into a spreadsheet")
-        p.add_option('--full',action='store_true',dest='full',default=False,
-                     help="print summary report suitable for record-keeping")
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def generic_parser(self,cmd,description=None):
-        """Create a generic parser for a command
+                        "statistics are generated by default unless suppressed by "
+                          "--no-stats)")
+    p.add_option_group(deprecated)
 
-        Arguments:
-          cmd: the command that the parser operates on
-          description: (optional) description text that the '-h' option will
-            display for the command.
-        """
-        if description is None:
-            description = "Automatically process Illumina sequence from ANALYSIS_DIR."
-        p  = optparse.OptionParser(usage="%prog "+cmd+" [OPTIONS] [ANALYSIS_DIR]",
-                                   version="%prog "+__version__,
-                                   description=description)
-        self.add_debug_option(p)
-        return p
-    @classmethod
-    def add_no_save_option(self,p):
-        """Add a '--no-save' option to a parser
-
-        """
-        p.add_option('--no-save',action='store_true',dest='no_save',default=False,
-                     help="Don't save parameter changes to the auto_process.info file")
-        return p
-    @classmethod
-    def add_dry_run_option(self,p):
-        """Add a '--dry-run' option to a parser
-        """
-        p.add_option('--dry-run',action='store_true',dest='dry_run',default=False,
-                     help="Dry run i.e. report but don't perform any actions")
-        return p
-    @classmethod
-    def add_debug_option(self,p):
-        """Add a '--debug' option to a parser
-        """
-        p.add_option('--debug',action='store_true',dest='debug',default=False,
-                     help="Turn on debugging output from Python libraries")
-        return p
-
-class Commands:
-    """Static class to handle available commands and command line options
-
+def add_setup_analysis_dirs_command(cmdparser):
+    """Create a parser for the 'setup_analysis_dirs' command
     """
-    # Define static list of commands and corresponding parser generators
-    commands = bcf_utils.OrderedDictionary()
-    commands['setup']               = Parsers.setup_parser()
-    commands['clone']               = Parsers.clone_parser()
-    commands['config']              = Parsers.config_parser()
-    commands['make_fastqs']         = Parsers.make_fastqs_parser()
-    commands['merge_fastq_dirs']    = Parsers.merge_fastq_dirs_parser()
-    commands['update_fastq_stats']  = Parsers.update_fastq_stats_parser()
-    commands['analyse_barcodes']    = Parsers.analyse_barcodes_parser()
-    commands['setup_analysis_dirs'] = Parsers.setup_analysis_dirs_parser()
-    commands['run_qc']              = Parsers.run_qc_parser()
-    commands['archive']             = Parsers.archive_parser()
-    commands['publish_qc']          = Parsers.publish_qc_parser()
-    commands['report']              = Parsers.report_parser()
-    @classmethod
-    def list_commands(self):
-        """Return a list of commands
-        """
-        return Commands.commands.keys()
-    @classmethod
-    def parser_for(self,cmd):
-        return Commands.commands[cmd]
+    p = cmdparser.add_command('setup_analysis_dirs',help="Create project subdirectories",
+                              usage="%prog setup_analysis_dirs [OPTIONS] [ANALYSIS_DIR]",
+                              description="Create analysis subdirectories for projects "
+                              "defined in projects.info file in ANALYSIS_DIR.")
+    p.add_option('--ignore-missing-metadata',action='store_true',
+                 dest='ignore_missing_metadata',default=False,
+                 help="force creation of project directories even if metadata is not "
+                 "set (default is to fail if metadata is missing)")
+    add_debug_option(p)
 
-#######################################################################
-# Functions
-#######################################################################
-
-def list_available_commands():
-    """Pretty-print available commands
+def add_run_qc_command(cmdparser):
+    """Create a parser for the 'run_qc' command
     """
-    print ""
-    print "Available commands are:"
-    for cmd in Commands.list_commands():
-        print "\t%s" % cmd
-    print ""
+    p = cmdparser.add_command('run_qc',help="Run QC procedures",
+                              usage="%prog run_qc [OPTIONS] [ANALYSIS_DIR]",
+                              description="Run QC procedures for sequencing projects in "
+                              "ANALYSIS_DIR.")
+    max_concurrent_jobs = auto_process_ngs.settings.general.max_concurrent_jobs
+    p.add_option('--projects',action='store',
+                 dest='project_pattern',default=None,
+                 help="simple wildcard-based pattern specifying a subset of projects "
+                 "and samples to run the QC on. PROJECT_PATTERN should be of the form "
+                 "'pname[/sname]', where 'pname' specifies a project (or set of "
+                 "projects) and 'sname' optionally specifies a sample (or set of "
+                 "samples).")
+    p.add_option('--max-jobs',action='store',
+                 dest='max_jobs',default=max_concurrent_jobs,type='int',
+                 help="explicitly specify maximum number of concurrent QC jobs to run "
+                 "(default %s, change in settings file)" % max_concurrent_jobs)
+    p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
+                 help="don't create uncompressed copies of fastq.gz files")
+    add_debug_option(p)
+
+def add_publish_qc_command(cmdparser):
+    """Create a parser for the 'publish_qc' command
+    """
+    p = cmdparser.add_command('publish_qc',help="Copy QC reports to publication area",
+                              usage="%prog publish_qc [OPTIONS] [ANALYSIS_DIR]",
+                              description="Copy QC reports from ANALYSIS_DIR to local "
+                              "or remote directory (e.g. web server). By default existing "
+                              "QC reports will be copied without further checking; if no "
+                              "report is found then QC results will be verified and a "
+                              "report generated first.")
+    p.add_option('--projects',action='store',
+                 dest='project_pattern',default=None,
+                 help="simple wildcard-based pattern specifying a subset of projects "
+                 "and samples to publish the QC for. PROJECT_PATTERN can specify a "
+                 "single project, or a set of projects.")
+    p.add_option('--qc_dir',action='store',
+                 dest='qc_dir',default=None,
+                 help="specify target directory to copy QC reports to. QC_DIR can "
+                 "be a local directory, or a remote location in the form "
+                 "'[[user@]host:]directory'. Overrides the default settings.")
+    p.add_option('--ignore-missing-qc',action='store_true',
+                 dest='ignore_missing_qc',default=False,
+                 help="skip projects where QC results are missing or can't be verified, "
+                 "or where reports can't be generated.")
+    p.add_option('--regenerate-reports',action='store_true',
+                 dest='regenerate_reports',default=False,
+                 help="attempt to regenerate existing QC reports")
+    add_debug_option(p)
+
+def add_archive_command(cmdparser):
+    """Create a parser for the 'archive' command
+    """
+    p = cmdparser.add_command('archive',help="Copy analyses to 'archive' area",
+                              usage="%prog archive [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Copy sequencing analysis data directory "
+                              "ANALYSIS_DIR to 'archive' destination.")
+    p.add_option('--archive_dir',action='store',
+                 dest='archive_dir',default=None,
+                 help="specify top-level archive directory to copy data under. "
+                 "ARCHIVE_DIR can be a local directory, or a remote location in the "
+                 "form '[[user@]host:]directory'. Overrides the default settings.")
+    p.add_option('--platform',action='store',
+                 dest='platform',default=None,
+                 help="specify the platform e.g. 'hiseq', 'miseq' etc (overrides "
+                 "automatically determined platform, if any). Use 'other' for cases "
+                 "where the platform is unknown.")
+    p.add_option('--year',action='store',
+                 dest='year',default=None,
+                 help="specify the year e.g. '2014' (default is the current year)")
+    default_group = auto_process_ngs.settings.archive.group
+    p.add_option('--group',action='store',dest='group',default=default_group,
+                 help="specify the name of group for the archived files NB only works "
+                 "when the archive is a local directory (default: %s)" % default_group)
+    default_chmod = auto_process_ngs.settings.archive.chmod
+    p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
+                 help="specify chmod operations for the archived files (default: "
+                 "%s)" % default_chmod)
+    add_dry_run_option(p)
+    add_debug_option(p)
+
+def add_report_command(cmdparser):
+    """Create a parser for the 'report' command
+    """
+    p  = cmdparser.add_command('report',help="Generate reporting information",
+                               usage="%prog report [OPTIONS] [ANALYSIS_DIR]",
+                               description="Report information on processed Illumina "
+                               "sequence data in ANALYSIS_DIR.")
+    p.add_option('--logging',action='store_true',dest='logging',default=False,
+                 help="print short report suitable for logging file")
+    p.add_option('--summary',action='store_true',dest='summary',default=False,
+                 help="print full report suitable for bioinformaticians")
+    p.add_option('--projects',action='store_true',dest='projects',default=False,
+                 help="print tab-delimited line (one per project) suitable for "
+                 "injection into a spreadsheet")
+    p.add_option('--full',action='store_true',dest='full',default=False,
+                 help="print summary report suitable for record-keeping")
+    add_debug_option(p)
+
+def add_clone_command(cmdparser):
+    """Create a parser for the 'clone' command
+    """
+    p = cmdparser.add_command('clone',help="Make a copy of an analysis directory",
+                              usage="%prog clone [OPTIONS] DIR CLONE_DIR",
+                              description="Make a copy of an existing auto_processed analysis "
+                              "directory DIR, in a new directory CLONE_DIR. The clone will "
+                              "not include any project directories, but will copy the "
+                              "projects.info file.")
+    p.add_option('--copy-fastqs',action='store_true',dest='copy_fastqs',default=False,
+                 help="Copy fastq.gz files from DIR into DIR2 (default is to make a "
+                 "link to the bcl-to-fastq directory)")
+    add_debug_option(p)
+
+def add_analyse_barcodes_command(cmdparser):
+    """Create a parser for the 'analyse_barcodes' command
+    """
+    p = cmdparser.add_command('analyse_barcodes',help="Analyse index (barcode) sequences",
+                              usage="%prog analyse_barcodes [OPTIONS] [ANALYSIS_DIR]",
+                              version="%prog "+__version__,
+                              description="Analyse barcode sequences for fastq files "
+                              "in specified lanes in ANALYSIS_DIR, and report the most "
+                              "common barcodes found across all reads from each lane.")
+    p.add_option('--unaligned-dir',action='store',
+                 dest='unaligned_dir',default='bcl2fastq',
+                 help="explicitly set the (sub)directory with bcl-to-fastq outputs")
+    p.add_option('--lanes',action='store',
+                 dest='lanes',default=None,
+                 help="specify which lanes to analyse barcodes for (default is to do "
+                 "analysis for all lanes).")
+    p.add_option('--truncate',action='store',
+                 dest='length',default=None,type='int',
+                 help="truncate sample sheet barcodes to LENGTH for barcode analysis "
+                 "(default is to use full barcodes)")
+    add_debug_option(p)
+
+def add_merge_fastq_dirs_command(cmdparser):
+    """Create a parser for the 'merge_fastq_dirs' command
+    """
+    p = cmdparser.add_command('merge_fastq_dirs',help="Combine bcl-to-fastq runs",
+                              usage="%prog merge_fastq_dirs [OPTIONS] [ANALYSIS_DIR]",
+                              description="Automatically merge fastq directories from "
+                              "multiple bcl-to-fastq runs within ANALYSIS_DIR. Use this "
+                              "command if 'make_fastqs' step was run multiple times to "
+                              "process subsets of lanes.")
+    nprocessors = auto_process_ngs.settings.bcl2fastq.nprocessors
+    p.add_option('--primary-unaligned-dir',action='store',
+                 dest='unaligned_dir',default='bcl2fastq',
+                 help="merge fastqs from additional bcl-to-fastq directories into "
+                 "UNALIGNED_DIR. Original data will be moved out of the way first. "
+                 "Defaults to 'bcl2fastq'.")
+    add_dry_run_option(p)
+    add_debug_option(p)
+
+def add_update_fastq_stats_command(cmdparser):
+    """Create a parser for the 'update_fastq_stats' command
+    """
+    p = cmdparser.add_command('update_fastq_stats',help="(Re)generate Fastq statistics",
+                              usage="%prog update_fastq_stats [OPTIONS] [ANALYSIS_DIR]",
+                              description="(Re)generate statistics for fastq "
+                              "files produced from 'make_fastqs'.")
+    nprocessors = auto_process_ngs.settings.fastq_stats.nprocessors
+    p.add_option('--unaligned-dir',action='store',
+                 dest='unaligned_dir',default='bcl2fastq',
+                 help="explicitly set the (sub)directory with bcl-to-fastq outputs")
+    p.add_option('--nprocessors',action='store',
+                 dest='nprocessors',default=nprocessors,
+                 help="explicitly specify number of processors to use for "
+                 "fastq generation (default %s, change in settings file)" % nprocessors)
+    p.add_option('--runner',action='store',
+                 dest='runner',default=None,
+                 help="explicitly specify runner definition (e.g. 'GEJobRunner(-j y)')")
+    add_debug_option(p)
 
 def set_debug(debug_flag):
     """Turn on debug output
@@ -478,29 +393,25 @@ def set_debug(debug_flag):
 
 if __name__ == "__main__":
 
-    # Process major command
-    try:
-        cmd = sys.argv[1]
-    except IndexError:
-        cmd = "help"
-    if cmd == "help" or cmd == "--help" or cmd == "-h":
-        list_available_commands()
-        sys.exit(0)
-    else:
-        err = None
-        if cmd not in Commands.list_commands():
-            err = "Unrecognised command '%s'" % cmd
-        elif len(sys.argv) < 2:
-            err = "Need to supply a command"
-        if err is not None:
-            print err
-            list_available_commands()
-            sys.stderr.write("%s\n" % err)
-            sys.exit(1)
-        p = Commands.parser_for(cmd)
+    # Set up the command line parser
+    p = CommandParser(description="Automated processing & QC for Illumina sequence data.",
+                      version="%prog "+__version__)
+    # Add commands
+    add_setup_command(p)
+    add_config_command(p)
+    add_make_fastqs_command(p)
+    add_setup_analysis_dirs_command(p)
+    add_run_qc_command(p)
+    add_publish_qc_command(p)
+    add_archive_command(p)
+    add_report_command(p)
+    add_clone_command(p)
+    add_analyse_barcodes_command(p)
+    add_merge_fastq_dirs_command(p)
+    add_update_fastq_stats_command(p)
     
-    # Process remaining command line arguments
-    options,args = p.parse_args(sys.argv[2:])
+    # Process remaining command line
+    cmd,options,args = p.parse_args()
 
     # Report name and version
     print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
