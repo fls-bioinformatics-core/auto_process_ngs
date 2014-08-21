@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.0.9"
+__version__ = "0.1.0"
 
 import FASTQFile
 import IlluminaData
@@ -25,12 +25,17 @@ import optparse
 import logging
 import sys
 import os
+from multiprocessing import Pool
 
-def count_barcodes(fastqs):
-    """Count the index sequences across one or more Fastq files
+#######################################################################
+# Functions
+#######################################################################
+
+def count_barcodes_for_file(fastq):
+    """Count the index sequences across a single Fastq file
 
     Arguments:
-      fastqs: list of one or more Fastq files to read barcodes from
+      fastq: Fastq file to read barcodes from
 
     Returns:
       'counts' dictionary where counts[SEQ] holds the number of
@@ -39,22 +44,57 @@ def count_barcodes(fastqs):
     """
     counts = dict()
     nreads = 0
-    for fastq in fastqs:
-        print "Reading in data from %s" % fastq
-        for read in FASTQFile.FastqIterator(fastq):
-            nreads += 1
-            seq = read.seqid.index_sequence
-            if not seq:
-                raise ValueError,"No index sequence for read! %s" % read
-            # Check if we've already encountered this sequence
-            if seq in counts:
-                # Already seen
-                counts[seq] += 1
-            else:
-                # Novel sequence
-                counts[seq] = 1
+    print "Reading in data from %s" % fastq
+    for read in FASTQFile.FastqIterator(fastq):
+        seq = read.seqid.index_sequence
+        if not seq:
+            raise ValueError,"No index sequence for read! %s" % read
+        # Check if we've already encountered this sequence
+        if seq in counts:
+            # Already seen
+            counts[seq] += 1
+        else:
+            # Novel sequence
+            counts[seq] = 1
     # Return the counts dictionary
     return counts
+
+def count_barcodes(fastqs,n_processors=1):
+    """Count the index sequences across one or more Fastq files
+
+    Arguments:
+      fastqs: list of one or more Fastq files to read barcodes from
+      n_processors: number of processors to use (if 1>1 then uses
+        the multiprocessing library to run the barcode counting
+        using multiple cores).
+
+    Returns:
+      'counts' dictionary where counts[SEQ] holds the number of
+      times index sequence SEQ occurs.
+
+    """
+    # Get counts for individual files
+    print "Counting index sequences for each file"
+    if n_processors > 1:
+        # Multiple cores
+        pool = Pool(n_processors)
+        results = pool.map(count_barcodes_for_file,fastqs)
+        pool.close()
+        pool.join()
+    else:
+        # Single core
+        results = map(count_barcodes_for_file,fastqs)
+    # Merge the results
+    print "Merging counts of index sequences"
+    all_counts = dict()
+    for counts in results:
+        for seq in counts:
+            if seq in all_counts:
+                all_counts[seq] += counts[seq]
+            else:
+                all_counts[seq] = counts[seq]
+    # Return all the counts
+    return all_counts
 
 def ordered_seqs(counts):
     """Return list of sequences sorted most to least numerous
@@ -244,6 +284,10 @@ def output(counts,filen):
         fp.write("%d\t%s\t%d\n" % (i+1,seq,counts[seq]))
     fp.close()
 
+#######################################################################
+# Main program
+#######################################################################
+
 if __name__ == '__main__':
     # Handle command line
     p = optparse.OptionParser(usage="\n\t%prog FASTQ [FASTQ...]\n\t%prog DIR\n\t%prog -c COUNTS_FILE",
@@ -283,6 +327,8 @@ if __name__ == '__main__':
                  help="percentage or fraction of reads that a sequence must appear in "
                  "to be reported; sequences appearing fewer times will not be reported "
                  "(default is to report all barcodes).")
+    p.add_option('-N','--nprocessors',action="store",dest="cores",default=1,type='int',
+                 help="spread work across multiple processors/cores (default is 1)")
     options,args = p.parse_args()
     # Check arguments
     if not args:
@@ -351,7 +397,7 @@ if __name__ == '__main__':
             fp.write("*** Counting barcodes in lane %d ***\n" % lane)
             for fq in fastq_in_lane[lane]:
                 fp.write("Fastq: %s\n" % fq)
-            counts = count_barcodes(fastq_in_lane[lane])
+            counts = count_barcodes(fastq_in_lane[lane],n_processors=options.cores)
             report(counts,nseqs=options.n,cutoff=options.cutoff,fp=fp)
             if options.counts_file:
                 counts_file = "%s.lane%s%s" % (os.path.splitext(options.counts_file)[0],
