@@ -221,6 +221,43 @@ class CommandParser:
             text.append(message)
         return ''.join(text)
 
+def add_nprocessors_option(parser,default_nprocessors=None):
+    """Add a '--nprocessors' option to a parser
+    
+    Given an OptionParser 'parser', add a '--nprocessors' option.
+
+    The value of this option can be accessed via the 'nprocessors'
+    attribute of the parser options.
+
+    Returns the input OptionParser object.
+
+    """
+    parser.add_option('--nprocessors',action='store',
+                      dest='nprocessors',default=default_nprocessors,
+                      help="explicitly specify number of processors/cores to use "
+                      "(default %s, change in settings file)" % 
+                      default_nprocessors)
+    return parser
+
+def add_runner_option(parser):
+    """Add a '--runner' option to a parser
+    
+    Given an OptionParser 'parser', add a '--runner' option.
+
+    The value of this option can be accessed via the 'runner'
+    attribute of the parser options (use the 'fetch_runner'
+    function to return a JobRunner object from the supplied
+    value).
+
+    Returns the input OptionParser object.
+
+    """
+    parser.add_option('--runner',action='store',
+                      dest='runner',default=None,
+                      help="explicitly specify runner definition (e.g. "
+                      "'GEJobRunner(-j y)')")
+    return parser
+
 def add_no_save_option(parser):
     """Add a '--no-save' option to a parser
     
