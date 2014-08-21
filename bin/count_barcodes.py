@@ -168,7 +168,8 @@ def report(counts,nseqs=20,exclude_ns=False,fp=None,
     fp.write("Number of unique barcode sequences: %d\n" % len(seqs))
     fp.write("Report up to %d sequences\n" % nseqs)
     if cutoff is not None:
-        fp.write("Only report sequences in >%.2f%% of reads\n" % cutoff)
+        fp.write("Only report sequences appearing in >%.2f%% of reads\n"
+                 % cutoff)
     if exclude_ns:
         fp.write("Don't include sequences that have N's\n")
     # Output top barcodes
@@ -236,7 +237,8 @@ def match_barcodes(counts,samples,nseqs=20,fp=None,
     fp.write("\nBest matches to supplied barcode sequences\n")
     fp.write("Report up to %d matches\n" % nseqs)
     if cutoff is not None:
-        fp.write("Only report sequences in >%.2f%% of reads\n" % cutoff)
+        fp.write("Only report sequences appearing in >%.2f%% of reads\n"
+                 % cutoff)
     fp.write("Allow up to %d mismatches\n" % max_mismatches)
     fp.write("NB all exact matches will be reported\n")
     # Get sequences in frequency order
