@@ -616,7 +616,8 @@ class AutoProcess:
                     nprocessors=1,unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,generate_stats=True,stats_file=None,
                     report_barcodes=False,barcodes_file=None,
-                    skip_bcl2fastq=False,only_fetch_primary_data=False):
+                    skip_bcl2fastq=False,only_fetch_primary_data=False,
+                    runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -648,6 +649,8 @@ class AutoProcess:
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
+          runner              : (optional) specify a non-default job runner to use for 
+                                fastq generation
 
         """
         #
@@ -674,7 +677,8 @@ class AutoProcess:
                               bases_mask=bases_mask,
                               ignore_missing_bcl=ignore_missing_bcl,
                               ignore_missing_stats=ignore_missing_stats,
-                              nprocessors=nprocessors)
+                              nprocessors=nprocessors,
+                              runner=runner)
             if not self.verify_bcl_to_fastq():
                 raise Exception, "Bcl2fastq failed to produce expected outputs"
         # Generate statistics
@@ -717,7 +721,7 @@ class AutoProcess:
 
     def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
-                     nprocessors=1,):
+                     nprocessors=1,runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -733,6 +737,8 @@ class AutoProcess:
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
           nprocessors: number of processors to run bclToFastq.py with
+          runner: (optional) specify a non-default job runner to use for fastq
+            generation
         
         """
         # Directories
@@ -780,7 +786,10 @@ class AutoProcess:
         print "Ignore missing stats: %s" % ignore_missing_stats
         print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
-        runner = settings.runners.bcl2fastq
+        if runner is not None:
+            runner = utils.fetch_runner(runner)
+        else:
+            runner = settings.runners.bcl2fastq
         runner.set_log_dir(self.log_dir)
         # Run bcl2fastq
         bcl2fastq = applications.Command('bclToFastq.py',
