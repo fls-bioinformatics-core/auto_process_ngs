@@ -452,7 +452,7 @@ if __name__ == "__main__":
         if cmd == 'make_fastqs':
             d.make_fastqs(skip_rsync=options.skip_rsync,
                           nprocessors=options.nprocessors,
-                          runner=option.runner,
+                          runner=options.runner,
                           remove_primary_data=options.remove_primary_data,
                           ignore_missing_bcl=options.ignore_missing_bcl,
                           ignore_missing_stats=options.ignore_missing_stats,
@@ -481,7 +481,7 @@ if __name__ == "__main__":
                                lanes=lanes,
                                truncate_barcodes=options.length,
                                nprocessors=options.nprocessors,
-                               runner=option.runner)
+                               runner=options.runner)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
                                   options.ignore_missing_metadata)
