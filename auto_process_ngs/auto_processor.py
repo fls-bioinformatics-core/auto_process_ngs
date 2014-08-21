@@ -20,12 +20,10 @@ import subprocess
 import logging
 import shutil
 import time
-import IlluminaData
-import platforms
-import TabFile
-import FASTQFile
-import JobRunner
-import bcf_utils
+import bcftbx.IlluminaData as IlluminaData
+import bcftbx.platforms as platforms
+import bcftbx.TabFile as TabFile
+import bcftbx.utils as bcf_utils
 import htmlpagewriter
 import applications
 import utils

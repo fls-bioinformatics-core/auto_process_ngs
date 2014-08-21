@@ -53,7 +53,7 @@ import os
 import subprocess
 import logging
 import optparse
-import bcf_utils
+import bcftbx.utils as bcf_utils
 import auto_process_ngs.settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.parser import CommandParser

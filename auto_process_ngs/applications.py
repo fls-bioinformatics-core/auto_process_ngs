@@ -49,7 +49,7 @@ import sys
 import re
 import subprocess
 import logging
-import bcf_utils
+from bcftbx.utils import find_program
 
 #######################################################################
 # Classes
@@ -129,7 +129,7 @@ class Command:
         """Check if the command executable exists
 
         """
-        return (bcf_utils.find_program(self.command) is not None)
+        return (find_program(self.command) is not None)
 
     def __contains__(self,item):
         """Implement container functionality for 'item in x'

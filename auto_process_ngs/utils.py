@@ -26,12 +26,12 @@ tree at some point.
 
 import os
 import logging
-import IlluminaData
-import TabFile
-import JobRunner
-import Pipeline
+import bcftbx.IlluminaData as IlluminaData
+import bcftbx.TabFile as TabFile
+import bcftbx.JobRunner as JobRunner
+import bcftbx.Pipeline as Pipeline
+import bcftbx.utils as bcf_utils
 import qcreporter
-import bcf_utils
 from ConfigParser import ConfigParser,NoOptionError
 
 #######################################################################

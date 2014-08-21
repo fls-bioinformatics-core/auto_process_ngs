@@ -25,7 +25,7 @@ command.
 import os
 import sys
 import optparse
-import bcf_utils
+from bcftbx.utils import OrderedDictionary
 
 #######################################################################
 # Classes
@@ -79,7 +79,7 @@ class CommandParser:
         self._name = os.path.basename(sys.argv[0])
         self._description = description
         self._version = version
-        self._commands = bcf_utils.OrderedDictionary()
+        self._commands = OrderedDictionary()
         self._help = dict()
 
     def add_command(self,cmd,help=None,**args):

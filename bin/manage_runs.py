@@ -22,8 +22,8 @@ import sys
 import logging
 import shutil
 import tempfile
-import Md5sum
-import bcf_utils
+import bcftbx.Md5sum as Md5sum
+import bcftbx.utils as bcf_utils
 import auto_process_ngs.settings as settings
 import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
