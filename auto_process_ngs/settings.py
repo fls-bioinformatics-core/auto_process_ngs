@@ -5,9 +5,9 @@ version = "0.0.84"
 import os
 import sys
 import logging
-import JobRunner
+import bcftbx.JobRunner as JobRunner
+from bcftbx.utils import AttributeDictionary
 from utils import AutoProcessConfigParser
-from bcf_utils import AttributeDictionary
 
 # Locate settings file
 __install_path = os.path.abspath(os.path.normpath(

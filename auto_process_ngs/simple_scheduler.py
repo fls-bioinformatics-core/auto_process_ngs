@@ -25,8 +25,8 @@ __version__ = "0.0.15"
 # Import modules that this module depends on
 #######################################################################
 
-import JobRunner
-from Pipeline import Job
+import bcftbx.JobRunner as JobRunner
+from bcftbx.Pipeline import Job
 import time
 import os
 import sys
