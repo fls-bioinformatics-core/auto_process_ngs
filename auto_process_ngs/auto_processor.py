@@ -24,7 +24,7 @@ import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
-import htmlpagewriter
+import bcftbx.htmlpagewriter as htmlpagewriter
 import applications
 import utils
 import settings
