@@ -889,7 +889,7 @@ class AutoProcess:
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,truncate_barcodes=None,
-                         runner=None):
+                         nprocessors=None,runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
         Run 'count_barcodes.py' for one or more lanes, to analyse the
@@ -907,8 +907,6 @@ class AutoProcess:
         
         """
         # Sort out parameters
-        if runner is not None:
-            raise NotImplementedError("Non-default runner specification not implemented")
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
@@ -935,10 +933,14 @@ class AutoProcess:
         output_dir = self.add_directory('barcode_analysis')
         # Base name for output counts
         counts_base = os.path.join(output_dir,'counts')
-        # Schedule the jobs
+        # Set up runner
         # Use the stats runner for now
-        runner = settings.runners.stats
+        if runner is not None:
+            runner = utils.fetch_runner(runner)
+        else:
+            runner = settings.runners.stats
         runner.set_log_dir(self.log_dir)
+        # Schedule the jobs
         sched = simple_scheduler.SimpleScheduler(
             runner=runner,
             max_concurrent=settings.general.max_concurrent_jobs)
@@ -955,6 +957,9 @@ class AutoProcess:
             # Truncate barcodes
             if truncate_barcodes is not None:
                 barcode_cmd.add_args('-T',truncate_barcodes)
+            # Multicore
+            if nprocessors is not None:
+                barcode_cmd.add_args('-N',nprocessors)
             # Look for an existing counts file
             counts_file = "%s.lane%s" % (counts_base,lane)
             if os.path.exists(counts_file):
