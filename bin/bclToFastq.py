@@ -33,12 +33,7 @@ import time
 import logging
 import optparse
 import subprocess
-
-# Extend Python search path for local modules
-sys.path.append(
-    os.path.abspath(os.path.normpath(
-        os.path.join(os.path.dirname(sys.argv[0]),'..','auto_process_ngs'))))
-import IlluminaData
+import bcftbx.IlluminaData as IlluminaData
 import applications
 
 #######################################################################

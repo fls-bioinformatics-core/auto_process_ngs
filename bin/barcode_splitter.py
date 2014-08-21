@@ -18,7 +18,7 @@ Split reads into fastq files based on matching barcode (index) sequences
 
 __version__ = "0.0.4"
 
-import IlluminaData
+import bcftbx.IlluminaData as IlluminaData
 
 #########################################################################
 # Classes

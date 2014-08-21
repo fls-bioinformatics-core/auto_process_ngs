@@ -19,8 +19,8 @@ Fastq files, and reports the most numerous.
 
 __version__ = "0.1.1"
 
-import FASTQFile
-import IlluminaData
+import bcftbx.FASTQFile as FASTQFile
+import bcftbx.IlluminaData as IlluminaData
 import optparse
 import logging
 import sys
