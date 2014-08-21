@@ -22,7 +22,7 @@ get_bases_mask: get a bases mask string
 #######################################################################
 # Imports
 #######################################################################
-import IlluminaData
+import bcftbx.IlluminaData as IlluminaData
 
 #######################################################################
 # Functions
