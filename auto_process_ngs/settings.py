@@ -1,6 +1,6 @@
 # Settings for auto_process module
 #
-version = "0.0.84"
+version = "0.0.85"
 
 import os
 import sys
