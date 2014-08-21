@@ -864,7 +864,7 @@ class AutoProcess:
             runner = utils.fetch_runner(runner)
         else:
             runner = settings.runners.stats
-            runner.set_log_dir(self.log_dir)
+        runner.set_log_dir(self.log_dir)
         # Number of cores
         if nprocessors is None:
             nprocessors = settings.fastq_stats.nprocessors
