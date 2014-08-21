@@ -1490,8 +1490,6 @@ class AutoProcess:
                        self.params.platform)
         index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
                        ('Paired end' if illumina_data.paired_end else 'Single end'))
-        index_page.add("<tr><td class='param'>Kit/assay</td><td>%s</td></tr>" %
-                       self.params.assay)
         index_page.add("</table>")
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
@@ -1679,7 +1677,6 @@ class AutoProcess:
             print "Run ref      : %s" % self.run_reference_id
             print "Directory    : %s" % self.analysis_dir
             print "Platform     : %s" % self.params.platform
-            print "Kit/assay    : %s" % self.params.assay
             print "Unaligned dir: %s" % self.params.unaligned_dir
             if self.readme:
                 print "README.txt found: %s" % self.readme
@@ -1728,9 +1725,6 @@ class AutoProcess:
         # Paired end run?
         if illumina_data.paired_end:
             report = "Paired end: " + report
-        # Assay type?
-        if self.params.assay is not None:
-            report += " (%s)" % self.params.assay
         return report
 
     def report_summary_format(self):
@@ -1787,7 +1781,6 @@ class AutoProcess:
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("Endedness: %s" % \
                       ('Paired end' if illumina_data.paired_end else 'Single end'))
-        report.append("Kit/assay: %s" % self.params.assay)
         report.append("")
         # Projects
         n_projects = len(project_metadata)
@@ -1798,7 +1791,7 @@ class AutoProcess:
             project_data = dict()
             for item in ('Project','User','PI','Library','Organism'):
                 project_data[item] = p[item] if p[item] not in ('.','?') else \
-                                     '<unknown %s>' % item.lower()
+                                     '<unspecified %s>' % item.lower()
             project = illumina_data.get_project(p['Project'])
             report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d sample%s" % \
                           (project_data['Project'],
@@ -1876,7 +1869,6 @@ class AutoProcess:
             report.append("\nAdditional information:\n")
             report.append("Endedness:\t%s" % \
                           ('Paired end' if illumina_data.paired_end else 'Single end'))
-            report.append("Kit/assay:\t%s" % self.params.assay)
             report.append("Comments :\t%s" % project.info.comments)
         report = '\n'.join(report)
         return report
