@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 import FASTQFile
 import IlluminaData
@@ -159,7 +159,6 @@ def report(counts,nseqs=20,exclude_ns=False,fp=None,
     if cutoff is not None:
         if cutoff < 1.0:
             cutoff = cutoff*100.0
-        fp.write("Cutoff: %5.2f%%\n" % cutoff) 
     # Get sequences in frequency order
     seqs = ordered_seqs(counts)
     if exclude_ns:
@@ -167,9 +166,13 @@ def report(counts,nseqs=20,exclude_ns=False,fp=None,
     n = nreads(counts)
     fp.write("Number of reads: %d\n" % n)
     fp.write("Number of unique barcode sequences: %d\n" % len(seqs))
+    fp.write("Report up to %d sequences\n" % nseq)
+    if cutoff is not None:
+        fp.write("Only report sequences in >%.2f%% of reads\n" % cutoff)
+    if exclude_ns:
+        fp.write("Don't include sequences that have N's\n")
     # Output top barcodes
-    fp.write("Top %d barcode sequences%s\n" % (nseqs,
-                                               (" (no 'N's)" if exclude_ns else "")))
+    fp.write("Top barcode sequences\n")
     for i,seq in enumerate(seqs[:nseqs]):
         if cutoff is not None and percent_reads(counts[seq],n) < cutoff:
             # Stop reporting
@@ -225,13 +228,17 @@ def match_barcodes(counts,samples,nseqs=20,fp=None,
         is to use stdout)
 
     """
-    if fp is None: fp = sys.stdout
-    fp.write("\nBest matches to supplied barcode sequences\n")
     # Deal with cutoff
     if cutoff is not None:
         if cutoff < 1.0:
             cutoff = cutoff*100.0
-        fp.write("Cutoff: %5.2f%%\n" % cutoff) 
+    if fp is None: fp = sys.stdout
+    fp.write("\nBest matches to supplied barcode sequences\n")
+    fp.write("Report up to %d matches\n" % nseq)
+    if cutoff is not None:
+        fp.write("Only report sequences in >%.2f%% of reads\n" % cutoff)
+    fp.write("Allow up to %d mismatches\n" % max_mismatches)
+    fp.write("NB all exact matches will be reported\n")
     # Get sequences in frequency order
     seqs = ordered_seqs(counts)[:nseqs]
     n = nreads(counts)
