@@ -16,7 +16,9 @@ Split reads into fastq files based on matching barcode (index) sequences
 
 """
 
-__version__ = "0.0.3"
+__version__ = "0.0.4"
+
+import IlluminaData
 
 #########################################################################
 # Classes
@@ -125,6 +127,44 @@ class OutputFiles:
         else:
             for name in self._fp:
                 self._fp[name].close()
+
+def get_fastqs_from_dir(dirn,lane,unaligned_dir=None):
+    """Automatically collect Fastq files for specified lane
+
+    """
+    try:
+        illumina_data = IlluminaData.IlluminaData(dirn,
+                                                  unaligned_dir=unaligned_dir)
+    except Exception,ex:
+        sys.stderr.write("Unable to read fastqs from %s: %s\n" % (dirn,ex))
+        sys.exit(1)
+    paired_end = illumina_data.paired_end
+    fastqs_r1 = []
+    fastqs_r2 = []
+    for project in illumina_data.projects:
+        for sample in project.samples:
+            for fastq in sample.fastq_subset(read_number=1,full_path=True):
+                if IlluminaData.IlluminaFastq(fastq).lane_number == lane:
+                    fastqs_r1.append(fastq)
+            for fastq in sample.fastq_subset(read_number=2,full_path=True):
+                if IlluminaData.IlluminaFastq(fastq).lane_number == lane:
+                    fastqs_r2.append(fastq)
+    if illumina_data.undetermined:
+        for sample in illumina_data.undetermined.samples:
+            for fastq in sample.fastq_subset(read_number=1,full_path=True):
+                if IlluminaData.IlluminaFastq(fastq).lane_number == lane:
+                    fastqs_r1.append(fastq)
+            for fastq in sample.fastq_subset(read_number=2,full_path=True):
+                if IlluminaData.IlluminaFastq(fastq).lane_number == lane:
+                    fastqs_r2.append(fastq)
+    if not paired_end:
+        return fastqs_r1
+    fastqs = []
+    fastqs_r1.sort()
+    fastqs_r2.sort()
+    for fq1,fq2 in zip(fastqs_r1,fastqs_r2):
+        fastqs.append("%s,%s" % (fq1,fq2))
+    return fastqs
 
 def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
     """
@@ -445,13 +485,11 @@ import logging
 import sys
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="\n\t%prog FASTQ [FASTQ...]\n"
-                              "\t%prog -p FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]",
+    p = optparse.OptionParser(usage="\n\t%prog [OPTIONS] FASTQ [FASTQ...]\n"
+                              "\t%prog [OPTIONS] FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]\n"
+                              "\t%prog {OPTIONS] DIR",
                               description="Split reads from one or more input Fastq files "
-                              "into new Fastqs based on matching supplied barcodes. Input "
-                              "Fastqs can be ")
-    p.add_option('-p','--paired-end',action='store_true',dest='paired_end',
-                 help="input arguments are pairs of Fastq files")
+                              "into new Fastqs based on matching supplied barcodes.")
     p.add_option('-b','--barcode',action='append',dest='index_seq',
                  help="specify index sequence to filter using")
     p.add_option('-m','--mismatches',action='store',dest='n_mismatches',type='int',default=0,
@@ -461,6 +499,13 @@ if __name__ == "__main__":
                  help="basename to use for output files")
     p.add_option('-o','--output-dir',action='store',dest='out_dir',
                  help="specify directory for output split Fastqs")
+    p.add_option('-u','--unaligned',action='store',dest='unaligned_dir',default=None,
+                 help="specify subdirectory with outputs from bcl-to-fastq")
+    p.add_option('-l','--lane',action='store',dest='lane',default=None,type='int',
+                 help="specify lane to collect and split Fastqs for")
+    p.add_option('-p','--paired-end',action='store_true',dest='paired_end',
+                 help="input arguments are pairs of Fastq files **NB** deprecated, pairs "
+                 "are detected automatically")
 
     options,args = p.parse_args()
     if options.index_seq is None:
@@ -470,12 +515,24 @@ if __name__ == "__main__":
 
     matcher = BarcodeMatcher(options.index_seq,
                              max_dist=options.n_mismatches)
-    if not options.paired_end:
-        split_single_end(matcher,args,
+
+    if len(args) == 1 and os.path.isdir(args[0]):
+        if options.lane is None:
+            p.error("Must supply a lane (-l option)")
+        fastqs = get_fastqs_from_dir(args[0],
+                                     lane=options.lane,
+                                     unaligned_dir=options.unaligned_dir)
+    else:
+        fastqs = args
+
+    paired_end = ',' in fastqs[0]
+
+    if not paired_end:
+        split_single_end(matcher,fastqs,
                          base_name=options.base_name,
                          output_dir=options.out_dir)
     else:
-        fastq_pairs = [x.split(',') for x in args] 
+        fastq_pairs = [x.split(',') for x in fastqs] 
         split_paired_end(matcher,fastq_pairs,
                          base_name=options.base_name,
                          output_dir=options.out_dir)
