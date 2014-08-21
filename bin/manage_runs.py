@@ -21,6 +21,7 @@ import os
 import sys
 import logging
 import shutil
+import tempfile
 import Md5sum
 import bcf_utils
 import auto_process_ngs.settings as settings
@@ -229,10 +230,12 @@ if __name__ == "__main__":
             print "%s\t%s" % (os.path.basename(fq),
                               bcf_utils.format_file_size(fsize))
         print "Total: %s" % bcf_utils.format_file_size(total_size)
-        # Generate MD5 sums
+        # Generate MD5 checksum file
         if not options.dry_run:
-            print "Generating MD5 sums"
-            md5_file = 'checksums.md5'
+            tmpdir = tempfile.mkdtemp(suffix='checksums.md5',
+                                      dir=os.get_cwd())
+            md5_file = os.path.join(tmpdir,'checksums.md5')
+            print "Generating MD5 sums in %s" % md5_file
             fp = open(md5_file,'w')
             for fq in fastqs:
                 chksum = Md5sum.md5sum(fq)
@@ -247,7 +250,6 @@ if __name__ == "__main__":
         if not options.dry_run:
             print "Copying MD5 checksum file"
             copy_to_dest(md5_file,args[1])
-        
-        
-        
+            shutil.rmtree(tmpdir)
+
 
