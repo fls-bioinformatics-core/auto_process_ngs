@@ -649,7 +649,7 @@ class AutoProcess:
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
-          runner              : (optional) specify a non-default job runner to use for 
+          runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
 
         """
