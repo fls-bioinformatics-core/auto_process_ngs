@@ -34,7 +34,7 @@ import logging
 import optparse
 import subprocess
 import bcftbx.IlluminaData as IlluminaData
-import applications
+import auto_process_ngs.applications as applications
 
 #######################################################################
 # Functions
