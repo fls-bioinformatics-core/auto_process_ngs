@@ -233,7 +233,7 @@ if __name__ == "__main__":
         # Generate MD5 checksum file
         if not options.dry_run:
             tmpdir = tempfile.mkdtemp(suffix='checksums.md5',
-                                      dir=os.get_cwd())
+                                      dir=os.getcwd())
             md5_file = os.path.join(tmpdir,'checksums.md5')
             print "Generating MD5 sums in %s" % md5_file
             fp = open(md5_file,'w')
