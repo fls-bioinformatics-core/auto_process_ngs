@@ -1,19 +1,19 @@
 #!/bin/env python
 #
-#     auto_process_utils: utility classes & funcs for auto_process module
-#     Copyright (C) University of Manchester 2013 Peter Briggs
+#     utils: utility classes & funcs for auto_process_mgs module
+#     Copyright (C) University of Manchester 2013-2014 Peter Briggs
 #
 ########################################################################
 #
-# auto_process_utils.py
+# utils.py
 #
 #########################################################################
 
 __version__ = "0.0.16"
 
-"""auto_process_utils
+"""utils
 
-Utility classes and functions to support auto_process module.
+Utility classes and functions to support auto_process_ngs module.
 
 Ultimately these should be relocated in the main 'genomics' code
 tree at some point.
@@ -31,38 +31,11 @@ import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
-import qcreporter
-from ConfigParser import ConfigParser,NoOptionError
+from bcftbx.qc.report import IlluminaQCReporter,IlluminaQCSample
 
 #######################################################################
 # Classes
 #######################################################################
-
-class AutoProcessConfigParser(ConfigParser):
-    """Wraps ConfigParser to set defaults for missing options
-
-    Implements a wrapper for ConfigParser:
-
-    - 'get' and 'getint' methods take a 'default' argument, which
-      is returned if the specified option is missing from the file
-    - implements a 'getrunner' method that returns a JobRunner
-      instance based on a specification string.
-
-    """
-    def __init__(self):
-        ConfigParser.__init__(self)
-    def get(self,section,option,default=None):
-        try:
-            return ConfigParser.get(self,section,option)
-        except NoOptionError:
-            return default
-    def getint(self,section,option,default):
-        try:
-            return ConfigParser.getint(self,section,option)
-        except NoOptionError:
-            return default
-    def getrunner(self,section,option,default):
-        return fetch_runner(self.get(section,option,default))
 
 class AnalysisFastq:
     """Class for extracting information about Fastq files
@@ -514,8 +487,7 @@ class AnalysisProject:
         if self.qc_dir is None:
             return None
         else:
-            return qcreporter.IlluminaQCReporter(self.dirn,
-                                                 data_format=self.fastq_format)
+            return IlluminaQCReporter(self.dirn,data_format=self.fastq_format)
 
     @property
     def qc_report(self):
@@ -668,7 +640,7 @@ class AnalysisSample:
 
         """
         name = bcf_utils.rootname(os.path.basename(fastq))
-        return qcreporter.IlluminaQCSample(name,qc_dir)
+        return IlluminaQCSample(name,qc_dir)
 
     def verify_qc(self,qc_dir,fastq):
         """Check if QC completed for a fastq file
@@ -1041,32 +1013,6 @@ class ProjectMetadataFile(TabFile.TabFile):
 #######################################################################
 # Functions
 #######################################################################
-
-def fetch_runner(definition):
-    """Return job runner instance based on a definition string
-
-    Given a definition string, returns an appropriate runner
-    instance.
-
-    Definitions are of the form:
-
-      RunnerName[(args)]
-
-    RunnerName can be 'SimpleJobRunner' or 'GEJobRunner'.
-    If '(args)' are also supplied then these are passed to
-    the job runner on instantiation (only works for
-    GE runners).
-
-    """
-    if definition.startswith('SimpleJobRunner'):
-        return JobRunner.SimpleJobRunner(join_logs=True)
-    elif definition.startswith('GEJobRunner'):
-        if definition.startswith('GEJobRunner(') and definition.endswith(')'):
-            ge_extra_args = definition[len('GEJobRunner('):len(definition)-1].split(' ')
-            return JobRunner.GEJobRunner(ge_extra_args=ge_extra_args)
-        else:
-            return JobRunner.GEJobRunner()
-    raise Exception,"Unrecognised runner definition: %s" % definition
 
 def bases_mask_is_paired_end(bases_mask):
     # Determine if run is paired end based on bases mask string

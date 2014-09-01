@@ -6,7 +6,7 @@ import sys
 import logging
 import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
-from utils import AutoProcessConfigParser
+from config import Config
 
 # Locate settings file
 __install_path = os.path.abspath(os.path.normpath(
@@ -28,7 +28,7 @@ if not os.path.exists(__config_file):
     sys.exit(1)
 #
 # Import site-specific settings from local version
-config = AutoProcessConfigParser()
+config = Config()
 config.read(__config_file)
 #
 # General parameters

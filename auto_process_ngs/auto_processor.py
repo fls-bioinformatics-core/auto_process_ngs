@@ -25,6 +25,7 @@ import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
+import config
 import applications
 import utils
 import settings
@@ -785,7 +786,7 @@ class AutoProcess:
         print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
-            runner = utils.fetch_runner(runner)
+            runner = config.fetch_runner(runner)
         else:
             runner = settings.runners.bcl2fastq
         runner.set_log_dir(self.log_dir)
@@ -859,7 +860,7 @@ class AutoProcess:
             logging.error("Unaligned dir '%s' not found" % unaligned_dir)
         # Set up runner
         if runner is not None:
-            runner = utils.fetch_runner(runner)
+            runner = config.fetch_runner(runner)
         else:
             runner = settings.runners.stats
         runner.set_log_dir(self.log_dir)
@@ -934,7 +935,7 @@ class AutoProcess:
         # Set up runner
         # Use the stats runner for now
         if runner is not None:
-            runner = utils.fetch_runner(runner)
+            runner = config.fetch_runner(runner)
         else:
             runner = settings.runners.stats
         runner.set_log_dir(self.log_dir)
