@@ -63,7 +63,7 @@ from auto_process_ngs.parser import add_dry_run_option
 from auto_process_ngs.parser import add_nprocessors_option
 from auto_process_ngs.parser import add_runner_option
 
-__version__ = auto_process_ngs.settings.version
+__version__ = auto_process_ngs.get_version()
 
 #######################################################################
 # Functions
