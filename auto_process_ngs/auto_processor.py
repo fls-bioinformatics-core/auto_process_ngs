@@ -31,6 +31,7 @@ import utils
 import settings
 import simple_scheduler
 import bcl2fastq_utils
+from auto_process_ngs import get_version
 
 #######################################################################
 # Classes
