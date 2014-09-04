@@ -24,13 +24,12 @@ import shutil
 import tempfile
 import bcftbx.Md5sum as Md5sum
 import bcftbx.utils as bcf_utils
-import auto_process_ngs.settings as settings
 import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
 from auto_process_ngs.parser import CommandParser
 from auto_process_ngs.parser import add_debug_option,add_dry_run_option
 
-__version__ = settings.version
+__version__ = auto_process_ngs.get_version()
 
 #######################################################################
 # Functions
