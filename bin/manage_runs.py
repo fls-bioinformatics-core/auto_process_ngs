@@ -28,8 +28,7 @@ import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
 from auto_process_ngs.parser import CommandParser
 from auto_process_ngs.parser import add_debug_option,add_dry_run_option
-
-__version__ = auto_process_ngs.get_version()
+from auto_process_ngs import get_version
 
 #######################################################################
 # Functions
@@ -124,7 +123,7 @@ if __name__ == "__main__":
     # Set up command line parser
     p = CommandParser(description="Utility for managing processed and analysed Illumina "
                       "sequence data in ANALYSIS_DIR",
-                      version="%prog "+__version__)
+                      version="%prog "+get_version())
     # Add info command
     p.add_command('info',help="Get information about ANALYSIS_DIR",
                   usage="%prog info [OPTIONS] ANALYSIS_DIR",
