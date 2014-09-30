@@ -222,12 +222,13 @@ def add_run_qc_command(cmdparser):
                  "'pname[/sname]', where 'pname' specifies a project (or set of "
                  "projects) and 'sname' optionally specifies a sample (or set of "
                  "samples).")
+    p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
+                 help="don't create uncompressed copies of fastq.gz files")
     p.add_option('--max-jobs',action='store',
                  dest='max_jobs',default=max_concurrent_jobs,type='int',
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default %s, change in settings file)" % max_concurrent_jobs)
-    p.add_option('--no-ungzip-fastqs',action='store_true',dest='no_ungzip_fastqs',
-                 help="don't create uncompressed copies of fastq.gz files")
+    add_runner_option(p)
     add_debug_option(p)
 
 def add_publish_qc_command(cmdparser):
@@ -488,7 +489,8 @@ if __name__ == "__main__":
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
-                     no_ungzip_fastqs=options.no_ungzip_fastqs)
+                     no_ungzip_fastqs=options.no_ungzip_fastqs,
+                     runner=options.runner)
         elif cmd == 'config':
             if options.key_value is not None:
                 for key_value in options.key_value:

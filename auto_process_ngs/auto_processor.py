@@ -1230,7 +1230,7 @@ class AutoProcess:
             else:
                 logging.warning("'undetermined' directory already exists, skipping")
 
-    def run_qc(self,projects=None,max_jobs=4,no_ungzip_fastqs=False):
+    def run_qc(self,projects=None,max_jobs=4,no_ungzip_fastqs=False,runner=None):
         # Run QC pipeline for all projects
         #
         # Tests whether QC outputs already exist and only runs
@@ -1255,8 +1255,12 @@ class AutoProcess:
         if len(projects) == 0:
             logging.warning("No projects found for QC analysis")
             return
+        # Set up runner
+        if runner is not None:
+            qc_runner = config.fetch_runner(runner)
+        else:
+            qc_runner = settings.runners.qc
         # Set up a simple scheduler
-        qc_runner = settings.runners.qc
         sched = simple_scheduler.SimpleScheduler(runner=qc_runner,
                                                  max_concurrent=max_jobs)
         sched.start()
