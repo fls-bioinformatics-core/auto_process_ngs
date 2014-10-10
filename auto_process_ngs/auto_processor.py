@@ -216,7 +216,7 @@ class AutoProcess:
         logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
         # Try loading each subdirectory as a project
-        for dirn in utils.list_dirs(self.analysis_dir):
+        for dirn in bcf_utils.list_dirs(self.analysis_dir):
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
@@ -572,7 +572,7 @@ class AutoProcess:
             logging.debug("Acquiring data for project %s" % name)
             # Look for a matching project directory
             project_dir = None
-            dirs = utils.list_dirs(self.analysis_dir,startswith=name)
+            dirs = bcf_utils.list_dirs(self.analysis_dir,startswith=name)
             logging.debug("Possible matching directories: %s" % dirs)
             if len(dirs) == 1:
                 # Just a single match
@@ -600,7 +600,7 @@ class AutoProcess:
     def undetermined(self):
         # Return analysis project directory for undetermined indices
         # or None if not found
-        dirs = utils.list_dirs(self.analysis_dir,matches='undetermined')
+        dirs = bcf_utils.list_dirs(self.analysis_dir,matches='undetermined')
         if len(dirs) == 0:
             logging.debug("No undetermined analysis directory found")
             return None
@@ -1075,7 +1075,7 @@ class AutoProcess:
         print "Collecting bcl2fastq directories"
         primary_illumina_data = None
         unaligned_dirs = {}
-        for dirn in utils.list_dirs(self.analysis_dir):
+        for dirn in bcf_utils.list_dirs(self.analysis_dir):
             try:
                 illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
                                                           unaligned_dir=dirn)

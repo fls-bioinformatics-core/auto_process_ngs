@@ -217,7 +217,7 @@ class AnalysisDir:
         self.projects = []
         # Look for outputs from bclToFastq and analysis projects
         logging.debug("Examining subdirectories of %s" % self._analysis_dir)
-        for dirn in list_dirs(self._analysis_dir):
+        for dirn in bcf_utils.list_dirs(self._analysis_dir):
             # Look for sequencing data
             try:
                 data = IlluminaData.IlluminaData(self._analysis_dir,
@@ -1057,17 +1057,3 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
-
-def list_dirs(parent,matches=None,startswith=None):
-    # Return list of subdirectories relative to 'parent'
-    # If startswith is set then return subset that starts with
-    # the specified string
-    # If matches is set then return an exact match only
-    dirs = []
-    for d in os.listdir(parent):
-        if os.path.isdir(os.path.join(parent,d)):
-            if startswith is None or d.startswith(startswith):
-                if matches is None or d == matches:
-                    dirs.append(d)
-    dirs.sort()
-    return dirs

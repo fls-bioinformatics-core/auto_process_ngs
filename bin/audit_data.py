@@ -66,7 +66,7 @@ class SeqDataSizes:
         self.include_subdirs = include_subdirs
         self.subdirs = []
         if not is_subdir and include_subdirs:
-            for d utils.list_dirs(self.dirn):
+            for d in bcf_utils.list_dirs(self.dirn):
                 self.subdirs.append(SeqDataSizes(d,os.path.join(self.dirn,d),
                                                  year=self.year,
                                                  platform=self.platform,
