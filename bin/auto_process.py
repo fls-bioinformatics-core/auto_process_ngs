@@ -54,14 +54,14 @@ import subprocess
 import logging
 import optparse
 import bcftbx.utils as bcf_utils
+from bcftbx.cmdparse import CommandParser
+from bcftbx.cmdparse import add_debug_option
+from bcftbx.cmdparse import add_no_save_option
+from bcftbx.cmdparse import add_dry_run_option
+from bcftbx.cmdparse import add_nprocessors_option
+from bcftbx.cmdparse import add_runner_option
 import auto_process_ngs.settings
 from auto_process_ngs.auto_processor import AutoProcess
-from auto_process_ngs.parser import CommandParser
-from auto_process_ngs.parser import add_debug_option
-from auto_process_ngs.parser import add_no_save_option
-from auto_process_ngs.parser import add_dry_run_option
-from auto_process_ngs.parser import add_nprocessors_option
-from auto_process_ngs.parser import add_runner_option
 
 __version__ = auto_process_ngs.get_version()
 
@@ -344,7 +344,7 @@ def add_analyse_barcodes_command(cmdparser):
                  dest='length',default=None,type='int',
                  help="truncate sample sheet barcodes to LENGTH for barcode analysis "
                  "(default is to use full barcodes)")
-    add_nprocessors_option(p)
+    add_nprocessors_option(p,1)
     add_runner_option(p)
     add_debug_option(p)
 

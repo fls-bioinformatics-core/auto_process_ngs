@@ -17,7 +17,7 @@ module.
 """
 
 from ConfigParser import ConfigParser,NoOptionError
-from bcftbx import JobRunner
+from bcftbx.JobRunner import fetch_runner
 
 #######################################################################
 # Classes
@@ -48,33 +48,3 @@ class Config(ConfigParser):
             return default
     def getrunner(self,section,option,default):
         return fetch_runner(self.get(section,option,default))
-
-#######################################################################
-# Functions
-#######################################################################
-
-def fetch_runner(definition):
-    """Return job runner instance based on a definition string
-
-    Given a definition string, returns an appropriate runner
-    instance.
-
-    Definitions are of the form:
-
-      RunnerName[(args)]
-
-    RunnerName can be 'SimpleJobRunner' or 'GEJobRunner'.
-    If '(args)' are also supplied then these are passed to
-    the job runner on instantiation (only works for
-    GE runners).
-
-    """
-    if definition.startswith('SimpleJobRunner'):
-        return JobRunner.SimpleJobRunner(join_logs=True)
-    elif definition.startswith('GEJobRunner'):
-        if definition.startswith('GEJobRunner(') and definition.endswith(')'):
-            ge_extra_args = definition[len('GEJobRunner('):len(definition)-1].split(' ')
-            return JobRunner.GEJobRunner(ge_extra_args=ge_extra_args)
-        else:
-            return JobRunner.GEJobRunner()
-    raise Exception,"Unrecognised runner definition: %s" % definition
