@@ -378,7 +378,8 @@ class AnalysisProject:
             paired_end = (paired_end and sample.paired_end)
         self.info['paired_end'] = paired_end
 
-    def create_directory(self,illumina_project=None,fastqs=None):
+    def create_directory(self,illumina_project=None,fastqs=None,
+                         short_fastq_names=False):
         """Create and populate analysis directory for an IlluminaProject
 
         Creates a new directory corresponding to the AnalysisProject
@@ -398,6 +399,9 @@ class AnalysisProject:
           illumina_project: (optional) populated IlluminaProject object
             from which the analysis directory will be populated
           fastqs: (optional) list of fastq files to import
+          short_fastq_names: (optional) if True then transform fastq file
+            names to be the shortest possible unique names; if False
+            (default) then use the original fastq names
     
         """
         logging.debug("Creating analysis directory for project '%s'" % self.name)
@@ -430,8 +434,14 @@ class AnalysisProject:
                 for sample in illumina_project.samples:
                     for fastq in sample.fastq:
                         fastqs.append(os.path.join(sample.dirn,fastq))
-        # Get mapping to unique names    
-        fastq_names = IlluminaData.get_unique_fastq_names(fastqs)
+        if short_fastq_names:
+            # Get mapping to (shortened) unique names
+            fastq_names = IlluminaData.get_unique_fastq_names(fastqs)
+        else:
+            # Use full names
+            fastq_names = {}
+            for fq in fastqs:
+                fastq_names[fq] = os.path.basename(fq)
         for fastq in fastqs:
             fastq_ln = os.path.join(fastqs_dir,fastq_names[fastq])
             if os.path.exists(fastq_ln):
