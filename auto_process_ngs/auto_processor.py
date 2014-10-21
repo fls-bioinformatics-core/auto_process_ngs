@@ -1154,7 +1154,8 @@ class AutoProcess:
             else:
                 print "No undetermined indices found"
 
-    def setup_analysis_dirs(self,ignore_missing_metadata=False):
+    def setup_analysis_dirs(self,ignore_missing_metadata=False,
+                            short_fastq_names=False):
         # Construct and populate the analysis directories for each project
         # ignore_missing_metadata: if set True then make projects even if
         #                          metadata hasn't been set (defaults to False
@@ -1210,7 +1211,8 @@ class AutoProcess:
                 logging.warning("Project '%s' already exists, skipping" % project.name)
                 continue
             print "Creating project: '%s'" % project_name
-            project.create_directory(illumina_data.get_project(project_name))
+            project.create_directory(illumina_data.get_project(project_name),
+                                     short_fastq_names=short_fastq_names)
             n_projects += 1
         # Tell us how many were made
         print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')

@@ -201,6 +201,10 @@ def add_setup_analysis_dirs_command(cmdparser):
                               usage="%prog setup_analysis_dirs [OPTIONS] [ANALYSIS_DIR]",
                               description="Create analysis subdirectories for projects "
                               "defined in projects.info file in ANALYSIS_DIR.")
+    p.add_option('--short-fastq-names',action='store_true',
+                 dest='short_fastq_names',default=False,
+                 help="shorten fastq file names when copying or linking from project "
+                 "directory (default is to keep long names from bcl2fastq)")
     p.add_option('--ignore-missing-metadata',action='store_true',
                  dest='ignore_missing_metadata',default=False,
                  help="force creation of project directories even if metadata is not "
@@ -485,7 +489,8 @@ if __name__ == "__main__":
                                runner=options.runner)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
-                                  options.ignore_missing_metadata)
+                                  options.ignore_missing_metadata,
+                                  short_fastq_names=options.short_fastq_names)
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
