@@ -1155,7 +1155,8 @@ class AutoProcess:
                 print "No undetermined indices found"
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False,
-                            short_fastq_names=False):
+                            short_fastq_names=False,
+                            link_to_fastqs=False):
         # Construct and populate the analysis directories for each project
         # ignore_missing_metadata: if set True then make projects even if
         #                          metadata hasn't been set (defaults to False
@@ -1212,7 +1213,8 @@ class AutoProcess:
                 continue
             print "Creating project: '%s'" % project_name
             project.create_directory(illumina_data.get_project(project_name),
-                                     short_fastq_names=short_fastq_names)
+                                     short_fastq_names=short_fastq_names,
+                                     link_to_fastqs=link_to_fastqs)
             n_projects += 1
         # Tell us how many were made
         print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
@@ -1229,7 +1231,8 @@ class AutoProcess:
             if not undetermined.exists:
                 print "Creating directory 'undetermined' for analysing reads " \
                 "with undetermined indices"
-                undetermined.create_directory(illumina_data.undetermined)
+                undetermined.create_directory(illumina_data.undetermined,
+                                              link_to_fastqs=link_to_fastqs)
             else:
                 logging.warning("'undetermined' directory already exists, skipping")
 
@@ -1318,8 +1321,24 @@ class AutoProcess:
                 project.qc_report
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
-                        chmod=None,group=None):
-        # Copy the analysis directory and contents to an archive area
+                        chmod=None,group=None,include_bcl2fastq=False):
+        """Copy the analysis directory and contents to an archive area
+
+        Arguments:
+          archive_dir:
+          platform:
+          year:
+          dry_run:
+          chmod:
+          group:
+          include_bcl2fastq:
+
+        """
+        # Check first: are there any projects?
+        projects = self.get_analysis_projects()
+        if not projects:
+            raise Exception("No project directories found, nothing to archive")
+        # Fetch archive location
         if archive_dir is None:
             archive_dir = settings.archive.dirn
         if archive_dir is None:
@@ -1334,14 +1353,28 @@ class AutoProcess:
         archive_dir = os.path.join(archive_dir,year,platform)
         print "Copying to archive directory: %s" % archive_dir
         print "Platform: %s" % platform
-        print "Year    : %s" % year 
+        print "Year    : %s" % year
+        # Determine which directories to exclude
+        excludes = ['--exclude=primary_data',
+                    '--exclude=save.*']
+        if not include_bcl2fastq:
+            # Determine whether bcl2fastq dir should be included implicitly
+            # because there are links from the analysis directories
+            for project in projects:
+                if project.fastqs_are_symlinks:
+                    print "Found at least one project with fastq symlinks (%s)" % project.name
+                    include_bcl2fastq = True
+                    break
+        if not include_bcl2fastq:
+            print "Excluding '%s' directory from archive" % self.params.unaligned_dir
+            excludes.append('--exclude=%s' % self.params.unaligned_dir)
+        # Run the rsync command
         try:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
                                                prune_empty_dirs=True,
                                                dry_run=dry_run,
                                                chmod=chmod,
-                                               extra_options=['--exclude=primary_data',
-                                                              '--exclude=save.*'])
+                                               extra_options=excludes)
             print "Running %s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
         except Exception, ex:

@@ -201,14 +201,18 @@ def add_setup_analysis_dirs_command(cmdparser):
                               usage="%prog setup_analysis_dirs [OPTIONS] [ANALYSIS_DIR]",
                               description="Create analysis subdirectories for projects "
                               "defined in projects.info file in ANALYSIS_DIR.")
-    p.add_option('--short-fastq-names',action='store_true',
-                 dest='short_fastq_names',default=False,
-                 help="shorten fastq file names when copying or linking from project "
-                 "directory (default is to keep long names from bcl2fastq)")
     p.add_option('--ignore-missing-metadata',action='store_true',
                  dest='ignore_missing_metadata',default=False,
                  help="force creation of project directories even if metadata is not "
                  "set (default is to fail if metadata is missing)")
+    p.add_option('--short-fastq-names',action='store_true',
+                 dest='short_fastq_names',default=False,
+                 help="shorten fastq file names when copying or linking from project "
+                 "directory (default is to keep long names from bcl2fastq)")
+    p.add_option('--link-to-fastqs',action='store_true',
+                 dest='link_to_fastqs',default=False,
+                 help="create symbolic links to original fastqs from project directory "
+                 "(default is to make hard links)")
     add_debug_option(p)
 
 def add_run_qc_command(cmdparser):
@@ -490,7 +494,8 @@ if __name__ == "__main__":
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
                                   options.ignore_missing_metadata,
-                                  short_fastq_names=options.short_fastq_names)
+                                  short_fastq_names=options.short_fastq_names,
+                                  link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,

@@ -379,7 +379,8 @@ class AnalysisProject:
         self.info['paired_end'] = paired_end
 
     def create_directory(self,illumina_project=None,fastqs=None,
-                         short_fastq_names=False):
+                         short_fastq_names=False,
+                         link_to_fastqs=False):
         """Create and populate analysis directory for an IlluminaProject
 
         Creates a new directory corresponding to the AnalysisProject
@@ -402,6 +403,8 @@ class AnalysisProject:
           short_fastq_names: (optional) if True then transform fastq file
             names to be the shortest possible unique names; if False
             (default) then use the original fastq names
+          link_to_fastqs: (optional) if True then make symbolic links to
+            to the fastq files; if False (default) then make hard links
     
         """
         logging.debug("Creating analysis directory for project '%s'" % self.name)
@@ -443,12 +446,16 @@ class AnalysisProject:
             for fq in fastqs:
                 fastq_names[fq] = os.path.basename(fq)
         for fastq in fastqs:
-            fastq_ln = os.path.join(fastqs_dir,fastq_names[fastq])
-            if os.path.exists(fastq_ln):
-                logging.warning("Link %s already exists" % fastq_ln)
+            target_fq = os.path.join(fastqs_dir,fastq_names[fastq])
+            if os.path.exists(target_fq):
+                logging.warning("Target '%s' already exists" % target_fq)
             else:
-                logging.debug("Linking to %s" % fastq)
-                bcf_utils.mklink(fastq,fastq_ln,relative=True)
+                if link_to_fastqs:
+                    logging.debug("Making symlink to %s" % fastq)
+                    bcf_utils.mklink(fastq,target_fq,relative=True)
+                else:
+                    logging.debug("Making hard link to %s" % fastq)
+                    os.link(fastq,target_fq)
         # Populate
         self.populate()
         # Update metadata information summarising the samples
@@ -518,6 +525,16 @@ class AnalysisProject:
         else:
             return reduce(lambda x,y: x and y,
                           [len(s.fastq_subset(read_number=1)) > 1 for s in self.samples])
+
+    @property
+    def fastqs_are_symlinks(self):
+        """Return True if fastq files are symbolic links, False if not
+
+        """
+        for s in self.samples:
+            if s.fastqs_are_symlinks:
+                return True
+        return False
 
     def verify_qc(self):
         # Verify if the QC was successful
@@ -595,9 +612,10 @@ class AnalysisSample:
         """Add a reference to a fastq file in the sample
 
         Arguments:
-          fastq: name of the fastq file
+          fastq: full path for the fastq file
 
         """
+        assert(os.path.isabs(fastq))
         self.fastq.append(fastq)
         # Sort fastq's into order
         self.fastq.sort()
@@ -631,12 +649,22 @@ class AnalysisSample:
                 fq_read_number = fq.read_number
             if fq_read_number == read_number:
                 if full_path:
-                    fastqs.append(os.path.join(self.dirn,fastq))
+                    fastqs.append(path.join(self.dirn,fastq))
                 else:
                     fastqs.append(fastq)
         # Sort into dictionary order and return
         fastqs.sort()
         return fastqs
+
+    @property
+    def fastqs_are_symlinks(self):
+        """Return True if fastq files are symlinked, False if not
+
+        """
+        for fastq in self.fastq:
+            if os.path.islink(fastq):
+                return True
+        return False
 
     def qc_sample(self,qc_dir,fastq):
         """Fetch IlluminaQCSample object for a fastq file
