@@ -50,7 +50,7 @@ class Config(ConfigParser):
         try:
             value = ConfigParser.get(self,section,option)
             if value == 'None' or value == '':
-                return None
+                return default
             else:
                 return value
         except NoOptionError:

@@ -73,8 +73,10 @@ class TestConfig(unittest.TestCase):
         """Check Config.get works for parameters set to 'None'
         """
         self.assertEqual(self.config.get('none_types','some_value'),None)
+        self.assertEqual(self.config.get('none_types','some_value','something'),'something')
 
     def test_get_with_empty_value(self):
         """Check Config.get works for parameters with no value set'
         """
         self.assertEqual(self.config.get('none_types','other_value'),None)
+        self.assertEqual(self.config.get('none_types','other_value','something'),'something')
