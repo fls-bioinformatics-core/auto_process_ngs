@@ -43,8 +43,15 @@ import auto_process_ngs.applications as applications
 def get_fastqs(project):
     """Return fastq files within an AnalysisProject
 
-    Given an AnalysisProject, yields (sample_name,fastq)
-    tuples for each fastq file in all samples.
+    Given an AnalysisProject, yields
+
+    (sample_name,fastq,actual_fastq)
+
+    tuples for each fastq file in all samples, where
+
+    - 'fastq' = the original fastq name
+    - 'actual_fastq' = the 'actual' fastq location (if
+      'fastq' is a symbolic link)
 
     Arguments:
       project: AnalysisProject instance
@@ -54,8 +61,10 @@ def get_fastqs(project):
         for fq in sample.fastq:
             # Resolve links
             if os.path.islink(fq):
-                fq = bcf_utils.Symlink(fq).resolve_target()
-            yield (sample.name,fq)
+                target = bcf_utils.Symlink(fq).resolve_target()
+            else:
+                target = fq
+            yield (sample.name,fq,target)
 
 def write_checksums(project,filen=None,relative=True):
     """Write MD5 checksums for fastq files with an AnalysisProject
@@ -74,7 +83,7 @@ def write_checksums(project,filen=None,relative=True):
         fp = open(md5file,'w')
     else:
         fp = sys.stdout
-    for sample_name,fq in get_fastqs(project):
+    for sample_name,fastq,fq in get_fastqs(project):
         if relative:
             name = os.path.basename(fq)
         else:
@@ -161,12 +170,13 @@ if __name__ == "__main__":
         # List fastqs and exit
         total_size = 0
         n_fastqs = 0
-        for sample_name,fq in get_fastqs(project):
+        for sample_name,fastq,fq in get_fastqs(project):
             # File size
             fsize = os.lstat(fq).st_size
-            print "%s\t%s\t%s" % (sample_name,
-                                  os.path.basename(fq),
-                                  bcf_utils.format_file_size(fsize))
+            print "%s\t%s%s\t%s" % (sample_name,
+                                    os.path.basename(fq),
+                                    ('*' if os.path.islink(fastq) else ''),
+                                    bcf_utils.format_file_size(fsize))
             total_size += fsize
             n_fastqs += 1
         # Summary
@@ -198,7 +208,7 @@ if __name__ == "__main__":
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
-        for sample_name,fq in get_fastqs(project):
+        for sample_name,fastq,fq in get_fastqs(project):
             print "%s" % fq
             copy_to_dest(fq,dest)
     elif cmd == 'md5':
@@ -219,7 +229,7 @@ if __name__ == "__main__":
         print "Creating zip file %s" % zip_file
         zz = zipfile.ZipFile(zip_file,'w')
         # Add fastqs
-        for sample_name,fq in get_fastqs(project):
+        for sample_name,fastq,fq in get_fastqs(project):
             zz.write(fq,arcname=os.path.basename(fq))
         # Make a temporary MD5 file
         tmp = tempfile.mkdtemp()
