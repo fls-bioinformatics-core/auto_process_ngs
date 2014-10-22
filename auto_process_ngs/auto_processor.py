@@ -1396,7 +1396,8 @@ class AutoProcess:
                             os.path.join(dirn,os.path.basename(self.analysis_dir)),
                             include_dirs=True):
                         logging.debug("Updating group for %s" % f)
-                        os.lchown(f,-1,gid)
+                        if not dry_run:
+                            os.lchown(f,-1,gid)
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
