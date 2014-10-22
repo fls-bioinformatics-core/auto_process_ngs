@@ -33,18 +33,35 @@ class Config(ConfigParser):
     - implements a 'getrunner' method that returns a JobRunner
       instance based on a specification string.
 
+    Example usage (read in a file and get a parameter value from a
+    section):
+
+    >>> c = Config()
+    >>> c.read(conf_file)
+    >>> c.get('section1','parameter2')
+
+    See also the ConfigParser documentation at
+    https://docs.python.org/2/library/configparser.html
+
     """
     def __init__(self):
         ConfigParser.__init__(self)
     def get(self,section,option,default=None):
         try:
-            return ConfigParser.get(self,section,option)
+            value = ConfigParser.get(self,section,option)
+            if value == 'None' or value == '':
+                return None
+            else:
+                return value
         except NoOptionError:
             return default
-    def getint(self,section,option,default):
+    def getint(self,section,option,default=None):
         try:
             return ConfigParser.getint(self,section,option)
-        except NoOptionError:
+        except TypeError:
             return default
-    def getrunner(self,section,option,default):
-        return fetch_runner(self.get(section,option,default))
+    def getrunner(self,section,option,default='SimpleJobRunner'):
+        try:
+            return fetch_runner(self.get(section,option,default))
+        except Exception:
+            return None
