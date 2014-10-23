@@ -256,6 +256,13 @@ class AnalysisDir:
 
         """
         return len(self.sequencing_data)
+
+    @property
+    def paired_end(self):
+        """Return True if run is paired end, False if single end
+
+        """
+        return reduce(lambda x,y: x and y.info.paired_end,self.projects,True)
         
 class AnalysisProject:
     """Class describing an analysis project
