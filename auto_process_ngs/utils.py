@@ -215,6 +215,7 @@ class AnalysisDir:
         self._project_dirs = []
         self.sequencing_data = []
         self.projects = []
+        self.undetermined = None
         # Look for outputs from bclToFastq and analysis projects
         logging.debug("Examining subdirectories of %s" % self._analysis_dir)
         for dirn in bcf_utils.list_dirs(self._analysis_dir):
@@ -231,9 +232,13 @@ class AnalysisDir:
             # Look for analysis data
             data = AnalysisProject(dirn,os.path.join(self._analysis_dir,dirn))
             if data.is_analysis_dir:
-                logging.debug("- %s: project directory" % dirn)
-                self._project_dirs.append(dirn)
-                self.projects.append(data)
+                if dirn == 'undetermined':
+                    logging.debug("- %s: undetermined indexes" % dirn)
+                    self.undetermined = data
+                else:
+                    logging.debug("- %s: project directory" % dirn)
+                    self._project_dirs.append(dirn)
+                    self.projects.append(data)
                 continue
             # Unidentified contents
             logging.debug("- %s: unknown" % dirn)
