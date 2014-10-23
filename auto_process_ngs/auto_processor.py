@@ -1757,48 +1757,68 @@ class AutoProcess:
                 print "  Comments: %s" % (project.info.comments)
 
     def report_logging_format(self):
-        # Generate short form "logging"-style report
-        # e.g. Paired end: 'PJB': Peter Briggs, Mouse ChIP-seq (PI: P Briggs) (6 samples); ...
-        #
-        # Acquire data
-        illumina_data = self.load_illumina_data()
-        project_metadata = self.load_project_metadata(self.params.project_metadata)
-        # Generate report text
+        """Generate one-line report suitable for logging
+
+        Generates a one-line report that can be used for logging, for
+        example:
+
+        Paired end: 'PJB': Peter Briggs, Mouse ChIP-seq (PI: P Briggs) (6 samples); ...
+
+        The report is based on project directories that are located
+        in the analysis directory, and not from other information
+        (e.g. contents of the 'bcl2fastq' directory or other outputs
+        from processing).
+
+        Returns:
+          String with the report text.
+
+        """
         report = []
-        for p in project_metadata:
-            project = illumina_data.get_project(p['Project'])
+        analysis_dir = utils.AnalysisDir(self.analysis_dir)
+        for p in analysis_dir.projects:
             report.append("'%s': %s, %s %s (PI: %s) (%d sample%s)" % \
-                          (p['Project'],
-                           p['User'],
-                           p['Organism'],
-                           p['Library'],
-                           p['PI'],
-                           len(project.samples),
-                           's' if len(project.samples) > 1 else ''
+                          (p.name,
+                           p.info.user,
+                           p.info.organism,
+                           p.info.library_type,
+                           p.info.PI,
+                           len(p.samples),
+                           's' if len(p.samples) > 1 else ''
                        ))
         report = '; '.join(report)
         # Paired end run?
-        if illumina_data.paired_end:
+        if analysis_dir.paired_end:
             report = "Paired end: " + report
         return report
 
     def report_summary_format(self):
-        # Generate summary form "email"-style report for record-keeping
-        # Includes:
-        # - Platform
-        # - Run name
-        # - Run reference id
-        # - Project subdirectory
-        # - Researcher (aka user)
-        # - PI
-        # - Application (aka library type)
-        # - Organism
-        # - Number of samples
-        #
-        # Acquire data
-        illumina_data = self.load_illumina_data()
-        project_metadata = self.load_project_metadata(self.params.project_metadata)
+        """Generate summary report suitable for bioinformaticians
+
+        Generates a multi-line report which gives general information
+        about the run, plus one-line summaries for each project, plus
+        any additional information that has been recorded.
+
+        The general information includes:
+
+        - Platform
+        - Run name
+        - Run reference id
+
+        For each project:
+
+        - Project subdirectory
+        - Researcher (aka user)
+        - PI
+        - Application (aka library type)
+        - Organism
+        - Number of samples
+
+        Returns:
+          String with the report text.
+
+        """
         # Gather information
+        analysis_dir = utils.AnalysisDir(self.analysis_dir)
         datestamp = None
         instrument = None
         run_number = None
@@ -1835,29 +1855,28 @@ class AutoProcess:
         report.append("Platform : %s" % platform)
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("Endedness: %s" % \
-                      ('Paired end' if illumina_data.paired_end else 'Single end'))
+                      ('Paired end' if analysis_dir.paired_end else 'Single end'))
         report.append("")
         # Projects
-        n_projects = len(project_metadata)
-        report.append("%d project%s:" % (n_projects,
-                                         '' if n_projects == 1 else 's'))
+        report.append("%d project%s:" % (analysis_dir.n_projects,
+                                         '' if analysis_dir.n_projects == 1 else 's'))
         comments = bcf_utils.OrderedDictionary()
-        for p in project_metadata:
-            project_data = dict()
-            for item in ('Project','User','PI','Library','Organism'):
-                project_data[item] = p[item] if p[item] not in ('.','?') else \
-                                     '<unspecified %s>' % item.lower()
-            project = illumina_data.get_project(p['Project'])
+        for project in analysis_dir.projects:
+            project_data = dict(project=project.name)
+            for item in ('user','PI','library_type','organism'):
+                value = project.info[item]
+                project_data[item] = value if value not in ('.','?') else \
+                                    '<unspecified %s>' % item.lower()
             report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d sample%s" % \
-                          (project_data['Project'],
-                           project_data['User'],
+                          (project_data['project'],
+                           project_data['user'],
                            project_data['PI'],
-                           project_data['Library'],
-                           project_data['Organism'],
+                           project_data['library_type'],
+                           project_data['organism'],
                            len(project.samples),
                            's' if len(project.samples) > 1 else ''))
-            if p['Comments'] not in ('.','?'):
-                comments[p['Project']] = p['Comments']
+            if project.info.comments:
+                comments[project.name] = project.info.comments
         # Additional comments/notes
         if comments:
             width = max([len(x) for x in comments])
