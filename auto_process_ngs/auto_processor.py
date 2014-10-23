@@ -1948,25 +1948,32 @@ class AutoProcess:
         return report
 
     def report_projects(self):
-        # Generate one line per project with tab-separated data items
-        # suitable for injection into a spreadsheet:
-        #
-        # Run id e.g. HISEQ_140328
-        # Run number
-        # Source
-        # Date
-        # User
-        # PI
-        # Application
-        # Genome
-        # Platform
-        # #Samples
-        # PE (yes/no)
-        # Samples
-        #
+        """Generate one line reports suitable for pasting into spreadsheet
+
+        Generate one-line report for each each project with tab-separated
+        data items, suitable for injection into a spreadsheet.
+
+        Each line has the following information:
+
+        - Run id e.g. HISEQ_140328
+        - Run number
+        - Source
+        - Date
+        - User
+        - PI
+        - Application
+        - Genome
+        - Platform
+        - #Samples
+        - PE (yes/no)
+        - Samples
+        
+        Returns:
+          String with the report text.
+
+        """
         # Acquire data
-        illumina_data = self.load_illumina_data()
-        project_metadata = self.load_project_metadata(self.params.project_metadata)
+        analysis_dir = utils.AnalysisDir(self.analysis_dir)
         # General information
         run_name = os.path.basename(self.analysis_dir)
         try:
@@ -1989,16 +1996,16 @@ class AutoProcess:
             data_source = self.params.source
         else:
             data_source = ''
-        paired_end = 'yes' if illumina_data.paired_end else 'no'
-        report = []
+        paired_end = 'yes' if analysis_dir.paired_end else 'no'
         # Generate report, one line per project
-        for p in project_metadata:
+        report = []
+        for project in analysis_dir.projects:
             project_line = [run_id,str(run_number),data_source,'']
-            project = illumina_data.get_project(p['Project'])
-            project_line.append('' if p['User'] == '.' else p['User'])
-            project_line.append('' if p['PI'] == '.' else p['PI'])
-            project_line.append('' if p['Library'] == '.' else p['Library'])
-            project_line.append('' if p['Organism'] == '.' else p['Organism'])
+            info = project.info
+            project_line.append('' if not info.user else info.user)
+            project_line.append('' if not info.PI else info.PI)
+            project_line.append('' if not info.library_type else info.library_type)
+            project_line.append('' if not info.organism else info.organism)
             project_line.append(platform)
             project_line.append(str(len(project.samples)))
             project_line.append(paired_end)
