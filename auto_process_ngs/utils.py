@@ -280,7 +280,7 @@ class AnalysisProject:
     dirn        : associated directory (full path)
     samples     : list of AnalysisSample objects
     fastq_dir   : subdirectory holding fastq files
-
+    fastqs      : list of fastq files
     
     multiple_fastqs: True if at least one sample has more than one fastq
                      file per read associated with it
@@ -537,6 +537,16 @@ class AnalysisProject:
         else:
             return reduce(lambda x,y: x and y,
                           [len(s.fastq_subset(read_number=1)) > 1 for s in self.samples])
+
+    @property
+    def fastqs(self):
+        """Return a list of fastqs
+
+        """
+        fastqs = []
+        for s in self.samples:
+            fastqs.extend(s.fastq)
+        return fastqs
 
     @property
     def fastqs_are_symlinks(self):
