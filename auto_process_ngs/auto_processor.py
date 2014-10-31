@@ -1236,16 +1236,45 @@ class AutoProcess:
             else:
                 logging.warning("'undetermined' directory already exists, skipping")
 
-    def run_qc(self,projects=None,max_jobs=4,no_ungzip_fastqs=False,runner=None):
-        # Run QC pipeline for all projects
-        #
-        # Tests whether QC outputs already exist and only runs
-        # QC for those files where the outputs are not all present
-        #
-        # projects: specify a pattern to match one or more projects to
-        # run the QC for (default is to run QC for all projects)
-        #
-        # Process pattern matching
+    def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,runner=None):
+        """Run QC pipeline script for projects
+
+        Run the illumina_qc.sh script to perform QC on projects.
+
+        Note that if all QC outputs already exist for a project then
+        the QC will *not* be run for that project.
+
+        A subset of projects can be selected for QC by setting the
+        'projects' argument to a name or pattern, only matching
+        projects will be examined.
+
+        Arguments:
+          projects: specify a pattern to match one or more projects to
+                    run the QC for (default is to run QC for all
+                    projects)
+          max_jobs: maximum number of jobs that will be scheduled
+                    to run at one time (passed to the scheduler;
+                    default is 4, set to zero to remove the limit)
+          ungzip_fastqs: if True then run the QC script with the
+                    '--ungzip-fastqs' option to create decompressed
+                    copies of any fastq.gz inputs (default is False,
+                    don't decompress the input files)
+          runner:   (optional) specify a non-default job runner to
+                    use for the QC.
+
+        """
+        # Check QC script version
+        required_version = '1.2.1'
+        print "Getting QC script information"
+        status,qc_script_info = applications.Command('illumina_qc.sh',
+                                                     '--version').subprocess_check_output()
+        print "Using QC script %s" % qc_script_info.strip()
+        version = qc_script_info.strip().split()[-1]
+        if version != required_version:
+            logging.error("QC script version is %s, need %s" % (version,
+                                                                required_version))
+            return
+        # Process project pattern matching
         if projects is None:
             project_pattern = '*'
             sample_pattern = '*'
@@ -1303,8 +1332,8 @@ class AutoProcess:
                         fastq = os.path.join(project.dirn,'fastqs',fq)
                         label = "illumina_qc.%s" % str(utils.AnalysisFastq(fq))
                         qc_cmd = applications.Command('illumina_qc.sh',fastq)
-                        if no_ungzip_fastqs or project.name == 'undetermined':
-                            qc_cmd.add_args('--no-ungzip')
+                        if ungzip_fastqs:
+                            qc_cmd.add_args('--ungzip-fastqs')
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
