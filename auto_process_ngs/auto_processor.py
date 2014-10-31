@@ -1949,6 +1949,7 @@ class AutoProcess:
         # Projects
         report.append("%d project%s:" % (analysis_dir.n_projects,
                                          '' if analysis_dir.n_projects == 1 else 's'))
+        rows = []
         comments = bcf_utils.OrderedDictionary()
         for project in analysis_dir.projects:
             project_data = dict(project=project.name)
@@ -1956,16 +1957,16 @@ class AutoProcess:
                 value = project.info[item]
                 project_data[item] = value if value not in ('.','?') else \
                                     '<unspecified %s>' % item.lower()
-            report.append("- '%s':\t%s\t(PI %s)\t%s\t(%s)\t%d sample%s" % \
-                          (project_data['project'],
-                           project_data['user'],
-                           project_data['PI'],
-                           project_data['library_type'],
-                           project_data['organism'],
-                           len(project.samples),
-                           's' if len(project.samples) > 1 else ''))
+            rows.append(("- '%s':" % project_data['project'],
+                         project_data['user'],
+                         project_data['organism'],
+                         project_data['library_type'],
+                         "%d sample%s" % (len(project.samples),
+                                          's' if len(project.samples) > 1 else ''),
+                         "(PI %s)" % project_data['PI']))
             if project.info.comments:
                 comments[project.name] = project.info.comments
+        report.append(utils.pretty_print_rows(rows))
         # Additional comments/notes
         if comments:
             width = max([len(x) for x in comments])
@@ -1973,14 +1974,14 @@ class AutoProcess:
             report.append("Additional notes/comments:")
             for project in comments:
                 first_line = True
-                for line in bcf_utils.split_into_lines(comments[project],80):
+                for line in bcf_utils.split_into_lines(comments[project],70-width):
                     if first_line:
-                        report.append("\t%s%s: %s" % (project,
+                        report.append("- %s%s: %s" % (project,
                                                       ' '*(width-len(project)),
                                                       line))
                         first_line = False
                     else:
-                        report.append("\t%s: %s" % (' '*width,line))
+                        report.append("  %s  %s" % (' '*width,line))
         return '\n'.join(report)
 
     def report_full_format(self):
