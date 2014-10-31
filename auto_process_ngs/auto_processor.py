@@ -1321,17 +1321,53 @@ class AutoProcess:
                 project.qc_report
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
-                        chmod=None,group=None,include_bcl2fastq=False):
+                        chmod=None,group=None,include_bcl2fastq=False,
+                        read_only_fastqs=True):
         """Copy the analysis directory and contents to an archive area
 
+        Copies the contents of the analysis directory to an archive
+        area, which can be on a local or remote system.
+
+        The archive directory is constructed in the form
+
+        <TOP_DIR>/<YEAR>/<PLATFORM>/<DIR>/...
+
+        The YEAR and PLATFORM can be overriden using the appropriate
+        arguments.
+
+        By default the 'bcl2fastq' directory is omitted from the
+        archive, unless the fastq files in any projects are links to
+        the data. Inclusion of this directory can be forced by
+        setting the appropriate argument.
+
+        The fastqs will be switched to be read-only in the archive
+        by default.
+
+        'rsync' is used to perform the transfer.
+
         Arguments:
-          archive_dir:
-          platform:
-          year:
-          dry_run:
-          chmod:
-          group:
-          include_bcl2fastq:
+          archive_dir: top level archive directory, of the form
+            '[[user@]host:]dir'; if not set then use the value from
+            the settings.ini file.
+          platform: set the value of the <PLATFORM> level in the
+            archive.
+          year: set the value of the <YEAR> level in the archive;
+            if not set then defaults to the current year (4 digits)
+          dry_run: report what would be done but don't perform any
+            operations.
+          chmod: change the mode of the destination files and
+            directories according to the supplied argument (e.g.
+            'g+w'); if not set then use the value from
+            the settings.ini file.
+          group: set the group of the destination files to the
+            supplied argument; if not set then use the value from
+            the settings.ini file.
+          include_bcl2fastq: if True then force inclusion of the
+            'bcl2fastq' subdirectory; otherwise only include it if
+            fastq files in project subdirectories are symlinks.
+          read_only_fastqs: if True then make the fastqs read-only
+            in the destination directory; otherwise keep the original
+            permissions.
 
         """
         # Check first: are there any projects?
@@ -1368,6 +1404,27 @@ class AutoProcess:
         if not include_bcl2fastq:
             print "Excluding '%s' directory from archive" % self.params.unaligned_dir
             excludes.append('--exclude=%s' % self.params.unaligned_dir)
+        # If making fastqs read-only then transfer them separately
+        if read_only_fastqs:
+            try:
+                rsync_fastqs = applications.general.rsync(self.analysis_dir,archive_dir,
+                                                          prune_empty_dirs=True,
+                                                          dry_run=dry_run,
+                                                          chmod='ugo-w',
+                                                          extra_options=('--include=*/',
+                                                                         '--include=fastqs/**',
+                                                                         '--exclude=*',))
+                print "Running %s" % rsync_fastqs
+                status = rsync_fastqs.run_subprocess(
+                    log=self.log_path('rsync.archive_fastqs.log'))
+            except Exception, ex:
+                logging.error("Exception rsyncing fastqs to archive: %s" % ex)
+                status = -1
+            if status != 0:
+                logging.error("Failed to rsync fastqs to archive (returned status %d)" %
+                              status)
+            # Exclude from main rsync
+            excludes.append('--exclude=fastqs')
         # Run the rsync command
         try:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
