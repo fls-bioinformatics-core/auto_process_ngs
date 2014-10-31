@@ -5,7 +5,7 @@
 import unittest
 import tempfile
 import shutil
-from JobRunner import SimpleJobRunner,GEJobRunner
+from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -607,3 +607,37 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
+
+class TestPrettyPrintRows(unittest.TestCase):
+    """Tests for the pretty_print_rows function
+
+    """
+    def test_pretty_print_rows_empty_inputs(self):
+        """pretty_print_rows can handle empty list
+        """
+        self.assertEqual(pretty_print_rows([]),"")
+
+    def test_pretty_print_rows_single_row(self):
+        """pretty_print_rows prints a single row
+        """
+        rows = [['hello:','A salutation']]
+        self.assertEqual(pretty_print_rows(rows),
+                         "hello: A salutation")
+
+    def test_pretty_print_rows_multiple_rows(self):
+        """pretty_print_rows prints multiple rows
+        """
+        rows = [['-','hello:','A salutation'],
+                ['-','goodbye:','The End']]
+        self.assertEqual(pretty_print_rows(rows),
+                         "- hello:   A salutation\n- goodbye: The End     ")
+
+    def test_pretty_print_rows_prepend(self):
+        """pretty_print_rows prepend right-justifies values
+        """
+        rows = [['-','hello:','A salutation'],
+                ['-','goodbye:','The End']]
+        self.assertEqual(pretty_print_rows(rows,prepend=True),
+                         "-   hello: A salutation\n- goodbye:      The End")
+
+        

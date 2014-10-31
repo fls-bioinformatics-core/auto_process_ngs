@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.16"
+__version__ = "0.0.17"
 
 """utils
 
@@ -1114,3 +1114,49 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
+
+def pretty_print_rows(data,prepend=False):
+    """Format row-wise data into 'pretty' lines
+
+    Given 'row-wise' data (in the form of a list of lists),
+    for example:
+
+    [['hello','A salutation'],[goodbye','The End']]
+
+    formats into a string of text where lines are
+    newline-separated and the 'fields' are padded with
+    spaces so that they line up left-justified in
+    columns, for example:
+
+    hello   A salutation
+    goodbye The End
+
+    Arguments:
+      data: row-wise data as a list of lists
+      prepend: (optional), if True then columns
+        are right-justified (i.e. padding is
+        added before each value).
+
+    """
+    # Get maximum field widths for each column
+    widths = []
+    for row in data:
+        for i in range(len(row)):
+            width = len(str(row[i]))
+            try:
+                widths[i] = max(width,widths[i])
+            except IndexError:
+                widths.append(width)
+    # Build output
+    output = []
+    for row in data:
+        line = []
+        for item,width in zip([str(x) for x in row],widths):
+            padding = ' '*(width-len(item))
+            if prepend:
+                line.append(padding + item)
+            else:
+                line.append(item + padding)
+        output.append(' '.join(line))
+    return '\n'.join(output)
+
