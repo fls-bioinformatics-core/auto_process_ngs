@@ -49,6 +49,7 @@ import sys
 import re
 import subprocess
 import logging
+import tempfile
 from bcftbx.utils import find_program
 
 #######################################################################
@@ -201,10 +202,15 @@ class Command:
         return returncode
 
     def subprocess_check_output(self,include_err=True,working_dir=None):
-        """Run the command using subprocess.check_output
+        """Run the command and capture the output
 
-        This runs the command using the subprocess.check_output()
-        function and wais for it to finish.
+        This runs the command using the subprocess.call() and
+        captures the output in a string which is returned to the
+        calling subprogram (along with the return code from the
+        command).
+
+        Nb it would be better if we could use the subprocess.check_output
+        function (but this is not available in Python 2.6).
 
         Arguments:
           include_err: optional, if True then stderr is included in
@@ -221,15 +227,14 @@ class Command:
             stderr = subprocess.STDOUT
         else:
             stderr = None
-        # Run and capture output
-        try:
-            output = subprocess.check_output(self.command_line,
-                                             cwd=working_dir,stderr=stderr)
-        except subprocess.CalledProcessError,ex:
-            # Error raised from subprocess
-            return (ex.returncode,str(ex))
-        # Completed ok
-        return (0,output)
+        # Create a temporary file-like object to capture output
+        ftmp = tempfile.TemporaryFile()
+        status = subprocess.call(self.command_line,stdout=ftmp,
+                                 cwd=working_dir,stderr=stderr)
+        # Read the output
+        ftmp.seek(0)
+        output = ftmp.read()
+        return (status,output)
 
 class bcl2fastq:
     """Bcl to fastq conversion line applications
