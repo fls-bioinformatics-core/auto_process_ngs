@@ -1308,8 +1308,11 @@ class AutoProcess:
             if not os.path.exists(qc_dir):
                 print "Making 'qc' subdirectory"
                 bcf_utils.mkdir(qc_dir,mode=0775)
-            # Set the log directory
-            log_dir = os.path.join(project.dirn,'logs')
+            # Set up the logs directory
+            log_dir = os.path.join(qc_dir,'logs')
+            if not os.path.exists(log_dir):
+                print "Making 'qc/logs' subdirectory"
+                bcf_utils.mkdir(log_dir,mode=0775)
             # Loop over samples and queue up those where the QC
             # isn't validated
             samples = project.get_samples(sample_pattern)

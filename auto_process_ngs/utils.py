@@ -426,9 +426,6 @@ class AnalysisProject:
         else:
             logging.debug("Making analysis directory %s" % self.dirn)
             bcf_utils.mkdir(self.dirn,mode=0775)
-        # Make a 'logs' directory
-        log_dir = os.path.join(self.dirn,'logs')
-        bcf_utils.mkdir(log_dir,mode=0775)
         # Make a 'ScriptCode' directory
         scriptcode_dir = os.path.join(self.dirn,"ScriptCode")
         bcf_utils.mkdir(scriptcode_dir,mode=0775)
