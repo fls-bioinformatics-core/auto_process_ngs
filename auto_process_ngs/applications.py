@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 
 #######################################################################
 # Import modules that this module depends on
@@ -156,7 +156,7 @@ class Command:
         return ' '.join(self.command_line)
 
     def run_subprocess(self,log=None,err=None,working_dir=None):
-        """Run the command using the subprocess module
+        """Run the command using subprocess.Popen
 
         This runs the command using the subprocess.popen() function
         and wais for it to finish.
@@ -171,7 +171,7 @@ class Command:
             to current directory
 
         Returns:
-          Return code from subprocess.popen() call.
+          Return code from subprocess.Popen() call.
 
         """
         # Deal with output destinations
@@ -194,11 +194,42 @@ class Command:
                                  cwd=working_dir,stdout=fpout,stderr=fperr)
             returncode = p.wait()
         except KeyboardInterrupt,ex:
-            # Handle keyboard interrupt while rsync is running
+            # Handle keyboard interrupt while process is running
             logging.warning("KeyboardInterrupt: stopping command subprocess")
             p.kill()
             returncode = -1
         return returncode
+
+    def subprocess_check_output(self,include_err=True,working_dir=None):
+        """Run the command using subprocess.check_output
+
+        This runs the command using the subprocess.check_output()
+        function and wais for it to finish.
+
+        Arguments:
+          include_err: optional, if True then stderr is included in
+            the output (default); otherwise stderr is discarded.
+          working_dir: optional, working directory to use (defaults
+            to current directory
+
+        Returns:
+          Tuple of (returncode,output).
+
+        """
+        # Include stderr (or not)
+        if include_err:
+            stderr = subprocess.STDOUT
+        else:
+            stderr = None
+        # Run and capture output
+        try:
+            output = subprocess.check_output(self.command_line,
+                                             cwd=working_dir,stderr=stderr)
+        except subprocess.CalledProcessError,ex:
+            # Error raised from subprocess
+            return (ex.returncode,str(ex))
+        # Completed ok
+        return (0,output)
 
 class bcl2fastq:
     """Bcl to fastq conversion line applications

@@ -41,6 +41,14 @@ class TestCommand(unittest.TestCase):
         cmd = Command('ls','-l')
         cmd.run_subprocess(log='/dev/null')
 
+    def test_subprocess_check_output(self):
+        """Run command and capture output
+        """
+        cmd = Command('echo','hello')
+        rc,out = cmd.subprocess_check_output()
+        self.assertEqual(rc,0)
+        self.assertEqual(out,"hello\n")
+
     def test_has_exe(self):
         """Check 'has_exe' property works
         """
