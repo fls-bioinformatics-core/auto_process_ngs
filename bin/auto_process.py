@@ -61,6 +61,7 @@ from bcftbx.cmdparse import add_dry_run_option
 from bcftbx.cmdparse import add_nprocessors_option
 from bcftbx.cmdparse import add_runner_option
 import auto_process_ngs.settings
+import auto_process_ngs.envmod as envmod
 from auto_process_ngs.auto_processor import AutoProcess
 
 __version__ = auto_process_ngs.get_version()
@@ -466,6 +467,12 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         # Run the specified stage
         if cmd == 'make_fastqs':
+            # Set up environment modules
+            modulefiles = auto_process_ngs.settings.modulefiles.make_fastqs
+            if modulefiles is not None:
+                for modulefile in modulefiles.split(','):
+                    envmod.load(modulefile)
+            # Do the make_fastqs step
             d.make_fastqs(skip_rsync=options.skip_rsync,
                           nprocessors=options.nprocessors,
                           runner=options.runner,
@@ -504,6 +511,12 @@ if __name__ == "__main__":
                                   short_fastq_names=options.short_fastq_names,
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
+            # Set up environment modules
+            modulefiles = auto_process_ngs.settings.modulefiles.run_qc
+            if modulefiles is not None:
+                for modulefile in modulefiles.split(','):
+                    envmod.load(modulefile)
+            # Do the make_fastqs step
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
                      ungzip_fastqs=options.ungzip_fastqs,

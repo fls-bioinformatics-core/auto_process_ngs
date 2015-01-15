@@ -16,7 +16,7 @@ module.
 
 """
 
-from ConfigParser import ConfigParser,NoOptionError
+from ConfigParser import ConfigParser,NoOptionError,NoSectionError
 from bcftbx.JobRunner import fetch_runner
 
 #######################################################################
@@ -54,6 +54,8 @@ class Config(ConfigParser):
             else:
                 return value
         except NoOptionError:
+            return default
+        except NoSectionError:
             return default
     def getint(self,section,option,default=None):
         try:

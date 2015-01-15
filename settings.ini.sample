@@ -5,6 +5,12 @@
 default_runner = SimpleJobRunner
 max_concurrent_jobs = 12
 
+# Explicitly specify modulefiles to load for each step
+# Specify modulefiles as a comma-separated list
+[modulefiles]
+make_fastqs = None
+run_qc = None
+
 # bcl2fastq settings
 [bcl2fastq]
 nprocessors = 1

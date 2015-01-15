@@ -36,6 +36,11 @@ general = AttributeDictionary()
 general['default_runner'] = config.get('general','default_runner','SimpleJobRunner')
 general['max_concurrent_jobs'] = config.getint('general','max_concurrent_jobs',12)
 #
+# modulefiles
+modulefiles = AttributeDictionary()
+modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
+modulefiles['run_qc'] = config.get('modulefiles','run_qc')
+#
 # bcl2fastq
 bcl2fastq = AttributeDictionary()
 bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
