@@ -438,6 +438,16 @@ if __name__ == "__main__":
     except AttributeError:
         allow_save = True
 
+    # Set up environment modules
+    try:
+        modulefiles = auto_process_ngs.settings.modulefiles[cmd]
+        if modulefiles is not None:
+            for modulefile in modulefiles.split(','):
+                envmod.load(modulefile)
+    except KeyError:
+        # No environment modules specified
+        pass
+
     # Setup the processing object and run the requested command
     if cmd == 'setup':
         if len(args) != 1:
@@ -467,11 +477,6 @@ if __name__ == "__main__":
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         # Run the specified stage
         if cmd == 'make_fastqs':
-            # Set up environment modules
-            modulefiles = auto_process_ngs.settings.modulefiles.make_fastqs
-            if modulefiles is not None:
-                for modulefile in modulefiles.split(','):
-                    envmod.load(modulefile)
             # Do the make_fastqs step
             d.make_fastqs(skip_rsync=options.skip_rsync,
                           nprocessors=options.nprocessors,
@@ -511,11 +516,6 @@ if __name__ == "__main__":
                                   short_fastq_names=options.short_fastq_names,
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
-            # Set up environment modules
-            modulefiles = auto_process_ngs.settings.modulefiles.run_qc
-            if modulefiles is not None:
-                for modulefile in modulefiles.split(','):
-                    envmod.load(modulefile)
             # Do the make_fastqs step
             d.run_qc(projects=options.project_pattern,
                      max_jobs=options.max_jobs,
