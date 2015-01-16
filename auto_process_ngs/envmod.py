@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 """envmod
 
@@ -44,7 +44,13 @@ modules_python = '/usr/share/Modules/init/python.py'
 if not os.path.isfile(modules_python):
     # Nothing to load
     raise ImportError("No file %s" % modules_python)
-execfile(modules_python)
+
+# Load the code from the env modules python file
+try:
+    execfile(modules_python)
+except Exception,ex:
+    raise ImportError("Exception executing code from %s: %s: %s" % 
+                      (modules_python,ex.__class__.__name__,ex))
 
 #######################################################################
 # Functions
