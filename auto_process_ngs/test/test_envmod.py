@@ -20,15 +20,24 @@ def _setup_example_modulefiles(*apps):
         shutil.rmtree(modulesdir)
         raise Exception("No MODULEPATH environment variable")
     # Wipe existing environment
-    try:
-        os.environ["LOADEDMODULES"] = ''
-    except KeyError:
-        pass
+    _clean_up_modules()
     return modulesdir
 
 def _teardown_example_modulefiles(modulesdir):
+    # Wipe existing environment
+    _clean_up_modules()
     # Remove the temporary test directory
     shutil.rmtree(modulesdir)
+
+def _clean_up_modules():
+    # Unload all modules
+    try:
+        if os.environ["LOADEDMODULES"]:
+            for mod in os.environ["LOADEDMODULES"].split(':'):
+                envmod.module('unload',mod)
+    except KeyError:
+        pass
+        
 
 class TestEnvModLoaded(unittest.TestCase):
     """Tests for the envmod module

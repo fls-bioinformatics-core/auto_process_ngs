@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 """envmod
 
@@ -73,7 +73,10 @@ def loaded():
 
     """
     try:
-        return os.environ['LOADEDMODULES'].split(':')
+        loadedmodules = os.environ['LOADEDMODULES']
+        if not loadedmodules:
+            return []
+        return loadedmodules.split(':')
     except KeyError:
         # No loaded modulefiles?
         return []
