@@ -27,10 +27,16 @@ Total reads = 182851745
 """
 
 #######################################################################
+# Module metadata
+#######################################################################
+
+__version__ = "0.0.1"
+
+#######################################################################
 # Imports
 #######################################################################
 
-import sys
+import optparse
 import bcftbx.TabFile as tf
 from bcftbx.IlluminaData import IlluminaFastq
 
@@ -39,8 +45,21 @@ from bcftbx.IlluminaData import IlluminaFastq
 #######################################################################
 
 if __name__ == '__main__':
+
+    # Process command line
+    p = optparse.OptionParser(usage="%prog [OPTIONS] STATS_INFO_FILE",
+                              version="%prog "+__version__,
+                              description="Summarise the per sample stats for each lane "
+                              "for an Illumina sequencing run, using the data from "
+                              "STATS_INFO_FILE (typically called 'statistics.info' and "
+                              "found in the top-level directory of sequencing runs "
+                              "processed using auto_process.py.")
+    options,args = p.parse_args()
+    if len(args) != 1:
+        p.error("expects a single argument (statistics file)")
+
     # Read in data
-    stats = tf.TabFile(sys.argv[1],first_line_is_header=True)
+    stats = tf.TabFile(args[0],first_line_is_header=True)
     data = dict()
     for line in stats:
         # Collect sample name, lane etc
