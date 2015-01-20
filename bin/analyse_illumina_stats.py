@@ -1,7 +1,42 @@
 #!/bin/env python
+#
+#     analyse_illumina_stats.py: summarise per lane/per sample stats
+#     Copyright (C) University of Manchester 2015 Peter Briggs
+#
+#########################################################################
+#
+# analyse_illumina_stats.py
+#
+#########################################################################
+
+"""analyse_illumina_stats
+
+Utility to analyse the 'statistics.info' file from auto_process.py
+and summarise the number of reads per sample in each lane (and the
+percentage of reads that represents in the lane).
+
+Example output:
+
+Lane 1
+Total reads = 182851745
+- KatharineDibb/KD-K1	79888058	43.7%
+- KatharineDibb/KD-K3	97854292	53.5%
+- Undetermined_indices/lane1	5109395	2.8%
+...
+
+"""
+
+#######################################################################
+# Imports
+#######################################################################
+
 import sys
 import bcftbx.TabFile as tf
 from bcftbx.IlluminaData import IlluminaFastq
+
+#######################################################################
+# Main script
+#######################################################################
 
 if __name__ == '__main__':
     # Read in data
