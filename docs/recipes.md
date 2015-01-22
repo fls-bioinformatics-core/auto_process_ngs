@@ -88,11 +88,10 @@ number of undetermined reads.
 
 To address this:
 
-1. Determine the true barcode sequences by running `report_barcodes.py` over
-   the undetermined reads for the lanes with the 'bad' indices, e.g.
+1. Determine the true barcode sequences using the `analyse_barcodes` command
+   for the lanes with the problem index sequences, e.g.
 
-        report_barcodes.py \
-	bcl2fastq/Undetermined_indices/Sample_lane1/lane1_Undetermined_L001_R1_001.fastq.gz
+        auto_process.py analyse_barcodes --lanes=6
 
    This will list the most common barcode sequences found, and should be
    sufficient to identify the true barcodes by eye, by comparing with the
@@ -101,9 +100,8 @@ To address this:
 2. Create a new sample sheet file containing information on just the lane(s)
    with the bad indices, e.g.
 
-       prep_sample_sheet.py --lanes=2,3 \
-            -o Samplesheet.lanes2and3.csv \
-            SampleSheet.csv
+       prep_sample_sheet.py --include-lanes=6 -o SampleSheet.lane6.csv \
+            custom_SampleSheet.csv
 
    Edit the barcodes in the new sample sheet file to replace the bad indices.
    NB don't remove any of the samples.
@@ -112,11 +110,18 @@ To address this:
    output to a new bcl2fastq directory e.g.
 
        auto_process.py make_fastqs \
-            --sample-sheet=Samplesheet.lanes2and3.csv \
-            --output-dir=bcl2fastq.lanes2and3 \
-            --stats-file=statistics.lanes2and3.info
+            --sample-sheet=Samplesheet.lane6.csv \
+            --output-dir=bcl2fastq.lane6 \
+            --stats-file=statistics.lane6.info \
+            --skip-rsync
 
-   Once this has completed the new statistics can be inspected check that the
+   This will put the Fastq files for the reprocessed lanes into a new
+   subdirectory (in this example `bcl2fastq.lane6`) and write the statistics
+   to a new file (`statistics.lane6.info`).
+  
+   `--skip-rsync` uses the existing primary data files to speed up the process.
+
+   Once this has completed the new statistics can be inspected to check that the
    demultiplexing has improved.
 
 4. Merge the new bcl2fastq directory into the old one using the `merge_fastq_dirs`
@@ -126,6 +131,7 @@ To address this:
 
    then update the statistics file, e.g.
 
+       auto_process.py config --set stats_file=statistics.info
        auto_process.py update_fastq_stats
 
 After this has been completed the analysis directory setup and QC steps can be
