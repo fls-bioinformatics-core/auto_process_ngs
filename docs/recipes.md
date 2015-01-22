@@ -135,4 +135,8 @@ To address this:
        auto_process.py update_fastq_stats
 
 After this has been completed the analysis directory setup and QC steps can be
-run as before.
+run as before; note that you will need to reset where `auto_process.py` looks
+for the Fastq files before running `setup_project_dirs`, i.e.
+
+    auto_process.py config --set unaligned_dir=bcl2fastq
+
