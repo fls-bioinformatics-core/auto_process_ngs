@@ -1354,7 +1354,7 @@ class AutoProcess:
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
                         chmod=None,group=None,include_bcl2fastq=False,
-                        read_only_fastqs=True):
+                        read_only_fastqs=True,force=False):
         """Copy the analysis directory and contents to an archive area
 
         Copies the contents of the analysis directory to an archive
@@ -1400,12 +1400,31 @@ class AutoProcess:
           read_only_fastqs: if True then make the fastqs read-only
             in the destination directory; otherwise keep the original
             permissions.
+          force: if True then do archiving even if key metadata items
+            are not set; otherwise abort archiving operation.
 
         """
         # Check first: are there any projects?
         projects = self.get_analysis_projects()
         if not projects:
             raise Exception("No project directories found, nothing to archive")
+        # Check metadata
+        check_metadata = True
+        if force:
+            log = logging.warning
+        else:
+            log = logging.error
+        if not self.params.source:
+            check_metadata = False
+            log("data source is not set")
+        if not self.params.run_number:
+            check_metadata = False
+            log("run number is not set")
+        if not check_metadata:
+            if not force:
+                logging.error("Some metadata items not set, stopping")
+                return
+            logging.warning("Some metadata items not set, proceeding")
         # Fetch archive location
         if archive_dir is None:
             archive_dir = settings.archive.dirn

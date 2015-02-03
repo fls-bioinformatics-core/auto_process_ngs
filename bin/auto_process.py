@@ -305,6 +305,9 @@ def add_archive_command(cmdparser):
     p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
                  help="specify chmod operations for the archived files (default: "
                  "%s)" % default_chmod)
+    p.add_option('--force',action='store_true',dest='force',default=False,
+                 help="perform archiving operation even if key metadata items are "
+                 "not set")
     add_dry_run_option(p)
     add_debug_option(p)
 
@@ -539,7 +542,8 @@ if __name__ == "__main__":
                               year=options.year,
                               dry_run=options.dry_run,
                               group=options.group,
-                              chmod=options.chmod)
+                              chmod=options.chmod,
+                              force=options.force)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,
