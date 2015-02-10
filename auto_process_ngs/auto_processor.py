@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-14 Peter Briggs
+#     Copyright (C) University of Manchester 2013-15 Peter Briggs
 #
 #########################################################################
 #
@@ -1554,7 +1554,7 @@ class AutoProcess:
             raise Exception, "No target directory specified"
         dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
         # Get general data
-        illumina_data = self.load_illumina_data()
+        analysis_dir = utils.AnalysisDir(self.analysis_dir)
         # Get project data
         projects = self.get_analysis_projects(project_pattern)
         # Check QC situation for each project
@@ -1652,7 +1652,7 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
                        self.params.platform)
         index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
-                       ('Paired end' if illumina_data.paired_end else 'Single end'))
+                       ('Paired end' if analysis_dir.paired_end else 'Single end'))
         index_page.add("</table>")
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
