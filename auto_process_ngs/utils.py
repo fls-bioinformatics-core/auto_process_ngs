@@ -263,6 +263,29 @@ class AnalysisDir:
 
         """
         return reduce(lambda x,y: x and y.info.paired_end,self.projects,True)
+
+    def get_projects(self,pattern=None):
+        """Return the analysis projects in a list
+
+        By default returns all projects within the analysis
+        
+        If the 'pattern' is not None then it should be a simple pattern
+        used to match against available names to select a subset of
+        projects (see bcf_utils.name_matches).
+
+        """
+        projects = []
+        if pattern is None:
+            pattern = '*'
+        for project in self.projects:
+            if not bcf_utils.name_matches(project.name,pattern):
+                # Name failed to match, ignore
+                continue
+            projects.append(project)
+        # Add undetermined reads directory
+        if self.undetermined and bcf_utils.name_matches('undetermined',pattern):
+            projects.append(self.undetermined)
+        return projects
         
 class AnalysisProject:
     """Class describing an analysis project

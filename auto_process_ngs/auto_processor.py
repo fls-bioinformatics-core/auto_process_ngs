@@ -1556,7 +1556,7 @@ class AutoProcess:
         # Get general data
         analysis_dir = utils.AnalysisDir(self.analysis_dir)
         # Get project data
-        projects = self.get_analysis_projects(project_pattern)
+        projects = analysis_dir.get_projects(project_pattern)
         # Check QC situation for each project
         print "Checking QC status for each project:"
         no_qc_projects = []
