@@ -66,6 +66,8 @@ from auto_process_ngs.auto_processor import AutoProcess
 
 __version__ = auto_process_ngs.get_version()
 
+logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
+
 #######################################################################
 # Functions
 #######################################################################
