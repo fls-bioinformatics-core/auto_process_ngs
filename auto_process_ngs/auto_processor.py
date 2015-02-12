@@ -1403,7 +1403,13 @@ class AutoProcess:
           force: if True then do archiving even if key metadata items
             are not set; otherwise abort archiving operation.
 
+        Returns:
+          UNIX-style integer returncode: 0 = successful termination,
+          non-zero indicates an error occurred.
+
         """
+        # Return value
+        retval = 0
         # Check first: are there any projects?
         projects = self.get_analysis_projects()
         if not projects:
@@ -1476,6 +1482,8 @@ class AutoProcess:
                               status)
             # Exclude from main rsync
             excludes.append('--exclude=fastqs')
+            # Set returncode
+            retval = status if status != 0 else retval
         # Run the rsync command
         try:
             rsync = applications.general.rsync(self.analysis_dir,archive_dir,
@@ -1490,6 +1498,8 @@ class AutoProcess:
             status = -1
         if status != 0:
             logging.error("Failed to rsync to archive (returned status %d)" % status)
+        # Set returncode
+        retval = status if status != 0 else retval
         # Set the group (local copies only)
         if group is not None:
             user,server,dirn = utils.split_user_host_dir(archive_dir)
@@ -1499,6 +1509,7 @@ class AutoProcess:
                 gid = bcf_utils.get_gid_from_group(group)
                 if gid is None:
                     logging.error("Failed to get gid for group '%s'" % group)
+                    retval = 1
                 else:
                     for f in bcf_utils.walk(
                             os.path.join(dirn,os.path.basename(self.analysis_dir)),
@@ -1506,6 +1517,8 @@ class AutoProcess:
                         logging.debug("Updating group for %s" % f)
                         if not dry_run:
                             os.lchown(f,-1,gid)
+        # Finish
+        return retval
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
