@@ -1261,19 +1261,22 @@ class AutoProcess:
                     don't decompress the input files)
           runner:   (optional) specify a non-default job runner to
                     use for the QC.
+        Returns:
+          UNIX-style integer returncode: 0 = successful termination,
+          non-zero indicates an error occurred.
 
         """
         # Check QC script version
-        required_version = '1.2.1'
+        compatible_versions = ('1.2.1','1.2.2')
         print "Getting QC script information"
         status,qc_script_info = applications.Command('illumina_qc.sh',
                                                      '--version').subprocess_check_output()
         print "Using QC script %s" % qc_script_info.strip()
         version = qc_script_info.strip().split()[-1]
-        if version != required_version:
-            logging.error("QC script version is %s, need %s" % (version,
-                                                                required_version))
-            return
+        if version not in compatible_versions:
+            logging.error("QC script version is %s, needs %s" %
+                          (version,'/'.join(compatible_versions)))
+            return 1
         # Process project pattern matching
         if projects is None:
             project_pattern = '*'
@@ -1289,7 +1292,7 @@ class AutoProcess:
         # Check we have projects
         if len(projects) == 0:
             logging.warning("No projects found for QC analysis")
-            return
+            return 1
         # Set up runner
         if runner is not None:
             qc_runner = fetch_runner(runner)
@@ -1348,9 +1351,11 @@ class AutoProcess:
         for project in projects:
             if not project.verify_qc():
                 logging.error("QC failed for one or more samples in %s" % project.name)
+                return 1
             else:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
+                return 0
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
                         chmod=None,group=None,include_bcl2fastq=False,
