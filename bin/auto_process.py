@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     auto_process.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-14 Peter Briggs
+#     Copyright (C) University of Manchester 2013-15 Peter Briggs
 #
 #########################################################################
 #
@@ -520,10 +520,11 @@ if __name__ == "__main__":
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
             # Do the make_fastqs step
-            d.run_qc(projects=options.project_pattern,
-                     max_jobs=options.max_jobs,
-                     ungzip_fastqs=options.ungzip_fastqs,
-                     runner=options.runner)
+            retcode = d.run_qc(projects=options.project_pattern,
+                               max_jobs=options.max_jobs,
+                               ungzip_fastqs=options.ungzip_fastqs,
+                               runner=options.runner)
+            sys.exit(retcode)
         elif cmd == 'config':
             if options.key_value is not None:
                 for key_value in options.key_value:
@@ -537,13 +538,14 @@ if __name__ == "__main__":
             else:
                 d.show_settings()
         elif cmd == 'archive':
-            d.copy_to_archive(archive_dir=options.archive_dir,
-                              platform=options.platform,
-                              year=options.year,
-                              dry_run=options.dry_run,
-                              group=options.group,
-                              chmod=options.chmod,
-                              force=options.force)
+            retcode = d.copy_to_archive(archive_dir=options.archive_dir,
+                                        platform=options.platform,
+                                        year=options.year,
+                                        dry_run=options.dry_run,
+                                        group=options.group,
+                                        chmod=options.chmod,
+                                        force=options.force)
+            sys.exit(retcode)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,
