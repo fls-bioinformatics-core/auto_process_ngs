@@ -150,6 +150,8 @@ if __name__ == "__main__":
         print "Projects:"
         for project in analysis_dir.projects:
             print "%s" % project.name
+        if analysis_dir.undetermined:
+            print "_undetermined"
         sys.exit(0)
     sys.stdout.write("Checking for project '%s'..." % project_name)
     project = None
@@ -158,11 +160,13 @@ if __name__ == "__main__":
             project = prj
             break
     if project is None:
-        print "not found"
-        sys.stderr.write("FAILED cannot find project '%s'\n" % project_name)
-        sys.exit(1)
-    else:
-        print "ok"
+        if project_name == "_undetermined" and analysis_dir.undetermined:
+            project = analysis_dir.undetermined
+        else:
+            print "not found"
+            sys.stderr.write("FAILED cannot find project '%s'\n" % project_name)
+            sys.exit(1)
+    print "ok"
     # Check for a command
     try:
         cmd = args[2]
