@@ -340,7 +340,7 @@ if __name__ == '__main__':
                  help="spread work across multiple processors/cores (default is 1)")
     options,args = p.parse_args()
     # Check arguments
-    if not args:
+    if not args and options.counts_file_in is None:
         p.error("Need to supply at least one input Fastq file, a bclToFastq output "
                 "directory, or a counts file from a previous run (if using -c)")
     if options.report_file is not None:
