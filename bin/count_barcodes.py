@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     count_barcodes.py: count index sequences (barcodes) in fastqs
-#     Copyright (C) University of Manchester 2014 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2015 Peter Briggs
 #
 #########################################################################
 #
@@ -17,7 +17,7 @@ Fastq files, and reports the most numerous.
 
 """
 
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 
 import bcftbx.FASTQFile as FASTQFile
 import bcftbx.IlluminaData as IlluminaData
@@ -355,16 +355,23 @@ if __name__ == '__main__':
     # Process according to inputs
     if options.counts_file_in:
         # Use counts from a previously generated file
-        print "Loading counts from %s" % args[0]
+        counts_file = options.counts_file_in
+        print "Loading counts from %s" % counts_file
         counts = dict()
-        for line in open(args[0],'r'):
+        for line in open(counts_file,'r'):
             seq = line.split('\t')[1]
             count = int(line.split('\t')[2])
             counts[seq] = count
         report(counts,nseqs=options.n,cutoff=options.cutoff,fp=fp)
         # Match barcodes to index sequences in sample sheet
         if options.sample_sheet:
-            lanes = [int(lane) for lane in options.lanes.split(',')]
+            if options.lanes is not None:
+                lanes = [int(lane) for lane in options.lanes.split(',')]
+            else:
+                lanes = []
+                for line in sample_sheet:
+                    lane = int(line['Lane'])
+                    if lane not in lanes: lanes.append(lane)
             barcodes = get_barcodes_from_sample_sheet(sample_sheet,
                                                       lanes=lanes,
                                                       length=options.length)
