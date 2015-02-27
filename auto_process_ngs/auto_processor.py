@@ -1153,6 +1153,8 @@ class AutoProcess:
                         shutil.move(lane.dirn,primary_illumina_data.undetermined.dirn)
             else:
                 print "No undetermined indices found"
+        # Reset the bcl2fastq dir
+        self.params['unaligned_dir'] = primary_unaligned_dir
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False,
                             short_fastq_names=False,
