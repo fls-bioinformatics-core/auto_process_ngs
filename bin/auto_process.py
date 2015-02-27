@@ -396,6 +396,9 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_option('--unaligned-dir',action='store',
                  dest='unaligned_dir',default='bcl2fastq',
                  help="explicitly set the (sub)directory with bcl-to-fastq outputs")
+    p.add_option('--stats-file',action='store',
+                 dest='stats_file',default=None,
+                 help="specify output file for fastq statistics")
     add_nprocessors_option(p,auto_process_ngs.settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
@@ -503,6 +506,7 @@ if __name__ == "__main__":
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
             d.generate_stats(unaligned_dir=options.unaligned_dir,
+                             stats_file=options.stats_file,
                              nprocessors=options.nprocessors,
                              runner=options.runner)
         elif cmd == 'analyse_barcodes':
