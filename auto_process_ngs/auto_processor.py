@@ -1167,7 +1167,15 @@ class AutoProcess:
             logging.error("No unaligned directory, cannot build analysis directories")
             raise Exception,"Cannot build analysis directories"
         illumina_data = self.load_illumina_data()
-        project_metadata = self.load_project_metadata(project_metadata_file='projects.info',
+        # Project metadata file
+        project_metadata_file='projects.info'
+        if not os.path.exists(os.path.join(self.params.analysis_dir,project_metadata_file)):
+            logging.warning("No project metadata file '%s' found, attempting to create"
+                            % project_metadata_file)
+            self.make_project_metadata_file(project_metadata_file)
+            logging.warning("Update '%s' and rerun" % project_metadata_file)
+            return
+        project_metadata = self.load_project_metadata(project_metadata_file=project_metadata_file,
                                                       check=True)
         # Sanity check that the project data file has been populated
         got_project_data = True
