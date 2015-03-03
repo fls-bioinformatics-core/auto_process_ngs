@@ -614,7 +614,7 @@ class AutoProcess:
         
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
-                    nprocessors=1,unaligned_dir=None,sample_sheet=None,
+                    nprocessors=None,unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,generate_stats=True,stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
@@ -627,6 +627,12 @@ class AutoProcess:
         - get primary data (BCL files)
         - run bcl-to-fastq conversion
         - generate statistics
+
+        If the number of processors and the job runner are not explicitly
+        specified then these are taken from the settings for the bcl2fastq
+        and the statistics generation steps, which may differ from each other.
+        However if either of these values are set explicitly then the same
+        values will be used for both steps.
 
         Arguments:
           nprocessors         : number of processors to run bclToFastq.py with
@@ -662,7 +668,10 @@ class AutoProcess:
             self.make_project_metadata_file()
             # (Re)generate stats?
             if generate_stats:
-                self.generate_stats(stats_file)
+                self.generate_stats(stats_file,
+                                    unaligned_dir=unaligned_dir,
+                                    nprocessors=nprocessors,
+                                    runner=runner)
             return
         # Fetch primary data
         if not skip_rsync:
@@ -684,7 +693,10 @@ class AutoProcess:
                 raise Exception, "Bcl2fastq failed to produce expected outputs"
         # Generate statistics
         if generate_stats:
-            self.generate_stats(stats_file)
+            self.generate_stats(stats_file,
+                                unaligned_dir=unaligned_dir,
+                                nprocessors=nprocessors,
+                                runner=runner)
         # Count and report barcode sequences
         if report_barcodes:
             self.report_barcodes(barcodes_file)
@@ -722,7 +734,7 @@ class AutoProcess:
 
     def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
-                     nprocessors=1,runner=None):
+                     nprocessors=None,runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -770,6 +782,9 @@ class AutoProcess:
             raise Exception, "No source data directory"
         if bases_mask is None:
             raise Exception, "No bases mask"
+        # Number of cores
+        if nprocessors is None:
+            nprocessors = settings.bcl2fastq.nprocessors
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run

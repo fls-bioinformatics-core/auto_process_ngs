@@ -161,7 +161,8 @@ def add_make_fastqs_command(cmdparser):
                             dest='ignore_missing_stats',default=False,
                             help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
-    add_nprocessors_option(bcl_to_fastq,auto_process_ngs.settings.bcl2fastq.nprocessors)
+    add_nprocessors_option(bcl_to_fastq,None,
+                           default_display=auto_process_ngs.settings.bcl2fastq.nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
     # Statistics
