@@ -212,8 +212,7 @@ if __name__ == "__main__":
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
-        fastqs = get_fastqs(project)
-        nfastqs = len(fastqs)
+        nfastqs = sum(1 for _ in get_fastqs(project))
         i = 0
         for sample_name,fastq,fq in get_fastqs(project):
             i += 1
