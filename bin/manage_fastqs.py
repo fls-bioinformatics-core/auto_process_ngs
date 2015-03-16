@@ -212,8 +212,12 @@ if __name__ == "__main__":
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
+        fastqs = get_fastqs(project)
+        nfastqs = len(fastqs)
+        i = 0
         for sample_name,fastq,fq in get_fastqs(project):
-            print "%s" % fq
+            i += 1
+            print "(%2 d/%2 d) %s" % (i,nfastqs,fq)
             copy_to_dest(fq,dest)
     elif cmd == 'md5':
         # Generate MD5 checksums
