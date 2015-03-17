@@ -216,7 +216,7 @@ if __name__ == "__main__":
         i = 0
         for sample_name,fastq,fq in get_fastqs(project):
             i += 1
-            print "(%2 d/%2 d) %s" % (i,nfastqs,fq)
+            print "(% 2d/% 2d) %s" % (i,nfastqs,fq)
             copy_to_dest(fq,dest)
     elif cmd == 'md5':
         # Generate MD5 checksums
