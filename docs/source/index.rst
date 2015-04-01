@@ -33,6 +33,7 @@ Contents
 
    setup
    commands
+   analysis_dirs
    problems   
 
 Indices and tables
