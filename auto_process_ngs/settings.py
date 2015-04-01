@@ -8,23 +8,39 @@ import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
 from config import Config
 
-# Locate settings file
+# Locate settings files
 __install_path = os.path.abspath(os.path.normpath(
     os.path.join(os.path.dirname(sys.argv[0]),'..')))
-__config_file = os.path.join(__install_path,'settings.ini')
-if not os.path.exists(__config_file):
-    # No settings.ini file - try to make one
-    logging.warning("No local settings file in %s" % __install_path)
-    logging.warning("Attempting to make a copy from sample settings file")
-    __sample_config_file = os.path.join(__install_path,'settings.ini.sample')
-    if not os.path.exists(__sample_config_file):
-        raise Exception,"No sample config file: %s" % __sample_config_file
-    try:
-        open(__config_file,'w').write(open(__sample_config_file,'r').read())
-    except Exception,ex:
-        raise Exception,"Failed to create settings file: %s" % ex
-    logging.warning("Created new file %s" % __config_file)
-    logging.warning("Edit configuration settings and rerun")
+__config_file_path = (__install_path,)
+__config_file = None
+__sample_config_file = None
+for path in __config_file_path:
+    __config_file = os.path.join(path,'settings.ini')
+    if os.path.exists(__config_file):
+        # Located settings file
+        break
+    # No settings file here, look for a sample version
+    if __sample_config_file is None:
+        __sample_config_file = __config_file + '.sample'
+        if not os.path.exists(__sample_config_file):
+            __sample_config_file = None
+    # Reset config file to keep looking
+    __config_file = None
+
+# No settings.ini file - try to make one
+if __config_file is None:
+    logging.warning("No local settings file found in %s" % ', '.join(__config_file_path))
+    if __sample_config_file is not None:
+        logging.warning("Attempting to make a copy from sample settings file")
+        __config_file = os.path.splitext(__sample_config_file)[0]
+        try:
+            open(__config_file,'w').write(open(__sample_config_file,'r').read())
+            logging.warning("Created new file %s" % __config_file)
+            logging.warning("Edit configuration settings and rerun")
+        except Exception,ex:
+            raise Exception("Failed to create %s: %s" % (__config_file,ex))
+    else:
+        raise Exception("No sample config file found")
     sys.exit(1)
 #
 # Import site-specific settings from local version
