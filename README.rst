@@ -18,7 +18,7 @@ directory to your `PYTHONPATH` environment.
 
 To install directly from github using `pip`::
 
-    pip install git+https://github.com/fls-bioinformatics-core/genomics.git@devel
+    pip install git+https://pjbriggs@bitbucket.org/pjbriggs/auto_process_ngs.git
 
 Documentation
 *************
