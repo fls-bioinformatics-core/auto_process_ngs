@@ -9,9 +9,13 @@ from bcftbx.utils import AttributeDictionary
 from config import Config
 
 # Locate settings files
+# Search in 'config' subdir of installation location, then
+# installation location, then in current directory
 __install_path = os.path.abspath(os.path.normpath(
     os.path.join(os.path.dirname(sys.argv[0]),'..')))
-__config_file_path = (__install_path,)
+__config_file_path = (os.path.join(__install_path,'config'),
+                      __install_path,
+                      os.getcwd(),)
 __config_file = None
 __sample_config_file = None
 for path in __config_file_path:
