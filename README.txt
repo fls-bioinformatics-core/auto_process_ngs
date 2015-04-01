@@ -4,32 +4,43 @@ auto_process
 Scripts and utilities for automatic processing & management of NGS sequencing
 data.
 
-auto_process.py: Python script wrapping automatic processing and QC of
-   sequencing data.
+Installation
+************
 
-auto_process_utils.py: supporting classes and utility functions for
-   automatic processing.
+It is recommended to use::
 
-process_miseq.sh: simple wrapper script for auto_process_illumina.sh, to
-   automatically process MiSEQ data.
-   Requires settings to be added to local copy of process_miseq_setup.sh
-   (use process_miseq_setup.sh.sample as starting point).
+    pip install .
 
-applications.py: Python module with utilities for generating and running
-   NGS-related command line programs.
+from within the top-level source directory to install the package.
 
-bclToFastq.py: run the CASAVA bcl to fastq conversion pipeline.
+To use the package without installing it first you will need to add the
+directory to your `PYTHONPATH` environment.
 
-process_miseq.sh
-----------------
+To install directly from github using `pip`::
 
-### Setup ###
+    pip install git+https://github.com/fls-bioinformatics-core/genomics.git@devel
 
-### Protocol ###
+Documentation
+*************
 
-auto_process.py
----------------
+Documentation based on `sphinx` is available under the `docs` directory.
 
-### Setup ###
+To build::
 
-### Protocol ###
+    cd docs
+    make html
+
+which creates the documentation in the `docs/build` subdirectory.
+
+Running Tests
+*************
+
+The tests can be run using::
+
+    python setup.py test
+
+Dependencies
+************
+
+The package depends on the ``genomics-bcftbx`` package, available from
+https://github.com/fls-bioinformatics-core/genomics
