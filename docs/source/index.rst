@@ -32,9 +32,11 @@ Contents
    :maxdepth: 2
 
    setup
+   standard_protocol
    commands
    analysis_dirs
-   problems   
+   problems
+   count_barcodes
 
 Indices and tables
 ==================
