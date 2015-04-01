@@ -26,7 +26,7 @@ qc = SimpleJobRunner
 stats = SimpleJobRunner
 
 # Settings for archiving analyses
-# dirn should be a directory in the form [[user@]host:]path]
+# dirn should be a directory in the form [[user@]host:]path
 [archive]
 dirn = None
 log = None
@@ -35,7 +35,7 @@ chmod = None
 
 # Settings for uploading QC reports
 [qc_web_server]
-# dirn should be a directory in the form [[user@]host:]path]
+# dirn should be a directory in the form [[user@]host:]path
 dirn = None
 # url is the top level URL that the 
 url = None
