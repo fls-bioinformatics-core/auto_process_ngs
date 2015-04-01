@@ -543,6 +543,7 @@ if __name__ == "__main__":
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
             else:
+                auto_process_ngs.settings.report_settings()
                 d.show_settings()
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,

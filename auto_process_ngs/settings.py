@@ -96,9 +96,17 @@ def show_dictionary(name,d):
     print "[%s]" % name
     for key in d:
         print "\t%s = %s" % (key,d[key])
-##show_dictionary('general',general)
-##show_dictionary('bcl2fastq',bcl2fastq)
-##show_dictionary('runners',runners)
-##show_dictionary('archive',archive)
-##show_dictionary('qc_web_server',qc_web_server)
+#
+# Report configuration settings
+def report_settings():
+    """
+    Report the settings read from the config file
+    """
+    print "Settings from %s:" % __config_file
+    show_dictionary('general',general)
+    show_dictionary('modulefiles',modulefiles)
+    show_dictionary('bcl2fastq',bcl2fastq)
+    show_dictionary('runners',runners)
+    show_dictionary('archive',archive)
+    show_dictionary('qc_web_server',qc_web_server)
 
