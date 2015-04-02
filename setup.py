@@ -28,8 +28,11 @@ setup(name = "auto_process_ngs",
       license = 'Artistic License',
       # Pull in dependencies
       # See http://stackoverflow.com/questions/19738085/why-isnt-setup-py-dependency-links-doing-anything for info on use of 'dependency_links'
+      # Note that pip 1.5 needs --process-dependency-links for these
+      # to work; for pip 1.6 even this will be removed so then you must
+      # do pip install -r requirements.txt first
       install_requires = ['genomics'],
-      dependency_links=['git+https://github.com/fls-bioinformatics-core/genomics.git@devel#egg=genomics-0.99.1'],
+      dependency_links=['git+https://github.com/fls-bioinformatics-core/genomics.git@devel#egg=genomics'],
       # Enable 'python setup.py test'
       test_suite='nose.collector',
       tests_require=['nose'],
