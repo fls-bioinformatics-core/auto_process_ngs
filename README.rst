@@ -20,6 +20,13 @@ To install directly from github using `pip`::
 
     pip install git+https://pjbriggs@bitbucket.org/pjbriggs/auto_process_ngs.git
 
+**Note**
+
+* For pip 1.5: you will need to specify the ``--process-dependency-links``
+  argument to the ``install`` command to pull in the dependencies.
+* For pip 1.6: you must first do ``pip install -r requirements.txt`` to
+  pull in the dependencies.
+
 Documentation
 *************
 
