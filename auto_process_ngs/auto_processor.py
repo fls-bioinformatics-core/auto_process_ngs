@@ -1893,7 +1893,7 @@ class AutoProcess:
                     print "\nSummary of data in '%s' dir:\n" % self.params.unaligned_dir
                     for project in illumina_data.projects:
                         print "- %s" % IlluminaData.describe_project(project)
-                except IlluminaDataError,ex:
+                except IlluminaData.IlluminaDataError,ex:
                     print "Failed to load data from %s:" % self.params.unaligned_dir
                     print "%s" % ex
             else:
