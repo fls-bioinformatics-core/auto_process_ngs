@@ -14,9 +14,9 @@ It is recommended to use::
 from within the top-level source directory to install the package.
 
 To use the package without installing it first you will need to add the
-directory to your `PYTHONPATH` environment.
+directory to your ``PYTHONPATH`` environment.
 
-To install directly from github using `pip`::
+To install directly from github using ``pip``::
 
     pip install git+https://pjbriggs@bitbucket.org/pjbriggs/auto_process_ngs.git
 
@@ -30,14 +30,14 @@ To install directly from github using `pip`::
 Documentation
 *************
 
-Documentation based on `sphinx` is available under the `docs` directory.
+Documentation based on ``sphinx`` is available under the ``docs`` directory.
 
 To build::
 
     cd docs
     make html
 
-which creates the documentation in the `docs/build` subdirectory.
+which creates the documentation in the ``docs/build`` subdirectory.
 
 Running Tests
 *************
