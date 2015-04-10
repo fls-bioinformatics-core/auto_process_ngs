@@ -1886,11 +1886,16 @@ class AutoProcess:
             print "Unaligned dir: %s" % self.params.unaligned_dir
             if self.readme:
                 print "README.txt found: %s" % self.readme
-            if self.params.unaligned_dir is not None:
-                illumina_data = self.load_illumina_data()
-                print "\nSummary of data in '%s' dir:\n" % self.params.unaligned_dir
-                for project in illumina_data.projects:
-                    print "- %s" % IlluminaData.describe_project(project)
+            if self.params.unaligned_dir is not None or \
+               not os.path.exists(self.params.unaligned_dir):
+                try:
+                    illumina_data = self.load_illumina_data()
+                    print "\nSummary of data in '%s' dir:\n" % self.params.unaligned_dir
+                    for project in illumina_data.projects:
+                        print "- %s" % IlluminaData.describe_project(project)
+                except IlluminaDataError,ex:
+                    print "Failed to load data from %s:" % self.params.unaligned_dir
+                    print "%s" % ex
             else:
                 print "No information on source fastq data (no unaligned dir found)"
             print "\nAnalysis projects:"
