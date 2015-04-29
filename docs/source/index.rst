@@ -37,6 +37,7 @@ Contents
    analysis_dirs
    problems
    count_barcodes
+   managing_data
 
 Indices and tables
 ==================
