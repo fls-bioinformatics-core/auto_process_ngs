@@ -37,6 +37,28 @@ Finally to make a zip file containing the FASTQs, use the ``zip`` command::
 
     The ``zip`` option works best if the FASTQs are relatively small.
 
+Setting and updating the metadata associated with a project
+***********************************************************
+
+The projects within a run each have a file called ``README.info`` which is
+used to hold metadata about that project (for example, user, PI, organism,
+library type and so on).
+
+Use the ``update_project_metadata.py`` utility to check and update the
+metadata associated with a project, for example to update the PI::
+
+    update_project_metadata.py RUN_DIR PROJECT -u PI="Andrew Jones"
+
+.. note::
+
+    Project directories created using very old versions of ``auto_process``,
+    or predating the automated processing system, might not have metadata
+    files. To create one use::
+
+        update_project_metadata.py RUN_DIR PROJECT -i
+
+    before using ``-u`` to populate the fields.
+
 Auditing disk usage for multiple runs
 *************************************
 
