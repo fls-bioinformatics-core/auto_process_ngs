@@ -116,3 +116,44 @@ for the Fastq files before running `setup_project_dirs`, i.e.::
     auto_process.py config --set unaligned_dir=bcl2fastq
 
 
+Skip demultiplexing in ``make_fastqs`` stage
+********************************************
+
+.. warning::
+
+    This section is still under development and might be inaccurate or even
+    completely wrong!
+
+The demultiplexing can be skipped in one of two ways.
+
+To process each lane without any demultiplexing, edit the sample sheet so
+that there is only one "sample" defined for each lane, and remove any barcode
+index sequence.
+
+For example::
+
+    FCID,Lane,SampleID,SampleRef,Index,Description,Control,Recipe,Operator,SampleProject
+    FC1,1,Lane1,,,,,,,AllReads
+
+Then update the bases mask so that the index sequences are either ignored or
+are collected as part of the reads.
+
+For example, if the initial bases mask was ``y300,I8,I8,y300`` then set this to
+``y300,n8,n8,y300`` to ignore them (in which case index sequences will be lost)
+or to e.g. ``y316,y300`` (in which case the last 16 bases of each R1 read will
+be the index sequence).
+
+Note that in either case, the index sequence will not appear in the header for
+each read.
+
+Alternatively a pseudo-demultiplexing approach can be used, by specifying a single
+"sample" in the sample sheet but this time including an appropriate length index
+sequence which cannot be matched::
+
+    FCID,Lane,SampleID,SampleRef,Index,Description,Control,Recipe,Operator,SampleProject
+    FC1,1,Lane1,,AAAAAAAA-AAAAAAAA,,,,,AllReads
+
+Using this approach should put all the reads into the "undetermined" project;
+however this way the index sequences should still have been captured in the read
+headers.
+
