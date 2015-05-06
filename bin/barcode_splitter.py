@@ -479,7 +479,7 @@ TTTTTTTTTCTTCTATTCTCAGATG
 # Main program
 #######################################################################
 
-import FASTQFile
+from bcftbx import FASTQFile
 import optparse
 import logging
 import sys
