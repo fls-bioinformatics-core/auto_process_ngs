@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     barcode_splitter.py: split reads into fastq files
-#     Copyright (C) University of Manchester 2014 Peter Briggs
+#     Copyright (C) University of Manchester 2014-15 Peter Briggs
 #
 #########################################################################
 #
@@ -12,13 +12,25 @@
 """
 barcode_splitter.py
 
-Split reads into fastq files based on matching barcode (index) sequences
+Split reads into fastq files based on matching barcode (index) sequences;
+can handle single- and paired-end inputs.
+
+The input fastqs can be supplied as an explicit list of files, or as a
+single directory which is assumed to contain the outputs from bclToFastq.
+In this case the fastqs will be collected automatically.
+
+The files are processed a read at a time and the barcode sequences in the
+read headers are matched against those supplied via one or more sequences
+supplied via the -b/--barcode argument.
+
+For each barcode there will be an output file called BARCODE.fastq
 
 """
 
-__version__ = "0.0.4"
+__version__ = "0.0.5"
 
 import bcftbx.IlluminaData as IlluminaData
+import bcftbx.FASTQFile as FASTQFile
 
 #########################################################################
 # Classes
@@ -104,13 +116,42 @@ class BarcodeMatcher:
         return self._index_seqs
 
 class OutputFiles:
-    """
+    """Class for managing multiple output files
+
+    Usage:
+    
+    Create a new OutputFiles instance:
+    >>> fp = OutputFiles()
+
+    Set up files against keys:
+    >>> fp.open('file1','first_file.txt')
+    >>> fp.open('file2','second_file.txt')
+
+    Write content to files:
+    >>> fp.write('file1','some content for first file')
+    >>> fp.write('file2','content for\nsecond file')
+
+    Finish and close all open files
+    >>> fp.close()
+    
     """
     def __init__(self,base_dir=None):
+        """Create a new OutputFiles instance
+
+        """
         self._fp = dict()
         self._file = dict()
         self._base_dir = base_dir
     def open(self,name,filen):
+        """Open a new output file
+
+        'name' is the handle used to reference the
+        file when using the 'write' and 'close' methods.
+
+        'filen' is the name of the file, and is unrelated
+        to the handle.
+
+        """
         if self._base_dir is not None:
             filen = os.path.join(self._base_dir,filen)
         else:
@@ -118,10 +159,26 @@ class OutputFiles:
         self._file[name] = filen
         self._fp[name] = open(filen,'w')
     def write(self,name,s):
+        """Write content to file
+
+        Writes 's' as a newline-terminated string to the
+        file that is referenced with the handle 'name'.
+
+        """
         self._fp[name].write("%s\n" % s)
     def file_name(self,name):
+        """Get the file name associated with a handle
+
+        """
         return self._file[name]
     def close(self,name=None):
+        """Close one or all open files
+
+        If a 'name' is specified then only the file matching
+        that handle will be closed; with no arguments all
+        open files will be closed.
+
+        """
         if name is not None:
             self._fp[name].close()
         else:
@@ -167,7 +224,12 @@ def get_fastqs_from_dir(dirn,lane,unaligned_dir=None):
     return fastqs
 
 def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
-    """
+    """Split reads from single ended data
+
+    For each fastq file in 'fastqs', check reads against the index
+    sequences in the BarcodeMatcher 'matcher' and write to an
+    appropriate file.
+
     """
     if base_name is None:
         base_name = ''
@@ -197,7 +259,12 @@ def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
     print "Finished (%d reads processed)" % nread
 
 def split_paired_end(matcher,fastq_pairs,base_name=None,output_dir=None):
-    """
+    """Split reads from paired end data
+
+    For each fastq file pair in 'fastqs', check reads against the
+    index sequences in the BarcodeMatcher 'matcher' and write to an
+    appropriate file.
+
     """
     if base_name is None:
         base_name = ''
@@ -230,6 +297,10 @@ def split_paired_end(matcher,fastq_pairs,base_name=None,output_dir=None):
             fp.write((assigned_index,'R1'),read1)
             fp.write((assigned_index,'R2'),read2)
     print "Finished (%d read pairs processed)" % nread
+
+#######################################################################
+# Unit tests
+#######################################################################
 
 import unittest
 class TestHammingMetrics(unittest.TestCase):
@@ -479,7 +550,6 @@ TTTTTTTTTCTTCTATTCTCAGATG
 # Main program
 #######################################################################
 
-from bcftbx import FASTQFile
 import optparse
 import logging
 import sys
