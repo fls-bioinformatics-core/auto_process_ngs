@@ -31,16 +31,18 @@ import optparse
 import shutil
 import tempfile
 import zipfile
+import fnmatch
 import bcftbx.utils as bcf_utils
 import bcftbx.Md5sum as md5sum
 import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
+from auto_process_ngs import get_version
 
 #######################################################################
 # Functions
 #######################################################################
 
-def get_fastqs(project):
+def get_fastqs(project,pattern=None):
     """Return fastq files within an AnalysisProject
 
     Given an AnalysisProject, yields
@@ -55,10 +57,16 @@ def get_fastqs(project):
 
     Arguments:
       project: AnalysisProject instance
+      pattern: if supplied then use the supplied pattern
+        to filter fastqs based on filename
 
     """
     for sample in project.samples:
         for fq in sample.fastq:
+            # Filter on name
+            if pattern is not None:
+                if not fnmatch.fnmatch(os.path.basename(fq),pattern):
+                    continue
             # Resolve links
             if os.path.islink(fq):
                 target = bcf_utils.Symlink(fq).resolve_target()
@@ -66,11 +74,13 @@ def get_fastqs(project):
                 target = fq
             yield (sample.name,fq,target)
 
-def write_checksums(project,filen=None,relative=True):
+def write_checksums(project,pattern=None,filen=None,relative=True):
     """Write MD5 checksums for fastq files with an AnalysisProject
 
     Arguments:
       project: AnalysisProject instance
+      pattern: if supplied then use the supplied pattern
+        to filter fastqs based on filename
       filen: if supplied then checksums will be written
         to this file; otherwise they will be written to
         stdout (default)
@@ -83,7 +93,7 @@ def write_checksums(project,filen=None,relative=True):
         fp = open(md5file,'w')
     else:
         fp = sys.stdout
-    for sample_name,fastq,fq in get_fastqs(project):
+    for sample_name,fastq,fq in get_fastqs(project,pattern=pattern):
         if relative:
             name = os.path.basename(fq)
         else:
@@ -132,7 +142,10 @@ if __name__ == "__main__":
                               "then list the fastqs; 'copy' command copies fastqs for the "
                               "specified PROJECT to DEST on a local or remote server; 'md5' "
                               "command generates checksums for the fastqs; 'zip' command "
-                              "creates a zip file with the fastq files.")
+                              "creates a zip file with the fastq files.",
+                              version="%prog "+get_version())
+    p.add_option('--filter',action='store',dest='pattern',default=None,
+                 help="filter file names for reporting and copying based on PATTERN")
     options,args = p.parse_args()
     # Get analysis dir
     try:
@@ -167,6 +180,11 @@ if __name__ == "__main__":
             sys.stderr.write("FAILED cannot find project '%s'\n" % project_name)
             sys.exit(1)
     print "ok"
+    # Filter fastqs on pattern
+    if options.pattern is not None:
+        print "Filtering fastqs using pattern '%s'" % options.pattern
+    #    fastqs = [fq for fq in fastqs
+    #              if fnmatch.fnmatch(os.path.basename(fq[2]),options.pattern)]
     # Check for a command
     try:
         cmd = args[2]
@@ -174,18 +192,21 @@ if __name__ == "__main__":
         # List fastqs and exit
         total_size = 0
         n_fastqs = 0
-        for sample_name,fastq,fq in get_fastqs(project):
+        sample_names = set()
+        # Collect information
+        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             # File size
             fsize = os.lstat(fq).st_size
             print "%s\t%s%s\t%s" % (sample_name,
                                     os.path.basename(fq),
                                     ('*' if os.path.islink(fastq) else ''),
                                     bcf_utils.format_file_size(fsize))
+            sample_names.add(sample_name)
             total_size += fsize
             n_fastqs += 1
         # Summary
         print "Total:\t%s" % bcf_utils.format_file_size(total_size)
-        print "%d %ssamples" % (len(project.samples),
+        print "%d %ssamples" % (len(sample_names),
                                 ('paired-end ' if project.info.paired_end else ''))
         print "%d fastqs" % n_fastqs
         sys.exit(0)
@@ -205,16 +226,16 @@ if __name__ == "__main__":
         try:
             md5file = os.path.join(tmp,"%s.chksums" % project.name)
             sys.stdout.write("Creating checksum file %s..." % md5file)
-            write_checksums(project,filen=md5file)
+            write_checksums(project,pattern=options.pattern,filen=md5file)
             print "done"
             print("Copying to %s" % dest)
             copy_to_dest(md5file,dest)
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
-        nfastqs = sum(1 for _ in get_fastqs(project))
+        nfastqs = sum(1 for _ in get_fastqs(project,pattern=options.pattern))
         i = 0
-        for sample_name,fastq,fq in get_fastqs(project):
+        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             i += 1
             print "(% 2d/% 2d) %s" % (i,nfastqs,fq)
             copy_to_dest(fq,dest)
@@ -225,7 +246,7 @@ if __name__ == "__main__":
             sys.stderr.write("ERROR checksum file '%s' already exists\n" % md5file)
             sys.exit(1)
         sys.stdout.write("Creating checksum file %s..." % md5file)
-        write_checksums(project,filen=md5file)
+        write_checksums(project,pattern=options.pattern,filen=md5file)
         print "done"
     elif cmd == 'zip':
         # Create a zip file
@@ -236,7 +257,7 @@ if __name__ == "__main__":
         print "Creating zip file %s" % zip_file
         zz = zipfile.ZipFile(zip_file,'w')
         # Add fastqs
-        for sample_name,fastq,fq in get_fastqs(project):
+        for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             zz.write(fq,arcname=os.path.basename(fq))
         # Make a temporary MD5 file
         tmp = tempfile.mkdtemp()

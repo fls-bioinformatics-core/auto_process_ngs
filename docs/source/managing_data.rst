@@ -37,6 +37,17 @@ Finally to make a zip file containing the FASTQs, use the ``zip`` command::
 
     The ``zip`` option works best if the FASTQs are relatively small.
 
+Handling subsets of files
+-------------------------
+
+Use the ``--filter`` option to work with a subset of files - this allows a
+'glob'-style pattern to be specified so that only files with matching names
+will be included.
+
+For example to only copy ``R1`` files::
+
+    manage_fastqs.py RUN_DIR PROJECTNAME copy /path/to/local/dir --filter *_R1_*
+
 Setting and updating the metadata associated with a project
 ***********************************************************
 
