@@ -1372,15 +1372,22 @@ class AutoProcess:
         # Wait for the scheduler to run all jobs
         sched.wait()
         sched.stop()
-        # Verify the outputs
+        # Verify the outputs and generate QC reports
+        failed_projects = []
         for project in projects:
             if not project.verify_qc():
-                logging.error("QC failed for one or more samples in %s" % project.name)
-                return 1
+                failed_projects.append(project)
             else:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report
-                return 0
+        # Report failed projects
+        if failed_projects:
+            logging.error("QC failed for one or more samples in following projects:")
+            for project in failed_projects:
+                logging.error("- %s" % project.name)
+            return 1
+        # Finish
+        return 0
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
                         chmod=None,group=None,include_bcl2fastq=False,
