@@ -545,8 +545,9 @@ class AutoProcess:
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq
         # files and directory structure
-        project_metadata = self.load_project_metadata(project_metadata_file='projects.info',
-                                                      update=True)
+        project_metadata = self.load_project_metadata(
+            project_metadata_file=project_metadata_file,
+            update=True)
         # Save to file
         filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         project_metadata.save(filen)
@@ -1168,8 +1169,13 @@ class AutoProcess:
                         shutil.move(lane.dirn,primary_illumina_data.undetermined.dirn)
             else:
                 print "No undetermined indices found"
+        if dry_run:
+            return
         # Reset the bcl2fastq dir
         self.params['unaligned_dir'] = primary_unaligned_dir
+        # Make a 'projects.merged.info' metadata file
+        merged_project_metadata_file='projects.merged.info'
+        self.make_project_metadata_file(merged_project_metadata_file)
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False,
                             short_fastq_names=False,
@@ -1183,7 +1189,9 @@ class AutoProcess:
             raise Exception,"Cannot build analysis directories"
         illumina_data = self.load_illumina_data()
         # Project metadata file
-        project_metadata_file='projects.info'
+        project_metadata_file = self.params.project_metadata
+        if project_metadata_file is None:
+            project_metadata_file = 'projects.info'
         if not os.path.exists(os.path.join(self.params.analysis_dir,project_metadata_file)):
             logging.warning("No project metadata file '%s' found, attempting to create"
                             % project_metadata_file)
