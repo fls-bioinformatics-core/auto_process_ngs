@@ -47,6 +47,8 @@ class AutoProcess:
         # allow_save_params: if True then allow updates to parameters
         #                    to be saved back to the metadata file
         #
+        # Initialise
+        self._log_dir = 'logs'
         # Load configuration settings
         self.settings = settings.Settings()
         # Create empty parameter set
@@ -244,10 +246,38 @@ class AutoProcess:
         # Unable to detect existing data directory
         return None
 
+    def set_log_dir(self,path):
+        # (Re)set the path for the log directory
+        # If path is relative then make a subdirectory of
+        # the existing log directory
+        # If the new directory doesn't already exist then
+        # create it
+        if os.path.isabs(path):
+            self._log_dir = path
+        else:
+            self._log_dir = self.log_path(path)
+        return self.log_dir
+
     def log_path(self,*args):
         # Return path appended to log directory
         # Use for getting paths of files under the logs directory
         return os.path.join(self.log_dir,*args)
+
+    def get_log_subdir(self,name):
+        # Return the name for a new log subdirectory
+        # Subdirectories are named as NNN_<name>
+        # e.g. 001_setup, 002_make_fastqs etc
+        #
+        # Get the highest current step number
+        # from the names of the existing subdirs
+        i = 0
+        for d in bcf_utils.list_dirs(self.log_dir):
+            try:
+                i = max(i,int(d.split('_')[0]))
+            except ValueError:
+                pass
+        # Return the name
+        return "%03d_%s" % (i+1,str(name))
 
     def __del__(self):
         tmp_dir = os.path.join(self.analysis_dir,'tmp')
@@ -261,7 +291,7 @@ class AutoProcess:
     @property
     def log_dir(self):
         # Generate and return full path to log directory
-        return self.add_directory('logs')
+        return self.add_directory(self._log_dir)
 
     @property
     def tmp_dir(self):
@@ -416,6 +446,8 @@ class AutoProcess:
                             % os.path.basename(self.analysis_dir))
             logging.warning("Exception: %s" % ex)
             run_number = ''
+        # Log dir
+        self.set_log_dir(self.get_log_subdir('setup'))
         # Custom SampleSheet.csv file
         custom_sample_sheet = self.params.sample_sheet
         if custom_sample_sheet is None:
@@ -688,6 +720,8 @@ class AutoProcess:
                                     nprocessors=nprocessors,
                                     runner=runner)
             return
+        # Log dir
+        self.set_log_dir(self.get_log_subdir('make_fastqs'))
         # Fetch primary data
         if not skip_rsync:
             if self.get_primary_data() != 0:
@@ -874,7 +908,7 @@ class AutoProcess:
           nprocessors: (optional) number of cores to use when
             running 'fastq_statistics.py'
           runner: (optional) specify a non-default job runner to
-            use for fastq_statistics.py.
+            use for fastq_statistics.py
 
         """
         # Get file name
@@ -964,6 +998,8 @@ class AutoProcess:
         output_dir = self.add_directory('barcode_analysis')
         # Base name for output counts
         counts_base = os.path.join(output_dir,'counts')
+        # Log dir
+        self.set_log_dir(self.get_log_subdir('analyse_barcodes'))
         # Set up runner
         # Use the stats runner for now
         if runner is not None:
@@ -1520,6 +1556,8 @@ class AutoProcess:
         if not include_bcl2fastq:
             print "Excluding '%s' directory from archive" % self.params.unaligned_dir
             excludes.append('--exclude=%s' % self.params.unaligned_dir)
+        # Log dir
+        self.set_log_dir(self.get_log_subdir('archive'))
         # If making fastqs read-only then transfer them separately
         if read_only_fastqs:
             try:
