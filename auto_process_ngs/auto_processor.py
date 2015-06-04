@@ -29,9 +29,9 @@ from bcftbx.JobRunner import fetch_runner
 import config
 import applications
 import utils
-import settings
 import simple_scheduler
 import bcl2fastq_utils
+import settings
 from auto_process_ngs import get_version
 
 #######################################################################
@@ -47,6 +47,8 @@ class AutoProcess:
         # allow_save_params: if True then allow updates to parameters
         #                    to be saved back to the metadata file
         #
+        # Load configuration settings
+        self.settings = settings.Settings()
         # Create empty parameter set
         self.params = utils.AnalysisDirMetadata()
         # Set flag to indicate whether it's okay to save parameters
@@ -785,7 +787,7 @@ class AutoProcess:
             raise Exception, "No bases mask"
         # Number of cores
         if nprocessors is None:
-            nprocessors = settings.bcl2fastq.nprocessors
+            nprocessors = self.settings.bcl2fastq.nprocessors
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
@@ -806,7 +808,7 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = settings.runners.bcl2fastq
+            runner = self.settings.runners.bcl2fastq
         runner.set_log_dir(self.log_dir)
         # Run bcl2fastq
         bcl2fastq = applications.Command('bclToFastq.py',
@@ -880,11 +882,11 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = settings.runners.stats
+            runner = self.settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Number of cores
         if nprocessors is None:
-            nprocessors = settings.fastq_stats.nprocessors
+            nprocessors = self.settings.fastq_stats.nprocessors
         # Generate statistics
         fastq_statistics = applications.Command('fastq_statistics.py',
                                                 '--unaligned',unaligned_dir,
@@ -955,12 +957,12 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = settings.runners.stats
+            runner = self.settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Schedule the jobs
         sched = simple_scheduler.SimpleScheduler(
             runner=runner,
-            max_concurrent=settings.general.max_concurrent_jobs)
+            max_concurrent=self.settings.general.max_concurrent_jobs)
         sched.start()
         for lane in lanes:
             print "Starting analysis of barcodes for lane %s" % lane
@@ -1012,7 +1014,7 @@ class AutoProcess:
             barcode_report = report_file
         barcode_counts = os.path.join(self.analysis_dir,'index_sequences.counts')
         # Set up runner
-        runner = settings.runners.stats
+        runner = self.settings.runners.stats
         runner.set_log_dir(self.log_dir)
         # Run count_barcodes.py
         count_barcodes = applications.Command('count_barcodes.py',
@@ -1330,7 +1332,7 @@ class AutoProcess:
         if runner is not None:
             qc_runner = fetch_runner(runner)
         else:
-            qc_runner = settings.runners.qc
+            qc_runner = self.settings.runners.qc
         # Set up a simple scheduler
         sched = simple_scheduler.SimpleScheduler(runner=qc_runner,
                                                  max_concurrent=max_jobs)
@@ -1478,7 +1480,7 @@ class AutoProcess:
             logging.warning("Some metadata items not set, proceeding")
         # Fetch archive location
         if archive_dir is None:
-            archive_dir = settings.archive.dirn
+            archive_dir = self.settings.archive.dirn
         if archive_dir is None:
             raise Exception, "No archive directory specified (use --archive_dir option?)"
         # Construct subdirectory structure i.e. platform and year
@@ -1592,7 +1594,7 @@ class AutoProcess:
         # Get location to publish qc reports to
         if location is None:
             user,server,dirn = utils.split_user_host_dir(
-                settings.qc_web_server.dirn)
+                self.settings.qc_web_server.dirn)
         else:
             user,server,dirn = utils.split_user_host_dir(location)
         if server is not None:

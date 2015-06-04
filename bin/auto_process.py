@@ -60,11 +60,13 @@ from bcftbx.cmdparse import add_no_save_option
 from bcftbx.cmdparse import add_dry_run_option
 from bcftbx.cmdparse import add_nprocessors_option
 from bcftbx.cmdparse import add_runner_option
+import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.auto_processor import AutoProcess
 
 __version__ = auto_process_ngs.get_version()
+__settings = auto_process_ngs.settings.Settings()
 
 logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
 
@@ -162,7 +164,7 @@ def add_make_fastqs_command(cmdparser):
                             help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
     add_nprocessors_option(bcl_to_fastq,None,
-                           default_display=auto_process_ngs.settings.bcl2fastq.nprocessors)
+                           default_display=__settings.bcl2fastq.nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
     # Statistics
@@ -226,7 +228,7 @@ def add_run_qc_command(cmdparser):
                               usage="%prog run_qc [OPTIONS] [ANALYSIS_DIR]",
                               description="Run QC procedures for sequencing projects in "
                               "ANALYSIS_DIR.")
-    max_concurrent_jobs = auto_process_ngs.settings.general.max_concurrent_jobs
+    max_concurrent_jobs = __settings.general.max_concurrent_jobs
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
@@ -300,11 +302,11 @@ def add_archive_command(cmdparser):
     p.add_option('--year',action='store',
                  dest='year',default=None,
                  help="specify the year e.g. '2014' (default is the current year)")
-    default_group = auto_process_ngs.settings.archive.group
+    default_group = __settings.archive.group
     p.add_option('--group',action='store',dest='group',default=default_group,
                  help="specify the name of group for the archived files NB only works "
                  "when the archive is a local directory (default: %s)" % default_group)
-    default_chmod = auto_process_ngs.settings.archive.chmod
+    default_chmod = __settings.archive.chmod
     p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
                  help="specify chmod operations for the archived files (default: "
                  "%s)" % default_chmod)
@@ -400,7 +402,7 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_option('--stats-file',action='store',
                  dest='stats_file',default=None,
                  help="specify output file for fastq statistics")
-    add_nprocessors_option(p,auto_process_ngs.settings.fastq_stats.nprocessors)
+    add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
 
@@ -449,7 +451,7 @@ if __name__ == "__main__":
 
     # Set up environment modules
     try:
-        modulefiles = auto_process_ngs.settings.modulefiles[cmd]
+        modulefiles = __settings.modulefiles[cmd]
         if modulefiles is not None:
             for modulefile in modulefiles.split(','):
                 envmod.load(modulefile)
@@ -543,7 +545,7 @@ if __name__ == "__main__":
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
             else:
-                auto_process_ngs.settings.report_settings()
+                __settings.report_settings()
                 d.show_settings()
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,

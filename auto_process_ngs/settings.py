@@ -1,5 +1,50 @@
-# Settings for auto_process module
+#!/bin/env python
 #
+#     settings.py: handle configuration settings for autoprocessing
+#     Copyright (C) University of Manchester 2014-15 Peter Briggs
+#
+#########################################################################
+#
+# settings.py
+#
+#########################################################################
+
+"""
+Classes and functions for handling the collection of configuration settings
+for automated processing.
+
+The settings are stored in a '.ini'-formatted file (by default called
+'settings.ini'; this file can be created by making a copy of the
+'settings.ini.sample' file).
+
+The simplest usage example is:
+
+>>> from settings import Settings
+>>> s = Settings()
+
+The values of the configuration parameters can then be accessed using
+e.g.
+
+>>> s.general.max_concurrent_jobs
+4
+
+To print the values of all parameters use
+
+>>> s.report_settings()
+
+To import values from a non-standard named file use e.g.
+
+>>> s = Settings('my_settings.ini')
+
+The 'locate_settings_file' function is used implicitly to locate the
+settings file if none is given; it can also automatically create a settings
+file if none is found but there is a sample version on the search path.
+
+"""
+
+#######################################################################
+# Imports
+#######################################################################
 
 import os
 import sys
@@ -8,105 +53,152 @@ import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
 from config import Config
 
-# Locate settings files
-# Search in 'config' subdir of installation location, then
-# installation location, then in current directory
-__install_path = os.path.abspath(os.path.normpath(
-    os.path.join(os.path.dirname(sys.argv[0]),'..')))
-__config_file_path = (os.path.join(__install_path,'config'),
-                      __install_path,
-                      os.getcwd(),)
-__config_file = None
-__sample_config_file = None
-for path in __config_file_path:
-    __config_file = os.path.join(path,'settings.ini')
-    if os.path.exists(__config_file):
-        # Located settings file
-        break
-    # No settings file here, look for a sample version
-    if __sample_config_file is None:
-        __sample_config_file = __config_file + '.sample'
-        if not os.path.exists(__sample_config_file):
-            __sample_config_file = None
-    # Reset config file to keep looking
-    __config_file = None
+#######################################################################
+# Classes
+#######################################################################
 
-# No settings.ini file - try to make one
-if __config_file is None:
-    logging.warning("No local settings file found in %s" % ', '.join(__config_file_path))
-    if __sample_config_file is not None:
-        logging.warning("Attempting to make a copy from sample settings file")
-        __config_file = os.path.splitext(__sample_config_file)[0]
-        try:
-            open(__config_file,'w').write(open(__sample_config_file,'r').read())
-            logging.warning("Created new file %s" % __config_file)
-            logging.warning("Edit configuration settings and rerun")
-        except Exception,ex:
-            raise Exception("Failed to create %s: %s" % (__config_file,ex))
-    else:
-        raise Exception("No sample config file found")
-    sys.exit(1)
-#
-# Import site-specific settings from local version
-config = Config()
-config.read(__config_file)
-#
-# General parameters
-general = AttributeDictionary()
-general['default_runner'] = config.get('general','default_runner','SimpleJobRunner')
-general['max_concurrent_jobs'] = config.getint('general','max_concurrent_jobs',12)
-#
-# modulefiles
-modulefiles = AttributeDictionary()
-modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
-modulefiles['run_qc'] = config.get('modulefiles','run_qc')
-#
-# bcl2fastq
-bcl2fastq = AttributeDictionary()
-bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
-#
-# fastq_stats
-fastq_stats = AttributeDictionary()
-fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
-#
-# Define runners for specific jobs
-runners = AttributeDictionary()
-for name in ('bcl2fastq','qc','stats',):
-    runners[name] = config.getrunner('runners',name,general.default_runner)
-#
-# Information for archiving analyses
-# dirn should be a directory in the form [[user@]host:]path]
-archive = AttributeDictionary()
-archive['dirn'] = config.get('archive','dirn',None)
-archive['log'] = config.get('archive','log',None)
-archive['group'] = config.get('archive','group',None)
-archive['chmod'] = config.get('archive','chmod',None)
-#
-# Information for uploading QC reports
-# dirn should be a directory in the form [[user@]host:]path]
-qc_web_server = AttributeDictionary()
-qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
-qc_web_server['url'] = config.get('qc_web_server','url',None)
-#
-# Show settings
+class Settings:
+    """
+    Load parameter values from an external config file
+
+    The input file should be in '.ini' format and contain
+    sections and values consistent with the sample
+    settings.ini file.
+
+    """
+    def __init__(self,settings_file=None):
+        """
+        Create new Settings instance
+
+        If 'settings_file' is specified then this should be the
+        full path to an appropriately formatted '.ini' file.
+
+        Otherwise the class will attempt to locate an appropriate
+        file to use.
+        
+        """
+        # Locate settings file
+        if settings_file is None:
+            self.settings_file = locate_settings_file()
+        else:
+            self.settings_file = os.path.abspath(settings_file)
+        # Import site-specific settings from local version
+        config = Config()
+        config.read(self.settings_file)
+        # General parameters
+        self.general = AttributeDictionary()
+        self.general['default_runner'] = config.get('general','default_runner',
+                                                    'SimpleJobRunner')
+        self.general['max_concurrent_jobs'] = config.getint('general',
+                                                            'max_concurrent_jobs',12)
+        # modulefiles
+        self.modulefiles = AttributeDictionary()
+        self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
+        self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
+        # bcl2fastq
+        self.bcl2fastq = AttributeDictionary()
+        self.bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
+        # fastq_stats
+        self.fastq_stats = AttributeDictionary()
+        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
+        # Define runners for specific jobs
+        self.runners = AttributeDictionary()
+        for name in ('bcl2fastq','qc','stats',):
+            self.runners[name] = config.getrunner('runners',name,
+                                                  self.general.default_runner)
+        # Information for archiving analyses
+        # dirn should be a directory in the form [[user@]host:]path]
+        self.archive = AttributeDictionary()
+        self.archive['dirn'] = config.get('archive','dirn',None)
+        self.archive['log'] = config.get('archive','log',None)
+        self.archive['group'] = config.get('archive','group',None)
+        self.archive['chmod'] = config.get('archive','chmod',None)
+        # Information for uploading QC reports
+        # dirn should be a directory in the form [[user@]host:]path]
+        self.qc_web_server = AttributeDictionary()
+        self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
+        self.qc_web_server['url'] = config.get('qc_web_server','url',None)
+    
+    def report_settings(self):
+        """
+        Report the settings read from the config file
+
+        """
+        print "Settings from %s:" % self.settings_file
+        show_dictionary('general',self.general)
+        show_dictionary('modulefiles',self.modulefiles)
+        show_dictionary('bcl2fastq',self.bcl2fastq)
+        show_dictionary('runners',self.runners)
+        show_dictionary('archive',self.archive)
+        show_dictionary('qc_web_server',self.qc_web_server)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def locate_settings_file(name='settings.ini',create_from_sample=True):
+    """
+    Locate configuration settings file
+
+    Look for a configuration settings file (default name
+    'settings.ini'). The search path is:
+
+    1. 'config' subdir of installation location
+    2. installation location
+    3. current directory
+
+    The first file with a matching name is returned.
+
+    If no matching file is located but one of the locations
+    contains a file with the correct name ending in
+    '.sample', and if the 'create_from_sample' argument is
+    set, then use this to make a settings file in the same
+    location.
+
+    Returns the path to a settings file, or None if one isn't
+    found.
+
+    """
+    install_dir = os.path.abspath(os.path.normpath(
+        os.path.join(os.path.dirname(sys.argv[0]),'..')))
+    config_file_dirs = (os.path.join(install_dir,'config'),
+                        install_dir,
+                        os.getcwd(),)
+    settings_file = None
+    sample_settings_file = None
+    for path in config_file_dirs:
+        settings_file = os.path.join(path,name)
+        if os.path.exists(settings_file):
+            # Located settings file
+            break
+        # No settings file here, look for a sample version
+        if sample_settings_file is None:
+            sample_settings_file = settings_file + '.sample'
+            if not os.path.exists(sample_settings_file):
+                sample_settings_file = None
+        # Reset settings file to keep looking
+        settings_file = None
+    # No settings file found anywhere on search path
+    if settings_file is None:
+        logging.warning("No local settings file found in %s" % ', '.join(config_file_dirs))
+        if sample_settings_file is not None and create_from_sample:
+            logging.warning("Attempting to make a copy from sample settings file")
+            settings_file = os.path.splitext(sample_settings_file)[0]
+            try:
+                open(settings_file,'w').write(open(sample_settings_file,'r').read())
+                logging.warning("Created new file %s" % settings_file)
+                logging.warning("Edit configuration settings and rerun")
+            except Exception,ex:
+                raise Exception("Failed to create %s: %s" % (settings_file,ex))
+                settings_file = None
+    # Finish
+    return settings_file
+
 def show_dictionary(name,d):
-    """Print the contents of a dictionary
+    """
+    Print the contents of a dictionary
 
     """
     print "[%s]" % name
     for key in d:
         print "\t%s = %s" % (key,d[key])
-#
-# Report configuration settings
-def report_settings():
-    """
-    Report the settings read from the config file
-    """
-    print "Settings from %s:" % __config_file
-    show_dictionary('general',general)
-    show_dictionary('modulefiles',modulefiles)
-    show_dictionary('bcl2fastq',bcl2fastq)
-    show_dictionary('runners',runners)
-    show_dictionary('archive',archive)
-    show_dictionary('qc_web_server',qc_web_server)
-
