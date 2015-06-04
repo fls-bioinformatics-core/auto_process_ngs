@@ -102,12 +102,11 @@ class AutoProcess:
         #             the info file (otherwise don't allow save)
         #
         # check for info file
-        info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
-        if not os.path.isfile(info_file_name):
-            raise MissingInfoFileException, "No info file %s" % info_file_name
+        if not self.has_info_file:
+            raise MissingInfoFileException, "No info file %s" % self.info_file
         # Read contents of info file and assign values
-        logging.debug("Loading settings from %s" % info_file_name)
-        self.params.load(info_file_name)
+        logging.debug("Loading settings from %s" % self.info_file)
+        self.params.load(self.info_file)
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
@@ -115,8 +114,7 @@ class AutoProcess:
         # Save parameters to info file
         #
         if self._save_params:
-            info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
-            self.params.save(info_file_name)
+            self.params.save(self.info_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -356,6 +354,20 @@ class AutoProcess:
                 run_id = run_name
         return run_id
 
+    @property
+    def info_file(self):
+        """
+        Return name of info file ('auto_process.info')
+        """
+        return os.path.join(self.analysis_dir,'auto_process.info')
+
+    @property
+    def has_info_file(self):
+        """
+        Indicate if there is an info file (typically auto_process.info)
+        """
+        return os.path.exists(os.path.join(self.info_file))
+
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         # Set up the initial analysis directory
         #
@@ -383,8 +395,7 @@ class AutoProcess:
             # Directory already exists
             logging.warning("Analysis directory already exists")
             # check for info file
-            info_file_name = os.path.join(self.analysis_dir,'auto_process.info')
-            if os.path.isfile(info_file_name):
+            if self.has_info_file:
                 self.load_parameters()
             else:
                 logging.warning("No info file found in %s" % self.analysis_dir)
@@ -499,10 +510,9 @@ class AutoProcess:
             raise Exception("Clone failed, target directory already exists")
         self.create_directory(clone_dir)
         # Copy info file
-        info_file = os.path.join(self.analysis_dir,'auto_process.info')
-        if not os.path.exists(info_file):
-            raise Exception("Clone failed, no info file %s" % info_file)
-        shutil.copy(info_file,os.path.join(clone_dir,'auto_process.info'))
+        if not self.has_info_file:
+            raise Exception("Clone failed, no info file %s" % self.info_file)
+        shutil.copy(self.info_file,os.path.join(clone_dir,'auto_process.info'))
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         clone_unaligned_dir = os.path.join(clone_dir,
@@ -527,6 +537,8 @@ class AutoProcess:
 
     def show_settings(self):
         # Print the current settings
+        if not self.has_info_file:
+            return
         print "Settings in auto_process.info:"
         settings = bcf_utils.OrderedDictionary()
         settings['Run reference'] = self.run_reference_id
