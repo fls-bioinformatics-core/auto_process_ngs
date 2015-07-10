@@ -467,7 +467,6 @@ class AutoProcess:
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
         self.params['platform'] = platform
-        self.params['run_number'] = run_number
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
         self.params['assay'] = assay
