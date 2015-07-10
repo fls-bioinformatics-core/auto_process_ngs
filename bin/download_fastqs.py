@@ -68,7 +68,7 @@ if __name__ == "__main__":
     url = args[0]
     if len(args) == 2:
         dest_dir = os.path.abspath(args[1])
-        print "Moving to %d" % dest_dir
+        print "Moving to %s" % dest_dir
         try:
             os.chdir(dest_dir)
         except Exception,ex:
