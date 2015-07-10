@@ -102,15 +102,21 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
     if filen:
         fp.close()
 
-def copy_to_dest(f,dirn):
+def copy_to_dest(f,dirn,chksum=None):
     """Copy a file to a local or remote destination
 
     Raises an exception if the copy operation fails.
+
+    If 'chksum' argument is supplied then the MD5 sum of
+    the copy is also verified against this and an
+    exception is raised if this fails to match.
 
     Arguments:
       f: file to copy (must be local)
       dirn: target directory, either local or of the form
         "[user@]host:dir"
+      chksum: (optional) MD5 sum of the original file
+        to match against the copy
     
     """
     if not os.path.exists(f):
@@ -120,12 +126,23 @@ def copy_to_dest(f,dirn):
     if not remote:
         # Local copy
         shutil.copy(f,dirn)
+        if chksum is not None:
+            if md5sum.md5sum(f) != chksum:
+                raise Exception("MD5 checksum failed for copy of %s" % f)
     else:
         # Remote copy
         try:
             scp = applications.general.scp(user,host,f,dest)
             print "Running %s" % scp
             scp.run_subprocess()
+            # Run md5sum -c on the remote system
+            md5sum = applications.general.ssh_command(user,host,
+                                                      'echo "%s  %s" | md5sum -c -' %
+                                                      (chksum,
+                                                       os.path.join(dest,
+                                                                    os.path.basename(f))))
+            print "Running %s" % md5sum
+            md5sum.run_subprocess()
         except Exception, ex:
             raise Exception("Failed to copy %s to %s: %s" % (f,dirn,ex))
 
@@ -230,6 +247,12 @@ if __name__ == "__main__":
             print "done"
             print("Copying to %s" % dest)
             copy_to_dest(md5file,dest)
+            # Load checksums into dictionary
+            chksums = dict()
+            with open(md5file,'r') as fp:
+                for line in fp:
+                    filen,chksum = line.strip().split('\t')
+                    chksums[filen] = chksum
         finally:
             shutil.rmtree(tmp)
         # Copy fastqs
@@ -238,7 +261,7 @@ if __name__ == "__main__":
         for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             i += 1
             print "(% 2d/% 2d) %s" % (i,nfastqs,fq)
-            copy_to_dest(fq,dest)
+            copy_to_dest(fq,dest,chksums[os.path.basename(fq)])
     elif cmd == 'md5':
         # Generate MD5 checksums
         md5file = "%s.chksums" % project.name
