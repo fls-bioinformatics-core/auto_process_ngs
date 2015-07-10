@@ -136,13 +136,11 @@ def copy_to_dest(f,dirn,chksum=None):
             print "Running %s" % scp
             scp.run_subprocess()
             # Run md5sum -c on the remote system
-            md5sum = applications.general.ssh_command(user,host,
-                                                      'echo "%s  %s" | md5sum -c -' %
-                                                      (chksum,
-                                                       os.path.join(dest,
-                                                                    os.path.basename(f))))
-            print "Running %s" % md5sum
-            md5sum.run_subprocess()
+            md5sum_check = applications.general.ssh_command(user,host, \
+                                    'echo "%s  %s" | md5sum -c -' %
+                                    (chksum,os.path.join(dest,os.path.basename(f))))
+            print "Running %s" % md5sum_check
+            md5sum_check.run_subprocess()
         except Exception, ex:
             raise Exception("Failed to copy %s to %s: %s" % (f,dirn,ex))
 
