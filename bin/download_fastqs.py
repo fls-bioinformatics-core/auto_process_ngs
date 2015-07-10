@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     download_fastqs.py: utility to download fastq files from web server
 #     Copyright (C) University of Manchester 2015 Peter Briggs
