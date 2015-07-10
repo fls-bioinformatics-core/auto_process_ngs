@@ -251,7 +251,7 @@ if __name__ == "__main__":
             chksums = dict()
             with open(md5file,'r') as fp:
                 for line in fp:
-                    filen,chksum = line.strip().split('\t')
+                    filen,chksum = line.strip('\n').split()
                     chksums[filen] = chksum
         finally:
             shutil.rmtree(tmp)
