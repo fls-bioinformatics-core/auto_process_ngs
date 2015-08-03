@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     manage_runs.py: utility for managing Illumina sequencing run directories
 #     Copyright (C) University of Manchester 2014 Peter Briggs

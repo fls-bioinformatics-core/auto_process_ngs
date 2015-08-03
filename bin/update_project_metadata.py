@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     update_project_metadata.py: update data associated with a project
 #     Copyright (C) University of Manchester 2015 Peter Briggs

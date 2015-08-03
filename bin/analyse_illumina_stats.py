@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     analyse_illumina_stats.py: summarise per lane/per sample stats
 #     Copyright (C) University of Manchester 2015 Peter Briggs

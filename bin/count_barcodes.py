@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     count_barcodes.py: count index sequences (barcodes) in fastqs
 #     Copyright (C) University of Manchester 2014-2015 Peter Briggs

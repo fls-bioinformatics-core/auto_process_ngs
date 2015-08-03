@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     manage_runs.py: utility for managing fastq files from auto_process
 #     Copyright (C) University of Manchester 2014 Peter Briggs

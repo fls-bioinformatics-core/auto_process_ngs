@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     data_manager.py: sequencing data curation utility
 #     Copyright (C) University of Manchester 2014 Peter Briggs

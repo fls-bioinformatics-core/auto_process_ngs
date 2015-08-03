@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     archive_data.py: archiving utility for sequencing data
 #     Copyright (C) University of Manchester 2014 Peter Briggs
