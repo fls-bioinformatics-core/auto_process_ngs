@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Wrapper for manage_fastqs.py
 # Maintained for backwards compatibility only

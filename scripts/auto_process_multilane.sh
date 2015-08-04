@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 #
 # First attempt at a wrapper to process each lane in a sequencing
 # run separately
