@@ -10,7 +10,6 @@
 #########################################################################
 
 __version__ = "2.0.0"
-__patched__ = False
 
 """envmod
 
@@ -43,21 +42,6 @@ Note that environment modules already loaded in the shell from
 where Python was invoked will also be available; these modules can
 be unloaded within the Python environment.
 
-Note for Ubuntu 14.04
----------------------
-
-The Python implementation of the environment modules package
-appears to be broken on Ubuntu 14.04. If this detected then the
-module will issue a debug message and attempt to patch it with
-it's own version of the 'module' function.
-
-To find out if a patched has been applied, check the __patched__
-property of the module e.g.
-
->>> from auto_process_ngs import envmod
->>> envmod.__patched__
-True
-
 """
 
 #######################################################################
@@ -85,21 +69,16 @@ except Exception,ex:
     raise ImportError("Exception executing code from %s: %s: %s" % 
                       (modules_python,ex.__class__.__name__,ex))
 
-# Check for broken 'module' function from python.py (e.g. Ubuntu 14.04)
-try:
-    module('list')
-except TypeError:
-    # Patch the module function
-    logging.debug("Patching broken 'module' function from %s" % modules_python)
-    def module(*args):
-	if type(args[0]) == type([]):
-            args = args[0]
-	else:
-            args = list(args)
-        (output,error) = subprocess.Popen(['/usr/bin/modulecmd','python']+args, stdout=subprocess.PIPE).communicate()
-        exec output
-    # Indicate that the module is patched
-    __patched__ = True
+# Add our own version of the 'module' function to deal with
+# the python implementation being broken on some systems (e.g.
+# Ubuntu 14.04)
+def module(*args):
+    if type(args[0]) == type([]):
+        args = args[0]
+    else:
+        args = list(args)
+    (output,error) = subprocess.Popen(['/usr/bin/modulecmd','python']+args, stdout=subprocess.PIPE).communicate()
+    exec output
 
 #######################################################################
 # Functions
