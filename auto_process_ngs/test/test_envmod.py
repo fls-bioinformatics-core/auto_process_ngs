@@ -37,7 +37,6 @@ def _clean_up_modules():
                 envmod.module('unload',mod)
     except KeyError:
         pass
-        
 
 class TestEnvModLoaded(unittest.TestCase):
     """Tests for the envmod module
