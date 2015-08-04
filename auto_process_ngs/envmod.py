@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     envmod.py: wrapper for setting up environment with modulefiles
 #     Copyright (C) University of Manchester 2014-2015 Peter Briggs

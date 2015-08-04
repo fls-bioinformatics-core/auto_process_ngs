@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
 #     Copyright (C) University of Manchester 2013-15 Peter Briggs
