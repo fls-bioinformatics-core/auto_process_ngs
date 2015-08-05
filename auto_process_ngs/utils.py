@@ -1045,7 +1045,8 @@ class ProjectMetadataFile(TabFile.TabFile):
                                                'Organism',
                                                'PI',
                                                'Comments'),
-                                 first_line_is_header=True)
+                                 first_line_is_header=True,
+                                 convert=False)
 
     def add_project(self,project_name,sample_names,user=None,
                     library_type=None,organism=None,PI=None,
