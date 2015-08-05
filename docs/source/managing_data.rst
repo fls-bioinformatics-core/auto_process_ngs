@@ -5,8 +5,8 @@ These additional tasks are not really part of the automated processing, but
 the utilities for performing them are currently part of the same package so
 they are outlined here.
 
-Copying data for transfer to end users
-**************************************
+``manage_fastqs.py``: copying data for transfer to end users
+************************************************************
 
 The ``manage_fastqs.py`` utility can be used to explore and copy data from
 a run directory to another location on a per-project basis.
@@ -48,8 +48,25 @@ For example to only copy ``R1`` files::
 
     manage_fastqs.py RUN_DIR PROJECTNAME copy /path/to/local/dir --filter *_R1_*
 
-Setting and updating the metadata associated with a project
-***********************************************************
+``download_fastqs.py``: fetch FASTQs from a webserver in batch
+**************************************************************
+
+FASTQ files pushed to a webserver using ``manage_fastqs.py`` can be retrieved
+in batch using the ``download_fastqs.py`` utility::
+
+     download_fastqs.py http://example.com/fastqs/
+
+This fetches the checksum file from the URL and then uses that to get a
+list of FASTQ files to download. Once the files are downloaded it runs
+the Linux ``md5sum`` program to verify the integrity of the downloads.
+
+.. note::
+
+   This utility is stand-alone so it can be sent to end users and
+   used independently of other components of the autoprocess package.
+
+``update_project_metadata.py``: manage metadata associated with a project
+*************************************************************************
 
 The projects within a run each have a file called ``README.info`` which is
 used to hold metadata about that project (for example, user, PI, organism,
@@ -70,8 +87,8 @@ metadata associated with a project, for example to update the PI::
 
     before using ``-u`` to populate the fields.
 
-Auditing disk usage for multiple runs
-*************************************
+``audit_projects.py``: auditing disk usage for multiple runs
+************************************************************
 
 Collections of runs that are copied to an 'archive' location via the
 ``archive`` function of ``auto_process.py`` will form a directory structure
@@ -92,13 +109,13 @@ of the form::
 Within each run dir there will be one or more project directories.
 
 The projects can be audited according to PI and disk usage using the
-``audit_project.py`` utility, for example::
+``audit_projects.py`` utility, for example::
 
-    audit_project.py ARCHIVE_DIR/2015/hiseq/
+    audit_projects.py ARCHIVE_DIR/2015/hiseq/
 
 Multiple directories can be specified, e.g.::
 
-    audit_project.py ARCHIVE_DIR/2015/hiseq/ ARCHIVE_DIR/2014/hiseq/
+    audit_projects.py ARCHIVE_DIR/2015/hiseq/ ARCHIVE_DIR/2014/hiseq/
 
 This will print out a summary of usage for each PI, e.g.::
 
