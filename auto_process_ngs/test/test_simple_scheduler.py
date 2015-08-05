@@ -7,7 +7,7 @@ import os
 import sys
 import time
 import logging
-from JobRunner import BaseJobRunner
+from bcftbx.JobRunner import BaseJobRunner
 from auto_process_ngs.simple_scheduler import *
 
 class MockJobRunner(BaseJobRunner):
