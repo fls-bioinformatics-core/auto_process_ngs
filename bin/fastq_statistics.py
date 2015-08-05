@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     fastq_stats.py: get statistics for fastq files from Illumina run
 #     Copyright (C) University of Manchester 2013-14 Peter Briggs

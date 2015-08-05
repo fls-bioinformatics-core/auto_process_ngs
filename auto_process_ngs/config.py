@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     config: classes & funcs for configuring auto_process_ngs
 #     Copyright (C) University of Manchester 2014 Peter Briggs

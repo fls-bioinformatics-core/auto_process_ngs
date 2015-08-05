@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
 #     Copyright (C) University of Manchester 2013 Peter Briggs

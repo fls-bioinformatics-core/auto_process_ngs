@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     barcode_splitter.py: split reads into fastq files
 #     Copyright (C) University of Manchester 2014-15 Peter Briggs

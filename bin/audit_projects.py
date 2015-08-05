@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     audit_projects.py: summarise disk usage for sequencing projects
 #     Copyright (C) University of Manchester 2015 Peter Briggs

@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     audit_data.py: audit sequencing data and disk usage
 #     Copyright (C) University of Manchester 2014 Peter Briggs

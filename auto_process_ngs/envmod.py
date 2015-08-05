@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     envmod.py: wrapper for setting up environment with modulefiles
 #     Copyright (C) University of Manchester 2014-2015 Peter Briggs
@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "1.1.1"
+__version__ = "2.0.0"
 
 """envmod
 
@@ -49,10 +49,18 @@ be unloaded within the Python environment.
 #######################################################################
 
 import os
-modules_python = '/usr/share/Modules/init/python.py'
-if not os.path.isfile(modules_python):
+import logging
+modules_python_dirs = ('/usr/share/Modules/init/',
+                       '/usr/share/modules/init/',)
+for d in modules_python_dirs:
+    modules_python = os.path.join(d,'python.py')
+    if not os.path.isfile(modules_python):
+        modules_python = None
+    else:
+        break
+if modules_python is None:
     # Nothing to load
-    raise ImportError("No file %s" % modules_python)
+    raise ImportError("No 'python.py' file in any of %s" % modules_python_dirs)
 
 # Load the code from the env modules python file
 try:
@@ -60,6 +68,17 @@ try:
 except Exception,ex:
     raise ImportError("Exception executing code from %s: %s: %s" % 
                       (modules_python,ex.__class__.__name__,ex))
+
+# Add our own version of the 'module' function to deal with
+# the python implementation being broken on some systems (e.g.
+# Ubuntu 14.04)
+def module(*args):
+    if type(args[0]) == type([]):
+        args = args[0]
+    else:
+        args = list(args)
+    (output,error) = subprocess.Popen(['/usr/bin/modulecmd','python']+args, stdout=subprocess.PIPE).communicate()
+    exec output
 
 #######################################################################
 # Functions

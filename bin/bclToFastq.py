@@ -1,4 +1,4 @@
-#!/bin/env python
+#!/usr/bin/env python
 #
 #     bclToFastq.py: wrapper for converting Illumina bcl files to fastq
 #     Copyright (C) University of Manchester 2013 Peter Briggs
