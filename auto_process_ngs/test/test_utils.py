@@ -555,6 +555,26 @@ class TestProjectMetadataFile(unittest.TestCase):
             for attr in ('Project','User','Library','Organism','PI','Comments'):
                 self.assertEqual(x[attr],y[attr])
 
+    def test_projects_with_numbers_for_names(self):
+        """Handle projects with names that look like numbers
+        """
+        metadata = ProjectMetadataFile()
+        metadata.add_project('1234',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        metadata.add_project('56.78',['F3','F4'],
+                             user="Farley G",
+                             library_type="ChIP-seq",
+                             organism="Mouse",
+                             PI="Harley",
+                             comments="Squeak!")
+        for project in metadata:
+            print "%s" % project
+            print "%s" % type(project['Project'])
+            self.assertTrue(isinstance(project['Project'],str))
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 
