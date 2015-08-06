@@ -778,6 +778,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     >>> metadata = MetadataDict()
     >>> metadata.load('metadata.tsv')
 
+    List items with 'null' values:
+    >>> metadata.null_items()
+
     The external file storage is intended to be readable by
     humans so longer names are used to describe the keys; also
     Python None values are stored as '.', and True and False
