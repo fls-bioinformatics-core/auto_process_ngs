@@ -1473,8 +1473,7 @@ class AutoProcess:
         if not projects:
             raise Exception("No project directories found, nothing to archive")
         # Check metadata
-        check_metadata = self.check_metadata(('source','run_number'),
-                                             error=not force)
+        check_metadata = self.check_metadata(('source','run_number'))
         if not check_metadata:
             if not force:
                 logging.error("Some metadata items not set, stopping")
@@ -1589,8 +1588,7 @@ class AutoProcess:
         # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
         self._save_params = False
         # Check metadata
-        check_metadata = self.check_metadata(('source','run_number'),
-                                             error=True)
+        check_metadata = self.check_metadata(('source','run_number'))
         if not check_metadata:
             logging.error("Some metadata items not set, stopping")
             return
@@ -2196,7 +2194,7 @@ class AutoProcess:
         report = '\n'.join(report)
         return report
 
-    def check_metadata(self,items,error=False):
+    def check_metadata(self,items):
         """
         Check that metadata items are set
 
@@ -2204,28 +2202,16 @@ class AutoProcess:
         check that each is set to a non-null value. Report
         those that are null.
 
-        If 'error' is True then null items are reported via
-        logging.error, otherwise they are reported via
-        logging.warning.
-
         Return False if one or more are null; otherwise return
         True.
 
         """
         # Check metadata
         metadata_ok = True
-        if not error:
-            log = logging.warning
-        else:
-            log = logging.error
         for item in items:
-            try:
-                if not self.params[item]:
-                    metadata_ok = False
-                    log("Metadata item '%s' is not set" % item)
-            except KeyError:
+            if item in self.params.null_items():
                 metadata_ok = False
-                logging.error("Metadata item '%s' not found" % item)
+                logging.warning("Metadata item '%s' is not set" % item)
         return metadata_ok
 
 #######################################################################
