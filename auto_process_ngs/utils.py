@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "0.0.17"
+__version__ = "0.0.18"
 
 """utils
 
@@ -912,6 +912,17 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         if filen is not None:
             self.__filen = filen
         metadata.write(self.__filen)
+
+    def null_items(self):
+        """
+        Return a list of data items with 'null' values
+
+        """
+        null_items = []
+        for key in self.__key_order:
+            if self[key] is None:
+                null_items.append(key)
+        return null_items
 
 class AnalysisDirMetadata(MetadataDict):
     """Class for storing metadata in an analysis project

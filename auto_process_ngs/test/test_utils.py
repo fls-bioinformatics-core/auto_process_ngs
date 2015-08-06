@@ -408,6 +408,24 @@ class TestMetadataDict(unittest.TestCase):
         for line,expected_key in zip(fp,expected_keys):
             self.assertEqual(line.split('\t')[0],expected_key)
 
+    def test_get_null_items(self):
+        """Check fetching of items with null values
+        """
+        metadata = MetadataDict(attributes={'salutation':'.',
+                                            'valediction': '.',
+                                            'chat': '.'})
+        self.assertEqual(metadata.null_items(),['chat',
+                                                'salutation',
+                                                'valediction'])
+        #
+        metadata['salutation'] = 'hello'
+        metadata['valediction'] = 'ave'
+        metadata['chat'] = 'awight'
+        self.assertEqual(metadata.null_items(),[])
+        #
+        metadata['chat'] = None
+        self.assertEqual(metadata.null_items(),['chat'])
+
 class TestAnalysisDirMetadata(unittest.TestCase):
     """Tests for the AnalysisDirMetadata class
 
