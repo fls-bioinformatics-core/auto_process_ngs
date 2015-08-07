@@ -667,17 +667,14 @@ class AnalysisSample:
             if fq.read_number == 2:
                 self.paired_end = True
 
-    def fastq_subset(self,read_number=None,full_path=False):
+    def fastq_subset(self,read_number=None):
         """Return a subset of fastq files from the sample
 
         Arguments:
           read_number: select subset based on read_number (1 or 2)
-          full_path  : if True then fastq files will be returned
-            with the full path, if False (default) then as file
-            names only.
 
         Returns:
-          List of fastq files matching the selection criteria.
+          List of full paths to fastq files matching the selection criteria.
 
         """
         # Build list of fastqs that match the selection criteria
@@ -690,10 +687,7 @@ class AnalysisSample:
             else:
                 fq_read_number = fq.read_number
             if fq_read_number == read_number:
-                if full_path:
-                    fastqs.append(path.join(self.dirn,fastq))
-                else:
-                    fastqs.append(fastq)
+                fastqs.append(fastq)
         # Sort into dictionary order and return
         fastqs.sort()
         return fastqs
