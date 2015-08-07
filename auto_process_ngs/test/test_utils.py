@@ -135,6 +135,17 @@ class TestAnalysisFastq(unittest.TestCase):
             self.assertEqual(fq.set_number,None)
             self.assertEqual(str(fq),'%s_R1' % name)
 
+    def test_input_is_full_path(self):
+        """Handle input as full path to Fastq file
+        """
+        fq = AnalysisFastq('/data/Project_NH/Sample_NH1/NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001.fastq.gz')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+
 class TestAnalysisProject(unittest.TestCase):
     """Tests for the AnalysisProject class
 
