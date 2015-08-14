@@ -59,8 +59,34 @@ The tests can be run using::
 
     python setup.py test
 
+In addition the tests are run via TravisCI whenever this GitHub repository
+is updated:
+
+.. image:: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs.png?branch=master
+   :alt: Current status of TravisCI build for master branch
+   :target: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs/builds
+
 Dependencies
 ************
 
 The package depends on the ``genomics-bcftbx`` package, available from
 https://github.com/fls-bioinformatics-core/genomics
+
+Developmental version
+*********************
+
+The developmental branch of the code on github is ``devel``, this can be
+installed using::
+
+    pip install git+https://github.com/fls-bioinformatics-core/auto_process_ngs.git@devel
+
+Use the ``-e`` option to install an 'editable' version (see the section on
+`"Editable" installs
+<https://pip.pypa.io/en/latest/reference/pip_install.html#editable-installs>_`
+in the pip documentation),
+
+The tests are run on TravisCI whenever the developmental version is updated:
+
+.. image:: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs.png?branch=devel
+   :alt: Current status of TravisCI build for devel branch
+   :target: https://travis-ci.org/fls-bioinformatics-core/auto_process_ngs/builds
