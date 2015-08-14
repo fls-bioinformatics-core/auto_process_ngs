@@ -20,7 +20,7 @@ setup(name = "auto_process_ngs",
       version = auto_process_ngs.get_version(),
       description = 'Automatic processing of NGS sequencing data from Illumina sequencers',
       long_description = """Utilities to help with the automated processing and management
-      of sequencing data from Illumina’s HiSEQ and MiSEQ platforms""",
+      of sequencing data from Illumina's HiSEQ and MiSEQ platforms""",
       url = 'https://bitbucket.org/pjbriggs/auto_process_ngs',
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
