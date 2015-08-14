@@ -435,6 +435,8 @@ class AutoProcess:
             print "Keeping copy of original sample sheet"
             original_sample_sheet = os.path.join(self.analysis_dir,'SampleSheet.orig.csv')
             os.rename(tmp_sample_sheet,original_sample_sheet)
+            # Set the permissions for the original SampleSheet
+            os.chmod(original_sample_sheet,0664)
         iem_sample_sheet = IlluminaData.IEMSampleSheet(original_sample_sheet)
         sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
         print "Sample sheet '%s'" % custom_sample_sheet
