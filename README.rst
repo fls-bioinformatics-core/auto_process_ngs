@@ -1,8 +1,21 @@
-auto_process
-============
+auto_process_ngs
+================
 
 Scripts and utilities for automatic processing & management of NGS sequencing
-data.
+data from Illumina sequencers, developed within the Bioinformatics Core Facility
+(BCF) at the University of Manchester (UoM).
+
+Full documentation is available at http://auto_process_ngs.readthedocs.org.
+
+Overview
+********
+
+This package provides a small set of utilities to generate FASTQ files from
+raw ``bcl`` files output by Illumina MiSEQ and HiSEQ sequencers, and to
+perform other task such as QC runs and file management.
+
+It also facilitates handling problem situations such as barcoding issues or
+incomplete runs.
 
 Installation
 ************
@@ -18,7 +31,7 @@ directory to your ``PYTHONPATH`` environment.
 
 To install directly from github using ``pip``::
 
-    pip install git+https://pjbriggs@bitbucket.org/pjbriggs/auto_process_ngs.git
+    pip install git+https://github.com/fls-bioinformatics-core/auto_process_ngs.git
 
 **Note**
 
