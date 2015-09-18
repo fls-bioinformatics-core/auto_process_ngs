@@ -243,4 +243,5 @@ def show_dictionary(name,d):
     """
     print "[%s]" % name
     for key in d:
-        print "\t%s = %s" % (key,d[key])
+        print "\t%s = %s" % (key,(d[key] if d[key] is not None
+                                  else '<Not set>'))
