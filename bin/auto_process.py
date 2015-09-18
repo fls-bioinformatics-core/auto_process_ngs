@@ -49,7 +49,8 @@ special cases and testing.
 #######################################################################
 
 import logging
-logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
+#logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
+logging.basicConfig(format='%(levelname) 8s: %(message)s')
 
 import sys
 import os
@@ -98,7 +99,7 @@ def add_setup_command(cmdparser):
 def add_config_command(cmdparser):
     """Create a parser for the 'config' command
     """
-    p  = cmdparser.add_command('config',help="Query and change configuration",
+    p  = cmdparser.add_command('config',help="Query and change global configuration",
                                usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
                                description="Query and change global configuration.")
     p.add_option('--init',action='store_true',dest='init',default=False,
@@ -114,10 +115,10 @@ def add_config_command(cmdparser):
                           "nothing; use 'config' with no options to display settings)")
     p.add_option_group(deprecated)
 
-def add_parameters_command(cmdparser):
-    """Create a parser for the 'parameters' command
+def add_params_command(cmdparser):
+    """Create a parser for the 'params' command
     """
-    p  = cmdparser.add_command('parameters',help="Query and change parameters",
+    p  = cmdparser.add_command('params',help="Query and change project parameters",
                                usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
                                description="Query and change processing parameters "
                                "and settings for ANALYSIS_DIR.")
@@ -436,7 +437,7 @@ if __name__ == "__main__":
     # Add commands
     add_config_command(p)
     add_setup_command(p)
-    add_parameters_command(p)
+    add_params_command(p)
     add_make_fastqs_command(p)
     add_setup_analysis_dirs_command(p)
     add_run_qc_command(p)
@@ -567,7 +568,8 @@ if __name__ == "__main__":
                                ungzip_fastqs=options.ungzip_fastqs,
                                runner=options.runner)
             sys.exit(retcode)
-        elif cmd == 'parameters':
+        elif cmd == 'params':
+            # Update the project-specific parameters
             if options.key_value is not None:
                 for key_value in options.key_value:
                     try:
