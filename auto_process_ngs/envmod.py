@@ -62,7 +62,7 @@ for d in modules_python_dirs:
         break
 if modules_python is None:
     # Nothing to load
-    logging.debug("No 'python.py' file in any of %s" % modules_python_dirs)
+    logging.debug("No 'python.py' file in any of %s" % str(modules_python_dirs))
 else:
     # Load the code from the env modules python file
     try:
