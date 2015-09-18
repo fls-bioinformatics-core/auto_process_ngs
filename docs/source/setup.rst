@@ -22,9 +22,34 @@ can be used to help manage this.
 Configuration: settings.ini
 ***************************
 
-The autoprocessor reads settings for the local system from a `settings.ini`
-file. An initial `settings.ini` file is created the first time that the
-autoprocessor is run.
+The autoprocessor reads its global settings for the local system from a
+`settings.ini` file, which it looks for in order in the following
+locations:
+
+1. The current directory;
+2. The ``config`` subdirectory of the installation directory;
+3. The installation directory (for legacy installations only)
+
+If no `settings.ini` file is found then one can be created using the
+command::
+
+    auto_process.py config --init
+
+otherwise the autoprocessor will run using the built-in default values.
+
+To see the current settings, do::
+
+    auto_process.py config
+
+To update the settings use the ``--set`` options, for example::
+
+    auto_process.py config --set bcl2fastq.nprocessors=4
+
+The most important settings are the :ref:`job-runners` and for any
+:ref:`environment-modules` that you wish to specify for a particular
+processing stage.
+
+.. _job-runners:
 
 Job runner specification
 ------------------------
@@ -32,15 +57,21 @@ Job runner specification
 Job runners tell the autoprocessor how to run programs. There are
 currently only two available:
 
-* SimpleJobRunner: runs programs as a subprocess of the current process
-* GEJobRunner: runs programs using Grid Engine (GE)
+* ``SimpleJobRunner``: runs programs as a subprocess of the current process
+* ``GEJobRunner``: runs programs using Grid Engine (GE)
 
-The `GEJobRunner` is recommended when using the autoprocessor on cluster
+The ``GEJobRunner`` is recommended when using the autoprocessor on cluster
 systems. To specify additional Grid Engine-specific options to use with
 the runner, enclose them in parentheses e.g.::
 
     [runners]
     bcl2fastq = GEJobRunner(-pe smp.pe 8)
+
+.. note::
+
+   If you specify multiple processors for the ``bcl2fastq`` and are using
+   the ``GEJobRunner`` then you should ensure that the job runner requests
+   a suitable number of cores when submitting jobs.
 
 .. _environment-modules:
 
@@ -52,7 +83,7 @@ dynamic modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
-The `[modulefiles]` directive allows specific module files to be loaded
+The ``[modulefiles]`` directive allows specific module files to be loaded
 before a specific step, for example::
 
     [modulefiles]

@@ -40,6 +40,14 @@ The 'locate_settings_file' function is used implicitly to locate the
 settings file if none is given; it can also automatically create a settings
 file if none is found but there is a sample version on the search path.
 
+To update values once the settings have been read in do e.g.
+
+>>> s.set('general.max_concurrent_jobs',4)
+
+To update the configuration file use the save method e.g.
+
+>>> s.save()
+
 """
 
 #######################################################################
@@ -79,12 +87,13 @@ class Settings:
         """
         # Locate settings file
         if settings_file is None:
-            self.settings_file = locate_settings_file()
+            self.settings_file = locate_settings_file(create_from_sample=False)
         else:
             self.settings_file = os.path.abspath(settings_file)
         # Import site-specific settings from local version
         config = Config()
-        config.read(self.settings_file)
+        if self.settings_file:
+            config.read(self.settings_file)
         # General parameters
         self.general = AttributeDictionary()
         self.general['default_runner'] = config.get('general','default_runner',
@@ -118,13 +127,48 @@ class Settings:
         self.qc_web_server = AttributeDictionary()
         self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
         self.qc_web_server['url'] = config.get('qc_web_server','url',None)
+
+    def set(self,param,value):
+        """
+        Update a configuration parameter value
+
+        Arguments:
+          param (str): an identifier of the form SECTION.ATTR
+            which specifies the parameter to update
+          value (str): the new value of the parameter
+
+        """
+        section,attr = param.split('.')
+        getattr(self,section)[attr] = value
+
+    def save(self):
+        """
+        Save the current configuration to the config file
+
+        If no config file was setting on initialisation then
+        this method doesn't do anything.
+
+        """
+        config = Config()
+        if self.settings_file:
+            config.read(self.settings_file)
+            for section in config.sections():
+                values = getattr(self,section)
+                for attr in values:
+                    config.set(section,attr,values[attr])
+            config.write(open(self.settings_file,'w'))
+        else:
+            logging.warning("No settings file found, nothing saved")
     
     def report_settings(self):
         """
         Report the settings read from the config file
 
         """
-        print "Settings from %s:" % self.settings_file
+        if self.settings_file:
+            print "Settings from %s:" % self.settings_file
+        else:
+            logging.warning("No settings file found, reporting built-in defaults")
         show_dictionary('general',self.general)
         show_dictionary('modulefiles',self.modulefiles)
         show_dictionary('bcl2fastq',self.bcl2fastq)
@@ -143,9 +187,9 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     Look for a configuration settings file (default name
     'settings.ini'). The search path is:
 
-    1. 'config' subdir of installation location
-    2. installation location
-    3. current directory
+    1. current directory
+    2. 'config' subdir of installation location
+    3. top-level installation location
 
     The first file with a matching name is returned.
 
@@ -161,9 +205,9 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     """
     install_dir = os.path.abspath(os.path.normpath(
         os.path.join(os.path.dirname(sys.argv[0]),'..')))
-    config_file_dirs = (os.path.join(install_dir,'config'),
-                        install_dir,
-                        os.getcwd(),)
+    config_file_dirs = (os.getcwd(),
+                        os.path.join(install_dir,'config'),
+                        install_dir,)
     settings_file = None
     sample_settings_file = None
     for path in config_file_dirs:
@@ -180,17 +224,15 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
         settings_file = None
     # No settings file found anywhere on search path
     if settings_file is None:
-        logging.warning("No local settings file found in %s" % ', '.join(config_file_dirs))
+        logging.debug("No local settings file found in %s" % ', '.join(config_file_dirs))
         if sample_settings_file is not None and create_from_sample:
             logging.warning("Attempting to make a copy from sample settings file")
             settings_file = os.path.splitext(sample_settings_file)[0]
             try:
                 open(settings_file,'w').write(open(sample_settings_file,'r').read())
                 logging.warning("Created new file %s" % settings_file)
-                logging.warning("Edit configuration settings and rerun")
             except Exception,ex:
                 raise Exception("Failed to create %s: %s" % (settings_file,ex))
-                settings_file = None
     # Finish
     return settings_file
 

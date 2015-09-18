@@ -48,10 +48,12 @@ special cases and testing.
 # Imports
 #######################################################################
 
+import logging
+logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
+
 import sys
 import os
 import subprocess
-import logging
 import optparse
 import bcftbx.utils as bcf_utils
 from bcftbx.cmdparse import CommandParser
@@ -67,8 +69,6 @@ from auto_process_ngs.auto_processor import AutoProcess
 
 __version__ = auto_process_ngs.get_version()
 __settings = auto_process_ngs.settings.Settings()
-
-logging.basicConfig(format='[%(asctime)s] %(levelname)8s: %(message)s')
 
 #######################################################################
 # Functions
@@ -98,10 +98,11 @@ def add_setup_command(cmdparser):
 def add_config_command(cmdparser):
     """Create a parser for the 'config' command
     """
-    p  = cmdparser.add_command('config',help="Query and configure parameters",
+    p  = cmdparser.add_command('config',help="Query and change configuration",
                                usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
-                               description="Query and configure automatic processing "
-                               "parameters and settings for ANALYSIS_DIR.")
+                               description="Query and change global configuration.")
+    p.add_option('--init',action='store_true',dest='init',default=False,
+                 help="Create a new configuration file from the sample.")
     p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
@@ -112,6 +113,18 @@ def add_config_command(cmdparser):
                           help="Show the values of parameters and settings (does "
                           "nothing; use 'config' with no options to display settings)")
     p.add_option_group(deprecated)
+
+def add_parameters_command(cmdparser):
+    """Create a parser for the 'parameters' command
+    """
+    p  = cmdparser.add_command('parameters',help="Query and change parameters",
+                               usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
+                               description="Query and change processing parameters "
+                               "and settings for ANALYSIS_DIR.")
+    p.add_option('--set',action='append',dest='key_value',default=None,
+                 help="Set the value of a parameter. KEY_VALUE should be of the form "
+                 "'<param>=<value>'. Multiple --set options can be specified.")
+    add_debug_option(p)
 
 def add_make_fastqs_command(cmdparser):
     """Create a parser for the 'make_fastqs' command
@@ -421,8 +434,9 @@ if __name__ == "__main__":
     p = CommandParser(description="Automated processing & QC for Illumina sequence data.",
                       version="%prog "+__version__)
     # Add commands
-    add_setup_command(p)
     add_config_command(p)
+    add_setup_command(p)
+    add_parameters_command(p)
     add_make_fastqs_command(p)
     add_setup_analysis_dirs_command(p)
     add_run_qc_command(p)
@@ -460,7 +474,26 @@ if __name__ == "__main__":
         pass
 
     # Setup the processing object and run the requested command
-    if cmd == 'setup':
+    if cmd == 'config':
+        if options.init:
+            # Create new settings file and reload
+            auto_process_ngs.settings.locate_settings_file()
+            __settings = auto_process_ngs.settings.Settings()
+        if options.key_value is not None:
+            # Update parameters
+            for key_value in options.key_value:
+                try:
+                    i = key_value.index('=')
+                    key = key_value[:i]
+                    value = key_value[i+1:].strip("'").strip('"')
+                    __settings.set(key,value)
+                except ValueError:
+                    logging.error("Can't process '%s'" % options.key_value)
+            __settings.save()
+        else:
+            # Report the current configuration settings
+            __settings.report_settings()
+    elif cmd == 'setup':
         if len(args) != 1:
             sys.stderr.write("Need to supply a data source location\n")
             sys.exit(1)
@@ -534,7 +567,7 @@ if __name__ == "__main__":
                                ungzip_fastqs=options.ungzip_fastqs,
                                runner=options.runner)
             sys.exit(retcode)
-        elif cmd == 'config':
+        elif cmd == 'parameters':
             if options.key_value is not None:
                 for key_value in options.key_value:
                     try:
@@ -545,7 +578,6 @@ if __name__ == "__main__":
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
             else:
-                __settings.report_settings()
                 d.show_settings()
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,
