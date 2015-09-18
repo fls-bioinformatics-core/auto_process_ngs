@@ -487,6 +487,7 @@ if __name__ == "__main__":
                     i = key_value.index('=')
                     key = key_value[:i]
                     value = key_value[i+1:].strip("'").strip('"')
+                    print "Setting '%s' to '%s'" % (key,value)
                     __settings.set(key,value)
                 except ValueError:
                     logging.error("Can't process '%s'" % options.key_value)
