@@ -106,14 +106,14 @@ To address this:
 
    then update the statistics file, e.g.::
 
-       auto_process.py config --set stats_file=statistics.info
+       auto_process.py params --set stats_file=statistics.info
        auto_process.py update_fastq_stats
 
 After this has been completed the analysis directory setup and QC steps can be
 run as before; note that you will need to reset where `auto_process.py` looks
 for the Fastq files before running `setup_project_dirs`, i.e.::
 
-    auto_process.py config --set unaligned_dir=bcl2fastq
+    auto_process.py params --set unaligned_dir=bcl2fastq
 
 
 Skip demultiplexing in ``make_fastqs`` stage
