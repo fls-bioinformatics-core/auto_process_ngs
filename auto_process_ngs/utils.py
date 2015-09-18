@@ -962,7 +962,8 @@ class AnalysisDirMetadata(MetadataDict):
                                   'stats_file':'stats_file',
                                   'source': 'source',
                                   'run_number': 'run_number',
-                                  'assay': 'assay'
+                                  'assay': 'assay',
+                                  'bcl2fastq_software': 'bcl2fastq_software',
                               },
                               filen=filen)
 

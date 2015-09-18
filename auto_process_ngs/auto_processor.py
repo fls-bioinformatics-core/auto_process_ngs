@@ -801,6 +801,8 @@ class AutoProcess:
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
+        # Collect and store info on underlying bcl2fastq software
+        self.params['bcl2fastq_software'] = utils.bcl_to_fastq_info()
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
