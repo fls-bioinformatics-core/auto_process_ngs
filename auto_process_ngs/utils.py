@@ -25,6 +25,7 @@ tree at some point.
 #######################################################################
 
 import os
+import re
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -1192,3 +1193,42 @@ def pretty_print_rows(data,prepend=False):
         output.append(' '.join(line))
     return '\n'.join(output)
 
+def bcl_to_fastq_info():
+    """
+    Retrieve information on the bcl2fastq software
+
+    Looks for the ``configureBclToFastq.pl`` script and attempts
+    to guess the package name (either `bcl2fastq` or `CASAVA`)
+    and the version.
+
+    If no package is identified then the script path is still
+    returned, but without any version info.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the configureBclToFastq.pl script and
+        PACKAGE and VERSION are guesses for the package/version
+        that it belongs to. If any value can't be determined then
+        it will be returned as None.
+
+    """
+    # Initialise
+    configurebcl2fastq_path = None
+    package_name = None
+    package_version = None
+    # Locate the core script
+    configurebcl2fastq_path = bcf_utils.find_program('configureBclToFastq.pl')
+    if configurebcl2fastq_path:
+        # Look for the top-level directory
+        path = os.path.dirname(configurebcl2fastq_path)
+        # Look for etc directory
+        etc_dir = os.path.join(os.path.dirname(path),'etc')
+        if os.path.isdir(etc_dir):
+            for d in bcf_utils.list_dirs(etc_dir):
+                m = re.match(r'^(bcl2fastq|CASAVA)-([0-9.]+)$',d)
+                if m:
+                    package_name = m.group(1)
+                    package_version = m.group(2)
+                    break
+    # Return what we found
+    return (configurebcl2fastq_path,package_name,package_version)

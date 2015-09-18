@@ -686,3 +686,99 @@ class TestPrettyPrintRows(unittest.TestCase):
                          "-   hello: A salutation\n- goodbye:      The End")
 
         
+class TestBclToFastqInfo(unittest.TestCase):
+    """
+    Tests for the bcl_to_fastq_info function
+
+    """
+    def setUp(self):
+        # Make some fake directories for different
+        # software versions
+        self.dirn = tempfile.mkdtemp(suffix='TestBclToFastqInfo')
+        # No version
+        os.makedirs(os.path.join(self.dirn,'unknown'))
+        open(os.path.join(self.dirn,'unknown','configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'unknown','configureBclToFastq.pl'),0775)
+        # CASAVA 1.8.2
+        os.makedirs(os.path.join(self.dirn,'casava','1.8.2','bin'))
+        os.makedirs(os.path.join(self.dirn,'casava','1.8.2','etc','CASAVA-1.8.2'))
+        open(os.path.join(self.dirn,'casava','1.8.2','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'casava','1.8.2','bin',
+                              'configureBclToFastq.pl'),0775)
+        # bcl2fastq 1.8.3
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin'))
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.3','etc','bcl2fastq-1.8.3'))
+        open(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin',
+                              'configureBclToFastq.pl'),0775)
+        # bcl2fastq 1.8.4
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin'))
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.4','etc','bcl2fastq-1.8.4'))
+        open(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin',
+                              'configureBclToFastq.pl'),0775)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_casava_1_8_2(self):
+        """
+        Collect info for CASAVA 1.8.2
+
+        """
+        exe = os.path.join(self.dirn,'casava','1.8.2','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'CASAVA')
+        self.assertEqual(version,'1.8.2')
+
+    def test_bcl2fastq_1_8_3(self):
+        """
+        Collect info for bcl2fastq 1.8.3
+
+        """
+        exe = os.path.join(self.dirn,'bcl2fastq','1.8.3','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.3')
+
+    def test_bcl2fastq_1_8_4(self):
+        """
+        Collect info for bcl2fastq 1.8.4
+
+        """
+        exe = os.path.join(self.dirn,'bcl2fastq','1.8.4','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.4')
+
+    def test_configurebcltofastq_not_found(self):
+        """
+        Collect info when configureBclToFastq.pl is not found
+
+        """
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,None)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)
+
+    def test_configurebcltofastq_no_package(self):
+        """
+        Collect info when there is no package info for configureBclToFastq.pl
+
+        """
+        exe = os.path.join(self.dirn,'unknown','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)
