@@ -9,6 +9,9 @@ import shutil
 import auto_process_ngs.envmod as envmod
 
 def _setup_example_modulefiles(*apps):
+    # Skip the test if environment modules not available
+    if not envmod.__ENVMODULES__:
+        raise unittest.SkipTest("Environment modules not available on system")
     # Create set of fake modulefiles
     modulesdir = tempfile.mkdtemp()
     try:
