@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 """envmod
 
@@ -48,6 +48,8 @@ be unloaded within the Python environment.
 # Setup
 #######################################################################
 
+__ENVMODULES__ = False
+
 import os
 import logging
 modules_python_dirs = ('/usr/share/Modules/init/',
@@ -60,19 +62,26 @@ for d in modules_python_dirs:
         break
 if modules_python is None:
     # Nothing to load
-    raise ImportError("No 'python.py' file in any of %s" % modules_python_dirs)
-
-# Load the code from the env modules python file
-try:
-    execfile(modules_python)
-except Exception,ex:
-    raise ImportError("Exception executing code from %s: %s: %s" % 
+    logging.debug("No 'python.py' file in any of %s" % str(modules_python_dirs))
+else:
+    # Load the code from the env modules python file
+    try:
+        execfile(modules_python)
+        __ENVMODULES__ = True
+    except Exception,ex:
+        logging.debug("Exception executing code from %s: %s: %s" % 
                       (modules_python,ex.__class__.__name__,ex))
+
+# Function to check if env modules are available
+def _got_envmodules():
+    return __ENVMODULES__
 
 # Add our own version of the 'module' function to deal with
 # the python implementation being broken on some systems (e.g.
 # Ubuntu 14.04)
 def module(*args):
+    if not _got_envmodules():
+        return
     if type(args[0]) == type([]):
         args = args[0]
     else:
@@ -91,6 +100,8 @@ def loaded():
     'LOADEDMODULES' environment variable.
 
     """
+    if not _got_envmodules():
+        return []
     try:
         loadedmodules = os.environ['LOADEDMODULES']
         if not loadedmodules:
