@@ -437,38 +437,24 @@ class TestMetadataDict(unittest.TestCase):
         metadata['chat'] = None
         self.assertEqual(metadata.null_items(),['chat'])
 
-class TestAnalysisDirMetadata(unittest.TestCase):
-    """Tests for the AnalysisDirMetadata class
+class TestAnalysisDirParameters(unittest.TestCase):
+    """Tests for the AnalysisDirParameters class
 
     """
 
-    def test_create_analysis_dir_metadata(self):
-        """Check creation of an empty AnalysisDirMetadata object
+    def test_create_analysis_dir_parameters(self):
+        """Check creation of an empty AnalysisDirParameters object
         """
-        metadata = AnalysisDirMetadata()
-        self.assertEqual(metadata.analysis_dir,None)
-        self.assertEqual(metadata.data_dir,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.sample_sheet,None)
-        self.assertEqual(metadata.bases_mask,None)
-        self.assertEqual(metadata.primary_data_dir,None)
-        self.assertEqual(metadata.unaligned_dir,None)
-        self.assertEqual(metadata.project_metadata,None)
-        self.assertEqual(metadata.stats_file,None)
-
-    def test_handle_analysis_dir_metadata(self):
-        """Check creation of an empty AnalysisDirMetadata object
-        """
-        metadata = AnalysisDirMetadata()
-        self.assertEqual(metadata.analysis_dir,None)
-        self.assertEqual(metadata.data_dir,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.sample_sheet,None)
-        self.assertEqual(metadata.bases_mask,None)
-        self.assertEqual(metadata.primary_data_dir,None)
-        self.assertEqual(metadata.unaligned_dir,None)
-        self.assertEqual(metadata.project_metadata,None)
-        self.assertEqual(metadata.stats_file,None)
+        params = AnalysisDirParameters()
+        self.assertEqual(params.analysis_dir,None)
+        self.assertEqual(params.data_dir,None)
+        self.assertEqual(params.platform,None)
+        self.assertEqual(params.sample_sheet,None)
+        self.assertEqual(params.bases_mask,None)
+        self.assertEqual(params.primary_data_dir,None)
+        self.assertEqual(params.unaligned_dir,None)
+        self.assertEqual(params.project_metadata,None)
+        self.assertEqual(params.stats_file,None)
 
 class TestAnalysisProjectInfo(unittest.TestCase):
     """Tests for the AnalysisProjectInfo class

@@ -39,18 +39,27 @@ from auto_process_ngs import get_version
 #######################################################################
 
 class AutoProcess:
-    # Class implementing an automatic fastq generation and QC
-    # processing procedure
+    """
+    Class implementing an automatic fastq generation and QC
+    processing procedure for Illumina sequencing data
 
+    """
     def __init__(self,analysis_dir=None,allow_save_params=True):
-        # analysis_dir: name/path for existing analysis directory
-        # allow_save_params: if True then allow updates to parameters
-        #                    to be saved back to the metadata file
-        #
+        """
+        Create a new AutoProcess instance
+
+        Arguments:
+          analysis_dir (str): name/path for existing analysis
+            directory
+          allow_save_params (bool): if True then allow updates
+            to parameters to be saved back to the parameter file
+            (this is the default)
+
+        """
         # Load configuration settings
         self.settings = settings.Settings()
         # Create empty parameter set
-        self.params = utils.AnalysisDirMetadata()
+        self.params = utils.AnalysisDirParameters()
         # Set flag to indicate whether it's okay to save parameters
         self._save_params = False
         # Set where the analysis directory actually is
@@ -60,7 +69,7 @@ class AutoProcess:
             self.analysis_dir = os.path.abspath(self.analysis_dir)
             try:
                 self.load_parameters(allow_save=allow_save_params)
-            except MissingInfoFileException, ex:
+            except MissingParameterFileException, ex:
                 logging.warning("Failed to load parameters: %s (ignored)" % ex)
                 logging.warning("Perhaps this is not an auto_process project?")
                 # Attempt to detect existing data directory
@@ -97,24 +106,33 @@ class AutoProcess:
                     bcf_utils.mkdir(dir_path)
 
     def load_parameters(self,allow_save=True):
-        # Get parameters from info file
-        # allow_save: if True then allow params to be saved back to
-        #             the info file (otherwise don't allow save)
-        #
-        # check for info file
-        if not self.has_info_file:
-            raise MissingInfoFileException, "No info file %s" % self.info_file
-        # Read contents of info file and assign values
-        logging.debug("Loading settings from %s" % self.info_file)
-        self.params.load(self.info_file)
+        """
+        Load parameter values from file
+
+        Arguments:
+          allow_save (boolean): if True then allow params to be
+            saved back to the parameter file (the default);
+            otherwise don't allow save.
+
+        """
+        # check for parameter file
+        if not self.has_parameter_file:
+            raise MissingParameterException(
+                "No parameter file %s" % self.parameter_file)
+        # Read contents of parameter file and assign values
+        logging.debug("Loading parameters from %s" %
+                      self.parameter_file)
+        self.params.load(self.parameter_file)
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
     def save_parameters(self):
-        # Save parameters to info file
-        #
+        """
+        Save parameters to file
+
+        """
         if self._save_params:
-            self.params.save(self.info_file)
+            self.params.save(self.parameter_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -250,6 +268,16 @@ class AutoProcess:
         return os.path.join(self.log_dir,*args)
 
     def __del__(self):
+        """
+        Implement __del__ method
+
+        Peforms clean up operations (e.g. save parameters,
+        remove temporary files etc) when the AutoProcess
+        object is destroyed.
+
+        """
+        if self.analysis_dir is None:
+            return
         tmp_dir = os.path.join(self.analysis_dir,'tmp')
         if os.path.isdir(tmp_dir):
             logging.debug("Removing %s" % tmp_dir)
@@ -355,18 +383,18 @@ class AutoProcess:
         return run_id
 
     @property
-    def info_file(self):
+    def parameter_file(self):
         """
-        Return name of info file ('auto_process.info')
+        Return name of parameter file ('auto_process.info')
         """
         return os.path.join(self.analysis_dir,'auto_process.info')
 
     @property
-    def has_info_file(self):
+    def has_parameter_file(self):
         """
-        Indicate if there is an info file (typically auto_process.info)
+        Indicate if there is a parameter file (typically auto_process.info)
         """
-        return os.path.exists(os.path.join(self.info_file))
+        return os.path.exists(os.path.join(self.parameter_file))
 
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         # Set up the initial analysis directory
@@ -394,11 +422,12 @@ class AutoProcess:
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
-            # check for info file
-            if self.has_info_file:
+            # check for parameter file
+            if self.has_parameter_file:
                 self.load_parameters()
             else:
-                logging.warning("No info file found in %s" % self.analysis_dir)
+                logging.warning("No parameter file found in %s" %
+                                self.analysis_dir)
         # Identify missing data and attempt to acquire
         # Sequencing platform
         platform = self.params.platform
@@ -510,10 +539,12 @@ class AutoProcess:
             logging.warning("Target directory '%s' already exists" % clone_dir)
             raise Exception("Clone failed, target directory already exists")
         self.create_directory(clone_dir)
-        # Copy info file
-        if not self.has_info_file:
-            raise Exception("Clone failed, no info file %s" % self.info_file)
-        shutil.copy(self.info_file,os.path.join(clone_dir,'auto_process.info'))
+        # Copy parameter file
+        if not self.has_parameter_file:
+            raise Exception("Clone failed, no parameter file %s" %
+                            self.parameter_file)
+        shutil.copy(self.parameter_file,
+                    os.path.join(clone_dir,'auto_process.info'))
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         clone_unaligned_dir = os.path.join(clone_dir,
@@ -538,9 +569,9 @@ class AutoProcess:
 
     def show_settings(self):
         # Print the current settings
-        if not self.has_info_file:
+        if not self.has_parameter_file:
             return
-        print "Settings in auto_process.info:"
+        print "Settings in %s:" % (os.path.basename(self.parameter_file))
         settings = bcf_utils.OrderedDictionary()
         settings['Run reference'] = self.run_reference_id
         for p in self.params:
@@ -2222,6 +2253,6 @@ class AutoProcess:
 # Custom exceptions
 #######################################################################
 
-class MissingInfoFileException(Exception):
+class MissingParameterFileException(Exception):
     """Used to indicate missing auto_process.info file
     """

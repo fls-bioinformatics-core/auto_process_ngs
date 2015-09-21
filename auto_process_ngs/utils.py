@@ -922,13 +922,14 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 null_items.append(key)
         return null_items
 
-class AnalysisDirMetadata(MetadataDict):
-    """Class for storing metadata in an analysis project
+class AnalysisDirParameters(MetadataDict):
+    """Class for storing parameters in an analysis directory
 
-    Provides a set of metadata items which are loaded from
-    and saved to an external file.
+    Provides a set of data items representing parameters for
+    the current analysis, which are loaded from and saved to
+    an external file.
 
-    The data items are:
+    The parameter data items are:
 
     analysis_dir: path to the analysis directory
     data_dir: path to the directory holding the raw sequencing data
@@ -942,11 +943,11 @@ class AnalysisDirMetadata(MetadataDict):
 
     """
     def __init__(self,filen=None):
-        """Create a new AnalysisDirMetadata object
+        """Create a new AnalysisDirParameters object
 
         Arguments:
-          filen: (optional) name of the tab-delimited file
-            with key-value pairs to load in.
+          filen (str): (optional) name of the tab-delimited
+            file with key-value pairs to load in.
 
         """
         MetadataDict.__init__(self,
