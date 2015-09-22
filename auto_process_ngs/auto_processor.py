@@ -104,7 +104,7 @@ class AutoProcess:
                         logging.warning("Unable to identify platform from "
                                         "directory name")
                     else:
-                        print "Setting 'platform' parameter to %s" % \
+                        print "Setting 'platform' metadata item to %s" % \
                             self.metadata.platform
             except Exception, ex:
                 # Some other problem
@@ -411,7 +411,7 @@ class AutoProcess:
         else:
             platform = None
         # Facility run number
-        if self.params.run_number is not None:
+        if self.metadata.run_number is not None:
             facility_run_number = str(self.metadata.run_number)
         else:
             facility_run_number = None
