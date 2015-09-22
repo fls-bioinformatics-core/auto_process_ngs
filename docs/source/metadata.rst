@@ -1,5 +1,5 @@
-Analysis metadata
-=================
+Metadata
+========
 
 The following additional information is associated with each analysis:
 
