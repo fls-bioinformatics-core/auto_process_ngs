@@ -25,6 +25,7 @@ tree at some point.
 #######################################################################
 
 import os
+import re
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -836,7 +837,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         else:
             raise AttributeError,"Key '%s' not defined" % key
 
-    def load(self,filen):
+    def load(self,filen,strict=True):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -846,8 +847,12 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         already assigned to keys within the metadata object.
 
         Arguments:
-          filen: name of the tab-delimited file with key-value
-            pairs
+          filen (str): name of the tab-delimited file with
+            key-value pairs
+          strict (boolean): if True (default) then discard
+            items in the input file which are missing from
+            the definition; if False then add them to the
+            definition.
 
         """
         self.__filen = filen
@@ -871,7 +876,15 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         found_key = True
                         break
                 if not found_key:
-                    logging.debug("Unrecognised key in %s: %s" % (filen,key))
+                    if strict:
+                        logging.debug("Unrecognised key in %s: %s"
+                                      % (filen,attr))
+                    else:
+                        logging.debug("Adding key from %s: %s"
+                                      % (filen,attr))
+                        self.__attributes[attr] = attr
+                        self.__key_order.append(attr)
+                        self[attr] = value
             except IndexError:
                 logging.warning("Bad line in %s: %s" % (filen,line))
 
@@ -921,13 +934,14 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 null_items.append(key)
         return null_items
 
-class AnalysisDirMetadata(MetadataDict):
-    """Class for storing metadata in an analysis project
+class AnalysisDirParameters(MetadataDict):
+    """Class for storing parameters in an analysis directory
 
-    Provides a set of metadata items which are loaded from
-    and saved to an external file.
+    Provides a set of data items representing parameters for
+    the current analysis, which are loaded from and saved to
+    an external file.
 
-    The data items are:
+    The parameter data items are:
 
     analysis_dir: path to the analysis directory
     data_dir: path to the directory holding the raw sequencing data
@@ -941,27 +955,57 @@ class AnalysisDirMetadata(MetadataDict):
 
     """
     def __init__(self,filen=None):
-        """Create a new AnalysisDirMetadata object
+        """Create a new AnalysisDirParameters object
 
         Arguments:
-          filen: (optional) name of the tab-delimited file
-            with key-value pairs to load in.
+          filen (str): (optional) name of the tab-delimited
+            file with key-value pairs to load in.
 
         """
         MetadataDict.__init__(self,
                               attributes = {
                                   'analysis_dir':'analysis_dir',
                                   'data_dir':'data_dir',
-                                  'platform':'platform',
                                   'sample_sheet':'sample_sheet',
                                   'bases_mask':'bases_mask',
                                   'project_metadata':'project_metadata',
                                   'primary_data_dir':'primary_data_dir',
                                   'unaligned_dir':'unaligned_dir',
                                   'stats_file':'stats_file',
-                                  'source': 'source',
+                              },
+                              filen=filen)
+
+class AnalysisDirMetadata(MetadataDict):
+    """Class for storing metadata about an analysis directory
+
+    Provides a set of data items representing metadata about
+    the current analysis, which are loaded from and saved to
+    an external file.
+
+    The metadata items are:
+
+    run_number: run number assigned by local facility
+    source: source of the data (e.g. local facility)
+    platform: sequencing platform e.g. 'miseq'
+    assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
+    bcl2fastq_software: info on the Bcl conversion software used
+
+    """
+    def __init__(self,filen=None):
+        """Create a new AnalysisDirMetadata object
+
+        Arguments:
+          filen (str): (optional) name of the tab-delimited
+            file with key-value pairs to load in.
+
+        """
+        MetadataDict.__init__(self,
+                              attributes = {
                                   'run_number': 'run_number',
-                                  'assay': 'assay'
+                                  'source': 'source',
+                                  'platform':'platform',
+                                  'assay': 'assay',
+                                  'bcl2fastq_software': 'bcl2fastq_software',
                               },
                               filen=filen)
 
@@ -1192,3 +1236,42 @@ def pretty_print_rows(data,prepend=False):
         output.append(' '.join(line))
     return '\n'.join(output)
 
+def bcl_to_fastq_info():
+    """
+    Retrieve information on the bcl2fastq software
+
+    Looks for the ``configureBclToFastq.pl`` script and attempts
+    to guess the package name (either `bcl2fastq` or `CASAVA`)
+    and the version.
+
+    If no package is identified then the script path is still
+    returned, but without any version info.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the configureBclToFastq.pl script and
+        PACKAGE and VERSION are guesses for the package/version
+        that it belongs to. If any value can't be determined then
+        it will be returned as None.
+
+    """
+    # Initialise
+    configurebcl2fastq_path = None
+    package_name = None
+    package_version = None
+    # Locate the core script
+    configurebcl2fastq_path = bcf_utils.find_program('configureBclToFastq.pl')
+    if configurebcl2fastq_path:
+        # Look for the top-level directory
+        path = os.path.dirname(configurebcl2fastq_path)
+        # Look for etc directory
+        etc_dir = os.path.join(os.path.dirname(path),'etc')
+        if os.path.isdir(etc_dir):
+            for d in bcf_utils.list_dirs(etc_dir):
+                m = re.match(r'^(bcl2fastq|CASAVA)-([0-9.]+)$',d)
+                if m:
+                    package_name = m.group(1)
+                    package_version = m.group(2)
+                    break
+    # Return what we found
+    return (configurebcl2fastq_path,package_name,package_version)

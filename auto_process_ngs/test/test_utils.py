@@ -437,38 +437,45 @@ class TestMetadataDict(unittest.TestCase):
         metadata['chat'] = None
         self.assertEqual(metadata.null_items(),['chat'])
 
-class TestAnalysisDirMetadata(unittest.TestCase):
-    """Tests for the AnalysisDirMetadata class
+    def test_undefined_items_in_file(self):
+        """Check handling of additional undefined items in file
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file,strict=False)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertEqual(metadata.chit_chat,'stuff')
+
+class TestAnalysisDirParameters(unittest.TestCase):
+    """Tests for the AnalysisDirParameters class
 
     """
 
-    def test_create_analysis_dir_metadata(self):
-        """Check creation of an empty AnalysisDirMetadata object
+    def test_create_analysis_dir_parameters(self):
+        """Check creation of an empty AnalysisDirParameters object
         """
-        metadata = AnalysisDirMetadata()
-        self.assertEqual(metadata.analysis_dir,None)
-        self.assertEqual(metadata.data_dir,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.sample_sheet,None)
-        self.assertEqual(metadata.bases_mask,None)
-        self.assertEqual(metadata.primary_data_dir,None)
-        self.assertEqual(metadata.unaligned_dir,None)
-        self.assertEqual(metadata.project_metadata,None)
-        self.assertEqual(metadata.stats_file,None)
-
-    def test_handle_analysis_dir_metadata(self):
-        """Check creation of an empty AnalysisDirMetadata object
-        """
-        metadata = AnalysisDirMetadata()
-        self.assertEqual(metadata.analysis_dir,None)
-        self.assertEqual(metadata.data_dir,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.sample_sheet,None)
-        self.assertEqual(metadata.bases_mask,None)
-        self.assertEqual(metadata.primary_data_dir,None)
-        self.assertEqual(metadata.unaligned_dir,None)
-        self.assertEqual(metadata.project_metadata,None)
-        self.assertEqual(metadata.stats_file,None)
+        params = AnalysisDirParameters()
+        self.assertEqual(params.analysis_dir,None)
+        self.assertEqual(params.data_dir,None)
+        self.assertEqual(params.platform,None)
+        self.assertEqual(params.sample_sheet,None)
+        self.assertEqual(params.bases_mask,None)
+        self.assertEqual(params.primary_data_dir,None)
+        self.assertEqual(params.unaligned_dir,None)
+        self.assertEqual(params.project_metadata,None)
+        self.assertEqual(params.stats_file,None)
 
 class TestAnalysisProjectInfo(unittest.TestCase):
     """Tests for the AnalysisProjectInfo class
@@ -686,3 +693,99 @@ class TestPrettyPrintRows(unittest.TestCase):
                          "-   hello: A salutation\n- goodbye:      The End")
 
         
+class TestBclToFastqInfo(unittest.TestCase):
+    """
+    Tests for the bcl_to_fastq_info function
+
+    """
+    def setUp(self):
+        # Make some fake directories for different
+        # software versions
+        self.dirn = tempfile.mkdtemp(suffix='TestBclToFastqInfo')
+        # No version
+        os.makedirs(os.path.join(self.dirn,'unknown'))
+        open(os.path.join(self.dirn,'unknown','configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'unknown','configureBclToFastq.pl'),0775)
+        # CASAVA 1.8.2
+        os.makedirs(os.path.join(self.dirn,'casava','1.8.2','bin'))
+        os.makedirs(os.path.join(self.dirn,'casava','1.8.2','etc','CASAVA-1.8.2'))
+        open(os.path.join(self.dirn,'casava','1.8.2','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'casava','1.8.2','bin',
+                              'configureBclToFastq.pl'),0775)
+        # bcl2fastq 1.8.3
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin'))
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.3','etc','bcl2fastq-1.8.3'))
+        open(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'bcl2fastq','1.8.3','bin',
+                              'configureBclToFastq.pl'),0775)
+        # bcl2fastq 1.8.4
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin'))
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','1.8.4','etc','bcl2fastq-1.8.4'))
+        open(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin',
+                          'configureBclToFastq.pl'),'w').write("")
+        os.chmod(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin',
+                              'configureBclToFastq.pl'),0775)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_casava_1_8_2(self):
+        """
+        Collect info for CASAVA 1.8.2
+
+        """
+        exe = os.path.join(self.dirn,'casava','1.8.2','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'CASAVA')
+        self.assertEqual(version,'1.8.2')
+
+    def test_bcl2fastq_1_8_3(self):
+        """
+        Collect info for bcl2fastq 1.8.3
+
+        """
+        exe = os.path.join(self.dirn,'bcl2fastq','1.8.3','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.3')
+
+    def test_bcl2fastq_1_8_4(self):
+        """
+        Collect info for bcl2fastq 1.8.4
+
+        """
+        exe = os.path.join(self.dirn,'bcl2fastq','1.8.4','bin','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.4')
+
+    def test_configurebcltofastq_not_found(self):
+        """
+        Collect info when configureBclToFastq.pl is not found
+
+        """
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,None)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)
+
+    def test_configurebcltofastq_no_package(self):
+        """
+        Collect info when there is no package info for configureBclToFastq.pl
+
+        """
+        exe = os.path.join(self.dirn,'unknown','configureBclToFastq.pl')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)

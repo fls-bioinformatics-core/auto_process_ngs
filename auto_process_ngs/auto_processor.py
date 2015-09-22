@@ -39,20 +39,31 @@ from auto_process_ngs import get_version
 #######################################################################
 
 class AutoProcess:
-    # Class implementing an automatic fastq generation and QC
-    # processing procedure
+    """
+    Class implementing an automatic fastq generation and QC
+    processing procedure for Illumina sequencing data
 
+    """
     def __init__(self,analysis_dir=None,allow_save_params=True):
-        # analysis_dir: name/path for existing analysis directory
-        # allow_save_params: if True then allow updates to parameters
-        #                    to be saved back to the metadata file
-        #
+        """
+        Create a new AutoProcess instance
+
+        Arguments:
+          analysis_dir (str): name/path for existing analysis
+            directory
+          allow_save_params (bool): if True then allow updates
+            to parameters to be saved back to the parameter file
+            (this is the default)
+
+        """
         # Load configuration settings
         self.settings = settings.Settings()
-        # Create empty parameter set
-        self.params = utils.AnalysisDirMetadata()
-        # Set flag to indicate whether it's okay to save parameters
+        # Create empty parameter and metadata set
+        self.params = utils.AnalysisDirParameters()
+        self.metadata = utils.AnalysisDirMetadata()
+        # Set flags to indicate whether it's okay to save parameters
         self._save_params = False
+        self._save_metadata = False
         # Set where the analysis directory actually is
         self.analysis_dir = analysis_dir
         if self.analysis_dir is not None:
@@ -60,24 +71,46 @@ class AutoProcess:
             self.analysis_dir = os.path.abspath(self.analysis_dir)
             try:
                 self.load_parameters(allow_save=allow_save_params)
-            except MissingInfoFileException, ex:
+            except MissingParameterFileException, ex:
+                # No parameter file
                 logging.warning("Failed to load parameters: %s (ignored)" % ex)
                 logging.warning("Perhaps this is not an auto_process project?")
                 # Attempt to detect existing data directory
                 self.params['unaligned_dir'] = self.detect_unaligned_dir()
                 if self.params.unaligned_dir is None:
                     logging.warning("Unable to find subdirectory containing data")
-                # Attempt to detect sequencing platform
-                self.params['platform'] = platforms.get_sequencer_platform(self.analysis_dir)
-                if self.params.platform is None:
-                    logging.warning("Unable to identify platform from directory name")
-                else:
-                    print "Setting 'platform' parameter to %s" % self.params.platform
             except Exception, ex:
                 logging.error("Failed to load parameters: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
             self.params['analysis_dir'] = self.analysis_dir
+            # Load metadata
+            try:
+                self.load_metadata(allow_save=allow_save_params)
+            except MissingParameterFileException, ex:
+                # No metadata file
+                logging.warning("Failed to load metadata: %s (ignored)" % ex)
+                if self.has_parameter_file:
+                    # Migrate relevant values across
+                    print "Migrating metadata values from parameter file:"
+                    for param in ('platform','run_number','source','assay'):
+                        print "- '%s' set to '%s'" % (param,self.params[param])
+                        self.metadata[param] = self.params[param]
+                else:
+                    # Attempt to detect sequencing platform
+                    self.metadata['platform'] = \
+                        platforms.get_sequencer_platform(self.analysis_dir)
+                    if self.metadata.platform is None:
+                        logging.warning("Unable to identify platform from "
+                                        "directory name")
+                    else:
+                        print "Setting 'platform' metadata item to %s" % \
+                            self.metadata.platform
+            except Exception, ex:
+                # Some other problem
+                logging.error("Failed to load metadata: %s" % ex)
+                logging.error("Stopping")
+                sys.exit(1)
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object
@@ -97,24 +130,61 @@ class AutoProcess:
                     bcf_utils.mkdir(dir_path)
 
     def load_parameters(self,allow_save=True):
-        # Get parameters from info file
-        # allow_save: if True then allow params to be saved back to
-        #             the info file (otherwise don't allow save)
-        #
-        # check for info file
-        if not self.has_info_file:
-            raise MissingInfoFileException, "No info file %s" % self.info_file
-        # Read contents of info file and assign values
-        logging.debug("Loading settings from %s" % self.info_file)
-        self.params.load(self.info_file)
+        """
+        Load parameter values from file
+
+        Arguments:
+          allow_save (boolean): if True then allow params to be
+            saved back to the parameter file (the default);
+            otherwise don't allow save.
+
+        """
+        # check for parameter file
+        if not self.has_parameter_file:
+            raise MissingParameterFileException(
+                "No parameter file %s" % self.parameter_file)
+        # Read contents of parameter file and assign values
+        logging.debug("Loading parameters from %s" %
+                      self.parameter_file)
+        self.params.load(self.parameter_file,strict=False)
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
     def save_parameters(self):
-        # Save parameters to info file
-        #
+        """
+        Save parameters to file
+
+        """
         if self._save_params:
-            self.params.save(self.info_file)
+            self.params.save(self.parameter_file)
+
+    def load_metadata(self,allow_save=True):
+        """
+        Load metadata values from file
+
+        Arguments:
+          allow_save (boolean): if True then allow metadata
+            items to be saved back to the metadata file (the
+            default); otherwise don't allow save.
+
+        """
+        # check for metadata file
+        if not os.path.exists(self.metadata_file):
+            raise MissingParameterFileException(
+                "No metadata file %s" % self.metadata_file)
+        # Read contents of metadata file and assign values
+        logging.debug("Loading metadata from %s" % self.metadata_file)
+        self.metadata.load(self.metadata_file)
+        # File exists and can be read so set flag accordingly
+        self._save_metadata = allow_save
+
+    def save_metadata(self):
+        """
+        Save metadata to file
+
+        """
+        if self._save_metadata:
+            self.metadata.save(self.metadata_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -250,6 +320,16 @@ class AutoProcess:
         return os.path.join(self.log_dir,*args)
 
     def __del__(self):
+        """
+        Implement __del__ method
+
+        Peforms clean up operations (e.g. save parameters,
+        remove temporary files etc) when the AutoProcess
+        object is destroyed.
+
+        """
+        if self.analysis_dir is None:
+            return
         tmp_dir = os.path.join(self.analysis_dir,'tmp')
         if os.path.isdir(tmp_dir):
             logging.debug("Removing %s" % tmp_dir)
@@ -257,6 +337,8 @@ class AutoProcess:
             shutil.rmtree(tmp_dir)
         logging.debug("Saving parameters to file")
         self.save_parameters()
+        logging.debug("Saving metadata to file")
+        self.save_metadata()
 
     @property
     def log_dir(self):
@@ -324,13 +406,13 @@ class AutoProcess:
         if run_number is not None:
             run_number = str(run_number).lstrip('0')
         # Platform
-        if self.params.platform is not None:
-            platform = self.params.platform.upper()
+        if self.metadata.platform is not None:
+            platform = self.metadata.platform.upper()
         else:
             platform = None
         # Facility run number
-        if self.params.run_number is not None:
-            facility_run_number = str(self.params.run_number)
+        if self.metadata.run_number is not None:
+            facility_run_number = str(self.metadata.run_number)
         else:
             facility_run_number = None
         # Construct the reference id
@@ -355,18 +437,26 @@ class AutoProcess:
         return run_id
 
     @property
-    def info_file(self):
+    def parameter_file(self):
         """
-        Return name of info file ('auto_process.info')
+        Return name of parameter file ('auto_process.info')
         """
         return os.path.join(self.analysis_dir,'auto_process.info')
 
     @property
-    def has_info_file(self):
+    def has_parameter_file(self):
         """
-        Indicate if there is an info file (typically auto_process.info)
+        Indicate if there is a parameter file (typically auto_process.info)
         """
-        return os.path.exists(os.path.join(self.info_file))
+        return os.path.exists(os.path.join(self.parameter_file))
+
+    @property
+    def metadata_file(self):
+        """
+        Return name of metadata file ('metadata.info')
+
+        """
+        return os.path.join(self.analysis_dir,'metadata.info')
 
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         # Set up the initial analysis directory
@@ -394,14 +484,15 @@ class AutoProcess:
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
-            # check for info file
-            if self.has_info_file:
+            # check for parameter file
+            if self.has_parameter_file:
                 self.load_parameters()
             else:
-                logging.warning("No info file found in %s" % self.analysis_dir)
+                logging.warning("No parameter file found in %s" %
+                                self.analysis_dir)
         # Identify missing data and attempt to acquire
         # Sequencing platform
-        platform = self.params.platform
+        platform = self.metadata.platform
         if platform is None:
             print "Identifying platform from data directory name"
             platform = platforms.get_sequencer_platform(data_dir)
@@ -468,12 +559,14 @@ class AutoProcess:
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
-        self.params['platform'] = platform
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
-        self.params['assay'] = assay
-        # Set flag to allow parameters to be saved back
+        # Store the metadata
+        self.metadata['platform'] = platform
+        self.metadata['assay'] = assay
+        # Set flags to allow parameters etc to be saved back
         self._save_params = True
+        self._save_metadata = True
 
     def setup_from_fastq_dir(self,analysis_dir,fastq_dir):
         # Do setup for an existing directory containing fastq files
@@ -492,9 +585,11 @@ class AutoProcess:
         # Store the parameters
         self.params['analysis_dir'] = self.analysis_dir
         self.params['unaligned_dir'] = fastq_dir
-        self.params['platform'] = platform
-        # Set flag to allow parameters to be saved back
+        # Store the metadata
+        self.metadata['platform'] = platform
+        # Set flag to allow parameters etc to be saved back
         self._save_params = True
+        self._save_metadata = True
         # Generate statistics
         self.generate_stats()
         # Make a 'projects.info' metadata file
@@ -510,10 +605,12 @@ class AutoProcess:
             logging.warning("Target directory '%s' already exists" % clone_dir)
             raise Exception("Clone failed, target directory already exists")
         self.create_directory(clone_dir)
-        # Copy info file
-        if not self.has_info_file:
-            raise Exception("Clone failed, no info file %s" % self.info_file)
-        shutil.copy(self.info_file,os.path.join(clone_dir,'auto_process.info'))
+        # Copy parameter file
+        if not self.has_parameter_file:
+            raise Exception("Clone failed, no parameter file %s" %
+                            self.parameter_file)
+        shutil.copy(self.parameter_file,
+                    os.path.join(clone_dir,'auto_process.info'))
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         clone_unaligned_dir = os.path.join(clone_dir,
@@ -538,9 +635,9 @@ class AutoProcess:
 
     def show_settings(self):
         # Print the current settings
-        if not self.has_info_file:
+        if not self.has_parameter_file:
             return
-        print "Settings in auto_process.info:"
+        print "Settings in %s:" % (os.path.basename(self.parameter_file))
         settings = bcf_utils.OrderedDictionary()
         settings['Run reference'] = self.run_reference_id
         for p in self.params:
@@ -556,6 +653,14 @@ class AutoProcess:
             self.params[key] = value
         else:
             raise KeyError("Parameter 'key' not found" % key)
+
+    def set_metadata(self,key,value):
+        # Set an analysis directory metadata item
+        if key in self.metadata:
+            print "Setting metadata item '%s' to '%s'" % (key,value)
+            self.metadata[key] = value
+        else:
+            raise KeyError("Metadata item 'key' not found" % key)
 
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq
@@ -801,6 +906,8 @@ class AutoProcess:
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
+        # Collect and store info on underlying bcl2fastq software
+        self.metadata['bcl2fastq_software'] = utils.bcl_to_fastq_info()
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
@@ -1255,7 +1362,7 @@ class AutoProcess:
                                             library_type=library_type,
                                             run=run_name,
                                             comments=comments,
-                                            platform=self.params.platform)
+                                            platform=self.metadata.platform)
             if project.exists:
                 logging.warning("Project '%s' already exists, skipping" % project.name)
                 continue
@@ -1275,7 +1382,7 @@ class AutoProcess:
                                                  run=run_name,
                                                  comments="Analysis of reads "
                                                  "with undetermined indices",
-                                                 platform=self.params.platform)
+                                                 platform=self.metadata.platform)
             if not undetermined.exists:
                 print "Creating directory 'undetermined' for analysing reads " \
                 "with undetermined indices"
@@ -1488,7 +1595,7 @@ class AutoProcess:
             raise Exception, "No archive directory specified (use --archive_dir option?)"
         # Construct subdirectory structure i.e. platform and year
         if platform is None:
-            platform = self.params.platform
+            platform = self.metadata.platform
         if platform is None:
             raise Exception, "No platform specified (use --platform option?)"
         if year is None:
@@ -1587,8 +1694,9 @@ class AutoProcess:
         # regenerate_reports: if True then try to create reports even when they
         #           already exist
         #
-        # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
+        # Turn off saving of parameters etc
         self._save_params = False
+        self._save_metadata = False
         # Check metadata
         check_metadata = self.check_metadata(('source','run_number'))
         if not check_metadata:
@@ -1716,9 +1824,9 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Run name</td><td>%s</td></tr>" %
                        os.path.basename(self.analysis_dir))
         index_page.add("<tr><td class='param'>Run number</td><td>%s</td></tr>" %
-                       self.params.run_number)
+                       self.metadata.run_number)
         index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
-                       self.params.platform)
+                       self.metadata.platform)
         index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
                        ('Paired end' if analysis_dir.paired_end else 'Single end'))
         index_page.add("</table>")
@@ -1883,8 +1991,9 @@ class AutoProcess:
         
     def report(self,logging=False,summary=False,full=False,projects=False):
         # Report the contents of the run in various formats
-        # Turn off saving of parameters (i.e. don't overwrite auto_process.info)
+        # Turn off saving of parameters etc
         self._save_params = False
+        self._save_metadata = False
         report = None
         if logging:
             # Short form "logging"-style report
@@ -1907,7 +2016,7 @@ class AutoProcess:
             # of the data directory
             print "Run ref      : %s" % self.run_reference_id
             print "Directory    : %s" % self.analysis_dir
-            print "Platform     : %s" % self.params.platform
+            print "Platform     : %s" % self.metadata.platform
             print "Unaligned dir: %s" % self.params.unaligned_dir
             if self.readme:
                 print "README.txt found: %s" % self.readme
@@ -2016,12 +2125,12 @@ class AutoProcess:
             if run_name.endswith('_analysis'):
                 # Strip trailing _analysis
                 run_name = run_name[:-len('_analysis')]
-        if self.params.platform is not None:
-            platform = self.params.platform.upper()
+        if self.metadata.platform is not None:
+            platform = self.metadata.platform.upper()
         else:
             platform = 'unknown'
-        if self.params.run_number is not None:
-            run_number = self.params.run_number
+        if self.metadata.run_number is not None:
+            run_number = self.metadata.run_number
         # Generate report text
         report = []
         # Report header
@@ -2167,15 +2276,15 @@ class AutoProcess:
             logging.warning("Exception: %s" % ex)
             date_stamp = ''
             run_number = ''
-        if self.params.platform is not None:
-            platform = self.params.platform.upper()
+        if self.metadata.platform is not None:
+            platform = self.metadata.platform.upper()
         else:
             platform = ''
         run_id = self.run_reference_id
-        if self.params.run_number is not None:
-            run_number = self.params.run_number
-        if self.params.source is not None:
-            data_source = self.params.source
+        if self.metadata.run_number is not None:
+            run_number = self.metadata.run_number
+        if self.metadata.source is not None:
+            data_source = self.metadata.source
         else:
             data_source = ''
         paired_end = 'yes' if analysis_dir.paired_end else 'no'
@@ -2211,7 +2320,7 @@ class AutoProcess:
         # Check metadata
         metadata_ok = True
         for item in items:
-            if item in self.params.null_items():
+            if item in self.metadata.null_items():
                 metadata_ok = False
                 logging.warning("Metadata item '%s' is not set" % item)
         return metadata_ok
@@ -2220,6 +2329,6 @@ class AutoProcess:
 # Custom exceptions
 #######################################################################
 
-class MissingInfoFileException(Exception):
+class MissingParameterFileException(Exception):
     """Used to indicate missing auto_process.info file
     """
