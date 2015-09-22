@@ -6,11 +6,18 @@ Top-level analysis directory
 
 The top-level analysis directory is created by the ``setup`` command:
 
+.. note::
+
+   Not all components may be present, depending on the
+   ``auto_process`` version.
+
 ::
 
  140729_SN1234_XYZ_analysis/            Top-level analysis directory
           |
           +--- auto_process.info        Parameters used for processing
+          |
+          +--- metadata.info            Metadata about the run
           |
           +--- statistics.info          Per-file statistics (size, no. of reads etc)
           |

@@ -35,6 +35,7 @@ Contents
    standard_protocol
    commands
    analysis_dirs
+   metadata
    problems
    count_barcodes
    managing_data

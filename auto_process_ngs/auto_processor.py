@@ -633,34 +633,71 @@ class AutoProcess:
         d.log_dir
         d.script_code_dir
 
-    def show_settings(self):
-        # Print the current settings
-        if not self.has_parameter_file:
-            return
-        print "Settings in %s:" % (os.path.basename(self.parameter_file))
-        settings = bcf_utils.OrderedDictionary()
-        settings['Run reference'] = self.run_reference_id
-        for p in self.params:
-            settings[p] = self.params[p]
-        field_width = max([len(s) for s in settings])
-        for p in settings:
-            print "%s: %s" % (p+' '*(field_width-len(p)),settings[p])
+    def print_values(self,data):
+        """
+        Print key/value pairs from a dictionary
+
+        """
+        values = bcf_utils.OrderedDictionary()
+        values['Run reference'] = self.run_reference_id
+        for i in data:
+            values[i] = data[i]
+        field_width = max([len(i) for i in values])
+        for item in values:
+            print "%s: %s" % (item+' '*(field_width-len(item)),
+                              values[item])
 
     def set_param(self,key,value):
-        # Set an analysis directory parameter
+        """
+        Set an analysis directory parameter
+
+        Arguments:
+          key (str): parameter name
+          value (object): value to assign to the parameter
+
+        """
         if key in self.params:
             print "Setting parameter '%s' to '%s'" % (key,value)
             self.params[key] = value
         else:
             raise KeyError("Parameter 'key' not found" % key)
 
+    def print_params(self):
+        """
+        Print the current parameter settings
+
+        """
+        if self.has_parameter_file:
+            print "Parameters in %s:" % (os.path.basename(self.parameter_file))
+        else:
+            print "No parameters file found"
+        self.print_values(self.params)
+
     def set_metadata(self,key,value):
-        # Set an analysis directory metadata item
+        """
+        Set an analysis directory metadata item
+
+        Arguments:
+          key (str): parameter name
+          value (object): value to assign to the parameter
+
+        """
         if key in self.metadata:
             print "Setting metadata item '%s' to '%s'" % (key,value)
             self.metadata[key] = value
         else:
             raise KeyError("Metadata item 'key' not found" % key)
+
+    def print_metadata(self):
+        """
+        Print the metadata items and associated values
+
+        """
+        if os.path.exists(self.metadata_file):
+            print "Metadata in %s:" % (os.path.basename(self.metadata_file))
+        else:
+            print "No metadata file found"
+        self.print_values(self.metadata)
 
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
         # Generate a project metadata file based on the fastq

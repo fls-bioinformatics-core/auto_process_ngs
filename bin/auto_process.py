@@ -18,7 +18,6 @@ processing and QC'ing Illumina sequencing data.
 The stages are:
 
     setup
-    config
     make_fastqs
     setup_analysis_dirs
     run_qc
@@ -31,6 +30,13 @@ data about the sequencing run from a source directory. Subsequent stages
 should be run in sequence to create fastq files, set up analysis
 directories for each project, and run QC scripts for each sample in
 each project.
+
+The following commands enable the querying and setting of configuration
+settings and project metadata:
+
+    config
+    params
+    metadata
 
 Additional commands are available:
 
@@ -119,11 +125,23 @@ def add_params_command(cmdparser):
     """Create a parser for the 'params' command
     """
     p  = cmdparser.add_command('params',help="Query and change project parameters",
-                               usage="%prog config [OPTIONS] [ANALYSIS_DIR]",
+                               usage="%prog params [OPTIONS] [ANALYSIS_DIR]",
                                description="Query and change processing parameters "
                                "and settings for ANALYSIS_DIR.")
     p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
+                 "'<param>=<value>'. Multiple --set options can be specified.")
+    add_debug_option(p)
+
+def add_metadata_command(cmdparser):
+    """Create a parser for the 'metadata' command
+    """
+    p  = cmdparser.add_command('metadata',help="Query and update analysis metadata",
+                               usage="%prog metadata [OPTIONS] [ANALYSIS_DIR]",
+                               description="Query and change metadata associated with "
+                               "ANALYSIS_DIR.")
+    p.add_option('--set',action='append',dest='key_value',default=None,
+                 help="Set the value of a metadata item. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
     add_debug_option(p)
 
@@ -438,6 +456,7 @@ if __name__ == "__main__":
     add_config_command(p)
     add_setup_command(p)
     add_params_command(p)
+    add_metadata_command(p)
     add_make_fastqs_command(p)
     add_setup_analysis_dirs_command(p)
     add_run_qc_command(p)
@@ -581,7 +600,20 @@ if __name__ == "__main__":
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
             else:
-                d.show_settings()
+                d.print_params()
+        elif cmd == 'metadata':
+            # Update the metadata associated with the analysis
+            if options.key_value is not None:
+                for key_value in options.key_value:
+                    try:
+                        i = key_value.index('=')
+                        key = key_value[:i]
+                        value = key_value[i+1:].strip("'").strip('"')
+                        d.set_metadata(key,value)
+                    except ValueError:
+                        logging.error("Can't process '%s'" % options.key_value)
+            else:
+                d.print_metadata()
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,
                                         platform=options.platform,
