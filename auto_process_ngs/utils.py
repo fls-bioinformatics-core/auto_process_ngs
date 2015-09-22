@@ -966,15 +966,44 @@ class AnalysisDirParameters(MetadataDict):
                               attributes = {
                                   'analysis_dir':'analysis_dir',
                                   'data_dir':'data_dir',
-                                  'platform':'platform',
                                   'sample_sheet':'sample_sheet',
                                   'bases_mask':'bases_mask',
                                   'project_metadata':'project_metadata',
                                   'primary_data_dir':'primary_data_dir',
                                   'unaligned_dir':'unaligned_dir',
                                   'stats_file':'stats_file',
-                                  'source': 'source',
+                              },
+                              filen=filen)
+
+class AnalysisDirMetadata(MetadataDict):
+    """Class for storing metadata about an analysis directory
+
+    Provides a set of data items representing metadata about
+    the current analysis, which are loaded from and saved to
+    an external file.
+
+    The metadata items are:
+
+    run_number: run number assigned by local facility
+    source: source of the data (e.g. local facility)
+    platform: sequencing platform e.g. 'miseq'
+    assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
+    bcl2fastq_software: info on the Bcl conversion software used
+
+    """
+    def __init__(self,filen=None):
+        """Create a new AnalysisDirMetadata object
+
+        Arguments:
+          filen (str): (optional) name of the tab-delimited
+            file with key-value pairs to load in.
+
+        """
+        MetadataDict.__init__(self,
+                              attributes = {
                                   'run_number': 'run_number',
+                                  'source': 'source',
+                                  'platform':'platform',
                                   'assay': 'assay',
                                   'bcl2fastq_software': 'bcl2fastq_software',
                               },
