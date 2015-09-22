@@ -837,7 +837,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         else:
             raise AttributeError,"Key '%s' not defined" % key
 
-    def load(self,filen):
+    def load(self,filen,strict=True):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -847,8 +847,12 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         already assigned to keys within the metadata object.
 
         Arguments:
-          filen: name of the tab-delimited file with key-value
-            pairs
+          filen (str): name of the tab-delimited file with
+            key-value pairs
+          strict (boolean): if True (default) then discard
+            items in the input file which are missing from
+            the definition; if False then add them to the
+            definition.
 
         """
         self.__filen = filen
@@ -872,7 +876,15 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         found_key = True
                         break
                 if not found_key:
-                    logging.debug("Unrecognised key in %s: %s" % (filen,key))
+                    if strict:
+                        logging.debug("Unrecognised key in %s: %s"
+                                      % (filen,attr))
+                    else:
+                        logging.debug("Adding key from %s: %s"
+                                      % (filen,attr))
+                        self.__attributes[attr] = attr
+                        self.__key_order.append(attr)
+                        self[attr] = value
             except IndexError:
                 logging.warning("Bad line in %s: %s" % (filen,line))
 

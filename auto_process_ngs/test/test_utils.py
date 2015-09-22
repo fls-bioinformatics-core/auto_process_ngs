@@ -437,6 +437,27 @@ class TestMetadataDict(unittest.TestCase):
         metadata['chat'] = None
         self.assertEqual(metadata.null_items(),['chat'])
 
+    def test_undefined_items_in_file(self):
+        """Check handling of additional undefined items in file
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        # Create a file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'w') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file,strict=False)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertEqual(metadata.chit_chat,'stuff')
+
 class TestAnalysisDirParameters(unittest.TestCase):
     """Tests for the AnalysisDirParameters class
 
