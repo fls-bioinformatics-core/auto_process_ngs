@@ -469,7 +469,6 @@ class TestAnalysisDirParameters(unittest.TestCase):
         params = AnalysisDirParameters()
         self.assertEqual(params.analysis_dir,None)
         self.assertEqual(params.data_dir,None)
-        self.assertEqual(params.platform,None)
         self.assertEqual(params.sample_sheet,None)
         self.assertEqual(params.bases_mask,None)
         self.assertEqual(params.primary_data_dir,None)
@@ -477,24 +476,38 @@ class TestAnalysisDirParameters(unittest.TestCase):
         self.assertEqual(params.project_metadata,None)
         self.assertEqual(params.stats_file,None)
 
-class TestAnalysisProjectInfo(unittest.TestCase):
-    """Tests for the AnalysisProjectInfo class
+class TestAnalysisDirParameters(unittest.TestCase):
+    """Tests for the AnalysisDirParameters class
 
     """
 
-    def test_create_analysis_project_metadata(self):
-        """Check creation of an empty AnalysisProjectInfo object
+    def test_create_analysis_dir_parameters(self):
+        """Check creation of an empty AnalysisDirParameters object
         """
-        info = AnalysisProjectInfo()
-        self.assertEqual(info.run,None)
-        self.assertEqual(info.platform,None)
-        self.assertEqual(info.user,None)
-        self.assertEqual(info.PI,None)
-        self.assertEqual(info.organism,None)
-        self.assertEqual(info.library_type,None)
-        self.assertEqual(info.paired_end,None)
-        self.assertEqual(info.samples,None)
-        self.assertEqual(info.comments,None)
+        params = AnalysisDirParameters()
+        self.assertEqual(params.analysis_dir,None)
+        self.assertEqual(params.data_dir,None)
+        self.assertEqual(params.sample_sheet,None)
+        self.assertEqual(params.bases_mask,None)
+        self.assertEqual(params.primary_data_dir,None)
+        self.assertEqual(params.unaligned_dir,None)
+        self.assertEqual(params.project_metadata,None)
+        self.assertEqual(params.stats_file,None)
+
+class TestAnalysisDirMetadata(unittest.TestCase):
+    """Tests for the AnalysisDirMetadata class
+
+    """
+
+    def test_create_analysis_dir_metadata(self):
+        """Check creation of an empty AnalysisDirMetadata object
+        """
+        metadata = AnalysisDirMetadata()
+        self.assertEqual(metadata.run_number,None)
+        self.assertEqual(metadata.platform,None)
+        self.assertEqual(metadata.source,None)
+        self.assertEqual(metadata.assay,None)
+        self.assertEqual(metadata.bcl2fastq_software,None)
 
 class TestProjectMetadataFile(unittest.TestCase):
     """Tests for the ProjectMetadataFile class
