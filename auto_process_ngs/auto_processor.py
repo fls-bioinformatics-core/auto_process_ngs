@@ -96,7 +96,8 @@ class AutoProcess:
                     # Migrate relevant values across
                     print "Migrating metadata values from parameter file:"
                     for param in ('platform','run_number','source','assay'):
-                        print "- '%s' set to '%s'" % (param,self.params[param])
+                        logging.debug("Importing metadata item '%s': set to "
+                                      "'%s'" % (param,self.params[param]))
                         self.metadata[param] = self.params[param]
                 else:
                     # Attempt to detect sequencing platform
