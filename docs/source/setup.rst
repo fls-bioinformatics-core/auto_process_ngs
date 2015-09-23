@@ -52,8 +52,25 @@ dynamic modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
-The `[modulefiles]` directive allows specific module files to be loaded
+The ``[modulefiles]`` directive allows specific module files to be loaded
 before a specific step, for example::
 
     [modulefiles]
     make_fastqs = apps/bcl2fastq/1.8.4
+
+Bash tab completion
+*******************
+
+The ``auto_process-completion.bash`` file (installed into the
+``etc/bash_completion.d`` subdirectory of the installation location)
+can used to enable tab completion of ``auto_process.py`` commands
+within ``bash`` shells.
+
+* For a global installation, copy the file to the system's
+  ``/etc/bash_completion.d/`` directory, to make it available
+  to all users
+* For a local installation, source the file when setting up the
+  environment for the installation (or source it in your ``~/.bashrc``
+  or similar).
+
+
