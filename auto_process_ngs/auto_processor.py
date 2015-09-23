@@ -1953,6 +1953,9 @@ class AutoProcess:
             scp = applications.general.scp(user,server,index_html,dirn)
             print "Running %s" % scp
             scp.run_subprocess()
+        # Print the URL if given
+        if self.settings.qc_web_server.url is not None:
+            print "QC published to %s" % self.settings.qc_web_server.url
 
     def stats_as_html_table(self):
         # Return statistics as string containing HTML table, or None if no
