@@ -211,7 +211,12 @@ class AutoProcess:
         else:
             filen = None
         logging.debug("Project metadata file: %s" % filen)
-        illumina_data = self.load_illumina_data()
+        try:
+            illumina_data = self.load_illumina_data()
+        except IlluminaData.IlluminaDataError,ex:
+            logging.warning("Failed to load data from bcl2fastq output "
+                            "(ignored): %s" % ex)
+            illumina_data = None
         projects_from_dirs = self.get_analysis_projects_from_dirs()
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
