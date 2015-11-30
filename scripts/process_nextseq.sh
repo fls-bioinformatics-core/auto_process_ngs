@@ -259,7 +259,7 @@ function setup_analysis_dirs() {
 	    mkdir $project/fastqs
 	    mkdir $project/ScriptCode
 	    ln $1/$project/*.fastq.gz $project/fastqs/
-	    cat >> $project/README.info <<EOF
+	    cat > $project/README.info <<EOF
 Run	.
 Platform	nextseq
 User	$user
@@ -277,7 +277,8 @@ EOF
     mkdir undetermined/fastqs
     for fq in $(get_undetermined $1) ; do
 	ln $1/$fq undetermined/fastqs/
-	    cat >> $project/README.info <<EOF
+    done
+    cat > undetermined/README.info <<EOF
 Run	.
 Platform	nextseq
 User	.
@@ -287,7 +288,6 @@ Library type	.
 Paired_end	$(is_paired_end $1)
 Comments	.
 EOF
-    done
 }
 # Main script
 # Sort out command line
