@@ -199,31 +199,18 @@ class AnalysisFastq:
         """Implement __repr__ built-in
 
         """
+        # Reconstruct name
+        fq = "%s" % self.sample_name
+        if self.sample_number is not None:
+            fq = "%s_S%d" % (fq,self.sample_number)
+        if self.barcode_sequence is not None:
+            fq = "%s_%s" % (fq,self.barcode_sequence)
+        if self.lane_number is not None:
+            fq = "%s_L%03d" % (fq,self.lane_number)
+        if self.read_number is not None:
+            fq = "%s_R%d" % (fq,self.read_number)
         if self.set_number is not None:
-            # Return the full name
-            if self.sample_number is not None:
-                sample_identifier = "S%d" % self.sample_number
-            else:
-                if self.barcode_sequence is not None:
-                    sample_identifier = self.barcode_sequence
-                else:
-                    barcode_sequence = 'NoIndex'
-            fq = "%s_%s_L%03d_R%d_%03d" % (self.sample_name,
-                                           sample_identifier,
-                                           self.lane_number,
-                                           self.read_number,
-                                           self.set_number)
-        else:
-            # Reconstruct partial name
-            fq = "%s" % self.sample_name
-            if self.sample_number is not None:
-                fq = "%s_S%d" % (fq,self.sample_number)
-            if self.barcode_sequence is not None:
-                fq = "%s_%s" % (fq,self.barcode_sequence)
-            if self.lane_number is not None:
-                fq = "%s_L%03d" % (fq,self.lane_number)
-            if self.read_number is not None:
-                fq = "%s_R%d" % (fq,self.read_number)
+            fq = "%s_%03d" % (fq,self.set_number)
         return fq
 
 class AnalysisDir:

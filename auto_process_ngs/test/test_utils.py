@@ -49,6 +49,18 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.set_number,1)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
 
+    def test_name_no_lane_blc2fastq2(self):
+        """Handle Illumina fastq name from bcl2fastq2 (without lane)
+        """
+        fq = AnalysisFastq('NH1_ChIP-seq_Gli1_S4_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_R2_001')
+
     def test_name_only(self):
         """Handle reduced fastq name (sample name only)
         """
