@@ -776,6 +776,16 @@ class TestBclToFastqInfo(unittest.TestCase):
                           'configureBclToFastq.pl'),'w').write("")
         os.chmod(os.path.join(self.dirn,'bcl2fastq','1.8.4','bin',
                               'configureBclToFastq.pl'),0775)
+        # bcl2fastq 2.17.1.14
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','2.17.1.14','bin'))
+        os.makedirs(os.path.join(self.dirn,'bcl2fastq','2.17.1.14','etc','bcl2fastq-2.17.1.14'))
+        with open(os.path.join(self.dirn,'bcl2fastq','2.17.1.14','bin',
+                               'bcl2fastq'),'w') as fp:
+            fp.write("#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.17.1.14\nCopyright (c) 2007-2015 Illumina, Inc.\n\n2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq --version\nEOF\nfi")
+        os.chmod(os.path.join(self.dirn,'bcl2fastq','2.17.1.14','bin',
+                              'bcl2fastq'),0755)
+        print open(os.path.join(self.dirn,'bcl2fastq','2.17.1.14','bin',
+                               'bcl2fastq'),'r').read()
 
     def tearDown(self):
         # Remove the temporary test directory
@@ -816,6 +826,18 @@ class TestBclToFastqInfo(unittest.TestCase):
         self.assertEqual(path,exe)
         self.assertEqual(name,'bcl2fastq')
         self.assertEqual(version,'1.8.4')
+
+    def test_bcl2fastq_2_17_1_14(self):
+        """
+        Collect info for bcl2fastq 2.17.1.14
+
+        """
+        exe = os.path.join(self.dirn,'bcl2fastq','2.17.1.14','bin','bcl2fastq')
+        os.environ['PATH'] = os.path.dirname(exe)+':'+os.environ['PATH']
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'2.17.1.14')
 
     def test_configurebcltofastq_not_found(self):
         """

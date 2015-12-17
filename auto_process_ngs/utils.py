@@ -27,6 +27,7 @@ tree at some point.
 import os
 import re
 import logging
+import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
@@ -1262,30 +1263,32 @@ def bcl_to_fastq_info():
     """
     Retrieve information on the bcl2fastq software
 
-    Looks for the ``configureBclToFastq.pl`` script and attempts
-    to guess the package name (either `bcl2fastq` or `CASAVA`)
-    and the version.
+    Looks for the appropriate bcl2fastq components (e.g. the
+    ``configureBclToFastq.pl`` script, or the ``bcl2fastq``
+    program) and attempts to guess the package name (either
+    `bcl2fastq` or `CASAVA`) and the version.
 
     If no package is identified then the script path is still
     returned, but without any version info.
 
     Returns:
       Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
-        is the full path for the configureBclToFastq.pl script and
-        PACKAGE and VERSION are guesses for the package/version
-        that it belongs to. If any value can't be determined then
-        it will be returned as None.
+        is the full path for the bcl2fastq program or
+        configureBclToFastq.pl script and PACKAGE and VERSION are
+        guesses for the package/version that it belongs to. If any
+        value can't be determined then it will be returned as None.
 
     """
     # Initialise
-    configurebcl2fastq_path = None
+    bcl2fastq_path = None
     package_name = None
     package_version = None
     # Locate the core script
-    configurebcl2fastq_path = bcf_utils.find_program('configureBclToFastq.pl')
-    if configurebcl2fastq_path:
+    bcl2fastq_path = bcf_utils.find_program('configureBclToFastq.pl')
+    if bcl2fastq_path:
+        # Found CASAVA or bcl2fastq 1.8.* version
         # Look for the top-level directory
-        path = os.path.dirname(configurebcl2fastq_path)
+        path = os.path.dirname(bcl2fastq_path)
         # Look for etc directory
         etc_dir = os.path.join(os.path.dirname(path),'etc')
         if os.path.isdir(etc_dir):
@@ -1295,5 +1298,23 @@ def bcl_to_fastq_info():
                     package_name = m.group(1)
                     package_version = m.group(2)
                     break
+    else:
+        # Look for bcl2fastq v2.*
+        bcl2fastq_path = bcf_utils.find_program('bcl2fastq')
+        if bcl2fastq_path:
+            # Run the program to get the version
+            version_cmd = applications.Command('bcl2fastq','--version')
+            output = version_cmd.subprocess_check_output()[1]
+            print output
+            for line in output.split('\n'):
+                if line.startswith('bcl2fastq'):
+                    # Extract version from line of the form
+                    # bcl2fastq v2.17.1.14
+                    package_name = 'bcl2fastq'
+                    try:
+                        package_version = line.split()[1][1:]
+                    except ex:
+                        logging.warning("Unable to get version from '%s': %s" %
+                                        (line,ex))
     # Return what we found
-    return (configurebcl2fastq_path,package_name,package_version)
+    return (bcl2fastq_path,package_name,package_version)
