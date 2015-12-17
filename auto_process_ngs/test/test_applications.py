@@ -88,6 +88,41 @@ class TestBcl2Fastq(unittest.TestCase):
                           '--fastq-cluster-count','-1',
                           '--ignore-missing-bcl'])
 
+    def test_bcl2fastq(self):
+        """Construct 'bcl2fastq' command lines for bcl2fastq v2.*
+        """
+        self.assertEqual(bcl2fastq.bcl2fastq2('Data/Intensities/Basecalls',
+                                              'SampleSheet.csv').command_line,
+                         ['bcl2fastq',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','Unaligned',
+                          '--sample-sheet','SampleSheet.csv'])
+        self.assertEqual(bcl2fastq.bcl2fastq2('Data/Intensities/Basecalls',
+                                              'SampleSheet.csv',
+                                              output_dir='run/bcl2fastq').command_line,
+                         ['bcl2fastq',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv'])
+        self.assertEqual(bcl2fastq.bcl2fastq2('Data/Intensities/Basecalls',
+                                              'SampleSheet.csv',
+                                              output_dir='run/bcl2fastq',
+                                              ignore_missing_bcl=True).command_line,
+                         ['bcl2fastq',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--ignore-missing-bcls'])
+        self.assertEqual(bcl2fastq.bcl2fastq2('Data/Intensities/Basecalls',
+                                              'SampleSheet.csv',
+                                              output_dir='run/bcl2fastq',
+                                              no_lane_splitting=True).command_line,
+                         ['bcl2fastq',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','run/bcl2fastq',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--no-lane-splitting'])
+
 class TestGeneral(unittest.TestCase):
 
     def test_rsync(self):
