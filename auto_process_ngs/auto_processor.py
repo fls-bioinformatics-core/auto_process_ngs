@@ -290,12 +290,31 @@ class AutoProcess:
         return project_metadata
 
     def get_analysis_projects_from_dirs(self):
-        # Return a list of analysis projects deduced from testing all
-        # subdirectories of the top-level analysis directory
+        """
+        Return a list of AnalysisProjects in the analysis directory
+
+        Tests each of the subdirectories in the top-level of the
+        analysis directory and rejects any that appear to be
+        CASVAVA/bcl2fastq outputs or which don't successfully load
+        as AnalysisProject instances.
+
+        Returns:
+          List: list of AnalysisProject instances.
+
+        """
         logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
         # Try loading each subdirectory as a project
         for dirn in bcf_utils.list_dirs(self.analysis_dir):
+            # Test for bcl2fastq output
+            try:
+                IlluminaData.IlluminaData(self.analysis_dir,
+                                          unaligned_dir=dirn)
+                logging.debug("* %s: rejected" % dirn)
+                continue
+            except IlluminaDataError:
+                pass
+            # Try loading as a project
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
