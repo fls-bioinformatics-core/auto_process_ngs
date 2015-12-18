@@ -81,6 +81,22 @@ __settings = auto_process_ngs.settings.Settings()
 # Functions
 #######################################################################
 
+# Supporting functions
+
+def add_modulefiles_option(p):
+    """
+    Add a --modulefiles option to an OptionParser option
+
+    The values can be accessed via the 'modulefiles' property of the
+    parser.
+
+    """
+    p.add_option('--modulefiles',action='store',
+                 dest='modulefiles',default=None,
+                 help="Specify comma-separated list of environment modules "
+                 "to load before executing commands (overrides any modules "
+                 "specified in the global settings)")
+
 # Command line parsers
 
 def add_setup_command(cmdparser):
@@ -154,6 +170,7 @@ def add_make_fastqs_command(cmdparser):
                               "produced by Illumina sequencer within ANALYSIS_DIR.")
     # General options
     add_no_save_option(p)
+    add_modulefiles_option(p)
     add_debug_option(p)
     # Primary data management
     primary_data = optparse.OptionGroup(p,'Primary data management')
@@ -275,6 +292,7 @@ def add_run_qc_command(cmdparser):
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default %s, change in settings file)" % max_concurrent_jobs)
     add_runner_option(p)
+    add_modulefiles_option(p)
     add_debug_option(p)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
@@ -484,14 +502,18 @@ if __name__ == "__main__":
         allow_save = True
 
     # Set up environment modules
+    modulefiles = None
     try:
-        modulefiles = __settings.modulefiles[cmd]
-        if modulefiles is not None:
-            for modulefile in modulefiles.split(','):
-                envmod.load(modulefile)
-    except KeyError:
-        # No environment modules specified
-        pass
+        modulesfiles = options.modulefiles
+    except AttributeError:
+        try:
+            modulefiles = __settings.modulefiles[cmd]
+        except KeyError:
+            # No environment modules specified
+            pass
+    if modulefiles is not None:
+        for modulefile in modulefiles.split(','):
+            envmod.load(modulefile)
 
     # Setup the processing object and run the requested command
     if cmd == 'config':
