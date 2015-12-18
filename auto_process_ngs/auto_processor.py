@@ -312,7 +312,7 @@ class AutoProcess:
                                           unaligned_dir=dirn)
                 logging.debug("* %s: rejected" % dirn)
                 continue
-            except IlluminaDataError:
+            except IlluminaData.IlluminaDataError:
                 pass
             # Try loading as a project
             test_project = utils.AnalysisProject(
