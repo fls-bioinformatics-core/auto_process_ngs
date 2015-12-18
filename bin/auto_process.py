@@ -506,6 +506,8 @@ if __name__ == "__main__":
     try:
         modulefiles = options.modulefiles
     except AttributeError:
+        pass
+    if modulefiles is None:
         try:
             modulefiles = __settings.modulefiles[cmd]
         except KeyError:
