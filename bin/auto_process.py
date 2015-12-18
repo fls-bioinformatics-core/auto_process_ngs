@@ -504,7 +504,7 @@ if __name__ == "__main__":
     # Set up environment modules
     modulefiles = None
     try:
-        modulesfiles = options.modulefiles
+        modulefiles = options.modulefiles
     except AttributeError:
         try:
             modulefiles = __settings.modulefiles[cmd]
