@@ -88,7 +88,9 @@ if __name__ == '__main__':
         total_reads = sum([data[lane][x] for x in samples])
         print "Total reads = %d" % total_reads
         for sample in samples:
-            nreads = data[lane][sample]
-            print "- %s\t%d\t%.1f%%" % (sample,nreads,float(nreads)/total_reads*100.0)
-    
-            
+            nreads = float(data[lane][sample])
+            if total_reads > 0:
+                print "- %s\t%d\t%.1f%%" % (sample,nreads,
+                                            nreads/total_reads*100.0)
+            else:
+                print "- %s\t%d\tn/a" % (sample,nreads)
