@@ -715,7 +715,7 @@ class AnalysisSample:
 
         """
         name = bcf_utils.rootname(os.path.basename(fastq))
-        return IlluminaQCSample(name,qc_dir)
+        return IlluminaQCSample(name,qc_dir,fastq)
 
     def verify_qc(self,qc_dir,fastq):
         """Check if QC completed for a fastq file
