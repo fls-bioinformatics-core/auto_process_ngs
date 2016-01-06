@@ -538,16 +538,19 @@ class AutoProcess:
         return os.path.join(self.analysis_dir,'metadata.info')
 
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
-        # Set up the initial analysis directory
-        #
-        # This does all the initialisation of the analysis directory
-        # and processing parameters
-        #
-        # Arguments:
-        # data_dir: source data directory
-        # analysis_dir: corresponding analysis dir
-        # sample_sheet: name and location of non-default sample sheet
-        #               file
+        """
+        Set up the initial analysis directory
+
+        This does all the initialisation of the analysis directory
+        and processing parameters
+
+        Arguments:
+          data_dir (str): source data directory
+          analysis_dir (str): corresponding analysis directory
+          sample_sheet (str): name and location of non-default sample sheet
+            file
+
+        """
         data_dir = data_dir.rstrip(os.sep)
         if analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
@@ -594,35 +597,46 @@ class AutoProcess:
             print "Acquiring sample sheet..."
             if sample_sheet is None:
                 sample_sheet = os.path.join(data_dir,
-                                            'Data/Intensities/BaseCalls/SampleSheet.csv')
+                                            'Data','Intensities',
+                                            'BaseCalls','SampleSheet.csv')
                 tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
             else:
                 tmp_sample_sheet = os.path.join(self.tmp_dir,os.path.basename(sample_sheet))
             rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-            custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
-            sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(tmp_sample_sheet,
-                                                                    custom_sample_sheet)
+            if platform == 'nextseq':
+                fmt = 'IEM'
+            else:
+                fmt = 'CASAVA'
+            custom_sample_sheet = os.path.join(self.analysis_dir,
+                                               'custom_SampleSheet.csv')
+            sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
+                tmp_sample_sheet,custom_sample_sheet,fmt=fmt)
             print "Keeping copy of original sample sheet"
-            original_sample_sheet = os.path.join(self.analysis_dir,'SampleSheet.orig.csv')
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
             os.rename(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
             os.chmod(original_sample_sheet,0664)
-        iem_sample_sheet = IlluminaData.IEMSampleSheet(original_sample_sheet)
-        sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
+        else:
+            sample_sheet = IlluminaData.SampleSheet(custom_sample_sheet)
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
         print "Sample sheet '%s'" % custom_sample_sheet
         # Assay type (= kit)
-        assay = iem_sample_sheet.header['Assay']
+        assay = IlluminaData.SampleSheet(original_sample_sheet).header['Assay']
         # Bases mask
         bases_mask = self.params.bases_mask
         if bases_mask is None:
             print "Acquiring RunInfo.xml to determine bases mask..."
             tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
-            rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
+            rsync = applications.general.rsync(os.path.join(data_dir,
+                                                            'RunInfo.xml'),
                                                self.tmp_dir)
             status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
-            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,custom_sample_sheet)
+            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,
+                                                        custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
         # Print the predicted ouputs
