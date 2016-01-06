@@ -28,31 +28,51 @@ import bcftbx.IlluminaData as IlluminaData
 # Functions
 #######################################################################
 
-def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None):
-    """Creates a fixed copy of a sample sheet file
+def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
+                             fmt=None):
+    """Creates a corrected copy of a sample sheet file
 
-    Creates and returns a CasavaSampleSheet object with a copy of the
+    Creates and returns a SampleSheet object with a copy of the
     input sample sheet, with any illegal or duplicated names fixed.
-    Optionally also writes the updated sample sheet data to a new file.
+    Optionally also writes the updated sample sheet data to a new
+    file.
 
     Arguments:
-      input_sample_sheet: name and path of initial sample sheet file
-      output_sample_sheet: (optional) name and path to write updated
-        sample sheet to.
+      input_sample_sheet (str): name and path of the original sample
+        sheet file
+      output_sample_sheet (str): (optional) name and path to write
+        updated sample sheet to, or `None`
+      fmt (str): (optional) format for the output sample sheet,
+        either 'CASAVA' or 'IEM'; if this `None` then the format of
+        the original file will be used
 
     Returns:
-      CasavaSampleSheet object with the data for the 'fixed' sample
+      SampleSheet object with the data for the corrected sample
       sheet.
 
     """
-    sample_sheet = IlluminaData.get_casava_sample_sheet(input_sample_sheet)
+    # Load the sample sheet data
+    sample_sheet = IlluminaData.SampleSheet(input_sample_sheet)
+    # Determine the column names for this format
+    if sample_sheet.format == 'CASAVA':
+        sample_col = 'SampleID'
+        project_col = 'SampleProject'
+    elif sample_sheet.format == 'IEM':
+        sample_col = 'Sample_ID'
+        project_col = 'Sample_Project'
+    else:
+        raise Exception("Unknown sample sheet format: %s" %
+                        sample_sheet.format)
+    # Add project names if not supplied
     for line in sample_sheet:
-        if not line['SampleProject']:
-            line['SampleProject'] = line['SampleID']
+        if not line[project_col]:
+            line[project_col] = line[sample_col]
+    # Fix other problems
     sample_sheet.fix_illegal_names()
     sample_sheet.fix_duplicated_names()
+    # Write out new sample sheet
     if output_sample_sheet is not None:
-        sample_sheet.write(output_sample_sheet)
+        sample_sheet.write(output_sample_sheet,fmt=fmt)
     return sample_sheet
 
 def get_bases_mask(run_info_xml,sample_sheet_file):
