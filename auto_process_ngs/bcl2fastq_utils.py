@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2014 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
 #
 ########################################################################
 #
@@ -9,19 +9,24 @@
 #
 #########################################################################
 
-"""bcl2fastq_utils.py
+"""
+bcl2fastq_utils.py
 
 Utility functions for bcl to fastq conversion operations:
 
 make_custom_sample_sheet: create a fixed copy of a sample sheet file
 get_nmismatches: determine number of mismatches from bases mask
 get_bases_mask: get a bases mask string
+run_bcl2fastq_18: run bcl-to-fastq conversion from CASAVA/bcl2fastq 1.8.*
 
 """
 
 #######################################################################
 # Imports
 #######################################################################
+import os
+import logging
+import auto_process_ngs.applications as applications
 import bcftbx.IlluminaData as IlluminaData
 
 #######################################################################
@@ -30,7 +35,8 @@ import bcftbx.IlluminaData as IlluminaData
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
                              fmt=None):
-    """Creates a corrected copy of a sample sheet file
+    """
+    Creates a corrected copy of a sample sheet file
 
     Creates and returns a SampleSheet object with a copy of the
     input sample sheet, with any illegal or duplicated names fixed.
@@ -76,7 +82,8 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     return sample_sheet
 
 def get_bases_mask(run_info_xml,sample_sheet_file):
-    """Get bases mask string
+    """
+    Get bases mask string
 
     Generates initial bases mask based on data in RunInfo.xml (which
     says how many reads there are, how many cycles in each read, and
@@ -103,7 +110,8 @@ def get_bases_mask(run_info_xml,sample_sheet_file):
     return bases_mask
 
 def get_nmismatches(bases_mask):
-    """Determine number of mismatches from bases mask
+    """
+    Determine number of mismatches from bases mask
 
     Automatically determines the maximum number of mismatches that shoud
     be allowed for a bcl to fastq conversion run, based on the tag
@@ -137,3 +145,98 @@ def get_nmismatches(bases_mask):
                 return 0
     # Failed to find any indexed reads
     return 0
+
+def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
+                      output_dir="Unaligned",
+                      mismatches=None,
+                      bases_mask=None,
+                      nprocessors=None,
+                      force=False,
+                      ignore_missing_bcl=False,
+                      ignore_missing_stats=False,
+                      ignore_missing_control=False):
+    """
+    Wrapper for running the CASAVA/bcl2fastq 1.8.* pipeline
+
+    Runs the CASAVA-style bcl to fastq pipeline, specifically:
+
+    1. Executes the 'configureBclToFastq.pl' script to generate a
+       Makefile to perform the conversion, then
+    2. Executes 'make' using this Makefile to generate fastq files
+       from bcl files.
+
+    Arguments:
+      basecalls_dir: path to the top-level directory holding the bcl
+        files (typically 'Data/Intensities/Basecalls/' subdirectory)
+      sample_sheet: path to the sample sheet file to use
+      output_dir: optional, path to the output directory. Defaults to
+        'Unaligned'. If this directory already exists then the
+        conversion will fail unless the force option is set to True
+      mismatches: optional, specify maximum number of mismatched bases
+        allowed for matching index sequences during multiplexing.
+        Recommended values are zero for indexes shorter than 6 base
+        pairs, 1 for indexes of 6 or longer
+        (If not specified and bases_mask is supplied then mismatches
+        will be derived automatically from the bases mask string)
+      bases_mask: optional, specify string indicating how to treat
+        each cycle within each read e.g. 'y101,I6,y101'
+      nprocessors: optional, number of processors to use when running
+        'make' step
+      force: optional, if True then force overwrite of an existing
+        output directory (default is False).
+      ignore_missing_bcl: optional, if True then interpret missing bcl
+        files as no call (default is False)
+      ignore_missing_stats: optional, if True then fill in with zeroes
+        when *.stats files are missing (default is False)
+      ignore_missing_control: optional, if True then interpret missing
+        control files as not-set control bits (default is False)
+
+    Returns:
+      0 on success; if a problem is encountered then returns -1 for
+      errors within the function (e.g. missing Makefile) or the exit
+      code from the failed program.
+
+    """
+    # Set up and run configureBclToFastq
+    configure_cmd = applications.bcl2fastq.configureBclToFastq(
+        basecalls_dir,
+        sample_sheet,
+        output_dir=output_dir,
+        mismatches=mismatches,
+        bases_mask=bases_mask,
+        force=force,
+        ignore_missing_bcl=ignore_missing_bcl,
+        ignore_missing_stats=ignore_missing_stats,
+        ignore_missing_control=ignore_missing_control
+    )
+    # Check the executable exists
+    if not configure_cmd.has_exe:
+        logging.error("'%s' missing, cannot run" % configure_cmd.command)
+        return -1
+    print "Running command: %s" % configure_cmd
+    returncode = configure_cmd.run_subprocess()
+    # Check returncode
+    if returncode != 0:
+        logging.error("configureToBclFastq.pl returned %s" % returncode)
+        return returncode
+    # Check outputs (directory and makefile)
+    if not os.path.isdir(output_dir):
+        logging.error("Output directory '%s' not found" % output_dir)
+        return -1
+    makefile = os.path.join(output_dir,'Makefile')
+    if not os.path.isfile(makefile):
+        logging.error("Makefile not found in %s" % output_dir)
+        return -1
+    # Set up and run make command
+    make_cmd = applications.general.make(makefile=makefile,
+                                         working_dir=output_dir,
+                                         nprocessors=nprocessors)
+    if not make_cmd.has_exe:
+        logging.error("'%s' missing, cannot run" % make_cmd.command)
+        return -1
+    print "Running command: %s" % make_cmd
+    returncode = make_cmd.run_subprocess()
+    # Check returncode
+    if returncode != 0:
+        logging.error("make returned %s" % returncode)
+    return returncode
