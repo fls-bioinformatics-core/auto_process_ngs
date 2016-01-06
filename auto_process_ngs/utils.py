@@ -1305,7 +1305,6 @@ def bcl_to_fastq_info():
             # Run the program to get the version
             version_cmd = applications.Command('bcl2fastq','--version')
             output = version_cmd.subprocess_check_output()[1]
-            print output
             for line in output.split('\n'):
                 if line.startswith('bcl2fastq'):
                     # Extract version from line of the form
