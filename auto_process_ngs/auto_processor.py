@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-15 Peter Briggs
+#     Copyright (C) University of Manchester 2013-16 Peter Briggs
 #
 #########################################################################
 #
@@ -868,7 +868,8 @@ class AutoProcess:
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
                     nprocessors=None,unaligned_dir=None,sample_sheet=None,
-                    bases_mask=None,generate_stats=True,stats_file=None,
+                    bases_mask=None,no_lane_splitting=None,
+                    generate_stats=True,stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
                     runner=None):
@@ -901,6 +902,7 @@ class AutoProcess:
                                 an alternative is already specified in the config file)
           sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
+          no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
           stats_file          : if set then use this as the name of the output stats
                                 file.
           report_barcodes     : if True then analyse barcodes in outputs (default is False
@@ -942,6 +944,7 @@ class AutoProcess:
                               bases_mask=bases_mask,
                               ignore_missing_bcl=ignore_missing_bcl,
                               ignore_missing_stats=ignore_missing_stats,
+                              no_lane_splitting=no_lane_splitting,
                               nprocessors=nprocessors,
                               runner=runner)
             if not self.verify_bcl_to_fastq():
@@ -989,7 +992,7 @@ class AutoProcess:
 
     def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
-                     nprocessors=None,runner=None):
+                     no_lane_splitting=None,nprocessors=None,runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1004,6 +1007,7 @@ class AutoProcess:
           bases_mask: if set then use this as an alternative bases mask setting
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+          no_lane_splitting: if True then run bcl2fastq with --no-lane-splitting
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
@@ -1074,6 +1078,8 @@ class AutoProcess:
             bcl2fastq.add_args('--ignore-missing-bcl')
         if ignore_missing_stats:
             bcl2fastq.add_args('--ignore-missing-stats')
+        if no_lane_splitting:
+            bcl2fastq.add_args('--no-lane-splitting')
         bcl2fastq.add_args(primary_data,
                            bcl2fastq_dir,
                            sample_sheet)

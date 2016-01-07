@@ -212,6 +212,10 @@ def add_make_fastqs_command(cmdparser):
                             dest='ignore_missing_stats',default=False,
                             help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
+    bcl_to_fastq.add_option('--no-lane-splitting',action='store_true',
+                            dest='no_lane_splitting',default=False,
+                            help="don't split the output FASTQ files by lane "
+                            "(bcl2fastq v2 only)")
     add_nprocessors_option(bcl_to_fastq,None,
                            default_display=__settings.bcl2fastq.nprocessors)
     add_runner_option(bcl_to_fastq)
@@ -577,6 +581,7 @@ if __name__ == "__main__":
                           unaligned_dir=options.unaligned_dir,
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
+                          no_lane_splitting=options.no_lane_splitting,
                           stats_file=options.stats_file,
                           report_barcodes=options.report_barcodes,
                           barcodes_file=options.barcodes_file,
