@@ -313,7 +313,7 @@ class bcl2fastq:
         return configure_cmd
 
     @staticmethod
-    def bcl2fastq2(basecalls_dir,sample_sheet,output_dir="Unaligned",
+    def bcl2fastq2(run_dir,sample_sheet,output_dir="Unaligned",
                    mismatches=None,
                    bases_mask=None,
                    force=False,
@@ -326,8 +326,7 @@ class bcl2fastq:
         program (for versions 2.*).
 
         Arguments:
-          basecalls_dir: path to the top-level directory holding the bcl
-            files (typically 'Data/Intensities/Basecalls/' subdirectory)
+          run: path to the top-level directory for the run
           sample_sheet: path to the sample sheet file to use
           output_dir: optional, path to the output directory. Defaults to
             'Unaligned'. If this directory already exists then the
@@ -351,17 +350,17 @@ class bcl2fastq:
         """
 
         bcl2fastq_cmd = Command('bcl2fastq',
-                                '--input-dir',basecalls_dir,
+                                '--runfolder-dir',run_dir,
                                 '--output-dir',output_dir,
                                 '--sample-sheet',sample_sheet)
         if bases_mask is not None:
             bcl2fastq_cmd.add_args('--use-bases-mask',bases_mask)
         if mismatches is not None:
-            bcl2fastq_cmd.add_args('--mismatches',mismatches)
+            bcl2fastq_cmd.add_args('--barcode-mismatches',mismatches)
         else:
             # Nmismatches not supplied, derive from bases mask
             if bases_mask is not None:
-                bcl2fastq_cmd.add_args('--mismatches',
+                bcl2fastq_cmd.add_args('--barcode-mismatches',
                                        get_nmismatches(bases_mask))
         if ignore_missing_bcl:
             bcl2fastq_cmd.add_args('--ignore-missing-bcls')
