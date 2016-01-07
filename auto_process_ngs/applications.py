@@ -316,7 +316,6 @@ class bcl2fastq:
     def bcl2fastq2(run_dir,sample_sheet,output_dir="Unaligned",
                    mismatches=None,
                    bases_mask=None,
-                   force=False,
                    ignore_missing_bcl=False,
                    no_lane_splitting=False):
         """
@@ -329,8 +328,7 @@ class bcl2fastq:
           run: path to the top-level directory for the run
           sample_sheet: path to the sample sheet file to use
           output_dir: optional, path to the output directory. Defaults to
-            'Unaligned'. If this directory already exists then the
-            conversion will fail unless the force option is set to True
+            'Unaligned'
           mismatches: optional, specify maximum number of mismatched bases
             allowed for matching index sequences during multiplexing.
             Recommended values are zero for indexes shorter than 6 base
