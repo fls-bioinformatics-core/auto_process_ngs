@@ -247,7 +247,6 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
                        mismatches=None,
                        bases_mask=None,
                        nprocessors=None,
-                       force=False,
                        ignore_missing_bcl=False,
                        no_lane_splitting=False):
     """
@@ -273,8 +272,6 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
         each cycle within each read e.g. 'y101,I6,y101'
       nprocessors: optional, number of processors to use when running
         'make' step
-      force: optional, if True then force overwrite of an existing
-        output directory (default is False).
       ignore_missing_bcl: optional, if True then interpret missing bcl
         files as no call (default is False)
       no_lane_splitting: optional, if True then output FASTQ files
@@ -294,7 +291,6 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
         output_dir=output_dir,
         mismatches=mismatches,
         bases_mask=bases_mask,
-        force=force,
         ignore_missing_bcl=ignore_missing_bcl,
         no_lane_splitting=no_lane_splitting
     )
