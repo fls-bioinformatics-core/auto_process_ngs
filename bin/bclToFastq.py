@@ -73,7 +73,8 @@ def main():
                  "1; for CASAVA/bcl2fastq v1.8 this is passed to the "
                  "-j option of the 'make' step after running "
                  "configureBcltoFastq.pl, for bcl2fastq v2 this is "
-                 "passed to the -r, -d, -p and -w options)")
+                 "the maximum number of CPUs that should be used by "
+                 "the -r, -d, -p and -w options)")
     p.add_option('--ignore-missing-bcl',action="store_true",
                  dest="ignore_missing_bcl",default=False,
                  help="interpret missing bcl files as no call "
@@ -181,15 +182,38 @@ def main():
         )
     elif bcl2fastq_version.startswith('2.17.'):
         # bcl2fastq 2.17.*
+        if options.nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            nprocessors=int(options.nprocessors)
+            loading_threads=min(4,nprocessors)
+            writing_threads=min(4,nprocessors)
+            demultiplexing_threads=max(int(float(nprocessors)*0.2),
+                                       nprocessors)
+            processing_threads=nprocessors
+            print "Explicitly setting determined threads for each stage:"
+            print "Loading (-r)       : %d" % loading_threads
+            print "Demultiplexing (-d): %d" % demultiplexing_threads
+            print "Processing (-p)    : %d" % processing_threads
+            print "Writing (-w)       : %d" % writing_threads
+        else:
+            # Use the defaults
+            loading_threads = None
+            demultiplexing_threads = None
+            processing_threads = None
+            writing_threads = None
+        # Run the bcl to fastq conversion
         status = run_bcl2fastq_2_17(
             illumina_run.run_dir,
             sample_sheet,
             output_dir=output_dir,
             mismatches=options.nmismatches,
             bases_mask=options.bases_mask,
-            nprocessors=options.nprocessors,
             ignore_missing_bcl=options.ignore_missing_bcl,
-            no_lane_splitting=options.no_lane_splitting
+            no_lane_splitting=options.no_lane_splitting,
+            loading_threads=loading_threads,
+            demultiplexing_threads=demultiplexing_threads,
+            processing_threads=processing_threads,
+            writing_threads=writing_threads
         )
     print "bclToFastq returncode: %s" % status
     if status != 0:

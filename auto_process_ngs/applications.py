@@ -317,7 +317,11 @@ class bcl2fastq:
                    mismatches=None,
                    bases_mask=None,
                    ignore_missing_bcl=False,
-                   no_lane_splitting=False):
+                   no_lane_splitting=False,
+                   loading_threads=None,
+                   demultiplexing_threads=None,
+                   processing_threads=None,
+                   writing_threads=None):
         """
         Generate Command instance for 'bcl2fastq' program (v2.*)
 
@@ -341,6 +345,14 @@ class bcl2fastq:
             files as no call (default is False)
           no_lane_splitting: optional, if True then don't split FASTQ
             files by lane (--no-lane-splitting) (default is False)
+          loading_threads: optional, specify number of threads to use
+            for loading bcl data (--loading-threads)
+          demultiplexing_threads: optional, specify number of threads to
+            use for demultiplexing (--demultiplexing-threads)
+          processing_threads: optional, specify number of threads to
+            use for processing (--processing-threads)
+          writing_threads: optional, specify number of threads to
+            use for writing FASTQ data (--writing-threads)
 
         Returns:
           Command object.
@@ -364,6 +376,14 @@ class bcl2fastq:
             bcl2fastq_cmd.add_args('--ignore-missing-bcls')
         if no_lane_splitting:
             bcl2fastq_cmd.add_args('--no-lane-splitting')
+        if loading_threads is not None:
+            bcl2fastq_cmd.add_args('-r',loading_threads)
+        if demultiplexing_threads is not None:
+            bcl2fastq_cmd.add_args('-d',demultiplexing_threads)
+        if processing_threads is not None:
+            bcl2fastq_cmd.add_args('-p',processing_threads)
+        if  writing_threads is not None:
+            bcl2fastq_cmd.add_args('-w',writing_threads)
         return bcl2fastq_cmd
 
 class general:

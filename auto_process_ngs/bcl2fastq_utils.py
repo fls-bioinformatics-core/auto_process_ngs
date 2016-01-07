@@ -246,9 +246,12 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
                        output_dir="Unaligned",
                        mismatches=None,
                        bases_mask=None,
-                       nprocessors=None,
                        ignore_missing_bcl=False,
-                       no_lane_splitting=False):
+                       no_lane_splitting=False,
+                       loading_threads=None,
+                       demultiplexing_threads=None,
+                       processing_threads=None,
+                       writing_threads=None):
     """
     Wrapper for running bcl2fastq 2.17.*
 
@@ -270,13 +273,19 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
         will be derived automatically from the bases mask string)
       bases_mask: optional, specify string indicating how to treat
         each cycle within each read e.g. 'y101,I6,y101'
-      nprocessors: optional, number of processors to use when running
-        'make' step
       ignore_missing_bcl: optional, if True then interpret missing bcl
         files as no call (default is False)
       no_lane_splitting: optional, if True then output FASTQ files
         will not be split by lane (default is False, i.e. do split
         FASTQs by lane)
+     loading_threads: optional, specify number of threads to use
+        for loading bcl data (--loading-threads)
+     demultiplexing_threads: optional, specify number of threads to
+        use for demultiplexing (--demultiplexing-threads)
+     processing_threads: optional, specify number of threads to use
+        for processing (--processing-threads)
+     writing_threads: optional, specify number of threads to use for
+        writing FASTQ data (--writing-threads)
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -292,7 +301,11 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
         mismatches=mismatches,
         bases_mask=bases_mask,
         ignore_missing_bcl=ignore_missing_bcl,
-        no_lane_splitting=no_lane_splitting
+        no_lane_splitting=no_lane_splitting,
+        loading_threads=loading_threads,
+        demultiplexing_threads=demultiplexing_threads,
+        processing_threads=processing_threads,
+        writing_threads=writing_threads
     )
     # Check the executable exists
     if not bcl2fastq2_cmd.has_exe:
