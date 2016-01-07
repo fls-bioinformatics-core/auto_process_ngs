@@ -36,19 +36,22 @@ import subprocess
 import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.utils as utils
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_1_8
+from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_2_17
 
 #######################################################################
 # Functions
 #######################################################################
 
-def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
+def run_bcl_to_fastq(run_dir,basecalls_dir,sample_sheet,
+                     output_dir="Unaligned",
                      mismatches=None,
                      bases_mask=None,
                      nprocessors=None,
                      force=False,
                      ignore_missing_bcl=False,
                      ignore_missing_stats=False,
-                     ignore_missing_control=False):
+                     ignore_missing_control=False,
+                     no_lane_splitting=False):
     """
     Run the bcl-to-fastq conversion software
 
@@ -77,6 +80,17 @@ def run_bcl_to_fastq(basecalls_dir,sample_sheet,output_dir="Unaligned",
                                  ignore_missing_bcl=ignore_missing_bcl,
                                  ignore_missing_stats=ignore_missing_stats,
                                  ignore_missing_control=ignore_missing_control)
+    elif bcl2fastq_version.startswith('2.17.'):
+        # bcl2fastq 2.17.*
+        return run_bcl2fastq_2_17(run_dir,
+                                  sample_sheet,
+                                  output_dir=output_dir,
+                                  mismatches=mismatches,
+                                  bases_mask=bases_mask,
+                                  nprocessors=nprocessors,
+                                  force=force,
+                                  ignore_missing_bcl=ignore_missing_bcl,
+                                  no_lane_splitting=no_lane_splitting)
     else:
         # Unimplemented version
         logging.error("Don't know how to run bcl2fastq version %s" %
@@ -127,6 +141,10 @@ if __name__ == '__main__':
                  help="interpret missing control files as not-set control bits "
                  "(see the CASAVA user guide for details of how --ignore-missing-control "
                  "works)")
+    p.add_option('--no-lane-splitting',action="store_true",
+                 dest="no_lane_splitting",default=False,
+                 help="Don't split output FASTQ files by lane (bcl2fastq v2 "
+                 "only)")
         
     options,args = p.parse_args()
     if not (2 <= len(args) <=3):
@@ -162,8 +180,10 @@ if __name__ == '__main__':
     print "Ignore missing bcl    : %s" % options.ignore_missing_bcl
     print "Ignore missing stats  : %s" % options.ignore_missing_stats
     print "Ignore missing control: %s" % options.ignore_missing_control
+    print "No lane splitting     : %s" % options.no_lane_splitting
     # Run bclToFastq conversion
-    status = run_bcl_to_fastq(illumina_run.basecalls_dir,
+    status = run_bcl_to_fastq(illumina_run.run_dir,
+                              illumina_run.basecalls_dir,
                               sample_sheet,
                               output_dir=output_dir,
                               mismatches=options.nmismatches,
@@ -172,7 +192,8 @@ if __name__ == '__main__':
                               nprocessors=options.nprocessors,
                               ignore_missing_bcl=options.ignore_missing_bcl,
                               ignore_missing_stats=options.ignore_missing_stats,
-                              ignore_missing_control=options.ignore_missing_control)
+                              ignore_missing_control=options.ignore_missing_control,
+                              no_lane_splitting=options.no_lane_splitting)
     print "bclToFastq returncode: %s" % status
     if status != 0:
         logging.error("bclToFastq failure")
