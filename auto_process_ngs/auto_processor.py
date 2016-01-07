@@ -1061,6 +1061,7 @@ class AutoProcess:
         print "Nprocessors         : %s" % nprocessors
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
         print "Ignore missing stats: %s" % ignore_missing_stats
+        print "No lane splitting   : %s" % no_lane_splitting
         print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
