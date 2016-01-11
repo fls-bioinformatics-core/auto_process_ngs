@@ -847,7 +847,8 @@ class AutoProcess:
         # Add undetermined reads directory
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
-            if undetermined_analysis is not None:
+            if undetermined_analysis is not None and \
+               'undetermined' not in [p.name for p in projects]:
                 projects.append(undetermined_analysis)
         return projects
 
