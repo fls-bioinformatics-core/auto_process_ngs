@@ -27,21 +27,38 @@ run_bcl2fastq_2_17: run bcl-to-fastq conversion from bcl2fastq 2.17.*
 #######################################################################
 import os
 import re
+import operator
 import logging
 import auto_process_ngs.applications as applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
+from pkg_resources import parse_version
 
 #######################################################################
 # Functions
 #######################################################################
 
-def available_bcl2fastq_versions():
+def available_bcl2fastq_versions(req=None):
     """
     List available bcl2fastq converters on PATH
 
     Searches the PATH for likely bcl2fastq converters and
     returns a list of executables with the full path.
+
+    The 'req' allows a specific version or range of
+    versions to be requested; in this case the returned
+    list will only contain those packages which satisfy
+    the requested versions.
+
+    If no versions are requested then the packages will
+    be returned in PATH order; otherwise they will be
+    returned in version order (highest to lowest).
+
+    Arguments:
+      req (str): optional version requirement expression
+        (for example '>=1.8.4'). If supplied then only
+        executables fulfilling the requirement will be
+        returned.
 
     Returns:
       List: full paths to bcl2fastq converter executables.
@@ -54,16 +71,61 @@ def available_bcl2fastq_versions():
             prog_path = os.path.abspath(os.path.join(path,name))
             if bcf_utils.PathInfo(prog_path).is_executable:
                 available_exes.append(prog_path)
+    # Filter on requirement
+    if req:
+        # Determine operator and version
+        req_op = None
+        req_version = None
+        for op in ('==','>=','<=','>','<'):
+            if req.startswith(op):
+                req_op = op
+                req_version = req[len(op):].strip()
+                break
+        if req_version is None:
+            raise Exception("Unable to parse expression: %s" % req)
+        logging.debug("Required version: %s %s" % (req_op,req_version))
+        if req_op == '==':
+            op = operator.eq
+        elif req_op == '>=':
+            op = operator.ge
+        elif req_op == '>':
+            op = operator.gt
+        elif req_op == '<':
+            op = operator.lt
+        elif req_op == '<=':
+            op = operator.le
+        # Filter the available executables on version
+        logging.debug("Pre filter: %s" % available_exes)
+        logging.debug("Versions  : %s" % [bcl_to_fastq_info(x)[2]
+                                          for x in available_exes])
+        available_exes = filter(lambda x: op(
+            parse_version(bcl_to_fastq_info(x)[2]),
+            parse_version(req_version)),
+                                available_exes)
+        logging.debug("Post filter: %s" % available_exes)
+        # Sort into version order, highest to lowest
+        available_exes.sort(
+            key=lambda x: parse_version(bcl_to_fastq_info(x)[2]),
+            reverse=True)
+        logging.debug("Post sort: %s" % available_exes)
+        logging.debug("Versions : %s" % [bcl_to_fastq_info(x)[2]
+                                 for x in available_exes])
     return available_exes
 
-def bcl_to_fastq_info():
+def bcl_to_fastq_info(path=None):
     """
     Retrieve information on the bcl2fastq software
 
-    Looks for the appropriate bcl2fastq components (e.g. the
-    ``configureBclToFastq.pl`` script, or the ``bcl2fastq``
-    program) and attempts to guess the package name (either
-    `bcl2fastq` or `CASAVA`) and the version.
+    If called without any arguments this will locate the first
+    bcl-to-fastq conversion package executable (either
+    'configureBclToFastq.pl' or 'bcl2fastq') that is available on
+    the user's PATH (as returned by 'available_bcl2fastq_versions')
+    and attempts to guess the package name (either `bcl2fastq` or
+    `CASAVA`) and the version that it belongs to.
+
+    Alternatively if the path to an executable is supplied then
+    the package name and version will be determined from that
+    instead.
 
     If no package is identified then the script path is still
     returned, but without any version info.
@@ -81,8 +143,17 @@ def bcl_to_fastq_info():
     package_name = None
     package_version = None
     # Locate the core script
-    bcl2fastq_path = bcf_utils.find_program('configureBclToFastq.pl')
-    if bcl2fastq_path:
+    if not path:
+        exes = available_bcl2fastq_versions()
+        if exes:
+            bcl2fastq_path = exes[0]
+    else:
+        bcl2fastq_path = os.path.abspath(path)
+    # Identify the version
+    if bcl2fastq_path is None:
+        # Nothing to look for
+        logging.warning("No bcl-to-fastq conversion package found")
+    elif os.path.basename(bcl2fastq_path) == 'configureBclToFastq.pl':
         # Found CASAVA or bcl2fastq 1.8.* version
         # Look for the top-level directory
         path = os.path.dirname(bcl2fastq_path)
@@ -95,23 +166,25 @@ def bcl_to_fastq_info():
                     package_name = m.group(1)
                     package_version = m.group(2)
                     break
+    elif os.path.basename(bcl2fastq_path) == 'bcl2fastq':
+        # Found bcl2fastq v2.*
+        # Run the program to get the version
+        version_cmd = applications.Command(bcl2fastq_path,'--version')
+        output = version_cmd.subprocess_check_output()[1]
+        for line in output.split('\n'):
+            if line.startswith('bcl2fastq'):
+                # Extract version from line of the form
+                # bcl2fastq v2.17.1.14
+                package_name = 'bcl2fastq'
+                try:
+                    package_version = line.split()[1][1:]
+                except ex:
+                    logging.warning("Unable to get version from '%s': %s" %
+                                    (line,ex))
     else:
-        # Look for bcl2fastq v2.*
-        bcl2fastq_path = bcf_utils.find_program('bcl2fastq')
-        if bcl2fastq_path:
-            # Run the program to get the version
-            version_cmd = applications.Command('bcl2fastq','--version')
-            output = version_cmd.subprocess_check_output()[1]
-            for line in output.split('\n'):
-                if line.startswith('bcl2fastq'):
-                    # Extract version from line of the form
-                    # bcl2fastq v2.17.1.14
-                    package_name = 'bcl2fastq'
-                    try:
-                        package_version = line.split()[1][1:]
-                    except ex:
-                        logging.warning("Unable to get version from '%s': %s" %
-                                        (line,ex))
+        # No package supplied or located
+        logging.warning("Unable to identify bcl-to-fastq conversion package "
+                        "from '%s'" % bcl2fastq_path)
     # Return what we found
     return (bcl2fastq_path,package_name,package_version)
 

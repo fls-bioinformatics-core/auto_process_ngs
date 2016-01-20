@@ -91,7 +91,7 @@ class MockBcl2fastq:
         os.chmod(os.path.join(self.dirn,*args),0775)
         self._exes.append(os.path.join(self.dirn,*args))
 
-    def set_path(self,prepend=False):
+    def set_path(self,prepend=True):
         """
         Set the PATH env variable to the paths of the exes
 
@@ -255,6 +255,63 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.assertEqual(available_bcl2fastq_versions(),
                          self.mockbcl2fastq.exes)
 
+    def test_require_bcl2fastq_version_eq_184(self):
+        """
+        available_bcl2fastq_versions: require version == '1.8.4'
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Only second executable on PATH will be returned (1.8.4)
+        self.assertEqual(available_bcl2fastq_versions('==1.8.4'),
+                         self.mockbcl2fastq.exes[1:])
+
+    def test_require_bcl2fastq_version_ge_184(self):
+        """
+        available_bcl2fastq_versions: require version >= '1.8.4'
+        """
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.set_path()
+        # Executables returned order by version (2.17 then 1.8.4)
+        # (i.e. reverse of order on PATH)
+        self.assertEqual(available_bcl2fastq_versions('>=1.8.4'),
+                         self.mockbcl2fastq.exes[::-1])
+
+    def test_require_bcl2fastq_version_gt_184(self):
+        """
+        available_bcl2fastq_versions: require version > '1.8.4'
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Only first executable will be returned (2.17)
+        self.assertEqual(available_bcl2fastq_versions('>1.8.4'),
+                         self.mockbcl2fastq.exes[0:1])
+
+    def test_require_bcl2fastq_version_lt_217(self):
+        """
+        available_bcl2fastq_versions: require version < '2.17'
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Only second executable on PATH will be returned (1.8.4)
+        self.assertEqual(available_bcl2fastq_versions('<2.17'),
+                         self.mockbcl2fastq.exes[1:])
+
+    def test_require_bcl2fastq_version_le_217(self):
+        """
+        available_bcl2fastq_versions: require version <= '2.17.1.14'
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Executables returned order by version (2.17 then 1.8.4)
+        # i.e. same as order on PATH
+        self.assertEqual(available_bcl2fastq_versions('<=2.17.1.14'),
+                         self.mockbcl2fastq.exes)
+
 class TestBclToFastqInfo(unittest.TestCase):
     """
     Tests for the bcl_to_fastq_info function
@@ -278,7 +335,7 @@ class TestBclToFastqInfo(unittest.TestCase):
         """
         # CASAVA 1.8.2
         self.mockbcl2fastq.casava_182()
-        self.mockbcl2fastq.set_path(prepend=True)
+        self.mockbcl2fastq.set_path()
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
@@ -292,7 +349,7 @@ class TestBclToFastqInfo(unittest.TestCase):
         """
         # bcl2fastq 1.8.3
         self.mockbcl2fastq.bcl2fastq_183()
-        self.mockbcl2fastq.set_path(prepend=True)
+        self.mockbcl2fastq.set_path()
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
@@ -306,7 +363,7 @@ class TestBclToFastqInfo(unittest.TestCase):
         """
         # bcl2fastq 1.8.4
         self.mockbcl2fastq.bcl2fastq_184()
-        self.mockbcl2fastq.set_path(prepend=True)
+        self.mockbcl2fastq.set_path()
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
@@ -320,10 +377,39 @@ class TestBclToFastqInfo(unittest.TestCase):
         """
         # bcl2fastq 2.17.1.14
         self.mockbcl2fastq.bcl2fastq_217()
-        self.mockbcl2fastq.set_path(prepend=True)
+        self.mockbcl2fastq.set_path()
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'2.17.1.14')
+
+    def test_bcl2fastq_1_8_4_supplied_exe(self):
+        """
+        Collect info for bcl2fastq 1.8.4 when executable is supplied
+
+        """
+        # bcl2fastq 1.8.4
+        self.mockbcl2fastq.bcl2fastq_183()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        bcl2fastq_184 = self.mockbcl2fastq.exes[1]
+        path,name,version = bcl_to_fastq_info(bcl2fastq_184)
+        self.assertEqual(path,bcl2fastq_184)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.4')
+
+    def test_bcl2fastq_2_17_1_14_supplied_exe(self):
+        """
+        Collect info for bcl2fastq 2.17.1.14 when executable is supplied
+
+        """
+        # bcl2fastq 2.17.1.14
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.set_path()
+        bcl2fastq_217 = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info(bcl2fastq_217)
+        self.assertEqual(path,bcl2fastq_217)
         self.assertEqual(name,'bcl2fastq')
         self.assertEqual(version,'2.17.1.14')
 
@@ -344,7 +430,7 @@ class TestBclToFastqInfo(unittest.TestCase):
         """
         # No version
         self.mockbcl2fastq.casava_no_version()
-        self.mockbcl2fastq.set_path(prepend=True)
+        self.mockbcl2fastq.set_path()
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
