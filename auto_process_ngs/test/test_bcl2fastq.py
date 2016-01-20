@@ -312,6 +312,19 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.assertEqual(available_bcl2fastq_versions('<=2.17.1.14'),
                          self.mockbcl2fastq.exes)
 
+    def test_require_bcl2fastq_version_gt_182_lt_184(self):
+        """
+        available_bcl2fastq_versions: require version > '1.8.2, < '1.8.4''
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.bcl2fastq_183()
+        self.mockbcl2fastq.casava_182()
+        self.mockbcl2fastq.set_path()
+        # Only 3rd executable will be returned (2.17)
+        self.assertEqual(available_bcl2fastq_versions('>1.8.2,<1.8.4'),
+                         self.mockbcl2fastq.exes[2:3])
+
 class TestBclToFastqInfo(unittest.TestCase):
     """
     Tests for the bcl_to_fastq_info function
