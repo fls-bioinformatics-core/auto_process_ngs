@@ -325,6 +325,20 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.assertEqual(available_bcl2fastq_versions('>1.8.2,<1.8.4'),
                          self.mockbcl2fastq.exes[2:3])
 
+    def test_require_bcl2fastq_version_with_versionless_package_on_pack(self):
+        """
+        available_bcl2fastq_versions: require specific version when 'versionless' package is also present
+        """
+        self.mockbcl2fastq.casava_no_version()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.set_path()
+        # Only last two executables will be returned, ordered
+        # by version (2.17 then 1.8.4, i.e. reverse of order on
+        # PATH)
+        self.assertEqual(available_bcl2fastq_versions('>=1.8.4'),
+                         self.mockbcl2fastq.exes[1:][::-1])
+
 class TestBclToFastqInfo(unittest.TestCase):
     """
     Tests for the bcl_to_fastq_info function
@@ -432,9 +446,9 @@ class TestBclToFastqInfo(unittest.TestCase):
 
         """
         path,name,version = bcl_to_fastq_info()
-        self.assertEqual(path,None)
-        self.assertEqual(name,None)
-        self.assertEqual(version,None)
+        self.assertEqual(path,'')
+        self.assertEqual(name,'')
+        self.assertEqual(version,'')
 
     def test_configurebcltofastq_no_package(self):
         """
@@ -447,8 +461,8 @@ class TestBclToFastqInfo(unittest.TestCase):
         exe = self.mockbcl2fastq.exes[0]
         path,name,version = bcl_to_fastq_info()
         self.assertEqual(path,exe)
-        self.assertEqual(name,None)
-        self.assertEqual(version,None)
+        self.assertEqual(name,'')
+        self.assertEqual(version,'')
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function

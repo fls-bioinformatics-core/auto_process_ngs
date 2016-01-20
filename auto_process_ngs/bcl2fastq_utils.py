@@ -142,13 +142,14 @@ def bcl_to_fastq_info(path=None):
         is the full path for the bcl2fastq program or
         configureBclToFastq.pl script and PACKAGE and VERSION are
         guesses for the package/version that it belongs to. If any
-        value can't be determined then it will be returned as None.
+        value can't be determined then it will be returned as an
+        empty string.
 
     """
     # Initialise
-    bcl2fastq_path = None
-    package_name = None
-    package_version = None
+    bcl2fastq_path = ''
+    package_name = ''
+    package_version = ''
     # Locate the core script
     if not path:
         exes = available_bcl2fastq_versions()
@@ -157,10 +158,7 @@ def bcl_to_fastq_info(path=None):
     else:
         bcl2fastq_path = os.path.abspath(path)
     # Identify the version
-    if bcl2fastq_path is None:
-        # Nothing to look for
-        logging.warning("No bcl-to-fastq conversion package found")
-    elif os.path.basename(bcl2fastq_path) == 'configureBclToFastq.pl':
+    if os.path.basename(bcl2fastq_path) == 'configureBclToFastq.pl':
         # Found CASAVA or bcl2fastq 1.8.* version
         # Look for the top-level directory
         path = os.path.dirname(bcl2fastq_path)
