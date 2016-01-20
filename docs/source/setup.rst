@@ -5,17 +5,19 @@ Requirements
 ************
 
 The autoprocessor is written in Python and should work with versions 2.6
-and 2.7. It also depends on the `bcftbx` Python module and NGS QC scripts
-which are part of the `genomics` github repository.
+and 2.7. It also depends on the ``genomics-bcftbx`` Python module and NGS
+QC scripts which are part of the ``genomics`` github repository.
 
 In addition the following software must be installed:
 
-* bcl2fastq http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
-* bowtie http://bowtie-bio.sourceforge.net/index.shtml
-* fastq_screen http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
-* fastqc http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+* ``bcl2fastq``:
+  * bcl2fastq 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
+  * bcl2fastq 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
+* ``bowtie`` http://bowtie-bio.sourceforge.net/index.shtml
+* ``fastq_screen`` http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
+* ``fastqc`` http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 
-The programs provided by these packages must be found on the `PATH` when
+The programs provided by these packages must be found on the ``PATH`` when
 the appropriate autoprocessor commands are issued. :ref:`environment-modules`
 can be used to help manage this.
 
@@ -23,14 +25,14 @@ Configuration: settings.ini
 ***************************
 
 The autoprocessor reads its global settings for the local system from a
-`settings.ini` file, which it looks for in order in the following
+``settings.ini`` file, which it looks for in order in the following
 locations:
 
 1. The current directory;
 2. The ``config`` subdirectory of the installation directory;
 3. The installation directory (for legacy installations only)
 
-If no `settings.ini` file is found then one can be created using the
+If no ``settings.ini`` file is found then one can be created using the
 command::
 
     auto_process.py config --init
@@ -83,11 +85,16 @@ dynamic modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
-The ``[modulefiles]`` directive allows specific module files to be loaded
-before a specific step, for example::
+The ``[modulefiles]`` directive in ``settings.ini`` allows specific module
+files to be loaded before a specific step, for example::
 
     [modulefiles]
     make_fastqs = apps/bcl2fastq/1.8.4
+
+.. note::
+
+   These can be overridden for the ``make_fastqs`` and ``run_qc`` using
+   the ``--modulefiles`` option.
 
 Bash tab completion
 *******************
