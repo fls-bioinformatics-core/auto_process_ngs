@@ -35,6 +35,7 @@ import optparse
 import subprocess
 import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.utils as utils
+from auto_process_ngs.bcl2fastq_utils import bcl_to_fastq_info
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_1_8
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_2_17
 
@@ -105,7 +106,7 @@ def main():
         p.error("input is an input directory, output directory and an "
                 "optional sample sheet")
     # Determine bcl2fastq version
-    bcl2fastq_info = utils.bcl_to_fastq_info()
+    bcl2fastq_info = bcl_to_fastq_info()
     if bcl2fastq_info[0] is None:
         logging.error("No bcl2fastq software found")
         return 1

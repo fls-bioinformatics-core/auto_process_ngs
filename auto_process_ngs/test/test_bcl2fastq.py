@@ -6,8 +6,7 @@ import unittest
 import tempfile
 import os
 import shutil
-from auto_process_ngs.bcl2fastq_utils import available_bcl2fastq_versions
-from auto_process_ngs.bcl2fastq_utils import get_nmismatches
+from auto_process_ngs.bcl2fastq_utils import *
 
 class MockBcl2fastq:
     """
@@ -28,10 +27,10 @@ class MockBcl2fastq:
 
     >>> exes = m.exes
 
-    Append the paths for these installations to the PATH
+    Prepend the paths for these installations to the PATH
     environment variable:
 
-    >>> m.set_path(append=True)
+    >>> m.set_path(prepend=True)
 
     Remove the base directory and contents:
 
@@ -92,19 +91,19 @@ class MockBcl2fastq:
         os.chmod(os.path.join(self.dirn,*args),0775)
         self._exes.append(os.path.join(self.dirn,*args))
 
-    def set_path(self,append=False):
+    def set_path(self,prepend=False):
         """
         Set the PATH env variable to the paths of the exes
 
         Arguments:
-          append (boolean): if True then append to the
+          prepend (boolean): if True then prepend to the
             existing PATH, otherwise reset the PATH to
             only contain the defined paths.
 
         """
         new_path = os.pathsep.join(self.paths)
-        if append:
-            new_path = os.environ['PATH'] + os.pathsep + new_path
+        if prepend:
+            new_path = new_path + os.pathsep + os.environ['PATH']
         os.environ['PATH'] = new_path
         print "PATH = %s" % os.environ['PATH']
 
@@ -123,6 +122,14 @@ class MockBcl2fastq:
 
         """
         return [x for x in self._exes]
+
+    def casava_no_version(self):
+        """
+        Add a mock CASAVA installation with no discernible version
+
+        """
+        self._makedirs('casava','bin')
+        self._make_exe('casava','bin','configureBclToFastq.pl')
 
     def casava_182(self):
         """
@@ -247,6 +254,102 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.mockbcl2fastq.set_path()
         self.assertEqual(available_bcl2fastq_versions(),
                          self.mockbcl2fastq.exes)
+
+class TestBclToFastqInfo(unittest.TestCase):
+    """
+    Tests for the bcl_to_fastq_info function
+
+    """
+    def setUp(self):
+        # Make some fake directories for different
+        # software versions
+        self.mockbcl2fastq = MockBcl2fastq()
+        self.original_path = os.environ['PATH']
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        os.environ['PATH'] = self.original_path
+        del(self.mockbcl2fastq)
+
+    def test_casava_1_8_2(self):
+        """
+        Collect info for CASAVA 1.8.2
+
+        """
+        # CASAVA 1.8.2
+        self.mockbcl2fastq.casava_182()
+        self.mockbcl2fastq.set_path(prepend=True)
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'CASAVA')
+        self.assertEqual(version,'1.8.2')
+
+    def test_bcl2fastq_1_8_3(self):
+        """
+        Collect info for bcl2fastq 1.8.3
+
+        """
+        # bcl2fastq 1.8.3
+        self.mockbcl2fastq.bcl2fastq_183()
+        self.mockbcl2fastq.set_path(prepend=True)
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.3')
+
+    def test_bcl2fastq_1_8_4(self):
+        """
+        Collect info for bcl2fastq 1.8.4
+
+        """
+        # bcl2fastq 1.8.4
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path(prepend=True)
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'1.8.4')
+
+    def test_bcl2fastq_2_17_1_14(self):
+        """
+        Collect info for bcl2fastq 2.17.1.14
+
+        """
+        # bcl2fastq 2.17.1.14
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.set_path(prepend=True)
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'2.17.1.14')
+
+    def test_configurebcltofastq_not_found(self):
+        """
+        Collect info when configureBclToFastq.pl is not found
+
+        """
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,None)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)
+
+    def test_configurebcltofastq_no_package(self):
+        """
+        Collect info when there is no package info for configureBclToFastq.pl
+
+        """
+        # No version
+        self.mockbcl2fastq.casava_no_version()
+        self.mockbcl2fastq.set_path(prepend=True)
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,None)
+        self.assertEqual(version,None)
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
