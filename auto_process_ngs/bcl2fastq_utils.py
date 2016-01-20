@@ -29,10 +29,31 @@ import os
 import logging
 import auto_process_ngs.applications as applications
 import bcftbx.IlluminaData as IlluminaData
+import bcftbx.utils as bcf_utils
 
 #######################################################################
 # Functions
 #######################################################################
+
+def available_bcl2fastq_versions():
+    """
+    List available bcl2fastq converters on PATH
+
+    Searches the PATH for likely bcl2fastq converters and
+    returns a list of executables with the full path.
+
+    Returns:
+      List: full paths to bcl2fastq converter executables.
+
+    """
+    # Search for executables
+    available_exes = []
+    for path in os.environ['PATH'].split(os.pathsep):
+        for name in ('bcl2fastq','configureBclToFastq.pl',):
+            prog_path = os.path.abspath(os.path.join(path,name))
+            if bcf_utils.PathInfo(prog_path).is_executable:
+                available_exes.append(prog_path)
+    return available_exes
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
                              fmt=None):
