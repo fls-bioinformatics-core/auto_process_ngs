@@ -38,7 +38,7 @@ from pkg_resources import parse_version
 # Functions
 #######################################################################
 
-def available_bcl2fastq_versions(reqs=None):
+def available_bcl2fastq_versions(reqs=None,paths=None):
     """
     List available bcl2fastq converters on PATH
 
@@ -63,14 +63,23 @@ def available_bcl2fastq_versions(reqs=None):
         (for example '>=1.8.4'). If supplied then only
         executables fulfilling the requirement will be
         returned.
+      paths (list): optional set of directory paths to
+        search when looking for bcl2fastq software. If
+        not supplied then the set of paths specified in
+        the PATH environment variable will be searched.
 
     Returns:
       List: full paths to bcl2fastq converter executables.
 
     """
+    # Search paths
+    if paths is None:
+        paths = os.environ['PATH'].split(os.pathsep)
     # Search for executables
     available_exes = []
-    for path in os.environ['PATH'].split(os.pathsep):
+    for path in paths:
+        if os.path.isfile(path):
+            path = os.path.dirname(path)
         for name in ('bcl2fastq','configureBclToFastq.pl',):
             prog_path = os.path.abspath(os.path.join(path,name))
             if bcf_utils.PathInfo(prog_path).is_executable:

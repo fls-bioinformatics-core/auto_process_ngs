@@ -325,7 +325,7 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.assertEqual(available_bcl2fastq_versions('>1.8.2,<1.8.4'),
                          self.mockbcl2fastq.exes[2:3])
 
-    def test_require_bcl2fastq_version_with_versionless_package_on_pack(self):
+    def test_require_bcl2fastq_version_with_versionless_package_on_path(self):
         """
         available_bcl2fastq_versions: require specific version when 'versionless' package is also present
         """
@@ -338,6 +338,36 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         # PATH)
         self.assertEqual(available_bcl2fastq_versions('>=1.8.4'),
                          self.mockbcl2fastq.exes[1:][::-1])
+
+    def test_specify_path_for_bcl2fastq_184(self):
+        """
+        available_bcl2fastq_versions: specify path for bcl2fastq 1.8.4
+
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Get the full path for the bcl2fastq 1.8.4 exe
+        bcl2fastq_184 = filter(lambda x: x.count('1.8.4') == 1,
+                               self.mockbcl2fastq.exes)[0]
+        self.assertEqual(available_bcl2fastq_versions(
+            paths=(os.path.dirname(bcl2fastq_184),)),
+                         [bcl2fastq_184,])
+
+    def test_specify_path_for_bcl2fastq_184_exe(self):
+        """
+        available_bcl2fastq_versions: specify path for bcl2fastq 1.8.4 exe
+
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.bcl2fastq_184()
+        self.mockbcl2fastq.set_path()
+        # Get the full path for the bcl2fastq 1.8.4 exe
+        bcl2fastq_184 = filter(lambda x: x.count('1.8.4') == 1,
+                               self.mockbcl2fastq.exes)[0]
+        self.assertEqual(available_bcl2fastq_versions(
+            paths=(bcl2fastq_184,)),
+                         [bcl2fastq_184,])
 
 class TestBclToFastqInfo(unittest.TestCase):
     """
