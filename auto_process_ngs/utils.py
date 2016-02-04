@@ -25,7 +25,6 @@ tree at some point.
 #######################################################################
 
 import os
-import re
 import logging
 import applications
 import bcftbx.IlluminaData as IlluminaData
