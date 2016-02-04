@@ -20,7 +20,10 @@ CASAVA or bcl2fastq software packages.
 # Module metadata
 #######################################################################
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
+
+# Set of versions that this is known to work with
+BCL2FASTQ_VERSIONS = ('1.8','2.17',)
 
 #######################################################################
 # Import modules that this module depends on
@@ -35,6 +38,7 @@ import optparse
 import subprocess
 import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.utils as utils
+from auto_process_ngs.bcl2fastq_utils import available_bcl2fastq_versions
 from auto_process_ngs.bcl2fastq_utils import bcl_to_fastq_info
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_1_8
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_2_17
@@ -81,6 +85,10 @@ def main():
                  help="interpret missing bcl files as no call "
                  "(CASAVA/bcl2fastq v1.8 --ignore-missing-bcl option, "
                  "bcl2fastq v2 --ignore-missing-bcls option)")
+    p.add_option('--bcl2fastq_path',action="store",
+                 dest="bcl2fastq_path",default=None,
+                 help="explicitly specify the path to the CASAVA or "
+                 "bcl2fastq software to use.")
     # CASAVA/bcl2fastq 1.8.* only
     casava = optparse.OptionGroup(p,'CASAVA/bcl2fastq v1.8 only')
     casava.add_option('--ignore-missing-stats',action="store_true",
@@ -105,8 +113,15 @@ def main():
     if not (2 <= len(args) <=3):
         p.error("input is an input directory, output directory and an "
                 "optional sample sheet")
+    # Acquire bcl2fastq software
+    bcl2fastq = available_bcl2fastq_versions(paths=(options.bcl2fastq_path,))
+    if not bcl2fastq:
+        logging.error("No bcl2fastq software found")
+        return 1
+    else:
+        bcl2fastq_exe = bcl2fastq[0]
     # Determine bcl2fastq version
-    bcl2fastq_info = bcl_to_fastq_info()
+    bcl2fastq_info = bcl_to_fastq_info(bcl2fastq_exe)
     if bcl2fastq_info[0] is None:
         logging.error("No bcl2fastq software found")
         return 1
@@ -121,7 +136,7 @@ def main():
     print "Package: %s" % bcl2fastq_package
     print "Version: %s" % bcl2fastq_version
     known_version = None
-    for version in ('1.8','2.17'):
+    for version in BCL2FASTQ_VERSIONS:
         if bcl2fastq_version.startswith("%s." % version):
             known_version = version
             break

@@ -1044,11 +1044,32 @@ class AutoProcess:
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
-        # Collect and store info on underlying bcl2fastq software
-        self.metadata['bcl2fastq_software'] = bcl2fastq_utils.bcl_to_fastq_info()
+        # Determine which bcl2fastq software to use
+        if self.metadata.platform == 'nextseq':
+            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('>=2')
+        else:
+            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('<2')
+        if bcl2fastq:
+            print "Found available bcl2fastq packages:"
+            for i,package in enumerate(bcl2fastq):
+                bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(package)
+                print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
+                                         bcl2fastq_info[0],
+                                         bcl2fastq_info[1],
+                                         bcl2fastq_info[2])
+            bcl2fastq_exe = bcl2fastq[0]
+            bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(bcl2fastq_exe)
+        else:
+            logging.error("No appropriate bcl2fastq software located")
+            return
+        # Store info on bcl2fastq package
+        self.metadata['bcl2fastq_software'] = bcl2fastq_info
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
+        print "Bcl-to-fastq exe    : %s" % bcl2fastq_exe
+        print "Bcl-to-fastq version: %s %s" % (bcl2fastq_info[1],
+                                               bcl2fastq_info[2])
         print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
@@ -1081,7 +1102,9 @@ class AutoProcess:
             bcl2fastq.add_args('--ignore-missing-stats')
         if no_lane_splitting:
             bcl2fastq.add_args('--no-lane-splitting')
-        bcl2fastq.add_args(primary_data,
+        bcl2fastq.add_args('--bcl2fastq_path',
+                           bcl2fastq_exe,
+                           primary_data,
                            bcl2fastq_dir,
                            sample_sheet)
         print "Running %s" % bcl2fastq
