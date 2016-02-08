@@ -555,10 +555,10 @@ if __name__ == "__main__":
             d.setup_from_fastq_dir(args[0],options.fastq_dir)
     elif cmd == 'clone':
         if len(args) != 2:
-            sys.stderr.write("Need to supply an existing analysis dir and directory for "
-                             "the copy\n")
+            sys.stderr.write("Need to supply an existing analysis dir and "
+                             "directory for the copy\n")
             sys.exit(1)
-        d = AutoProcess(args[0])
+        d = AutoProcess(args[0],allow_save_params=False)
         d.clone(args[1],copy_fastqs=options.copy_fastqs)
     else:
         # For other options check if an analysis

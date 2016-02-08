@@ -152,13 +152,26 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
-    def save_parameters(self):
+    def save_parameters(self,alt_parameter_file=None,force=True):
         """
         Save parameters to file
 
+        Arguments:
+          alt_parameter_file (str): optional, path to an
+            'alternative' parameter file; otherwise
+            parameters are saved to the default file for the
+            processing directory.
+          force (boolean): if True then force the parameters
+            to be saved even if saving was previously
+            turned off (default is False i.e. don't force
+            save).
+
         """
-        if self._save_params:
-            self.params.save(self.parameter_file)
+        if self._save_params or force:
+            if alt_parameter_file is None:
+                self.params.save(self.parameter_file)
+            else:
+                self.params.save(alt_parameter_file)
 
     def load_metadata(self,allow_save=True):
         """
@@ -180,13 +193,26 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_metadata = allow_save
 
-    def save_metadata(self):
+    def save_metadata(self,alt_metadata_file=None,force=True):
         """
         Save metadata to file
 
+        Arguments:
+          alt_metadata_file (str): optional, path to an
+            'alternative' metadata file; otherwise
+            metadata are saved to the default file for the
+            processing directory.
+          force (boolean): if True then force the metadata
+            to be saved even if saving was previously
+            turned off (default is False i.e. don't force
+            save).
+
         """
-        if self._save_metadata:
-            self.metadata.save(self.metadata_file)
+        if self._save_metadata or force:
+            if alt_metadata_file is None:
+                self.metadata.save(self.metadata_file)
+            else:
+                self.metadata.save(alt_metadata_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -690,30 +716,52 @@ class AutoProcess:
         self.make_project_metadata_file()
 
     def clone(self,clone_dir,copy_fastqs=False):
-        # "Clone" (i.e. copy) to new directory 'clone_dir'
-        # By default this is done by linking to the bcl2fastq dir; set
-        # 'copy_fastqs' to True to make copies instead
+        """
+        Make a 'clone' (i.e. copy) to new directory
+
+        Makes a copy of the processing directory, including
+        metadata and parameters but ignoring any project
+        subdirectories.
+
+        By default the 'unaligned' directory in the new
+        directory is simply a symlink from the original
+        directory; set the 'copy_fastqs' to make copies
+        instead.
+
+        Arguments
+          clone_dir (str): path to the new directory to
+            create as a clone (must not already exist).
+          copy_fastqs (boolean): set to True to copy the
+            fastq files (otherwise default behaviour is
+            to make a symlink)
+
+        """
         clone_dir = os.path.abspath(clone_dir)
         if os.path.exists(clone_dir):
             # Directory already exists
-            logging.warning("Target directory '%s' already exists" % clone_dir)
+            logging.critical("Target directory '%s' already exists" % clone_dir)
             raise Exception("Clone failed, target directory already exists")
         self.create_directory(clone_dir)
-        # Copy parameter file
-        if not self.has_parameter_file:
-            raise Exception("Clone failed, no parameter file %s" %
-                            self.parameter_file)
-        shutil.copy(self.parameter_file,
-                    os.path.join(clone_dir,'auto_process.info'))
+        # Copy metadata and parameters
+        self.save_metadata(os.path.join(clone_dir,
+                                        os.path.basename(
+                                            self.metadata_file)),
+                           force=True)
+        self.save_parameters(os.path.join(clone_dir,
+                                          os.path.basename(
+                                              self.parameter_file)),
+                             force=True)
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         clone_unaligned_dir = os.path.join(clone_dir,
                                            os.path.basename(self.params.unaligned_dir))
         if not copy_fastqs:
             # Link to unaligned dir
+            print "Symlinking %s" % clone_unaligned_dir
             os.symlink(unaligned_dir,clone_unaligned_dir)
         else:
             # Copy unaligned dir
+            print "Copying %s" % clone_unaligned_dir
             shutil.copytree(unaligned_dir,clone_unaligned_dir)
         # Copy additional files, if found
         for f in (self.params.sample_sheet,
