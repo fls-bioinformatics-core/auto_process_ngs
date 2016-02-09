@@ -14,11 +14,14 @@ bcl2fastq_utils.py
 
 Utility functions for bcl to fastq conversion operations:
 
-make_custom_sample_sheet: create a fixed copy of a sample sheet file
-get_nmismatches: determine number of mismatches from bases mask
-get_bases_mask: get a bases mask string
-run_bcl2fastq_1_8: run bcl-to-fastq conversion from CASAVA/bcl2fastq 1.8.*
-run_bcl2fastq_2_17: run bcl-to-fastq conversion from bcl2fastq 2.17.*
+- available_bcl2fastq_versions: list available bcl2fastq converters
+- bcl_to_fastq_info: retrieve information on the bcl2fastq software
+- make_custom_sample_sheet: create a fixed copy of a sample sheet file
+- get_required_samplesheet_format: fetch format required by bcl2fastq version
+- get_nmismatches: determine number of mismatches from bases mask
+- get_bases_mask: get a bases mask string
+- run_bcl2fastq_1_8: run bcl-to-fastq conversion from CASAVA/bcl2fastq 1.8.*
+- run_bcl2fastq_2_17: run bcl-to-fastq conversion from bcl2fastq 2.17.*
 
 """
 
@@ -40,10 +43,11 @@ from pkg_resources import parse_version
 
 def available_bcl2fastq_versions(reqs=None,paths=None):
     """
-    List available bcl2fastq converters on PATH
+    List available bcl2fastq converters
 
-    Searches the PATH for likely bcl2fastq converters and
-    returns a list of executables with the full path.
+    By default searches the PATH for likely bcl2fastq
+    converters and returns a list of executables with the
+    full path.
 
     The 'reqs' argument allows a specific version or range
     of versions to be requested; in this case the returned
