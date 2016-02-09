@@ -630,14 +630,10 @@ class AutoProcess:
             rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-            if platform == 'nextseq':
-                fmt = 'IEM'
-            else:
-                fmt = 'CASAVA'
             custom_sample_sheet = os.path.join(self.analysis_dir,
                                                'custom_SampleSheet.csv')
             sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
-                tmp_sample_sheet,custom_sample_sheet,fmt=fmt)
+                tmp_sample_sheet,custom_sample_sheet)
             print "Keeping copy of original sample sheet"
             original_sample_sheet = os.path.join(self.analysis_dir,
                                                  'SampleSheet.orig.csv')
@@ -1067,15 +1063,6 @@ class AutoProcess:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
             self.params['unaligned_dir'] = 'bcl2fastq'
-        # Sample sheet
-        if sample_sheet is None:
-            sample_sheet = self.params.sample_sheet
-        if not os.path.isabs(sample_sheet):
-            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
-        if not os.path.isfile(sample_sheet):
-            raise Exception("Missing sample sheet '%s'" % sample_sheet)
-        self.params['sample_sheet'] = sample_sheet
-        sample_sheet = self.params.sample_sheet
         # Examine primary data
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
@@ -1112,6 +1099,24 @@ class AutoProcess:
             return
         # Store info on bcl2fastq package
         self.metadata['bcl2fastq_software'] = bcl2fastq_info
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        if not os.path.isabs(sample_sheet):
+            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
+        if not os.path.isfile(sample_sheet):
+            raise Exception("Missing sample sheet '%s'" % sample_sheet)
+        self.params['sample_sheet'] = sample_sheet
+        sample_sheet = self.params.sample_sheet
+        # Generate temporary sample sheet with required format
+        fmt = bcl2fastq_utils.get_required_samplesheet_format(bcl2fastq_info[2])
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        tmp_sample_sheet = os.path.join(self.tmp_dir,
+                                        "SampleSheet.%s.csv" % timestamp)
+        print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
+        IlluminaData.SampleSheet(sample_sheet).write(tmp_sample_sheet,fmt=fmt)
+        # Put a copy in the log directory
+        shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
@@ -1124,7 +1129,7 @@ class AutoProcess:
         print "%s" % illumina_run.run_dir
         print "Platform            : %s" % illumina_run.platform
         print "Bcl format          : %s" % illumina_run.bcl_extension
-        print "Sample sheet        : %s" % sample_sheet
+        print "Source sample sheet : %s" % sample_sheet
         print "Bases mask          : %s" % bases_mask
         print "Nmismatches         : %d (determined from bases mask)" % nmismatches
         print "Nprocessors         : %s" % nprocessors
@@ -1154,7 +1159,7 @@ class AutoProcess:
                            bcl2fastq_exe,
                            primary_data,
                            bcl2fastq_dir,
-                           sample_sheet)
+                           tmp_sample_sheet)
         print "Running %s" % bcl2fastq
         bcl2fastq_job = simple_scheduler.SchedulerJob(runner,
                                                       bcl2fastq.command_line,

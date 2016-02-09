@@ -250,6 +250,34 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
         sample_sheet.write(output_sample_sheet,fmt=fmt)
     return sample_sheet
 
+def get_required_samplesheet_format(bcl2fastq_version):
+    """
+    Returns sample sheet format required by bcl2fastq
+
+    Given a bcl2fastq version, returns the format of the
+    sample sheet that is required for that version.
+
+    Arguments:
+      bcl2fastq_version (str): version of bcl2fastq
+
+    Returns:
+      String: Sample sheet format (e.g. 'CASAVA', 'IEM'
+        etc).
+
+    """
+    version = parse_version(bcl2fastq_version)
+    major,minor = version[0:2]
+    if (major,minor) == parse_version('1.8')[0:2]:
+        # Version 1.8.*
+        return 'CASAVA'
+    elif major == parse_version('2')[0]:
+        # Version 2.*
+        return 'IEM'
+    else:
+        # Not a known version
+        raise NotImplementedError('unknown version: %s' %
+                                  bcl2fastq_version)
+
 def get_bases_mask(run_info_xml,sample_sheet_file):
     """
     Get bases mask string
