@@ -58,6 +58,10 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
     separating multiple specifiers with a comma - for
     example '>1.8.3,<2.16'.
 
+    The full set of operators is:
+
+    - ==, >, >=, <=, <
+
     If no versions are requested then the packages will
     be returned in PATH order; otherwise they will be
     returned in version order (highest to lowest).
@@ -66,7 +70,8 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
       reqs (str): optional version requirement expression
         (for example '>=1.8.4'). If supplied then only
         executables fulfilling the requirement will be
-        returned.
+        returned. If no operator is supplied then '=='
+        is implied.
       paths (list): optional set of directory paths to
         search when looking for bcl2fastq software. If
         not supplied then the set of paths specified in
@@ -102,7 +107,8 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
                     req_version = req[len(op):].strip()
                     break
             if req_version is None:
-                raise Exception("Unable to parse expression: %s" % req)
+                req_op = '=='
+                req_version = req.strip()
             logging.debug("Required version: %s %s" % (req_op,req_version))
             if req_op == '==':
                 op = operator.eq

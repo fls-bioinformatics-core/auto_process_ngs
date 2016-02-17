@@ -325,6 +325,15 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.assertEqual(available_bcl2fastq_versions('>1.8.2,<1.8.4'),
                          self.mockbcl2fastq.exes[2:3])
 
+    def test_require_bcl2fastq_version_eq_217_no_operator(self):
+        """
+        available_bcl2fastq_versions: require version '2.17.1.14' (no '==')
+        """
+        self.mockbcl2fastq.bcl2fastq_217()
+        self.mockbcl2fastq.set_path()
+        self.assertEqual(available_bcl2fastq_versions('2.17.1.14'),
+                         self.mockbcl2fastq.exes)
+
     def test_require_bcl2fastq_version_with_versionless_package_on_path(self):
         """
         available_bcl2fastq_versions: require specific version when 'versionless' package is also present
