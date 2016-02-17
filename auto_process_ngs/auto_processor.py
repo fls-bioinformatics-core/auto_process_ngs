@@ -915,7 +915,8 @@ class AutoProcess:
         
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
-                    nprocessors=None,unaligned_dir=None,sample_sheet=None,
+                    nprocessors=None,require_bcl2fastq_version=None,
+                    unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,no_lane_splitting=None,
                     generate_stats=True,stats_file=None,
                     report_barcodes=False,barcodes_file=None,
@@ -945,6 +946,10 @@ class AutoProcess:
           remove_primary_data : if True then remove primary data at the end of bcl2fastq
                                 conversion (default is to keep it)
           generate_stats      : if True then (re)generate statistics file for fastqs
+          require_bcl2fastq_version: (optional) specify bcl2fastq version to use
+                                Should be a string of the form '1.8.4' or
+                                '>2.0'. Set to None to automatically determine
+                                bcl2fastq version.
           unaligned_dir       : if set then use this as the output directory for
                                 bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
                                 an alternative is already specified in the config file)
@@ -987,16 +992,20 @@ class AutoProcess:
                 return
         # Run bcl_to_fastq
         if not skip_bcl2fastq:
-            self.bcl_to_fastq(unaligned_dir=unaligned_dir,
-                              sample_sheet=sample_sheet,
-                              bases_mask=bases_mask,
-                              ignore_missing_bcl=ignore_missing_bcl,
-                              ignore_missing_stats=ignore_missing_stats,
-                              no_lane_splitting=no_lane_splitting,
-                              nprocessors=nprocessors,
-                              runner=runner)
+            try:
+                self.bcl_to_fastq(require_bcl2fastq=require_bcl2fastq_version,
+                                  unaligned_dir=unaligned_dir,
+                                  sample_sheet=sample_sheet,
+                                  bases_mask=bases_mask,
+                                  ignore_missing_bcl=ignore_missing_bcl,
+                                  ignore_missing_stats=ignore_missing_stats,
+                                  no_lane_splitting=no_lane_splitting,
+                                  nprocessors=nprocessors,
+                                  runner=runner)
+            except Exception,ex:
+                raise Exception("Bcl2fastq stage failed: '%s'" % ex)
             if not self.verify_bcl_to_fastq():
-                raise Exception, "Bcl2fastq failed to produce expected outputs"
+                raise Exception("Bcl2fastq failed to produce expected outputs")
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file,
@@ -1038,7 +1047,8 @@ class AutoProcess:
             logging.error("Failed to acquire primary data (status %s)" % status)
         return status
 
-    def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
+    def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
+                     sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,nprocessors=None,runner=None):
         """Generate FASTQ files from the raw BCL files
@@ -1048,6 +1058,10 @@ class AutoProcess:
         wraps the 'configureBclToFastq' and 'make' steps).
 
         Arguments:
+          require_bcl2fastq: if set then should be a string of the form
+            '1.8.4' or '>2.0' explicitly specifying the version of
+            bcl2fastq to use. (Default to use specifications from the
+            settings)
           unaligned_dir: if set then use this as the output directory for
             bcl-to-fastq conversion. Default is 'bcl2fastq' (unless an
             alternative is already specified in the settings)
@@ -1084,9 +1098,10 @@ class AutoProcess:
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
         # Determine which bcl2fastq software to use
-        require_bcl2fastq = self.settings.bcl2fastq[self.metadata.platform]
         if require_bcl2fastq is None:
-            require_bcl2fastq = self.settings.bcl2fastq.default_version
+            require_bcl2fastq = self.settings.bcl2fastq[self.metadata.platform]
+            if require_bcl2fastq is None:
+                require_bcl2fastq = self.settings.bcl2fastq.default_version
         if require_bcl2fastq is not None:
             print "Platform '%s' requires bcl2fastq version %s" \
                 % (self.metadata.platform,require_bcl2fastq)
@@ -1105,8 +1120,7 @@ class AutoProcess:
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(bcl2fastq_exe)
         else:
-            logging.error("No appropriate bcl2fastq software located")
-            return
+            raise Exception("No appropriate bcl2fastq software located")
         # Store info on bcl2fastq package
         self.metadata['bcl2fastq_software'] = bcl2fastq_info
         # Sample sheet

@@ -216,6 +216,10 @@ def add_make_fastqs_command(cmdparser):
                             dest='no_lane_splitting',default=False,
                             help="don't split the output FASTQ files by lane "
                             "(bcl2fastq v2 only)")
+    bcl_to_fastq.add_option('--require-bcl2fastq-version',action='store',
+                            dest='bcl2fastq_version',default=None,
+                            help="explicitly specify version of bcl2fastq "
+                            "software to use (e.g. '1.8.4' or '>=2.0').")
     add_nprocessors_option(bcl_to_fastq,None,
                            default_display=__settings.bcl2fastq.nprocessors)
     add_runner_option(bcl_to_fastq)
@@ -578,6 +582,7 @@ if __name__ == "__main__":
                           ignore_missing_bcl=options.ignore_missing_bcl,
                           ignore_missing_stats=options.ignore_missing_stats,
                           generate_stats=(not options.no_stats),
+                          require_bcl2fastq_version=options.bcl2fastq_version,
                           unaligned_dir=options.unaligned_dir,
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
