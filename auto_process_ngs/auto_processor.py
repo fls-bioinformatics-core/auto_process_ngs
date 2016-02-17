@@ -2481,7 +2481,7 @@ class AutoProcess:
         - User
         - PI
         - Application
-        - Genome
+        - Organism
         - Platform
         - #Samples
         - PE (yes/no)
