@@ -14,6 +14,10 @@ run_qc = None
 # bcl2fastq settings
 [bcl2fastq]
 nprocessors = 1
+default_version = <=1.8.4
+hiseq = None
+miseq = None
+nextseq = >=2.0
 
 # fastq_stats settings
 [fastq_stats]

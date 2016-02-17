@@ -1084,10 +1084,16 @@ class AutoProcess:
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
         # Determine which bcl2fastq software to use
-        if self.metadata.platform == 'nextseq':
-            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('>=2')
+        require_bcl2fastq = self.settings.bcl2fastq[self.metadata.platform]
+        if require_bcl2fastq is None:
+            require_bcl2fastq = self.settings.bcl2fastq.default_version
+        if require_bcl2fastq is not None:
+            print "Platform '%s' requires bcl2fastq version %s" \
+                % (self.metadata.platform,require_bcl2fastq)
         else:
-            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('<2')
+            logging.warning("No bcl2fastq version explicitly specified")
+        bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
+            require_bcl2fastq)
         if bcl2fastq:
             print "Found available bcl2fastq packages:"
             for i,package in enumerate(bcl2fastq):

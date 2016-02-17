@@ -10,9 +10,11 @@ QC scripts which are part of the ``genomics`` github repository.
 
 In addition the following software must be installed:
 
-* ``bcl2fastq``:
-  * bcl2fastq 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
-  * bcl2fastq 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
+* ``bcl2fastq``: one or both of:
+
+  * ``bcl2fastq`` 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
+  * ``bcl2fastq`` 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
+
 * ``bowtie`` http://bowtie-bio.sourceforge.net/index.shtml
 * ``fastq_screen`` http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 * ``fastqc`` http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
@@ -20,6 +22,12 @@ In addition the following software must be installed:
 The programs provided by these packages must be found on the ``PATH`` when
 the appropriate autoprocessor commands are issued. :ref:`environment-modules`
 can be used to help manage this.
+
+..  note::
+
+    If there are multiple ``bcl2fastq`` packages available then see
+    :ref:`required_bcl2fastq_versions` for how to specify which version
+    is used.
 
 Configuration: settings.ini
 ***************************
@@ -71,8 +79,8 @@ the runner, enclose them in parentheses e.g.::
 
 .. note::
 
-   If you specify multiple processors for the ``bcl2fastq`` and are using
-   the ``GEJobRunner`` then you should ensure that the job runner requests
+   If you specify multiple processors for the ``bcl2fastq`` runner and are
+   using ``GEJobRunner`` then you should ensure that the job runner requests
    a suitable number of cores when submitting jobs.
 
 .. _environment-modules:
@@ -95,6 +103,48 @@ files to be loaded before a specific step, for example::
 
    These can be overridden for the ``make_fastqs`` and ``run_qc`` using
    the ``--modulefiles`` option.
+
+.. _required_bcl2fastq_versions:
+
+Required bcl2fastq versions
+---------------------------
+
+Different versions of Illumina's ``bcl2fastq`` software can be specified
+depending on the sequencer platform, by setting the appropriate parameters
+in the ``[bcl2fastq]`` directive.
+
+For example, to specify the version to use when processing data from a
+NextSeq instrument to be specifically ``2.17.1.14``::
+
+    [bcl2fastq]
+    ...
+    nextseq = 2.17.1.14
+
+A range of versions can be specified by prefacing the version number by
+one of the operators ``>``, ``>=``, ``<=`` and ``<`` (``==`` can also be
+specified explicitly), for example::
+
+    nextseq = >=2.0
+
+Alternatively a comma-separated list can be provided::
+
+    hiseq = >=1.8.3,<2.0
+
+The ``default_version`` sets the required version implicitly in the absence
+of an explicit specification, for example::
+
+    [bcl2fastq]
+    ...
+    default_version = 1.8.4
+    hiseq = None
+
+If the ``default_version`` is set to ``None`` then the highest available
+version will be used.
+
+.. note::
+
+   This mechanism allows multiple ``bcl2fastq`` versions to be present
+   in the environment simultaneously.
 
 Bash tab completion
 *******************

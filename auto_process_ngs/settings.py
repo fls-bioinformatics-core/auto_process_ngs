@@ -112,6 +112,13 @@ class Settings:
         self._sections.append('bcl2fastq')
         self.bcl2fastq = AttributeDictionary()
         self.bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
+        self.bcl2fastq['default_version'] = config.get('bcl2fastq',
+                                                       'default_version',
+                                                       '<=1.8.4')
+        self.bcl2fastq['hiseq'] = config.get('bcl2fastq','hiseq',None)
+        self.bcl2fastq['miseq'] = config.get('bcl2fastq','miseq',None)
+        self.bcl2fastq['nextseq'] = config.get('bcl2fastq','nextseq',
+                                               '>=2.0')
         # fastq_stats
         self._sections.append('fastq_stats')
         self.fastq_stats = AttributeDictionary()
