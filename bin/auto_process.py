@@ -81,6 +81,22 @@ __settings = auto_process_ngs.settings.Settings()
 # Functions
 #######################################################################
 
+# Supporting functions
+
+def add_modulefiles_option(p):
+    """
+    Add a --modulefiles option to an OptionParser option
+
+    The values can be accessed via the 'modulefiles' property of the
+    parser.
+
+    """
+    p.add_option('--modulefiles',action='store',
+                 dest='modulefiles',default=None,
+                 help="Specify comma-separated list of environment modules "
+                 "to load before executing commands (overrides any modules "
+                 "specified in the global settings)")
+
 # Command line parsers
 
 def add_setup_command(cmdparser):
@@ -154,6 +170,7 @@ def add_make_fastqs_command(cmdparser):
                               "produced by Illumina sequencer within ANALYSIS_DIR.")
     # General options
     add_no_save_option(p)
+    add_modulefiles_option(p)
     add_debug_option(p)
     # Primary data management
     primary_data = optparse.OptionGroup(p,'Primary data management')
@@ -195,6 +212,10 @@ def add_make_fastqs_command(cmdparser):
                             dest='ignore_missing_stats',default=False,
                             help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
+    bcl_to_fastq.add_option('--no-lane-splitting',action='store_true',
+                            dest='no_lane_splitting',default=False,
+                            help="don't split the output FASTQ files by lane "
+                            "(bcl2fastq v2 only)")
     add_nprocessors_option(bcl_to_fastq,None,
                            default_display=__settings.bcl2fastq.nprocessors)
     add_runner_option(bcl_to_fastq)
@@ -275,6 +296,7 @@ def add_run_qc_command(cmdparser):
                  help="explicitly specify maximum number of concurrent QC jobs to run "
                  "(default %s, change in settings file)" % max_concurrent_jobs)
     add_runner_option(p)
+    add_modulefiles_option(p)
     add_debug_option(p)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
@@ -484,14 +506,20 @@ if __name__ == "__main__":
         allow_save = True
 
     # Set up environment modules
+    modulefiles = None
     try:
-        modulefiles = __settings.modulefiles[cmd]
-        if modulefiles is not None:
-            for modulefile in modulefiles.split(','):
-                envmod.load(modulefile)
-    except KeyError:
-        # No environment modules specified
+        modulefiles = options.modulefiles
+    except AttributeError:
         pass
+    if modulefiles is None:
+        try:
+            modulefiles = __settings.modulefiles[cmd]
+        except KeyError:
+            # No environment modules specified
+            pass
+    if modulefiles is not None:
+        for modulefile in modulefiles.split(','):
+            envmod.load(modulefile)
 
     # Setup the processing object and run the requested command
     if cmd == 'config':
@@ -527,10 +555,10 @@ if __name__ == "__main__":
             d.setup_from_fastq_dir(args[0],options.fastq_dir)
     elif cmd == 'clone':
         if len(args) != 2:
-            sys.stderr.write("Need to supply an existing analysis dir and directory for "
-                             "the copy\n")
+            sys.stderr.write("Need to supply an existing analysis dir and "
+                             "directory for the copy\n")
             sys.exit(1)
-        d = AutoProcess(args[0])
+        d = AutoProcess(args[0],allow_save_params=False)
         d.clone(args[1],copy_fastqs=options.copy_fastqs)
     else:
         # For other options check if an analysis
@@ -553,6 +581,7 @@ if __name__ == "__main__":
                           unaligned_dir=options.unaligned_dir,
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
+                          no_lane_splitting=options.no_lane_splitting,
                           stats_file=options.stats_file,
                           report_barcodes=options.report_barcodes,
                           barcodes_file=options.barcodes_file,

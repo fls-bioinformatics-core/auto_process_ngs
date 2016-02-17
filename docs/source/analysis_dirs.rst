@@ -33,27 +33,11 @@ The top-level analysis directory is created by the ``setup`` command:
           |
           +--- ScriptCode/
           |
-	  +--- primary_data/            Temporary
+	  +--- primary_data/            Temporary; holds the 'raw' data from the sequencer
 	  |
 	  +--- logs/
 	  |
 	  +--- bcl2fastq/               Output from CASAVA/bclToFastq conversion
-	  |           |
-          |           +--- Project_PeterBriggs/
-          |           |            |
-          |           |            +--- Sample_PB1/
-          |           |            |           |
-          |           |            |           +--- [Gzipped FASTQs]
-          |           |            |
-          |           |            +--- Sample_PB2/
-          |           |            |
-          |           |           ...
-	  |           |
-          |           +--- Project_AnotherUser/
-          |           |            |
-          |           |           ...
-          |           |
-          |          ...
           |
           +--- PeterBriggs/             Analysis project directory for 'PeterBriggs' project
           |           |
@@ -63,7 +47,7 @@ The top-level analysis directory is created by the ``setup`` command:
           |           |
           |          ...
           |
-          +--- _undetermined/           Analysis project directory for undetermined reads
+          +--- undetermined/           Analysis project directory for undetermined reads
           |           |
           |          ...
 

@@ -243,6 +243,7 @@ class bcl2fastq:
     applications used in bcl to fastq conversion:
 
     configureBclToFastq
+    bcl2fastq2
 
     """
 
@@ -310,6 +311,80 @@ class bcl2fastq:
         if ignore_missing_control:
             configure_cmd.add_args('--ignore-missing-control')
         return configure_cmd
+
+    @staticmethod
+    def bcl2fastq2(run_dir,sample_sheet,output_dir="Unaligned",
+                   mismatches=None,
+                   bases_mask=None,
+                   ignore_missing_bcl=False,
+                   no_lane_splitting=False,
+                   loading_threads=None,
+                   demultiplexing_threads=None,
+                   processing_threads=None,
+                   writing_threads=None):
+        """
+        Generate Command instance for 'bcl2fastq' program (v2.*)
+
+        Creates a Command instance to run the Illumina 'bcl2fastq'
+        program (for versions 2.*).
+
+        Arguments:
+          run: path to the top-level directory for the run
+          sample_sheet: path to the sample sheet file to use
+          output_dir: optional, path to the output directory. Defaults to
+            'Unaligned'
+          mismatches: optional, specify maximum number of mismatched bases
+            allowed for matching index sequences during multiplexing.
+            Recommended values are zero for indexes shorter than 6 base
+            pairs, 1 for indexes of 6 or longer
+            (If not specified and bases_mask is supplied then mismatches
+            will be derived automatically from the bases mask string)
+          bases_mask: optional, specify string indicating how to treat
+            each cycle within each read e.g. 'y101,I6,y101'
+          ignore_missing_bcl: optional, if True then interpret missing bcl
+            files as no call (default is False)
+          no_lane_splitting: optional, if True then don't split FASTQ
+            files by lane (--no-lane-splitting) (default is False)
+          loading_threads: optional, specify number of threads to use
+            for loading bcl data (--loading-threads)
+          demultiplexing_threads: optional, specify number of threads to
+            use for demultiplexing (--demultiplexing-threads)
+          processing_threads: optional, specify number of threads to
+            use for processing (--processing-threads)
+          writing_threads: optional, specify number of threads to
+            use for writing FASTQ data (--writing-threads)
+
+        Returns:
+          Command object.
+
+        """
+
+        bcl2fastq_cmd = Command('bcl2fastq',
+                                '--runfolder-dir',run_dir,
+                                '--output-dir',output_dir,
+                                '--sample-sheet',sample_sheet)
+        if bases_mask is not None:
+            bcl2fastq_cmd.add_args('--use-bases-mask',bases_mask)
+        if mismatches is not None:
+            bcl2fastq_cmd.add_args('--barcode-mismatches',mismatches)
+        else:
+            # Nmismatches not supplied, derive from bases mask
+            if bases_mask is not None:
+                bcl2fastq_cmd.add_args('--barcode-mismatches',
+                                       get_nmismatches(bases_mask))
+        if ignore_missing_bcl:
+            bcl2fastq_cmd.add_args('--ignore-missing-bcls')
+        if no_lane_splitting:
+            bcl2fastq_cmd.add_args('--no-lane-splitting')
+        if loading_threads is not None:
+            bcl2fastq_cmd.add_args('-r',loading_threads)
+        if demultiplexing_threads is not None:
+            bcl2fastq_cmd.add_args('-d',demultiplexing_threads)
+        if processing_threads is not None:
+            bcl2fastq_cmd.add_args('-p',processing_threads)
+        if  writing_threads is not None:
+            bcl2fastq_cmd.add_args('-w',writing_threads)
+        return bcl2fastq_cmd
 
 class general:
     """General command line applications (e.g. rsync, make)

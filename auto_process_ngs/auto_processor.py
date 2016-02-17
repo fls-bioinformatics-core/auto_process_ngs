@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-15 Peter Briggs
+#     Copyright (C) University of Manchester 2013-16 Peter Briggs
 #
 #########################################################################
 #
@@ -15,7 +15,6 @@
 
 import sys
 import os
-import re
 import subprocess
 import logging
 import shutil
@@ -153,13 +152,26 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
-    def save_parameters(self):
+    def save_parameters(self,alt_parameter_file=None,force=True):
         """
         Save parameters to file
 
+        Arguments:
+          alt_parameter_file (str): optional, path to an
+            'alternative' parameter file; otherwise
+            parameters are saved to the default file for the
+            processing directory.
+          force (boolean): if True then force the parameters
+            to be saved even if saving was previously
+            turned off (default is False i.e. don't force
+            save).
+
         """
-        if self._save_params:
-            self.params.save(self.parameter_file)
+        if self._save_params or force:
+            if alt_parameter_file is None:
+                self.params.save(self.parameter_file)
+            else:
+                self.params.save(alt_parameter_file)
 
     def load_metadata(self,allow_save=True):
         """
@@ -181,13 +193,26 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_metadata = allow_save
 
-    def save_metadata(self):
+    def save_metadata(self,alt_metadata_file=None,force=True):
         """
         Save metadata to file
 
+        Arguments:
+          alt_metadata_file (str): optional, path to an
+            'alternative' metadata file; otherwise
+            metadata are saved to the default file for the
+            processing directory.
+          force (boolean): if True then force the metadata
+            to be saved even if saving was previously
+            turned off (default is False i.e. don't force
+            save).
+
         """
-        if self._save_metadata:
-            self.metadata.save(self.metadata_file)
+        if self._save_metadata or force:
+            if alt_metadata_file is None:
+                self.metadata.save(self.metadata_file)
+            else:
+                self.metadata.save(alt_metadata_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -211,7 +236,12 @@ class AutoProcess:
         else:
             filen = None
         logging.debug("Project metadata file: %s" % filen)
-        illumina_data = self.load_illumina_data()
+        try:
+            illumina_data = self.load_illumina_data()
+        except IlluminaData.IlluminaDataError,ex:
+            logging.warning("Failed to load data from bcl2fastq output "
+                            "(ignored): %s" % ex)
+            illumina_data = None
         projects_from_dirs = self.get_analysis_projects_from_dirs()
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
@@ -285,12 +315,31 @@ class AutoProcess:
         return project_metadata
 
     def get_analysis_projects_from_dirs(self):
-        # Return a list of analysis projects deduced from testing all
-        # subdirectories of the top-level analysis directory
+        """
+        Return a list of AnalysisProjects in the analysis directory
+
+        Tests each of the subdirectories in the top-level of the
+        analysis directory and rejects any that appear to be
+        CASVAVA/bcl2fastq outputs or which don't successfully load
+        as AnalysisProject instances.
+
+        Returns:
+          List: list of AnalysisProject instances.
+
+        """
         logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
         # Try loading each subdirectory as a project
         for dirn in bcf_utils.list_dirs(self.analysis_dir):
+            # Test for bcl2fastq output
+            try:
+                IlluminaData.IlluminaData(self.analysis_dir,
+                                          unaligned_dir=dirn)
+                logging.debug("* %s: rejected" % dirn)
+                continue
+            except IlluminaData.IlluminaDataError:
+                pass
+            # Try loading as a project
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
@@ -514,16 +563,19 @@ class AutoProcess:
         return os.path.join(self.analysis_dir,'metadata.info')
 
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
-        # Set up the initial analysis directory
-        #
-        # This does all the initialisation of the analysis directory
-        # and processing parameters
-        #
-        # Arguments:
-        # data_dir: source data directory
-        # analysis_dir: corresponding analysis dir
-        # sample_sheet: name and location of non-default sample sheet
-        #               file
+        """
+        Set up the initial analysis directory
+
+        This does all the initialisation of the analysis directory
+        and processing parameters
+
+        Arguments:
+          data_dir (str): source data directory
+          analysis_dir (str): corresponding analysis directory
+          sample_sheet (str): name and location of non-default sample sheet
+            file
+
+        """
         data_dir = data_dir.rstrip(os.sep)
         if analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
@@ -570,35 +622,46 @@ class AutoProcess:
             print "Acquiring sample sheet..."
             if sample_sheet is None:
                 sample_sheet = os.path.join(data_dir,
-                                            'Data/Intensities/BaseCalls/SampleSheet.csv')
+                                            'Data','Intensities',
+                                            'BaseCalls','SampleSheet.csv')
                 tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
             else:
                 tmp_sample_sheet = os.path.join(self.tmp_dir,os.path.basename(sample_sheet))
             rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-            custom_sample_sheet = os.path.join(self.analysis_dir,'custom_SampleSheet.csv')
-            sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(tmp_sample_sheet,
-                                                                    custom_sample_sheet)
+            if status != 0:
+                logging.error("Failed to rsync sample sheet '%s' (status %s)"
+                              % (sample_sheet,status))
+                return status
+            custom_sample_sheet = os.path.join(self.analysis_dir,
+                                               'custom_SampleSheet.csv')
+            sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
+                tmp_sample_sheet,custom_sample_sheet)
             print "Keeping copy of original sample sheet"
-            original_sample_sheet = os.path.join(self.analysis_dir,'SampleSheet.orig.csv')
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
             os.rename(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
             os.chmod(original_sample_sheet,0664)
-        iem_sample_sheet = IlluminaData.IEMSampleSheet(original_sample_sheet)
-        sample_sheet = IlluminaData.CasavaSampleSheet(custom_sample_sheet)
+        else:
+            sample_sheet = IlluminaData.SampleSheet(custom_sample_sheet)
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
         print "Sample sheet '%s'" % custom_sample_sheet
         # Assay type (= kit)
-        assay = iem_sample_sheet.header['Assay']
+        assay = IlluminaData.SampleSheet(original_sample_sheet).header['Assay']
         # Bases mask
         bases_mask = self.params.bases_mask
         if bases_mask is None:
             print "Acquiring RunInfo.xml to determine bases mask..."
             tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
-            rsync = applications.general.rsync(os.path.join(data_dir,'RunInfo.xml'),
+            rsync = applications.general.rsync(os.path.join(data_dir,
+                                                            'RunInfo.xml'),
                                                self.tmp_dir)
             status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
-            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,custom_sample_sheet)
+            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,
+                                                        custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
         # Print the predicted ouputs
@@ -653,30 +716,52 @@ class AutoProcess:
         self.make_project_metadata_file()
 
     def clone(self,clone_dir,copy_fastqs=False):
-        # "Clone" (i.e. copy) to new directory 'clone_dir'
-        # By default this is done by linking to the bcl2fastq dir; set
-        # 'copy_fastqs' to True to make copies instead
+        """
+        Make a 'clone' (i.e. copy) to new directory
+
+        Makes a copy of the processing directory, including
+        metadata and parameters but ignoring any project
+        subdirectories.
+
+        By default the 'unaligned' directory in the new
+        directory is simply a symlink from the original
+        directory; set the 'copy_fastqs' to make copies
+        instead.
+
+        Arguments
+          clone_dir (str): path to the new directory to
+            create as a clone (must not already exist).
+          copy_fastqs (boolean): set to True to copy the
+            fastq files (otherwise default behaviour is
+            to make a symlink)
+
+        """
         clone_dir = os.path.abspath(clone_dir)
         if os.path.exists(clone_dir):
             # Directory already exists
-            logging.warning("Target directory '%s' already exists" % clone_dir)
+            logging.critical("Target directory '%s' already exists" % clone_dir)
             raise Exception("Clone failed, target directory already exists")
         self.create_directory(clone_dir)
-        # Copy parameter file
-        if not self.has_parameter_file:
-            raise Exception("Clone failed, no parameter file %s" %
-                            self.parameter_file)
-        shutil.copy(self.parameter_file,
-                    os.path.join(clone_dir,'auto_process.info'))
+        # Copy metadata and parameters
+        self.save_metadata(os.path.join(clone_dir,
+                                        os.path.basename(
+                                            self.metadata_file)),
+                           force=True)
+        self.save_parameters(os.path.join(clone_dir,
+                                          os.path.basename(
+                                              self.parameter_file)),
+                             force=True)
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
         clone_unaligned_dir = os.path.join(clone_dir,
                                            os.path.basename(self.params.unaligned_dir))
         if not copy_fastqs:
             # Link to unaligned dir
+            print "Symlinking %s" % clone_unaligned_dir
             os.symlink(unaligned_dir,clone_unaligned_dir)
         else:
             # Copy unaligned dir
+            print "Copying %s" % clone_unaligned_dir
             shutil.copytree(unaligned_dir,clone_unaligned_dir)
         # Copy additional files, if found
         for f in (self.params.sample_sheet,
@@ -809,7 +894,8 @@ class AutoProcess:
         # Add undetermined reads directory
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
-            if undetermined_analysis is not None:
+            if undetermined_analysis is not None and \
+               'undetermined' not in [p.name for p in projects]:
                 projects.append(undetermined_analysis)
         return projects
 
@@ -830,7 +916,8 @@ class AutoProcess:
     def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
                     nprocessors=None,unaligned_dir=None,sample_sheet=None,
-                    bases_mask=None,generate_stats=True,stats_file=None,
+                    bases_mask=None,no_lane_splitting=None,
+                    generate_stats=True,stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
                     runner=None):
@@ -863,6 +950,7 @@ class AutoProcess:
                                 an alternative is already specified in the config file)
           sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
+          no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
           stats_file          : if set then use this as the name of the output stats
                                 file.
           report_barcodes     : if True then analyse barcodes in outputs (default is False
@@ -904,6 +992,7 @@ class AutoProcess:
                               bases_mask=bases_mask,
                               ignore_missing_bcl=ignore_missing_bcl,
                               ignore_missing_stats=ignore_missing_stats,
+                              no_lane_splitting=no_lane_splitting,
                               nprocessors=nprocessors,
                               runner=runner)
             if not self.verify_bcl_to_fastq():
@@ -951,7 +1040,7 @@ class AutoProcess:
 
     def bcl_to_fastq(self,unaligned_dir=None,sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
-                     nprocessors=None,runner=None):
+                     no_lane_splitting=None,nprocessors=None,runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -966,6 +1055,7 @@ class AutoProcess:
           bases_mask: if set then use this as an alternative bases mask setting
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
+          no_lane_splitting: if True then run bcl2fastq with --no-lane-splitting
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
@@ -977,15 +1067,6 @@ class AutoProcess:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
             self.params['unaligned_dir'] = 'bcl2fastq'
-        # Sample sheet
-        if sample_sheet is None:
-            sample_sheet = self.params.sample_sheet
-        if not os.path.isabs(sample_sheet):
-            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
-        if not os.path.isfile(sample_sheet):
-            raise Exception("Missing sample sheet '%s'" % sample_sheet)
-        self.params['sample_sheet'] = sample_sheet
-        sample_sheet = self.params.sample_sheet
         # Examine primary data
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
@@ -1002,23 +1083,63 @@ class AutoProcess:
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
-        # Collect and store info on underlying bcl2fastq software
-        self.metadata['bcl2fastq_software'] = utils.bcl_to_fastq_info()
+        # Determine which bcl2fastq software to use
+        if self.metadata.platform == 'nextseq':
+            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('>=2')
+        else:
+            bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions('<2')
+        if bcl2fastq:
+            print "Found available bcl2fastq packages:"
+            for i,package in enumerate(bcl2fastq):
+                bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(package)
+                print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
+                                         bcl2fastq_info[0],
+                                         bcl2fastq_info[1],
+                                         bcl2fastq_info[2])
+            bcl2fastq_exe = bcl2fastq[0]
+            bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(bcl2fastq_exe)
+        else:
+            logging.error("No appropriate bcl2fastq software located")
+            return
+        # Store info on bcl2fastq package
+        self.metadata['bcl2fastq_software'] = bcl2fastq_info
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        if not os.path.isabs(sample_sheet):
+            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
+        if not os.path.isfile(sample_sheet):
+            raise Exception("Missing sample sheet '%s'" % sample_sheet)
+        self.params['sample_sheet'] = sample_sheet
+        sample_sheet = self.params.sample_sheet
+        # Generate temporary sample sheet with required format
+        fmt = bcl2fastq_utils.get_required_samplesheet_format(bcl2fastq_info[2])
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        tmp_sample_sheet = os.path.join(self.tmp_dir,
+                                        "SampleSheet.%s.csv" % timestamp)
+        print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
+        IlluminaData.SampleSheet(sample_sheet).write(tmp_sample_sheet,fmt=fmt)
+        # Put a copy in the log directory
+        shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info about the run
+        print "Bcl-to-fastq exe    : %s" % bcl2fastq_exe
+        print "Bcl-to-fastq version: %s %s" % (bcl2fastq_info[1],
+                                               bcl2fastq_info[2])
         print "Primary data dir    : %s" % primary_data
         illumina_run = IlluminaData.IlluminaRun(primary_data)
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
         print "Platform            : %s" % illumina_run.platform
         print "Bcl format          : %s" % illumina_run.bcl_extension
-        print "Sample sheet        : %s" % sample_sheet
+        print "Source sample sheet : %s" % sample_sheet
         print "Bases mask          : %s" % bases_mask
         print "Nmismatches         : %d (determined from bases mask)" % nmismatches
         print "Nprocessors         : %s" % nprocessors
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
         print "Ignore missing stats: %s" % ignore_missing_stats
+        print "No lane splitting   : %s" % no_lane_splitting
         print "Output dir          : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
@@ -1036,9 +1157,13 @@ class AutoProcess:
             bcl2fastq.add_args('--ignore-missing-bcl')
         if ignore_missing_stats:
             bcl2fastq.add_args('--ignore-missing-stats')
-        bcl2fastq.add_args(primary_data,
+        if no_lane_splitting:
+            bcl2fastq.add_args('--no-lane-splitting')
+        bcl2fastq.add_args('--bcl2fastq_path',
+                           bcl2fastq_exe,
+                           primary_data,
                            bcl2fastq_dir,
-                           sample_sheet)
+                           tmp_sample_sheet)
         print "Running %s" % bcl2fastq
         bcl2fastq_job = simple_scheduler.SchedulerJob(runner,
                                                       bcl2fastq.command_line,
@@ -2356,7 +2481,7 @@ class AutoProcess:
         - User
         - PI
         - Application
-        - Genome
+        - Organism
         - Platform
         - #Samples
         - PE (yes/no)

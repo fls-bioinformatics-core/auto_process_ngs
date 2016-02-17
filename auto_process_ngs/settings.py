@@ -85,6 +85,8 @@ class Settings:
         file to use.
         
         """
+        # Initialise list of sections
+        self._sections = []
         # Locate settings file
         if settings_file is None:
             self.settings_file = locate_settings_file(create_from_sample=False)
@@ -95,28 +97,34 @@ class Settings:
         if self.settings_file:
             config.read(self.settings_file)
         # General parameters
+        self._sections.append('general')
         self.general = AttributeDictionary()
         self.general['default_runner'] = config.get('general','default_runner',
                                                     'SimpleJobRunner')
         self.general['max_concurrent_jobs'] = config.getint('general',
                                                             'max_concurrent_jobs',12)
         # modulefiles
+        self._sections.append('modulefiles')
         self.modulefiles = AttributeDictionary()
         self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         # bcl2fastq
+        self._sections.append('bcl2fastq')
         self.bcl2fastq = AttributeDictionary()
         self.bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
         # fastq_stats
+        self._sections.append('fastq_stats')
         self.fastq_stats = AttributeDictionary()
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
         # Define runners for specific jobs
+        self._sections.append('runners')
         self.runners = AttributeDictionary()
         for name in ('bcl2fastq','qc','stats',):
             self.runners[name] = config.getrunner('runners',name,
                                                   self.general.default_runner)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
+        self._sections.append('archive')
         self.archive = AttributeDictionary()
         self.archive['dirn'] = config.get('archive','dirn',None)
         self.archive['log'] = config.get('archive','log',None)
@@ -124,6 +132,7 @@ class Settings:
         self.archive['chmod'] = config.get('archive','chmod',None)
         # Information for uploading QC reports
         # dirn should be a directory in the form [[user@]host:]path]
+        self._sections.append('qc_web_server')
         self.qc_web_server = AttributeDictionary()
         self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
         self.qc_web_server['url'] = config.get('qc_web_server','url',None)
@@ -169,12 +178,8 @@ class Settings:
             print "Settings from %s:" % self.settings_file
         else:
             logging.warning("No settings file found, reporting built-in defaults")
-        show_dictionary('general',self.general)
-        show_dictionary('modulefiles',self.modulefiles)
-        show_dictionary('bcl2fastq',self.bcl2fastq)
-        show_dictionary('runners',self.runners)
-        show_dictionary('archive',self.archive)
-        show_dictionary('qc_web_server',self.qc_web_server)
+        for section in self._sections:
+            show_dictionary(section,getattr(self,section))
 
 #######################################################################
 # Functions
