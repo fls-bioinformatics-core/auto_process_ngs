@@ -630,6 +630,10 @@ class AutoProcess:
             rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
             print "%s" % rsync
             status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
+            if status != 0:
+                logging.error("Failed to rsync sample sheet '%s' (status %s)"
+                              % (sample_sheet,status))
+                return status
             custom_sample_sheet = os.path.join(self.analysis_dir,
                                                'custom_SampleSheet.csv')
             sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
