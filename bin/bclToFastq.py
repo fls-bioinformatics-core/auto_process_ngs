@@ -206,7 +206,7 @@ def main():
             demultiplexing_threads=max(int(float(nprocessors)*0.2),
                                        nprocessors)
             processing_threads=nprocessors
-            print "Explicitly setting determined threads for each stage:"
+            print "Explicitly setting number of threads for each stage:"
             print "Loading (-r)       : %d" % loading_threads
             print "Demultiplexing (-d): %d" % demultiplexing_threads
             print "Processing (-p)    : %d" % processing_threads
