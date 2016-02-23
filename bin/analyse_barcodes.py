@@ -633,10 +633,6 @@ if __name__ == '__main__':
         lanes = counts.lanes
     for lane in lanes:
         report(counts,lane,20,opts.mismatches,opts.sample_sheet,fp=fp)
-    # Match against samplesheet if requested
-    ##if opts.sample_sheet is not None:
-    ##     match_against_samplesheet(counts,opts.sample_sheet,
-    ##                               lanes,opts.mismatches)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
