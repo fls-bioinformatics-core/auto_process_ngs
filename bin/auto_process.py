@@ -229,6 +229,9 @@ def add_make_fastqs_command(cmdparser):
     statistics.add_option('--stats-file',action='store',
                           dest='stats_file',default=None,
                           help="specify output file for fastq statistics")
+    statistics.add_option('--per-lane-stats-file',action='store',
+                          dest='per_lane_stats_file',default=None,
+                          help="specify output file for per-lane statistics")
     statistics.add_option('--no-stats',action='store_true',
                           dest='no_stats',default=False,
                           help="don't generate statistics file; use 'update_fastq_stats' "
@@ -460,6 +463,9 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_option('--stats-file',action='store',
                  dest='stats_file',default=None,
                  help="specify output file for fastq statistics")
+    p.add_option('--per-lane-stats-file',action='store',
+                 dest='per_lane_stats_file',default=None,
+                 help="specify output file for per-lane statistics")
     add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
@@ -588,6 +594,7 @@ if __name__ == "__main__":
                           bases_mask=options.bases_mask,
                           no_lane_splitting=options.no_lane_splitting,
                           stats_file=options.stats_file,
+                          per_lane_stats_file=options.per_lane_stats_file,
                           report_barcodes=options.report_barcodes,
                           barcodes_file=options.barcodes_file,
                           skip_bcl2fastq=options.skip_bcl2fastq,
@@ -598,6 +605,7 @@ if __name__ == "__main__":
         elif cmd == 'update_fastq_stats':
             d.generate_stats(unaligned_dir=options.unaligned_dir,
                              stats_file=options.stats_file,
+                             per_lane_stats_file=options.per_lane_stats_file,
                              nprocessors=options.nprocessors,
                              runner=options.runner)
         elif cmd == 'analyse_barcodes':

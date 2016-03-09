@@ -920,6 +920,7 @@ class AutoProcess:
                     unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,no_lane_splitting=None,
                     generate_stats=True,stats_file=None,
+                    per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
                     runner=None):
@@ -957,8 +958,10 @@ class AutoProcess:
           sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
           no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
-          stats_file          : if set then use this as the name of the output stats
-                                file.
+          stats_file          : if set then use this as the name of the output
+                                per-fastq stats file.
+          per_lane_stats_file : if set then use this as the name of the output
+                                per-lane stats file.
           report_barcodes     : if True then analyse barcodes in outputs (default is False
                                 i.e. don't do barcode analyses)
           barcodes_file       : if set then use this as the name of the report file for
@@ -977,7 +980,8 @@ class AutoProcess:
             self.make_project_metadata_file()
             # (Re)generate stats?
             if generate_stats:
-                self.generate_stats(stats_file,
+                self.generate_stats(stats_file=stats_file,
+                                    per_lane_stats_file=per_lane_stats_file,
                                     unaligned_dir=unaligned_dir,
                                     nprocessors=nprocessors,
                                     runner=runner)
@@ -1009,7 +1013,8 @@ class AutoProcess:
                 raise Exception("Bcl2fastq failed to produce expected outputs")
         # Generate statistics
         if generate_stats:
-            self.generate_stats(stats_file,
+            self.generate_stats(stats_file=stats_file,
+                                per_lane_stats_file=per_lane_stats_file,
                                 unaligned_dir=unaligned_dir,
                                 nprocessors=nprocessors,
                                 runner=runner)
@@ -1204,7 +1209,8 @@ class AutoProcess:
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             return
 
-    def generate_stats(self,stats_file=None,unaligned_dir=None,nprocessors=None,
+    def generate_stats(self,stats_file=None,per_lane_stats_file=None,
+                       unaligned_dir=None,nprocessors=None,
                        runner=None):
         """Generate statistics for FASTQ files
 
@@ -1214,11 +1220,13 @@ class AutoProcess:
 
         Arguments
           stats_file: (optional) specify the name and path of
-            a non-default file to write the statistics to.
-            Otherwise the name is taken from the settings for the
-            analysis project; if this is not defined then it
-            defaults to a file called 'stats.info' in the analysis
-            directory.
+            a non-default file to write the statistics to
+            (defaults to 'statistics.info' unless over-ridden by
+            local settings)
+          per_lane_stats_file: (optional) path for per-lane
+            statistics output file (defaults to
+            'per_lane_statistics.info' unless over-ridden by
+            local settings)
           unaligned_dir: (optional) where to look for Fastq files
             from bcl2fastq
           nprocessors: (optional) number of cores to use when
@@ -1227,12 +1235,17 @@ class AutoProcess:
             use for fastq_statistics.py
 
         """
-        # Get file name
+        # Get file names for output files
         if stats_file is None:
             if self.params['stats_file'] is not None:
                 stats_file = self.params['stats_file']
             else:
                 stats_file='statistics.info'
+        if per_lane_stats_file is None:
+            if self.params['per_lane_stats_file'] is not None:
+                per_lane_stats_file = self.params['per_lane_stats_file']
+            else:
+                per_lane_stats_file='per_lane_statistics.info'
         # Sort out unaligned_dir
         if unaligned_dir is None:
             if self.params.unaligned_dir is None:
@@ -1255,10 +1268,12 @@ class AutoProcess:
                                                 '--output',
                                                 os.path.join(self.params.analysis_dir,
                                                              stats_file),
+                                                '--per-lane-stats',
+                                                os.path.join(self.params.analysis_dir,
+                                                             per_lane_stats_file),
                                                 self.params.analysis_dir,
                                                 '--nprocessors',nprocessors,
                                                 '--force')
-        
         print "Generating statistics: running %s" % fastq_statistics
         fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
                                                              fastq_statistics.command_line,
@@ -1267,6 +1282,7 @@ class AutoProcess:
         fastq_statistics_job.start()
         fastq_statistics_job.wait()
         self.params['stats_file'] = stats_file
+        self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,truncate_barcodes=None,
@@ -2213,15 +2229,19 @@ class AutoProcess:
     def per_lane_stats_as_html_table(self):
         # Return per-lane statistics as string containing HTML table, or None if
         # no per-lane stats file was found
-        per_lane_stats_file = 'per_lane_stats.info'
-        if not os.path.exists(os.path.join(self.analysis_dir,per_lane_stats_file)):
+        per_lane_stats_file = self.params.per_lane_stats
+        if not per_lane_stats_file:
+            per_lane_stats_file = 'per_lane_stats.info'
+        if not os.path.exists(os.path.join(self.analysis_dir,
+                                           per_lane_stats_file)):
             logging.warning("No per-lane statistics file found")
             return None
-        else:
-            per_lane_stats_file = os.path.join(self.analysis_dir,per_lane_stats_file)
+        per_lane_stats_file = os.path.join(self.analysis_dir,
+                                           per_lane_stats_file)
         # Load the statistics and dump as HTML table
         table = ['<table class="per_lane_stats">']
-        per_lane_stats = TabFile.TabFile(per_lane_stats_file,first_line_is_header=True)
+        per_lane_stats = TabFile.TabFile(per_lane_stats_file,
+                                         first_line_is_header=True)
         html_line = ['<tr>']
         for field in per_lane_stats.header():
             html_line.append("<th>%s</th>" % field)

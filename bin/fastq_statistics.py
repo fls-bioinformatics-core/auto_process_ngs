@@ -39,6 +39,7 @@ import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.FASTQFile as FASTQFile 
 import bcftbx.utils as bcf_utils
+import auto_process_ngs.stats as auto_process_stats
 from multiprocessing import Pool
 
 #######################################################################
@@ -232,7 +233,12 @@ if __name__ == '__main__':
                               "run to be processed, plus assigned and unassigned reads "
                               "per lane)")
     p.add_option('-o','--output',action="store",dest="stats_file",default='statistics.info',
-                 help="name of output file (default is 'statistics.info')")
+                 help="name of output file for per-file statistics (default "
+                 "is 'statistics.info')")
+    p.add_option('-p','--per-lane-stats',action="store",
+                 dest="per_lane_stats_file",default='per_lane_statistics.info',
+                 help="name of output file for per-lane statistics (default "
+                 "is 'per_lane_statistics.info')")
     p.add_option("--unaligned",action="store",dest="unaligned_dir",default="Unaligned",
                  help="specify an alternative name for the 'Unaligned' directory "
                  "containing the fastq.gz files")
@@ -267,7 +273,16 @@ if __name__ == '__main__':
         stats.write(options.stats_file,include_header=True)
     print "Statistics written to %s" % options.stats_file
     # Per-lane sequencer statistics
-    seq_stats_file = 'per_lane_stats.info'
-    seqstats = sequencer_stats(stats)
-    seqstats.write(seq_stats_file,include_header=True)
-    print "Per-lane sequencer stats written to %s" % seq_stats_file
+    if illumina_data.lanes == [None]:
+        print "No lane information: per-lane statistics not generated"
+    else:
+        auto_process_stats.report_per_lane_stats(options.stats_file,
+                                                 options.per_lane_stats_file)
+        print "Per-lane sequencer stats written to %s" % \
+            options.per_lane_stats_file
+        # Summary of per-lane sequencer stats
+        per_lane_stats_summary
+        seqstats = sequencer_stats(stats)
+        seqstats.write(seq_stats_file,include_header=True)
+        print "Summary of per-lane sequencer stats written to %s" % \
+            seq_stats_file
