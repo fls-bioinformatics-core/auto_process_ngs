@@ -37,8 +37,7 @@ __version__ = "0.0.1"
 #######################################################################
 
 import optparse
-import bcftbx.TabFile as tf
-from bcftbx.IlluminaData import IlluminaFastq
+from auto_process_ngs import stats
 
 #######################################################################
 # Main script
@@ -55,42 +54,10 @@ if __name__ == '__main__':
                               "found in the top-level directory of sequencing runs "
                               "processed using auto_process.py.")
     options,args = p.parse_args()
-    if len(args) != 1:
+    if len(args) == 0:
+        stats_file = "statistics.info"
+    elif len(args) > 1:
         p.error("expects a single argument (statistics file)")
-
-    # Read in data
-    stats = tf.TabFile(args[0],first_line_is_header=True)
-    data = dict()
-    for line in stats:
-        # Collect sample name, lane etc
-        fq = IlluminaFastq(line['Fastq'])
-        if fq.read_number != 1:
-            # Only interested in R1 reads
-            continue
-        lane = fq.lane_number
-        sample = "%s/%s" % (line['Project'],line['Sample'])
-        nreads = line['Nreads']
-        # Update information in dict
-        if lane not in data:
-            data[lane] = dict()
-        try:
-            data[lane][sample] += nreads
-        except KeyError:
-            data[lane][sample] = nreads
-    # Get list of lanes
-    lanes = [int(x) for x in data.keys()]
-    lanes.sort()
-    # Report
-    for lane in lanes:
-        print "\nLane %d" % lane
-        samples = data[lane].keys()
-        samples.sort()
-        total_reads = sum([data[lane][x] for x in samples])
-        print "Total reads = %d" % total_reads
-        for sample in samples:
-            nreads = float(data[lane][sample])
-            if total_reads > 0:
-                print "- %s\t%d\t%.1f%%" % (sample,nreads,
-                                            nreads/total_reads*100.0)
-            else:
-                print "- %s\t%d\tn/a" % (sample,nreads)
+    else:
+        stats_file = args[0]
+    stats.report_per_lane_stats(stats_file)
