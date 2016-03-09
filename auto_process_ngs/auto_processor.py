@@ -19,6 +19,7 @@ import subprocess
 import logging
 import shutil
 import time
+import ast
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
@@ -2341,6 +2342,7 @@ class AutoProcess:
         - Platform
         - Run name
         - Run reference id
+        - Processing software
 
         For each project:
 
@@ -2379,6 +2381,11 @@ class AutoProcess:
             platform = 'unknown'
         if self.metadata.run_number is not None:
             run_number = self.metadata.run_number
+        try:
+            bcl2fastq_software = ast.literal_eval(
+                self.metadata.bcl2fastq_software)
+        except ValueError:
+            bcl2fastq_software = None
         # Generate report text
         report = []
         # Report header
@@ -2394,6 +2401,10 @@ class AutoProcess:
         report.append("Directory: %s" % self.params.analysis_dir)
         report.append("Endedness: %s" % \
                       ('Paired end' if analysis_dir.paired_end else 'Single end'))
+        report.append("Bcl2fastq: %s" %
+                      ('Unknown' if not bcl2fastq_software else
+                       "%s %s" % (bcl2fastq_software[1],
+                                  bcl2fastq_software[2])))
         report.append("")
         # Projects
         report.append("%d project%s:" % (analysis_dir.n_projects,
