@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 #
-#     analyse_illumina_stats.py: summarise per lane/per sample stats
+#     per_lane_statistics.py: summarise per lane/per sample stats
 #     Copyright (C) University of Manchester 2015 Peter Briggs
 #
 #########################################################################
 #
-# analyse_illumina_stats.py
+# per_lane_statistics.py
 #
 #########################################################################
 
-"""analyse_illumina_stats
+"""per_lane_statistics.py
 
 Utility to analyse the 'statistics.info' file from auto_process.py
 and summarise the number of reads per sample in each lane (and the
