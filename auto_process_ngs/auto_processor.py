@@ -2291,7 +2291,7 @@ class AutoProcess:
     def per_lane_stats_as_html_table(self):
         # Return per-lane statistics as string containing HTML table, or None if
         # no per-lane stats file was found
-        per_lane_stats_file = self.params.per_lane_stats
+        per_lane_stats_file = self.params.per_lane_stats_file
         if not per_lane_stats_file:
             per_lane_stats_file = 'per_lane_stats.info'
         if not os.path.exists(os.path.join(self.analysis_dir,
