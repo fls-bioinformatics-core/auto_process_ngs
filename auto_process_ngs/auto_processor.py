@@ -188,7 +188,7 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_params = allow_save
 
-    def save_parameters(self,alt_parameter_file=None,force=True):
+    def save_parameters(self,alt_parameter_file=None,force=False):
         """
         Save parameters to file
 
@@ -229,7 +229,7 @@ class AutoProcess:
         # File exists and can be read so set flag accordingly
         self._save_metadata = allow_save
 
-    def save_metadata(self,alt_metadata_file=None,force=True):
+    def save_metadata(self,alt_metadata_file=None,force=False):
         """
         Save metadata to file
 
