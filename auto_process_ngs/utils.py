@@ -859,6 +859,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         else:
             raise AttributeError,"Key '%s' not defined" % key
 
+    def __iter__(self):
+        return iter(self.__key_order)
+
     def load(self,filen,strict=True):
         """Load key-value pairs from a tab-delimited file
         
