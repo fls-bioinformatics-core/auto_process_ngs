@@ -92,63 +92,12 @@ class AutoProcess:
             except MissingParameterFileException, ex:
                 # No metadata file
                 logging.warning("Failed to load metadata: %s (ignored)" % ex)
-                if self.has_parameter_file:
-                    # Migrate relevant values across
-                    print "Migrating metadata values from parameter file:"
-                    for param in ('platform','run_number','source','assay'):
-                        logging.debug("Importing metadata item '%s': set to "
-                                      "'%s'" % (param,self.params[param]))
-                        self.metadata[param] = self.params[param]
-                else:
-                    # Attempt to detect sequencing platform
-                    self.metadata['platform'] = \
-                        platforms.get_sequencer_platform(self.analysis_dir)
-                    if self.metadata.platform is None:
-                        logging.warning("Unable to identify platform from "
-                                        "directory name")
-                    else:
-                        print "Setting 'platform' metadata item to %s" % \
-                            self.metadata.platform
+                logging.warning("Consider running metadata --update?")
             except Exception, ex:
                 # Some other problem
                 logging.error("Failed to load metadata: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
-            # Update missing metadata items
-            if self.metadata.run_name is None:
-                print "Attempting to set missing 'run_name' metadata item"
-                if self.has_parameter_file and self.params.data_dir is not None:
-                    # Get run name from data directory
-                    self.metadata['run_name'] = os.path.basename(
-                        self.params.data_dir)
-                elif self.analysis_dir.endswith('_analysis'):
-                    # Guess from analysis dir name
-                    self.metadata['run_name'] = os.path.basename(
-                        self.analysis_dir[:len('_analysis')])
-                else:
-                    # Unknown run name
-                    logging.warning("Unable to identify or guess run name")
-            if self.metadata.instrument_name is None or \
-               self.metadata.instrument_datestamp is None or \
-               self.metadata.instrument_run_number is None:
-                print "Attempting to set missing instrument metadata items"
-                if self.metadata.run_name is not None:
-                    # Extract from run name
-                    try:
-                        datestamp,instrument,run_number = \
-                            IlluminaData.split_run_name(self.metadata.run_name)
-                        if self.metadata.instrument_name is None:
-                            self.metadata['instrument_name'] = instrument
-                        if self.metadata.instrument_datestamp is None:
-                            self.metadata['instrument_datestamp'] = datestamp
-                        if self.metadata.instrument_run_number is None:
-                            self.metadata['instrument_run_number'] = run_number
-                    except Exception, ex:
-                        logging.warning("Unable to extract information from "
-                                        "run name")
-                else:
-                    # Unable to get missing data items
-                    logging.warning("Unable to set missing instrument metadata")
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object
@@ -249,6 +198,71 @@ class AutoProcess:
                 self.metadata.save(self.metadata_file)
             else:
                 self.metadata.save(alt_metadata_file)
+
+    def update_metadata(self):
+        """
+        Migrates and updates metadata values
+
+        """
+        # Migrate missing values from parameter file
+        if self.has_parameter_file:
+            # Migrate relevant values across
+            print "Migrating metadata values from parameter file"
+            for param in ('platform','run_number','source','assay'):
+                if param not in self.params:
+                    continue
+                if self.metadata[param] is None:
+                    logging.debug("Importing metadata item '%s': set to "
+                              "'%s'" % (param,self.params[param]))
+                    print "Importing metadata item '%s'" % param
+                    self.metadata[param] = self.params[param]
+        # Make guesses for other metadata
+        if self.metadata.platform is None:
+            # Attempt to detect sequencing platform
+            self.metadata['platform'] = \
+                platforms.get_sequencer_platform(self.analysis_dir)
+            if self.metadata.platform is None:
+                logging.warning("Unable to identify platform from "
+                                "directory name")
+            else:
+                print "Setting 'platform' metadata item to %s" % \
+                    self.metadata.platform
+        # Run name
+        if self.metadata.run_name is None:
+            print "Attempting to set missing 'run_name' metadata item"
+            if self.has_parameter_file and self.params.data_dir is not None:
+                # Get run name from data directory
+                self.metadata['run_name'] = os.path.basename(
+                    self.params.data_dir)
+            elif self.analysis_dir.endswith('_analysis'):
+                # Guess from analysis dir name
+                self.metadata['run_name'] = os.path.basename(
+                    self.analysis_dir[:len('_analysis')])
+            else:
+                # Unknown run name
+                logging.warning("Unable to identify or guess run name")
+        # Instrument-related metadata
+        if self.metadata.instrument_name is None or \
+           self.metadata.instrument_datestamp is None or \
+           self.metadata.instrument_run_number is None:
+            print "Attempting to set missing instrument metadata items"
+            if self.metadata.run_name is not None:
+                # Extract from run name
+                try:
+                    datestamp,instrument,run_number = \
+                        IlluminaData.split_run_name(self.metadata.run_name)
+                    if self.metadata.instrument_name is None:
+                        self.metadata['instrument_name'] = instrument
+                    if self.metadata.instrument_datestamp is None:
+                        self.metadata['instrument_datestamp'] = datestamp
+                    if self.metadata.instrument_run_number is None:
+                        self.metadata['instrument_run_number'] = run_number
+                except Exception, ex:
+                    logging.warning("Unable to extract information from "
+                                    "run name")
+            else:
+                # Unable to get missing data items
+                logging.warning("Unable to set missing instrument metadata")
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
