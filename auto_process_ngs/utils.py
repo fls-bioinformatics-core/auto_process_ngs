@@ -1035,7 +1035,14 @@ class AnalysisDirMetadata(MetadataDict):
                                   'platform':'platform',
                                   'assay': 'assay',
                                   'bcl2fastq_software': 'bcl2fastq_software',
+                                  'instrument_name': 'instrument_name',
+                                  'instrument_datestamp': 'instrument_datestamp',
+                                  'instrument_run_number': 'instrument_run_number',
                               },
+                              order=('run_name',
+                                     'platform',
+                                     'run_number',
+                                     'source',),
                               filen=filen)
 
 class AnalysisProjectInfo(MetadataDict):

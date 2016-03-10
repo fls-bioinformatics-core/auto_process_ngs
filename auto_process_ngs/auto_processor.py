@@ -128,6 +128,27 @@ class AutoProcess:
                 else:
                     # Unknown run name
                     logging.warning("Unable to identify or guess run name")
+            if self.metadata.instrument_name is None or \
+               self.metadata.instrument_datestamp is None or \
+               self.metadata.instrument_run_number is None:
+                print "Attempting to set missing instrument metadata items"
+                if self.metadata.run_name is not None:
+                    # Extract from run name
+                    try:
+                        datestamp,instrument,run_number = \
+                            IlluminaData.split_run_name(self.metadata.run_name)
+                        if self.metadata.instrument_name is None:
+                            self.metadata['instrument_name'] = instrument
+                        if self.metadata.instrument_datestamp is None:
+                            self.metadata['instrument_datestamp'] = datestamp
+                        if self.metadata.instrument_run_number is None:
+                            self.metadata['instrument_run_number'] = run_number
+                    except Exception, ex:
+                        logging.warning("Unable to extract information from "
+                                        "run name")
+                else:
+                    # Unable to get missing data items
+                    logging.warning("Unable to set missing instrument metadata")
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object
@@ -515,7 +536,6 @@ class AutoProcess:
         run_name = os.path.basename(self.analysis_dir)
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-            run_number = run_number
         except Exception, ex:
             logging.warning("Unable to extract information from run name '%s'" \
                             % run_name)
@@ -619,7 +639,7 @@ class AutoProcess:
             print "Identifying platform from data directory name"
             platform = platforms.get_sequencer_platform(data_dir)
         print "Platform identified as '%s'" % platform
-        # Run number
+        # Run datestamp, instrument name and instrument run number
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(
                 os.path.basename(self.analysis_dir))
@@ -628,7 +648,9 @@ class AutoProcess:
             logging.warning("Unable to extract information from run name '%s'" \
                             % os.path.basename(self.analysis_dir))
             logging.warning("Exception: %s" % ex)
-            run_number = ''
+            datestamp = None
+            instrument= None
+            run_number = None
         # Log dir
         self.set_log_dir(self.get_log_subdir('setup'))
         # Custom SampleSheet.csv file
@@ -699,6 +721,9 @@ class AutoProcess:
         # Store the metadata
         self.metadata['run_name'] = os.path.basename(data_dir)
         self.metadata['platform'] = platform
+        self.metadata['instrument_name'] = instrument
+        self.metadata['instrument_datestamp'] = datestamp
+        self.metadata['instrument_run_number'] = run_number
         self.metadata['assay'] = assay
         # Set flags to allow parameters etc to be saved back
         self._save_params = True
