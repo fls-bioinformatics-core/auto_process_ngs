@@ -540,8 +540,16 @@ class AutoProcess:
             logging.warning("Unable to extract information from run name '%s'" \
                             % run_name)
             logging.warning("Exception: %s" % ex)
+            instrument = None
             date_stamp = None
             run_number = None
+        # Update items from metadata
+        if self.metadata.instrument_name:
+            instrument = self.metadata.instrument_name
+        if self.metadata.instrument_datestamp:
+            date_stamp = self.metadata.instrument_datestamp
+        if self.metadata.instrument_run_number:
+            run_number = self.metadata.instrument_run_number
         if run_number is not None:
             run_number = str(run_number).lstrip('0')
         # Platform
