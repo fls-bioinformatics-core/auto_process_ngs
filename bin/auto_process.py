@@ -154,11 +154,15 @@ def add_metadata_command(cmdparser):
     """
     p  = cmdparser.add_command('metadata',help="Query and update analysis metadata",
                                usage="%prog metadata [OPTIONS] [ANALYSIS_DIR]",
-                               description="Query and change metadata associated with "
-                               "ANALYSIS_DIR.")
+                               description="Query and change metadata "
+                               "associated with ANALYSIS_DIR.")
     p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a metadata item. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
+    p.add_option('--update',action='store_true',dest='update',default=False,
+                 help="Automatically update metadata items where possible "
+                 "(e.g. for older analyses which have old or missing metadata "
+                 "files)")
     add_debug_option(p)
 
 def add_make_fastqs_command(cmdparser):
@@ -577,8 +581,11 @@ if __name__ == "__main__":
             analysis_dir = args[0]
         else:
             analysis_dir = os.getcwd()
-        d = AutoProcess(analysis_dir,allow_save_params=allow_save)
+        # Turn off allow save for 'params' and 'metadata' commands
+        if cmd == 'params' or cmd == 'metadata':
+            allow_save = False
         # Run the specified stage
+        d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         if cmd == 'make_fastqs':
             # Do the make_fastqs step
             d.make_fastqs(skip_rsync=options.skip_rsync,
@@ -641,10 +648,13 @@ if __name__ == "__main__":
                         d.set_param(key,value)
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
+                d.save_parameters(force=True)
             else:
                 d.print_params()
         elif cmd == 'metadata':
             # Update the metadata associated with the analysis
+            if options.update:
+                d.update_metadata()
             if options.key_value is not None:
                 for key_value in options.key_value:
                     try:
@@ -654,7 +664,11 @@ if __name__ == "__main__":
                         d.set_metadata(key,value)
                     except ValueError:
                         logging.error("Can't process '%s'" % options.key_value)
+            if options.key_value or options.update:
+                # Save updates to file
+                d.save_metadata(force=True)
             else:
+                # Only print values
                 d.print_metadata()
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,
