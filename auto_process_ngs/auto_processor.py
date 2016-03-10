@@ -114,6 +114,20 @@ class AutoProcess:
                 logging.error("Failed to load metadata: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
+            # Update missing metadata items
+            if self.metadata.run_name is None:
+                print "Attempting to set missing 'run_name' metadata item"
+                if self.has_parameter_file and self.params.data_dir is not None:
+                    # Get run name from data directory
+                    self.metadata['run_name'] = os.path.basename(
+                        self.params.data_dir)
+                elif self.analysis_dir.endswith('_analysis'):
+                    # Guess from analysis dir name
+                    self.metadata['run_name'] = os.path.basename(
+                        self.analysis_dir[:len('_analysis')])
+                else:
+                    # Unknown run name
+                    logging.warning("Unable to identify or guess run name")
 
     def add_directory(self,sub_dir):
         # Add a directory to the AutoProcess object
@@ -683,6 +697,7 @@ class AutoProcess:
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
         # Store the metadata
+        self.metadata['run_name'] = os.path.basename(data_dir)
         self.metadata['platform'] = platform
         self.metadata['assay'] = assay
         # Set flags to allow parameters etc to be saved back

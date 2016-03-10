@@ -1008,6 +1008,7 @@ class AnalysisDirMetadata(MetadataDict):
 
     The metadata items are:
 
+    run_name: name of the run
     run_number: run number assigned by local facility
     source: source of the data (e.g. local facility)
     platform: sequencing platform e.g. 'miseq'
@@ -1025,6 +1026,7 @@ class AnalysisDirMetadata(MetadataDict):
         """
         MetadataDict.__init__(self,
                               attributes = {
+                                  'run_name':'run_name',
                                   'run_number': 'run_number',
                                   'source': 'source',
                                   'platform':'platform',
