@@ -2631,6 +2631,13 @@ class AutoProcess:
         paired_end = 'yes' if analysis_dir.paired_end else 'no'
         # Generate report, one line per project
         report = []
+        nprojects = len(analysis_dir.projects)
+        if nprojects == 0:
+            report.append("No projects found")
+        else:
+            report.append("%s project%s found" % (nprojects,
+                                                  ('' if nprojects == 1
+                                                   else 's')))
         for project in analysis_dir.projects:
             project_line = [run_id,str(run_number),data_source,'']
             info = project.info
