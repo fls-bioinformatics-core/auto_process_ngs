@@ -1124,21 +1124,47 @@ class ProjectMetadataFile(TabFile.TabFile):
             projects in from.
 
         """
+        # List of expected fields
+        # Add new fields to this list
+        self._default_fields = ('Project',
+                                'Samples',
+                                'User',
+                                'Library',
+                                'Organism',
+                                'PI',
+                                'Comments')
+        # Map keywords to column names
+        self._kwmap = { 'Project': 'project_name',
+                        'Samples': 'sample_names',
+                        'User': 'user',
+                        'Library': 'library_type',
+                        'Organism': 'organism',
+                        'PI' : 'PI',
+                        'Comments': 'comments', }
+        # List of default values
+        self._default_values = { }
+        # Optional file to read from
         self.__filen = filen
-        TabFile.TabFile.__init__(self,filen=filen,
-                                 column_names=('Project',
-                                               'Samples',
-                                               'User',
-                                               'Library',
-                                               'Organism',
-                                               'PI',
-                                               'Comments'),
+        if self.__filen is None:
+            # No existing file so set the default
+            # fields to write to the file
+            self._fields = self._default_fields
+        else:
+            # Get columns from existing file
+            with open(self.__filen,'r') as fp:
+                header = fp.readline()
+                self._fields = header.rstrip('\n').lstrip('#').split('\t')
+        # Open the file
+        TabFile.TabFile.__init__(self,filen=self.__filen,
+                                 column_names=self._fields,
                                  first_line_is_header=True,
                                  convert=False)
+        # Add any missing columns
+        for field in self._default_fields:
+            if field not in self._fields:
+                self.appendColumn(field)
 
-    def add_project(self,project_name,sample_names,user=None,
-                    library_type=None,organism=None,PI=None,
-                    comments=None):
+    def add_project(self,project_name,sample_names,**kws):
         """Add information about a project into the file
 
         Arguments:
@@ -1152,14 +1178,31 @@ class ProjectMetadataFile(TabFile.TabFile):
             the project
 
         """
+        # Assemble dictionary with all values
+        values = { 'project_name': project_name,
+                   'sample_names': ','.join(sample_names), }
+        for kw in kws:
+            values[kw] = kws[kw]
+        # Build the data line to append to the file
+        data = []
+        for field in self._fields:
+            # Identify the keyword parameter for this field
+            try:
+                kw = self._kwmap[field]
+            except KeyError,ex:
+                raise ex
+            # Look up the assigned value
+            try:
+                value = values[kw]
+            except KeyError:
+                value = None
+            # Append to the data line
+            if value is None:
+                data.append('.')
+            else:
+                data.append(value)
         # Add project info to the metadata file
-        self.append(data=(project_name,
-                          ','.join(sample_names),
-                          '.' if user is None else user,
-                          '.' if library_type is None else library_type,
-                          '.' if organism is None else organism,
-                          '.' if PI is None else PI,
-                          '.' if comments is None else comments))
+        self.append(data=data)
 
     def project(self,name):
         """Return AttributeDictionary for a project
