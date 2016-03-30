@@ -2302,21 +2302,27 @@ class AutoProcess:
                                            per_lane_stats_file)
         # Load the statistics and dump as HTML table
         table = ['<table class="per_lane_stats">']
-        per_lane_stats = TabFile.TabFile(per_lane_stats_file,
-                                         first_line_is_header=True)
-        html_line = ['<tr>']
-        for field in per_lane_stats.header():
-            html_line.append("<th>%s</th>" % field)
-        html_line.append('</tr>')
-        table.append(''.join(html_line))
-        last_project = None
-        last_sample = None
-        for line in per_lane_stats:
-            html_line = ['<tr>']
-            for field in line:
-                html_line.append("<td>%s</td>" % field)
-            html_line.append('</tr>')
-            table.append(''.join(html_line))
+        with open(per_lane_stats_file,'r') as fp:
+            for line in fp:
+                line = line.rstrip('\n')
+                if not line:
+                    continue
+                html_line = ['<tr>']
+                if line.startswith('Lane '):
+                    html_line.append('<td colspan="4">%s</td>' % line)
+                elif line.startswith('Total reads = '):
+                    html_line.append('<td colspan="4">%s</td>' % line)
+                elif line.startswith('- '):
+                    items = line[2:].split('\t')
+                    project,sample = items[0].split('/')
+                    nreads = items[1]
+                    percent_reads = items[2]
+                    html_line.append('<td>%s</td>' % project)
+                    html_line.append('<td>%s</td>' % sample)
+                    html_line.append('<td>%s</td>' % nreads)
+                    html_line.append('<td>%s</td>' % percent_reads)
+                html_line.append('<tr>')
+                table.append(''.join(html_line))
         table.append('</table>')
         return '\n'.join(table)
         
