@@ -2153,6 +2153,17 @@ class AutoProcess:
                        self.metadata.platform)
         index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
                        ('Paired end' if analysis_dir.paired_end else 'Single end'))
+        try:
+            bcl2fastq_software = ast.literal_eval(
+                self.metadata.bcl2fastq_software)
+        except ValueError:
+            bcl2fastq_software = None
+        index_page.add("<tr><td class='param'>Bcl2fastq</td><td>%s</td></tr>" %
+                       ('unspecified' if not bcl2fastq_software else
+                       "%s %s" % (bcl2fastq_software[1],
+                                  bcl2fastq_software[2])))
+        index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
+                       self.run_reference_id)
         index_page.add("</table>")
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
