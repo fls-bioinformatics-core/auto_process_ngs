@@ -610,6 +610,7 @@ if __name__ == "__main__":
             d.merge_fastq_dirs(options.unaligned_dir,
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
+            d.set_log_dir(d.get_log_subdir(cmd))
             d.generate_stats(unaligned_dir=options.unaligned_dir,
                              stats_file=options.stats_file,
                              per_lane_stats_file=options.per_lane_stats_file,
