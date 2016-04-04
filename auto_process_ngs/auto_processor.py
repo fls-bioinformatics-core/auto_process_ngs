@@ -1260,7 +1260,12 @@ class AutoProcess:
                                                       name='bclToFastq',
                                                       working_dir=os.getcwd())
         bcl2fastq_job.start()
-        bcl2fastq_job.wait()
+        try:
+            bcl2fastq_job.wait()
+        except KeyboardInterrupt,ex:
+            logging.warning("Keyboard interrupt, terminating bcl2fastq")
+            bcl2fastq_job.terminate()
+            raise ex
         print "bcl2fastq completed"
         # Verify outputs
         try:
@@ -1344,7 +1349,12 @@ class AutoProcess:
                                                              name='fastq_statistics',
                                                              working_dir=self.analysis_dir)
         fastq_statistics_job.start()
-        fastq_statistics_job.wait()
+        try:
+            fastq_statistics_job.wait()
+        except KeyboardInterrupt,ex:
+            logging.warning("Keyboard interrupt, terminating fastq_statistics")
+            fastq_statistics_job.terminate()
+            raise ex
         self.params['stats_file'] = stats_file
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
