@@ -1152,6 +1152,8 @@ class AutoProcess:
         # Examine primary data
         primary_data = os.path.join(self.params.primary_data_dir,
                                     os.path.basename(self.params.data_dir))
+        if not os.path.isdir(primary_data):
+            raise Exception("Missing primary data directory: %s" % primary_data)
         # Bases mask
         if bases_mask is None:
             bases_mask = self.params.bases_mask
