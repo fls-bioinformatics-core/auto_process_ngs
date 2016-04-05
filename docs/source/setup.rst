@@ -106,45 +106,60 @@ files to be loaded before a specific step, for example::
 
 .. _required_bcl2fastq_versions:
 
-Required bcl2fastq versions
----------------------------
+Required bcl2fastq versions and other settings
+----------------------------------------------
 
 Different versions of Illumina's ``bcl2fastq`` software can be specified
-depending on the sequencer platform, by setting the appropriate parameters
-in the ``[bcl2fastq]`` directive.
+both as a default and dependent on the sequencer platform, by setting the
+appropriate parameters in the ``settings.ini`` file.
 
-For example, to specify the version to use when processing data from a
-NextSeq instrument to be specifically ``2.17.1.14``::
+The ``[bcl2fastq]`` directive specifies the defaults to use for all
+platforms in the absence of more specific settings, for example::
 
     [bcl2fastq]
-    ...
-    nextseq = 2.17.1.14
+    default_version = 1.8.4
+    nprocessors = 8
+
+These settings can be overriden for specific platforms, by creating optional
+directives of the form ``[platform:NAME]`` (where ``NAME`` is the name of the
+platform). For example to set the version to use when processing data from a
+NextSeq instrument to be specifically ``2.17.1.14``::
+
+    [platform:nextseq]
+    bcl2fastq = 2.17.1.14
 
 A range of versions can be specified by prefacing the version number by
 one of the operators ``>``, ``>=``, ``<=`` and ``<`` (``==`` can also be
 specified explicitly), for example::
 
-    nextseq = >=2.0
+    bcl2fastq = >=2.0
 
 Alternatively a comma-separated list can be provided::
 
-    hiseq = >=1.8.3,<2.0
+    bcl2fastq = >=1.8.3,<2.0
 
-The ``default_version`` sets the required version implicitly in the absence
-of an explicit specification, for example::
-
-    [bcl2fastq]
-    ...
-    default_version = 1.8.4
-    hiseq = None
-
-If the ``default_version`` is set to ``None`` then the highest available
+If no bcl2fastq version is explicitly specified then the highest available
 version will be used.
 
 .. note::
 
    This mechanism allows multiple ``bcl2fastq`` versions to be present
    in the environment simultaneously.
+
+.. warning::
+
+   Previously the ``[bcl2fastq]`` directive allowed the versions to be
+   set using platform names specified within that section, for example::
+
+        [bcl2fastq]
+        ...
+        hiseq = 1.8.4
+
+   This method is now deprecated in favour of the ``[platform:NAME]``
+   mechanism.
+
+   If this old method is detected then warnings are issued and the
+   software attempts to make an intelligent choice about the versions.
 
 Bash tab completion
 *******************
