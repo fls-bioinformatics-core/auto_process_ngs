@@ -220,6 +220,10 @@ def add_make_fastqs_command(cmdparser):
                             dest='no_lane_splitting',default=False,
                             help="don't split the output FASTQ files by lane "
                             "(bcl2fastq v2 only)")
+    bcl_to_fastq.add_option('--use-lane-splitting',action='store_true',
+                            dest='use_lane_splitting',default=False,
+                            help="split the output FASTQ files by lane "
+                            "(bcl2fastq v2 only)")
     bcl_to_fastq.add_option('--require-bcl2fastq-version',action='store',
                             dest='bcl2fastq_version',default=None,
                             help="explicitly specify version of bcl2fastq "
@@ -587,6 +591,16 @@ if __name__ == "__main__":
         # Run the specified stage
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         if cmd == 'make_fastqs':
+            # Deal with --no-lane-splitting
+            if options.no_lane_splitting and options.use_lane_splitting:
+                p.error("--no-lane-splitting and --use-lane-splitting "
+                        "are mutually exclusive")
+            elif options.no_lane_splitting:
+                no_lane_splitting = True
+            elif options.use_lane_splitting:
+                no_lane_splitting = False
+            else:
+                no_lane_splitting = None
             # Do the make_fastqs step
             d.make_fastqs(skip_rsync=options.skip_rsync,
                           nprocessors=options.nprocessors,
@@ -599,7 +613,7 @@ if __name__ == "__main__":
                           unaligned_dir=options.unaligned_dir,
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
-                          no_lane_splitting=options.no_lane_splitting,
+                          no_lane_splitting=no_lane_splitting,
                           stats_file=options.stats_file,
                           per_lane_stats_file=options.per_lane_stats_file,
                           report_barcodes=options.report_barcodes,

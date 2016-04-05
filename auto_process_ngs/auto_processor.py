@@ -1167,9 +1167,20 @@ class AutoProcess:
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
+        # Whether to use lane splitting
+        if no_lane_splitting is None:
+            try:
+                no_lane_splitting = self.settings.platform[self.metadata.platform].no_lane_splitting
+            except (KeyError,AttributeError):
+                pass
+            if no_lane_splitting is None:
+                no_lane_splitting = self.settings.bcl2fastq.no_lane_splitting
         # Determine which bcl2fastq software to use
         if require_bcl2fastq is None:
-            require_bcl2fastq = self.settings.bcl2fastq[self.metadata.platform]
+            try:
+                require_bcl2fastq = self.settings.platform[self.metadata.platform].bcl2fastq
+            except (KeyError,AttributeError):
+                pass
             if require_bcl2fastq is None:
                 require_bcl2fastq = self.settings.bcl2fastq.default_version
         if require_bcl2fastq is not None:
