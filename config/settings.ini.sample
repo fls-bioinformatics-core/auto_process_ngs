@@ -15,9 +15,15 @@ run_qc = None
 [bcl2fastq]
 nprocessors = 1
 default_version = <=1.8.4
-hiseq = None
-miseq = None
-nextseq = >=2.0
+no_lane_splitting = False
+
+# Platform specific settings
+# Make sections [platform:NAME] and add parameters to
+# override the default bcl2fastq settings (i.e. number of
+# processors, version, lane splitting etc)
+[platform:nextseq]
+bcl2fastq = >=2.0
+no_lane_splitting = True
 
 # fastq_stats settings
 [fastq_stats]

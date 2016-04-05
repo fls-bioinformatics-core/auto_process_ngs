@@ -110,15 +110,30 @@ class Settings:
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         # bcl2fastq
         self._sections.append('bcl2fastq')
-        self.bcl2fastq = AttributeDictionary()
-        self.bcl2fastq['nprocessors'] = config.getint('bcl2fastq','nprocessors',1)
-        self.bcl2fastq['default_version'] = config.get('bcl2fastq',
-                                                       'default_version',
-                                                       '<=1.8.4')
-        self.bcl2fastq['hiseq'] = config.get('bcl2fastq','hiseq',None)
-        self.bcl2fastq['miseq'] = config.get('bcl2fastq','miseq',None)
-        self.bcl2fastq['nextseq'] = config.get('bcl2fastq','nextseq',
-                                               '>=2.0')
+        self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
+        # Sequencing platform-specific defaults
+        self._sections.append('platform')
+        self.platform = AttributeDictionary()
+        for section in filter(lambda x: x.startswith('platform:'),
+                              config.sections()):
+            platform = section.split(':')[1]
+            self.platform[platform] = self.get_bcl2fastq_config(section,config)
+        # Handle deprecated bcl2fastq settings
+        for platform in ('hiseq','miseq','nextseq'):
+            if config.has_option('bcl2fastq',platform):
+                logging.warning("Deprecated setting in [bcl2fastq]: '%s'"
+                                % platform)
+            try:
+                bcl2fastq = self.platform[platform]['bcl2fastq']
+            except KeyError:
+                bcl2fastq = config.get('bcl2fastq',platform)
+                if bcl2fastq is None:
+                    continue
+                logging.warning("Setting 'bcl2fastq' in '[platform:%s]' to '%s'"
+                                % (platform,bcl2fastq))
+                if platform not in self.platform:
+                    self.platform[platform] = AttributeDictionary()
+                self.platform[platform]['bcl2fastq'] = bcl2fastq
         # fastq_stats
         self._sections.append('fastq_stats')
         self.fastq_stats = AttributeDictionary()
@@ -144,24 +159,84 @@ class Settings:
         self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
         self.qc_web_server['url'] = config.get('qc_web_server','url',None)
 
+    def get_bcl2fastq_config(self,section,config):
+        """
+        Retrieve bcl2fastq configuration options from .ini file
+
+        Given the name of a section (e.g. 'blc2fastq',
+        'platform:miseq'), fetch the bcl2fastq settings and return
+        in an AttributeDictionary object.
+
+        The options that can be extracted are:
+
+        - default_version
+        - bcl2fastq
+        - nprocessors
+        - no_lane_splitting
+
+        Arguments:
+          section (str): name of the section to retrieve the
+            settings from
+          config (Config): Config object with settings loaded
+
+        Returns:
+          AttributeDictionary: dictionary of option:value pairs.
+
+        """
+        values = AttributeDictionary()
+        if config.has_option(section,'default_version'):
+            values['default_version'] = config.get(section,
+                                                   'default_version',None)
+        if config.has_option(section,'bcl2fastq'):
+            values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
+        if config.has_option(section,'nprocessors'):
+            values['nprocessors'] = config.getint(section,'nprocessors',None)
+        if config.has_option(section,'no_lane_splitting'):
+            try:
+                no_lane_splitting = config.getboolean(section,
+                                                      'no_lane_splitting')
+            except (ValueError,AttributeError):
+                no_lane_splitting = None
+            values['no_lane_splitting'] = no_lane_splitting
+        return values
+
     def set(self,param,value):
         """
         Update a configuration parameter value
 
         Arguments:
-          param (str): an identifier of the form SECTION.ATTR
-            which specifies the parameter to update
+          param (str): an identifier of the form
+            SECTION[:SUBSECTION].ATTR which specifies the
+            parameter to update
           value (str): the new value of the parameter
 
         """
         section,attr = param.split('.')
-        getattr(self,section)[attr] = value
+        try:
+            section,subsection = section.split(':')
+            getattr(self,section)[subsection][attr] = value
+        except ValueError:
+            getattr(self,section)[attr] = value
+
+    def has_subsections(self,section):
+        """
+        Check if section contains subsections
+
+        Arguments:
+          section (str): name of the section to check
+
+        """
+        for item in getattr(self,section):
+            if not isinstance(getattr(self,section)[item],
+                              AttributeDictionary):
+                return False
+        return True
 
     def save(self):
         """
         Save the current configuration to the config file
 
-        If no config file was setting on initialisation then
+        If no config file was specified on initialisation then
         this method doesn't do anything.
 
         """
@@ -169,7 +244,11 @@ class Settings:
         if self.settings_file:
             config.read(self.settings_file)
             for section in config.sections():
-                values = getattr(self,section)
+                try:
+                    sec,subsec = section.split(':')
+                    values =  getattr(self,sec)[subsec]
+                except ValueError:
+                    values = getattr(self,section)
                 for attr in values:
                     config.set(section,attr,values[attr])
             config.write(open(self.settings_file,'w'))
@@ -186,7 +265,12 @@ class Settings:
         else:
             logging.warning("No settings file found, reporting built-in defaults")
         for section in self._sections:
-            show_dictionary(section,getattr(self,section))
+            if self.has_subsections(section):
+                for subsection in getattr(self,section):
+                    show_dictionary('%s:%s' % (section,subsection),
+                                    getattr(self,section)[subsection])
+            else:
+                show_dictionary(section,getattr(self,section))
 
 #######################################################################
 # Functions
