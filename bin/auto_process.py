@@ -216,6 +216,10 @@ def add_make_fastqs_command(cmdparser):
                             dest='ignore_missing_stats',default=False,
                             help="use the --ignore-missing-stats option for bcl2fastq (fill "
                             "in with zeroes when *.stats files are missing)")
+    bcl_to_fastq.add_option('--require-bcl2fastq-version',action='store',
+                            dest='bcl2fastq_version',default=None,
+                            help="explicitly specify version of bcl2fastq "
+                            "software to use (e.g. '1.8.4' or '>=2.0').")
     bcl_to_fastq.add_option('--no-lane-splitting',action='store_true',
                             dest='no_lane_splitting',default=False,
                             help="don't split the output FASTQ files by lane "
@@ -224,12 +228,21 @@ def add_make_fastqs_command(cmdparser):
                             dest='use_lane_splitting',default=False,
                             help="split the output FASTQ files by lane "
                             "(bcl2fastq v2 only)")
-    bcl_to_fastq.add_option('--require-bcl2fastq-version',action='store',
-                            dest='bcl2fastq_version',default=None,
-                            help="explicitly specify version of bcl2fastq "
-                            "software to use (e.g. '1.8.4' or '>=2.0').")
+    # Number of processors
+    default_nprocessors = []
+    for platform in __settings.platform:
+        if __settings.platform[platform].nprocessors is not None:
+            default_nprocessors.append("%s: %s" % 
+                                       (platform,
+                                        __settings.platform[platform].nprocessors))
+    if default_nprocessors:
+        default_nprocessors.append("other platforms: %s" %
+                                   __settings.bcl2fastq.nprocessors)
+    else:
+        default_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
+    default_nprocessors = ', '.join(default_nprocessors)
     add_nprocessors_option(bcl_to_fastq,None,
-                           default_display=__settings.bcl2fastq.nprocessors)
+                           default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
     # Statistics

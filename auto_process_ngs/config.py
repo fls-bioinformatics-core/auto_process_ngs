@@ -62,6 +62,11 @@ class Config(ConfigParser):
             return ConfigParser.getint(self,section,option)
         except TypeError:
             return default
+    def getboolean(self,section,option,default=None):
+        try:
+            return ConfigParser.getboolean(self,section,option)
+        except TypeError:
+            return default
     def getrunner(self,section,option,default='SimpleJobRunner'):
         try:
             return fetch_runner(self.get(section,option,default))

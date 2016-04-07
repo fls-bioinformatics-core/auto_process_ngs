@@ -184,20 +184,17 @@ class Settings:
 
         """
         values = AttributeDictionary()
-        if config.has_option(section,'default_version'):
-            values['default_version'] = config.get(section,
-                                                   'default_version',None)
-        if config.has_option(section,'bcl2fastq'):
+        if section == 'bcl2fastq':
+            values['default_version'] = config.get(section,'default_version',
+                                                   None)
+            values['nprocessors'] = config.getint(section,'nprocessors',1)
+            no_lane_splitting = config.getboolean(section,'no_lane_splitting',
+                                                  False)
+        else:
             values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
-        if config.has_option(section,'nprocessors'):
             values['nprocessors'] = config.getint(section,'nprocessors',None)
-        if config.has_option(section,'no_lane_splitting'):
-            try:
-                no_lane_splitting = config.getboolean(section,
-                                                      'no_lane_splitting')
-            except (ValueError,AttributeError):
-                no_lane_splitting = None
-            values['no_lane_splitting'] = no_lane_splitting
+            no_lane_splitting = config.getboolean(section,'no_lane_splitting',
+                                                  None)
         return values
 
     def set(self,param,value):
