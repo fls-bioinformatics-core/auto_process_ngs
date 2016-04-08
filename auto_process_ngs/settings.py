@@ -223,8 +223,7 @@ class Settings:
         """
         try:
             section,subsection = section.split(':')
-            if section in self._sections:
-            else:
+            if section not in self._sections:
                 self.add_section(section)
             getattr(self,section)[subsection] = AttributeDictionary()
         except ValueError:
