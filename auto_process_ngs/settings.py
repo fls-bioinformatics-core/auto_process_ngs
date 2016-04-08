@@ -62,6 +62,19 @@ from bcftbx.utils import AttributeDictionary
 from config import Config
 
 #######################################################################
+# Internal values
+#######################################################################
+
+# Location of the top-level directory of the installation
+# Use 'get_install_dir' function to access this externally
+__INSTALL_DIR__ = os.path.abspath(os.path.normpath(
+    os.path.join(os.path.dirname(sys.argv[0]),'..')))
+
+# Location of the configuration directory of the installation
+# Use 'get_config_dir' function to access this externally
+__CONFIG_DIR__ = os.path.join(__INSTALL_DIR__,'config')
+
+#######################################################################
 # Classes
 #######################################################################
 
@@ -273,6 +286,18 @@ class Settings:
 # Functions
 #######################################################################
 
+def get_install_dir():
+    """
+    Return location of top-level directory of installation
+    """
+    return __INSTALL_DIR__
+
+def get_config_dir():
+    """
+    Return location of top-level directory of installation
+    """
+    return __CONFIG_DIR__
+
 def locate_settings_file(name='settings.ini',create_from_sample=True):
     """
     Locate configuration settings file
@@ -296,10 +321,10 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     found.
 
     """
-    install_dir = os.path.abspath(os.path.normpath(
-        os.path.join(os.path.dirname(sys.argv[0]),'..')))
+    install_dir = __INSTALL_DIR__
+    config_dir = __CONFIG_DIR__
     config_file_dirs = (os.getcwd(),
-                        os.path.join(install_dir,'config'),
+                        config_dir,
                         install_dir,)
     settings_file = None
     sample_settings_file = None
