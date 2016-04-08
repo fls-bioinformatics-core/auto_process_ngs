@@ -100,23 +100,20 @@ class Settings:
             # Look for sample settings file
             config.read(os.path.join(get_config_dir(),'settings.ini.sample'))
         # General parameters
-        self._sections.append('general')
-        self.general = AttributeDictionary()
+        self.add_section('general')
         self.general['default_runner'] = config.get('general','default_runner',
                                                     'SimpleJobRunner')
         self.general['max_concurrent_jobs'] = config.getint('general',
                                                             'max_concurrent_jobs',12)
         # modulefiles
-        self._sections.append('modulefiles')
-        self.modulefiles = AttributeDictionary()
+        self.add_section('modulefiles')
         self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         # bcl2fastq
-        self._sections.append('bcl2fastq')
+        self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
         # Sequencing platform-specific defaults
-        self._sections.append('platform')
-        self.platform = AttributeDictionary()
+        self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
                               config.sections()):
             platform = section.split(':')[1]
@@ -138,27 +135,23 @@ class Settings:
                     self.platform[platform] = AttributeDictionary()
                 self.platform[platform]['bcl2fastq'] = bcl2fastq
         # fastq_stats
-        self._sections.append('fastq_stats')
-        self.fastq_stats = AttributeDictionary()
+        self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
         # Define runners for specific jobs
-        self._sections.append('runners')
-        self.runners = AttributeDictionary()
+        self.add_section('runners')
         for name in ('bcl2fastq','qc','stats',):
             self.runners[name] = config.getrunner('runners',name,
                                                   self.general.default_runner)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
-        self._sections.append('archive')
-        self.archive = AttributeDictionary()
+        self.add_section('archive')
         self.archive['dirn'] = config.get('archive','dirn',None)
         self.archive['log'] = config.get('archive','log',None)
         self.archive['group'] = config.get('archive','group',None)
         self.archive['chmod'] = config.get('archive','chmod',None)
         # Information for uploading QC reports
         # dirn should be a directory in the form [[user@]host:]path]
-        self._sections.append('qc_web_server')
-        self.qc_web_server = AttributeDictionary()
+        self.add_section('qc_web_server')
         self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
         self.qc_web_server['url'] = config.get('qc_web_server','url',None)
 
@@ -217,6 +210,26 @@ class Settings:
             getattr(self,section)[subsection][attr] = value
         except ValueError:
             getattr(self,section)[attr] = value
+
+    def add_section(self,section):
+        """
+        Add a new section
+
+        Arguments:
+          section (str): an identifier of the form
+            SECTION[:SUBSECTION] which specifies the
+            section to add
+
+        """
+        try:
+            section,subsection = section.split(':')
+            if section in self._sections:
+            else:
+                self.add_section(section)
+            getattr(self,section)[subsection] = AttributeDictionary()
+        except ValueError:
+            self._sections.append(section)
+            setattr(self,section,AttributeDictionary())
 
     def has_subsections(self,section):
         """
