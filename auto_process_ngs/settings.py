@@ -201,13 +201,13 @@ class Settings:
             values['default_version'] = config.get(section,'default_version',
                                                    None)
             values['nprocessors'] = config.getint(section,'nprocessors',1)
-            no_lane_splitting = config.getboolean(section,'no_lane_splitting',
-                                                  False)
+            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
+                                                            False)
         else:
             values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
             values['nprocessors'] = config.getint(section,'nprocessors',None)
-            no_lane_splitting = config.getboolean(section,'no_lane_splitting',
-                                                  None)
+            values['no_lane_splitting']= config.getboolean(section,'no_lane_splitting',
+                                                           None)
         return values
 
     def set(self,param,value):
