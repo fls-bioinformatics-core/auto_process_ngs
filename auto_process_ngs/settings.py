@@ -255,15 +255,20 @@ class Settings:
         """
         config = Config()
         if self.settings_file:
-            config.read(self.settings_file)
-            for section in config.sections():
-                try:
-                    sec,subsec = section.split(':')
-                    values =  getattr(self,sec)[subsec]
-                except ValueError:
+            for section in self._sections:
+                if not self.has_subsections(section):
+                    name = section
                     values = getattr(self,section)
-                for attr in values:
-                    config.set(section,attr,values[attr])
+                    config.add_section(name)
+                    for attr in values:
+                        config.set(name,attr,values[attr])
+                else:
+                    for subsection in getattr(self,section):
+                        name = "%s:%s" % (section,subsection)
+                        values = getattr(self,section)[subsection]
+                        config.add_section(name)
+                        for attr in values:
+                            config.set(name,attr,values[attr])
             config.write(open(self.settings_file,'w'))
         else:
             logging.warning("No settings file found, nothing saved")
