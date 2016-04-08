@@ -13,7 +13,8 @@ class TestSettings(unittest.TestCase):
     def test_sample_settings_file(self):
         sample_settings_file = os.path.join(get_config_dir(),
                                             'settings.ini.sample')
-        self.assertTrue(os.path.isfile(sample_settings_file))
+        self.assertTrue(os.path.isfile(sample_settings_file),
+                        "Missing sample file %s" % sample_settings_file)
         s = Settings(sample_settings_file)
         # General settings
         self.assertEqual(s.general.default_runner,'SimpleJobRunner')
