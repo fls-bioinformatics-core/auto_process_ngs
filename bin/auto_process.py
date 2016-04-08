@@ -220,14 +220,43 @@ def add_make_fastqs_command(cmdparser):
                             dest='bcl2fastq_version',default=None,
                             help="explicitly specify version of bcl2fastq "
                             "software to use (e.g. '1.8.4' or '>=2.0').")
+    # Use lane splitting
+    # Determine defaults to report to user
+    no_lane_splitting_platforms = []
+    use_lane_splitting_platforms = []
+    for platform in __settings.platform:
+        if __settings.platform[platform].no_lane_splitting is not None:
+            if __settings.platform[platform].no_lane_splitting:
+                no_lane_splitting_platforms.append(platform)
+            else:
+                use_lane_splitting_platforms.append(platform)
+    if __settings.bcl2fastq.no_lane_splitting:
+        if use_lane_splitting_platforms:
+            default_no_lane_splitting = \
+                                        " (default for all platforms except %s)" % \
+                                        ', '.join(use_lane_splitting_platforms)
+            default_use_lane_splitting = " (default for %s)" % \
+                                         ', '.join(use_lane_splitting_platforms)
+        else:
+            default_no_lane_splitting = " (default for all platforms)"
+            default_use_lane_splitting = ""
+    else:
+        if no_lane_splitting_platforms:
+            default_use_lane_splitting = \
+                                        " (default for all platforms except %s)" % \
+                                        ', '.join(no_lane_splitting_platforms)
+            default_no_lane_splitting = " (default for %s)" % \
+                                         ', '.join(no_lane_splitting_platforms)
+        else:
+            default_use_lane_splitting = " (default for all platforms)"
     bcl_to_fastq.add_option('--no-lane-splitting',action='store_true',
                             dest='no_lane_splitting',default=False,
                             help="don't split the output FASTQ files by lane "
-                            "(bcl2fastq v2 only)")
+                            "(bcl2fastq v2 only)%s" % default_no_lane_splitting)
     bcl_to_fastq.add_option('--use-lane-splitting',action='store_true',
                             dest='use_lane_splitting',default=False,
                             help="split the output FASTQ files by lane "
-                            "(bcl2fastq v2 only)")
+                            "(bcl2fastq v2 only)%s" % default_use_lane_splitting)
     # Number of processors
     default_nprocessors = []
     for platform in __settings.platform:
