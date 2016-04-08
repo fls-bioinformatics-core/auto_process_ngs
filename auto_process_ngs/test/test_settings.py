@@ -11,7 +11,8 @@ class TestSettings(unittest.TestCase):
     """Tests for the Settings class
     """
     def test_sample_settings_file(self):
-        sample_settings_file = os.path.join(CONFIG_DIR,'settings.ini.sample')
+        sample_settings_file = os.path.join(get_config_dir(),
+                                            'settings.ini.sample')
         self.assertTrue(os.path.isfile(sample_settings_file))
         s = Settings(sample_settings_file)
         # General settings
