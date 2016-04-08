@@ -297,9 +297,9 @@ def get_install_dir():
     """
     path = os.path.dirname(__file__)
     while path != os.sep:
-        print path
         if os.path.isdir(os.path.join(path,'config')) and \
            os.path.isfile(os.path.join(path,'config','settings.ini.sample')):
+            logging.debug("Found install dir: %s" % path)
             return os.path.abspath(os.path.normpath(path))
         path = os.path.dirname(path)
     return os.path.dirname(__file__)
@@ -313,6 +313,7 @@ def get_config_dir():
 
     """
     path = os.path.join(get_install_dir(),'config')
+    logging.debug("Putative config dir: %s" % path)
     if os.path.isdir(path):
         return path
     else:
