@@ -129,6 +129,10 @@ def add_config_command(cmdparser):
     p.add_option('--set',action='append',dest='key_value',default=None,
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
+    p.add_option('--add',action='append',dest='new_section',default=None,
+                 help="Add a new section called SECTION to the config. To add a new "
+                 "platform, use 'platform:NAME'. Multiple --add options can be "
+                 "specified.")
     add_debug_option(p)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
@@ -587,17 +591,28 @@ if __name__ == "__main__":
             # Create new settings file and reload
             auto_process_ngs.settings.locate_settings_file()
             __settings = auto_process_ngs.settings.Settings()
-        if options.key_value is not None:
-            # Update parameters
-            for key_value in options.key_value:
-                try:
-                    i = key_value.index('=')
-                    key = key_value[:i]
-                    value = key_value[i+1:].strip("'").strip('"')
-                    print "Setting '%s' to '%s'" % (key,value)
-                    __settings.set(key,value)
-                except ValueError:
-                    logging.error("Can't process '%s'" % options.key_value)
+        if options.key_value or options.new_section:
+            if options.new_section is not None:
+                # Add new sections
+                for new_section in options.new_section:
+                    try:
+                        new_section = new_section.strip("'").strip('"')
+                        print "Adding section '%s'" % new_section
+                        __settings.add_section(new_section)
+                    except ValueError:
+                        logging.error("Can't process '%s'" % options.section)
+            if options.key_value is not None:
+                # Update parameters
+                for key_value in options.key_value:
+                    try:
+                        i = key_value.index('=')
+                        key = key_value[:i]
+                        value = key_value[i+1:].strip("'").strip('"')
+                        print "Setting '%s' to '%s'" % (key,value)
+                        __settings.set(key,value)
+                    except ValueError:
+                        logging.error("Can't process '%s'" % options.key_value)
+            # Save the updated settings to file
             __settings.save()
         else:
             # Report the current configuration settings
