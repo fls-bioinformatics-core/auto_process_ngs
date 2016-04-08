@@ -65,7 +65,7 @@ class Config(ConfigParser):
     def getboolean(self,section,option,default=None):
         try:
             return ConfigParser.getboolean(self,section,option)
-        except TypeError:
+        except (TypeError,AttributeError):
             return default
     def getrunner(self,section,option,default='SimpleJobRunner'):
         try:
