@@ -96,6 +96,9 @@ class Settings:
         config = Config()
         if self.settings_file:
             config.read(self.settings_file)
+        else:
+            # Look for sample settings file
+            config.read(os.path.join(get_config_dir(),'settings.ini.sample'))
         # General parameters
         self._sections.append('general')
         self.general = AttributeDictionary()
