@@ -62,19 +62,6 @@ from bcftbx.utils import AttributeDictionary
 from config import Config
 
 #######################################################################
-# Internal values
-#######################################################################
-
-# Location of the top-level directory of the installation
-# Use 'get_install_dir' function to access this externally
-__INSTALL_DIR__ = os.path.abspath(os.path.normpath(
-    os.path.join(os.path.dirname(sys.argv[0]),'..')))
-
-# Location of the configuration directory of the installation
-# Use 'get_config_dir' function to access this externally
-__CONFIG_DIR__ = os.path.join(__INSTALL_DIR__,'config')
-
-#######################################################################
 # Classes
 #######################################################################
 
@@ -206,8 +193,8 @@ class Settings:
         else:
             values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
             values['nprocessors'] = config.getint(section,'nprocessors',None)
-            values['no_lane_splitting']= config.getboolean(section,'no_lane_splitting',
-                                                           None)
+            values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
+                                                            None)
         return values
 
     def set(self,param,value):
@@ -289,14 +276,44 @@ class Settings:
 def get_install_dir():
     """
     Return location of top-level directory of installation
+
+    This is a directory one or more level above the location of this
+    module which contains a 'config' subdir with a 'settings.ini.sample'
+    file, for example:
+
+    If this file is located in:
+
+    /opt/auto_process/lib/python2.7/site-packages/auto_process_ngs
+
+    then each level will be searched until a matching 'config' dir is
+    located.
+
+    If it can't be located then the directory of this module is
+    returned.
+
     """
-    return __INSTALL_DIR__
+    path = os.path.dirname(__file__)
+    while path != os.sep:
+        print path
+        if os.path.isdir(os.path.join(path,'config')) and \
+           os.path.isfile(os.path.join(path,'config','settings.ini.sample')):
+            return os.path.abspath(os.path.normpath(path))
+        path = os.path.dirname(path)
+    return os.path.dirname(__file__)
 
 def get_config_dir():
     """
-    Return location of top-level directory of installation
+    Return location of config directory
+
+    Returns the path to the 'config' directory, or None if it doesn't
+    exist.
+
     """
-    return __CONFIG_DIR__
+    path = os.path.join(get_install_dir(),'config')
+    if os.path.isdir(path):
+        return path
+    else:
+        return None
 
 def locate_settings_file(name='settings.ini',create_from_sample=True):
     """
@@ -321,8 +338,8 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     found.
 
     """
-    install_dir = __INSTALL_DIR__
-    config_dir = __CONFIG_DIR__
+    install_dir = get_install_dir()
+    config_dir = get_config_dir()
     config_file_dirs = (os.getcwd(),
                         config_dir,
                         install_dir,)
