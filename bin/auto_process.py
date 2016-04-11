@@ -130,8 +130,8 @@ def add_config_command(cmdparser):
                  help="Set the value of a parameter. KEY_VALUE should be of the form "
                  "'<param>=<value>'. Multiple --set options can be specified.")
     p.add_option('--add',action='append',dest='new_section',default=None,
-                 help="Add a new section called SECTION to the config. To add a new "
-                 "platform, use 'platform:NAME'. Multiple --add options can be "
+                 help="Add a new section called NEW_SECTION to the config. To add a "
+                 "new platform, use 'platform:NAME'. Multiple --add options can be "
                  "specified.")
     add_debug_option(p)
     # Deprecated options
@@ -237,30 +237,36 @@ def add_make_fastqs_command(cmdparser):
     if __settings.bcl2fastq.no_lane_splitting:
         if use_lane_splitting_platforms:
             default_no_lane_splitting = \
-                                        " (default for all platforms except %s)" % \
+                                        "Used by default for all platforms except %s" % \
                                         ', '.join(use_lane_splitting_platforms)
-            default_use_lane_splitting = " (default for %s)" % \
+            default_use_lane_splitting = "Used by default for %s" % \
                                          ', '.join(use_lane_splitting_platforms)
         else:
-            default_no_lane_splitting = " (default for all platforms)"
+            default_no_lane_splitting = "Default for all platforms"
             default_use_lane_splitting = ""
     else:
         if no_lane_splitting_platforms:
             default_use_lane_splitting = \
-                                        " (default for all platforms except %s)" % \
+                                        "Used by default for all platforms except %s" % \
                                         ', '.join(no_lane_splitting_platforms)
-            default_no_lane_splitting = " (default for %s)" % \
+            default_no_lane_splitting = "Used by default for %s" % \
                                          ', '.join(no_lane_splitting_platforms)
         else:
-            default_use_lane_splitting = " (default for all platforms)"
+            default_use_lane_splitting = "Default for all platforms"
+    if default_use_lane_splitting:
+        default_use_lane_splitting = ". "+default_use_lane_splitting
+    if default_no_lane_splitting:
+        default_no_lane_splitting = ". "+default_no_lane_splitting
     bcl_to_fastq.add_option('--no-lane-splitting',action='store_true',
                             dest='no_lane_splitting',default=False,
                             help="don't split the output FASTQ files by lane "
-                            "(bcl2fastq v2 only)%s" % default_no_lane_splitting)
+                            "(bcl2fastq v2 only; turn off using "
+                            "--use-lane-splitting)%s" % default_no_lane_splitting)
     bcl_to_fastq.add_option('--use-lane-splitting',action='store_true',
                             dest='use_lane_splitting',default=False,
                             help="split the output FASTQ files by lane "
-                            "(bcl2fastq v2 only)%s" % default_use_lane_splitting)
+                            "(bcl2fastq v2 only; turn off using "
+                            "--no-lane-splitting)%s" % default_use_lane_splitting)
     # Number of processors
     default_nprocessors = []
     for platform in __settings.platform:
