@@ -287,7 +287,7 @@ def output(counts,filen):
 
     """
     # Output all barcodes to file
-    print "Writing all counts to file '%s'" % counts_file
+    print "Writing all counts to file '%s'" % filen
     fp = open(filen,'w')
     for i,seq in enumerate(ordered_seqs(counts)):
         fp.write("%d\t%s\t%d\n" % (i+1,seq,counts[seq]))
