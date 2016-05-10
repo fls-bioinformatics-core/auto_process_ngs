@@ -2465,6 +2465,7 @@ class AutoProcess:
         - Run name
         - Run reference id
         - Processing software
+        - Assay (i.e. sequencing kit)
 
         For each project:
 
@@ -2508,6 +2509,10 @@ class AutoProcess:
                 self.metadata.bcl2fastq_software)
         except ValueError:
             bcl2fastq_software = None
+        if self.metadata.assay is not None:
+            assay = self.metadata.assay
+        else:
+            assay = ''
         # Generate report text
         report = []
         # Report header
@@ -2527,6 +2532,7 @@ class AutoProcess:
                       ('Unknown' if not bcl2fastq_software else
                        "%s %s" % (bcl2fastq_software[1],
                                   bcl2fastq_software[2])))
+        report.append("Assay    : %s" % assay)
         report.append("")
         # Projects
         report.append("%d project%s:" % (analysis_dir.n_projects,
