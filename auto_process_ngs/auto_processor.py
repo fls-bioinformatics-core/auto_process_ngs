@@ -32,6 +32,7 @@ import utils
 import simple_scheduler
 import bcl2fastq_utils
 import settings
+from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
 #######################################################################
@@ -2746,11 +2747,3 @@ class AutoProcess:
                 metadata_ok = False
                 logging.warning("Metadata item '%s' is not set" % item)
         return metadata_ok
-
-#######################################################################
-# Custom exceptions
-#######################################################################
-
-class MissingParameterFileException(Exception):
-    """Used to indicate missing auto_process.info file
-    """
