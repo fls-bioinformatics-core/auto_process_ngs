@@ -252,6 +252,7 @@ def add_make_fastqs_command(cmdparser):
             default_no_lane_splitting = "Used by default for %s" % \
                                          ', '.join(no_lane_splitting_platforms)
         else:
+            default_no_lane_splitting = ""
             default_use_lane_splitting = "Default for all platforms"
     if default_use_lane_splitting:
         default_use_lane_splitting = ". "+default_use_lane_splitting
