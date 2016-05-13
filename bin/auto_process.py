@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_process.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-15 Peter Briggs
+#     Copyright (C) University of Manchester 2013-16 Peter Briggs
 #
 #########################################################################
 #
@@ -44,6 +44,7 @@ Additional commands are available:
     analyse_barcodes
     merge_fastq_dirs
     update_fastq_stats
+    readme
 
 but these are not part of the standard workflow - they are used for
 special cases and testing.
@@ -456,6 +457,19 @@ def add_report_command(cmdparser):
                  help="print summary report suitable for record-keeping")
     add_debug_option(p)
 
+def add_readme_command(cmdparser):
+    """Create a parser for the 'readme' command
+    """
+    p = cmdparser.add_command('readme',help="Add or amend top-level README file",
+                              usage="%prog readme [OPTIONS] [ANALYSIS_DIR]",
+                              description="Add or amend a README file in the "
+                              "analysis directory DIR.")
+    p.add_option('--init',action='store_true',dest='init',default=False,
+                 help="create a new README file")
+    p.add_option('--edit',action='store_true',dest='edit',default=False,
+                 help="bring up README file in an editor to make changes")
+    add_debug_option(p)
+
 def add_clone_command(cmdparser):
     """Create a parser for the 'clone' command
     """
@@ -556,6 +570,7 @@ if __name__ == "__main__":
     add_publish_qc_command(p)
     add_archive_command(p)
     add_report_command(p)
+    add_readme_command(p)
     add_clone_command(p)
     add_analyse_barcodes_command(p)
     add_merge_fastq_dirs_command(p)
@@ -749,6 +764,16 @@ if __name__ == "__main__":
             else:
                 # Only print values
                 d.print_metadata()
+        elif cmd == 'readme':
+            if options.init:
+                d.init_readme()
+            elif options.edit:
+                d.edit_readme()
+            else:
+                if d.readme_file is not None:
+                    print d.readme_file
+                else:
+                    print "No README file for %s" % d.analysis_dir
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,
                                         platform=options.platform,

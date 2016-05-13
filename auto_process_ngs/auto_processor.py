@@ -264,6 +264,32 @@ class AutoProcess:
                 # Unable to get missing data items
                 logging.warning("Unable to set missing instrument metadata")
 
+    def init_readme(self):
+        """
+        Create a new README file
+        """
+        if self.readme_file is None:
+            readme_file = os.path.join(self.analysis_dir,'README')
+            print "Initialising %s" % readme_file
+            with open(readme_file,'w') as fp:
+                title = "Processing notes for %s" % \
+                        os.path.basename(self.analysis_dir)
+                fp.write("%s\n%s\n\n\n--" % (title,'='*len(title)))
+        else:
+            logging.warning("'%s' already exists" % self.readme_file)
+
+    def edit_readme(self,editor='vi'):
+        """
+        Bring up README in an editor
+        """
+        if self.readme_file is None:
+            logging.error("No README file to edit")
+            return
+        editor = editor.split(' ')
+        edit_cmd = applications.Command(editor[0],*editor[1:])
+        edit_cmd.add_args(self.readme_file)
+        edit_cmd.run_subprocess()
+
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
         if unaligned_dir is None:
@@ -516,14 +542,16 @@ class AutoProcess:
                                    "place to put custom scripts and programs\n")
 
     @property
-    def readme(self):
+    def readme_file(self):
         # If the analysis dir contains a README file then
         # return the full path; otherwise return None
-        readme = os.path.join(self.analysis_dir,"README.txt")
-        if os.path.isfile(readme):
-            return readme
-        else:
-            return None
+        readme_file = None
+        for name in ('README','README.txt'):
+            readme_file = os.path.join(self.analysis_dir,name)
+            if os.path.isfile(readme_file):
+                return readme_file
+        # No match found
+        return None
 
     @property
     def run_reference_id(self):
