@@ -65,6 +65,33 @@ the Linux ``md5sum`` program to verify the integrity of the downloads.
    This utility is stand-alone so it can be sent to end users and
    used independently of other components of the autoprocess package.
 
+``export_to_galaxy.py``: export FASTQs to a data library in a local Galaxy instance
+***********************************************************************************
+
+The ``export_to_galaxy.py`` utility will upload FASTQ files from a run into
+a data library on a local Galaxy instance::
+
+    export_to_galaxy.py http://localhost:8080 "MISeq Data" /mnt/galaxy-data RUN_DIR
+
+The script performs the following actions:
+
+ * Copy uncompressed versions of the FASTQ files from ``RUN_DIR`` to a
+   ``RUN/PROJECT`` directory structure under the target directory (e.g.
+   ``/mnt/galaxy-data``)
+ * Make a new folder for the run in the target data library (e.g.
+   ``MISeq Data``) with subfolders for each project linked to the
+   uncompressed FASTQ files created in the previous step.
+
+.. note::
+
+   The destination directory must be mounted locally from both where the
+   ``export_to_galaxy.py`` utility is being run, and the Galaxy server
+   itself.
+
+.. note::
+
+   The target data library must already exist on the Galaxy server.
+
 ``update_project_metadata.py``: manage metadata associated with a project
 *************************************************************************
 
