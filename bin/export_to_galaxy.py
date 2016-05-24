@@ -52,11 +52,6 @@ if __name__ == "__main__":
     dest = args[2]
     rundir = args[3]
 
-    # Turn off SSL certificate verification?
-    if opts.no_verify:
-        logging.warning("SSL certificate verification disabled")
-        turn_off_urllib3_warnings()
-
     # Subset of projects
     if opts.projects is not None:
         projects = opts.projects.split(',')

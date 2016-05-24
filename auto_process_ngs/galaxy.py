@@ -175,6 +175,10 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
     # Split up destination path
     user,server,dirn = split_user_host_dir(dest)
     remote = (server is not None)
+    # Turn off SSL certificate verification?
+    if no_verify:
+        logging.warning("SSL certificate verification disabled")
+        turn_off_urllib3_warnings()
     # Create data library structure in Galaxy
     print "Fetching Galaxy instance for %s" % galaxy_url
     gi = get_galaxy_instance(galaxy_url,verify=(not no_verify))
