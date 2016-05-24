@@ -16,264 +16,15 @@ Automatically export Fastqs to Galaxy data libraries
 import logging
 logging.basicConfig(format='%(levelname) 8s: %(message)s')
 
-import os
-import sys
 import optparse
-import fnmatch
-import time
 from bcftbx.IlluminaData import split_run_name
-from bcftbx.FASTQFile import get_fastq_file_handle
-from bcftbx.utils import mkdir
 from auto_process_ngs.utils import AnalysisDir
-from auto_process_ngs.utils import AnalysisDirMetadata
-from auto_process_ngs.utils import split_user_host_dir
-from nebulizer.core import get_galaxy_instance
-from nebulizer.core import turn_off_urllib3_warnings
-from nebulizer.libraries import library_id_from_name
-from nebulizer.libraries import folder_id_from_name
-from nebulizer.libraries import create_folder
-from nebulizer.libraries import add_library_datasets
-from nebulizer.libraries import split_library_path
+from auto_process_ngs.galaxy import build_library_directory
+from auto_process_ngs.galaxy import create_data_library
 
 #######################################################################
-# Classes
+# Main program
 #######################################################################
-
-# This is an "augmented" version of the AnalysisDir
-# class from auto_process_ngs.utils
-class AugmentedAnalysisDir(AnalysisDir):
-    def __init__(self,*args):
-        # Set up
-        AnalysisDir.__init__(self,*args)
-        # Metadata
-        self.metadata = AnalysisDirMetadata()
-        self.metadata.load(os.path.join(self._analysis_dir,
-                                        "metadata.info"))
-        # Run name
-        try:
-            self.run_name = self.metadata.run
-        except AttributeError:
-            self.run_name = args[0][0:-len('_analysis')]
-        self.run_name = os.path.basename(self.run_name)
-        self.date_stamp,\
-            self.instrument_name,\
-            self.instrument_run_number = split_run_name(self.run_name)
-
-    def get_projects(self,pattern=None,include_undetermined=True):
-        # Override get_projects method from base class
-        # to add option of excluding undetermined
-        projects = [p for p in self.projects]
-        if include_undetermined and self.undetermined:
-            projects.append(self.undetermined)
-        # Filter on pattern
-        if pattern is not None:
-            projects = filter(lambda p: fnmatch.fnmatch(p.name,pattern),
-                              projects)
-        return projects
-
-# These are classes and functions that should be
-# considered for incorporation into nebulizer.libraries
-from bioblend import galaxy
-
-# classes
-
-class LibraryFolder:
-    # FIXME: rename to Folder
-    # FIXME: move to nebulizer.libraries
-    def __init__(self,folder_data):
-        self.id = folder_data['id']
-        self.name = folder_data['name']
-        self.type = folder_data['type']
-        self.url = folder_data['url']
-
-class LibraryDataset:
-    # FIXEME: rename to Dataset
-    # FIXME: move to nebulizer.libraries
-    def __init__(self,dataset_data):
-        self.id = dataset_data['id']
-        self.name = dataset_data['name']
-        self.type = dataset_data['type']
-        self.url = dataset_data['url']
-
-#######################################################################
-# Functions
-#######################################################################
-
-def get_library_contents(gi,path):
-    """
-    Return the contents of a data library
-
-    Returns a list of LibraryFolder and LibraryDataset
-    instances representing the contents of the specified
-    Galaxy data library.
-
-    FIXME: should filter on full path (currently
-    lists everything)
-
-    Arguments:
-      gi (GalaxyInstance): bioblend GalaxyInstance
-      path (str): path of the data library to fetch
-        the contents of
-
-    Returns:
-      list: list of folders and datasets.
-
-    """
-    logging.debug("Path '%s'" % path)
-    lib_client = galaxy.libraries.LibraryClient(gi)
-    library_name,folder_path = split_library_path(path)
-    logging.debug("library_name '%s'" % library_name)
-    library_id = library_id_from_name(gi,library_name)
-    if library_id is None:
-        print "No library '%s'" % library_name
-        return
-    # Get library contents
-    contents = []
-    for item in lib_client.show_library(library_id,contents=True):
-        if item['type'] == 'folder':
-            contents.append(LibraryFolder(item))
-        else:
-            contents.append(LibraryDataset(item))
-    return contents
-
-def build_library_directory(analysis_dir,dest):
-    """
-    Build and populate data library directory on server
-
-    Arguments:
-      analysis_dir (AnalysisDir): analysis directory to export
-        files from
-      dest (str): location of top-level data library directory
-    
-    """
-    # Create and populate internal directory structure on server
-    user,server,dirn = split_user_host_dir(dest)
-    remote = (server is not None)
-    path = os.path.join(dirn,analysis_dir.run_name)
-    if remote:
-        logging.critical("Dealing with remote systems not implemented")
-        sys.exit(1)
-    run_path = os.path.join(dirn,analysis_dir.run_name)
-    print "Creating %s" % run_path
-    mkdir(run_path)
-    for project in analysis_dir.get_projects(
-            include_undetermined=False):
-        project_path = os.path.join(run_path,project.name)
-        print "Creating %s" % project_path
-        mkdir(project_path)
-        print "Populating with uncompressed Fastqs:"
-        for sample in project.samples:
-            for fq in sample.fastq:
-                fqcp = os.path.join(project_path,
-                                    os.path.basename(fq))
-                if fqcp.endswith('.gz'):
-                    fqcp = fqcp[0:-3]
-                if os.path.exists(fqcp):
-                    print "-- found: %s" % fqcp
-                    continue
-                print "-- %s" % fqcp
-                with get_fastq_file_handle(fq) as fp:
-                    with open(fqcp,'wb') as fpcp:
-                        while True:
-                            data = fp.read(102400)
-                            if not data:
-                                break
-                            fpcp.write(data)
-
-def create_data_library(galaxy_url,library_name,analysis_dir,dest,
-                        no_verify=False):
-    """
-    Create and populate data library in Galaxy
-
-    Arguments:
-      galaxy_url (str): URL or alias of Galaxy server
-      library_name (str): name of the library on the server
-        to export the files to
-      analysis_dir (AnalysisDir): analysis directory to
-        export the files from
-      dest (str): location of top-level data library directory
-      no_verify (boolean): True to disable SSL certificate
-        checking when connecting to Galaxy server (default is
-        to verify certificate)
-
-    """
-    # Split up destination path
-    user,server,dirn = split_user_host_dir(dest)
-    remote = (server is not None)
-    # Create data library structure in Galaxy
-    print "Fetching Galaxy instance for %s" % galaxy_url
-    gi = get_galaxy_instance(galaxy_url,verify=(not no_verify))
-    print "Creating folder for run in Galaxy"
-    run_path = '/'.join((library_name,analysis_dir.run_name))
-    library = library_id_from_name(gi,library_name)
-    if library is None:
-        logging.critical("%s: library not found" % library_name)
-        sys.exit(1)
-    run_folder = folder_id_from_name(gi,library,
-                                     analysis_dir.run_name)
-    if run_folder is None:
-        description = "Data for %s run #%s datestamped %s" \
-                      % (analysis_dir.metadata.platform.upper(),
-                         analysis_dir.metadata.run_number,
-                         analysis_dir.date_stamp)
-        run_folder = create_folder(gi,run_path,description)
-        if run_folder is None:
-            logging.critical("%s: failed to create folder" % run_path)
-        else:
-            print "Created run folder: '%s' '%s'" % (run_path,description)
-    else:
-        logging.warning("%s: run folder already exists"
-                        % analysis_dir.run_name)
-    for project in analysis_dir.get_projects(
-            include_undetermined=False):
-        project_name = "Fastqs (%s: %s)" % (project.name,
-                                            project.info.organism)
-        project_path = '/'.join((run_path,project_name))
-        description = "%s: %s" % (project.name,project.info.organism)
-        project_folder = folder_id_from_name(gi,library,
-                                             os.path.join(analysis_dir.run_name,
-                                                          project_name))
-        if project_folder is not None:
-            print "Found existing subfolder for %s" % project.name
-        else:
-            print "Creating subfolder for %s" % project.name
-            project_folder = create_folder(gi,project_path,description)
-            if project_folder is None:
-                logging.critical("%s: failed to create folder" %
-                                 project_path)
-                sys.exit(1)
-        ##contents = get_library_contents(gi,project_path)
-        ##for item in contents:
-        ##    print "%s: %s" % (item.type,item.name)
-        print "Populating project folder:"
-        for sample in project.samples:
-            fastqs = []
-            for fq in sample.fastq:
-                fqcp = os.path.join(dirn,
-                                    analysis_dir.run_name,
-                                    project.name,
-                                    os.path.basename(fq))
-                if fqcp.endswith('.gz'):
-                    fqcp = fqcp[0:-3]
-                matches = filter(lambda x: os.path.basename(x.name) == 
-                                 os.path.basename(fqcp),
-                                 get_library_contents(gi,project_path))
-                if len(matches):
-                    print "-- found: %s" % fqcp
-                else:
-                    print "-- %s" % fqcp
-                    fastqs.append(fqcp)
-            if fastqs:
-                for fq in fastqs:
-                    # Add one at a time and pause to try
-                    # and prevent overloading the server
-                    add_library_datasets(gi,
-                                         project_path,
-                                         [fq,],
-                                         from_server=True,
-                                         link_only=True,
-                                         file_type='fastqsanger')
-                    time.sleep(5.0)
 
 if __name__ == "__main__":
 
@@ -297,14 +48,16 @@ if __name__ == "__main__":
         turn_off_urllib3_warnings()
 
     # Get analysis dir
-    analysis_dir = AugmentedAnalysisDir(rundir)
+    analysis_dir = AnalysisDir(rundir)
     print "Run name: %s" % analysis_dir.run_name
     print "Run number: %s" % analysis_dir.metadata.run_number
     print "Date stamp: %s" % analysis_dir.date_stamp
-
-    # Create the directory structure on the server
-    build_library_directory(analysis_dir,dest)
-
-    # Upload to the Galaxy instance
-    create_data_library(galaxy_url,library_name,analysis_dir,dest,
-                        no_verify=opts.no_verify)
+    try:
+        # Create the directory structure on the server
+        build_library_directory(analysis_dir,dest)
+        # Upload to the Galaxy instance
+        create_data_library(galaxy_url,library_name,analysis_dir,dest,
+                            no_verify=opts.no_verify)
+    except ex:
+        logging.critical("Failed to create data library: %s" % ex)
+        sys.exit(1)
