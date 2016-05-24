@@ -187,6 +187,7 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
                          galaxy_url)
         raise GalaxyUploadException("%s: failed to connect to Galaxy "
                                     "instance" % galaxy_url)
+    # Create the data library
     print "Creating folder for run in Galaxy"
     run_path = '/'.join((library_name,analysis_dir.run_name))
     library = library_id_from_name(gi,library_name)
@@ -219,7 +220,10 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
         project_name = "Fastqs (%s: %s)" % (project.name,
                                             project.info.organism)
         project_path = '/'.join((run_path,project_name))
-        description = "%s: %s" % (project.name,project.info.organism)
+        if project.info.organism is not None:
+            description = "%s: %s" % (project.name,project.info.organism)
+        else:
+            description = "%s" % project.name
         project_folder = folder_id_from_name(gi,library,
                                              os.path.join(analysis_dir.run_name,
                                                           project_name))
@@ -233,9 +237,6 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
                                  project_path)
                 raise GalaxyUploadException("%s: failed to create folder" %
                                             project_path)
-        ##contents = get_library_contents(gi,project_path)
-        ##for item in contents:
-        ##    print "%s: %s" % (item.type,item.name)
         print "Populating project folder:"
         for sample in project.samples:
             fastqs = []
