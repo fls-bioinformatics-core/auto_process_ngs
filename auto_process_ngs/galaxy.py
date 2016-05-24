@@ -218,10 +218,11 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
             print "Ignoring project '%s'" % project.name
             continue
         project_name = "Fastqs (%s: %s)" % (project.name,
-                                            project.info.organism)
+                                            project.info.organism.replace('/',','))
         project_path = '/'.join((run_path,project_name))
         if project.info.organism is not None:
-            description = "%s: %s" % (project.name,project.info.organism)
+            description = "%s: %s" % (project.name,
+                                      project.info.organism.replace('/',','))
         else:
             description = "%s" % project.name
         project_folder = folder_id_from_name(gi,library,
@@ -230,7 +231,9 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
         if project_folder is not None:
             print "Found existing subfolder for %s" % project.name
         else:
-            print "Creating subfolder for %s" % project.name
+            print "Creating subfolder for project '%s'" % project.name
+            print "-- name       : %s" % project_path
+            print "-- description: %s" % description
             project_folder = create_folder(gi,project_path,description)
             if project_folder is None:
                 logging.critical("%s: failed to create folder" %
