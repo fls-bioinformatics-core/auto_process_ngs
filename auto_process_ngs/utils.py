@@ -248,11 +248,12 @@ class AnalysisDir:
         try:
             self.run_name = self.metadata.run
         except AttributeError:
-            self.run_name = args[0][0:-len('_analysis')]
+            self.run_name = self._analysis_dir[0:-len('_analysis')]
         self.run_name = os.path.basename(self.run_name)
         self.date_stamp,\
             self.instrument_name,\
-            self.instrument_run_number = split_run_name(self.run_name)
+            self.instrument_run_number = IlluminaData.split_run_name(
+                self.run_name)
         # Look for outputs from bclToFastq and analysis projects
         logging.debug("Examining subdirectories of %s" % self._analysis_dir)
         for dirn in bcf_utils.list_dirs(self._analysis_dir):
