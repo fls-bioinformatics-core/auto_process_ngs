@@ -25,6 +25,7 @@ tree at some point.
 #######################################################################
 
 import os
+import fnmatch
 import logging
 import applications
 import bcftbx.IlluminaData as IlluminaData
@@ -225,7 +226,7 @@ class AnalysisDir:
 
     """
     def __init__(self,analysis_dir):
-        """Create a new AnalsysDir instance for a specified directory
+        """Create a new AnalysisDir instance for a specified directory
 
         Arguments:
           analysis_dir: name (and path) to analysis directory
@@ -239,6 +240,19 @@ class AnalysisDir:
         self.sequencing_data = []
         self.projects = []
         self.undetermined = None
+        # Metadata
+        self.metadata = AnalysisDirMetadata()
+        self.metadata.load(os.path.join(self._analysis_dir,
+                                        "metadata.info"))
+        # Run name
+        try:
+            self.run_name = self.metadata.run
+        except AttributeError:
+            self.run_name = args[0][0:-len('_analysis')]
+        self.run_name = os.path.basename(self.run_name)
+        self.date_stamp,\
+            self.instrument_name,\
+            self.instrument_run_number = split_run_name(self.run_name)
         # Look for outputs from bclToFastq and analysis projects
         logging.debug("Examining subdirectories of %s" % self._analysis_dir)
         for dirn in bcf_utils.list_dirs(self._analysis_dir):
@@ -287,7 +301,7 @@ class AnalysisDir:
         """
         return reduce(lambda x,y: x and y.info.paired_end,self.projects,True)
 
-    def get_projects(self,pattern=None):
+    def get_projects(self,pattern=None,include_undetermined=True):
         """Return the analysis projects in a list
 
         By default returns all projects within the analysis
@@ -296,18 +310,17 @@ class AnalysisDir:
         used to match against available names to select a subset of
         projects (see bcf_utils.name_matches).
 
+        If 'include_undetermined' is True then the undetermined
+        project will also be included; otherwise it will be omitted.
+
         """
-        projects = []
-        if pattern is None:
-            pattern = '*'
-        for project in self.projects:
-            if not bcf_utils.name_matches(project.name,pattern):
-                # Name failed to match, ignore
-                continue
-            projects.append(project)
-        # Add undetermined reads directory
-        if self.undetermined and bcf_utils.name_matches('undetermined',pattern):
+        projects = [p for p in self.projects]
+        if include_undetermined and self.undetermined:
             projects.append(self.undetermined)
+        # Filter on pattern
+        if pattern is not None:
+            projects = filter(lambda p: fnmatch.fnmatch(p.name,pattern),
+                              projects)
         return projects
         
 class AnalysisProject:
