@@ -1,1 +1,2 @@
-git+https://github.com/fls-bioinformatics-core/genomics.git@devel#egg=genomics-bcftbx
+git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx
+git+https://github.com/pjbriggs/nebulizer.git#egg=nebulizer
