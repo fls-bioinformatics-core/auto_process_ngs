@@ -22,6 +22,7 @@ instance:
 
 import os
 import time
+import logging
 from bioblend import galaxy
 from nebulizer.core import get_galaxy_instance
 from nebulizer.core import turn_off_urllib3_warnings
@@ -100,7 +101,7 @@ def get_library_contents(gi,path):
             contents.append(LibraryDataset(item))
     return contents
 
-def build_library_directory(analysis_dir,dest):
+def build_library_directory(analysis_dir,dest,projects=None):
     """
     Build and populate data library directory on server
 
@@ -108,6 +109,8 @@ def build_library_directory(analysis_dir,dest):
       analysis_dir (AnalysisDir): analysis directory to export
         files from
       dest (str): location of top-level data library directory
+      projects (list): list of projects to export (default is to
+        export all projects)
     
     """
     # Create and populate internal directory structure on server
@@ -122,6 +125,9 @@ def build_library_directory(analysis_dir,dest):
     mkdir(run_path)
     for project in analysis_dir.get_projects(
             include_undetermined=False):
+        if projects is not None and project.name not in projects:
+            print "Ignoring project '%s'" % project.name
+            continue
         project_path = os.path.join(run_path,project.name)
         print "Creating %s" % project_path
         mkdir(project_path)
@@ -145,7 +151,8 @@ def build_library_directory(analysis_dir,dest):
                             fpcp.write(data)
 
 def create_data_library(galaxy_url,library_name,analysis_dir,dest,
-                        no_verify=False,wait_interval=5.0):
+                        projects=None,no_verify=False,
+                        wait_interval=5.0):
     """
     Create and populate data library in Galaxy
 
@@ -156,6 +163,8 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
       analysis_dir (AnalysisDir): analysis directory to
         export the files from
       dest (str): location of top-level data library directory
+      projects (list): list of projects to export (default is to
+        export all projects)
       no_verify (boolean): True to disable SSL certificate
         checking when connecting to Galaxy server (default is
         to verify certificate)
@@ -169,6 +178,11 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
     # Create data library structure in Galaxy
     print "Fetching Galaxy instance for %s" % galaxy_url
     gi = get_galaxy_instance(galaxy_url,verify=(not no_verify))
+    if gi is None:
+        logging.critical("%s: failed to connect to Galaxy instance" %
+                         galaxy_url)
+        raise GalaxyUploadException("%s: failed to connect to Galaxy "
+                                    "instance" % galaxy_url)
     print "Creating folder for run in Galaxy"
     run_path = '/'.join((library_name,analysis_dir.run_name))
     library = library_id_from_name(gi,library_name)
@@ -186,6 +200,8 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
         run_folder = create_folder(gi,run_path,description)
         if run_folder is None:
             logging.critical("%s: failed to create folder" % run_path)
+            raise GalaxyUploadException("%s: failed to create folder" %
+                                        run_path)
         else:
             print "Created run folder: '%s' '%s'" % (run_path,description)
     else:
@@ -193,6 +209,9 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
                         % analysis_dir.run_name)
     for project in analysis_dir.get_projects(
             include_undetermined=False):
+        if projects is not None and project.name not in projects:
+            print "Ignoring project '%s'" % project.name
+            continue
         project_name = "Fastqs (%s: %s)" % (project.name,
                                             project.info.organism)
         project_path = '/'.join((run_path,project_name))

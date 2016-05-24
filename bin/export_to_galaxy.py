@@ -13,14 +13,15 @@ Automatically export Fastqs to Galaxy data libraries
 # Imports
 #######################################################################
 
-import logging
-logging.basicConfig(format='%(levelname) 8s: %(message)s')
-
+import sys
 import optparse
+import logging
 from bcftbx.IlluminaData import split_run_name
 from auto_process_ngs.utils import AnalysisDir
 from auto_process_ngs.galaxy import build_library_directory
 from auto_process_ngs.galaxy import create_data_library
+
+logging.basicConfig(format='%(levelname) 8s: %(message)s')
 
 #######################################################################
 # Main program
@@ -29,7 +30,16 @@ from auto_process_ngs.galaxy import create_data_library
 if __name__ == "__main__":
 
     # Parse command line
-    p = optparse.OptionParser(usage="%prog GALAXY LIBRARY DEST RUNDIR")
+    p = optparse.OptionParser(usage="%prog GALAXY LIBRARY DEST ANALYSIS_DIR",
+                              description="Export FASTQs from ANALYSIS_DIR "
+                              "to a Galaxy instance: uncompressed files "
+                              "are copied to directory structure under DEST "
+                              "(must be local directory also visible on the "
+                              "target Galaxy server) and then imported into a "
+                              "data library on GALAXY as links.")
+    p.add_option('--projects',action='store',dest='projects',default=None,
+                 help="comma-separated list of project names to export "
+                 "(default is to export all projects)")
     p.add_option('-n','--no-verify',action='store_true',dest='no_verify',
                  default=False,help="don't verify HTTPS connections")
     opts,args = p.parse_args()
@@ -47,6 +57,12 @@ if __name__ == "__main__":
         logging.warning("SSL certificate verification disabled")
         turn_off_urllib3_warnings()
 
+    # Subset of projects
+    if opts.projects is not None:
+        projects = opts.projects.split(',')
+    else:
+        projects = None
+
     # Get analysis dir
     analysis_dir = AnalysisDir(rundir)
     print "Run name: %s" % analysis_dir.run_name
@@ -54,10 +70,10 @@ if __name__ == "__main__":
     print "Date stamp: %s" % analysis_dir.date_stamp
     try:
         # Create the directory structure on the server
-        build_library_directory(analysis_dir,dest)
+        build_library_directory(analysis_dir,dest,projects=projects)
         # Upload to the Galaxy instance
         create_data_library(galaxy_url,library_name,analysis_dir,dest,
-                            no_verify=opts.no_verify)
-    except ex:
-        logging.critical("Failed to create data library: %s" % ex)
+                            projects=projects,no_verify=opts.no_verify)
+    except Exception as ex:
+        logging.critical("Export failed: %s" % ex)
         sys.exit(1)
