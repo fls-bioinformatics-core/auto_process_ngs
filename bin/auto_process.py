@@ -351,6 +351,7 @@ def add_run_qc_command(cmdparser):
                               description="Run QC procedures for sequencing projects in "
                               "ANALYSIS_DIR.")
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
+    fastq_screen_subset = 1000000
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "
@@ -358,6 +359,11 @@ def add_run_qc_command(cmdparser):
                  "'pname[/sname]', where 'pname' specifies a project (or set of "
                  "projects) and 'sname' optionally specifies a sample (or set of "
                  "samples).")
+    p.add_option('--fastq_screen_subset',action='store',dest='subset',
+                 type='int',default=fastq_screen_subset,
+                 help="specify size of subset of total reads to use for "
+                 "fastq_screen (i.e. --subset option); (default %d, set to "
+                 "0 to use all reads)" % fastq_screen_subset)
     p.add_option('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
                  help="create decompressed copies of fastq.gz files")
     p.add_option('--max-jobs',action='store',
@@ -729,6 +735,7 @@ if __name__ == "__main__":
             retcode = d.run_qc(projects=options.project_pattern,
                                max_jobs=options.max_jobs,
                                ungzip_fastqs=options.ungzip_fastqs,
+                               fastq_screen_subset=options.subset,
                                runner=options.runner)
             sys.exit(retcode)
         elif cmd == 'params':
