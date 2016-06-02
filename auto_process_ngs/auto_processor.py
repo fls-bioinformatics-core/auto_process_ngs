@@ -1765,7 +1765,8 @@ class AutoProcess:
             else:
                 logging.warning("'undetermined' directory already exists, skipping")
 
-    def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,runner=None):
+    def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,
+               fastq_screen_subset=1000000,runner=None):
         """Run QC pipeline script for projects
 
         Run the illumina_qc.sh script to perform QC on projects.
@@ -1788,6 +1789,9 @@ class AutoProcess:
                     '--ungzip-fastqs' option to create decompressed
                     copies of any fastq.gz inputs (default is False,
                     don't decompress the input files)
+          fastq_screen_subset: subset of reads to use in fastq_screen
+                    (default is 1000000, set to zero or None to use
+                    all reads)
           runner:   (optional) specify a non-default job runner to
                     use for the QC.
         Returns:
@@ -1796,7 +1800,7 @@ class AutoProcess:
 
         """
         # Check QC script version
-        compatible_versions = ('1.2.1','1.2.2')
+        compatible_versions = ('1.3.0',)
         print "Getting QC script information"
         status,qc_script_info = applications.Command('illumina_qc.sh',
                                                      '--version').subprocess_check_output()
@@ -1869,6 +1873,9 @@ class AutoProcess:
                         qc_cmd = applications.Command('illumina_qc.sh',fastq)
                         if ungzip_fastqs:
                             qc_cmd.add_args('--ungzip-fastqs')
+                        if fastq_screen_subset is None:
+                            fastq_screen_subset = 0
+                        qc_cmd.add_args('--subset',fastq_screen_subset)
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
