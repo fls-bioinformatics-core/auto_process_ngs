@@ -269,6 +269,21 @@ def add_make_fastqs_command(cmdparser):
                             help="split the output FASTQ files by lane "
                             "(bcl2fastq v2 only; turn off using "
                             "--no-lane-splitting)%s" % default_use_lane_splitting)
+    # Adapter trimming/masking options
+    bcl_to_fastq.add_option('--minimum-trimmed-read-length',action="store",
+                            dest="minimum_trimmed_read_length",default=35,
+                            help="Minimum read length after adapter "
+                            "trimming. bcl2fastq trims the adapter from "
+                            "the read down to this value; if there is more "
+                            "adapter match below this length then those "
+                            "bases are masked not trimmed (i.e. replaced "
+                            "by N rather than removed) (default: 35)")
+    bcl_to_fastq.add_option('--mask-short-adapter-reads',action="store",
+                            dest="mask_short_adapter_reads",default=22,
+                            help="minimum length of unmasked bases that "
+                            "a read can be after adapter trimming; reads "
+                            "with fewer ACGT bases will be completely "
+                            "masked with Ns (default: 22)")
     # Number of processors
     default_nprocessors = []
     for platform in __settings.platform:
@@ -699,6 +714,8 @@ if __name__ == "__main__":
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
                           no_lane_splitting=no_lane_splitting,
+                          minimum_trimmed_read_length=options.minimum_trimmed_read_length,
+                          mask_short_adapter_reads=options.mask_short_adapter_reads,
                           stats_file=options.stats_file,
                           per_lane_stats_file=options.per_lane_stats_file,
                           report_barcodes=options.report_barcodes,

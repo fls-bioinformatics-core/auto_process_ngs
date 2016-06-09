@@ -1010,6 +1010,8 @@ class AutoProcess:
                     nprocessors=None,require_bcl2fastq_version=None,
                     unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,no_lane_splitting=None,
+                    minimum_trimmed_read_length=None,
+                    mask_short_adapter_reads=None,
                     generate_stats=True,stats_file=None,
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
@@ -1049,6 +1051,13 @@ class AutoProcess:
           sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
           no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
+          minimum_trimmed_read_length: if set then specify minimum length
+                                for reads after adapter trimming (shorter reads will
+                                be padded with Ns to make them long enough)
+          mask_short_adapter_reads: if set then specify the minimum length
+                                of ACGT bases that must be present in a read after
+                                adapter trimming for it not to be masked completely
+                                with Ns.
           stats_file          : if set then use this as the name of the output
                                 per-fastq stats file.
           per_lane_stats_file : if set then use this as the name of the output
@@ -1096,6 +1105,8 @@ class AutoProcess:
                                   ignore_missing_bcl=ignore_missing_bcl,
                                   ignore_missing_stats=ignore_missing_stats,
                                   no_lane_splitting=no_lane_splitting,
+                                  minimum_trimmed_read_length=minimum_trimmed_read_length,
+                                  mask_short_adapter_reads=mask_short_adapter_reads,
                                   nprocessors=nprocessors,
                                   runner=runner)
             except Exception,ex:
@@ -1147,7 +1158,9 @@ class AutoProcess:
     def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
                      sample_sheet=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
-                     no_lane_splitting=None,nprocessors=None,runner=None):
+                     no_lane_splitting=None,minimum_trimmed_read_length=None,
+                     mask_short_adapter_reads=None,nprocessors=None,
+                     runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1167,6 +1180,10 @@ class AutoProcess:
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
           no_lane_splitting: if True then run bcl2fastq with --no-lane-splitting
+          minimum_trimmed_read_length: if set then supply to bcl2fastq with
+            --minimum-trimmed-read-length N
+          mask_short_adapter_reads: if set then supply to bcl2fastq with
+            --mask-short-adapter-reads N
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
@@ -1285,21 +1302,23 @@ class AutoProcess:
             print "No barcode collisions detected using %d mismatches" % \
                 nmismatches
         # Report values and settings
-        print "Bcl-to-fastq exe    : %s" % bcl2fastq_exe
-        print "Bcl-to-fastq version: %s %s" % (bcl2fastq_info[1],
+        print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
+        print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
-        print "Primary data dir    : %s" % primary_data
+        print "Primary data dir      : %s" % primary_data
         print "%s" % illumina_run.run_dir
-        print "Platform            : %s" % illumina_run.platform
-        print "Bcl format          : %s" % illumina_run.bcl_extension
-        print "Source sample sheet : %s" % sample_sheet
-        print "Bases mask          : %s" % bases_mask
-        print "Nmismatches         : %d" % nmismatches
-        print "Nprocessors         : %s" % nprocessors
-        print "Ignore missing bcl  : %s" % ignore_missing_bcl
-        print "Ignore missing stats: %s" % ignore_missing_stats
-        print "No lane splitting   : %s" % no_lane_splitting
-        print "Output dir          : %s" % bcl2fastq_dir
+        print "Platform              : %s" % illumina_run.platform
+        print "Bcl format            : %s" % illumina_run.bcl_extension
+        print "Source sample sheet   : %s" % sample_sheet
+        print "Bases mask            : %s" % bases_mask
+        print "Nmismatches           : %d" % nmismatches
+        print "Nprocessors           : %s" % nprocessors
+        print "Ignore missing bcl    : %s" % ignore_missing_bcl
+        print "Ignore missing stats  : %s" % ignore_missing_stats
+        print "No lane splitting     : %s" % no_lane_splitting
+        print "Min trimmed read len  : %s" % minimum_trimmed_read_length
+        print "Mask short adptr reads: %s" % mask_short_adapter_reads
+        print "Output dir            : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
             runner = fetch_runner(runner)
@@ -1318,6 +1337,12 @@ class AutoProcess:
             bcl2fastq.add_args('--ignore-missing-stats')
         if no_lane_splitting:
             bcl2fastq.add_args('--no-lane-splitting')
+        if minimum_trimmed_read_length:
+            bcl2fastq.add_args('--minimum-trimmed-read-length',
+                               minimum_trimmed_read_length)
+        if mask_short_adapter_reads:
+            bcl2fastq.add_args('--mask-short-adapter-reads',
+                               mask_short_adapter_reads)
         bcl2fastq.add_args('--bcl2fastq_path',
                            bcl2fastq_exe,
                            primary_data,
