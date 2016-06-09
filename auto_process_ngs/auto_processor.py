@@ -1253,19 +1253,48 @@ class AutoProcess:
         shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
-        # Get info about the run
+        # Get info on the run
+        illumina_run = IlluminaData.IlluminaRun(primary_data)
+        # Determine initial number of mismatches
+        nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
+        # Check for barcode collisions
+        collisions = bcl2fastq_utils.check_barcode_collisions(sample_sheet,
+                                                              nmismatches)
+        if collisions:
+            # Report problem barcodes
+            logging.warning("Barcode collisions detected using %d mismatches"
+                            % nmismatches)
+            for collision in collisions:
+                logging.warning("Barcode collision for barcodes: %s, %s"
+                                % (collision[0],collision[1]))
+            # Reduce mismatches to try and address the collisions
+            logging.warning("Attempting to address by adjusting #mismatches")
+            while nmismatches > 0 and collisions:
+                nmismatches -= 1
+                collisions = bcl2fastq_utils.check_barcode_collisions(
+                    sample_sheet,
+                    nmismatches)
+                if not collisions:
+                    print "No collisions using %d mismatches" % nmismatches
+                    break
+            else:
+                # Unable to address collisions, bail out
+                raise Exception("Barcode collisions with zero mismatches "
+                                "(duplicated indexes?): unable to proceed")
+        else:
+            print "No barcode collisions detected using %d mismatches" % \
+                nmismatches
+        # Report values and settings
         print "Bcl-to-fastq exe    : %s" % bcl2fastq_exe
         print "Bcl-to-fastq version: %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
         print "Primary data dir    : %s" % primary_data
-        illumina_run = IlluminaData.IlluminaRun(primary_data)
-        nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         print "%s" % illumina_run.run_dir
         print "Platform            : %s" % illumina_run.platform
         print "Bcl format          : %s" % illumina_run.bcl_extension
         print "Source sample sheet : %s" % sample_sheet
         print "Bases mask          : %s" % bases_mask
-        print "Nmismatches         : %d (determined from bases mask)" % nmismatches
+        print "Nmismatches         : %d" % nmismatches
         print "Nprocessors         : %s" % nprocessors
         print "Ignore missing bcl  : %s" % ignore_missing_bcl
         print "Ignore missing stats: %s" % ignore_missing_stats
