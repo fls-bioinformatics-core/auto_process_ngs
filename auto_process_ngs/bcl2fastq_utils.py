@@ -528,6 +528,8 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
                        bases_mask=None,
                        ignore_missing_bcl=False,
                        no_lane_splitting=False,
+                       minimum_trimmed_read_length=None,
+                       mask_short_adapter_reads=None,
                        loading_threads=None,
                        demultiplexing_threads=None,
                        processing_threads=None,
@@ -558,13 +560,19 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
       no_lane_splitting: optional, if True then output FASTQ files
         will not be split by lane (default is False, i.e. do split
         FASTQs by lane)
-     loading_threads: optional, specify number of threads to use
+      minimum_trimmed_read_length: optional, specify minimum length
+        for reads after adapter trimming (shorter reads will be padded
+        with Ns to make them long enough)
+      mask_short_adapter_reads: optional, specify the minimum length
+        of ACGT bases that must be present in a read after adapter
+        trimming for it not to be masked completely with Ns.
+      loading_threads: optional, specify number of threads to use
         for loading bcl data (--loading-threads)
-     demultiplexing_threads: optional, specify number of threads to
+      demultiplexing_threads: optional, specify number of threads to
         use for demultiplexing (--demultiplexing-threads)
-     processing_threads: optional, specify number of threads to use
+      processing_threads: optional, specify number of threads to use
         for processing (--processing-threads)
-     writing_threads: optional, specify number of threads to use for
+      writing_threads: optional, specify number of threads to use for
         writing FASTQ data (--writing-threads)
 
     Returns:
@@ -582,6 +590,8 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
         bases_mask=bases_mask,
         ignore_missing_bcl=ignore_missing_bcl,
         no_lane_splitting=no_lane_splitting,
+        minimum_trimmed_read_length=minimum_trimmed_read_length,
+        mask_short_adapter_reads=mask_short_adapter_reads,
         loading_threads=loading_threads,
         demultiplexing_threads=demultiplexing_threads,
         processing_threads=processing_threads,

@@ -107,7 +107,23 @@ def main():
     bcl2fastq2.add_option('--no-lane-splitting',action="store_true",
                           dest="no_lane_splitting",default=False,
                           help="Don't split output FASTQ files by lane")
-    p.add_option_group(bcl2fastq2)
+    # Adapter trimming (bcl2fastq 2 only)
+    adapter_trimming = optparse.OptionGroup(p,'Adapter trimming (bcl2fastq v2 only)')
+    adapter_trimming.add_option('--minimum-trimmed-read-length',action="store",
+                                dest="minimum_trimmed_read_length",default=35,
+                                help="Minimum read length after adapter "
+                                "trimming. bcl2fastq trims the adapter from "
+                                "the read down to this value; if there is more "
+                                "adapter match below this length then those "
+                                "bases are masked not trimmed (i.e. replaced "
+                                "by N rather than removed) (default: 35)")
+    adapter_trimming.add_option('--mask-short-adapter-reads',action="store",
+                                dest="mask_short_adapter_reads",default=22,
+                                help="minimum length of unmasked bases that "
+                                "a read can be after adapter trimming; reads "
+                                "with fewer ACGT bases will be completely "
+                                "masked with Ns (default: 22)")
+    p.add_option_group(adapter_trimming)
 
     options,args = p.parse_args()
     if not (2 <= len(args) <=3):
@@ -166,21 +182,25 @@ def main():
         bases_mask = IlluminaData.IlluminaRunInfo(
             illumina_run.runinfo_xml).bases_mask
     # Report settings
-    print "Illumina run directory: %s" % illumina_run.run_dir
-    print "Basecalls directory   : %s" % illumina_run.basecalls_dir
-    print "Platform              : %s" % illumina_run.platform
-    print "Bcl file extension    : %s" % illumina_run.bcl_extension
-    print "SampleSheet.csv file  : %s" % sample_sheet
-    print "Output dir            : %s" % output_dir
-    print "Nmismatches           : %s" % options.nmismatches
-    print "Bases mask            : %s" % bases_mask
-    print "Nprocessors           : %s" % options.nprocessors
-    print "Ignore missing bcl    : %s" % options.ignore_missing_bcl
+    print "Illumina run directory  : %s" % illumina_run.run_dir
+    print "Basecalls directory     : %s" % illumina_run.basecalls_dir
+    print "Platform                : %s" % illumina_run.platform
+    print "Bcl file extension      : %s" % illumina_run.bcl_extension
+    print "SampleSheet.csv file    : %s" % sample_sheet
+    print "Output dir              : %s" % output_dir
+    print "Nmismatches             : %s" % options.nmismatches
+    print "Bases mask              : %s" % bases_mask
+    print "Nprocessors             : %s" % options.nprocessors
+    print "Ignore missing bcl      : %s" % options.ignore_missing_bcl
     if known_version == '1.8':
-        print "Ignore missing stats  : %s" % options.ignore_missing_stats
-        print "Ignore missing control: %s" % options.ignore_missing_control
+        print "Ignore missing stats    : %s" % options.ignore_missing_stats
+        print "Ignore missing control  : %s" % options.ignore_missing_control
     elif known_version == '2.17':
-        print "No lane splitting     : %s" % options.no_lane_splitting
+        print "No lane splitting       : %s" % options.no_lane_splitting
+        print "Min trimmed read length : %s" % \
+            options.minimum_trimmed_read_length
+        print "Mask short adapter reads: %s" % \
+            options.mask_short_adapter_reads
     # Run bclToFastq conversion based on the version
     if bcl2fastq_version.startswith('1.8.'):
         # 1.8.* pipeline
@@ -226,6 +246,8 @@ def main():
             bases_mask=options.bases_mask,
             ignore_missing_bcl=options.ignore_missing_bcl,
             no_lane_splitting=options.no_lane_splitting,
+            minimum_trimmed_read_length=options.minimum_trimmed_read_length,
+            mask_short_adapter_reads=options.mask_short_adapter_reads,
             loading_threads=loading_threads,
             demultiplexing_threads=demultiplexing_threads,
             processing_threads=processing_threads,
