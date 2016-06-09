@@ -354,7 +354,7 @@ def get_nmismatches(bases_mask):
     # Failed to find any indexed reads
     return 0
 
-def check_barcode_collisions(input_sample_sheet,nmismatches):
+def check_barcode_collisions(sample_sheet_file,nmismatches):
     """
     Check sample sheet for barcode collisions
 
@@ -373,7 +373,7 @@ def check_barcode_collisions(input_sample_sheet,nmismatches):
     [('ATTCCT','ATTCCG'),...]
 
     Arguments:
-      input_sample_sheet (str): path to a SampleSheet.csv file
+      sample_sheet_file (str): path to a SampleSheet.csv file
         to analyse for barcode collisions
       nmismatches (int): maximum number of mismatches to allow
 
@@ -384,7 +384,7 @@ def check_barcode_collisions(input_sample_sheet,nmismatches):
 
     """
     # Load the sample sheet data
-    sample_sheet = IlluminaData.SampleSheet(input_sample_sheet)
+    sample_sheet = IlluminaData.SampleSheet(sample_sheet_file)
     # List of index sequences (barcodes)
     barcodes = {}
     has_lanes = sample_sheet.has_lanes
