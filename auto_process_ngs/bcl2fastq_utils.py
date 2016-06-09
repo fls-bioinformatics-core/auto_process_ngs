@@ -19,6 +19,7 @@ Utility functions for bcl to fastq conversion operations:
 - make_custom_sample_sheet: create a fixed copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
 - get_nmismatches: determine number of mismatches from bases mask
+- check_barcode_collisions: look for too-similiar pairs of barcode sequences
 - get_bases_mask: get a bases mask string
 - run_bcl2fastq_1_8: run bcl-to-fastq conversion from CASAVA/bcl2fastq 1.8.*
 - run_bcl2fastq_2_17: run bcl-to-fastq conversion from bcl2fastq 2.17.*
@@ -352,6 +353,79 @@ def get_nmismatches(bases_mask):
                 return 0
     # Failed to find any indexed reads
     return 0
+
+def check_barcode_collisions(input_sample_sheet,nmismatches):
+    """
+    Check sample sheet for barcode collisions
+
+    Check barcode index sequences within each lane (or across
+    all samples, if no lane information is present) and find
+    any which differ in fewer bases than a threshold number
+    which is calculated as:
+
+    less than 2 times the number of mismatches plus 1
+
+    (as is stated in the output from bcl2fastq v2.)
+
+    Pairs of barcodes which are too similar (i.e. which collide)
+    are reported as a list of tuples, e.g.
+
+    [('ATTCCT','ATTCCG'),...]
+
+    Arguments:
+      input_sample_sheet (str): path to a SampleSheet.csv file
+        to analyse for barcode collisions
+      nmismatches (int): maximum number of mismatches to allow
+
+    Returns:
+      List: list of pairs of colliding barcodes (with each pair
+        wrapped in a tuple), or an empty list if no collisions
+        were detected.
+
+    """
+    # Load the sample sheet data
+    sample_sheet = IlluminaData.SampleSheet(input_sample_sheet)
+    # List of index sequences (barcodes)
+    barcodes = {}
+    has_lanes = sample_sheet.has_lanes
+    for line in sample_sheet:
+        # Lane
+        if has_lanes:
+            lane = line['Lane']
+        else:
+            lane = 1
+        # Index sequence
+        try:
+            # Try dual-indexed IEM4 format
+            indx = "%s%s" %(line['index'].strip(),
+                            line['index2'].strip())
+        except KeyError:
+            # Try single indexed IEM4 (no index2)
+            try:
+                indx = line['index'].strip()
+            except KeyError:
+                # Try CASAVA format
+                indx = line['Index'].strip()
+                if not indx:
+                    indx = None
+        try:
+            barcodes[lane].append(indx)
+        except KeyError:
+            barcodes[lane] = [indx,]
+    # Mismatch threshold
+    mismatch_threshold = 2*nmismatches + 1
+    # Check for collisions
+    collisions = []
+    for lane in barcodes:
+        for i,seq1 in enumerate(barcodes[lane][:-1]):
+            for seq2 in barcodes[lane][i+1:]:
+                ndiff = 0
+                for c1,c2 in zip(seq1,seq2):
+                    if c1 != c2:
+                        ndiff += 1
+                if ndiff < mismatch_threshold:
+                    collisions.append((seq1,seq2))
+    return collisions
 
 def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
                       output_dir="Unaligned",
