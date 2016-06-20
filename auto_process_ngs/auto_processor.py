@@ -738,7 +738,11 @@ class AutoProcess:
                                                  'SampleSheet.orig.csv')
         print "Sample sheet '%s'" % custom_sample_sheet
         # Assay type (= kit)
-        assay = IlluminaData.SampleSheet(original_sample_sheet).header['Assay']
+        try:
+            assay = IlluminaData.SampleSheet(original_sample_sheet).header['Assay']
+        except KeyError:
+            logging.warning("No element 'Assay' found in sample sheet")
+            assay = None
         # Bases mask
         bases_mask = self.params.bases_mask
         if bases_mask is None:
