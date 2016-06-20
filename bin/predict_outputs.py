@@ -3,46 +3,124 @@ import optparse
 import difflib
 import bcftbx.IlluminaData as IlluminaData
 
-def predict_samplesheet_outputs(sample_sheet_file):
+# Classes for sample sheet prediction and validation
+
+# FIXME not tested on pre IEM sample sheets
+# TODO implement fastq prediction
+# TODO implement bcl2fastq output validation
+
+class SampleSheetPredictor(object):
     """
+    Sample sheet output predictor
+
+    Processes a sample sheet file and builds a data
+    structure which predicts the outputs.
+
     """
-    sample_sheet = IlluminaData.SampleSheet(sample_sheet_file)
-    projects = {}
-    s_index = 0
-    for line in sample_sheet.data:
-        # Get project
-        project = str(line[sample_sheet.sample_project_column])
-        if project not in projects:
-            projects[project] = {}
-        # Get data on sample
-        sample_id = str(line[sample_sheet.sample_id_column])
+    def __init__(self,sample_sheet_file):
+        self.projects = []
+        sample_sheet = IlluminaData.SampleSheet(sample_sheet_file)
+        s_index = 0
+        for line in sample_sheet:
+            # Get project and sample info
+            project_name = str(line[sample_sheet.sample_project_column])
+            sample_id = str(line[sample_sheet.sample_id_column])
+            try:
+                sample_name = str(line[sample_sheet.sample_name_column])
+            except KeyError:
+                sample_name = None
+            project = self.add_project(project_name)
+            sample = project.add_sample(sample_id,
+                                        sample_name=sample_name)
+            # Barcode and lane
+            indx = get_barcode_from_samplesheet_line(line)
+            if not indx:
+                indx = "NoIndex"
+            if sample_sheet.has_lanes:
+                lane = line['Lane']
+            else:
+                lane = None
+            sample.add_barcode(indx,lane=lane)
+            # Sample index
+            if sample.s_index is None:
+                s_index += 1
+                sample.s_index = s_index
+    def get_project(self,project_name):
+        # Fetch project by name
+        for project in self.projects:
+            if project.name == project_name:
+                return project
+        raise KeyError("%s: not found" % project_name)
+    def add_project(self,project_name):
+        # Add a new project or return existing one
         try:
-            sample_name = str(line[sample_sheet.sample_name_column])
+            return self.get_project(project_name)
         except KeyError:
-            sample_name = ''
-        if not sample_id:
-            sample_id = sample_name
-        if sample_id not in projects[project]:
-            projects[project][sample_id] = {}
-            projects[project][sample_id]['barcodes'] = {}
-        # Barcodes
-        indx = get_barcode_from_samplesheet_line(line)
-        if not indx:
-            indx = "NoIndex"
-        # Lane
-        if sample_sheet.has_lanes:
-            lane = line['Lane']
-        else:
-            lane = None
-        if indx not in projects[project][sample_id]['barcodes']:
-            # Increment sample (S) index for bcl2fastq2
-            s_index += 1
-            # Store data
-            projects[project][sample_id]['s_index'] = s_index
-            projects[project][sample_id]['barcodes'][indx] = []
-        if sample_sheet.has_lanes:
-            projects[project][sample_id]['barcodes'][indx].append(lane)
-    return projects
+            project = SampleSheetProject(project_name)
+            self.projects.append(project)
+            return project
+    @property
+    def project_names(self):
+        # Return sorted list of project names
+        names = [str(p) for p in self.projects]
+        names.sort()
+        return names
+    @property
+    def nprojects(self):
+        # Return number of projects
+        return len(self.projects)
+
+class SampleSheetProject(object):
+    """
+    """
+    def __init__(self,project_name):
+        self.name = project_name
+        self.samples = []
+    def get_sample(self,sample_id):
+        # Fetch sample by name
+        for sample in self.samples:
+            if sample.sample_id == sample_id:
+                return sample
+        raise KeyError("%s: not found" % sample_id)
+    def add_sample(self,sample_id,sample_name=None,s_index=None):
+        # Add a new sample or return existing one
+        try:
+            return self.get_sample(sample_id)
+        except KeyError:
+            sample = SampleSheetSample(sample_id,
+                                       sample_name=sample_name)
+            self.samples.append(sample)
+            return sample
+    @property
+    def sample_ids(self):
+        # Return sorted list of sample ids
+        ids = [s.sample_id for s in self.samples]
+        ids.sort()
+        return ids
+    def __repr__(self):
+        return str(self.name)
+
+class SampleSheetSample(object):
+    """
+    """
+    def __init__(self,sample_id,sample_name=None,s_index=None):
+        self.sample_id = sample_id
+        self.sample_name = sample_name
+        self.s_index = s_index
+        self.barcodes = {}
+    def add_barcode(self,barcode,lane=None):
+        # Add a new barcode or return existing one
+        if barcode not in self.barcodes:
+            self.barcodes[barcode] = []
+        if lane and lane not in self.barcodes[barcode]:
+            self.barcodes[barcode].append(lane)
+        return self.barcodes[barcode]
+    def __repr__(self):
+        if not self.sample_id:
+            return str(self.sample_name)
+        if self.sample_name and self.sample_name != self.sample_id:
+            return "%s/%s" % (self.sample_name,self.sample_id)
+        return str(self.sample_id)
 
 def get_barcode_from_samplesheet_line(line,delimiter='-'):
     """
@@ -77,21 +155,21 @@ def get_close_names(names):
                 close_names[name1].append(name)
     return close_names
 
-if __name__ == "__main__":
+def main():
     p = optparse.OptionParser()
     opts,args = p.parse_args()
     # Get prediction
-    projects = predict_samplesheet_outputs(args[0])
-    project_names = projects.keys()
-    project_names.sort()
+    predictor = SampleSheetPredictor(args[0])
     # Check for close-matching project names
-    close_names = get_close_names(project_names)
+    close_names = get_close_names(predictor.project_names)
     # Report project names
     print
-    print "Expecting %d projects:" % len(project_names)
+    print "Expecting %d project%s:" % (predictor.nprojects,
+                                       '' if predictor.nprojects == 1
+                                       else 's')
     print
     warning_close_names = False
-    for p in project_names:
+    for p in predictor.project_names:
         warning_flag = False
         if p in close_names:
             warning_flag = True
@@ -100,23 +178,21 @@ if __name__ == "__main__":
     print
     # Report samples within each project
     warning_wrong_barcodes = False
-    for p in project_names:
-        samples = projects[p]
-        print "%s\n%s" % (p,'-'*len(p))
-        sample_names = samples.keys()
-        sample_names.sort()
-        for s in sample_names:
+    for pname in predictor.project_names:
+        project = predictor.get_project(pname)
+        print "%s\n%s" % (pname,'-'*len(pname))
+        for sname in project.sample_ids:
+            sample = project.get_sample(sname)
             warning_wrong_barcodes = warning_wrong_barcodes or \
-                                     (len(samples[s]['barcodes']) > 1)
-            warning_flag = (len(samples[s]['barcodes']) > 1)
-            s_index = samples[s]['s_index']
-            for barcode in samples[s]['barcodes']:
+                                     (len(sample.barcodes) > 1)
+            warning_flag = (len(sample.barcodes) > 1)
+            for barcode in sample.barcodes:
                 #print samples[s][barcode]
                 lanes = ','.join([str(x)
-                                  for x in samples[s]['barcodes'][barcode]])
+                                  for x in sample.barcodes[barcode]])
                 print "%s%s\tS%s\t%s\t%s" % (('* ' if warning_flag else ''),
-                                             s,
-                                             s_index,
+                                             sample,
+                                             sample.s_index,
                                              barcode,
                                              (('L' + lanes) if lanes else ''))
         print
@@ -125,3 +201,6 @@ if __name__ == "__main__":
         print "*** WARNING projects detected with closing-matching names ***"
     if warning_wrong_barcodes:
         print "*** WARNING samples detected with multiple barcodes ***"
+
+if __name__ == "__main__":
+    main()
