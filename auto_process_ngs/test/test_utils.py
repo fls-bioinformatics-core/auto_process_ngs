@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
+from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -181,6 +182,45 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+
+class TestAnalysisDir(unittest.TestCase):
+    """Tests for the AnalysisDir class
+
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestAnalysisDir')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_casava(self):
+        """Check AnalysisDir against CASAVA-style output
+        """
+        mockdir = MockAnalysisDirFactory.casava(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
+    def test_bcl2fastq2(self):
+        """Check AnalysisDir against bcl2fastq v2-style output
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
 
 class TestAnalysisProject(unittest.TestCase):
     """Tests for the AnalysisProject class
