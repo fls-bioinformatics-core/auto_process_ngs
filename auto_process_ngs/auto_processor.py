@@ -2543,7 +2543,10 @@ class AutoProcess:
         report = '; '.join(report)
         # Paired end run?
         if analysis_dir.paired_end:
-            report = "Paired end: " + report
+            endedness = "Paired end"
+        else:
+            endedness = "Single end"
+        report = "%s: %s" % (endedness,report)
         return report
 
     def report_summary_format(self):
