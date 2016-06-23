@@ -1145,7 +1145,7 @@ class AutoProcess:
         try:
             rsync = applications.general.rsync(data_dir,self.params.primary_data_dir,
                                                prune_empty_dirs=True,
-                                               extra_options=('-copy-links',
+                                               extra_options=('--copy-links',
                                                               '--include=*/',
                                                               '--include=Data/**',
                                                               '--include=RunInfo.xml',
