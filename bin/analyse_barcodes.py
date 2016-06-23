@@ -635,21 +635,23 @@ def match_against_samplesheet(groups,sample_sheet,lanes,mismatches,nreads,
     # Get barcodes from sample sheet
     sample_sheet = SampleSheet(sample_sheet)
     sample_id = sample_sheet.sample_id_column
+    sample = {}
+    index_sequences = []
     if sample_sheet.has_lanes:
-        samples = { samplesheet_index_sequence(line): line[sample_id]
-                    for line in sample_sheet.data
-                    if line['Lane'] in lanes }
-        index_sequences = [samplesheet_index_sequence(line)
-                           for line in sample_sheet.data
-                           if line['Lane'] in lanes]
+        for line in sample_sheet.data:
+            if line['Lane'] in lanes:
+                samples[samplesheet_index_sequence(line)] = line[sample_id]
+                index_sequences.append(samplesheet_index_sequence(line))
     else:
-        samples = { samplesheet_index_sequence(line): line[sample_id]
-                    for line in sample_sheet.data }
-        index_sequences = [samplesheet_index_sequence(line)
-                           for line in sample_sheet.data]
+        for line in sample_sheet.data:
+            samples[samplesheet_index_sequence(line)] = line[sample_id]
+            index_sequences.append(samplesheet_index_sequence(line))
     # Normalise sequences
     index_sequences = [normalise_barcode(s) for s in index_sequences]
-    samples = { normalise_barcode(s): samples[s] for s in samples }
+    normalised_samples = {}
+    for sample in samples:
+        normalised_samples[normalise_barcode(sample)] = samples[sample]
+    samples = normalised_samples
     # Match barcodes
     fp.write("%d mismatch%s allowed\n" % (mismatches,
                                           ('' if mismatches == 1
