@@ -2614,11 +2614,12 @@ class AutoProcess:
         report = []
         # Report header
         if datestamp and instrument and run_number:
-            report.append("%s run #%s datestamped %s\n" % (platform,
-                                                           run_number,
-                                                           datestamp))
+            title = "%s run #%s datestamped %s" % (platform,
+                                                   run_number,
+                                                   datestamp)
         else:
-            report.append("%s\n" % os.path.basename(self.analysis_dir))
+            title = "%s" % os.path.basename(self.analysis_dir)
+        report.append("%s\n%s" % (title,'='*len(title)))
         report.append("Run name : %s" % run_name)
         report.append("Reference: %s" % self.run_reference_id)
         report.append("Platform : %s" % platform)
