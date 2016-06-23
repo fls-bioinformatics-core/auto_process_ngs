@@ -245,7 +245,6 @@ def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
         print "Processing reads from %s" % fastq
         for read in FASTQFile.FastqIterator(fastq):
             nread += 1
-            print read
             seq = read.seqid.index_sequence
             if not seq:
                 logging.error("No index sequence for read!")
@@ -557,7 +556,7 @@ import sys
 if __name__ == "__main__":
     p = optparse.OptionParser(usage="\n\t%prog [OPTIONS] FASTQ [FASTQ...]\n"
                               "\t%prog [OPTIONS] FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]\n"
-                              "\t%prog {OPTIONS] DIR",
+                              "\t%prog [OPTIONS] DIR",
                               description="Split reads from one or more input Fastq files "
                               "into new Fastqs based on matching supplied barcodes.")
     p.add_option('-b','--barcode',action='append',dest='index_seq',
