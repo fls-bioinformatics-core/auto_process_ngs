@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import os
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.mock import MockAnalysisDirFactory
 
 IEMSampleSheetContents = """[Header]
 IEMFileVersion,4
@@ -92,3 +93,70 @@ class TestAutoProcess(unittest.TestCase):
         ap.setup(self.data_dir)
         self.assertTrue(os.path.isdir(
             '150921_M00123_0045_000000000-ABC6D_analysis'))
+
+class TestAutoProcessImportProject(unittest.TestCase):
+    """Tests for AutoProcess.import_project
+
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessImportProject')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_import_project(self):
+        """Check AutoProcess.import_project
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        open(os.path.join(mockdir.dirn,'auto_process.info'),'w').write(
+            """analysis_dir\t%s
+bases_mask\ty76,I8,I8,y76
+data_dir\t/mnt/data/%s
+per_lane_stats_file\tper_lane_statistics.info
+primary_data_dir\t%s/primary_data/%s
+project_metadata\tprojects.info
+sample_sheet\t%s/custom_SampleSheet.csv
+stats_file\tstatistics.info
+unaligned_dir\tbcl2fastq
+"""
+            % (mockdir.dirn,
+               os.path.basename(mockdir.dirn[:-9]),
+               mockdir.dirn,os.path.basename(mockdir.dirn[:-9]),
+               mockdir.dirn))
+        # Make a mock project
+        project_dir = os.path.join(self.dirn,'NewProj')
+        os.mkdir(project_dir)
+        os.mkdir(os.path.join(project_dir,'fastqs'))
+        for fq in ('NP01_S1_R1_001.fastq.gz','NP01_S1_R1_001.fastq.gz'):
+            open(os.path.join(project_dir,'fastqs',fq),'w').write('')
+        open(os.path.join(project_dir,'README.info'),'w').write(
+            """Run\t160622_NB5001234_0011_ABCDE5AFXX
+Platform\tnextseq
+User\tPeter Briggs
+PI\tAnne Cleaves
+Organism\tHuman
+Library type\tRNA-seq
+Paired_end\tY
+Samples\t1 sample (NP01)
+Comments\t1% PhiX spike in
+""")
+        # Check that the project is not currently present
+        ap = AutoProcess(mockdir.dirn)
+        self.assertFalse('NewProj' in [p.name
+                                       for p in ap.get_analysis_projects()])
+        self.assertFalse('NewProj' in [p.name
+                                       for p in ap.get_analysis_projects_from_dirs()])
+        self.assertFalse(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
+        # Import the project
+        ap.import_project(project_dir)
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap.get_analysis_projects()])
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap.get_analysis_projects_from_dirs()])
+        self.assertTrue(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
