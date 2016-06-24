@@ -64,6 +64,10 @@ class BarcodeCounter:
 
     >>> bc2 = BarcodeCounter("counts.out")
 
+    Multiple counts files can be combined:
+
+    >>> bc_all = BarcodeCounter("counts1.out","counts2.out")
+
     Grouping barcodes
     -----------------
 
@@ -76,14 +80,19 @@ class BarcodeCounter:
 
     """
 
-    def __init__(self,counts_file=None):
+    def __init__(self,*counts_files):
         """
         Create a new BarcodeCounter instance
+
+        Arguments:
+          counts_files: (optionally) one or more count
+           files; if there are multiple files then the
+           data will be combined for all input files
 
         """
         self._seqs = {}
         self._seqs_all = {}
-        if counts_file is not None:
+        for counts_file in counts_files:
             self.read(counts_file)
 
     def count_barcode(self,barcode,lane=None,incr=1):
@@ -777,9 +786,9 @@ if __name__ == '__main__':
     # Determine subset of lanes to examine
     lanes = parse_lanes_expression(opts.lanes)
     # Determine mode
-    if opts.counts_file_in is not None:
-        # Read counts from counts file
-        counts = BarcodeCounter(opts.counts_file_in)
+    if opts.use_counts:
+        # Read counts from counts file(s)
+        counts = BarcodeCounter(*args)
     elif len(args) == 1 and os.path.isdir(args[0]):
         # Generate counts from bcl2fastq output
         counts = count_barcodes_bcl2fastq(args[0])
