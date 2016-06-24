@@ -533,11 +533,14 @@ def add_analyse_barcodes_command(cmdparser):
                  "the fraction of reads specified by COVERAGE, e.g. "
                  "'0.9' limits barcodes to those associated with 90% "
                  " of total reads (default is to include all barcodes)")
-    add_nprocessors_option(p,1)
     add_runner_option(p)
     add_debug_option(p)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option('--nprocessors',action='store',
+                          dest='nprocessors',default=None,type='int',
+                          help="does nothing; kept for backwards "
+                          "compatibility only")
     deprecated.add_option('--truncate',action='store',
                           dest='length',default=None,type='int',
                           help="does nothing; kept for backwards "
@@ -756,7 +759,6 @@ if __name__ == "__main__":
                                lanes=lanes,
                                cutoff=options.cutoff,
                                coverage=options.coverage,
-                               nprocessors=options.nprocessors,
                                runner=options.runner)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
