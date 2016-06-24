@@ -132,6 +132,18 @@ class MockAnalysisDir(MockIlluminaData):
                     fp.write("%s\t%s\n" % (item,self.metadata[item]))
             else:
                 fp.write('')
+        # Add auto_process.info file
+        with open(os.path.join(self.dirn,'auto_process.info'),'w') as fp:
+            fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
+            fp.write("bases_mask\ty76,I8,I8,y76\n")
+            fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
+            fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
+            fp.write("primary_data_dir\t%s/primary_data/%s\n" % (self.dirn,
+                                                                 self.run_name))
+            fp.write("project_metadata\tprojects.info\n")
+            fp.write("sample_sheet\t%s/custom_SampleSheet.csv\n" % self.dirn)
+            fp.write("stats_file\tstatistics.info\n")
+            fp.write("unaligned_dir\tbcl2fastq\n")
         # Add top-level README file
         if self.readme is not None:
             open(os.path.join(self.dirn,'README'),'w').write(self.readme)
@@ -229,4 +241,3 @@ class MockAnalysisDirFactory(object):
         mad.add_fastq_batch('CDE','CDE3','CDE3_GCCAAT',lanes=lanes)
         mad.add_fastq_batch('CDE','CDE4','CDE4_AGTCAA',lanes=lanes)
         return mad
-

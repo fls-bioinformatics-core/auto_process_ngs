@@ -114,21 +114,6 @@ class TestAutoProcessImportProject(unittest.TestCase):
             'miseq',
             top_dir=self.dirn)
         mockdir.create()
-        open(os.path.join(mockdir.dirn,'auto_process.info'),'w').write(
-            """analysis_dir\t%s
-bases_mask\ty76,I8,I8,y76
-data_dir\t/mnt/data/%s
-per_lane_stats_file\tper_lane_statistics.info
-primary_data_dir\t%s/primary_data/%s
-project_metadata\tprojects.info
-sample_sheet\t%s/custom_SampleSheet.csv
-stats_file\tstatistics.info
-unaligned_dir\tbcl2fastq
-"""
-            % (mockdir.dirn,
-               os.path.basename(mockdir.dirn[:-9]),
-               mockdir.dirn,os.path.basename(mockdir.dirn[:-9]),
-               mockdir.dirn))
         # Make a mock project
         project_dir = os.path.join(self.dirn,'NewProj')
         os.mkdir(project_dir)
