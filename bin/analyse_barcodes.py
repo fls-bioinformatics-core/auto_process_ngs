@@ -91,9 +91,9 @@ class BarcodeCounter:
         Increment count of a barcode sequence
 
         Arguments:
+          barcode (str): barcode sequence to count
           lane (int): lane that the barcode appears
             in (None if unknown)
-          barcode (str): barcode sequence to count
           incr (int): increment the count for the
             barcode in the lane by this amount
             (defaults to 1)
