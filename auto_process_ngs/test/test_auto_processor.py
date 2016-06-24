@@ -145,3 +145,10 @@ Comments\t1% PhiX spike in
         self.assertTrue('NewProj' in [p.name
                                       for p in ap.get_analysis_projects_from_dirs()])
         self.assertTrue(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
+        # Verify via fresh AutoProcess object
+        ap2 = AutoProcess(mockdir.dirn)
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap2.get_analysis_projects()])
+        self.assertTrue('NewProj' in [p.name
+                                      for p in ap2.get_analysis_projects_from_dirs()])
+        self.assertTrue(os.path.exists(os.path.join(ap2.analysis_dir,'NewProj')))
