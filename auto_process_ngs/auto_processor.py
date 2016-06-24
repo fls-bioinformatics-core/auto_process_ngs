@@ -1487,14 +1487,18 @@ class AutoProcess:
         for s in illumina_data.undetermined.samples:
             for f in s.fastq_subset(read_number=1,full_path=True):
                 lane = str(IlluminaData.IlluminaFastq(f).lane_number)
-            if lane not in lane_numbers:
+            if lane is not None and lane not in lane_numbers:
                 lane_numbers.append(lane)
         lane_numbers.sort()
-        print "Found lanes: %s" % ','.join(lane_numbers)
-        if lanes is None:
-            lanes = lane_numbers
+        if lane_numbers:
+            print "Found lanes: %s" % ','.join(lane_numbers)
+            if lanes is None:
+                lanes = lane_numbers
+            else:
+                lanes.sort()
         else:
-            lanes.sort()
+            print "No lanes found"
+            raise NotImplementedError("Cannot handle no lanes")
         # Check there are some lanes to examine
         if len(lanes) == 0:
             print "No lanes specified/found: nothing to do"
