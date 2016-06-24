@@ -1459,8 +1459,8 @@ class AutoProcess:
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
-                         mismatches=1,cutoff=None,threshold=None,
-                         nprocessors=None,runner=None):
+                         mismatches=1,cutoff=None,coverage=None,
+                         runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
         Run 'analyse_barcodes.py' for one or more lanes, to analyse the
@@ -1490,32 +1490,53 @@ class AutoProcess:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
             self.params['unaligned_dir'] = 'bcl2fastq'
-        # Load data and determine lanes
+        # Load data
         illumina_data = self.load_illumina_data(unaligned_dir=unaligned_dir)
-        lane_numbers = []
-        for s in illumina_data.undetermined.samples:
-            for f in s.fastq_subset(read_number=1,full_path=True):
-                lane = str(IlluminaData.IlluminaFastq(f).lane_number)
-            if lane is not None and lane not in lane_numbers:
-                lane_numbers.append(lane)
-        lane_numbers.sort()
-        if lane_numbers:
-            print "Found lanes: %s" % ','.join(lane_numbers)
-            if lanes is None:
-                lanes = lane_numbers
-            else:
-                lanes.sort()
-        else:
-            print "No lanes found"
-            raise NotImplementedError("Cannot handle no lanes")
-        # Check there are some lanes to examine
-        if len(lanes) == 0:
-            print "No lanes specified/found: nothing to do"
-            return
         # Create a subdirectory for barcode analysis
-        output_dir = self.add_directory('barcode_analysis')
-        # Base name for output counts
-        counts_base = os.path.join(output_dir,'counts')
+        barcode_dir = self.add_directory('barcode_analysis')
+        # Create a subdirectory for count files
+        counts_dir = self.add_directory('barcode_analysis/counts')
+        # Map fastq files to counts files
+        counts_files = {}
+        for project in illumina_data.projects:
+            for sample in project.samples:
+                for fq in sample.fastq_subset(read_number=1,
+                                              full_path=True):
+                    counts_files[fq] = os.path.join(
+                        counts_dir,
+                        os.path.basename(fq) + '.counts')
+        for sample in illumina_data.undetermined.samples:
+            for fq in sample.fastq_subset(read_number=1,
+                                          full_path=True):
+                counts_files[fq] = os.path.join(
+                    counts_dir,
+                    os.path.basename(fq) + '.counts')
+        # Subset of fastq files with no corresponding counts
+        missing_counts = filter(lambda fq: not os.path.exists(counts_files[fq]),
+                                counts_files.keys())
+        # Deal with lanes
+        lane_numbers = illumina_data.lanes
+        if lanes:
+            lanes = [int(lane) for lane in lanes]
+            print "Requested analysis for lanes: %s" % \
+                ', '.join([str(l) for l in lanes])
+        else:
+            print "No lanes explicitly specified"
+        print "Lanes explicitly defined in file names: %s" % \
+                          ', '.join([str(l) for l in lane_numbers])
+        if (lanes is None) or (len(lane_numbers) == 1
+                               and lane_numbers[0] is None):
+            # Need counts from all files
+            req_counts = counts_files.keys()
+        else:
+            # Get subset of files explictly belonging to this lane
+            req_counts = filter(lambda fq: utils.AnalysisFastq(fq).lane_number
+                                in lanes,
+                                counts_files.keys())
+        # Check there are files to examine
+        if not req_counts:
+            logging.warning("No matching files: nothing to do")
+            return
         # Log dir
         self.set_log_dir(self.get_log_subdir('analyse_barcodes'))
         # Set up runner (use the stats runner for now)
@@ -1524,43 +1545,52 @@ class AutoProcess:
         else:
             runner = self.settings.runners.stats
         runner.set_log_dir(self.log_dir)
-        # Schedule the jobs
+        # Schedule the jobs needed to do counting
         sched = simple_scheduler.SimpleScheduler(
             runner=runner,
             max_concurrent=self.settings.general.max_concurrent_jobs)
         sched.start()
-        for lane in lanes:
-            print "Starting analysis of barcodes for lane %s" % lane
-            # Initial command
-            barcode_cmd = applications.Command(
-                'analyse_barcodes.py',
-                '--lanes',lane,
-                '--report',os.path.join(output_dir,'report.lane%s' % lane),
-                '--sample-sheet',self.params.sample_sheet)
-            # Cutoff
-            if cutoff is not None:
-                barcode_cmd.add_args('--cutoff',cutoff)
-            # Coverage
-            if coverage is not None:
-                barcode_cmd.add_args('--coverge',coverage)
-            # Multicore
-            if nprocessors is not None:
-                barcode_cmd.add_args('-N',nprocessors)
-            # Look for an existing counts file
-            counts_file = "%s.lane%s" % (counts_base,lane)
-            if os.path.exists(counts_file):
-                print "Using counts from existing file %s" % counts_file
-                barcode_cmd.add_args('-c',counts_file)
-            else:
-                barcode_cmd.add_args('-o',counts_base)
-            # Finish command and submit
-            barcode_cmd.add_args(os.path.join(self.analysis_dir,
-                                              unaligned_dir))
-            sched.submit(barcode_cmd,
-                         name='analyse_barcodes.lane%s' % lane)
+        # Do counting
+        print "Getting counts from fastq files"
+        for fq in req_counts:
+            if fq in missing_counts:
+                # Get counts for this file
+                barcode_count_cmd = applications.Command(
+                    'analyse_barcodes.py',
+                    '-o',counts_files[fq],fq)
+                print "Running %s" % barcode_count_cmd
+                sched.submit(barcode_count_cmd,
+                             name='analyse_barcodes.count.%s' %
+                             os.path.basename(fq))
+        # Wait for the scheduler to run all jobs
+        sched.wait()
+        # Do reporting
+        report_file = os.path.join(barcode_dir,'barcodes.report')
+        if os.path.exists(report_file):
+            print "Removing existing report file: %s" % report_file
+            os.remove(report_file)
+        barcode_report_cmd = applications.Command(
+            'analyse_barcodes.py',
+            '--report',report_file)
+        # Cutoff
+        if cutoff is not None:
+            barcode_report_cmd.add_args('--cutoff',cutoff)
+        # Coverage
+        if coverage is not None:
+            barcode_report_cmd.add_args('--coverage',coverage)
+        # Add the list of count files to process
+        barcode_report_cmd.add_args('-c')
+        for counts_file in [counts_files[f] for f in req_counts]:
+            barcode_report_cmd.add_args(counts_file)
+        # Submit command
+        print "Running %s" % barcode_report_cmd
+        sched.submit(barcode_report_cmd,
+                     name='analyse_barcodes.report')
         # Wait for the scheduler to run all jobs
         sched.wait()
         sched.stop()
+        # Finish
+        print "Report written to %s" % report_file
 
     def report_barcodes(self,report_file=None):
         """Count and report barcode sequences in FASTQs for each lane
