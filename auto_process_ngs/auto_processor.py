@@ -1505,12 +1505,13 @@ class AutoProcess:
                     counts_files[fq] = os.path.join(
                         counts_dir,
                         os.path.basename(fq) + '.counts')
-        for sample in illumina_data.undetermined.samples:
-            for fq in sample.fastq_subset(read_number=1,
-                                          full_path=True):
-                counts_files[fq] = os.path.join(
-                    counts_dir,
-                    os.path.basename(fq) + '.counts')
+        if illumina_data.undetermined is not None:
+            for sample in illumina_data.undetermined.samples:
+                for fq in sample.fastq_subset(read_number=1,
+                                              full_path=True):
+                    counts_files[fq] = os.path.join(
+                        counts_dir,
+                        os.path.basename(fq) + '.counts')
         # Subset of fastq files with no corresponding counts
         missing_counts = filter(lambda fq: not os.path.exists(counts_files[fq]),
                                 counts_files.keys())
