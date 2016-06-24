@@ -1458,11 +1458,12 @@ class AutoProcess:
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
 
-    def analyse_barcodes(self,unaligned_dir=None,lanes=None,truncate_barcodes=None,
+    def analyse_barcodes(self,unaligned_dir=None,lanes=None,
+                         mismatches=1,cutoff=None,threshold=None,
                          nprocessors=None,runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
-        Run 'count_barcodes.py' for one or more lanes, to analyse the
+        Run 'analyse_barcodes.py' for one or more lanes, to analyse the
         barcode index sequences in each lane.
 
         Arguments:
@@ -1471,8 +1472,16 @@ class AutoProcess:
             alternative is already specified in the settings)
           lanes: a list of lane numbers (integers) to perform the analysis
             for. Default is to analyse all lanes.
-          truncate_barcodes: if set then truncate barcode sequences to the
-            specified length for analysis
+          mismatches: optional, maximum number of mismatches to consider
+            when grouping similar barcodes (default is 1)
+          cutoff: optional, exclude barcodes with a smaller fraction of
+            associated reads than specified cutoff from reporting (e.g.
+            '0.001' excludes barcodes with < 0.1% of reads); default is to
+            include all barcodes
+          coverage: optional, include most numerous barcodes to cover only
+            the fraction of reads up to the specified value ('0.9' limits
+            barcodes to those associated with 90%  of total reads);
+            default is to include all barcodes
           runner: set a non-default job runner.
         
         """
@@ -1509,8 +1518,7 @@ class AutoProcess:
         counts_base = os.path.join(output_dir,'counts')
         # Log dir
         self.set_log_dir(self.get_log_subdir('analyse_barcodes'))
-        # Set up runner
-        # Use the stats runner for now
+        # Set up runner (use the stats runner for now)
         if runner is not None:
             runner = fetch_runner(runner)
         else:
@@ -1524,15 +1532,17 @@ class AutoProcess:
         for lane in lanes:
             print "Starting analysis of barcodes for lane %s" % lane
             # Initial command
-            barcode_cmd = applications.Command('count_barcodes.py',
-                                               '-l',lane,
-                                               '-r',os.path.join(output_dir,
-                                                                 'report.lane%s' % lane),
-                                               '-s',self.params.sample_sheet,
-                                               '-t',0.01)
-            # Truncate barcodes
-            if truncate_barcodes is not None:
-                barcode_cmd.add_args('-T',truncate_barcodes)
+            barcode_cmd = applications.Command(
+                'analyse_barcodes.py',
+                '--lanes',lane,
+                '--report',os.path.join(output_dir,'report.lane%s' % lane),
+                '--sample-sheet',self.params.sample_sheet)
+            # Cutoff
+            if cutoff is not None:
+                barcode_cmd.add_args('--cutoff',cutoff)
+            # Coverage
+            if coverage is not None:
+                barcode_cmd.add_args('--coverge',coverage)
             # Multicore
             if nprocessors is not None:
                 barcode_cmd.add_args('-N',nprocessors)
