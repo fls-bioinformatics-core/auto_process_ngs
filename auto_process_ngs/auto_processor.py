@@ -2046,7 +2046,8 @@ class AutoProcess:
         print "Year    : %s" % year
         # Determine which directories to exclude
         excludes = ['--exclude=primary_data',
-                    '--exclude=save.*']
+                    '--exclude=save.*',
+                    '--exclude=tmp.*']
         if not include_bcl2fastq:
             # Determine whether bcl2fastq dir should be included implicitly
             # because there are links from the analysis directories
@@ -2797,6 +2798,53 @@ class AutoProcess:
             report.append('\t'.join(project_line))
         report = '\n'.join(report)
         return report
+
+    def import_project(self,project_dir):
+        """
+        Import a project directory into this analysis directory
+
+        Arguments:
+          project_dir (str): path to project directory to be
+            imported
+
+        """
+        # Check that target directory exists
+        project_dir = os.path.abspath(project_dir)
+        # Check that project doesn't already exist
+        project_name = os.path.basename(project_dir)
+        project = utils.AnalysisProject(project_name,
+                                        os.path.join(self.analysis_dir,
+                                                     project_name))
+        if project.exists:
+            raise Exception("Project called '%s' already exists" %
+                            project_name)
+        # Load target as a project
+        project = utils.AnalysisProject(project_name,project_dir)
+        # Rsync the project directory
+        print "Importing project directory contents"
+        try:
+            rsync = applications.general.rsync(project_dir,
+                                               self.analysis_dir)
+            print "Running %s" % rsync
+            status = rsync.run_subprocess(log=self.log_path('import_project.rsync.log'))
+        except Exception as ex:
+            logging.error("Exception importing project: %s" % ex)
+            raise ex
+        if status != 0:
+            raise Exception("Failed to import project from %s (status %s)" %
+                            (project_dir,status))
+        # Update the projects.info metadata file
+        print "Updating projects.info file with imported project"
+        project_metadata = self.load_illumina_data()
+        project_metadata.add_project(project.name,sample_names)
+        sample_names = [s.name for s in project.samples]
+        project_metadata.add_project(project_name,
+                                     sample_names,
+                                     user=project.info.user,
+                                     library_type=project.info.library_type,
+                                     organism=project.info.organism,
+                                     PI=project.info.PI,
+                                     comments=project.info.comments)
 
     def check_metadata(self,items):
         """
