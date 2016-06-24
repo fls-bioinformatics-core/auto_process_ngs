@@ -140,6 +140,14 @@ class MockAnalysisDir(MockIlluminaData):
         # Add top-level logs directory
         os.mkdir(os.path.join(self.dirn,'logs'))
         # Add project dirs
+        projects_info = open(os.path.join(self.dirn,'projects.info'),'w')
+        projects_info.write('#%s\n' % '\t'.join(('Project',
+                                                 'Samples',
+                                                 'User',
+                                                 'Library',
+                                                 'Organism',
+                                                 'PI',
+                                                 'Comments')))
         for project in self.projects:
             if project.startswith("Undetermined"):
                 project_name = 'undetermined'
@@ -149,10 +157,21 @@ class MockAnalysisDir(MockIlluminaData):
             # Add fastqs
             fqs_dir = os.path.join(self.dirn,project_name,'fastqs')
             os.mkdir(fqs_dir)
+            sample_names = []
             for sample in self.samples_in_project(project):
+                sample_names.append(sample)
                 for fq in self.fastqs_in_sample(project,sample):
                     with open(os.path.join(fqs_dir,fq),'w') as fp:
                         fp.write('')
+            # Add line to projects.info
+            if project_name != 'undetermined':
+                projects_info.write('%s\n' % '\t'.join((project,
+                                                        ','.join(sample_names),
+                                                        '.',
+                                                        '.',
+                                                        '.',
+                                                        '.',
+                                                        '.')))
             # Add (empty) README.info
             open(os.path.join(self.dirn,
                               project_name,
