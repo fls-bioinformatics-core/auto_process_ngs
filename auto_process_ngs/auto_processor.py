@@ -2835,8 +2835,7 @@ class AutoProcess:
                             (project_dir,status))
         # Update the projects.info metadata file
         print "Updating projects.info file with imported project"
-        project_metadata = self.load_illumina_data()
-        project_metadata.add_project(project.name,sample_names)
+        project_metadata = self.load_project_metadata()
         sample_names = [s.name for s in project.samples]
         project_metadata.add_project(project_name,
                                      sample_names,
@@ -2845,6 +2844,11 @@ class AutoProcess:
                                      organism=project.info.organism,
                                      PI=project.info.PI,
                                      comments=project.info.comments)
+        project_metadata.save()
+        # Report
+        print "Projects now in metadata file:"
+        for p in project_metadata:
+            print "- %s" % p['Project']
 
     def check_metadata(self,items):
         """
