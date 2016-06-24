@@ -60,6 +60,19 @@ Copy the final data to an 'archive' location::
 
    auto_process.py archive [ANALYSIS_DIR]
 
+.. _special-cases:
+
+Special cases
+=============
+
+import_project
+--------------
+
+Import a project directory from a separate location into the current
+analysis::
+
+   auto_process.py import_project [ANALYSIS_DIR] PROJECT_DIR
+
 .. _metadata-management:
 
 Metadata management
