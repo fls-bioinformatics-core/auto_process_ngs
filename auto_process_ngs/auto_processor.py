@@ -2821,7 +2821,7 @@ class AutoProcess:
         # Load target as a project
         project = utils.AnalysisProject(project_name,project_dir)
         # Rsync the project directory
-        print "Importing project directory contents"
+        print "Importing project directory contents for '%s'" % project_name
         try:
             rsync = applications.general.rsync(project_dir,
                                                self.analysis_dir)
