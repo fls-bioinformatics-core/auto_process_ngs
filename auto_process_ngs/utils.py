@@ -1192,6 +1192,10 @@ class ProjectMetadataFile(TabFile.TabFile):
             the project
 
         """
+        # Check project name doesn't already exist
+        if project_name in [p[self._fields[0]] for p in self]:
+            raise Exception("Project '%s' already exists" %
+                            project_name)
         # Assemble dictionary with all values
         values = { 'project_name': project_name,
                    'sample_names': ','.join(sample_names), }
