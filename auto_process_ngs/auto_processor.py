@@ -2812,10 +2812,11 @@ class AutoProcess:
         project_dir = os.path.abspath(project_dir)
         # Check that project doesn't already exist
         project_name = os.path.basename(project_dir)
-        project = utils.AnalysisProject(project_name,
-                                        os.path.join(self.analysis_dir,
-                                                     project_name))
-        if project.exists:
+        project_metadata = self.load_project_metadata()
+        if project_name in [p['Project'] for p in project_metadata] or \
+           utils.AnalysisProject(project_name,
+                                 os.path.join(self.analysis_dir,
+                                              project_name)).exists:
             raise Exception("Project called '%s' already exists" %
                             project_name)
         # Load target as a project
@@ -2823,8 +2824,11 @@ class AutoProcess:
         # Rsync the project directory
         print "Importing project directory contents for '%s'" % project_name
         try:
+            excludes = ['--exclude=tmp.*',
+                        '--exclude=qc_report.*']
             rsync = applications.general.rsync(project_dir,
-                                               self.analysis_dir)
+                                               self.analysis_dir,
+                                               extra_options=excludes)
             print "Running %s" % rsync
             status = rsync.run_subprocess(log=self.log_path('import_project.rsync.log'))
         except Exception as ex:
@@ -2849,6 +2853,23 @@ class AutoProcess:
         print "Projects now in metadata file:"
         for p in project_metadata:
             print "- %s" % p['Project']
+        # Update the QC report
+        try:
+            project = self.get_analysis_projects(pattern=project_name)[0]
+        except Exception as ex:
+            logging.error("Exception when trying to acquire project %s: %s"
+                          % (project_name,ex))
+            return
+        if project.qc is None:
+            print "No QC for %s" % project_name
+        else:
+            if project.qc.verify():
+                try:
+                    project.qc.zip()
+                    print "Updated QC report for %s" % project_name
+                except Exception, ex:
+                    logging.error("Failed to generate QC report for %s" %
+                                  project_name)
 
     def check_metadata(self,items):
         """
