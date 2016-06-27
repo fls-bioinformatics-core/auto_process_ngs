@@ -682,6 +682,21 @@ class TestProjectMetadataFile(unittest.TestCase):
             print "%s" % type(project['Project'])
             self.assertTrue(isinstance(project['Project'],str))
 
+    def test_refuse_to_add_duplicate_projects(self):
+        """Refuse to add duplicated project names
+        """
+        metadata = ProjectMetadataFile()
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Attempt to add same project name again
+        self.assertRaises(Exception,
+                          metadata.add_project,'Charlie',['C1','C2'])
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 

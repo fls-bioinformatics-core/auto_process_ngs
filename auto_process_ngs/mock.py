@@ -132,6 +132,18 @@ class MockAnalysisDir(MockIlluminaData):
                     fp.write("%s\t%s\n" % (item,self.metadata[item]))
             else:
                 fp.write('')
+        # Add auto_process.info file
+        with open(os.path.join(self.dirn,'auto_process.info'),'w') as fp:
+            fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
+            fp.write("bases_mask\ty76,I8,I8,y76\n")
+            fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
+            fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
+            fp.write("primary_data_dir\t%s/primary_data/%s\n" % (self.dirn,
+                                                                 self.run_name))
+            fp.write("project_metadata\tprojects.info\n")
+            fp.write("sample_sheet\t%s/custom_SampleSheet.csv\n" % self.dirn)
+            fp.write("stats_file\tstatistics.info\n")
+            fp.write("unaligned_dir\tbcl2fastq\n")
         # Add top-level README file
         if self.readme is not None:
             open(os.path.join(self.dirn,'README'),'w').write(self.readme)
@@ -140,6 +152,14 @@ class MockAnalysisDir(MockIlluminaData):
         # Add top-level logs directory
         os.mkdir(os.path.join(self.dirn,'logs'))
         # Add project dirs
+        projects_info = open(os.path.join(self.dirn,'projects.info'),'w')
+        projects_info.write('#%s\n' % '\t'.join(('Project',
+                                                 'Samples',
+                                                 'User',
+                                                 'Library',
+                                                 'Organism',
+                                                 'PI',
+                                                 'Comments')))
         for project in self.projects:
             if project.startswith("Undetermined"):
                 project_name = 'undetermined'
@@ -149,10 +169,21 @@ class MockAnalysisDir(MockIlluminaData):
             # Add fastqs
             fqs_dir = os.path.join(self.dirn,project_name,'fastqs')
             os.mkdir(fqs_dir)
+            sample_names = []
             for sample in self.samples_in_project(project):
+                sample_names.append(sample)
                 for fq in self.fastqs_in_sample(project,sample):
                     with open(os.path.join(fqs_dir,fq),'w') as fp:
                         fp.write('')
+            # Add line to projects.info
+            if project_name != 'undetermined':
+                projects_info.write('%s\n' % '\t'.join((project,
+                                                        ','.join(sample_names),
+                                                        '.',
+                                                        '.',
+                                                        '.',
+                                                        '.',
+                                                        '.')))
             # Add (empty) README.info
             open(os.path.join(self.dirn,
                               project_name,
@@ -210,4 +241,3 @@ class MockAnalysisDirFactory(object):
         mad.add_fastq_batch('CDE','CDE3','CDE3_GCCAAT',lanes=lanes)
         mad.add_fastq_batch('CDE','CDE4','CDE4_AGTCAA',lanes=lanes)
         return mad
-

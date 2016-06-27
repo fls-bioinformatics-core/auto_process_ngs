@@ -44,6 +44,7 @@ Additional commands are available:
     analyse_barcodes
     merge_fastq_dirs
     update_fastq_stats
+    import_project
     readme
 
 but these are not part of the standard workflow - they are used for
@@ -546,6 +547,15 @@ def add_merge_fastq_dirs_command(cmdparser):
     add_dry_run_option(p)
     add_debug_option(p)
 
+def add_import_project_command(cmdparser):
+    """Create a parser for the 'import_project' command
+    """
+    p = cmdparser.add_command('import_project',help="Import a project directory",
+                              usage="%prog import_project [OPTIONS] [ANALYSIS_DIR] PROJECT_DIR",
+                              description="Copy a project directory PROJECT_DIR into "
+                              "ANALYSIS_DIR.")
+    add_debug_option(p)
+
 def add_update_fastq_stats_command(cmdparser):
     """Create a parser for the 'update_fastq_stats' command
     """
@@ -595,6 +605,7 @@ if __name__ == "__main__":
     add_clone_command(p)
     add_analyse_barcodes_command(p)
     add_merge_fastq_dirs_command(p)
+    add_import_project_command(p)
     add_update_fastq_stats_command(p)
     
     # Process remaining command line
@@ -678,6 +689,16 @@ if __name__ == "__main__":
             sys.exit(1)
         d = AutoProcess(args[0],allow_save_params=False)
         d.clone(args[1],copy_fastqs=options.copy_fastqs)
+    elif cmd == 'import_project':
+        if len(args) == 0 or len(args) > 2:
+            sys.stderr.write("Need to supply a project directory to import\n")
+            sys.exit(1)
+        if len(args) == 2:
+            analysis_dir = args[0]
+        else:
+            analysis_dir = os.getcwd()
+        d = AutoProcess(analysis_dir)
+        d.import_project(args[-1])
     else:
         # For other options check if an analysis
         # directory was specified
@@ -685,8 +706,8 @@ if __name__ == "__main__":
             analysis_dir = args[0]
         else:
             analysis_dir = os.getcwd()
-        # Turn off allow save for 'params' and 'metadata' commands
-        if cmd == 'params' or cmd == 'metadata':
+        # Turn off allow save for specific commands
+        if cmd in ('params','metadata','report'):
             allow_save = False
         # Run the specified stage
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
