@@ -1553,18 +1553,19 @@ class AutoProcess:
         sched.start()
         # Do counting
         print "Getting counts from fastq files"
+        group = sched.group("get_barcode_counts")
         for fq in req_counts:
             if fq in missing_counts:
                 # Get counts for this file
                 barcode_count_cmd = applications.Command(
                     'analyse_barcodes.py',
-                    '-o',counts_files[fq],fq)
+                    '-o',counts_files[fq],
+                    '--no-report',fq)
                 print "Running %s" % barcode_count_cmd
-                sched.submit(barcode_count_cmd,
-                             name='analyse_barcodes.count.%s' %
-                             os.path.basename(fq))
-        # Wait for the scheduler to run all jobs
-        sched.wait()
+                group.add(barcode_count_cmd,
+                          name='analyse_barcodes.count.%s' %
+                          os.path.basename(fq))
+        group.close()
         # Do reporting
         report_file = os.path.join(barcode_dir,'barcodes.report')
         if os.path.exists(report_file):
@@ -1586,7 +1587,8 @@ class AutoProcess:
         # Submit command
         print "Running %s" % barcode_report_cmd
         sched.submit(barcode_report_cmd,
-                     name='analyse_barcodes.report')
+                     name='analyse_barcodes.report',
+                     wait_for=('get_barcode_counts',))
         # Wait for the scheduler to run all jobs
         sched.wait()
         sched.stop()
