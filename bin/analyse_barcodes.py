@@ -792,6 +792,9 @@ if __name__ == '__main__':
                  action='store',dest='report_file',default=None,
                  help="write report to REPORT_FILE (otherwise write to "
                  "stdout)")
+    p.add_option('-n','--no-report',
+                 action='store_true',dest='no_report',default=None,
+                 help="suppress reporting (overrides --report)")
     # Report name and version
     p.print_version()
     # Process command line
@@ -809,21 +812,22 @@ if __name__ == '__main__':
         # Generate counts from fastq files
         counts = count_barcodes(args)
     # Report the counts
-    if opts.report_file is not None:
-        print "Writing report to %s" % opts.report_file
-        fp = open(opts.report_file,'w')
-    else:
-        fp = sys.stdout
-    if lanes is None:
-        lanes = counts.lanes
-    for lane in lanes:
-        report(counts,
-               lane=lane,
-               mismatches=opts.mismatches,
-               cutoff=opts.cutoff,
-               coverage=opts.coverage,
-               sample_sheet=opts.sample_sheet,
-               fp=fp)
+    if not opts.no_report:
+        if opts.report_file is not None:
+            print "Writing report to %s" % opts.report_file
+            fp = open(opts.report_file,'w')
+        else:
+            fp = sys.stdout
+        if lanes is None:
+            lanes = counts.lanes
+        for lane in lanes:
+            report(counts,
+                   lane=lane,
+                   mismatches=opts.mismatches,
+                   cutoff=opts.cutoff,
+                   coverage=opts.coverage,
+                   sample_sheet=opts.sample_sheet,
+                   fp=fp)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
