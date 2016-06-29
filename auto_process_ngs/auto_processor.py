@@ -1540,11 +1540,11 @@ class AutoProcess:
             return
         # Log dir
         self.set_log_dir(self.get_log_subdir('analyse_barcodes'))
-        # Set up runner (use the stats runner for now)
+        # Set up runner
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = self.settings.runners.stats
+            runner = fetch_runner(self.settings.general.default_runner)
         runner.set_log_dir(self.log_dir)
         # Schedule the jobs needed to do counting
         sched = simple_scheduler.SimpleScheduler(
@@ -1584,10 +1584,14 @@ class AutoProcess:
         barcode_report_cmd.add_args('-c')
         for counts_file in [counts_files[f] for f in req_counts]:
             barcode_report_cmd.add_args(counts_file)
+        # Write a script file
+        script_file = os.path.join(self.log_dir,'report_barcodes.sh')
+        utils.write_script_file(script_file,barcode_report_cmd,
+                                shell='/bin/sh')
         # Submit command
-        print "Running %s" % barcode_report_cmd
-        sched.submit(barcode_report_cmd,
-                     name='analyse_barcodes.report',
+        print "Running %s" % script_file
+        sched.submit(applications.Command('sh',script_file),
+                     name='report_barcodes',
                      wait_for=('get_barcode_counts',))
         # Wait for the scheduler to run all jobs
         sched.wait()
