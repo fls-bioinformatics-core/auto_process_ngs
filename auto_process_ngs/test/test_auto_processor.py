@@ -6,93 +6,92 @@ import unittest
 import tempfile
 import shutil
 import os
+from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 
-IEMSampleSheetContents = """[Header]
-IEMFileVersion,4
-Date,21/9/2015
-Workflow,GenerateFASTQ
-Application,FASTQ Only
-Assay,Nextera XT
-Description,
-Chemistry,Amplicon
-
-[Reads]
-75
-75
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
-S1_A,S1_A,,,N701,TAAGGCGA,S501,TAGATCGC,,
-S2_A,S2_A,,,N702,CGTACTAG,S501,TAGATCGC,,
-TM3,TM3,,,N703,AGGCAGAA,S502,CTCTCTAT,,
-"""
-
-RunInfoXmlContents = """<?xml version="1.0"?>
-<RunInfo xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="2">
-  <Run Id="150921_M00123_0045_000000000-ABC6D" Number="45">
-    <Flowcell>000000000-ABC6D</Flowcell>
-    <Instrument>M00123</Instrument>
-    <Date>150921</Date>
-    <Reads>
-      <Read NumCycles="75" Number="1" IsIndexedRead="N" />
-      <Read NumCycles="8" Number="2" IsIndexedRead="Y" />
-      <Read NumCycles="8" Number="3" IsIndexedRead="Y" />
-      <Read NumCycles="75" Number="4" IsIndexedRead="N" />
-    </Reads>
-    <FlowcellLayout LaneCount="1" SurfaceCount="2" SwathCount="1" TileCount="19" />
-  </Run>
-</RunInfo>
-"""
-
-# Helper functions for testing
-
-def _make_mock_primary_data_dir(top_dir):
-    # Creates a mock primary data directory
-    data_dir = os.path.join(top_dir,
-                            '150921_M00123_0045_000000000-ABC6D')
-    # Make the Data/Intensities/BaseCalls dir
-    os.makedirs(os.path.join(data_dir,
-                             'Data','Intensities','BaseCalls'))
-    # Make an IEM sample sheet
-    sample_sheet = os.path.join(data_dir,
-                                'Data','Intensities','BaseCalls',
-                                'SampleSheet.csv')
-    with open(sample_sheet,'w') as fp:
-        fp.write(IEMSampleSheetContents)
-    # Make a RunInfo.xml file
-    run_info_xml =  os.path.join(data_dir,'RunInfo.xml')
-    with open(run_info_xml,'w') as fp:
-        fp.write(RunInfoXmlContents)
-    return data_dir
-
 # Unit tests
 
-class TestAutoProcess(unittest.TestCase):
+class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):
-        # Create a temporary working dir for tests
-        self.this_dir = os.getcwd()
-        self.wd = tempfile.mkdtemp(suffix='TestAutoProcess')
-        self.data_dir = _make_mock_primary_data_dir(self.wd)
-        os.chdir(self.wd)
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessSetup')
+        # Store original location so we can get back at the end
+        self.pwd = os.getcwd()
+        # Move to working dir
+        os.chdir(self.dirn)
+        # Placeholders for test objects
+        self.mock_illumina_run = None
+        self.analysis_dir = None
 
     def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
         # Remove the temporary test directory
-        os.chdir(self.this_dir)
-        shutil.rmtree(self.wd)
+        shutil.rmtree(self.dirn)
 
     def test_autoprocess_setup(self):
-        # Test the 'setup' command of AutoProcess
+        """AutoProcess.setup works for mock MISeq run
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '151125_M00879_0001_000000000-ABCDE1',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Set up autoprocessor
         ap = AutoProcess()
-        ap.setup(self.data_dir)
+        ap.setup(mock_illumina_run.dirn)
+        analysis_dirn = "%s_analysis" % mock_illumina_run.name
+        # Check parameters
+        self.assertEqual(ap.analysis_dir,
+                         os.path.join(self.dirn,analysis_dirn))
+        self.assertEqual(ap.params.data_dir,mock_illumina_run.dirn)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(self.dirn,analysis_dirn,
+                                      'custom_SampleSheet.csv'))
+        self.assertEqual(ap.params.bases_mask,
+                         'y101,I8,I8,y101')
+        # Delete to force write of data to disk
+        del(ap)
+        # Check directory exists
+        self.assertTrue(os.path.isdir(analysis_dirn))
+        # Check files exists
+        for filen in ('SampleSheet.orig.csv',
+                      'custom_SampleSheet.csv',
+                      'auto_process.info',
+                      'metadata.info',):
+            self.assertTrue(os.path.exists(os.path.join(analysis_dirn,
+                                                        filen)),
+                            "Missing file: %s" % filen)
+        # Check subdirs have been created
+        for subdirn in ('ScriptCode',
+                        'logs',):
+            self.assertTrue(os.path.isdir(os.path.join(analysis_dirn,
+                                                       subdirn)),
+                            "Missing subdir: %s" % subdirn)
+
+    def test_autoprocess_setup_existing_target_dir(self):
+        """AutoProcess.setup works when target dir exists
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Do setup into existing analysis dir
+        ap = AutoProcess()
+        ap.setup(mock_illumina_run.dirn)
         self.assertTrue(os.path.isdir(
-            '150921_M00123_0045_000000000-ABC6D_analysis'))
+            '160621_M00879_0087_000000000-AGEW9'))
 
 class TestAutoProcessImportProject(unittest.TestCase):
     """Tests for AutoProcess.import_project
