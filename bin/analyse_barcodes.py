@@ -681,69 +681,6 @@ def samplesheet_index_sequence(line):
         indx = None
     return indx
 
-def match_against_samplesheet(groups,sample_sheet,lanes,mismatches,nreads,
-                              fp=None):
-    """
-    Find best matches to barcodes in samplesheet
-
-    """
-    # Where to write the output
-    if fp is None:
-        fp = sys.stdout
-    write_title(fp,"Best matches of sample sheet against groups",'-')
-    # Get barcodes from sample sheet
-    sample_sheet = SampleSheet(sample_sheet)
-    sample_id = sample_sheet.sample_id_column
-    sample = {}
-    index_sequences = []
-    if sample_sheet.has_lanes:
-        for line in sample_sheet.data:
-            if line['Lane'] in lanes:
-                samples[samplesheet_index_sequence(line)] = line[sample_id]
-                index_sequences.append(samplesheet_index_sequence(line))
-    else:
-        for line in sample_sheet.data:
-            samples[samplesheet_index_sequence(line)] = line[sample_id]
-            index_sequences.append(samplesheet_index_sequence(line))
-    # Normalise sequences
-    index_sequences = [normalise_barcode(s) for s in index_sequences]
-    normalised_samples = {}
-    for sample in samples:
-        normalised_samples[normalise_barcode(sample)] = samples[sample]
-    samples = normalised_samples
-    # Match barcodes
-    fp.write("%d mismatch%s allowed\n" % (mismatches,
-                                          ('' if mismatches == 1
-                                           else 'es')))
-    fp.write("%12s\t%18s\t%18s\t%8s\t%6s\n" % ("Sample",
-                                               "Sample_index",
-                                               "Group_seq",
-                                               "Nreads",
-                                               "%reads"))
-    for seq in index_sequences:
-        matched = False
-        rejected = []
-        for i,group in enumerate(groups):
-            if not matched and group.match(seq,mismatches):
-                group_counts = group.counts
-                fp.write("%12s\t% 18s\t% 18s\t% 8d\t% 5.1f%%\n" %
-                         (samples[seq],seq,
-                          group.reference,
-                          group_counts,
-                          float(group_counts)/float(nreads)*100.0))
-                matched = True
-                rejected.extend(groups[i+1:])
-                break
-            else:
-                rejected.append(group)
-        if not matched:
-            fp.write("%12s\t%18s\t%18s\t%8s\t%6s\n" % (samples[seq],
-                                                         seq,
-                                                         "No match",
-                                                         "-",
-                                                         "-"))
-        groups = rejected
-
 def parse_lanes_expression(lanes):
     """
     Parse a string and return list of lane numbers
