@@ -296,20 +296,44 @@ class BarcodeCounter:
                                                    seq,
                                                    self.counts(seq,lane)))
 
-    def group(self,lane,mismatches=2,n=None,cutoff=None,coverage=None):
+    def group(self,lane,mismatches=2,n=None,cutoff=None,coverage=None,
+              exclude_reads=0.000001):
         """
         Put barcodes into groups of similar sequences
 
         Returns a list of BarcodeGroup instances
 
+        Arguments:
+          lane: lane number to restrict the pool of barcodes to
+            (set to None to use barcodes from all lanes)
+          mismatches: number of mismatches to allow when creating
+            groups
+          cutoff: minimum number of reads as a fraction of all
+            reads that a group must contain to be included
+            (set to None to disable cut-off)
+          coverage: include groups to cover up to this fraction of
+            all reads (set to None to cover all reads)
+          exclude_reads: speed-up parameter, excludes barcodes with
+            less than this fraction of associated reads. Speeds up
+            the grouping calculation at the cost of some precision
+
         """
         # Initialise
-        barcodes = self.filter_barcodes(cutoff=cutoff,
-                                        coverage=coverage,
-                                        lane=lane)
+        barcodes = self.filter_barcodes(lane=lane,cutoff=exclude_reads)
+        nreads = self.nreads(lane=lane)
         groups = []
+        # Cutoff and coverage
+        if cutoff is not None:
+            cutoff_reads = int(float(nreads)*cutoff)
+        else:
+            cutoff_reads = 0
+        if coverage is not None:
+            limit = int(float(nreads)*coverage)
+        else:
+            limit = 0
         # Iteratively assign barcodes to groups
         # until we run out
+        cumulative = 0
         while barcodes:
             # Fetch next reference sequence
             group = BarcodeGroup(barcodes[0],
@@ -324,9 +348,18 @@ class BarcodeCounter:
                 else:
                     rejected.append(seq)
             # Finished checking sequences for this group
-            groups.append(group)
             # Reset sequences to check in next iteration
             barcodes = rejected
+            # Check cutoff
+            if group.counts >= cutoff_reads:
+                groups.append(group)
+                # Check if coverage limit has been exceeded
+                cumulative += group.counts
+                if limit and cumulative >= limit:
+                    break
+            else:
+                # Discard group
+                pass
         # Sort groups into order of total counts
         groups = sorted(groups,cmp=lambda x,y: cmp(y.counts,x.counts))
         return groups
