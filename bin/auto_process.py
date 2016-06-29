@@ -526,11 +526,10 @@ def add_analyse_barcodes_command(cmdparser):
                  help="maximum number of mismatches to use when grouping "
                  "similar barcodes (default is 0, i.e. no grouping)")
     p.add_option('--cutoff',action='store',dest='cutoff',
-                 default=None,type='float',
+                 default=0.001,type='float',
                  help="exclude barcodes with a smaller fraction of "
-                 "associated reads than CUTOFF, e.g. '0.001' excludes "
-                 "barcodes with < 0.1% of reads (default is to include "
-                 "all barcodes)")
+                 "associated reads than CUTOFF, e.g. '0.01' excludes "
+                 "barcodes with < 1% of reads (default is 0.01%)")
     p.add_option('--coverage',action='store',dest='coverage',
                  default=None,type='float',
                  help="include most numerous barcodes to cover only "
