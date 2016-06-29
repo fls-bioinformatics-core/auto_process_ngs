@@ -53,14 +53,23 @@ __ENVMODULES__ = False
 import os
 import logging
 modules_python_dirs = ('/usr/share/Modules/init/',
-                       '/usr/share/modules/init/',)
+                       '/usr/share/modules/init/',
+                       '/opt/clusterware/opt/Modules/init/',)
 for d in modules_python_dirs:
     modules_python = os.path.join(d,'python.py')
     if not os.path.isfile(modules_python):
         modules_python = None
     else:
         break
-if modules_python is None:
+modulecmd_dirs = ('/usr/bin',
+                  '/opt/clusterware/opt/Modules/bin',)
+for d in modulecmd_dirs:
+    modulecmd = os.path.join(d,'modulecmd')
+    if not os.path.isfile(modulecmd):
+        modulecmd = None
+    else:
+        break
+if modules_python is None or modulecmd is None:
     # Nothing to load
     logging.debug("No 'python.py' file in any of %s" % str(modules_python_dirs))
 else:
@@ -86,7 +95,7 @@ def module(*args):
         args = args[0]
     else:
         args = list(args)
-    (output,error) = subprocess.Popen(['/usr/bin/modulecmd','python']+args, stdout=subprocess.PIPE).communicate()
+    (output,error) = subprocess.Popen([modulecmd,'python']+args, stdout=subprocess.PIPE).communicate()
     exec output
 
 #######################################################################
