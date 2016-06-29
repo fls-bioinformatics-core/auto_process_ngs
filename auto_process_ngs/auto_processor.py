@@ -1581,6 +1581,17 @@ class AutoProcess:
         if sample_sheet is None:
             sample_sheet = self.params.sample_sheet
         barcode_report_cmd.add_args('--sample-sheet',sample_sheet)
+        # Implicitly set per-lane analysis if none were explicitly
+        # requested but some are defined in sample sheet
+        if lanes is None:
+            try:
+                lanes = sorted(
+                    set([str(line['Lane'])
+                         for line in IlluminaData.SampleSheet(sample_sheet).data]))
+            except KeyError:
+                pass
+        if lanes:
+            barcode_report_cmd.add_args('--lanes',','.join(lanes))
         # Cutoff
         if cutoff is not None:
             barcode_report_cmd.add_args('--cutoff',cutoff)
