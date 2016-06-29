@@ -627,8 +627,9 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     if cutoff is not None:
         fp.write("Barcodes which cover less than %.1f%% of reads have been "
                  "excluded\n" % (cutoff*100.0))
-    fp.write("Reported barcodes cover %.1f%% of the data\n" %
-             (float(analysis['coverage'])/float(analysis['total_reads'])*100.0))
+    fp.write("Reported barcodes cover %.1f%% of the data (%d/%d)\n" %
+             (float(analysis['coverage'])/float(analysis['total_reads'])*100.0,
+             analysis['coverage'],analysis['total_reads']))
     if mismatches:
         fp.write("Barcodes have been grouped by allowing %d mismatch%s\n" %
                  (mismatches,
