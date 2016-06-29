@@ -1459,8 +1459,8 @@ class AutoProcess:
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
-                         mismatches=1,cutoff=None,coverage=None,
-                         runner=None):
+                         mismatches=None,cutoff=None,coverage=None,
+                         sample_sheet=None,runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
         Run 'analyse_barcodes.py' for one or more lanes, to analyse the
@@ -1482,6 +1482,9 @@ class AutoProcess:
             the fraction of reads up to the specified value ('0.9' limits
             barcodes to those associated with 90%  of total reads);
             default is to include all barcodes
+          sample_sheet: optional, explicitly specify a sample sheet to
+            check barcode sequences against (by default will use the
+            sample sheet defined in the parameter file for the run)
           runner: set a non-default job runner.
         
         """
@@ -1574,12 +1577,19 @@ class AutoProcess:
         barcode_report_cmd = applications.Command(
             'analyse_barcodes.py',
             '--report',report_file)
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        barcode_report_cmd.add_args('--sample-sheet',sample_sheet)
         # Cutoff
         if cutoff is not None:
             barcode_report_cmd.add_args('--cutoff',cutoff)
         # Coverage
         if coverage is not None:
             barcode_report_cmd.add_args('--coverage',coverage)
+        # Mismatches
+        if mismatches is not None:
+            barcode_report_cmd.add_args('--mismatches',mismatches)
         # Add the list of count files to process
         barcode_report_cmd.add_args('-c')
         for counts_file in [counts_files[f] for f in req_counts]:

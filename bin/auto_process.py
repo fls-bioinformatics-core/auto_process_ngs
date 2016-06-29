@@ -521,6 +521,10 @@ def add_analyse_barcodes_command(cmdparser):
                  dest='lanes',default=None,
                  help="specify which lanes to analyse barcodes for (default is to do "
                  "analysis for all lanes).")
+    p.add_option('--mismatches',action='store',dest='mismatches',
+                 default=0,type='int',
+                 help="maximum number of mismatches to use when grouping "
+                 "similar barcodes (default is 0, i.e. no grouping)")
     p.add_option('--cutoff',action='store',dest='cutoff',
                  default=None,type='float',
                  help="exclude barcodes with a smaller fraction of "
@@ -533,6 +537,10 @@ def add_analyse_barcodes_command(cmdparser):
                  "the fraction of reads specified by COVERAGE, e.g. "
                  "'0.9' limits barcodes to those associated with 90% "
                  " of total reads (default is to include all barcodes)")
+    p.add_option('--sample-sheet',action="store",
+                 dest="sample_sheet",default=None,
+                 help="use an alternative sample sheet to the default "
+                 "'custom_SampleSheet.csv' created on setup.")
     add_runner_option(p)
     add_debug_option(p)
     # Deprecated options
@@ -757,8 +765,10 @@ if __name__ == "__main__":
                 lanes = None
             d.analyse_barcodes(unaligned_dir=options.unaligned_dir,
                                lanes=lanes,
+                               mismatches=options.mismatches,
                                cutoff=options.cutoff,
                                coverage=options.coverage,
+                               sample_sheet=options.sample_sheet,
                                runner=options.runner)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
