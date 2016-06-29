@@ -364,6 +364,61 @@ class BarcodeCounter:
         groups = sorted(groups,cmp=lambda x,y: cmp(y.counts,x.counts))
         return groups
 
+    def analyse(self,lane=None,sample_sheet=None,cutoff=None,
+                mismatches=0):
+        """
+        Analyse barcode frequencies
+
+        """
+        if not mismatches:
+            groups = None
+            barcodes = self.filter_barcodes(cutoff=cutoff,lane=lane)
+        else:
+            groups = self.group(lane,mismatches=mismatches,
+                                cutoff=cutoff)
+            barcodes = [grp.reference for grp in groups]
+        analysis = {
+            'barcodes': barcodes,
+            'cutoff': cutoff,
+            'counts': dict(),
+            'total_reads': self.nreads(lane=lane),
+            'mismatches': mismatches,
+        }
+        sample_lookup = {}
+        if sample_sheet is not None:
+            sample_sheet = SampleSheet(sample_sheet)
+            sample_id = sample_sheet.sample_id_column
+            for line in sample_sheet.data:
+                sample = line[sample_id]
+                index_seq = normalise_barcode(samplesheet_index_sequence(line))
+                sample_lookup[index_seq] = sample
+        cum_reads = 0
+        if groups:
+            for group in groups:
+                barcode = group.reference
+                barcode_reads = group.counts
+                cum_reads += barcode_reads
+                try:
+                    sample = sample_lookup[barcode]
+                except KeyError:
+                    sample = None
+                analysis['counts'][barcode] = { 'reads': barcode_reads,
+                                                'sample': sample,
+                                                'sequences': len(group) }
+        else:
+            for barcode in barcodes:
+                barcode_reads = self.counts(barcode,lane)
+                cum_reads += barcode_reads
+                try:
+                    sample = sample_lookup[barcode]
+                except KeyError:
+                    sample = None
+                analysis['counts'][barcode] = { 'reads': barcode_reads,
+                                                'sample': sample,
+                                                'sequences': 1 }
+        analysis['coverage'] = cum_reads
+        return analysis
+
 class BarcodeGroup:
     """
     Class for storing groups of related barcodes
@@ -528,8 +583,8 @@ def print_title(text,underline):
 def write_title(fp,text,underline):
     fp.write("\n%s\n%s\n" % (text,underline*len(text)))
 
-def report(counts,lane=None,n=None,sample_sheet=None,
-           mismatches=1,cutoff=None,coverage=None,fp=None):
+def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
+                    mismatches=0,fp=None):
     """
     Report barcode statistics
 
@@ -538,14 +593,11 @@ def report(counts,lane=None,n=None,sample_sheet=None,
         with barcode data to report on
       lane (integer): optional, restrict report to the
         specified lane ('None' reports across all lanes)
-      n (integer): optional, maximum number of barcodes
-        and barcode groups to report ('None' reports
-        all barcodes and groups)
       sample_sheet (str): optional, sample sheet file
         to match actual barcodes/groups against
       mismatches (integer): optional, maximum number of
-        mismatches to allow for grouping (default is 1;
-        zero means there will be no groups)
+        mismatches to allow for grouping; zero means there
+        will be no grouping (default)
       cutoff (float): optional, decimal fraction
         representing minimum percentage of total reads
         that must be associated with a barcode in order
@@ -567,76 +619,41 @@ def report(counts,lane=None,n=None,sample_sheet=None,
         write_title(fp,"Barcode analysis for lane #%d" % lane,'=')
     else:
         write_title(fp,"Barcode analysis for all lanes",'=')
-    # Calculate total number of reads
-    nreads = counts.nreads(lane)
-    # Fetch barcode list
-    barcodes = counts.filter_barcodes(cutoff=cutoff,
-                                      coverage=coverage,
-                                      lane=lane)
+    # Get analysis
+    analysis = counts.analyse(lane=lane,cutoff=cutoff,
+                              sample_sheet=sample_sheet,
+                              mismatches=mismatches)
     # Report settings
     if cutoff is not None:
-        fp.write("Barcodes which cover less than %.1f%% of reads will be "
+        fp.write("Barcodes which cover less than %.1f%% of reads have been "
                  "excluded\n" % (cutoff*100.0))
-    if coverage is not None:
-        fp.write("Barcode sequences covering %.1f%% of reads will be used\n"
-                 % (coverage*100.0))
-    # Report top barcodes
-    if lane is not None:
-        write_title(fp,"Top barcode sequences in lane %d" % lane,'-')
-    else:
-        write_title(fp,"Top barcode sequences",'-')
-    fp.write("%8s\t%18s\t%10s\t%6s\t%10s\t%6s\n" % ("Rank",
-                                                    "Index",
-                                                    "N_reads",
-                                                    "%reads",
-                                                    "Total_reads",
-                                                    "%Total"))
-    cum_reads = 0
-    for i,barcode in enumerate(barcodes):
-        bc_reads = counts.counts(barcode,lane)
-        cum_reads += bc_reads
-        fp.write("% 8d\t%18s\t% 10d\t% 5.1f%%\t% 10d\t% 5.1f%%\n" %
-                 (i+1,
-                  barcode,
-                  bc_reads,
-                  float(bc_reads)/nreads*100.0,
-                  cum_reads,
-                  float(cum_reads)/nreads*100.0))
-    # Group matching barcodes
-    write_title(fp,"Groups",'-')
-    groups = counts.group(lane,mismatches=mismatches,
-                          cutoff=cutoff,
-                          coverage=coverage)
-    fp.write("%d group%s (%d mismatch%s allowed)\n" %
-             (len(groups),
-              ('' if len(groups) == 1
-               else 's'),
-              mismatches,
-              ('' if mismatches == 1
-               else 'es')))
-    fp.write("%8s\t%18s\t%6s\t%10s\t%6s\t%10s\t%6s\n" % ("Rank",
-                                                         "Reference index",
-                                                         "N_seqs",
-                                                         "N_reads",
-                                                         "%reads",
-                                                         "Total_reads",
-                                                         "%Total"))
-    cum_reads = 0
-    for i,group in enumerate(groups):
-        ngroup = group.counts
-        cum_reads += ngroup
-        fp.write("% 8d\t%18s\t% 6d\t% 10d\t% 5.1f%%\t% 10d\t% 5.1f%%\n" %
-                 (i+1,
-                  group.reference,
-                  len(group),
-                  ngroup,
-                  float(ngroup)/nreads*100.0,
-                  cum_reads,
-                  float(cum_reads)/nreads*100.0))
-    # Match against sample sheet
-    if sample_sheet is not None:
-        match_against_samplesheet(groups,sample_sheet,lanes,mismatches,
-                                  nreads,fp=fp)
+    fp.write("Reported barcodes cover %.1f%% of the data\n" %
+             (float(analysis['coverage'])/float(analysis['total_reads'])*100.0))
+    if mismatches:
+        fp.write("Barcodes have been grouped by allowing %d mismatch%s\n" %
+                 (mismatches,
+                  ('' if mismatches == 1 else 'es')))
+    cumulative_reads = 0
+    fp.write("\n%s\n" % '\t'.join(("#Rank",
+                                   "Index",
+                                   "Sample",
+                                   "N_seqs",
+                                   "N_reads",
+                                   "%reads",
+                                   "(%Total_reads)")))
+    for i,barcode in enumerate(analysis['barcodes']):
+        cumulative_reads += analysis['counts'][barcode]['reads']
+        sample_name = analysis['counts'][barcode]['sample']
+        if sample_name is None:
+            sample_name = ''
+        fp.write("%s\n" % '\t'.join([str(x) for x in
+                                     ('% 5d' % (i+1),
+                                      barcode,
+                                      sample_name,
+                                      analysis['counts'][barcode]['sequences'],
+                                      analysis['counts'][barcode]['reads'],
+                                      '%.1f%%' % (float(analysis['counts'][barcode]['reads'])/float(analysis['total_reads'])*100.0),
+                                      '(%.1f%%)' % (float(cumulative_reads)/float(analysis['total_reads'])*100.0))]))
 
 def samplesheet_index_sequence(line):
     """
@@ -802,9 +819,9 @@ if __name__ == '__main__':
                  "can be specified using ranges (e.g. '2-3'), comma-"
                  "separated list ('5,7') or a mixture ('2-3,5,7')")
     p.add_option('-m','--mismatches',action='store',dest='mismatches',
-                 default=1,type='int',
+                 default=0,type='int',
                  help="maximum number of mismatches to use when "
-                 "grouping similar barcodes (default is 1)")
+                 "grouping similar barcodes (default is 0)")
     p.add_option('--cutoff',action='store',dest='cutoff',
                  default=None,type='float',
                  help="exclude barcodes with a smaller fraction of "
@@ -852,15 +869,19 @@ if __name__ == '__main__':
         else:
             fp = sys.stdout
         if lanes is None:
-            lanes = counts.lanes
-        for lane in lanes:
-            report(counts,
-                   lane=lane,
-                   mismatches=opts.mismatches,
-                   cutoff=opts.cutoff,
-                   coverage=opts.coverage,
-                   sample_sheet=opts.sample_sheet,
-                   fp=fp)
+            report_barcodes(counts,
+                            cutoff=opts.cutoff,
+                            sample_sheet=opts.sample_sheet,
+                            mismatches=opts.mismatches,
+                            fp=fp)
+        else:
+            for lane in lanes:
+                report_barcodes(counts,
+                                lane=lane,
+                                cutoff=opts.cutoff,
+                                sample_sheet=opts.sample_sheet,
+                                mismatches=opts.mismatches,
+                                fp=fp)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
