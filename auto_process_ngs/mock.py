@@ -147,6 +147,12 @@ class MockAnalysisDir(MockIlluminaData):
         # Add top-level README file
         if self.readme is not None:
             open(os.path.join(self.dirn,'README'),'w').write(self.readme)
+        # Add empty original sample sheet
+        open(os.path.join(self.dirn,'SampleSheet.orig.csv'),'w').write('')
+        # Initialise a custom_SampleSheet.csv
+        with open(os.path.join(self.dirn,'custom_SampleSheet.csv'),'w') as fp:
+            fp.write('[Data]\n')
+            fp.write('Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description\n')
         # Add top-level ScriptCode directory
         os.mkdir(os.path.join(self.dirn,'ScriptCode'))
         # Add top-level logs directory
@@ -184,6 +190,12 @@ class MockAnalysisDir(MockIlluminaData):
                                                         '.',
                                                         '.',
                                                         '.')))
+                # Add lines to custom_SampleSheet
+                with open(os.path.join(self.dirn,'custom_SampleSheet.csv'),
+                          'a') as fp:
+                    for sample in self.samples_in_project(project):
+                        fp.write('%s,,,,,,%s,\n' % (sample,
+                                                    project_name))
             # Add (empty) README.info
             open(os.path.join(self.dirn,
                               project_name,
