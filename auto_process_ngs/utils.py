@@ -1328,3 +1328,26 @@ def pretty_print_rows(data,prepend=False):
                 line.append(item + padding)
         output.append(' '.join(line))
     return '\n'.join(output)
+
+def write_script_file(script_file,contents,append=False,shell=None):
+    """Write command to file
+
+    Arguments:
+      script_file (str): path of file to write command to
+      contents (str): content to write to the file
+      append (bool): optional, if True and script_file exists
+        then append content (default is to overwrite existing
+        contents) 
+      shell: optional, if set then defines the shell to
+        specify after '!#'
+
+    """
+    if append:
+        mode = 'a'
+    else:
+        mode = 'w'
+    with open(script_file,mode=mode) as fp:
+        if (not append) and (shell is not None):
+            fp.write("#!%s\n" % shell)
+        fp.write("%s\n" % contents)
+    os.chmod(script_file,0775)
