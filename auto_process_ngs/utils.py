@@ -1247,13 +1247,13 @@ class ZipArchive(object):
 
     Example usage:
 
-    >>> z = ZipArchive('test.zip',top_dir='/data')
+    >>> z = ZipArchive('test.zip',relpath='/data')
     >>> z.add('/data/file1') # Add a single file
     >>> z.add('/data/dir2/') # Add a directory and all contents
     >>> z.close()  # to write the archive
 
     """
-    def __init__(self,zip_file,contents=None,top_dir=None):
+    def __init__(self,zip_file,contents=None,relpath=None,prefix=None):
         """
         Make an new zip archive instance
 
@@ -1261,12 +1261,18 @@ class ZipArchive(object):
           zip_file (str): path to the zip file to be created
           contents (list): list of file and/or directory paths
             which will be added to the zip file
-          top_dir (str): optional, if specified then items
-            will be written to the archive relative to this path
+          relpath (str): optional, if specified then this path
+            will be stripped from the leading path for each item
+            before being written (see also 'prefix')
+          prefix (str): optional, if specified then this path
+            will be prepended to the names of the items written
+            to the archive. The prepending takes place after the
+            relpath argument has been applied
 
         """
         self._zipfile = zipfile.ZipFile(zip_file,'w')
-        self._top_dir = top_dir
+        self._relpath = relpath
+        self._prefix = prefix
         if contents is not None:
             for item in contents:
                 self.add(item)
@@ -1289,10 +1295,12 @@ class ZipArchive(object):
         """
         Add a file to the zip archive
         """
-        if self._top_dir:
-            zip_pth = os.path.relpath(filen,self._top_dir)
+        if self._relpath:
+            zip_pth = os.path.relpath(filen,self._relpath)
         else:
             zip_pth = filen
+        if self._prefix:
+            zip_pth = os.path.join(self._prefix,zip_pth)
         self._zipfile.write(filen,zip_pth)
 
     def add_dir(self,dirn):
