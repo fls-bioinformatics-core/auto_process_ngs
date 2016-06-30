@@ -81,13 +81,33 @@ class QCReporter:
                 verified = False
         return verified
 
-    def report(self):
+    def report(self,title=None,filename=None,relative_links=False):
         """
         Report the QC for the project
 
+        Arguments:
+          title (str): optional, specify title for the report
+            (defaults to '<PROJECT_NAME>: QC report')
+          filename (str): optional, specify path and name for
+            the output report file (defaults to
+            '<PROJECT_NAME>.qc_report.html')
+          relative_links (boolean): optional, if set to True
+            then use relative paths for links in the report
+            (default is to use absolute paths)
+
         """
+        # Set title and output destination
+        if title is None:
+            title = "%s: QC report" % self.name
+        if filename is None:
+            filename = "%s.qc_report.html" % self.name
+        # Use relative paths for links
+        if relative_links:
+            relpath = os.path.dirname(filename)
+        else:
+            relpath = None
         # Initialise report
-        report = Document(title="%s: QC report" % self.name)
+        report = Document(title=title)
         # Styles
         report.add_css_rule("h1 { background-color: #42AEC2;\n"
                             "     color: white;\n"
@@ -230,7 +250,7 @@ class QCReporter:
                 clear = fqs_report.add_subsection()
                 clear.add_css_classes("clear")
         # Write the report
-        report.write("%s.qcreport.html" % self.name)
+        report.write(filename)
 
     def _report_fastq(self,fq,read_id,summary,idx,report):
         """
