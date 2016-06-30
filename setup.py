@@ -31,7 +31,8 @@ setup(name = "auto_process_ngs",
       # Note that pip 1.5 needs --process-dependency-links for these
       # to work; for pip 1.6 even this will be removed so then you must
       # do pip install -r requirements.txt first
-      install_requires = ['genomics-bcftbx',
+      install_requires = ['pillow',
+                          'genomics-bcftbx',
                           'nebulizer',],
       dependency_links=['git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx'],
       # Enable 'python setup.py test'
