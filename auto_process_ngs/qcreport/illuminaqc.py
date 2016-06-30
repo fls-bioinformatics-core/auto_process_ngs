@@ -63,6 +63,10 @@ class QCReporter:
     def paired_end(self):
         return self._project.info.paired_end
 
+    @property
+    def samples(self):
+        return self._samples
+
     def verify(self):
         """
         Check that the QC outputs are correct
@@ -386,6 +390,15 @@ class FastqSet:
 
         """
         return self._fastqs[1]
+
+    @property
+    def fastqs(self):
+        """
+        Return list of Fastq files
+
+        """
+        return filter(lambda fq: fq is not None,
+                      self._fastqs)
 
     def verify(self,qc_dir):
         """
