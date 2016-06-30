@@ -5,6 +5,7 @@
 import unittest
 import tempfile
 import shutil
+import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.utils import *
@@ -696,6 +697,69 @@ class TestProjectMetadataFile(unittest.TestCase):
         # Attempt to add same project name again
         self.assertRaises(Exception,
                           metadata.add_project,'Charlie',['C1','C2'])
+
+class TestZipArchive(unittest.TestCase):
+    """
+    Tests for the ZipArchive class
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestZipArchive')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_create_zip_archive(self):
+        """ZipArchive: create a new zip archive
+        """
+        # Make an example directory to zip up
+        src_dir = os.path.join(self.dirn,'source')
+        items = ('test1',
+                 'test2',
+                 'sub1/',
+                 'sub1/test3',
+                 'sub1/test4',
+                 'sub1/sub2/',
+                 'sub1/sub2/test5',
+                 'sub3/',
+                 'sub3/test6')
+        os.mkdir(src_dir)
+        for item in [os.path.join(self.dirn,x) for x in items]:
+            if item.endswith('/'):
+                try:
+                    os.mkdir(item)
+                except OSError as ex:
+                    raise OSError("Failed to make %s" % item)
+            else:
+                open(item,'w').write('')
+        # Create the zip archive
+        zip_filename = os.path.join(self.dirn,'test.zip')
+        self.assertFalse(os.path.exists(zip_filename))
+        z = ZipArchive(zip_filename,top_dir=self.dirn)
+        for item in [os.path.join(self.dirn,x) for x in ('test1','sub1')]:
+            z.add(item)
+        z.close()
+        # Check the zip archive exists
+        self.assertTrue(os.path.exists(zip_filename),
+                        "zip file not created")
+        self.assertTrue(zipfile.is_zipfile(zip_filename),
+                        "file exists but is not zip file")
+        # Check the contents
+        namelist = zipfile.ZipFile(zip_filename).namelist()
+        print namelist
+        for item in ('test1',
+                     'sub1/test3',
+                     'sub1/test4',
+                     'sub1/sub2/test5'):
+            self.assertTrue((item.rstrip('/') in namelist),
+                            "Item '%s' not in zip file" % item)
+        for name in namelist:
+            self.assertTrue((name in ('test1',
+                                      'sub1/test3',
+                                      'sub1/test4',
+                                      'sub1/sub2/test5')),
+                            "'%s' in zip file but shouldn't be"
+                            % name)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function

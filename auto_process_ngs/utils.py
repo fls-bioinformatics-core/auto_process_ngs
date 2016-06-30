@@ -27,6 +27,7 @@ tree at some point.
 import os
 import fnmatch
 import logging
+import zipfile
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -1239,6 +1240,77 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+class ZipArchive(object):
+    """
+    Utility class for creating .zip archive files
+
+    Example usage:
+
+    >>> z = ZipArchive('test.zip',top_dir='/data')
+    >>> z.add('/data/file1') # Add a single file
+    >>> z.add('/data/dir2/') # Add a directory and all contents
+    >>> z.close()  # to write the archive
+
+    """
+    def __init__(self,zip_file,contents=None,top_dir=None):
+        """
+        Make an new zip archive instance
+
+        Arguments:
+          zip_file (str): path to the zip file to be created
+          contents (list): list of file and/or directory paths
+            which will be added to the zip file
+          top_dir (str): optional, if specified then items
+            will be written to the archive relative to this path
+
+        """
+        self._zipfile = zipfile.ZipFile(zip_file,'w')
+        self._top_dir = top_dir
+        if contents is not None:
+            for item in contents:
+                self.add(item)
+
+    def add(self,item):
+        """
+        Add an item (file or directory) to the zip archive
+        """
+        item = os.path.abspath(item)
+        if os.path.isfile(item):
+            # Add file
+            self.add_file(item)
+        elif os.path.isdir(item):
+            # Add directory and contents
+            self.add_dir(item)
+        else:
+            raise Exception("Unknown item type for '%s'" % item)
+
+    def add_file(self,filen):
+        """
+        Add a file to the zip archive
+        """
+        if self._top_dir:
+            zip_pth = os.path.relpath(filen,self._top_dir)
+        else:
+            zip_pth = filen
+        self._zipfile.write(filen,zip_pth)
+
+    def add_dir(self,dirn):
+        """
+        Recursively add a directory and its contents
+        """
+        for item in os.listdir(dirn):
+            f = os.path.join(dirn,item)
+            if os.path.isdir(f):
+                self.add_dir(f)
+            else:
+                self.add_file(f)
+
+    def close(self):
+        self._zipfile.close()
+
+    def __del__(self):
+        self.close()
 
 #######################################################################
 # Functions
