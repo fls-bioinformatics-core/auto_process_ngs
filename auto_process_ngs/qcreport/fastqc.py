@@ -200,31 +200,47 @@ class FastqcSummary(TabFile):
         return [r['Module'] for r in filter(lambda x: x['Status'] == 'FAIL',
                                             self)]
 
-    def link_to_module(self,name,full_path=True):
+    def link_to_module(self,name,full_path=True,relpath=None):
         """
+        Return link to the result of a specified FastQC module
+
+        Arguments:
+          name (str): name of the module (e.g. 'Basic Statistics')
+          full_path (boolean): optional, if True then return the
+            full path; otherwise return just the anchor (e.g. '#M1')
+          relpath (str): optional, if supplied then specifies the
+            path that full paths will be made relative to (implies
+            full_path is True)
+
         """
         i = self.modules.index(name)
         link = "#M%d" % i
         if full_path:
-            return self.html_report() + link
-        else:
-            return link
+            link = self.html_report() + link
+            if relpath:
+                link = os.path.relpath(link,relpath)
+        return link
 
     def html_report(self):
         """
         """
         return os.path.dirname(self.path)+'.html'
 
-    def html_table(self):
+    def html_table(self,relpath=None):
         """
         Generate HTML table for FastQC summary
+
+        Arguments:
+          relpath (str): optional, if supplied then links in the
+            table will be relative to this path
 
         """
         tbl = Table(('module','status'),
                     module='FastQC test',status='Outcome')
         tbl.add_css_classes('fastqc_summary','summary')
         for name in self.modules:
-            tbl.add_row(module=Link(name,self.link_to_module(name)),
+            tbl.add_row(module=Link(name,self.link_to_module(name,
+                                                             relpath=relpath)),
                         status="<span class='%s'>%s</span>" % (
                             self.status(name),
                             self.status(name)))
