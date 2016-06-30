@@ -240,10 +240,10 @@ class QCReporter:
                     summary_tbl.set_value(idx,'fastq',Link(fq_r1,
                                                            fqr1_report))
                 self._report_fastq(fq_r1,'r1',summary_tbl,idx,
-                                   fqr1_report)
+                                   fqr1_report,relpath=relpath)
                 if self.paired_end:
                     self._report_fastq(fq_r2,'r2',summary_tbl,idx,
-                                       fqr2_report)
+                                       fqr2_report,relpath=relpath)
                 # Reset sample name for remaining pairs
                 sample_name = None
                 # Add an empty section to clear HTML floats
@@ -252,7 +252,8 @@ class QCReporter:
         # Write the report
         report.write(filename)
 
-    def _report_fastq(self,fq,read_id,summary,idx,report):
+    def _report_fastq(self,fq,read_id,summary,idx,report,
+                      relpath=None):
         """
         Generate report section for a Fastq file
 
@@ -277,7 +278,8 @@ class QCReporter:
                       height=250,
                       width=480,
                       href=fastqc.summary.link_to_module(
-                          'Per base sequence quality'),
+                          'Per base sequence quality',
+                          relpath=relpath),
                       name="boxplot_%s" % fq)
         fastqc_report.add(boxplot)
         summary.set_value(idx,'boxplot_%s' % read_id,
@@ -286,12 +288,16 @@ class QCReporter:
         # FastQC summary plot
         fastqc_report.add("FastQC summary:")
         fastqc_tbl = Target("fastqc_%s" % fq)
-        fastqc_report.add(fastqc_tbl,fastqc.summary.html_table())
+        fastqc_report.add(fastqc_tbl,fastqc.summary.html_table(relpath=relpath))
         summary.set_value(idx,'fastqc_%s' % read_id,
                           Img(ufastqcplot(fastqc.summary.path,inline=True),
                               href=fastqc_tbl))
+        if relpath:
+            fastqc_html_report = os.path.relpath(fastqc.html_report,relpath)
+        else:
+            fastqc_html_report = fastqc.html_report
         fastqc_report.add("%s for %s" % (Link("Full FastQC report",
-                                              fastqc.html_report),
+                                              fastqc_html_report),
                                          fq))
         # Fastq_screens
         screens_report = report.add_subsection("Screens")
@@ -303,13 +309,20 @@ class QCReporter:
             description = name.replace('_',' ').title()
             png,txt = fastq_screen_output(fq,name)
             png = os.path.join(self._qc_dir,png)
-            screen_files.append(os.path.join(self._qc_dir,txt))
+            txt = os.path.join(self._qc_dir,txt)
+            if relpath:
+                png_href = os.path.relpath(png,relpath)
+                txt_href = os.path.relpath(txt,relpath)
+            else:
+                png_href = png
+                txt_href = txt
+            screen_files.append(txt)
             screens_report.add(description)
             screens_report.add(Img(encode_png(png),
                                    height=250,
-                                   href=png))
+                                   href=png_href))
             fastq_screen_txt.append(
-                Link(description,os.path.join(self._qc_dir,txt)).html())
+                Link(description,txt_href).html())
         screens_report.add("Raw screen data: " +
                            " | ".join(fastq_screen_txt))
         summary.set_value(idx,'screens_%s' % read_id,
