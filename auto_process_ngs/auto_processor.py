@@ -2042,7 +2042,7 @@ class AutoProcess:
                 failed_projects.append(project)
             else:
                 print "QC okay, generating report for %s" % project.name
-                project.qc_report
+                project.qc_report()
         # Report failed projects
         if failed_projects:
             logging.error("QC failed for one or more samples in following projects:")
@@ -2280,7 +2280,10 @@ class AutoProcess:
             else:
                 # QC is available, check status of reports
                 generate_report = regenerate_reports
-                qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+                qc_zip = os.path.join(project.dirn,
+                                      "qc_report.%s.%s.zip" %
+                                      (project.name,
+                                       os.path.basename(self.analysis_dir)))
                 if os.path.isfile(qc_zip):
                     print "Existing QC report found for %s" % project.name
                 else:
@@ -2292,10 +2295,11 @@ class AutoProcess:
                     if project.qc.verify():
                         print "Generating report and zip file"
                         try:
-                            project.qc.zip()
-                        except Exception, ex:
-                            logging.error("Failed to generate QC report for %s" %
-                                          project.name)
+                            project.qc_report()
+                        except Exception as ex:
+                            logging.error(
+                                "Failed to generate QC report for %s: %s" %
+                                (project.name,ex))
                             qc_zip = None
                     else:
                         logging.error("Unable to verify QC for %s" % project.name)
@@ -2401,7 +2405,11 @@ class AutoProcess:
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
             index_page.add("<td>%d</td>" % len(project.samples))
             # Locate and copy QC report
-            qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+            qc_zip = os.path.join(project.dirn,
+                                  "qc_report.%s.%s.zip" %
+                                  (project.name,
+                                   os.path.basename(self.analysis_dir)))
+            print qc_zip
             assert(os.path.isfile(qc_zip))
             report_copied = True
             if not remote:
@@ -2429,8 +2437,10 @@ class AutoProcess:
                     report_copied = False
             # Append info to the index page
             if report_copied:
-                index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
-                               % project.qc.report_name)
+                index_page.add("<td><a href='qc_report.%s.%s/qc_report.html'>"
+                               "[Report]</a></td>"
+                               % (project.name,
+                                  os.path.basename(self.analysis_dir)))
                 index_page.add("<td><a href='%s'>[Zip]</a></td>"
                                % os.path.basename(qc_zip))
             else:
@@ -2958,7 +2968,7 @@ class AutoProcess:
         else:
             if project.qc.verify():
                 try:
-                    project.qc.zip()
+                    project.qc_report()
                     print "Updated QC report for %s" % project_name
                 except Exception, ex:
                     logging.error("Failed to generate QC report for %s" %

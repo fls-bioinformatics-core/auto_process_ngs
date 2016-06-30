@@ -34,7 +34,10 @@ import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
-from bcftbx.qc.report import IlluminaQCReporter,IlluminaQCSample
+from qcreport.illuminaqc import QCReporter
+from qcreport.illuminaqc import QCSample
+from qcreport.illuminaqc import expected_qc_outputs
+from qcreport.illuminaqc import check_qc_outputs
 
 #######################################################################
 # Classes
@@ -574,15 +577,37 @@ class AnalysisProject:
         if self.qc_dir is None:
             return None
         else:
-            return IlluminaQCReporter(self.dirn,data_format=self.fastq_format)
+            return QCReporter(self)
 
-    @property
     def qc_report(self):
-        # Create zipped QC report and return name of zip file
-        qc_reporter = self.qc
+        # Generate HTML and zipped QC reports
+        # Return name of zip file, or None if there is a problem
         try:
             if self.verify_qc():
-                return self.qc.zip()
+                # Create HTML report
+                report_html = os.path.join(self.dirn,"qc_report.html")
+                self.qc.report(title="%s/%s: QC report" % (self.info.run,
+                                                           self.name),
+                               filename=report_html,
+                               relative_links=True)
+                # Create zip file
+                analysis_dir = os.path.basename(os.path.dirname(self.dirn))
+                report_zip = os.path.join(self.dirn,
+                                          "qc_report.%s.%s.zip" %
+                                          (self.name,analysis_dir))
+                zip_file = ZipArchive(report_zip,relpath=self.dirn,
+                                      prefix="qc_report.%s.%s" %
+                                      (self.name,analysis_dir))
+                # Add the HTML report
+                zip_file.add_file(report_html)
+                # Add the FastQC and screen files
+                for sample in self.qc.samples:
+                    for fastqs in sample.fastq_pairs:
+                        for fq in fastqs:
+                            for f in expected_qc_outputs(fq,self.qc_dir):
+                                zip_file.add(f)
+                # Finished
+                return report_zip
         except AttributeError:
             logging.error("Failed to generate QC report")
         return None
@@ -740,19 +765,14 @@ class AnalysisSample:
                 return True
         return False
 
-    def qc_sample(self,qc_dir,fastq):
-        """Fetch IlluminaQCSample object for a fastq file
-
-        Arguments:
-          qc_dir: name of the QC directory
-          fastq : fastq file to get the QC information for
+    def qc_sample(self):
+        """Fetch QCSample object for this sample
 
         Returns:
-          Populated IlluminaQCSample object.
+          Populated QCSample object.
 
         """
-        name = bcf_utils.rootname(os.path.basename(fastq))
-        return IlluminaQCSample(name,qc_dir,fastq)
+        return QCSample(self)
 
     def verify_qc(self,qc_dir,fastq):
         """Check if QC completed for a fastq file
@@ -765,7 +785,10 @@ class AnalysisSample:
           True if QC completed correctly, False otherwise.
 
         """
-        return self.qc_sample(qc_dir,fastq).verify()
+        present,missing = check_qc_outputs(fastq,qc_dir)
+        if missing:
+            return False
+        return True
 
     def __repr__(self):
         """Implement __repr__ built-in
