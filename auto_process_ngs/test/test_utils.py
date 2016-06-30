@@ -735,7 +735,7 @@ class TestZipArchive(unittest.TestCase):
         # Create the zip archive
         zip_filename = os.path.join(self.dirn,'test.zip')
         self.assertFalse(os.path.exists(zip_filename))
-        z = ZipArchive(zip_filename,top_dir=self.dirn)
+        z = ZipArchive(zip_filename,relpath=self.dirn)
         for item in [os.path.join(self.dirn,x) for x in ('test1','sub1')]:
             z.add(item)
         z.close()
