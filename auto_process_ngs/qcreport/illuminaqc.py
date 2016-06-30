@@ -4,6 +4,7 @@
 
 import sys
 import os
+import logging
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
@@ -52,7 +53,7 @@ class QCReporter:
             self._stats = None
         for sample in self._project.samples:
             self._samples.append(QCSample(sample))
-        print "Found %d samples" % len(self._samples)
+        logging.debug("Found %d samples" % len(self._samples))
 
     @property
     def name(self):
@@ -171,7 +172,7 @@ class QCReporter:
         # Write entries for samples, fastqs etc
         current_sample = None
         for i,sample in enumerate(self._samples):
-            print "Sample #%3d: %s " % (i+1,sample.name)
+            logging.debug("Reporting sample #%3d: %s " % (i+1,sample.name))
             sample_name = sample.name
             sample_report = report.add_section("Sample: %s" % sample_name,
                                                name="sample_%s" % sample_name)
@@ -443,7 +444,7 @@ def get_fastq_pairs(sample):
     fastqs_r2 = sample.fastq_subset(read_number=2)
     for fqr1 in fastqs_r1:
         # Split up R1 name
-        print "fqr1 %s" % os.path.basename(fqr1)
+        logging.debug("fqr1 %s" % os.path.basename(fqr1))
         fastq_base = os.path.basename(fqr1)
         dir_path = os.path.dirname(fqr1)
         try:
@@ -457,7 +458,7 @@ def get_fastq_pairs(sample):
         fqr2 = os.path.join(dir_path,"%s" % fqr2)
         if ext:
             fqr2 += ext
-        print "fqr2 %s" % os.path.basename(fqr2)
+        logging.debug("fqr2 %s" % os.path.basename(fqr2))
         if fqr2 in fastqs_r2:
             pairs.append(FastqSet(fqr1,fqr2))
         else:
