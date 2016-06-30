@@ -4,7 +4,7 @@
 
 import sys
 import os
-from auto_process_ngs.utils import AnalysisFastq
+from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from .docwriter import Document
@@ -452,7 +452,7 @@ def get_fastq_pairs(sample):
         except ValueError:
             ext = ''
         # Generate equivalent R2 file
-        fqr2 = AnalysisFastq(fqr1)
+        fqr2 = IlluminaFastq(fqr1)
         fqr2.read_number = 2
         fqr2 = os.path.join(dir_path,"%s" % fqr2)
         if ext:
