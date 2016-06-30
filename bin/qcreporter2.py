@@ -12,7 +12,7 @@ import sys
 import os
 import optparse
 from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.qcreport.illumina import QCReporter
+from auto_process_ngs.qcreport.illuminaqc import QCReporter
 from auto_process_ngs import get_version
 
 """
