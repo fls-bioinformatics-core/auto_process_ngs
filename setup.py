@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-15 Peter Briggs
+Copyright (C) University of Manchester 2013-16 Peter Briggs
 
 """
 
@@ -25,7 +25,7 @@ setup(name = "auto_process_ngs",
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
       packages = ['auto_process_ngs',
-                  'auto_process_ngs.qcreport',],
+                  'auto_process_ngs.qc',],
       license = 'Artistic License',
       # Pull in dependencies
       # See http://stackoverflow.com/questions/19738085/why-isnt-setup-py-dependency-links-doing-anything for info on use of 'dependency_links'
