@@ -4,8 +4,8 @@
 import os
 from bcftbx.TabFile import TabFile
 from bcftbx.htmlpagewriter import PNGBase64Encoder
-from .docwriter import Table
-from .docwriter import Link
+from ..docwriter import Table
+from ..docwriter import Link
 
 """
 Example Fastqc summary text file (FASTQ_fastqc/summary.txt):

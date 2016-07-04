@@ -8,11 +8,11 @@ import logging
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
-from .docwriter import Document
-from .docwriter import Table
-from .docwriter import Img
-from .docwriter import Link
-from .docwriter import Target
+from ..docwriter import Document
+from ..docwriter import Table
+from ..docwriter import Img
+from ..docwriter import Link
+from ..docwriter import Target
 from .fastqc import Fastqc
 from .screens import Fastqscreen
 from .plots import uscreenplot
