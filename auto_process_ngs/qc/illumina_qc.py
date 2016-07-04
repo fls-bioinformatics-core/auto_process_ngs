@@ -8,6 +8,8 @@ import logging
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
+from bcftbx.utils import extract_prefix
+from bcftbx.utils import extract_index
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Img
@@ -53,6 +55,8 @@ class QCReporter:
             self._stats = None
         for sample in self._project.samples:
             self._samples.append(QCSample(sample))
+        self._samples = sorted(self._samples,
+                               cmp=lambda x,y: cmp_sample_names(x.name,y.name))
         logging.debug("Found %d samples" % len(self._samples))
 
     @property
@@ -270,7 +274,7 @@ class QCReporter:
         # Number of reads for summary
         if read_id == 'r1':
             nreads = fastqc.data.basic_statistics('Total Sequences')
-            summary.set_value(idx,'reads',nreads)
+            summary.set_value(idx,'reads',pretty_print_reads(nreads))
         # FastQC quality boxplot
         fastqc_report = report.add_subsection("FastQC")
         fastqc_report.add("Per base sequence quality boxplot:")
@@ -600,3 +604,50 @@ def check_qc_outputs(fastq,qc_dir):
         else:
             missing.append(output)
     return (present,missing)
+
+def cmp_sample_names(s1,s2):
+    """
+    Compare two sample names and return integer depending on the outcome
+
+    The sample names are compared first by prefix and then by index.
+
+    Arguments:
+      s1 (str): first sample name
+      s2 (str): second sample name
+
+    Returns:
+      Integer: the return value is negative if s1 < s2, zero if
+      s1 == s2 and strictly positive if s1 > s2.
+
+    """
+    prefix1 = extract_prefix(s1)
+    prefix2 = extract_prefix(s2)
+    if prefix1 != prefix2:
+        return cmp(prefix1,prefix2)
+    indx1 = extract_index(s1)
+    indx2 = extract_index(s2)
+    return cmp(indx1,indx2)
+
+def pretty_print_reads(n):
+    """
+    Print the number of reads with commas at each thousand
+
+    For example:
+
+    >>> pretty_print_reads(10409789)
+    10,409,789
+
+    Arguments:
+      n (int): number of reads
+
+    Returns:
+      String: representation with commas for every thousand.
+
+    """
+    n = str(int(n))[::-1]
+    n0 = []
+    while len(n) >= 3:
+        n0.append(n[0:3])
+        n = n[3:]
+    n0.append(n)
+    return (','.join(n0))[::-1]
