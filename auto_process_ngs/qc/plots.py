@@ -18,11 +18,20 @@ RGB_COLORS = {
     'blue': (0,0,255),
     'cyan': (0,255,255),
     'darkyellow1': (204,204,0),
+    'green': (0,128,0),
     'grey': (145,145,145),
     'lightgrey': (211,211,211),
+    'maroon': (128,0,0),
+    'navyblue': (0,0,153),
     'orange': (255,165,0),
     'red': (255,0,0),
     'yellow': (255,255,0),
+}
+
+HEX_COLORS = {
+    'green': '#008000',
+    'orange': '#FFA500',
+    'red': '#FF0000',
 }
 
 def encode_png(png_file):
@@ -90,6 +99,16 @@ def uscreenplot(screen_files,outfile=None,inline=None):
       outfile (str): path to output file
 
     """
+    # Mappings
+    mappings = ('%One_hit_one_library',
+                '%Multiple_hits_one_library',
+                '%One_hit_multiple_libraries',
+                '%Multiple_hits_multiple_libraries',)
+    # Colours
+    colors = (RGB_COLORS['navyblue'],
+              RGB_COLORS['blue'],
+              RGB_COLORS['red'],
+              RGB_COLORS['maroon'])
     # Read in the screen data
     screens = []
     for screen_file in screen_files:
@@ -120,17 +139,27 @@ def uscreenplot(screen_files,outfile=None,inline=None):
             data = filter(lambda x: x['Library'] == library,screen)[0]
             x = xorigin
             y = n*(barwidth+1) + 1
-            for mapping,rgb in (('%One_hit_one_library',(0,0,153)),
-                                ('%Multiple_hits_one_library',(0,0,255)),
-                                ('%One_hit_multiple_libraries',(255,0,0)),
-                                ('%Multiple_hits_multiple_libraries',(128,0,0))):
-                # Round up to nearest pixel (so that non-zero
-                # percentages are always represented)
-                npx = int(ceil(data[mapping]/2.0))
-                for i in xrange(x,x+npx):
-                    for j in xrange(y,y+barwidth):
-                        pixels[i,j] = rgb
-                x += npx
+            # Get the total percentage for the stack
+            total_percent = sum([data[m] for m in mappings])
+            if total_percent > 2.0:
+                # Plot the stack as-is
+                for mapping,rgb in zip(mappings,colors):
+                    # Round up to nearest pixel (so that non-zero
+                    # percentages are always represented)
+                    npx = int(ceil(data[mapping]/2.0))
+                    for i in xrange(x,x+npx):
+                        for j in xrange(y,y+barwidth):
+                            pixels[i,j] = rgb
+                    x += npx
+            elif total_percent > 0.25:
+                # Small non-zero values can't be represented
+                # accurately so just plot a placeholder
+                max_mapped = 0.0
+                for mapping,rgb in zip(mappings,colors):
+                    if data[mapping] > max_mapped:
+                        max_rgb = rgb
+                for j in xrange(y,y+barwidth):
+                    pixels[xorigin,j] = max_rgb
         # Add 'no hits'
         x = xorigin
         y = n_libraries_max*(barwidth+1) + 1
@@ -250,16 +279,16 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
     status_codes = {
         'PASS' : { 'index': 0,
                    'color': 'green',
-                   'rgb': (0,128,0),
-                   'hex': '#008000' },
+                   'rgb': RGB_COLORS['green'],
+                   'hex': HEX_COLORS['green'] },
         'WARN' : { 'index': 1,
                    'color': 'orange',
-                   'rgb': (255,165,0),
-                   'hex': '#FFA500' },
+                   'rgb': RGB_COLORS['orange'],
+                   'hex': HEX_COLORS['orange'] },
         'FAIL' : { 'index': 2,
                    'color': 'red',
-                   'rgb': (255,0,0),
-                   'hex': '#FF0000' },
+                   'rgb': RGB_COLORS['red'],
+                   'hex': HEX_COLORS['red'] },
         }
     fastqc_summary = FastqcSummary(summary_file)
     # Initialise output image instance
