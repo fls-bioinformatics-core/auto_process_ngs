@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# illuminaqc library
+# illumina_qc library
 
 import sys
 import os

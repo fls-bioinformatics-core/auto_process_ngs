@@ -34,10 +34,10 @@ import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
-from qc.illuminaqc import QCReporter
-from qc.illuminaqc import QCSample
-from qc.illuminaqc import expected_qc_outputs
-from qc.illuminaqc import check_qc_outputs
+from qc.illumina_qc import QCReporter
+from qc.illumina_qc import QCSample
+from qc.illumina_qc import expected_qc_outputs
+from qc.illumina_qc import check_qc_outputs
 
 #######################################################################
 # Classes
