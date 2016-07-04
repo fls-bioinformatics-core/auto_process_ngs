@@ -14,7 +14,7 @@ from ..docwriter import Img
 from ..docwriter import Link
 from ..docwriter import Target
 from .fastqc import Fastqc
-from .screens import Fastqscreen
+from .fastq_screen import Fastqscreen
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot

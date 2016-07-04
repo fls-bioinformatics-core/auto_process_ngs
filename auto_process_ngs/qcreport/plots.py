@@ -9,7 +9,7 @@ from PIL import Image
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from .fastqc import FastqcData
 from .fastqc import FastqcSummary
-from .screens import Fastqscreen
+from .fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
 
 # Colours taken from http://www.rapidtables.com/web/color/RGB_Color.htm
