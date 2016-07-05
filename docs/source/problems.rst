@@ -11,6 +11,7 @@ use to solve them.
  * :ref:`problem-incorrect-barcodes`
  * :ref:`problem-skip-demultiplexing`
  * :ref:`problem-handling-inline-barcodes`
+ * :ref:`problem-no-adapter-trimming`
 
 .. _problem-missing-sample-sheet:
 
@@ -271,3 +272,35 @@ In this case the following procedure can be used:
    for example::
 
        barcode_splitter.py -b ATACC -b TCTAG -b GCAGC all_barcoded_S1_R1_001.fastq.gz
+
+.. _problem-no-adapter-trimming:
+
+Turning or tuning off adapter trimming and masking
+**************************************************
+
+.. note::
+
+   This only applies when using ``bcl2fastq`` version 2.
+
+By default ``bcl2fastq`` version 2 performs adapter trimming and masking
+on the reads in the output FASTQ files, using the adapter sequences that
+are provided in the input sample sheet file.
+
+The default procedure it uses is:
+
+ * Reads that contain sequence matching the adapters are trimmed to remove
+   the matching sequence and all subsequent bases;
+
+ * If a trimmed read is less than 35 bases long, it is padded with ``N``s
+   to make the length back up to 35 bases (this length can be modified
+   using the ``--minimum-trimmed-read-length`` option of ``make_fastqs``);
+
+ * If there are fewer than 22 non-``N`` bases in the read then the entire
+   read is masked with ``N``s (this length can be modified using the
+   ``--mask-short-adapter-reads`` option of ``make_fastqs``).
+
+There is no explicit switch to turn off the trimming and adapter masking,
+however this can effectively be done by setting the adapter sequences in the
+sample sheet to empty strings, for example::
+
+    prep_sample_sheet.py -o SampleSheet.csv --set-adapter='' --set-adapter2='' SampleSheet.csv
