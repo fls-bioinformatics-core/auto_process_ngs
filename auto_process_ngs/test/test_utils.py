@@ -795,3 +795,45 @@ class TestPrettyPrintRows(unittest.TestCase):
                 ['-','goodbye:','The End']]
         self.assertEqual(pretty_print_rows(rows,prepend=True),
                          "-   hello: A salutation\n- goodbye:      The End")
+
+class TestWriteScriptFile(unittest.TestCase):
+    """Tests for the write_script_file function
+
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestWriteScripFile')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_write_script_file(self):
+        """write_script_file creates new script file
+        """
+        script_file = os.path.join(self.dirn,'test.sh')
+        self.assertFalse(os.path.exists(script_file))
+        write_script_file(script_file,"sleep 50\n#")
+        self.assertTrue(os.path.exists(script_file))
+        self.assertEqual(open(script_file).read(),
+                         "sleep 50\n#\n")
+
+    def test_write_script_file_with_shell(self):
+        """write_script_file creates new script file with shell
+        """
+        script_file = os.path.join(self.dirn,'test.sh')
+        self.assertFalse(os.path.exists(script_file))
+        write_script_file(script_file,"sleep 50\n#",shell='/bin/sh')
+        self.assertTrue(os.path.exists(script_file))
+        self.assertEqual(open(script_file).read(),
+                         "#!/bin/sh\nsleep 50\n#\n")
+
+    def test_write_script_file_append(self):
+        """write_script_file appends to an existing file
+        """
+        script_file = os.path.join(self.dirn,'test.sh')
+        with open(script_file,'w') as fp:
+            fp.write("#\necho Going to sleep\n")
+        write_script_file(script_file,"sleep 50\n#",append=True)
+        self.assertTrue(os.path.exists(script_file))
+        self.assertEqual(open(script_file).read(),
+                         "#\necho Going to sleep\nsleep 50\n#\n")
