@@ -275,7 +275,7 @@ In this case the following procedure can be used:
 
 .. _problem-no-adapter-trimming:
 
-Turning or tuning off adapter trimming and masking
+Tuning or turning off adapter trimming and masking
 **************************************************
 
 .. note::
@@ -291,12 +291,12 @@ The default procedure it uses is:
  * Reads that contain sequence matching the adapters are trimmed to remove
    the matching sequence and all subsequent bases;
 
- * If a trimmed read is less than 35 bases long, it is padded with ``N``s
+ * If a trimmed read is less than 35 bases long, it is padded with ``N``'s
    to make the length back up to 35 bases (this length can be modified
    using the ``--minimum-trimmed-read-length`` option of ``make_fastqs``);
 
  * If there are fewer than 22 non-``N`` bases in the read then the entire
-   read is masked with ``N``s (this length can be modified using the
+   read is masked with ``N``'s (this length can be modified using the
    ``--mask-short-adapter-reads`` option of ``make_fastqs``).
 
 There is no explicit switch to turn off the trimming and adapter masking,
