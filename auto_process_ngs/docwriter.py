@@ -173,6 +173,13 @@ class Table:
         self._css_classes = []
         self._output_header = True
 
+    @property
+    def nrows(self):
+        """
+        Return the number of rows in the table
+        """
+        return len(self._rows)
+
     def add_css_classes(self,*classes):
         """
         Associate CSS classes with the table
