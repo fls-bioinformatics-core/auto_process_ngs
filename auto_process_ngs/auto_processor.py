@@ -1525,11 +1525,14 @@ class AutoProcess:
             print "Requested analysis for lanes: %s" % \
                 ', '.join([str(l) for l in lanes])
         else:
-            print "No lanes explicitly specified"
-        print "Lanes explicitly defined in file names: %s" % \
-                          ', '.join([str(l) for l in lane_numbers])
-        if (lanes is None) or (len(lane_numbers) == 1
-                               and lane_numbers[0] is None):
+            print "No lanes explicitly requested"
+        if len(lane_numbers) == 1 and lane_numbers[0] is None:
+            lane_numbers = None
+            print "No lanes explicitly defined in fastq file names"
+        else:
+            print "Lanes explicitly defined in file names: %s" % \
+                ', '.join([str(l) for l in lane_numbers])
+        if lanes is None or not lane_numbers:
             # Need counts from all files
             req_counts = counts_files.keys()
         else:
