@@ -175,7 +175,7 @@ class Table:
 
     def add_css_classes(self,*classes):
         """
-        Associate CSS classes with the section
+        Associate CSS classes with the table
 
         """
         for css_class in classes:
