@@ -213,6 +213,14 @@ def uboxplot(fastqc_data=None,fastq=None,
     # Initialise output image instance
     img = Image.new('RGB',(fastq_stats.nbases,40),"white")
     pixels = img.load()
+    # Create colour bands for different quality ranges
+    for i in xrange(0,fastq_stats.nbases,2):
+        for j in xrange(0,20):
+            pixels[i,40-j-1] = (230,175,175)
+        for j in xrange(20,30):
+            pixels[i,40-j-1] = (230,215,175)
+        for j in xrange(30,40):
+            pixels[i,40-j-1] = (175,230,175)
     # Draw a box around the outside
     box_color = RGB_COLORS['grey']
     for i in xrange(fastq_stats.nbases):
@@ -226,7 +234,7 @@ def uboxplot(fastqc_data=None,fastq=None,
         #print "Position: %d" % i
         for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
             # 10th-90th percentile coloured cyan
-            pixels[i,40-j] = RGB_COLORS['lightgrey']
+            pixels[i,40-j] = RGB_COLORS['grey']
         for j in xrange(fastq_stats.q25[i],fastq_stats.q75[i]):
             # Interquartile range coloured yellow
             pixels[i,40-j] = RGB_COLORS['darkyellow1']
