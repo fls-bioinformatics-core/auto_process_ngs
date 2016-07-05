@@ -244,6 +244,10 @@ Handling inline barcodes
 
     This section is still under development.
 
+.. warning::
+
+    Currently this is only implemented for **single-ended FASTQs**
+
 In this situation the barcode index sequences are part of each read (e.g.
 the first five bases of the first read), so ``bcl2fastq``'s standard
 demultiplexing process can't be used.
