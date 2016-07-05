@@ -168,6 +168,13 @@ class QCReporter:
         report.add_css_rule("table.summary td { text-align: right; \n"
                             "                   padding: 2px 5px;\n"
                             "                   border-bottom: solid 1px lightgray; }")
+        report.add_css_rule("table.fastq_summary tr td:first-child {\n"
+                            "          background-color: grey;\n"
+                            "          color: white;\n"
+                            "          font-weight: bold; }")
+        report.add_css_rule("table.fastq_summary tr td:first-child a {\n"
+                            "          color: white;\n"
+                            "          font-weight: bold; }")
         report.add_css_rule("table.fastqc_summary span.PASS { font-weight: bold;\n"
                             "                                 color: green; }")
         report.add_css_rule("table.fastqc_summary span.WARN { font-weight: bold;\n"
@@ -208,7 +215,7 @@ class QCReporter:
         summary.add("%d samples | %d fastqs" % (len(self._samples),
                                                 len(self._project.fastqs)))
         summary_tbl = Table(('sample',),sample='Sample')
-        summary_tbl.add_css_classes('summary')
+        summary_tbl.add_css_classes('summary','fastq_summary')
         summary.add(summary_tbl)
         if self.paired_end:
             summary_tbl.append_columns('fastqs',fastqs='Fastqs (R1/R2)')
