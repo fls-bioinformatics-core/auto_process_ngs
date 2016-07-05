@@ -171,6 +171,7 @@ class Table:
         self._rows = []
         self._column_names = dict(kws)
         self._css_classes = []
+        self._output_header = True
 
     def add_css_classes(self,*classes):
         """
