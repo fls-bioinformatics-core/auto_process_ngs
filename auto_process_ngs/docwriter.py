@@ -180,6 +180,13 @@ class Table:
         for css_class in classes:
             self._css_classes.append(css_class)
 
+    def no_header(self):
+        """
+        Don't write the table header on output
+
+        """
+        self._output_header = False
+
     def append_columns(self,*columns,**kws):
         """
         Add a new columns to the table
@@ -234,16 +241,17 @@ class Table:
         table_tag.append(">\n")
         html.append(''.join(table_tag))
         # Header
-        header = []
-        header.append("<tr>")
-        for col in self._columns:
-            try:
-                col_name = self._column_names[col]
-            except KeyError:
-                col_name = col
-            header.append("<th>%s</th>" % col_name)
-        header.append("</tr>")
-        html.append(''.join(header))
+        if self._output_header:
+            header = []
+            header.append("<tr>")
+            for col in self._columns:
+                try:
+                    col_name = self._column_names[col]
+                except KeyError:
+                    col_name = col
+                header.append("<th>%s</th>" % col_name)
+            header.append("</tr>")
+            html.append(''.join(header))
         # Body
         for row in self._rows:
             line = []
