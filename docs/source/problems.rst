@@ -5,6 +5,13 @@ There are a variety of relatively common problem situations that can be
 encountered; these are outline below along with suggested protocols to
 use to solve them.
 
+ * :ref:`problem-missing-sample-sheet`
+ * :ref:`problem-split-processing`
+ * :ref:`problem-incomplete-run`
+ * :ref:`problem-incorrect-barcodes`
+ * :ref:`problem-skip-demultiplexing`
+ * :ref:`problem-handling-inline-barcodes`
+
 .. _problem-missing-sample-sheet:
 
 Missing Sample Sheet
@@ -193,8 +200,7 @@ Skip demultiplexing in ``make_fastqs`` stage
 
 .. warning::
 
-    This section is still under development and might be inaccurate or even
-    completely wrong!
+    This section is still under development
 
 The demultiplexing can be skipped in one of two ways.
 
@@ -229,3 +235,35 @@ Using this approach should put all the reads into the "undetermined" project;
 however this way the index sequences should still have been captured in the read
 headers.
 
+.. _problem-handling-inline-barcodes:
+
+Handling inline barcodes
+************************
+
+.. warning::
+
+    This section is still under development.
+
+In this situation the barcode index sequences are part of each read (e.g.
+the first five bases of the first read), so ``bcl2fastq``'s standard
+demultiplexing process can't be used.
+
+In this case the following procedure can be used:
+
+ * **Perform ``bcl`` to ``fastq`` conversion without demultiplexing**:
+   put all the reads into a single fastq file by following the approach
+   outlined in :ref:`problem-skip-demultiplexing` to avoid assigning
+   index sequences to each read.
+
+ * **Extract and assign inline barcodes**: use the ``assign_barcodes.py``
+   utility to extract the barcode sequences from each read from the fastq
+   file produced by the previous step and assign these to the read header,
+   for example::
+
+       assign_barcodes.py -n 5 all_S1_R1_001.fastq.gz all_barcoded_S1_R1_001.fastq.gz
+
+ * **Split into separate fastq files by barcode sequence**: use the
+   ``barcode_splitter.py`` utility to assign reads to individual fastqs,
+   for example::
+
+       barcode_splitter.py -b ATACC -b TCTAG -b GCAGC all_barcoded_S1_R1_001.fastq.gz
