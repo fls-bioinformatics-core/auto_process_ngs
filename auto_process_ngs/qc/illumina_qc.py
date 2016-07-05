@@ -495,7 +495,7 @@ def get_fastq_pairs(sample):
        sample (AnalysisSample): sample to get Fastq pairs for
 
     Returns:
-       list: list of FastqSet instances
+       list: list of FastqSet instances, sorted by R1 names
 
     """
     pairs = []
@@ -522,6 +522,7 @@ def get_fastq_pairs(sample):
             pairs.append(FastqSet(fqr1,fqr2))
         else:
             pairs.append(FastqSet(fqr1))
+    pairs = sorted(pairs,cmp=lambda x,y: cmp(x.r1,y.r1))
     return pairs
 
 def fastq_screen_output(fastq,screen_name):
