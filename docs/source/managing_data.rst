@@ -5,6 +5,14 @@ These additional tasks are not really part of the automated processing, but
 the utilities for performing them are currently part of the same package so
 they are outlined here.
 
+ * :ref:`manage_fastqs`
+ * :ref:`download_fastqs`
+ * :ref:`export_to_galaxy`
+ * :ref:`update_project_metadata`
+ * :ref:`audit_projects`
+
+.. _manage_fastqs:
+
 ``manage_fastqs.py``: copying data for transfer to end users
 ************************************************************
 
@@ -48,6 +56,8 @@ For example to only copy ``R1`` files::
 
     manage_fastqs.py RUN_DIR PROJECTNAME copy /path/to/local/dir --filter *_R1_*
 
+.. _download_fastqs:
+
 ``download_fastqs.py``: fetch FASTQs from a webserver in batch
 **************************************************************
 
@@ -64,6 +74,8 @@ the Linux ``md5sum`` program to verify the integrity of the downloads.
 
    This utility is stand-alone so it can be sent to end users and
    used independently of other components of the autoprocess package.
+
+.. _export_to_galaxy:
 
 ``export_to_galaxy.py``: export FASTQs to a data library in a local Galaxy instance
 ***********************************************************************************
@@ -92,6 +104,8 @@ The script performs the following actions:
 
    The target data library must already exist on the Galaxy server.
 
+.. _update_project_metadata:
+
 ``update_project_metadata.py``: manage metadata associated with a project
 *************************************************************************
 
@@ -113,6 +127,8 @@ metadata associated with a project, for example to update the PI::
         update_project_metadata.py RUN_DIR PROJECT -i
 
     before using ``-u`` to populate the fields.
+
+.. _audit_projects:
 
 ``audit_projects.py``: auditing disk usage for multiple runs
 ************************************************************
