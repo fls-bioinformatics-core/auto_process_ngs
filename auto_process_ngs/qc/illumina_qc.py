@@ -48,13 +48,7 @@ class QCReporter:
         self._project = project
         self._samples = []
         self._parent_dir = os.path.dirname(self._project.dirn)
-        self._stats_file = os.path.join(self._parent_dir,'statistics.info')
         self._qc_dir = self._project.qc_dir
-        try:
-            self._stats = FastqStats(self._stats_file)
-        except IOError:
-            print "Failed to load stats"
-            self._stats = None
         for sample in self._project.samples:
             self._samples.append(QCSample(sample))
         self._samples = sorted(self._samples,
@@ -488,22 +482,6 @@ class FastqSet:
             if missing:
                 return False
         return True
-
-class FastqStats(TabFile):
-    """
-    Class for looking up statistics on Fastq files
-
-    """
-    def __init__(self,stats_file):
-        """
-        Initialise a FastqStats instance
-
-        Arguments:
-           stats_file (str): path to a stats file
-
-        """
-        self._stats_file = stats_file
-        TabFile.__init__(self,self._stats_file)
 
 #######################################################################
 # Functions
