@@ -33,6 +33,23 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
     """
     Extract inline barcodes and assign to Fastq read headers
 
+    Strips the first n bases from each read of the input
+    FASTQ file and assigns it to the index sequence for that
+    read in the output file.
+
+    If the supplied output file name ends with '.gz' then it
+    will be gzipped.
+
+    Arguments:
+      fastq_in (str): input FASTQ file (can be gzipped)
+      fastq_out (str): output FASTQ file (will be gzipped if
+        ending with '.gz')
+      n (integer): number of bases to extract and assign as
+        index sequence (default: 5)
+
+    Returns:
+      Integer: number of reads processed.
+
     """
     if fastq_out.endswith('.gz'):
         fp = gzip.GzipFile(filename=fastq_out,mode='wb')
@@ -53,3 +70,4 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         fp.write("%s\n" % read)
         nread += 1
     print "Finished (%d reads processed)" % nread
+    return nread

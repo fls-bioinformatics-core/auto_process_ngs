@@ -71,7 +71,8 @@ class TestAssignBarcodesSingleEnd(unittest.TestCase):
     def test_assign_barcodes_single_end(self):
         """assign_barcodes_single_end: extract barcodes from first 5 bases
         """
-        assign_barcodes_single_end(self.fastq_in,
-                                   self.fastq_out)
+        nreads = assign_barcodes_single_end(self.fastq_in,
+                                            self.fastq_out)
+        self.assertEqual(nreads,5)
         self.assertEqual(open(self.fastq_out,'r').read(),
                          fastq_r1_out)
