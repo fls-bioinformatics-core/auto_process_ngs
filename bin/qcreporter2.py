@@ -12,7 +12,7 @@ import sys
 import os
 import optparse
 from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.qcreport.illuminaqc import QCReporter
+from auto_process_ngs.qc.illumina_qc import QCReporter
 from auto_process_ngs import get_version
 
 """
@@ -26,7 +26,7 @@ qc_reporter2
 
 def main():
     # Deal with command line
-    p = optparse.OptionParser(usage="%prog DIR [DIR]",
+    p = optparse.OptionParser(usage="%prog DIR [DIR...]",
                               version="%prog "+get_version(),
                               description="Generate QC report for each directory "
                               "DIR")
