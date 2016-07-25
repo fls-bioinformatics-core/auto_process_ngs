@@ -68,10 +68,11 @@ class Fastqscreen(TabFile):
                 if line.startswith('#Fastq_screen version:'):
                     self._version = line.split()[2]
                     continue
-                elif line.startswith('Library'):
+                elif line.startswith('Library') or line.startswith('Genome'):
                     tabfile = TabFile(column_names=line.split())
                     continue
-                elif line.startswith('%Hit_no_libraries:'):
+                elif line.startswith('%Hit_no_libraries:') or \
+                     line.startswith('%Hit_no_genomes:'):
                     self._no_hits = float(line.split()[-1])
                     continue
                 elif not line or \
@@ -79,11 +80,29 @@ class Fastqscreen(TabFile):
                    line.startswith('%'):
                     continue
                 tabfile.append(tabdata=line)
-        # Move data to main object
+        # Handle different terminology for different versions
+        if tabfile.header()[0] == 'Library':
+            library = 'Library'
+            unmapped = '%Unmapped'
+            one_hit_one_library = '%One_hit_one_library'
+            multiple_hits_one_library = '%Multiple_hits_one_library'
+            one_hit_multiple_libraries = '%One_hit_multiple_libraries'
+            multiple_hits_multiple_libraries = '%Multiple_hits_multiple_libraries'
+        elif tabfile.header()[0] == 'Genome':
+            library = 'Genome'
+            unmapped = '%Unmapped'
+            one_hit_one_library = '%One_hit_one_genome'
+            multiple_hits_one_library = '%Multiple_hits_one_genome'
+            one_hit_multiple_libraries = '%One_hit_multiple_genomes'
+            multiple_hits_multiple_libraries = '%Multiple_hits_multiple_genomes'
+        # Copy data to main object
         for line in tabfile:
-            data = []
-            for col in self.header():
-                data.append(line[col])
+            data = [line[library],
+                    line[unmapped],
+                    line[one_hit_one_library],
+                    line[multiple_hits_one_library],
+                    line[one_hit_multiple_libraries],
+                    line[multiple_hits_multiple_libraries]]
             self.append(data=data)
 
     @property
