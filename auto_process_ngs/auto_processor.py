@@ -709,19 +709,31 @@ class AutoProcess:
         if custom_sample_sheet is None:
             print "Acquiring sample sheet..."
             if sample_sheet is None:
-                sample_sheet = os.path.join(data_dir,
-                                            'Data','Intensities',
-                                            'BaseCalls','SampleSheet.csv')
-                tmp_sample_sheet = os.path.join(self.tmp_dir,'SampleSheet.csv')
+                targets = ('Data/Intensities/BaseCalls/SampleSheet.csv',
+                           'SampleSheet.csv',)
             else:
-                tmp_sample_sheet = os.path.join(self.tmp_dir,os.path.basename(sample_sheet))
-            rsync = applications.general.rsync(sample_sheet,self.tmp_dir)
-            print "%s" % rsync
-            status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-            if status != 0:
-                logging.error("Failed to rsync sample sheet '%s' (status %s)"
-                              % (sample_sheet,status))
-                return status
+                targets = (sample_sheet,)
+            # Try each possibility until one sticks
+            for target in targets:
+                sample_sheet = os.path.join(data_dir,target)
+                print "Trying '%s'" % sample_sheet
+                tmp_sample_sheet = os.path.join(self.tmp_dir,
+                                                os.path.basename(target))
+                rsync = applications.general.rsync(sample_sheet,
+                                                   self.tmp_dir)
+                print "%s" % rsync
+                status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
+                if status != 0:
+                    logging.warning("Failed to fetch sample sheet '%s'"
+                                    % sample_sheet)
+                    tmp_sample_sheet = None
+                else:
+                    break
+            # Bail out if no sample sheet was acquired
+            if tmp_sample_sheet is None:
+                logging.error("Unable to acquire sample sheet")
+                return
+            # Process acquired sample sheet
             custom_sample_sheet = os.path.join(self.analysis_dir,
                                                'custom_SampleSheet.csv')
             sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
