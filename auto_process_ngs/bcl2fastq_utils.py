@@ -321,7 +321,7 @@ def get_nmismatches(bases_mask):
     """
     Determine number of mismatches from bases mask
 
-    Automatically determines the maximum number of mismatches that shoud
+    Automatically determines the maximum number of mismatches that should
     be allowed for a bcl to fastq conversion run, based on the tag
     length i.e. the length of the index barcode sequences.
 
