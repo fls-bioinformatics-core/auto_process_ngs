@@ -715,7 +715,13 @@ class AutoProcess:
                 targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
-                sample_sheet = os.path.join(data_dir,target)
+                user,host,location = utils.split_user_host_dir(target)
+                if host is not None:
+                    sample_sheet = target
+                elif os.path.isabs(target):
+                    sample_sheet = target
+                else:
+                    sample_sheet = os.path.join(data_dir,target)
                 print "Trying '%s'" % sample_sheet
                 tmp_sample_sheet = os.path.join(self.tmp_dir,
                                                 os.path.basename(target))
