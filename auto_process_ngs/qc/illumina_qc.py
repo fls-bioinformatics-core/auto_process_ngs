@@ -672,5 +672,5 @@ def pretty_print_reads(n):
     while len(n) >= 3:
         n0.append(n[0:3])
         n = n[3:]
-    n0.append(n)
+    if n: n0.append(n)
     return (','.join(n0))[::-1]
