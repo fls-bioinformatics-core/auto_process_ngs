@@ -297,7 +297,7 @@ class BarcodeCounter:
                                                    self.counts(seq,lane)))
 
     def group(self,lane,mismatches=2,n=None,cutoff=None,coverage=None,
-              exclude_reads=0.000001):
+              seed_barcodes=None,exclude_reads=0.000001):
         """
         Put barcodes into groups of similar sequences
 
@@ -316,12 +316,27 @@ class BarcodeCounter:
           exclude_reads: speed-up parameter, excludes barcodes with
             less than this fraction of associated reads. Speeds up
             the grouping calculation at the cost of some precision
+          seed_barcodes (list): optional, set of barcode sequences
+            (typically, expected index sequences from a sample sheet)
+            which will be used to build groups around even if they
+            have low associated counts
 
         """
         # Initialise
         barcodes = self.filter_barcodes(lane=lane,cutoff=exclude_reads)
         nreads = self.nreads(lane=lane)
         groups = []
+        # Update barcode list if 'seed' barcodes were provided
+        if seed_barcodes:
+            promoted_barcodes = []
+            for barcode in seed_barcodes:
+                try:
+                    barcodes.remove(barcode)
+                    promoted_barcodes.append(barcode)
+                except ValueError:
+                    # Barcode doesn't appear in the list
+                    pass
+            barcodes = promoted_barcodes + barcodes
         # Cutoff and coverage
         if cutoff is not None:
             cutoff_reads = int(float(nreads)*cutoff)
@@ -370,11 +385,24 @@ class BarcodeCounter:
         Analyse barcode frequencies
 
         """
+        sample_lookup = {}
+        if sample_sheet is not None:
+            sample_sheet = SampleSheet(sample_sheet)
+            sample_id = sample_sheet.sample_id_column
+            for line in sample_sheet.data:
+                if lane is not None and sample_sheet.has_lanes:
+                    if line['Lane'] != lane:
+                        continue
+                sample = line[sample_id]
+                index_seq = normalise_barcode(samplesheet_index_sequence(line))
+                sample_lookup[index_seq] = sample
+            sample_sheet_barcodes = sample_lookup.keys()
         if not mismatches:
             groups = None
             barcodes = self.filter_barcodes(cutoff=cutoff,lane=lane)
         else:
             groups = self.group(lane,mismatches=mismatches,
+                                seed_barcodes=sample_sheet_barcodes,
                                 cutoff=cutoff)
             barcodes = [grp.reference for grp in groups]
         analysis = {
@@ -384,14 +412,6 @@ class BarcodeCounter:
             'total_reads': self.nreads(lane=lane),
             'mismatches': mismatches,
         }
-        sample_lookup = {}
-        if sample_sheet is not None:
-            sample_sheet = SampleSheet(sample_sheet)
-            sample_id = sample_sheet.sample_id_column
-            for line in sample_sheet.data:
-                sample = line[sample_id]
-                index_seq = normalise_barcode(samplesheet_index_sequence(line))
-                sample_lookup[index_seq] = sample
         cum_reads = 0
         if groups:
             for group in groups:
@@ -399,9 +419,18 @@ class BarcodeCounter:
                 barcode_reads = group.counts
                 cum_reads += barcode_reads
                 try:
+                    # Exact match
                     sample = sample_lookup[barcode]
                 except KeyError:
-                    sample = None
+                    # Closest match(es)
+                    sample = []
+                    for seq in sample_lookup:
+                        if group.match(seq,mismatches):
+                            sample.append(sample_lookup[seq])
+                    if sample:
+                        sample = ','.join(sample)
+                    else:
+                        sample = None
                 analysis['counts'][barcode] = { 'reads': barcode_reads,
                                                 'sample': sample,
                                                 'sequences': len(group) }
