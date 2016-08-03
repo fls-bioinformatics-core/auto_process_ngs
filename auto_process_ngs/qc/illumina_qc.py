@@ -311,16 +311,24 @@ class QCReporter:
                           relpath=relpath),
                       name="boxplot_%s" % fq)
         fastqc_report.add(boxplot)
-        summary.set_value(idx,'boxplot_%s' % read_id,
-                          Img(uboxplot(fastqc.data.path,inline=True),
-                              href=boxplot))
+        try:
+            summary.set_value(idx,'boxplot_%s' % read_id,
+                              Img(uboxplot(fastqc.data.path,inline=True),
+                                  href=boxplot))
+        except Exception,ex:
+            logging.error("Failed to generate boxplot for %s: %s"
+                          % (fq,ex))
         # FastQC summary plot
         fastqc_report.add("FastQC summary:")
         fastqc_tbl = Target("fastqc_%s" % fq)
         fastqc_report.add(fastqc_tbl,fastqc.summary.html_table(relpath=relpath))
-        summary.set_value(idx,'fastqc_%s' % read_id,
-                          Img(ufastqcplot(fastqc.summary.path,inline=True),
-                              href=fastqc_tbl))
+        try:
+            summary.set_value(idx,'fastqc_%s' % read_id,
+                              Img(ufastqcplot(fastqc.summary.path,inline=True),
+                                  href=fastqc_tbl))
+        except Exception,ex:
+            logging.error("Failed to  generate Fastqc plot for %s: %s"
+                          % (fq,ex))
         if relpath:
             fastqc_html_report = os.path.relpath(fastqc.html_report,relpath)
         else:
@@ -354,9 +362,13 @@ class QCReporter:
                 Link(description,txt_href).html())
         screens_report.add("Raw screen data: " +
                            " | ".join(fastq_screen_txt))
-        summary.set_value(idx,'screens_%s' % read_id,
-                          Img(uscreenplot(screen_files,inline=True),
-                              href=fastq_screens))
+        try:
+            summary.set_value(idx,'screens_%s' % read_id,
+                              Img(uscreenplot(screen_files,inline=True),
+                                  href=fastq_screens))
+        except Exception,ex:
+            logging.error("Failed to generate screen plot for %s: %s"
+                          % (fq,ex))
         # Program versions
         versions = report.add_subsection("Program versions")
         versions.add(self._program_versions(fq))
