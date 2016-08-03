@@ -605,6 +605,9 @@ class AnalysisProject:
                     for fastqs in sample.fastq_pairs:
                         for fq in fastqs:
                             for f in expected_qc_outputs(fq,self.qc_dir):
+                                if f.endswith('.zip'):
+                                    # Exclude .zip file
+                                    continue
                                 zip_file.add(f)
                 # Finished
                 return report_zip
