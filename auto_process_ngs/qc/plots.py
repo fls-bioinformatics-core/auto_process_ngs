@@ -200,6 +200,8 @@ def uboxplot(fastqc_data=None,fastq=None,
     """
     # Boxplots need: mean, median, 25/75th and 10/90th quantiles
     # for each base
+    max_qual = 41
+    height = max_qual + 1
     fastq_stats = FastqQualityStats()
     if fastqc_data is not None:
         fastq_stats.from_fastqc_data(fastqc_data)
@@ -211,22 +213,22 @@ def uboxplot(fastqc_data=None,fastq=None,
     # http://stackoverflow.com/questions/20304438/how-can-i-use-the-python-imaging-library-to-create-a-bitmap
     #
     # Initialise output image instance
-    img = Image.new('RGB',(fastq_stats.nbases,40),"white")
+    img = Image.new('RGB',(fastq_stats.nbases,height),"white")
     pixels = img.load()
     # Create colour bands for different quality ranges
     for i in xrange(0,fastq_stats.nbases,2):
         for j in xrange(0,20):
-            pixels[i,40-j-1] = (230,175,175)
+            pixels[i,max_qual-j-1] = (230,175,175)
         for j in xrange(20,30):
-            pixels[i,40-j-1] = (230,215,175)
-        for j in xrange(30,40):
-            pixels[i,40-j-1] = (175,230,175)
+            pixels[i,max_qual-j-1] = (230,215,175)
+        for j in xrange(30,max_qual):
+            pixels[i,max_qual-j-1] = (175,230,175)
     # Draw a box around the outside
     box_color = RGB_COLORS['grey']
     for i in xrange(fastq_stats.nbases):
         pixels[i,0] = box_color
-        pixels[i,40-1] = box_color
-    for j in xrange(40):
+        pixels[i,height-1] = box_color
+    for j in xrange(height):
         pixels[0,j] = box_color
         pixels[fastq_stats.nbases-1,j] = box_color
     # For each base position determine stats
@@ -234,14 +236,14 @@ def uboxplot(fastqc_data=None,fastq=None,
         #print "Position: %d" % i
         for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
             # 10th-90th percentile coloured cyan
-            pixels[i,40-j] = RGB_COLORS['grey']
+            pixels[i,max_qual-j] = RGB_COLORS['grey']
         for j in xrange(fastq_stats.q25[i],fastq_stats.q75[i]):
             # Interquartile range coloured yellow
-            pixels[i,40-j] = RGB_COLORS['darkyellow1']
+            pixels[i,max_qual-j] = RGB_COLORS['darkyellow1']
         # Median coloured red
-        pixels[i,40-int(fastq_stats.median[i])] = RGB_COLORS['red']
+        pixels[i,max_qual-int(fastq_stats.median[i])] = RGB_COLORS['red']
         # Mean coloured black
-        pixels[i,40-int(fastq_stats.mean[i])] = RGB_COLORS['blue']
+        pixels[i,max_qual-int(fastq_stats.mean[i])] = RGB_COLORS['blue']
     # Output the plot to file
     fp,tmp_plot = tempfile.mkstemp(".uboxplot.png")
     img.save(tmp_plot)
