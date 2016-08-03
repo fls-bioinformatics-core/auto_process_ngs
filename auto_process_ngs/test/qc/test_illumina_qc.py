@@ -57,5 +57,13 @@ class TestFastqcOutputFunction(unittest.TestCase):
                           'PB1_ATTAGG_L001_R1_001_fastqc.html',
                           'PB1_ATTAGG_L001_R1_001_fastqc.zip'))
     
-        
-                         
+from auto_process_ngs.qc.illumina_qc import pretty_print_reads
+class TestPrettyPrintReadsFunction(unittest.TestCase):
+    def test_pretty_print_reads(self):
+        self.assertEqual(pretty_print_reads(1),"1")
+        self.assertEqual(pretty_print_reads(12),"12")
+        self.assertEqual(pretty_print_reads(117),"117")
+        self.assertEqual(pretty_print_reads(1024),"1,024")
+        self.assertEqual(pretty_print_reads(33385500),"33,385,500")
+        self.assertEqual(pretty_print_reads(112839902),"112,839,902")
+        self.assertEqual(pretty_print_reads(10212341927),"10,212,341,927")
