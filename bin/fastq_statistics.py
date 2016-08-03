@@ -29,6 +29,8 @@ import os
 import sys
 import optparse
 import logging
+import time
+import subprocess
 
 # Put .. onto Python search path for modules
 SHARE_DIR = os.path.abspath(
@@ -64,6 +66,82 @@ class FastqStats:
     @property
     def name(self):
         return os.path.basename(self.fastq)
+
+class FastqReadCounter:
+    """
+    Implements various methods for counting reads in FASTQ file
+
+    The methods are:
+
+    - simple: a wrapper for the FASTQFile.nreads() function
+    - fastqiterator: counts reads using FASTQFile.FastqIterator
+    - zcat_wc: runs 'zcat | wc -l' in the shell
+
+    """
+    @staticmethod
+    def simple(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses the FASTQFile.nreads function to do the counting.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        return FASTQFile.nreads
+    @staticmethod
+    def fastqiterator(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses the FASTQFile.FastqIterator class to do the
+        counting.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        nreads = 0
+        for r in FASTQFile.FastqIterator(fastq_file=fastq,fp=fp):
+            nreads += 1
+        return nreads
+    @staticmethod
+    def zcat_wc(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses a system call to run 'zcat FASTQ | wc -l' to do
+        the counting.
+
+        Note that this can only operate on fastq files (not
+        on streams provided via the 'fp' argument; this will
+        raise an exception).
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        if fastq is None:
+            raise Exception("zcat_wc: can only operate on a file")
+        output = subprocess.check_output(("zcat %s | wc -l" % fastq),
+                                         shell=True)
+        try:
+            return int(output)/4
+        except Exception,ex:
+            raise Exception("zcat_wc returned: %s" % output)
 
 #######################################################################
 # Functions
@@ -104,7 +182,7 @@ def get_fastqs(illumina_data):
                                          lane.name))
     return fastqs
 
-def get_stats_for_file(fq):
+def get_stats_for_file(fq,read_counter=FastqReadCounter.zcat_wc):
     """Generate statistics for a single fastq file
 
     Given a FastqStats object, set the 'nreads' property to
@@ -114,15 +192,25 @@ def get_stats_for_file(fq):
     Arguments:
       fq: FastqStats object with 'fastq' property set to the
         full path for a Fastq file
+      read_counter: optional, specify function to use for
+        counting reads in the fastq file
 
     Returns:
       Input FastqStats object with the 'nreads' and 'fsize'
       properties set.
 
     """
-    print "* %s" % fq.name
-    fq.nreads = FASTQFile.nreads(fq.fastq)
+    print "* %s: starting" % fq.name
+    start_time = time.time()
+    sys.stdout.flush()
+    fq.nreads = read_counter(fq.fastq)
     fq.fsize = os.path.getsize(fq.fastq)
+    print "- %s: finished" % fq.name
+    end_time = time.time()
+    print "- %s: %d reads, %s" % (fq.name,
+                                  fq.nreads,
+                                  bcf_utils.format_file_size(fq.fsize))
+    print "- %s: took %f.2s" % (fq.name,(end_time-start_time))
     return fq
 
 def fastq_statistics(illumina_data,n_processors=1):
@@ -246,9 +334,25 @@ if __name__ == '__main__':
                  help="spread work across N processors/cores (default is 1)")
     p.add_option("--force",action="store_true",dest="force",default=False,
                  help="force regeneration of statistics from fastq files")
+    p.add_option("--debug",action="store_true",dest="debug",default=False,
+                 help="turn on debugging output")
     options,args = p.parse_args()
     if len(args) != 1:
         p.error("expects a single argument (input directory)")
+
+    # Report settings etc
+    print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
+    print "Source dir    : %s" % args[0]
+    print "Unaligned dir : %s" % options.unaligned_dir
+    print "Stats file    : %s" % options.stats_file
+    print "Per-lane stats: %s" % options.per_lane_stats_file
+    print "Nprocessors   : %s" % options.n
+    print "Force?        : %s" % options.force
+    print "Debug?        : %s" % options.debug
+
+    # Handle debugging output if requested
+    if options.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     # Get the raw data
     stats = None
