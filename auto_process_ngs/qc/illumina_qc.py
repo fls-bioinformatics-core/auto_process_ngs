@@ -198,9 +198,15 @@ class QCReporter:
         # Set up summary section & metadata
         summary = report.add_section("Summary",name='summary')
         metadata_tbl = Table(('item','value',))
+        metadata_titles = {
+            'user': 'User',
+            'PI': 'PI',
+            'library_type': 'Library type',
+            'organism': 'Organism',
+        }
         for item in ('user','PI','library_type','organism',):
             if self._project.info[item]:
-                metadata_tbl.add_row(item=item.title(),
+                metadata_tbl.add_row(item=metadata_titles[item],
                                      value=self._project.info[item])
         if metadata_tbl.nrows > 0:
             metadata_tbl.no_header()
