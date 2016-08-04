@@ -387,16 +387,11 @@ class BarcodeCounter:
         """
         sample_lookup = {}
         if sample_sheet is not None:
-            sample_sheet = SampleSheet(sample_sheet)
-            sample_id = sample_sheet.sample_id_column
-            for line in sample_sheet.data:
-                if lane is not None and sample_sheet.has_lanes:
-                    if line['Lane'] != lane:
-                        continue
-                sample = line[sample_id]
-                index_seq = normalise_barcode(samplesheet_index_sequence(line))
-                sample_lookup[index_seq] = sample
-            sample_sheet_barcodes = sample_lookup.keys()
+            sample_sheet = SampleSheetBarcodes(sample_sheet)
+            sample_sheet_barcodes = sample_sheet.barcodes(lane)
+        else:
+            sample_sheet_barcodes = None
+        print "analyse: %s" % sample_sheet_barcodes
         if not mismatches:
             groups = None
             barcodes = self.filter_barcodes(cutoff=cutoff,lane=lane)
@@ -420,13 +415,13 @@ class BarcodeCounter:
                 cum_reads += barcode_reads
                 try:
                     # Exact match
-                    sample = sample_lookup[barcode]
+                    sample = sample_sheet.lookup_sample(barcode,lane)
                 except KeyError:
                     # Closest match(es)
                     sample = []
-                    for seq in sample_lookup:
+                    for seq in sample_sheet.barcodes(lane):
                         if group.match(seq,mismatches):
-                            sample.append(sample_lookup[seq])
+                            sample.append(sample_sheet.lookup_sample(seq,lane))
                     if sample:
                         sample = ','.join(sample)
                     else:
@@ -439,7 +434,7 @@ class BarcodeCounter:
                 barcode_reads = self.counts(barcode,lane)
                 cum_reads += barcode_reads
                 try:
-                    sample = sample_lookup[barcode]
+                    sample = sample_sheet.lookup_sample(barcode,lane)
                 except KeyError:
                     sample = None
                 analysis['counts'][barcode] = { 'reads': barcode_reads,
@@ -554,6 +549,156 @@ class BarcodeGroup:
     def __len__(self):
         return len(self._sequences)
 
+class SampleSheetBarcodes(object):
+    """
+    Class for index sequence information from a sample sheet
+
+    Given a SampleSheet.csv file this class can extract
+    the index sequences (aka barcodes) corresponding to
+    sample names, and provides methods to look up one from
+    the other.
+
+    Note that the sequences are 'normalised' i.e. dual
+    indexes are concatenated with no intermediate character
+    (so 'AGCCCTT' and 'GTTACAT' becomes 'AGCCCTTGTTACAT',
+    not 'AGCCCTT-GTTACAT' or 'AGCCCTT+GTTACAT')
+
+    Create an initial lookup object:
+
+    >>> s = SampleSheetBarcodes('SampleSheet.csv')
+
+    Get a list of barcodes in lane 2:
+
+    >>> s.barcodes(1)
+
+    Look up the sample name in lane 2 matching a barcode:
+
+    >>> s.lookup_sample('ATTGTG',2)
+
+    Look up the sample name matching a barcode in all lanes
+    (e.g. if the sample sheet doesn't include explicit lane
+    information):
+
+    >>> s.lookup_sample('ATTGTG')
+
+    """
+    def __init__(self,sample_sheet_file):
+        """
+        Create a new SampleSheetBarcodes instance
+
+        Arguments:
+          sample_sheet_file (str): path of a SampleSheet.csv
+            file
+
+        """
+        self._sample_sheet = SampleSheet(sample_sheet_file)
+        self._sample_lookup = {}
+        self._barcode_lookup = {}
+        self._lanes = []
+        sample_id = self._sample_sheet.sample_id_column
+        for line in self._sample_sheet.data:
+            if self._sample_sheet.has_lanes:
+                lane = line['Lane']
+            else:
+                lane = None
+            if lane not in self._lanes:
+                self._lanes.append(lane)
+                self._sample_lookup[lane] = {}
+                self._barcode_lookup[lane] = {}
+            sample = line[sample_id]
+            index_seq = normalise_barcode(samplesheet_index_sequence(line))
+            self._sample_lookup[lane][index_seq] = sample
+            self._barcode_lookup[lane][sample] = index_seq
+
+    def barcodes(self,lane=None):
+        """
+        Return a list of index sequences
+
+        If a lane is specified then a list of normalised
+        barcode sequences for that lane is returned; if no
+        lane is specified (or lane is 'None') then all
+        barcode sequences are returned.
+
+        Arguments:
+          lane (int): lane to restrict barcodes to, or None
+            to get all barcode sequences
+
+        """
+        if lane is not None:
+            return self._sample_lookup[lane].keys()
+        else:
+            barcodes = []
+            for l in self._lanes:
+                barcodes.extend(self.barcodes(l))
+            return barcodes
+
+    def samples(self,lane=None):
+        """
+        Return a list of sample names
+
+        If a lane is specified then a list of sample names
+        that lane is returned; if no lane is specified (or
+        lane is 'None') then all barcode sequences are
+        returned.
+
+        Arguments:
+          lane (int): lane to restrict sample names to, or
+            None to get all sample names
+
+        """
+        if lane is not None:
+            return self._barcode_lookup[lane].keys()
+        else:
+            samples = []
+            for l in self._lanes:
+                samples.extend(self.samples(l))
+            return samples
+
+    def lookup_sample(self,barcode,lane=None):
+        """
+        Return sample name matching barcode sequence
+
+        Arguments:
+          barcode (str): normalised barcode sequence
+            to get sample name for
+          lane (int): optional, lane to look for
+            matching sample in
+
+        """
+        if lane is not None:
+            return self._sample_lookup[lane][barcode]
+        else:
+            samples = []
+            for l in self._lanes:
+                try:
+                    samples.append(self.lookup_sample(barcode,l))
+                except KeyError:
+                    pass
+            return ','.join(samples)
+
+    def lookup_barcode(self,sample,lane=None):
+        """
+        Return normalised barcode sequence matching
+        sample name
+
+        Arguments:
+          sample (str): sample name to get normalised
+            barcode sequence for
+          lane (int): optional, lane to look for
+            matching barcode in
+
+        """
+        if lane is not None:
+            return self._barcode_lookup[lane][sample]
+        else:
+            barcodes = []
+            for l in self._lanes:
+                try:
+                    barcodes.append(self.lookup_barcode(sample,l))
+                except KeyError:
+                    pass
+            return ','.join(barcodes)
+
 def normalise_barcode(seq):
     """
     Return normalised version of barcode sequence
@@ -612,6 +757,9 @@ def print_title(text,underline):
 def write_title(fp,text,underline):
     fp.write("\n%s\n%s\n" % (text,underline*len(text)))
 
+def percent(num,denom):
+    return float(num)/float(denom)*100.0
+
 def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                     mismatches=0,fp=None):
     """
@@ -657,13 +805,14 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         fp.write("Barcodes which cover less than %.1f%% of reads have been "
                  "excluded\n" % (cutoff*100.0))
     fp.write("Reported barcodes cover %.1f%% of the data (%d/%d)\n" %
-             (float(analysis['coverage'])/float(analysis['total_reads'])*100.0,
-             analysis['coverage'],analysis['total_reads']))
+             (percent(analysis['coverage'],analysis['total_reads']),
+              analysis['coverage'],analysis['total_reads']))
     if mismatches:
         fp.write("Barcodes have been grouped by allowing %d mismatch%s\n" %
                  (mismatches,
                   ('' if mismatches == 1 else 'es')))
     cumulative_reads = 0
+    # Report information on the top barcodes
     fp.write("\n%s\n" % '\t'.join(("#Rank",
                                    "Index",
                                    "Sample",
@@ -682,8 +831,46 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                       sample_name,
                                       analysis['counts'][barcode]['sequences'],
                                       analysis['counts'][barcode]['reads'],
-                                      '%.1f%%' % (float(analysis['counts'][barcode]['reads'])/float(analysis['total_reads'])*100.0),
-                                      '(%.1f%%)' % (float(cumulative_reads)/float(analysis['total_reads'])*100.0))]))
+                                      '%.1f%%' % (percent(analysis['counts'][barcode]['reads'],analysis['total_reads'])),
+                                      '(%.1f%%)' % (percent(cumulative_reads,
+                                                            analysis['total_reads'])))]))
+    # Report "missing" samples
+    if sample_sheet is not None:
+        sample_sheet = SampleSheetBarcodes(sample_sheet)
+        found_samples = filter(lambda s: s is not None,
+                               [analysis['counts'][bc]['sample']
+                                for bc in analysis['barcodes']])
+        found_samples = ','.join(found_samples).split(',')
+        missing = []
+        missing_no_counts = []
+        for sample in sample_sheet.samples(lane):
+            if sample not in found_samples:
+                barcode = sample_sheet.lookup_barcode(sample,lane)
+                try:
+                    missing.append({'name': sample,
+                                    'barcode': barcode,
+                                    'counts': counts.counts(barcode,lane)
+                                })
+                except KeyError:
+                    missing_no_counts.append({'name': sample,
+                                              'barcode': barcode,
+                                          })
+        if missing:
+            fp.write("\nThe following samples had too few counts to appear "
+                     "in the results:\n")
+            fp.write("\n\t#Sample\tIndex\tN_reads\t%reads\n")
+            for sample in missing:
+                fp.write("\t%s\t%s\t%d\t%.2f%%\n" %
+                         (sample['name'],
+                          sample['barcode'],
+                          sample['counts'],
+                          percent(sample['counts'],analysis['total_reads'])))
+        if missing_no_counts:
+            fp.write("\nThe following samples had no counts:\n")
+            fp.write("\n\t#Sample\tIndex\n")
+            for sample in missing_no_counts:
+                fp.write("\t%s\t%d\n" % (sample['name'],
+                                         sample['barcode']))
 
 def samplesheet_index_sequence(line):
     """
