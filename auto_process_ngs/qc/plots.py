@@ -105,8 +105,8 @@ def uscreenplot(screen_files,outfile=None,inline=None):
                 '%One_hit_multiple_libraries',
                 '%Multiple_hits_multiple_libraries',)
     # Colours
-    colors = (RGB_COLORS['navyblue'],
-              RGB_COLORS['blue'],
+    colors = (RGB_COLORS['blue'],
+              RGB_COLORS['navyblue'],
               RGB_COLORS['red'],
               RGB_COLORS['maroon'])
     # Read in the screen data
