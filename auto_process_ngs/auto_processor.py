@@ -1592,12 +1592,15 @@ class AutoProcess:
         group.close()
         # Do reporting
         report_file = os.path.join(barcode_dir,'barcodes.report')
-        if os.path.exists(report_file):
-            print "Removing existing report file: %s" % report_file
-            os.remove(report_file)
+        xls_file = os.path.join(barcode_dir,'barcodes.xls')
+        for filen in (report_file,xls_file):
+            if os.path.exists(filen):
+                print "Removing existing file: %s" % filen
+                os.remove(filen)
         barcode_report_cmd = applications.Command(
             'analyse_barcodes.py',
-            '--report',report_file)
+            '--report',report_file,
+            '--xls',xls_file)
         # Sample sheet
         if sample_sheet is None:
             sample_sheet = self.params.sample_sheet

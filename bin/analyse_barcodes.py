@@ -19,6 +19,8 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.simple_xls import XLSWorkBook
+from bcftbx.simple_xls import XLSStyle
 
 __version__ = "0.0.1"
 
@@ -698,6 +700,79 @@ class SampleSheetBarcodes(object):
                     pass
             return ','.join(barcodes)
 
+class Reporter(object):
+    """
+    Class for generating reports of barcode statistics
+
+    """
+    def __init__(self):
+        """
+        Create new Reporter instance
+        """
+        self._content = []
+
+    def __len__(self):
+        return len(self._content)
+
+    def __nonzero__(self):
+        return bool(self._content)
+
+    def add(self,content,**kws):
+        """
+        Add content to the report
+
+        Supplied content is appended to the existing
+        content.
+
+        Also arbitrary keyword-value parts can be
+        associated with the content.
+
+        """
+        for line in content.split('\n'):
+            self._content.append((line,dict(**kws)))
+
+    def write(self,fp=None,filen=None):
+        """
+        Write the report to a file or stream
+
+        """
+        if fp is None:
+            if filen is None:
+                fp = sys.stdout
+            else:
+                fp = open(filen,'w')
+        for item in self._content:
+            content = item[0]
+            attrs = item[1]
+            if attrs.get('title',False):
+                content = make_title(content,'=')
+            fp.write("%s\n" % content)
+        if filen is not None:
+            fp.close()
+
+    def write_xls(self,xls_file):
+        """
+        Write the report to an XLS file
+
+        """
+        wb = XLSWorkBook("Barcodes Report")
+        ws = wb.add_work_sheet("barcodes")
+        for item in self._content:
+            content = item[0]
+            attrs = item[1]
+            style = None
+            if attrs.get('title',False):
+                style = XLSStyle(bold=True,
+                                 color='white',
+                                 bgcolor='gray55')
+            elif attrs.get('heading',False):
+                style = XLSStyle(bold=True,
+                                 bgcolor='gray25')
+            elif attrs.get('strong',False):
+                style = XLSStyle(bold=True)
+            ws.append_row(data=content.split('\t'),style=style)
+        wb.save_as_xls(xls_file)
+
 def normalise_barcode(seq):
     """
     Return normalised version of barcode sequence
@@ -750,17 +825,14 @@ def count_barcodes(fastqs):
             counts.count_barcode(seq,lane)
     return counts
 
-def print_title(text,underline):
-    print "\n%s\n%s" % (text,underline*len(text))
-
-def write_title(fp,text,underline):
-    fp.write("\n%s\n%s\n" % (text,underline*len(text)))
+def make_title(text,underline="="):
+    return "%s\n%s" % (text,underline*len(text))
 
 def percent(num,denom):
     return float(num)/float(denom)*100.0
 
 def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
-                    mismatches=0,fp=None):
+                    mismatches=0,reporter=None):
     """
     Report barcode statistics
 
@@ -783,56 +855,64 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         representing percentage of reads that will be
         included in analyses (e.g. 0.9 = 90%). Default
         is to include all barcodes
-      fp (File): optional, file object opened for writing
-        (defaults to stdout)
+      reporter (Reporter): Reporter instance to write
+        results to for reporting (optional, default is to
+        write to stdout)
 
     """
-    # Where to write the output
-    if fp is None:
-        fp = sys.stdout
+    # Initialise report content
+    if reporter is None:
+        reporter = Reporter()
+    # Add separator line if the reporter already has content
+    if reporter:
+        reporter.add('')
     # Check lanes
     if lane is not None:
-        write_title(fp,"Barcode analysis for lane #%d" % lane,'=')
+        reporter.add("Barcode analysis for lane #%d" % lane,title=True)
     else:
-        write_title(fp,"Barcode analysis for all lanes",'=')
+        reporter.add("Barcode analysis for all lanes",title=True)
     # Get analysis
     analysis = counts.analyse(lane=lane,cutoff=cutoff,
                               sample_sheet=sample_sheet,
                               mismatches=mismatches)
     # Report settings
     if cutoff is not None:
-        fp.write("Barcodes which cover less than %.1f%% of reads have been "
-                 "excluded\n" % (cutoff*100.0))
-    fp.write("Reported barcodes cover %.1f%% of the data (%d/%d)\n" %
-             (percent(analysis['coverage'],analysis['total_reads']),
-              analysis['coverage'],analysis['total_reads']))
+        reporter.add("Barcodes which cover less than %.1f%% of reads "
+                     "have been excluded" % (cutoff*100.0))
+        reporter.add("Reported barcodes cover %.1f%% of the data "
+                     "(%d/%d)" % (percent(analysis['coverage'],
+                                          analysis['total_reads']),
+                                  analysis['coverage'],
+                                  analysis['total_reads']))
     if mismatches:
-        fp.write("Barcodes have been grouped by allowing %d mismatch%s\n" %
-                 (mismatches,
-                  ('' if mismatches == 1 else 'es')))
+        reporter.add("Barcodes have been grouped by allowing %d mismatch%s" %
+                     (mismatches,
+                      ('' if mismatches == 1 else 'es')))
     cumulative_reads = 0
     # Report information on the top barcodes
-    fp.write("\n%s\n" % '\t'.join(("#Rank",
+    reporter.add("")
+    reporter.add("%s" % '\t'.join(("#Rank",
                                    "Index",
                                    "Sample",
                                    "N_seqs",
                                    "N_reads",
                                    "%reads",
-                                   "(%Total_reads)")))
+                                   "(%Total_reads)")),heading=True)
     for i,barcode in enumerate(analysis['barcodes']):
         cumulative_reads += analysis['counts'][barcode]['reads']
         sample_name = analysis['counts'][barcode]['sample']
         if sample_name is None:
             sample_name = ''
-        fp.write("%s\n" % '\t'.join([str(x) for x in
-                                     ('% 5d' % (i+1),
-                                      barcode,
-                                      sample_name,
-                                      analysis['counts'][barcode]['sequences'],
-                                      analysis['counts'][barcode]['reads'],
-                                      '%.1f%%' % (percent(analysis['counts'][barcode]['reads'],analysis['total_reads'])),
-                                      '(%.1f%%)' % (percent(cumulative_reads,
-                                                            analysis['total_reads'])))]))
+        reporter.add("%s" % '\t'.join(
+            [str(x) for x in
+             ('% 5d' % (i+1),
+              barcode,
+              sample_name,
+              analysis['counts'][barcode]['sequences'],
+              analysis['counts'][barcode]['reads'],
+              '%.1f%%' % (percent(analysis['counts'][barcode]['reads'],analysis['total_reads'])),
+              '(%.1f%%)' % (percent(cumulative_reads,
+                                    analysis['total_reads'])))]))
     # Report "missing" samples
     if sample_sheet is not None:
         sample_sheet = SampleSheetBarcodes(sample_sheet)
@@ -859,25 +939,32 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
             missing = sorted(missing,key=lambda x: x['counts'],
                              reverse=True)
             # Report
-            fp.write("\nThe following samples had too few counts to appear "
-                     "in the results:\n")
-            fp.write("\n\t#Sample\tIndex\tN_reads\t%reads\n")
+            reporter.add("")
+            reporter.add("The following samples had too few counts to "
+                         "appear in the results:",strong=True)
+            reporter.add("")
+            reporter.add("\t#Sample\tIndex\tN_reads\t%reads",heading=True)
             for sample in missing:
-                fp.write("\t%s\t%s\t%d\t%.2f%%\n" %
-                         (sample['name'],
-                          sample['barcode'],
-                          sample['counts'],
-                          percent(sample['counts'],analysis['total_reads'])))
+                reporter.add("\t%s\t%s\t%d\t%.2f%%" %
+                             (sample['name'],
+                              sample['barcode'],
+                              sample['counts'],
+                              percent(sample['counts'],
+                                      analysis['total_reads'])))
         if missing_no_counts:
             # Sort into alphabetical order
             missing_no_counts = sorted(missing_no_counts,
                                        key=lambda x: x['name'])
             # Report
-            fp.write("\nThe following samples had no counts:\n")
-            fp.write("\n\t#Sample\tIndex\n")
+            reporter.add("")
+            reporter.add("The following samples had no counts:",
+                         strong=True)
+            reporter.add("")
+            reporter.add("\t#Sample\tIndex",heading=True)
             for sample in missing_no_counts:
-                fp.write("\t%s\t%s\n" % (sample['name'],
-                                         sample['barcode']))
+                reporter.add("\t%s\t%s" % (sample['name'],
+                                           sample['barcode']))
+    return reporter
 
 def samplesheet_index_sequence(line):
     """
@@ -1002,6 +1089,9 @@ if __name__ == '__main__':
                  action='store',dest='report_file',default=None,
                  help="write report to REPORT_FILE (otherwise write to "
                  "stdout)")
+    p.add_option('-x','--xls',
+                 action='store',dest='xls_file',default=None,
+                 help="write XLS version of report to XLS_FILE")
     p.add_option('-n','--no-report',
                  action='store_true',dest='no_report',default=None,
                  help="suppress reporting (overrides --report)")
@@ -1028,17 +1118,13 @@ if __name__ == '__main__':
         cutoff = opts.cutoff
     # Report the counts
     if not opts.no_report:
-        if opts.report_file is not None:
-            print "Writing report to %s" % opts.report_file
-            fp = open(opts.report_file,'w')
-        else:
-            fp = sys.stdout
+        reporter = Reporter()
         if lanes is None:
             report_barcodes(counts,
                             cutoff=cutoff,
                             sample_sheet=opts.sample_sheet,
                             mismatches=opts.mismatches,
-                            fp=fp)
+                            reporter=reporter)
         else:
             for lane in lanes:
                 report_barcodes(counts,
@@ -1046,7 +1132,15 @@ if __name__ == '__main__':
                                 cutoff=cutoff,
                                 sample_sheet=opts.sample_sheet,
                                 mismatches=opts.mismatches,
-                                fp=fp)
+                                reporter=reporter)
+        if opts.report_file is not None:
+            print "Writing report to %s" % opts.report_file
+            reporter.write(filen=opts.report_file)
+        else:
+            reporter.write()
+        if opts.xls_file is not None:
+            print "Writing XLS to %s" % opts.xls_file
+            reporter.write_xls(opts.xls_file)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
