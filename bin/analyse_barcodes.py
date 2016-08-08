@@ -391,7 +391,6 @@ class BarcodeCounter:
             sample_sheet_barcodes = sample_sheet.barcodes(lane)
         else:
             sample_sheet_barcodes = None
-        print "analyse: %s" % sample_sheet_barcodes
         if not mismatches:
             groups = None
             barcodes = self.filter_barcodes(cutoff=cutoff,lane=lane)
