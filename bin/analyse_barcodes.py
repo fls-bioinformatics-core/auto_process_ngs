@@ -764,7 +764,7 @@ class Reporter(object):
             if attrs.get('title',False):
                 style = XLSStyle(bold=True,
                                  color='white',
-                                 bgcolor='gray55')
+                                 bgcolor='gray50')
             elif attrs.get('heading',False):
                 style = XLSStyle(bold=True,
                                  bgcolor='gray25')
