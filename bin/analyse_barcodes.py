@@ -856,6 +856,10 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                               'barcode': barcode,
                                           })
         if missing:
+            # Sort into order of highest to lowest counts
+            missing = sorted(missing,key=lambda x: x['counts'],
+                             reverse=True)
+            # Report
             fp.write("\nThe following samples had too few counts to appear "
                      "in the results:\n")
             fp.write("\n\t#Sample\tIndex\tN_reads\t%reads\n")
@@ -866,10 +870,14 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                           sample['counts'],
                           percent(sample['counts'],analysis['total_reads'])))
         if missing_no_counts:
+            # Sort into alphabetical order
+            missing_no_counts = sorted(missing_no_counts,
+                                       key=lambda x: x['name'])
+            # Report
             fp.write("\nThe following samples had no counts:\n")
             fp.write("\n\t#Sample\tIndex\n")
             for sample in missing_no_counts:
-                fp.write("\t%s\t%d\n" % (sample['name'],
+                fp.write("\t%s\t%s\n" % (sample['name'],
                                          sample['barcode']))
 
 def samplesheet_index_sequence(line):
