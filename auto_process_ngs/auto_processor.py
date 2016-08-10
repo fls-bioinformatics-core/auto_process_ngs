@@ -1478,6 +1478,7 @@ class AutoProcess:
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
                          mismatches=None,cutoff=None,coverage=None,
+                         barcode_analysis_dir=None,
                          sample_sheet=None,runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
@@ -1503,6 +1504,10 @@ class AutoProcess:
           sample_sheet: optional, explicitly specify a sample sheet to
             check barcode sequences against (by default will use the
             sample sheet defined in the parameter file for the run)
+          barcode_analysis_dir: optional, explicitly specify the
+            subdirectory to use for barcode analysis. Counts will be
+            written to and read from the 'counts' subdirectory of this
+            directory (defaults to 'barcode_analysis')
           runner: set a non-default job runner.
         
         """
@@ -1513,10 +1518,14 @@ class AutoProcess:
             self.params['unaligned_dir'] = 'bcl2fastq'
         # Load data
         illumina_data = self.load_illumina_data(unaligned_dir=unaligned_dir)
-        # Create a subdirectory for barcode analysis
-        barcode_dir = self.add_directory('barcode_analysis')
+        # Handle barcode analysis subdirectories
+        if barcode_analysis_dir is None:
+            # Create a subdirectory for barcode analysis
+            barcode_analysis_dir = 'barcode_analysis'
+        barcode_dir = self.add_directory(barcode_analysis_dir)
         # Create a subdirectory for count files
-        counts_dir = self.add_directory('barcode_analysis/counts')
+        counts_dir = self.add_directory(os.path.join(barcode_analysis_dir,
+                                                     'counts'))
         # Map fastq files to counts files
         counts_files = {}
         for project in illumina_data.projects:

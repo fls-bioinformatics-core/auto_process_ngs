@@ -541,6 +541,10 @@ def add_analyse_barcodes_command(cmdparser):
                  dest="sample_sheet",default=None,
                  help="use an alternative sample sheet to the default "
                  "'custom_SampleSheet.csv' created on setup.")
+    p.add_option('--barcode-analysis-dir',action="store",
+                 dest="barcode_analysis_dir",default=None,
+                 help="specify subdirectory where barcode analysis will "
+                 "be performed and outputs will be written")
     add_runner_option(p)
     add_debug_option(p)
     # Deprecated options
@@ -789,6 +793,7 @@ if __name__ == "__main__":
                                cutoff=options.cutoff,
                                coverage=options.coverage,
                                sample_sheet=options.sample_sheet,
+                               barcode_analysis_dir=options.barcode_analysis_dir,
                                runner=options.runner)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
