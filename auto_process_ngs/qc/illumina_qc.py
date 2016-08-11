@@ -301,49 +301,61 @@ class QCReporter:
           report (Section): container for the report
 
         """
-        # Locate FastQC outputs for R1
-        fastqc = Fastqc(os.path.join(self._qc_dir,fastqc_output(fq)[0]))
-        # Number of reads for summary
-        if read_id == 'r1':
-            nreads = fastqc.data.basic_statistics('Total Sequences')
-            summary.set_value(idx,'reads',pretty_print_reads(nreads))
-        # FastQC quality boxplot
+        # Report FastQC results
         fastqc_report = report.add_subsection("FastQC")
-        fastqc_report.add("Per base sequence quality boxplot:")
-        boxplot = Img(fastqc.quality_boxplot(inline=True),
-                      height=250,
-                      width=480,
-                      href=fastqc.summary.link_to_module(
-                          'Per base sequence quality',
-                          relpath=relpath),
-                      name="boxplot_%s" % fq)
-        fastqc_report.add(boxplot)
         try:
-            summary.set_value(idx,'boxplot_%s' % read_id,
-                              Img(uboxplot(fastqc.data.path,inline=True),
-                                  href=boxplot))
+            # Locate FastQC outputs
+            fastqc = Fastqc(os.path.join(self._qc_dir,fastqc_output(fq)[0]))
+            # FastQC quality boxplot
+            fastqc_report.add("Per base sequence quality boxplot:")
+            boxplot = Img(fastqc.quality_boxplot(inline=True),
+                          height=250,
+                          width=480,
+                          href=fastqc.summary.link_to_module(
+                              'Per base sequence quality',
+                              relpath=relpath),
+                          name="boxplot_%s" % fq)
+            fastqc_report.add(boxplot)
+            try:
+                summary.set_value(idx,'boxplot_%s' % read_id,
+                                  Img(uboxplot(fastqc.data.path,inline=True),
+                                      href=boxplot))
+            except Exception,ex:
+                logging.error("Failed to generate boxplot for %s: %s"
+                              % (fq,ex))
+            # FastQC summary table
+            fastqc_report.add("FastQC summary:")
+            fastqc_tbl = Target("fastqc_%s" % fq)
+            fastqc_report.add(fastqc_tbl,
+                              fastqc.summary.html_table(relpath=relpath))
+            if relpath:
+                fastqc_html_report = os.path.relpath(fastqc.html_report,relpath)
+            else:
+                fastqc_html_report = fastqc.html_report
+            fastqc_report.add("%s for %s" % (Link("Full FastQC report",
+                                                  fastqc_html_report),
+                                             fq))
+            # Populate line in main Fastqs summary table
+            if read_id == 'r1':
+                nreads = fastqc.data.basic_statistics('Total Sequences')
+                summary.set_value(idx,'reads',pretty_print_reads(nreads))
+            try:
+                summary.set_value(idx,'fastqc_%s' % read_id,
+                                  Img(ufastqcplot(
+                                      fastqc.summary.path,inline=True),
+                                      href=fastqc_tbl))
+            except Exception,ex:
+                logging.error("Failed to generate Fastqc microplot for %s: %s"
+                              % (fq,ex))
         except Exception,ex:
-            logging.error("Failed to generate boxplot for %s: %s"
-                          % (fq,ex))
-        # FastQC summary plot
-        fastqc_report.add("FastQC summary:")
-        fastqc_tbl = Target("fastqc_%s" % fq)
-        fastqc_report.add(fastqc_tbl,fastqc.summary.html_table(relpath=relpath))
-        try:
-            summary.set_value(idx,'fastqc_%s' % read_id,
-                              Img(ufastqcplot(fastqc.summary.path,inline=True),
-                                  href=fastqc_tbl))
-        except Exception,ex:
-            logging.error("Failed to  generate Fastqc plot for %s: %s"
-                          % (fq,ex))
-        if relpath:
-            fastqc_html_report = os.path.relpath(fastqc.html_report,relpath)
-        else:
-            fastqc_html_report = fastqc.html_report
-        fastqc_report.add("%s for %s" % (Link("Full FastQC report",
-                                              fastqc_html_report),
-                                         fq))
-        # Fastq_screens
+            # Unable to get the FastQC data
+            logging.warning("Unable to load FastQC data for %s: %s" %
+                            (fq,ex))
+            # Add placeholders for missing data
+            if read_id == 'r1':
+                summary.set_value(idx,'reads','-')
+            fastqc_report.add("!!!No FastQC data available!!!")
+        # Report fastq_screen outputs
         screens_report = report.add_subsection("Screens")
         fastq_screens = Target("fastq_screens_%s" % fq)
         screens_report.add(fastq_screens)
@@ -360,13 +372,21 @@ class QCReporter:
             else:
                 png_href = png
                 txt_href = txt
-            screen_files.append(txt)
             screens_report.add(description)
-            screens_report.add(Img(encode_png(png),
-                                   height=250,
-                                   href=png_href))
-            fastq_screen_txt.append(
-                Link(description,txt_href).html())
+            if os.path.exists(png):
+                screens_report.add(Img(encode_png(png),
+                                       height=250,
+                                       href=png_href))
+            else:
+                logging.warning("Unable to find screen PNG: %s" % png)
+                screens_report.add("!!!No FastqScreen plot available!!!")
+            if os.path.exists(txt):
+                screen_files.append(txt)
+                fastq_screen_txt.append(
+                    Link(description,txt_href).html())
+            else:
+                logging.warning("Unable to find raw screen data: %s" % txt)
+                screens_report.add("!!!No FastqScreen data available!!!")
         screens_report.add("Raw screen data: " +
                            " | ".join(fastq_screen_txt))
         try:
@@ -374,7 +394,7 @@ class QCReporter:
                               Img(uscreenplot(screen_files,inline=True),
                                   href=fastq_screens))
         except Exception,ex:
-            logging.error("Failed to generate screen plot for %s: %s"
+            logging.error("Failed to generate microscreen plots for %s: %s"
                           % (fq,ex))
         # Program versions
         versions = report.add_subsection("Program versions")
@@ -386,15 +406,27 @@ class QCReporter:
         # Program versions table
         tbl = Table(("Program","Version"))
         tbl.add_css_classes("programs","summary")
-        tbl.add_row(Program='fastqc',
-                    Version=Fastqc(
-                        os.path.join(self._qc_dir,
-                                     fastqc_output(fastq)[0])).version)
-        tbl.add_row(Program='fastq_screen',
-                    Version=Fastqscreen(
-                        os.path.join(self._qc_dir,
-                                     fastq_screen_output(fastq,
-                                        FASTQ_SCREENS[0])[1])).version)
+        # Fetch the version info
+        try:
+            fastqc_version = Fastqc(
+                os.path.join(self._qc_dir,
+                             fastqc_output(fastq)[0])).version
+        except Exception,ex:
+            logging.error("Unable to get Fastqc version for %s: %s"
+                          % (fastq,ex))
+            fastqc_version = "?"
+        try:
+            fastq_screen_version = Fastqscreen(
+                os.path.join(self._qc_dir,
+                             fastq_screen_output(fastq,
+                                                 FASTQ_SCREENS[0])[1])).version
+        except Exception,ex:
+            logging.error("Unable to get Fastq_screen version for %s: %s"
+                          % (fastq,ex))
+            fastq_screen_version = "?"
+        # Add to table
+        tbl.add_row(Program='fastqc',Version=fastqc_version)
+        tbl.add_row(Program='fastq_screen',Version=fastq_screen_version)
         return tbl
 
 class QCSample:
