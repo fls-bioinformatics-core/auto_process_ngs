@@ -1315,7 +1315,8 @@ class ZipArchive(object):
             # Add directory and contents
             self.add_dir(item)
         else:
-            raise Exception("Unknown item type for '%s'" % item)
+            raise Exception("ZipArchive: unknown item type for '%s'"
+                            % item)
 
     def add_file(self,filen):
         """
