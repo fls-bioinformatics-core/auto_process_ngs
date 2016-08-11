@@ -1127,6 +1127,12 @@ if __name__ == '__main__':
                             reporter=reporter)
         else:
             for lane in lanes:
+                if lane not in counts.lanes:
+                    logging.error("Requested analysis for lane %d but "
+                                  "only have counts for lanes %s" %
+                                  (lane,
+                                   ','.join([str(l) for l in counts.lanes])))
+                    sys.exit(1)
                 report_barcodes(counts,
                                 lane=lane,
                                 cutoff=cutoff,
