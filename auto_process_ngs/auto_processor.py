@@ -1534,14 +1534,15 @@ class AutoProcess:
                                               full_path=True):
                     counts_files[fq] = os.path.join(
                         counts_dir,
-                        os.path.basename(fq) + '.counts')
+                        "%s.%s.counts" % (project.name,
+                                          os.path.basename(fq)))
         if illumina_data.undetermined is not None:
             for sample in illumina_data.undetermined.samples:
                 for fq in sample.fastq_subset(read_number=1,
                                               full_path=True):
                     counts_files[fq] = os.path.join(
                         counts_dir,
-                        os.path.basename(fq) + '.counts')
+                        "undetermined.%s.counts" % os.path.basename(fq))
         # Subset of fastq files with no corresponding counts
         missing_counts = filter(lambda fq: not os.path.exists(counts_files[fq]),
                                 counts_files.keys())
@@ -1596,8 +1597,9 @@ class AutoProcess:
                     '--no-report',fq)
                 print "Running %s" % barcode_count_cmd
                 group.add(barcode_count_cmd,
-                          name='analyse_barcodes.count.%s' %
-                          os.path.basename(fq))
+                          name='analyse_barcodes.count.%s.%s' %
+                          (os.path.basename(counts_files[fq]).split('.')[0],
+                           os.path.basename(counts_files[fq]).split('.')[1]))
         group.close()
         # Do reporting
         report_file = os.path.join(barcode_dir,'barcodes.report')
@@ -1651,7 +1653,16 @@ class AutoProcess:
         sched.wait()
         sched.stop()
         # Finish
-        print "Report written to %s" % report_file
+        if os.path.exists(report_file):
+            print "Report written to %s" % report_file
+        else:
+            logging.error("Missing barcode analysis report: %s" %
+                          report_file)
+        if os.path.exists(xls_file):
+            print "XLS written to %s" % xls_file
+        else:
+            logging.error("Missing barcode analysis XLS report: %s" %
+                          xls_file)
 
     def report_barcodes(self,report_file=None):
         """Count and report barcode sequences in FASTQs for each lane
