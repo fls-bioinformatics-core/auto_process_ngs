@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-15 Peter Briggs
+Copyright (C) University of Manchester 2013-16 Peter Briggs
 
 """
 
@@ -24,14 +24,17 @@ setup(name = "auto_process_ngs",
       url = 'https://github.com/fls-bioinformatics-core/auto_process_ngs',
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
-      packages = ['auto_process_ngs'],
+      packages = ['auto_process_ngs',
+                  'auto_process_ngs.qc',],
       license = 'Artistic License',
       # Pull in dependencies
       # See http://stackoverflow.com/questions/19738085/why-isnt-setup-py-dependency-links-doing-anything for info on use of 'dependency_links'
       # Note that pip 1.5 needs --process-dependency-links for these
       # to work; for pip 1.6 even this will be removed so then you must
       # do pip install -r requirements.txt first
-      install_requires = ['genomics-bcftbx',
+      install_requires = ['pillow',
+                          'matplotlib',
+                          'genomics-bcftbx',
                           'nebulizer',],
       dependency_links=['git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx'],
       # Enable 'python setup.py test'

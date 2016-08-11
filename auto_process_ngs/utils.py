@@ -27,13 +27,17 @@ tree at some point.
 import os
 import fnmatch
 import logging
+import zipfile
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
-from bcftbx.qc.report import IlluminaQCReporter,IlluminaQCSample
+from qc.illumina_qc import QCReporter
+from qc.illumina_qc import QCSample
+from qc.illumina_qc import expected_qc_outputs
+from qc.illumina_qc import check_qc_outputs
 
 #######################################################################
 # Classes
@@ -573,17 +577,45 @@ class AnalysisProject:
         if self.qc_dir is None:
             return None
         else:
-            return IlluminaQCReporter(self.dirn,data_format=self.fastq_format)
+            return QCReporter(self)
 
-    @property
-    def qc_report(self):
-        # Create zipped QC report and return name of zip file
-        qc_reporter = self.qc
+    def qc_report(self,force=False):
+        # Generate HTML and zipped QC reports
+        # Return name of zip file, or None if there is a problem
+        # Set force=True to force reports to be generated
         try:
-            if self.verify_qc():
-                return self.qc.zip()
-        except AttributeError:
-            logging.error("Failed to generate QC report")
+            if force or self.verify_qc():
+                # Create HTML report
+                report_html = os.path.join(self.dirn,"qc_report.html")
+                self.qc.report(title="%s/%s: QC report" % (self.info.run,
+                                                           self.name),
+                               filename=report_html,
+                               relative_links=True)
+                # Create zip file
+                analysis_dir = os.path.basename(os.path.dirname(self.dirn))
+                report_zip = os.path.join(self.dirn,
+                                          "qc_report.%s.%s.zip" %
+                                          (self.name,analysis_dir))
+                zip_file = ZipArchive(report_zip,relpath=self.dirn,
+                                      prefix="qc_report.%s.%s" %
+                                      (self.name,analysis_dir))
+                # Add the HTML report
+                zip_file.add_file(report_html)
+                # Add the FastQC and screen files
+                for sample in self.qc.samples:
+                    for fastqs in sample.fastq_pairs:
+                        for fq in fastqs:
+                            for f in expected_qc_outputs(fq,self.qc_dir):
+                                if f.endswith('.zip'):
+                                    # Exclude .zip file
+                                    continue
+                                if os.path.exists(f):
+                                    zip_file.add(f)
+                # Finished
+                return report_zip
+        except AttributeError,ex:
+            logging.error("Failed to generate QC report for %s: %s"
+                          % (self.name,ex))
         return None
 
     @property
@@ -739,19 +771,14 @@ class AnalysisSample:
                 return True
         return False
 
-    def qc_sample(self,qc_dir,fastq):
-        """Fetch IlluminaQCSample object for a fastq file
-
-        Arguments:
-          qc_dir: name of the QC directory
-          fastq : fastq file to get the QC information for
+    def qc_sample(self):
+        """Fetch QCSample object for this sample
 
         Returns:
-          Populated IlluminaQCSample object.
+          Populated QCSample object.
 
         """
-        name = bcf_utils.rootname(os.path.basename(fastq))
-        return IlluminaQCSample(name,qc_dir,fastq)
+        return QCSample(self)
 
     def verify_qc(self,qc_dir,fastq):
         """Check if QC completed for a fastq file
@@ -764,7 +791,10 @@ class AnalysisSample:
           True if QC completed correctly, False otherwise.
 
         """
-        return self.qc_sample(qc_dir,fastq).verify()
+        present,missing = check_qc_outputs(fastq,qc_dir)
+        if missing:
+            return False
+        return True
 
     def __repr__(self):
         """Implement __repr__ built-in
@@ -1239,6 +1269,86 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+class ZipArchive(object):
+    """
+    Utility class for creating .zip archive files
+
+    Example usage:
+
+    >>> z = ZipArchive('test.zip',relpath='/data')
+    >>> z.add('/data/file1') # Add a single file
+    >>> z.add('/data/dir2/') # Add a directory and all contents
+    >>> z.close()  # to write the archive
+
+    """
+    def __init__(self,zip_file,contents=None,relpath=None,prefix=None):
+        """
+        Make an new zip archive instance
+
+        Arguments:
+          zip_file (str): path to the zip file to be created
+          contents (list): list of file and/or directory paths
+            which will be added to the zip file
+          relpath (str): optional, if specified then this path
+            will be stripped from the leading path for each item
+            before being written (see also 'prefix')
+          prefix (str): optional, if specified then this path
+            will be prepended to the names of the items written
+            to the archive. The prepending takes place after the
+            relpath argument has been applied
+
+        """
+        self._zipfile = zipfile.ZipFile(zip_file,'w')
+        self._relpath = relpath
+        self._prefix = prefix
+        if contents is not None:
+            for item in contents:
+                self.add(item)
+
+    def add(self,item):
+        """
+        Add an item (file or directory) to the zip archive
+        """
+        item = os.path.abspath(item)
+        if os.path.isfile(item):
+            # Add file
+            self.add_file(item)
+        elif os.path.isdir(item):
+            # Add directory and contents
+            self.add_dir(item)
+        else:
+            raise Exception("ZipArchive: unknown item type for '%s'"
+                            % item)
+
+    def add_file(self,filen):
+        """
+        Add a file to the zip archive
+        """
+        if self._relpath:
+            zip_pth = os.path.relpath(filen,self._relpath)
+        else:
+            zip_pth = filen
+        if self._prefix:
+            zip_pth = os.path.join(self._prefix,zip_pth)
+        self._zipfile.write(filen,zip_pth)
+
+    def add_dir(self,dirn):
+        """
+        Recursively add a directory and its contents
+        """
+        for item in os.listdir(dirn):
+            f = os.path.join(dirn,item)
+            if os.path.isdir(f):
+                self.add_dir(f)
+            else:
+                self.add_file(f)
+
+    def close(self):
+        self._zipfile.close()
+
+    def __del__(self):
+        self.close()
 
 #######################################################################
 # Functions

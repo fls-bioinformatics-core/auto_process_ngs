@@ -2065,7 +2065,7 @@ class AutoProcess:
                 failed_projects.append(project)
             else:
                 print "QC okay, generating report for %s" % project.name
-                project.qc_report
+                project.qc_report()
         # Report failed projects
         if failed_projects:
             logging.error("QC failed for one or more samples in following projects:")
@@ -2241,7 +2241,7 @@ class AutoProcess:
         raise NotImplementedError
 
     def publish_qc(self,projects=None,location=None,ignore_missing_qc=False,
-                   regenerate_reports=False):
+                   regenerate_reports=False,force=False):
         # Copy the QC reports to the webserver
         #
         # projects: specify a pattern to match one or more projects to
@@ -2252,6 +2252,8 @@ class AutoProcess:
         #           or reports (otherwise raises an exception)
         # regenerate_reports: if True then try to create reports even when they
         #           already exist
+        # force:    if True then force QC report (re)generation even
+        #           if QC is unverified
         #
         # Turn off saving of parameters etc
         self._save_params = False
@@ -2303,7 +2305,10 @@ class AutoProcess:
             else:
                 # QC is available, check status of reports
                 generate_report = regenerate_reports
-                qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+                qc_zip = os.path.join(project.dirn,
+                                      "qc_report.%s.%s.zip" %
+                                      (project.name,
+                                       os.path.basename(self.analysis_dir)))
                 if os.path.isfile(qc_zip):
                     print "Existing QC report found for %s" % project.name
                 else:
@@ -2312,34 +2317,43 @@ class AutoProcess:
                     generate_report = True
                 # (Re)create report
                 if generate_report:
-                    if project.qc.verify():
+                    if not project.qc.verify():
+                        logging.error("Unable to verify QC for %s" %
+                                      project.name)
+                        if not force:
+                            qc_zip = None
+                        else:
+                            print "Forcing QC report generation"
+                    if qc_zip:
                         print "Generating report and zip file"
                         try:
-                            project.qc.zip()
-                        except Exception, ex:
-                            logging.error("Failed to generate QC report for %s" %
-                                          project.name)
+                            project.qc_report(force=force)
+                        except Exception as ex:
+                            logging.error(
+                                "Failed to generate QC report for %s: %s" %
+                                (project.name,ex))
                             qc_zip = None
-                    else:
-                        logging.error("Unable to verify QC for %s" % project.name)
-                        qc_zip = None
                 if qc_zip is None:
                     logging.error("Failed to make QC report for %s" % project.name)
                     no_qc_projects.append(project)
         # Final results
         if no_qc_projects:
-            logging.error("QC reports missing for projects: %s" %
-                          ', '.join([x.name for x in no_qc_projects]))
+            # Failed to generate results for some projects
+            err_msg = "QC reports missing for projects: %s" % \
+                      ', '.join([x.name for x in no_qc_projects])
             if not ignore_missing_qc:
-                raise Exception, "QC reports missing for projects: %s" % \
-                    ', '.join([x.name for x in no_qc_projects])
+                # Fatal error
+                logging.error(err_msg + " (fatal)")
+                return False
+            # Proceed with a warning
+            logging.warning(err_msg)
         # Remove the 'bad' projects from the list before proceeding
         for project in no_qc_projects:
             print "Project %s will be skipped" % project.name
             projects.remove(project)
         if not projects:
             logging.error("No projects with QC results to publish")
-            raise Exception, "No projects with QC results to publish"
+            return False
         # Make a directory for the QC reports
         if not remote:
             # Local directory
@@ -2424,7 +2438,11 @@ class AutoProcess:
             index_page.add("<td>%s</td>" % project.prettyPrintSamples())
             index_page.add("<td>%d</td>" % len(project.samples))
             # Locate and copy QC report
-            qc_zip = os.path.join(project.dirn,"%s.zip" % project.qc.report_name)
+            qc_zip = os.path.join(project.dirn,
+                                  "qc_report.%s.%s.zip" %
+                                  (project.name,
+                                   os.path.basename(self.analysis_dir)))
+            print qc_zip
             assert(os.path.isfile(qc_zip))
             report_copied = True
             if not remote:
@@ -2452,8 +2470,10 @@ class AutoProcess:
                     report_copied = False
             # Append info to the index page
             if report_copied:
-                index_page.add("<td><a href='%s/qc_report.html'>[Report]</a></td>"
-                               % project.qc.report_name)
+                index_page.add("<td><a href='qc_report.%s.%s/qc_report.html'>"
+                               "[Report]</a></td>"
+                               % (project.name,
+                                  os.path.basename(self.analysis_dir)))
                 index_page.add("<td><a href='%s'>[Zip]</a></td>"
                                % os.path.basename(qc_zip))
             else:
@@ -2981,7 +3001,7 @@ class AutoProcess:
         else:
             if project.qc.verify():
                 try:
-                    project.qc.zip()
+                    project.qc_report()
                     print "Updated QC report for %s" % project_name
                 except Exception, ex:
                     logging.error("Failed to generate QC report for %s" %
