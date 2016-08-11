@@ -579,11 +579,12 @@ class AnalysisProject:
         else:
             return QCReporter(self)
 
-    def qc_report(self):
+    def qc_report(self,force=False):
         # Generate HTML and zipped QC reports
         # Return name of zip file, or None if there is a problem
+        # Set force=True to force reports to be generated
         try:
-            if self.verify_qc():
+            if force or self.verify_qc():
                 # Create HTML report
                 report_html = os.path.join(self.dirn,"qc_report.html")
                 self.qc.report(title="%s/%s: QC report" % (self.info.run,
@@ -608,11 +609,13 @@ class AnalysisProject:
                                 if f.endswith('.zip'):
                                     # Exclude .zip file
                                     continue
-                                zip_file.add(f)
+                                if os.path.exists(f):
+                                    zip_file.add(f)
                 # Finished
                 return report_zip
-        except AttributeError:
-            logging.error("Failed to generate QC report")
+        except AttributeError,ex:
+            logging.error("Failed to generate QC report for %s: %s"
+                          % (self.name,ex))
         return None
 
     @property
