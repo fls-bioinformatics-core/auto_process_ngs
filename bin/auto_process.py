@@ -424,6 +424,10 @@ def add_publish_qc_command(cmdparser):
     p.add_option('--regenerate-reports',action='store_true',
                  dest='regenerate_reports',default=False,
                  help="attempt to regenerate existing QC reports")
+    p.add_option('--force',action='store_true',
+                 dest='force',default=False,
+                 help="force generation of QC reports for all projects even "
+                 "if verification has failed")
     add_debug_option(p)
 
 def add_archive_command(cmdparser):
@@ -859,7 +863,8 @@ if __name__ == "__main__":
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,
                          ignore_missing_qc=options.ignore_missing_qc,
-                         regenerate_reports=options.regenerate_reports)
+                         regenerate_reports=options.regenerate_reports,
+                         force=options.force)
         elif cmd == 'report':
             d.report(logging=options.logging,
                      summary=options.summary,
