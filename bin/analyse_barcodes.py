@@ -625,13 +625,15 @@ class SampleSheetBarcodes(object):
             to get all barcode sequences
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._sample_lookup[lane].keys()
-        else:
+        elif lane is None:
             barcodes = []
             for l in self._lanes:
                 barcodes.extend(self.barcodes(l))
             return barcodes
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
     def samples(self,lane=None):
         """
@@ -647,13 +649,15 @@ class SampleSheetBarcodes(object):
             None to get all sample names
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._barcode_lookup[lane].keys()
-        else:
+        elif lane is None:
             samples = []
             for l in self._lanes:
                 samples.extend(self.samples(l))
             return samples
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
     def lookup_sample(self,barcode,lane=None):
         """
@@ -666,9 +670,9 @@ class SampleSheetBarcodes(object):
             matching sample in
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._sample_lookup[lane][barcode]
-        else:
+        elif lane is None:
             samples = []
             for l in self._lanes:
                 try:
@@ -676,6 +680,8 @@ class SampleSheetBarcodes(object):
                 except KeyError:
                     pass
             return ','.join(samples)
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
     def lookup_barcode(self,sample,lane=None):
         """
@@ -689,9 +695,9 @@ class SampleSheetBarcodes(object):
             matching barcode in
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._barcode_lookup[lane][sample]
-        else:
+        elif lane is None:
             barcodes = []
             for l in self._lanes:
                 try:
@@ -699,6 +705,8 @@ class SampleSheetBarcodes(object):
                 except KeyError:
                     pass
             return ','.join(barcodes)
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
 class Reporter(object):
     """
