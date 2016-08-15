@@ -8,6 +8,7 @@ import shutil
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -223,6 +224,32 @@ class TestAnalysisDir(unittest.TestCase):
         self.assertEqual(analysis_dir.n_projects,2)
         self.assertTrue(analysis_dir.paired_end)
 
+    def test_handle_non_project_dir(self):
+        """Check AnalysisDir with non-project directory
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add non-project dir
+        non_project_dir = os.path.join(self.dirn,
+                                '160621_M00879_0087_000000000-AGEW9_analysis',
+                                'extras')
+        fqs_dir = os.path.join(non_project_dir,'fastqs')
+        os.mkdir(non_project_dir)
+        os.mkdir(fqs_dir)
+        for fq in ('PB04_S4_R1_unpaired.fastq.gz',
+                   'PB04_trimmoPE_bowtie2_notHg38.1.fastq.gz'):
+            with open(os.path.join(fqs_dir,fq),'w') as fp:
+                fp.write("")
+        # Load and check the analysis dir
+        analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.run_name,mockdir.run_name)
+        self.assertEqual(analysis_dir.n_sequencing_data,1)
+        self.assertEqual(analysis_dir.n_projects,2)
+        self.assertTrue(analysis_dir.paired_end)
+
 class TestAnalysisProject(unittest.TestCase):
     """Tests for the AnalysisProject class
 
@@ -240,6 +267,10 @@ class TestAnalysisProject(unittest.TestCase):
             fastq = os.path.join(fake_fastqs_dir,fq)
             open(fastq,'w').close()
             self.fastqs.append(fastq)
+
+    def make_mock_project_dir(self,name,fastq_list):
+        # Make a mock project directory
+        MockAnalysisProject(name,fastq_list).create(top_dir=self.dirn)
 
     def tearDown(self):
         # Remove the temporary test directory
@@ -278,7 +309,9 @@ class TestAnalysisProject(unittest.TestCase):
     def test_create_single_end_analysis_project_multi_fastqs(self):
         """Check creation of new single-end AnalysisProject directory (multi-fastq/sample)
         """
-        self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+        self.make_data_dir(('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-A_ACAGTG_L002_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
                             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
         dirn = os.path.join(self.dirn,'PJB')
         project = AnalysisProject('PJB',dirn)
@@ -287,7 +320,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertTrue(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
-        self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
 
     def test_create_paired_end_analysis_project(self):
         """Check creation of new paired-end AnalysisProject directory
@@ -321,6 +355,36 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+
+    def test_load_single_end_analysis_project(self):
+        """Check loading of an existing single-end AnalysisProject directory
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+
+    def test_load_analysis_project_non_canonical_fastqs(self):
+        """Check AnalysisProject loading fails for directory with non-canonical fastqs
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PB04_S4_R1_unpaired.fastq.gz',
+             'PB04_trimmoPE_bowtie2_notHg38.1.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class

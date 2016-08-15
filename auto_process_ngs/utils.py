@@ -241,6 +241,7 @@ class AnalysisDir:
         self._name = os.path.basename(analysis_dir)
         self._bcl2fastq_dirs = []
         self._project_dirs = []
+        self._extra_dirs = []
         self.sequencing_data = []
         self.projects = []
         self.undetermined = None
@@ -248,6 +249,12 @@ class AnalysisDir:
         self.metadata = AnalysisDirMetadata()
         self.metadata.load(os.path.join(self._analysis_dir,
                                         "metadata.info"))
+        # Projects metadata
+        try:
+            self.projects_metadata = ProjectMetadataFile(
+                os.path.join(self._analysis_dir,"projects.info"))
+        except OSError:
+            self.projects_metadata = None
         # Run name
         try:
             self.run_name = self.metadata.run
@@ -278,12 +285,22 @@ class AnalysisDir:
                     logging.debug("- %s: undetermined indexes" % dirn)
                     self.undetermined = data
                 else:
+                    # Check against projects.info, if possible
+                    try:
+                        if not self.projects_metadata.lookup('Project',dirn):
+                            logging.debug("- %s: not in projects.info" % dirn)
+                            self._extra_dirs.append(dirn)
+                            continue
+                    except AttributeError:
+                        pass
                     logging.debug("- %s: project directory" % dirn)
                     self._project_dirs.append(dirn)
                     self.projects.append(data)
                 continue
-            # Unidentified contents
-            logging.debug("- %s: unknown" % dirn)
+            else:
+                # Unidentified contents
+                self._extra_dirs.append(dirn)
+                logging.debug("- %s: unknown" % dirn)
 
     @property
     def n_projects(self):
