@@ -171,16 +171,12 @@ class MockAnalysisDir(MockIlluminaData):
                 project_name = 'undetermined'
             else:
                 project_name = project
-            os.mkdir(os.path.join(self.dirn,project_name))
-            # Add fastqs
-            fqs_dir = os.path.join(self.dirn,project_name,'fastqs')
-            os.mkdir(fqs_dir)
+            project_dir = MockAnalysisProject(project_name)
             sample_names = []
             for sample in self.samples_in_project(project):
                 sample_names.append(sample)
                 for fq in self.fastqs_in_sample(project,sample):
-                    with open(os.path.join(fqs_dir,fq),'w') as fp:
-                        fp.write('')
+                    project_dir.add_fastq(fq)
             # Add line to projects.info
             if project_name != 'undetermined':
                 projects_info.write('%s\n' % '\t'.join((project,
@@ -196,14 +192,69 @@ class MockAnalysisDir(MockIlluminaData):
                     for sample in self.samples_in_project(project):
                         fp.write('%s,,,,,,%s,\n' % (sample,
                                                     project_name))
-            # Add (empty) README.info
-            open(os.path.join(self.dirn,
-                              project_name,
-                              'README.info'),'w').write('')
-            # Add ScriptCode directory
-            os.mkdir(os.path.join(self.dirn,project_name,'ScriptCode'))
+            # Write the project directory to disk
+            project_dir.create(top_dir=self.dirn)
         # Finished
         return self.dirn
+
+class MockAnalysisProject(object):
+    """
+    Utility class for creating mock auto-process project directories
+
+    Example usage:
+
+    >>> m = MockAnalysisProject('PJB',('PJB1_S1_R1_001.fasta.gz,
+    ...                                'PJB1_S1_R2_001.fasta.gz))
+    >>> m.create()
+
+    """
+    def __init__(self,name,fastq_names=None):
+        """
+        Create a new MockAnalysisProject instance
+        """
+        self.name = name
+        if fastq_names is None:
+            fastq_names = []
+        self.fastq_names = [fq for fq in fastq_names]
+
+    def add_fastq(self,fq):
+        """
+        Add a Fastq file to the project
+        """
+        self.fastq_names.append(fq)
+
+    def create(self,top_dir=None,readme=True,scriptcode=True):
+        """
+        Build and populate the directory structure
+
+        Arguments:
+          top_dir (str): path to directory to create project
+            directory underneath (default is pwd)
+          readme (boolean): if True then write a README file
+          scriptcode (boolean): if True then write a ScriptCode
+            subdirectory
+
+        """
+        # Create directory
+        if top_dir is None:
+            top_dir = os.getcwd()
+        project_dir = os.path.join(top_dir,self.name)
+        os.mkdir(project_dir)
+        # Create fastqs subdirectory
+        fqs_dir = os.path.join(project_dir,'fastqs')
+        os.mkdir(fqs_dir)
+        # Add Fastq files
+        for fq in self.fastq_names:
+            fq = os.path.basename(fq)
+            with open(os.path.join(fqs_dir,fq),'w') as fp:
+                fp.write('')
+        # Add (empty) README.info
+        if readme:
+            open(os.path.join(project_dir,'README.info'),
+                 'w').write('')
+        # Add ScriptCode directory
+        if scriptcode:
+            os.mkdir(os.path.join(project_dir,'ScriptCode'))
 
 class MockAnalysisDirFactory(object):
     """
