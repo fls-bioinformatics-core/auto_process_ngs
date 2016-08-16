@@ -18,6 +18,8 @@ from itertools import izip
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.IlluminaData import samplesheet_index_sequence
+from bcftbx.IlluminaData import normalise_barcode
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.simple_xls import XLSStyle
@@ -773,18 +775,6 @@ class Reporter(object):
             ws.append_row(data=content.split('\t'),style=style)
         wb.save_as_xls(xls_file)
 
-def normalise_barcode(seq):
-    """
-    Return normalised version of barcode sequence
-
-    This standardises the sequence so that:
-
-    - all bases are uppercase
-    - dual index barcodes have '-' and '+' removed
-
-    """
-    return str(seq).upper().replace('-','').replace('+','')
-
 def count_barcodes_bcl2fastq(dirn):
     """
     Count the barcodes from bcl2fastq output
@@ -965,32 +955,6 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                 reporter.add("\t%s\t%s" % (sample['name'],
                                            sample['barcode']))
     return reporter
-
-def samplesheet_index_sequence(line):
-    """
-    Return the index sequence for a sample sheet line
-
-    Arguments:
-      line (TabDataLine): line from a SampleSheet instance
-
-    """
-    # Index sequence
-    try:
-        # Try dual-indexed IEM4 format
-        return "%s-%s" % (line['index'].strip(),
-                          line['index2'].strip())
-    except KeyError:
-        pass
-    # Try single indexed IEM4 (no index2)
-    try:
-        return line['index'].strip()
-    except KeyError:
-        pass
-    # Try CASAVA format
-    indx = line['Index'].strip()
-    if not indx:
-        indx = None
-    return indx
 
 def parse_lanes_expression(lanes):
     """
