@@ -13,6 +13,7 @@ structures), to be used in testing.
 These include:
 
 - MockAnalysisDir
+- MockAnalysisProject
 - MockAnalysisDirFactory
 
 """
