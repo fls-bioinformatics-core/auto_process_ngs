@@ -627,13 +627,15 @@ class SampleSheetBarcodes(object):
             to get all barcode sequences
 
         """
-        if lane is not None:
-            return self._sample_lookup[lane].keys()
-        else:
+        if lane in self._lanes:
+            barcodes = self._sample_lookup[lane].keys()
+        elif lane is None:
             barcodes = []
             for l in self._lanes:
                 barcodes.extend(self.barcodes(l))
-            return barcodes
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
+        return sorted(barcodes)
 
     def samples(self,lane=None):
         """
@@ -649,13 +651,15 @@ class SampleSheetBarcodes(object):
             None to get all sample names
 
         """
-        if lane is not None:
-            return self._barcode_lookup[lane].keys()
-        else:
+        if lane in self._lanes:
+            samples = self._barcode_lookup[lane].keys()
+        elif lane is None:
             samples = []
             for l in self._lanes:
                 samples.extend(self.samples(l))
-            return samples
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
+        return sorted(samples)
 
     def lookup_sample(self,barcode,lane=None):
         """
@@ -668,9 +672,9 @@ class SampleSheetBarcodes(object):
             matching sample in
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._sample_lookup[lane][barcode]
-        else:
+        elif lane is None:
             samples = []
             for l in self._lanes:
                 try:
@@ -678,6 +682,8 @@ class SampleSheetBarcodes(object):
                 except KeyError:
                     pass
             return ','.join(samples)
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
     def lookup_barcode(self,sample,lane=None):
         """
@@ -691,9 +697,9 @@ class SampleSheetBarcodes(object):
             matching barcode in
 
         """
-        if lane is not None:
+        if lane in self._lanes:
             return self._barcode_lookup[lane][sample]
-        else:
+        elif lane is None:
             barcodes = []
             for l in self._lanes:
                 try:
@@ -701,6 +707,8 @@ class SampleSheetBarcodes(object):
                 except KeyError:
                     pass
             return ','.join(barcodes)
+        else:
+            raise KeyError("Lane %s not in sample sheet" % lane)
 
 class Reporter(object):
     """
@@ -996,6 +1004,253 @@ def parse_lanes_expression(lanes):
             lane_numbers.extend(xrange(int(l1[0]),int(l1[1])+1))
     lane_numbers = sorted(set(lane_numbers))
     return lane_numbers
+
+# Unit tests
+
+import unittest
+import tempfile
+import shutil
+
+class TestSampleSheetBarcodes(unittest.TestCase):
+    def setUp(self):
+        # Test data
+        sample_sheet_header = "[Header]\nIEMFileVersion,4\n\n[Reads]\n150\n150\n\n[Settings]\nAdapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA\nAdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT\n\n"
+        sample_sheet_single_index_with_lanes = """
+"""
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_SampleSheetBarcodes')
+        # Create files
+        sample_sheet_single_index_no_lanes = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+ES1,,,,A006,GCCAAT,,
+EP1,,,,A012,CTTGTA,,
+ES2,,,,A005,ACAGTG,,
+EP2,,,,A019,GTGAAA,,"""
+        self.single_index_no_lanes = \
+            os.path.join(self.wd,"single_index_no_lanes.csv")
+        with open(self.single_index_no_lanes,"w") as fp:
+            fp.write(sample_sheet_header +
+                     sample_sheet_single_index_no_lanes)
+        #
+        sample_sheet_dual_index_no_lanes = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+SW1,SW1,,,N701,TAAGGCGA,S517,TCTTACGC,,
+SW2,SW2,,,N702,CGTACTAG,S517,TCTTACGC,,
+SW3,SW3,,,N703,AGGCAGAA,S517,TCTTACGC,,
+SW4,SW4,,,N704,TCCTGAGC,S517,TCTTACGC,,
+SW5,SW5,,,N705,GGACTCCT,S517,TCTTACGC,,
+SW6,SW6,,,N706,TAGGCATG,S517,TCTTACGC,,"""
+        self.dual_index_no_lanes = \
+            os.path.join(self.wd,"dual_index_no_lanes.csv")
+        with open(self.dual_index_no_lanes,"w") as fp:
+            fp.write(sample_sheet_header +
+                     sample_sheet_dual_index_no_lanes)
+        #
+        sample_sheet_single_index_with_lanes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,ES1,,,,A006,GCCAAT,,
+1,EP1,,,,A012,CTTGTA,,
+2,ES2,,,,A005,ACAGTG,,
+2,EP2,,,,A019,GTGAAA,,"""
+        self.single_index_with_lanes = \
+            os.path.join(self.wd,"single_index_with_lanes.csv")
+        with open(self.single_index_with_lanes,"w") as fp:
+            fp.write(sample_sheet_header +
+                     sample_sheet_single_index_with_lanes)
+        #
+        sample_sheet_dual_index_with_lanes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,DI1,DI1,,,D701,CGTGTAGG,D501,GACCTGTA,HO,
+1,DI2,DI2,,,D702,CGTGTAGG,D501,ATGTAACT,HO,
+1,DI3,DI3,,,D703,CGTGTAGG,D501,GTTTCAGA,HO,
+1,DI4,DI4,,,D704,CGTGTAGG,D501,CACAGGAT,HO,
+2,E11,E11,,,D703,GCCAATAT,D503,TCTTTCCC,FL,
+2,E12,E12,,,D704,CAGATCAT,D504,TCTTTCCC,FL,
+3,AT1,AT1,,,D701,GGATTCGC,D501,TAGTAGCC,JF,
+3,AT3,AT3,,,D702,TACCAGCG,D502,CGCTGCTG,JF,
+3,AT4,AT4,,,D703,ACCGATTC,D503,GCGCGTAG,JF,
+3,AT5,AT5,,,D704,CCGCGTAA,D504,GCAATAGA,JF,
+3,AEx,AEx,,,D705,ATGCTCGT,D505,CTCGCATC,JF,
+4,AEx,AEx,,,D705,ATGCTCGT,D505,CTCGCATC,JF,
+4,AD5,AD5,,,D707,CCAGCAAT,D507,ATCGCGAG,JF,
+4,D3K1,D3K1,,,D701,ACAGTGAT,D501,TCTTTCCC,FL,
+4,D3K2,D3K2,,,D702,ATGTCAGA,D502,TCTTTCCC,FL,"""
+        self.dual_index_with_lanes = \
+            os.path.join(self.wd,"dual_index_with_lanes.csv")
+        with open(self.dual_index_with_lanes,"w") as fp:
+            fp.write(sample_sheet_header +
+                     sample_sheet_dual_index_with_lanes)
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def test_single_index_no_lanes(self):
+        """SampleSheetBarcodes: single index sample sheet with no lanes defined
+        """
+        s = SampleSheetBarcodes(self.single_index_no_lanes)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["ACAGTG","CTTGTA",
+                                       "GCCAAT","GTGAAA"])
+        # Check all samples
+        self.assertEqual(s.samples(),["EP1","EP2","ES1","ES2"])
+        # Look up sample names for barcodes in each lane
+        self.assertEqual(s.lookup_sample("GCCAAT"),"ES1")
+        self.assertEqual(s.lookup_sample("CTTGTA"),"EP1")
+        self.assertEqual(s.lookup_sample("ACAGTG"),"ES2")
+        self.assertEqual(s.lookup_sample("GTGAAA"),"EP2")
+        # Look up barcode matching sample names in each lane
+        self.assertEqual(s.lookup_barcode("ES1"),"GCCAAT")
+        self.assertEqual(s.lookup_barcode("EP1"),"CTTGTA")
+        self.assertEqual(s.lookup_barcode("ES2"),"ACAGTG")
+        self.assertEqual(s.lookup_barcode("EP2"),"GTGAAA")
+
+    def test_dual_index_no_lanes(self):
+        """SampleSheetBarcodes: dual index sample sheet with no lanes defined
+        """
+        s = SampleSheetBarcodes(self.dual_index_no_lanes)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["AGGCAGAATCTTACGC",
+                                       "CGTACTAGTCTTACGC",
+                                       "GGACTCCTTCTTACGC",
+                                       "TAAGGCGATCTTACGC",
+                                       "TAGGCATGTCTTACGC",
+                                       "TCCTGAGCTCTTACGC"])
+        # Check all samples
+        self.assertEqual(s.samples(),["SW1","SW2","SW3","SW4","SW5","SW6"])
+        # Look up sample names for barcodes in each lane
+        self.assertEqual(s.lookup_sample("TAAGGCGATCTTACGC"),"SW1")
+        self.assertEqual(s.lookup_sample("CGTACTAGTCTTACGC"),"SW2")
+        self.assertEqual(s.lookup_sample("AGGCAGAATCTTACGC"),"SW3")
+        self.assertEqual(s.lookup_sample("TCCTGAGCTCTTACGC"),"SW4")
+        self.assertEqual(s.lookup_sample("GGACTCCTTCTTACGC"),"SW5")
+        self.assertEqual(s.lookup_sample("TAGGCATGTCTTACGC"),"SW6")
+        # Look up barcode matching sample names in each lane
+        self.assertEqual(s.lookup_barcode("SW1"),"TAAGGCGATCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW2"),"CGTACTAGTCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW3"),"AGGCAGAATCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW4"),"TCCTGAGCTCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW5"),"GGACTCCTTCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW6"),"TAGGCATGTCTTACGC")
+
+    def test_single_index_with_lanes(self):
+        """SampleSheetBarcodes: single index sample sheet with lanes defined
+        """
+        s = SampleSheetBarcodes(self.single_index_with_lanes)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["ACAGTG","CTTGTA",
+                                       "GCCAAT","GTGAAA"])
+        # Check barcodes in each lane
+        self.assertEqual(s.barcodes(1),["CTTGTA","GCCAAT"])
+        self.assertEqual(s.barcodes(2),["ACAGTG","GTGAAA"])
+        # Check all samples
+        self.assertEqual(s.samples(),["EP1","EP2","ES1","ES2"])
+        # Check samples in each lane
+        self.assertEqual(s.samples(1),["EP1","ES1"])
+        self.assertEqual(s.samples(2),["EP2","ES2"])
+        # Look up sample names for barcodes in each lane
+        self.assertEqual(s.lookup_sample("GCCAAT",1),"ES1")
+        self.assertEqual(s.lookup_sample("CTTGTA",1),"EP1")
+        self.assertEqual(s.lookup_sample("ACAGTG",2),"ES2")
+        self.assertEqual(s.lookup_sample("GTGAAA",2),"EP2")
+        # Look up barcode matching sample names in each lane
+        self.assertEqual(s.lookup_barcode("ES1",1),"GCCAAT")
+        self.assertEqual(s.lookup_barcode("EP1",1),"CTTGTA")
+        self.assertEqual(s.lookup_barcode("ES2",2),"ACAGTG")
+        self.assertEqual(s.lookup_barcode("EP2",2),"GTGAAA")
+
+    def test_dual_index_with_lanes(self):
+        """SampleSheetBarcodes: dual index sample sheet with lanes defined
+        """
+        s = SampleSheetBarcodes(self.dual_index_with_lanes)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["ACAGTGATTCTTTCCC",
+                                       "ACCGATTCGCGCGTAG",
+                                       "ATGCTCGTCTCGCATC",
+                                       "ATGCTCGTCTCGCATC",
+                                       "ATGTCAGATCTTTCCC",
+                                       "CAGATCATTCTTTCCC",
+                                       "CCAGCAATATCGCGAG",
+                                       "CCGCGTAAGCAATAGA",
+                                       "CGTGTAGGATGTAACT",
+                                       "CGTGTAGGCACAGGAT",
+                                       "CGTGTAGGGACCTGTA",
+                                       "CGTGTAGGGTTTCAGA",
+                                       "GCCAATATTCTTTCCC",
+                                       "GGATTCGCTAGTAGCC",
+                                       "TACCAGCGCGCTGCTG"])
+        # Check barcodes in each lane
+        self.assertEqual(s.barcodes(1),["CGTGTAGGATGTAACT",
+                                        "CGTGTAGGCACAGGAT",
+                                        "CGTGTAGGGACCTGTA",
+                                        "CGTGTAGGGTTTCAGA"])
+        self.assertEqual(s.barcodes(2),["CAGATCATTCTTTCCC",
+                                        "GCCAATATTCTTTCCC"])
+        self.assertEqual(s.barcodes(3),["ACCGATTCGCGCGTAG",
+                                        "ATGCTCGTCTCGCATC",
+                                        "CCGCGTAAGCAATAGA",
+                                        "GGATTCGCTAGTAGCC",
+                                        "TACCAGCGCGCTGCTG"])
+        self.assertEqual(s.barcodes(4),["ACAGTGATTCTTTCCC",
+                                        "ATGCTCGTCTCGCATC",
+                                        "ATGTCAGATCTTTCCC",
+                                        "CCAGCAATATCGCGAG"])
+        # Check all samples
+        self.assertEqual(s.samples(),["AD5","AEx","AEx",
+                                      "AT1","AT3","AT4","AT5",
+                                      "D3K1","D3K2",
+                                      "DI1","DI2","DI3","DI4",
+                                      "E11","E12"])
+        # Check samples in each lane
+        self.assertEqual(s.samples(1),["DI1","DI2","DI3","DI4"])
+        self.assertEqual(s.samples(2),["E11","E12"])
+        self.assertEqual(s.samples(3),["AEx","AT1","AT3","AT4","AT5"])
+        self.assertEqual(s.samples(4),["AD5","AEx","D3K1","D3K2"])
+        # Look up sample names for barcodes in each lane
+        self.assertEqual(s.lookup_sample("CGTGTAGGGACCTGTA",1),"DI1")
+        self.assertEqual(s.lookup_sample("CGTGTAGGATGTAACT",1),"DI2")
+        self.assertEqual(s.lookup_sample("CGTGTAGGGTTTCAGA",1),"DI3")
+        self.assertEqual(s.lookup_sample("CGTGTAGGCACAGGAT",1),"DI4")
+        self.assertEqual(s.lookup_sample("GCCAATATTCTTTCCC",2),"E11")
+        self.assertEqual(s.lookup_sample("CAGATCATTCTTTCCC",2),"E12")
+        self.assertEqual(s.lookup_sample("GGATTCGCTAGTAGCC",3),"AT1")
+        self.assertEqual(s.lookup_sample("TACCAGCGCGCTGCTG",3),"AT3")
+        self.assertEqual(s.lookup_sample("ACCGATTCGCGCGTAG",3),"AT4")
+        self.assertEqual(s.lookup_sample("CCGCGTAAGCAATAGA",3),"AT5")
+        self.assertEqual(s.lookup_sample("ATGCTCGTCTCGCATC",3),"AEx")
+        self.assertEqual(s.lookup_sample("ATGCTCGTCTCGCATC",4),"AEx")
+        self.assertEqual(s.lookup_sample("CCAGCAATATCGCGAG",4),"AD5")
+        self.assertEqual(s.lookup_sample("ACAGTGATTCTTTCCC",4),"D3K1")
+        self.assertEqual(s.lookup_sample("ATGTCAGATCTTTCCC",4),"D3K2")
+        # Look up barcode matching sample names in each lane
+        self.assertEqual(s.lookup_barcode("DI1",1),"CGTGTAGGGACCTGTA")
+        self.assertEqual(s.lookup_barcode("DI2",1),"CGTGTAGGATGTAACT")
+        self.assertEqual(s.lookup_barcode("DI3",1),"CGTGTAGGGTTTCAGA")
+        self.assertEqual(s.lookup_barcode("DI4",1),"CGTGTAGGCACAGGAT")
+        self.assertEqual(s.lookup_barcode("E11",2),"GCCAATATTCTTTCCC")
+        self.assertEqual(s.lookup_barcode("E12",2),"CAGATCATTCTTTCCC")
+        self.assertEqual(s.lookup_barcode("AT1",3),"GGATTCGCTAGTAGCC")
+        self.assertEqual(s.lookup_barcode("AT3",3),"TACCAGCGCGCTGCTG")
+        self.assertEqual(s.lookup_barcode("AT4",3),"ACCGATTCGCGCGTAG")
+        self.assertEqual(s.lookup_barcode("AT5",3),"CCGCGTAAGCAATAGA")
+        self.assertEqual(s.lookup_barcode("AEx",3),"ATGCTCGTCTCGCATC")
+        self.assertEqual(s.lookup_barcode("AEx",4),"ATGCTCGTCTCGCATC")
+        self.assertEqual(s.lookup_barcode("AD5",4),"CCAGCAATATCGCGAG")
+        self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGATTCTTTCCC")
+        self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGATCTTTCCC")
+
+    def test_non_existent_lane_raises_exception(self):
+        """SampleSheetBarcodes: request non-existent lane raises KeyError
+        """
+        # Bad lane for sample sheet with lanes
+        s = SampleSheetBarcodes(self.dual_index_with_lanes)
+        self.assertRaises(KeyError,s.barcodes,5)
+        self.assertRaises(KeyError,s.samples,5)
+        # Any lane for sample sheet with no lanes
+        s = SampleSheetBarcodes(self.dual_index_no_lanes)
+        self.assertRaises(KeyError,s.barcodes,1)
+        self.assertRaises(KeyError,s.samples,1)
 
 # Main program
 if __name__ == '__main__':
