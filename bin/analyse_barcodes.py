@@ -778,6 +778,36 @@ class Reporter(object):
     """
     Class for generating reports of barcode statistics
 
+    Add arbitrary blocks of text with optional keyword
+    'tags', which can then be written to a text file,
+    stream, or as an XLS file.
+
+    Usage:
+
+    Make a new Reporter:
+
+    >>> r = Reporter()
+
+    Add a title:
+
+    >>> r.add("This is the title",title=True)
+
+    Add a heading:
+
+    >>> r.add("A heading",heading=True)
+
+    Add some text:
+
+    >>> r.add("Lorem ipsum")
+
+    Write to file:
+
+    >>> r.write("report.txt")
+
+    Write as XLS:
+
+    >>> r.write_xls("report.xls")
+
     """
     def __init__(self):
         """
@@ -790,6 +820,16 @@ class Reporter(object):
 
     def __nonzero__(self):
         return bool(self._content)
+
+    def __str__(self):
+        text = []
+        for item in self._content:
+            content = item[0]
+            attrs = item[1]
+            if attrs.get('title',False):
+                content = make_title(content,'=')
+            text.append("%s" % content)
+        return '\n'.join(text)
 
     def add(self,content,**kws):
         """
@@ -1906,6 +1946,66 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         s = SampleSheetBarcodes(self.dual_index_no_lanes)
         self.assertRaises(KeyError,s.barcodes,1)
         self.assertRaises(KeyError,s.samples,1)
+
+# Reporter
+class TestReporter(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+
+    def _make_working_dir(self):
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_BarcodeCounter')
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def test_add(self):
+        """Reporter: can add content
+        """
+        reporter = Reporter()
+        self.assertEqual(len(reporter),0)
+        self.assertFalse(reporter)
+        self.assertEqual(str(reporter),"")
+        reporter.add("Title text",title=True)
+        reporter.add("Some words")
+        self.assertEqual(len(reporter),2)
+        self.assertTrue(reporter)
+        self.assertEqual(str(reporter),
+                         """Title text
+==========
+Some words""")
+
+    def test_write(self):
+        """Reporter: can write to a text file
+        """
+        self._make_working_dir()
+        reporter = Reporter()
+        reporter.add("Test Document",title=True)
+        reporter.add("Lorem ipsum")
+        report_file = os.path.join(self.wd,"report.txt")
+        reporter.write(filen=report_file)
+        self.assertTrue(os.path.isfile(report_file))
+        expected_contents = """Test Document
+=============
+Lorem ipsum
+"""
+        self.assertTrue(os.path.exists(report_file))
+        self.assertEqual(open(report_file,'r').read(),
+                         expected_contents)
+
+    def test_write_xls(self):
+        """Reporter: can write to an XLS file
+        """
+        self._make_working_dir()
+        reporter = Reporter()
+        reporter.add("Test Document",title=True)
+        reporter.add("Lorem ipsum")
+        report_xls = os.path.join(self.wd,"report.xls")
+        reporter.write_xls(report_xls)
+        self.assertTrue(os.path.isfile(report_xls))
 
 # Main program
 if __name__ == '__main__':
