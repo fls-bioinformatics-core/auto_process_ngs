@@ -573,6 +573,9 @@ class BarcodeGroup(object):
         """
         Check if a sequence is related to the reference
 
+        Note that if sequences differ in length then they
+        automatically fail to match.
+
         Arguments:
           seq (str): sequence to check against the reference
           mismatches (int): maximum number of mismatches that
@@ -580,7 +583,14 @@ class BarcodeGroup(object):
             related (default is 2). Note that 'N's in either
             sequence automatically count as a mismatch.
 
+        Returns:
+          Boolean: True if sequences match within the
+            specified tolerance, False otherwise (or if
+            sequence lengths differ)
+
         """
+        if len(self._barcode) != len(seq):
+            return False
         m = 0
         for c1,c2 in izip(self._barcode,seq):
             if c1 == 'N' or c2 == 'N' or c1 != c2:
@@ -1704,6 +1714,11 @@ class TestBarcodeGroup(unittest.TestCase):
         self.assertTrue(grp.match("CTAAGCCA"))
         self.assertTrue(grp.match("CGAAGCCA"))
         self.assertFalse(grp.match("CGATGCCA"))
+        # Differing lengths of barcode
+        # -- Too short
+        self.assertFalse(grp.match("CGATGCC"))
+        # -- Too long
+        self.assertFalse(grp.match("CGATGCCGG"))
 
 # SampleSheetBarcodes
 class TestSampleSheetBarcodes(unittest.TestCase):
