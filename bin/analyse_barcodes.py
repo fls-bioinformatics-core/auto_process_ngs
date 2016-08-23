@@ -138,7 +138,11 @@ class BarcodeCounter:
             ascending order.
 
         """
-        return sorted(self._seqs.keys())
+        lanes = self._seqs.keys()
+        if lanes == [None]:
+            return []
+        else:
+            return sorted(lanes)
 
     def barcodes(self,lane=None):
         """
@@ -168,6 +172,20 @@ class BarcodeCounter:
 
     def filter_barcodes(self,cutoff=None,coverage=None,lane=None):
         """
+        Return subset of index sequences filtered by specified criteria
+
+        Arguments:
+          cutoff (float): barcodes must account for at least this
+            fraction of all reads to be included. Total reads are
+            all reads if lane is 'None', or else total for the
+            specified lane
+          coverage (float): barcodes must be in top fraction of
+            reads up to this limit
+          lane (integer): barcodes must appear in this lane
+
+        Returns:
+          List: list of barcodes.
+
         """
         # Initialise
         bc = self.barcodes(lane=lane)
@@ -201,17 +219,20 @@ class BarcodeCounter:
         lanes.
 
         """
-        if lane is None:
-            return self._seqs_all[barcode]
-        else:
-            return self._seqs[lane][barcode]
+        try:
+            if lane is None:
+                return self._seqs_all[barcode]
+            else:
+                return self._seqs[lane][barcode]
+        except KeyError:
+            return 0
 
     def counts_all(self,barcode):
         """
         Number of counts for the barcode across all lanes
 
         """
-        return self._seqs_all[barcode]
+        return self.counts(barcode)
 
     def nreads(self,lane=None):
         """
@@ -232,8 +253,11 @@ class BarcodeCounter:
             return sum([self._seqs_all[barcode]
                         for barcode in self._seqs_all])
         else:
-            return sum([self._seqs[lane][barcode]
-                        for barcode in self._seqs[lane]])
+            try:
+                return sum([self._seqs[lane][barcode]
+                            for barcode in self._seqs[lane]])
+            except KeyError:
+                return 0
 
     def read(self,filen):
         """
@@ -388,6 +412,38 @@ class BarcodeCounter:
         """
         Analyse barcode frequencies
 
+        Returns a dictionary with the following keys:
+
+        - barcodes: list of barcodes (or reference barcodes,
+          if mismatches > 0)
+        - cutoff: the specified cutoff fraction
+        - mismatches: the specified number of mismatches to
+          allow
+        - total_reads: the total number of reads for the
+          specified lane (or all reads, if no lane was
+          specified)
+        - coverage: the number of reads after cutoffs have
+          been applied
+        - counts: dictionary with barcodes from the 'barcodes'
+          list as keys; each key points to a dictionary with
+          keys:
+          * reads: number of reads associated with this barcode
+            (or group, if mismatches > 0)
+          * sample: name of the associated sample (if a sample
+            sheet was supplied, otherwise 'None')
+          * sequences: number of sequences in the group (always
+            1 if mismatches == 0)
+
+        Arguments:
+          lane (integer): lane to restrict analysis to (None
+            analyses all lanes)
+          sample_sheet (str): sample sheet file to compare
+            barcodes against (None skips comparison)
+          cutoff (float): if mismatches == 0 then barcodes must
+            have at least this fraction of reads to be included;
+            (if mismatches > 0 then this condition is applied to
+            groups instead)
+
         """
         sample_lookup = {}
         if sample_sheet is not None:
@@ -429,6 +485,9 @@ class BarcodeCounter:
                         sample = ','.join(sample)
                     else:
                         sample = None
+                except AttributeError:
+                    # No sample sheet
+                    sample = None
                 analysis['counts'][barcode] = { 'reads': barcode_reads,
                                                 'sample': sample,
                                                 'sequences': len(group) }
@@ -438,7 +497,7 @@ class BarcodeCounter:
                 cum_reads += barcode_reads
                 try:
                     sample = sample_sheet.lookup_sample(barcode,lane)
-                except KeyError:
+                except (KeyError,AttributeError):
                     sample = None
                 analysis['counts'][barcode] = { 'reads': barcode_reads,
                                                 'sample': sample,
@@ -1010,6 +1069,559 @@ def parse_lanes_expression(lanes):
 import unittest
 import tempfile
 import shutil
+
+# BarcodeCounter
+class TestBarcodeCounter(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+
+    def _make_working_dir(self):
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_BarcodeCounter')
+
+    def _make_file(self,name,contents):
+        # Create a file under the working directory
+        # called "name" and populated with "contents"
+        # Working directory will be created if not already
+        # set up
+        # Returns the path to the file
+        self._make_working_dir()
+        filen = os.path.join(self.wd,name)
+        with open(filen,'w') as fp:
+            fp.write(contents)
+        return filen
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def test_empty_counter(self):
+        """BarcodeCounter: check empty counter
+        """
+        # Initialise counter object
+        bc = BarcodeCounter()
+        self.assertEqual(bc.barcodes(),[])
+        self.assertEqual(bc.lanes,[])
+        self.assertEqual(bc.filter_barcodes(),[])
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC"),0)
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC",lane=1),0)
+        self.assertEqual(bc.counts_all("AGGCAGAATCTTACGC"),0)
+        self.assertEqual(bc.nreads(),0)
+        self.assertEqual(bc.nreads(1),0)
+
+    def test_count_fastq_sequences(self):
+        """BarcodeCounter: count barcode sequences
+        """
+        # Initialise counter object
+        bc = BarcodeCounter()
+        # Populate with sequences
+        for r,incr in (((1,"AGGCAGAATCTTACGC"),102),
+                       ((1,"TCCTGAGCTCTTACGC"),10),
+                       ((1,"ACAGTGATTCTTTCCC"),3),
+                       ((1,"ATGCTCGTCTCGCATC"),1),
+                       ((2,"CGTACTAGTCTTACGC"),95),
+                       ((2,"ATGTCAGATCTTTCCC"),29),
+                       ((2,"AGGCAGAATCTTACGC"),12),
+                       ((2,"CAGATCATTCTTTCCC"),6),
+                       ((3,"GGACTCCTTCTTACGC"),75),
+                       ((3,"ACCGATTCGCGCGTAG"),74),
+                       ((3,"CCAGCAATATCGCGAG"),2),
+                       ((3,"CCGCGTAAGCAATAGA"),1)):
+            lane,seq = r
+            for i in xrange(incr):
+                bc.count_barcode(seq,lane=lane)
+        # Check contents
+        self.assertEqual(bc.barcodes(),["AGGCAGAATCTTACGC",
+                                        "CGTACTAGTCTTACGC",
+                                        "GGACTCCTTCTTACGC",
+                                        "ACCGATTCGCGCGTAG",
+                                        "ATGTCAGATCTTTCCC",
+                                        "TCCTGAGCTCTTACGC",
+                                        "CAGATCATTCTTTCCC",
+                                        "ACAGTGATTCTTTCCC",
+                                        "CCAGCAATATCGCGAG",
+                                        "ATGCTCGTCTCGCATC",
+                                        "CCGCGTAAGCAATAGA"])
+        # Lanes
+        self.assertEqual(bc.lanes,[1,2,3])
+        # Counts for individual barcodes
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC"),114)
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC",lane=1),102)
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC",lane=2),12)
+        self.assertEqual(bc.counts("AGGCAGAATCTTACGC",lane=3),0)
+        self.assertEqual(bc.counts_all("AGGCAGAATCTTACGC"),114)
+        self.assertEqual(bc.counts("CCGCGTAAGCAATAGA"),1)
+        self.assertEqual(bc.counts("CCGCGTAAGCAATAGA",lane=1),0)
+        self.assertEqual(bc.counts("CCGCGTAAGCAATAGA",lane=2),0)
+        self.assertEqual(bc.counts("CCGCGTAAGCAATAGA",lane=3),1)
+        self.assertEqual(bc.counts_all("CCGCGTAAGCAATAGA"),1)
+        # Read counts
+        self.assertEqual(bc.nreads(),410)
+        self.assertEqual(bc.nreads(1),116)
+        self.assertEqual(bc.nreads(2),142)
+        self.assertEqual(bc.nreads(3),152)
+
+    def test_filter_barcodes(self):
+        """BarcodeCounter: check filtering by lane and cutoff
+        """
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("TATGCGCGGTG",lane=1,incr=532)
+        bc.count_barcode("ACCTACCGGTA",lane=1,incr=315)
+        bc.count_barcode("CCCTTATGCGA",lane=1,incr=22)
+	bc.count_barcode("ACCTAGCGGTA",lane=2,incr=477)
+        bc.count_barcode("ACCTCTATGCT",lane=2,incr=368)
+        self.assertEqual(bc.barcodes(),["TATGCGCGGTA",
+                                        "TATGCGCGGTG",
+                                        "ACCTAGCGGTA",
+                                        "ACCTCTATGCT",
+                                        "ACCTACCGGTA",
+                                        "CCCTTATGCGA"])
+        # No filtering
+        self.assertEqual(bc.filter_barcodes(),["TATGCGCGGTA",
+                                               "TATGCGCGGTG",
+                                               "ACCTAGCGGTA",
+                                               "ACCTCTATGCT",
+                                               "ACCTACCGGTA",
+                                               "CCCTTATGCGA"])
+        # Filter by lane
+        self.assertEqual(bc.filter_barcodes(lane=1),["TATGCGCGGTA",
+                                                     "TATGCGCGGTG",
+                                                     "ACCTACCGGTA",
+                                                     "CCCTTATGCGA"]),
+        self.assertEqual(bc.filter_barcodes(lane=2),["ACCTAGCGGTA",
+                                                     "ACCTCTATGCT"])
+        # Filter by cutoff
+        self.assertEqual(bc.filter_barcodes(cutoff=0.5),
+                         ["TATGCGCGGTA",])
+        self.assertEqual(bc.filter_barcodes(cutoff=0.0015,lane=1),
+                         ["TATGCGCGGTA","TATGCGCGGTG"])
+        self.assertEqual(bc.filter_barcodes(cutoff=0.5,lane=2),
+                         ["ACCTAGCGGTA",])
+
+    def test_group(self):
+        """BarcodeCounter: check grouping of barcode sequences
+        """
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        bc.count_barcode("GTCACGCGGTA",lane=2,incr=296201)
+        bc.count_barcode("GTCACGCGGTT",lane=2,incr=2853)
+        bc.count_barcode("GTCACGCTGTT",lane=2,incr=278539)
+        ## 2 mismatches across all lanes
+        groups = bc.group(None,mismatches=2)
+        ##"GCTGCGCGGTC","GCTGCGCGGTA","GATGCGCGGTA" = 338568
+        ##"TATGCGCGGTA","CATGCGCGGTA" = 293834
+        ##"GTCACGCGGTA","GTCACGCTGTT","GTCACGCGGTT" = 577593
+        self.assertEqual(len(groups),3)
+        self.assertEqual(groups[0].reference,"GTCACGCGGTA")
+        self.assertEqual(groups[0].sequences,["GTCACGCGGTA",
+                                              "GTCACGCTGTT",
+                                              "GTCACGCGGTT"])
+        self.assertEqual(groups[0].counts,577593)
+        self.assertEqual(groups[1].reference,"GCTGCGCGGTC")
+        self.assertEqual(groups[1].sequences,["GCTGCGCGGTC",
+                                              "GCTGCGCGGTA",
+                                              "GATGCGCGGTA"])
+        self.assertEqual(groups[1].counts,338568)
+        self.assertEqual(groups[2].reference,"TATGCGCGGTA")
+        self.assertEqual(groups[2].sequences,["TATGCGCGGTA",
+                                              "CATGCGCGGTA"])
+        self.assertEqual(groups[2].counts,293834)
+        ## 1 mismatch across all lanes
+        groups = bc.group(None,mismatches=1)
+        ##"TATGCGCGGTA","CATGCGCGGTA","GATGCGCGGTA" = 299155
+        ##"GCTGCGCGGTC","GCTGCGCGGTA" = 333247
+        ##"GTCACGCGGTA","GTCACGCGGTT" = 299054
+        ##"GTCACGCTGTT" = 278539
+        self.assertEqual(len(groups),4)
+        self.assertEqual(groups[0].reference,"GCTGCGCGGTC")
+        self.assertEqual(groups[0].sequences,["GCTGCGCGGTC",
+                                              "GCTGCGCGGTA"])
+        self.assertEqual(groups[0].counts,333247)
+        self.assertEqual(groups[1].reference,"TATGCGCGGTA")
+        self.assertEqual(groups[1].sequences,["TATGCGCGGTA",
+                                              "CATGCGCGGTA",
+                                              "GATGCGCGGTA"])
+        self.assertEqual(groups[1].counts,299155)
+        self.assertEqual(groups[2].reference,"GTCACGCGGTA")
+        self.assertEqual(groups[2].sequences,["GTCACGCGGTA",
+                                              "GTCACGCGGTT"])
+        self.assertEqual(groups[2].counts,299054)
+        self.assertEqual(groups[3].reference,"GTCACGCTGTT")
+        self.assertEqual(groups[3].sequences,["GTCACGCTGTT",])
+        self.assertEqual(groups[3].counts,278539)
+        ## 1 mismatch in lane 1
+        groups = bc.group(1,mismatches=1)
+        ##"TATGCGCGGTA","CATGCGCGGTA","GATGCGCGGTA" = 299155
+        ##"GCTGCGCGGTC","GCTGCGCGGTA" = 333247
+        self.assertEqual(len(groups),2)
+        self.assertEqual(groups[0].reference,"GCTGCGCGGTC")
+        self.assertEqual(groups[0].sequences,["GCTGCGCGGTC",
+                                              "GCTGCGCGGTA"])
+        self.assertEqual(groups[0].counts,333247)
+        self.assertEqual(groups[1].reference,"TATGCGCGGTA")
+        self.assertEqual(groups[1].sequences,["TATGCGCGGTA",
+                                              "CATGCGCGGTA",
+                                              "GATGCGCGGTA"])
+        self.assertEqual(groups[1].counts,299155)
+        ## 2 mismatches across all lanes
+        groups = bc.group(None,mismatches=2)
+        ##"GCTGCGCGGTC","GCTGCGCGGTA","GATGCGCGGTA" = 338568
+        ##"TATGCGCGGTA","CATGCGCGGTA" = 293834
+        ##"GTCACGCGGTA","GTCACGCTGTT","GTCACGCGGTT" = 577593
+        self.assertEqual(len(groups),3)
+        self.assertEqual(groups[0].reference,"GTCACGCGGTA")
+        self.assertEqual(groups[0].sequences,["GTCACGCGGTA",
+                                              "GTCACGCTGTT",
+                                              "GTCACGCGGTT"])
+        self.assertEqual(groups[0].counts,577593)
+        self.assertEqual(groups[1].reference,"GCTGCGCGGTC")
+        self.assertEqual(groups[1].sequences,["GCTGCGCGGTC",
+                                              "GCTGCGCGGTA",
+                                              "GATGCGCGGTA"])
+        self.assertEqual(groups[1].counts,338568)
+        self.assertEqual(groups[2].reference,"TATGCGCGGTA")
+        self.assertEqual(groups[2].sequences,["TATGCGCGGTA",
+                                              "CATGCGCGGTA"])
+        self.assertEqual(groups[2].counts,293834)
+
+    def test_analyse(self):
+        """BarcodeCounter: perform analysis with defaults
+        """
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1)
+        self.assertEqual(analysis['cutoff'],None)
+        self.assertEqual(analysis['mismatches'],0)
+        self.assertEqual(analysis['total_reads'],632402)
+        self.assertEqual(analysis['coverage'],632402)
+        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
+                                               "TATGCGCGGTA",
+                                               "CATGCGCGGTA",
+                                               "GCTGCGCGGTA",
+                                               "GATGCGCGGTA"])
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['reads'],7853)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['reads'],5321)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sequences'],1)
+
+    def test_analyse_with_cutoff(self):
+        """BarcodeCounter: perform analysis with cutoff
+        """
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1,cutoff=0.013)
+        self.assertEqual(analysis['cutoff'],0.013)
+        self.assertEqual(analysis['mismatches'],0)
+        self.assertEqual(analysis['total_reads'],632402)
+        self.assertEqual(analysis['coverage'],619228)
+        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
+                                               "TATGCGCGGTA",
+                                               "CATGCGCGGTA"])
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
+
+    def test_analyse_with_sample_sheet(self):
+        """BarcodeCounter: perform analysis with samplesheet
+        """
+        # Create sample sheet
+        sample_sheet_file = self._make_file("SampleSheet.csv",
+                                            """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,SMPL1,,,,A006,CATGCGCGGTA,,
+1,SMPL2,,,,A012,GCTGCGCGGTC,,
+2,SMPL3,,,,A005,ACAGTGCGGTA,,
+2,SMPL4,,,,A019,GTGAAACGGTC,,
+""")
+        # Set up barcode counts
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1,sample_sheet=sample_sheet_file)
+        self.assertEqual(analysis['cutoff'],None)
+        self.assertEqual(analysis['mismatches'],0)
+        self.assertEqual(analysis['total_reads'],632402)
+        self.assertEqual(analysis['coverage'],632402)
+        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
+                                               "TATGCGCGGTA",
+                                               "CATGCGCGGTA",
+                                               "GCTGCGCGGTA",
+                                               "GATGCGCGGTA"])
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['reads'],7853)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['reads'],5321)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],"SMPL2")
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],"SMPL1")
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sequences'],1)
+
+    def test_analyse_groups(self):
+        """BarcodeCounter: perform analysis with grouping
+        """
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1,mismatches=1)
+        ##"TATGCGCGGTA","CATGCGCGGTA","GATGCGCGGTA" = 299155
+        ##"GCTGCGCGGTC","GCTGCGCGGTA" = 333247
+        self.assertEqual(analysis['cutoff'],None)
+        self.assertEqual(analysis['mismatches'],1)
+        self.assertEqual(analysis['total_reads'],632402)
+        self.assertEqual(analysis['coverage'],632402)
+        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
+                                               "TATGCGCGGTA"])
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],333247)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],299155)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],2)
+        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],3)
+
+    def test_analyse_groups_with_sample_sheet(self):
+        """BarcodeCounter: perform analysis with grouping and samplesheet
+        """
+        # Create sample sheet
+        sample_sheet_file = self._make_file("SampleSheet.csv",
+                                            """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,SMPL1,,,,A006,CATGCGCGGTA,,
+1,SMPL2,,,,A012,GCTGCGCGGTC,,
+2,SMPL3,,,,A005,ACAGTGCGGTA,,
+2,SMPL4,,,,A019,GTGAAACGGTC,,
+""")
+        # Set up barcode counts
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1,
+                              mismatches=2,
+                              sample_sheet=sample_sheet_file)
+        ##"CATGCGCGGTA","TATGCGCGGTA","GATGCGCGGTA","GCTGCGCGGTA" = 307008
+        ##"GCTGCGCGGTC" = 325394
+        self.assertEqual(analysis['cutoff'],None)
+        self.assertEqual(analysis['mismatches'],2)
+        self.assertEqual(analysis['total_reads'],632402)
+        self.assertEqual(analysis['coverage'],632402)
+        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
+                                               "CATGCGCGGTA"])
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],307008)
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],"SMPL2")
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],"SMPL1")
+        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
+        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],4)
+
+    def test_read_counts_file(self):
+        """BarcodeCounter: read in data from '.counts' file
+        """
+        # Read a counts file
+        counts_file = self._make_file("test.counts","""#Lane	Rank	Sequence	Count
+1	1	TATGCGCGGTA	285302
+1	2	TATGCGCGGTG	532
+1	3	ACCTACCGGTA	315
+1	4	CCCTTATGCGA	22
+2	5	ACCTAGCGGTA	477
+2	6	ACCTCTATGCT	368
+3	7	ACCCTNCGGTA	312
+3	8	ACCTTATGCGC	248""")
+        # Read the file
+        bc = BarcodeCounter(counts_file)
+        # Check the contents
+        self.assertEqual(bc.barcodes(),["TATGCGCGGTA",
+                                        "TATGCGCGGTG",
+                                        "ACCTAGCGGTA",
+                                        "ACCTCTATGCT",
+                                        "ACCTACCGGTA",
+                                        "ACCCTNCGGTA",
+                                        "ACCTTATGCGC",
+                                        "CCCTTATGCGA"])
+        # Lanes
+        self.assertEqual(bc.lanes,[1,2,3])
+        # Counts for individual barcodes
+        self.assertEqual(bc.counts("TATGCGCGGTA"),285302)
+        self.assertEqual(bc.counts("TATGCGCGGTG"),532)
+        self.assertEqual(bc.counts("ACCTAGCGGTA"),477)
+        self.assertEqual(bc.counts("ACCTCTATGCT"),368)
+        self.assertEqual(bc.counts("ACCTACCGGTA"),315)
+        self.assertEqual(bc.counts("ACCCTNCGGTA"),312)
+        self.assertEqual(bc.counts("ACCTTATGCGC"),248)
+        self.assertEqual(bc.counts("CCCTTATGCGA"),22)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=1),285302)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=2),0)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=3),0)
+        self.assertEqual(bc.counts_all("TATGCGCGGTA"),285302)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=1),0)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=2),0)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=3),248)
+        self.assertEqual(bc.counts_all("ACCTTATGCGC"),248)
+        # Read counts
+        self.assertEqual(bc.nreads(),287576)
+        self.assertEqual(bc.nreads(1),286171)
+        self.assertEqual(bc.nreads(2),845)
+        self.assertEqual(bc.nreads(3),560)
+
+    def test_read_multiple_counts_file(self):
+        """BarcodeCounter: read in data from multiple '.counts' files
+        """
+        # Read multiple counts files
+        counts_lane1 = self._make_file("lane1.counts",
+                                       """#Lane	Rank	Sequence	Count
+1	1	TATGCGCGGTA	285302
+1	2	TATGCGCGGTG	532
+1	3	ACCTACCGGTA	315
+1	4	CCCTTATGCGA	22""")
+        counts_lane2 = self._make_file("lane2.counts",
+                                       """#Lane	Rank	Sequence	Count
+2	1	ACCTAGCGGTA	477
+2	2	ACCTCTATGCT	368""")
+        counts_lane3 = self._make_file("lane3.counts",
+                                       """#Lane	Rank	Sequence	Count
+3	1	ACCCTNCGGTA	312
+3	2	ACCTTATGCGC	248""")
+        # Read the file
+        bc = BarcodeCounter(counts_lane1,counts_lane2,counts_lane3)
+        # Check the contents
+        self.assertEqual(bc.barcodes(),["TATGCGCGGTA",
+                                        "TATGCGCGGTG",
+                                        "ACCTAGCGGTA",
+                                        "ACCTCTATGCT",
+                                        "ACCTACCGGTA",
+                                        "ACCCTNCGGTA",
+                                        "ACCTTATGCGC",
+                                        "CCCTTATGCGA"])
+        # Lanes
+        self.assertEqual(bc.lanes,[1,2,3])
+        # Counts for individual barcodes
+        self.assertEqual(bc.counts("TATGCGCGGTA"),285302)
+        self.assertEqual(bc.counts("TATGCGCGGTG"),532)
+        self.assertEqual(bc.counts("ACCTAGCGGTA"),477)
+        self.assertEqual(bc.counts("ACCTCTATGCT"),368)
+        self.assertEqual(bc.counts("ACCTACCGGTA"),315)
+        self.assertEqual(bc.counts("ACCCTNCGGTA"),312)
+        self.assertEqual(bc.counts("ACCTTATGCGC"),248)
+        self.assertEqual(bc.counts("CCCTTATGCGA"),22)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=1),285302)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=2),0)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=3),0)
+        self.assertEqual(bc.counts_all("TATGCGCGGTA"),285302)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=1),0)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=2),0)
+        self.assertEqual(bc.counts("ACCTTATGCGC",lane=3),248)
+        self.assertEqual(bc.counts_all("ACCTTATGCGC"),248)
+        # Read counts
+        self.assertEqual(bc.nreads(),287576)
+        self.assertEqual(bc.nreads(1),286171)
+        self.assertEqual(bc.nreads(2),845)
+        self.assertEqual(bc.nreads(3),560)
+
+    def test_read_old_style_counts_file(self):
+        """BarcodeCounter: read in data from old-style 3 column '.counts' file
+        """
+        # Read old-style 3 column counts files
+        self._make_working_dir()
+        old_style_counts_file = self._make_file("old_style.counts",
+                                                """#Rank	Sequence	Count
+1	TATGCGCGGTA	285302
+2	TATGCGCGGTG	532
+3	ACCTACCGGTA	315
+4	CCCTTATGCGA	22""")
+        # Read the file
+        bc = BarcodeCounter(old_style_counts_file)
+        # Check the contents
+        self.assertEqual(bc.barcodes(),["TATGCGCGGTA",
+                                        "TATGCGCGGTG",
+                                        "ACCTACCGGTA",
+                                        "CCCTTATGCGA"])
+        # Lanes
+        self.assertEqual(bc.lanes,[])
+        # Counts for individual barcodes
+        self.assertEqual(bc.counts("TATGCGCGGTA"),285302)
+        self.assertEqual(bc.counts("TATGCGCGGTG"),532)
+        self.assertEqual(bc.counts("ACCTACCGGTA"),315)
+        self.assertEqual(bc.counts("CCCTTATGCGA"),22)
+        self.assertEqual(bc.counts("TATGCGCGGTA",lane=1),0)
+        self.assertEqual(bc.counts_all("TATGCGCGGTA"),285302)
+        # Read counts
+        self.assertEqual(bc.nreads(),286171)
+
+    def test_write_counts_file(self):
+        """BarcodeCounter: write counts to a file
+        """
+        # Write a file
+        self._make_working_dir()
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("TATGCGCGGTG",lane=1,incr=532)
+        bc.count_barcode("ACCTACCGGTA",lane=1,incr=315)
+        bc.count_barcode("CCCTTATGCGA",lane=1,incr=22)
+        bc.count_barcode("ACCTAGCGGTA",lane=2,incr=477)
+        bc.count_barcode("ACCTCTATGCT",lane=2,incr=368)
+        bc.count_barcode("ACCCTNCGGTA",lane=3,incr=312)
+        bc.count_barcode("ACCTTATGCGC",lane=3,incr=248)
+        counts_file = os.path.join(self.wd,"out.counts")
+        bc.write(counts_file)
+        expected_contents = """#Lane	Rank	Sequence	Count
+1	1	TATGCGCGGTA	285302
+1	2	TATGCGCGGTG	532
+1	3	ACCTACCGGTA	315
+1	4	CCCTTATGCGA	22
+2	1	ACCTAGCGGTA	477
+2	2	ACCTCTATGCT	368
+3	1	ACCCTNCGGTA	312
+3	2	ACCTTATGCGC	248
+"""
+        self.assertTrue(os.path.exists(counts_file))
+        self.assertEqual(open(counts_file,'r').read(),
+                         expected_contents)
 
 class TestSampleSheetBarcodes(unittest.TestCase):
     def setUp(self):
