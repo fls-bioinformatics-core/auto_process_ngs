@@ -27,7 +27,7 @@ from bcftbx.simple_xls import XLSStyle
 
 __version__ = "0.0.1"
 
-class BarcodeCounter:
+class BarcodeCounter(object):
     """
     Utility class to track counts of barcode sequences
 
@@ -510,7 +510,7 @@ class BarcodeCounter:
         analysis['coverage'] = cum_reads
         return analysis
 
-class BarcodeGroup:
+class BarcodeGroup(object):
     """
     Class for storing groups of related barcodes
 
@@ -1628,6 +1628,44 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(open(counts_file,'r').read(),
                          expected_contents)
 
+# BarcodeGroup
+class TestBarcodeGroup(unittest.TestCase):
+    def test_barcodegroup(self):
+        """BarcodeGroup: check making a new instance
+        """
+        # Create a new BarcodeGroup
+        grp = BarcodeGroup("CTAAGCCT",2894178)
+        self.assertEqual(grp.reference,"CTAAGCCT")
+        self.assertEqual(grp.sequences,["CTAAGCCT"])
+        self.assertEqual(grp.counts,2894178)
+        self.assertEqual(len(grp),1)
+
+    def test_barcodegroup_add(self):
+        """BarcodeGroup: check adding a sequence to the group
+        """
+        # Add sequences to a BarcodeGroup
+        grp = BarcodeGroup("CTAAGCCT",2894178)
+        grp.add("CTAAGCCA",92417)
+        self.assertEqual(grp.reference,"CTAAGCCT")
+        self.assertEqual(grp.sequences,["CTAAGCCT","CTAAGCCA"])
+        self.assertEqual(grp.counts,2986595)
+        self.assertEqual(len(grp),2)
+
+    def test_barcodegroup_match(self):
+        """BarcodeGroup: check matching sequences against the reference
+        """
+        # Match sequence against the group
+        grp = BarcodeGroup("CTAAGCCT",2894178)
+        # 1 mismatch allowed
+        self.assertTrue(grp.match("CTAAGCCA",mismatches=1))
+        self.assertFalse(grp.match("CGAAGCCA",mismatches=1))
+        self.assertFalse(grp.match("CGATGCCA",mismatches=1))
+        # Default (2 mismatches)
+        self.assertTrue(grp.match("CTAAGCCA"))
+        self.assertTrue(grp.match("CGAAGCCA"))
+        self.assertFalse(grp.match("CGATGCCA"))
+
+# SampleSheetBarcodes
 class TestSampleSheetBarcodes(unittest.TestCase):
     def setUp(self):
         # Test data
