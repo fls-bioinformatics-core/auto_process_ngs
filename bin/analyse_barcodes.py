@@ -1955,7 +1955,7 @@ class TestReporter(unittest.TestCase):
 
     def _make_working_dir(self):
         if self.wd is None:
-            self.wd = tempfile.mkdtemp(suffix='.test_BarcodeCounter')
+            self.wd = tempfile.mkdtemp(suffix='.test_Reporter')
 
     def tearDown(self):
         # Remove temporary working dir
@@ -2006,6 +2006,81 @@ Lorem ipsum
         report_xls = os.path.join(self.wd,"report.xls")
         reporter.write_xls(report_xls)
         self.assertTrue(os.path.isfile(report_xls))
+
+# report_barcodes
+class TestReportBarcodesFunction(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+
+    def _make_working_dir(self):
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_report_barcodes')
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
+    def _make_file(self,name,contents):
+        # Create a file under the working directory
+        # called "name" and populated with "contents"
+        # Working directory will be created if not already
+        # set up
+        # Returns the path to the file
+        self._make_working_dir()
+        filen = os.path.join(self.wd,name)
+        with open(filen,'w') as fp:
+            fp.write(contents)
+        return filen
+
+    def test_report_barcodes(self):
+        """report_barcodes: check output for mismatches and sample sheet
+        """
+        # Create sample sheet
+        sample_sheet_file = self._make_file("SampleSheet.csv",
+                                            """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,SMPL1,,,,A006,CATGCGCGGTA,,
+1,SMPL2,,,,A012,GCTGCGCGGTC,,
+""")
+        # Set up barcode counts
+        bc = BarcodeCounter()
+        bc.count_barcode("TATGCGCGGTA",lane=1,incr=285302)
+        bc.count_barcode("CATGCGCGGTA",lane=1,incr=8532)
+        bc.count_barcode("GATGCGCGGTA",lane=1,incr=5321)
+        bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
+        bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
+        analysis = bc.analyse(lane=1,mismatches=2,
+                              sample_sheet=sample_sheet_file)
+        ##"CATGCGCGGTA","TATGCGCGGTA","GATGCGCGGTA","GCTGCGCGGTA" = 307008
+        ##"GCTGCGCGGTC" = 325394
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,2)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,632402)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "CATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,325394)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].reads,307008)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,"SMPL2")
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sample,"SMPL1")
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,4)
+        # Create report
+        reporter = report_barcodes(bc,
+                                   lane=1,
+                                   mismatches=2,
+                                   sample_sheet=sample_sheet_file)
+        # Check content
+        self.assertEqual(str(reporter),
+                         """Barcode analysis for lane #1
+============================
+Barcodes have been grouped by allowing 2 mismatches
+
+#Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
+    1	GCTGCGCGGTC	SMPL2	1	325394	51.5%	(51.5%)
+    2	CATGCGCGGTA	SMPL1	4	307008	48.5%	(100.0%)""")
 
 # Main program
 if __name__ == '__main__':
