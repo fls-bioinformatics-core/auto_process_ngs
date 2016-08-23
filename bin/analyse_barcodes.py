@@ -21,6 +21,7 @@ from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import normalise_barcode
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.utils import AttributeDictionary
 from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.simple_xls import XLSStyle
 
@@ -459,13 +460,13 @@ class BarcodeCounter:
                                 seed_barcodes=sample_sheet_barcodes,
                                 cutoff=cutoff)
             barcodes = [grp.reference for grp in groups]
-        analysis = {
-            'barcodes': barcodes,
-            'cutoff': cutoff,
-            'counts': dict(),
-            'total_reads': self.nreads(lane=lane),
-            'mismatches': mismatches,
-        }
+        analysis = AttributeDictionary(
+            barcodes=barcodes,
+            cutoff=cutoff,
+            counts=dict(),
+            total_reads=self.nreads(lane=lane),
+            mismatches=mismatches
+        )
         cum_reads = 0
         if groups:
             for group in groups:
@@ -488,9 +489,11 @@ class BarcodeCounter:
                 except AttributeError:
                     # No sample sheet
                     sample = None
-                analysis['counts'][barcode] = { 'reads': barcode_reads,
-                                                'sample': sample,
-                                                'sequences': len(group) }
+                analysis.counts[barcode] = AttributeDictionary(
+                    reads=barcode_reads,
+                    sample=sample,
+                    sequences=len(group)
+                )
         else:
             for barcode in barcodes:
                 barcode_reads = self.counts(barcode,lane)
@@ -499,9 +502,11 @@ class BarcodeCounter:
                     sample = sample_sheet.lookup_sample(barcode,lane)
                 except (KeyError,AttributeError):
                     sample = None
-                analysis['counts'][barcode] = { 'reads': barcode_reads,
-                                                'sample': sample,
-                                                'sequences': 1 }
+                analysis.counts[barcode] = AttributeDictionary(
+                    reads=barcode_reads,
+                    sample=sample,
+                    sequences=1
+                )
         analysis['coverage'] = cum_reads
         return analysis
 
@@ -955,9 +960,9 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                    "N_reads",
                                    "%reads",
                                    "(%Total_reads)")),heading=True)
-    for i,barcode in enumerate(analysis['barcodes']):
-        cumulative_reads += analysis['counts'][barcode]['reads']
-        sample_name = analysis['counts'][barcode]['sample']
+    for i,barcode in enumerate(analysis.barcodes):
+        cumulative_reads += analysis.counts[barcode].reads
+        sample_name = analysis.counts[barcode].sample
         if sample_name is None:
             sample_name = ''
         reporter.add("%s" % '\t'.join(
@@ -965,17 +970,17 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
              ('% 5d' % (i+1),
               barcode,
               sample_name,
-              analysis['counts'][barcode]['sequences'],
-              analysis['counts'][barcode]['reads'],
-              '%.1f%%' % (percent(analysis['counts'][barcode]['reads'],analysis['total_reads'])),
+              analysis.counts[barcode].sequences,
+              analysis.counts[barcode].reads,
+              '%.1f%%' % (percent(analysis.counts[barcode].reads,analysis['total_reads'])),
               '(%.1f%%)' % (percent(cumulative_reads,
                                     analysis['total_reads'])))]))
     # Report "missing" samples
     if sample_sheet is not None:
         sample_sheet = SampleSheetBarcodes(sample_sheet)
         found_samples = filter(lambda s: s is not None,
-                               [analysis['counts'][bc]['sample']
-                                for bc in analysis['barcodes']])
+                               [analysis.counts[bc].sample
+                                for bc in analysis.barcodes])
         found_samples = ','.join(found_samples).split(',')
         missing = []
         missing_no_counts = []
@@ -993,7 +998,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                           })
         if missing:
             # Sort into order of highest to lowest counts
-            missing = sorted(missing,key=lambda x: x['counts'],
+            missing = sorted(missing,key=lambda x: x.counts,
                              reverse=True)
             # Report
             reporter.add("")
@@ -1005,8 +1010,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                 reporter.add("\t%s\t%s\t%d\t%.2f%%" %
                              (sample['name'],
                               sample['barcode'],
-                              sample['counts'],
-                              percent(sample['counts'],
+                              sample.counts,
+                              percent(sample.counts,
                                       analysis['total_reads'])))
         if missing_no_counts:
             # Sort into alphabetical order
@@ -1301,30 +1306,30 @@ class TestBarcodeCounter(unittest.TestCase):
         bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
         bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
         analysis = bc.analyse(lane=1)
-        self.assertEqual(analysis['cutoff'],None)
-        self.assertEqual(analysis['mismatches'],0)
-        self.assertEqual(analysis['total_reads'],632402)
-        self.assertEqual(analysis['coverage'],632402)
-        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
-                                               "TATGCGCGGTA",
-                                               "CATGCGCGGTA",
-                                               "GCTGCGCGGTA",
-                                               "GATGCGCGGTA"])
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['reads'],7853)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['reads'],5321)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,0)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,632402)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "TATGCGCGGTA",
+                                            "CATGCGCGGTA",
+                                            "GCTGCGCGGTA",
+                                            "GATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,325394)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].reads,285302)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].reads,8532)
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].reads,7853)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].reads,5321)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,None)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].sequences,1)
 
     def test_analyse_with_cutoff(self):
         """BarcodeCounter: perform analysis with cutoff
@@ -1336,22 +1341,22 @@ class TestBarcodeCounter(unittest.TestCase):
         bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
         bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
         analysis = bc.analyse(lane=1,cutoff=0.013)
-        self.assertEqual(analysis['cutoff'],0.013)
-        self.assertEqual(analysis['mismatches'],0)
-        self.assertEqual(analysis['total_reads'],632402)
-        self.assertEqual(analysis['coverage'],619228)
-        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
-                                               "TATGCGCGGTA",
-                                               "CATGCGCGGTA"])
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis.cutoff,0.013)
+        self.assertEqual(analysis.mismatches,0)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,619228)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "TATGCGCGGTA",
+                                            "CATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,325394)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].reads,285302)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].reads,8532)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,None)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,1)
 
     def test_analyse_with_sample_sheet(self):
         """BarcodeCounter: perform analysis with samplesheet
@@ -1373,30 +1378,30 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         bc.count_barcode("GCTGCGCGGTA",lane=1,incr=7853)
         bc.count_barcode("GCTGCGCGGTC",lane=1,incr=325394)
         analysis = bc.analyse(lane=1,sample_sheet=sample_sheet_file)
-        self.assertEqual(analysis['cutoff'],None)
-        self.assertEqual(analysis['mismatches'],0)
-        self.assertEqual(analysis['total_reads'],632402)
-        self.assertEqual(analysis['coverage'],632402)
-        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
-                                               "TATGCGCGGTA",
-                                               "CATGCGCGGTA",
-                                               "GCTGCGCGGTA",
-                                               "GATGCGCGGTA"])
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],285302)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],8532)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['reads'],7853)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['reads'],5321)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],"SMPL2")
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],"SMPL1")
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTA"]['sequences'],1)
-        self.assertEqual(analysis['counts']["GATGCGCGGTA"]['sequences'],1)
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,0)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,632402)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "TATGCGCGGTA",
+                                            "CATGCGCGGTA",
+                                            "GCTGCGCGGTA",
+                                            "GATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,325394)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].reads,285302)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].reads,8532)
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].reads,7853)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].reads,5321)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,"SMPL2")
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sample,"SMPL1")
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["GCTGCGCGGTA"].sequences,1)
+        self.assertEqual(analysis.counts["GATGCGCGGTA"].sequences,1)
 
     def test_analyse_groups(self):
         """BarcodeCounter: perform analysis with grouping
@@ -1410,18 +1415,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         analysis = bc.analyse(lane=1,mismatches=1)
         ##"TATGCGCGGTA","CATGCGCGGTA","GATGCGCGGTA" = 299155
         ##"GCTGCGCGGTC","GCTGCGCGGTA" = 333247
-        self.assertEqual(analysis['cutoff'],None)
-        self.assertEqual(analysis['mismatches'],1)
-        self.assertEqual(analysis['total_reads'],632402)
-        self.assertEqual(analysis['coverage'],632402)
-        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
-                                               "TATGCGCGGTA"])
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],333247)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['reads'],299155)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],None)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sample'],None)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],2)
-        self.assertEqual(analysis['counts']["TATGCGCGGTA"]['sequences'],3)
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,1)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,632402)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "TATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,333247)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].reads,299155)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,None)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sample,None)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,2)
+        self.assertEqual(analysis.counts["TATGCGCGGTA"].sequences,3)
 
     def test_analyse_groups_with_sample_sheet(self):
         """BarcodeCounter: perform analysis with grouping and samplesheet
@@ -1447,18 +1452,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                               sample_sheet=sample_sheet_file)
         ##"CATGCGCGGTA","TATGCGCGGTA","GATGCGCGGTA","GCTGCGCGGTA" = 307008
         ##"GCTGCGCGGTC" = 325394
-        self.assertEqual(analysis['cutoff'],None)
-        self.assertEqual(analysis['mismatches'],2)
-        self.assertEqual(analysis['total_reads'],632402)
-        self.assertEqual(analysis['coverage'],632402)
-        self.assertEqual(analysis['barcodes'],["GCTGCGCGGTC",
-                                               "CATGCGCGGTA"])
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['reads'],325394)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['reads'],307008)
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sample'],"SMPL2")
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sample'],"SMPL1")
-        self.assertEqual(analysis['counts']["GCTGCGCGGTC"]['sequences'],1)
-        self.assertEqual(analysis['counts']["CATGCGCGGTA"]['sequences'],4)
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,2)
+        self.assertEqual(analysis.total_reads,632402)
+        self.assertEqual(analysis.coverage,632402)
+        self.assertEqual(analysis.barcodes,["GCTGCGCGGTC",
+                                            "CATGCGCGGTA"])
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].reads,325394)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].reads,307008)
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sample,"SMPL2")
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sample,"SMPL1")
+        self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
+        self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,4)
 
     def test_read_counts_file(self):
         """BarcodeCounter: read in data from '.counts' file
