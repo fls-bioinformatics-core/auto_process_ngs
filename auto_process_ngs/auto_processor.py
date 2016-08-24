@@ -1477,7 +1477,7 @@ class AutoProcess:
         print "Statistics generation completed: %s" % self.params.stats_file
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
-                         mismatches=None,cutoff=None,coverage=None,
+                         mismatches=None,cutoff=None,
                          barcode_analysis_dir=None,
                          sample_sheet=None,runner=None):
         """Analyse the barcode sequences for FASTQs for each specified lane
@@ -1497,10 +1497,6 @@ class AutoProcess:
             associated reads than specified cutoff from reporting (e.g.
             '0.001' excludes barcodes with < 0.1% of reads); default is to
             include all barcodes
-          coverage: optional, include most numerous barcodes to cover only
-            the fraction of reads up to the specified value ('0.9' limits
-            barcodes to those associated with 90%  of total reads);
-            default is to include all barcodes
           sample_sheet: optional, explicitly specify a sample sheet to
             check barcode sequences against (by default will use the
             sample sheet defined in the parameter file for the run)
@@ -1630,9 +1626,6 @@ class AutoProcess:
         # Cutoff
         if cutoff is not None:
             barcode_report_cmd.add_args('--cutoff',cutoff)
-        # Coverage
-        if coverage is not None:
-            barcode_report_cmd.add_args('--coverage',coverage)
         # Mismatches
         if mismatches is not None:
             barcode_report_cmd.add_args('--mismatches',mismatches)
