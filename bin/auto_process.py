@@ -535,12 +535,6 @@ def add_analyse_barcodes_command(cmdparser):
                  help="exclude barcodes with a smaller fraction of "
                  "associated reads than CUTOFF, e.g. '0.01' excludes "
                  "barcodes with < 1% of reads (default is 0.01%)")
-    p.add_option('--coverage',action='store',dest='coverage',
-                 default=None,type='float',
-                 help="include most numerous barcodes to cover only "
-                 "the fraction of reads specified by COVERAGE, e.g. "
-                 "'0.9' limits barcodes to those associated with 90% "
-                 " of total reads (default is to include all barcodes)")
     p.add_option('--sample-sheet',action="store",
                  dest="sample_sheet",default=None,
                  help="use an alternative sample sheet to the default "
@@ -795,7 +789,6 @@ if __name__ == "__main__":
                                lanes=lanes,
                                mismatches=options.mismatches,
                                cutoff=options.cutoff,
-                               coverage=options.coverage,
                                sample_sheet=options.sample_sheet,
                                barcode_analysis_dir=options.barcode_analysis_dir,
                                runner=options.runner)

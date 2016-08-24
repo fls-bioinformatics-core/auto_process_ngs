@@ -178,7 +178,7 @@ class BarcodeCounter(object):
                           cmp=lambda x,y: cmp(self.counts(y,lane),
                                               self.counts(x,lane)))
 
-    def filter_barcodes(self,cutoff=None,coverage=None,lane=None):
+    def filter_barcodes(self,cutoff=None,lane=None):
         """
         Return subset of index sequences filtered by specified criteria
 
@@ -187,8 +187,6 @@ class BarcodeCounter(object):
             fraction of all reads to be included. Total reads are
             all reads if lane is 'None', or else total for the
             specified lane
-          coverage (float): barcodes must be in top fraction of
-            reads up to this limit
           lane (integer): barcodes must appear in this lane
 
         Returns:
@@ -204,19 +202,6 @@ class BarcodeCounter(object):
         if cutoff is not None:
             cutoff_reads = int(float(nreads)*cutoff)
             bc = [s for s in bc if self.counts(s,lane) >= cutoff_reads]
-        # Limit coverage if specified
-        # i.e. only include reads up to the specified total
-        # fraction of reads
-        if coverage is not None:
-            limit = int(float(nreads)*coverage)
-            cumulative = 0
-            filtered = []
-            for s in bc:
-                cumulative += self.counts(s,lane)
-                filtered.append(s)
-                if cumulative >= limit:
-                    break
-            bc = filtered
         return bc
 
     def counts(self,barcode,lane=None):
@@ -332,7 +317,7 @@ class BarcodeCounter(object):
                                                    seq,
                                                    self.counts(seq,lane)))
 
-    def group(self,lane,mismatches=2,n=None,cutoff=None,coverage=None,
+    def group(self,lane,mismatches=2,n=None,cutoff=None,
               seed_barcodes=None,exclude_reads=0.000001):
         """
         Put barcodes into groups of similar sequences
@@ -347,8 +332,6 @@ class BarcodeCounter(object):
           cutoff: minimum number of reads as a fraction of all
             reads that a group must contain to be included
             (set to None to disable cut-off)
-          coverage: include groups to cover up to this fraction of
-            all reads (set to None to cover all reads)
           exclude_reads: speed-up parameter, excludes barcodes with
             less than this fraction of associated reads. Speeds up
             the grouping calculation at the cost of some precision
@@ -373,15 +356,11 @@ class BarcodeCounter(object):
                     # Barcode doesn't appear in the list
                     pass
             barcodes = promoted_barcodes + barcodes
-        # Cutoff and coverage
+        # Cutoff
         if cutoff is not None:
             cutoff_reads = int(float(nreads)*cutoff)
         else:
             cutoff_reads = 0
-        if coverage is not None:
-            limit = int(float(nreads)*coverage)
-        else:
-            limit = 0
         # Iteratively assign barcodes to groups
         # until we run out
         cumulative = 0
@@ -404,10 +383,6 @@ class BarcodeCounter(object):
             # Check cutoff
             if group.counts >= cutoff_reads:
                 groups.append(group)
-                # Check if coverage limit has been exceeded
-                cumulative += group.counts
-                if limit and cumulative >= limit:
-                    break
             else:
                 # Discard group
                 pass
@@ -928,10 +903,6 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         that must be associated with a barcode in order
         to be included in analyses (e.g. 0.001 = 0.1%).
         Default is to include all barcodes
-      coverage (float): optional, decimal fraction
-        representing percentage of reads that will be
-        included in analyses (e.g. 0.9 = 90%). Default
-        is to include all barcodes
       reporter (Reporter): Reporter instance to write
         results to for reporting (optional, default is to
         write to stdout)
@@ -957,10 +928,10 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("Barcodes which cover less than %.1f%% of reads "
                      "have been excluded" % (cutoff*100.0))
         reporter.add("Reported barcodes cover %.1f%% of the data "
-                     "(%d/%d)" % (percent(analysis['coverage'],
-                                          analysis['total_reads']),
-                                  analysis['coverage'],
-                                  analysis['total_reads']))
+                     "(%d/%d)" % (percent(analysis.coverage,
+                                          analysis.total_reads),
+                                  analysis.coverage,
+                                  analysis.total_reads))
     if mismatches:
         reporter.add("Barcodes have been grouped by allowing %d mismatch%s" %
                      (mismatches,

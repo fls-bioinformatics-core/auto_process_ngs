@@ -152,12 +152,6 @@ if __name__ == '__main__':
                  help="exclude barcodes with a smaller fraction of "
                  "associated reads than CUTOFF, e.g. '0.01' excludes "
                  "barcodes with < 0.01% of reads (default is 0.1%)")
-    p.add_option('--coverage',action='store',dest='coverage',
-                 default=None,type='float',
-                 help="include most numerous barcodes to cover only "
-                 "the fraction of reads specified by COVERAGE, e.g. "
-                 "'0.9' limits barcodes to those associated with 90% "
-                 " of total reads (default is to include all barcodes)")
     p.add_option('-s','--sample-sheet',
                  action='store',dest='sample_sheet',default=None,
                  help="report best matches against barcodes in "
