@@ -936,8 +936,12 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("Barcodes have been grouped by allowing %d mismatch%s" %
                      (mismatches,
                       ('' if mismatches == 1 else 'es')))
-    cumulative_reads = 0
+    # Check there are results
+    if analysis.total_reads == 0:
+        reporter.add("No barcodes counted")
+        return reporter
     # Report information on the top barcodes
+    cumulative_reads = 0
     reporter.add("")
     reporter.add("%s" % '\t'.join(("#Rank",
                                    "Index",

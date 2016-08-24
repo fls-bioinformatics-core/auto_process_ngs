@@ -402,6 +402,17 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(analysis.counts["GCTGCGCGGTC"].sequences,1)
         self.assertEqual(analysis.counts["CATGCGCGGTA"].sequences,4)
 
+    def test_analyse_with_no_counts(self):
+        """BarcodeCounter: perform analysis for zero counts
+        """
+        bc = BarcodeCounter()
+        analysis = bc.analyse()
+        self.assertEqual(analysis.cutoff,None)
+        self.assertEqual(analysis.mismatches,0)
+        self.assertEqual(analysis.total_reads,0)
+        self.assertEqual(analysis.coverage,0)
+        self.assertEqual(analysis.barcodes,[])
+
     def test_read_counts_file(self):
         """BarcodeCounter: read in data from '.counts' file
         """
@@ -983,3 +994,15 @@ Barcodes have been grouped by allowing 2 mismatches
 #Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
     1	GCTGCGCGGTC	SMPL2	1	325394	51.5%	(51.5%)
     2	CATGCGCGGTA	SMPL1	4	307008	48.5%	(100.0%)""")
+
+    def test_report_barcodes_for_no_counts(self):
+        """report_barcodes: check output when there are no counts
+        """
+        bc = BarcodeCounter()
+        analysis = bc.analyse()
+        reporter = report_barcodes(bc)
+        # Check content
+        self.assertEqual(str(reporter),
+                         """Barcode analysis for all lanes
+==============================
+No barcodes counted""")
