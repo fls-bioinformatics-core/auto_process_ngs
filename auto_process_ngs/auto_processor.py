@@ -266,6 +266,20 @@ class AutoProcess:
                 # Unable to get missing data items
                 logging.warning("Unable to set missing instrument metadata")
 
+    def edit_samplesheet(self,editor='vi'):
+        """
+        Bring up SampleSheet in an editor
+        """
+        # Fetch the sample sheet
+        sample_sheet_file = self.params.sample_sheet
+        if sample_sheet_file is None:
+            logging.error("No sample sheet file to edit")
+            return
+        editor = editor.split(' ')
+        edit_cmd = applications.Command(editor[0],*editor[1:])
+        edit_cmd.add_args(sample_sheet_file)
+        edit_cmd.run_subprocess()
+
     def init_readme(self):
         """
         Create a new README file
