@@ -775,8 +775,12 @@ class AutoProcess:
                                                         custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
-        # Generate and print predicted outputs
+        # Generate and print predicted outputs and warnings
         print samplesheet_utils.predict_outputs(sample_sheet=sample_sheet)
+        samplesheet_utils.warn_close_names(sample_sheet=sample_sheet)
+        if samplesheet_utils.has_invalid_characters(custom_sample_sheet):
+            logging.warning("Sample sheet file contains invalid characters "
+                            "(non-printing ASCII or non-ASCII)")
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
