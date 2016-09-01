@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_mgs module
-#     Copyright (C) University of Manchester 2013-2014 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
 #
 ########################################################################
 #
@@ -24,10 +24,12 @@ tree at some point.
 # Imports
 #######################################################################
 
+import sys
 import os
 import fnmatch
 import logging
 import zipfile
+import pydoc
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -1482,3 +1484,27 @@ def write_script_file(script_file,contents,append=False,shell=None):
             fp.write("#!%s\n" % shell)
         fp.write("%s\n" % contents)
     os.chmod(script_file,0775)
+
+def paginate_output(text):
+    """
+    Send text to stdout with pagination
+
+    Arguments:
+      text (str): text to be printed using pagination
+
+    """
+    # If stdout is a terminal
+    if os.isatty(sys.stdout.fileno()):
+        # Acquire a pager command
+        try:
+            pager = os.environ["PAGER"]
+        except KeyError:
+            pager = None
+        # Output the prediction with paging
+        if pager is not None:
+            pydoc.pipepager(text,cmd=pager)
+        else:
+            pydoc.pager(text)
+    else:
+        # Stdout not a terminal
+        print text
