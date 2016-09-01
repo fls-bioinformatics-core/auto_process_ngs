@@ -37,6 +37,7 @@ Functions:
 - split_user_host_dir:
 - pretty_print_rows:
 - write_script_file:
+- edit_file:
 - paginate:
 
 """
@@ -1505,6 +1506,31 @@ def write_script_file(script_file,contents,append=False,shell=None):
             fp.write("#!%s\n" % shell)
         fp.write("%s\n" % contents)
     os.chmod(script_file,0775)
+
+def edit_file(filen,editor="vi"):
+    """
+    Send a file to an editor
+
+    Arguments:
+      filen (str): path to the file to be edited
+      editor (str): optional, editor command to be used
+        (will be overriden by user's EDITOR environment
+        variable even if set). Defaults to 'vi'.
+
+    """
+    # Acquire an editor command
+    try:
+        editor = os.environ["EDITOR"]
+    except KeyError:
+        pass
+    if editor is None:
+        logging.critical("No editor specified!")
+        return
+    # Build command line to run the editor
+    editor = str(editor).split(' ')
+    edit_cmd = applications.Command(editor[0],*editor[1:])
+    edit_cmd.add_args(filen)
+    edit_cmd.run_subprocess()
 
 def paginate(text):
     """
