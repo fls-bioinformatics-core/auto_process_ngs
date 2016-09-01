@@ -31,6 +31,7 @@ import applications
 import utils
 import simple_scheduler
 import bcl2fastq_utils
+import samplesheet_utils
 import settings
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
@@ -774,18 +775,8 @@ class AutoProcess:
                                                         custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
-        # Print the predicted ouputs
-        projects = sample_sheet.predict_output()
-        print "Predicted output from sample sheet:"
-        print "Project\tSample\tFastq"
-        for project in projects:
-            project_name = project[8:]
-            sample_names = []
-            for sample in projects[project]:
-                sample_name = sample[7:]
-                for fastq_base in projects[project][sample]:
-                    print "%s\t%s\t%s" % (project_name,sample_name,fastq_base)
-                sample_names.append(sample_name)
+        # Generate and print predicted outputs
+        print samplesheet_utils.predict_outputs(sample_sheet=sample_sheet)
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
