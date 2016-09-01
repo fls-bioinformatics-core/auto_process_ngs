@@ -7,6 +7,7 @@ import os
 import logging
 import time
 from bcftbx.IlluminaData import IlluminaFastq
+from bcftbx.IlluminaData import cmp_sample_names
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import extract_prefix
@@ -665,29 +666,6 @@ def check_qc_outputs(fastq,qc_dir):
         else:
             missing.append(output)
     return (present,missing)
-
-def cmp_sample_names(s1,s2):
-    """
-    Compare two sample names and return integer depending on the outcome
-
-    The sample names are compared first by prefix and then by index.
-
-    Arguments:
-      s1 (str): first sample name
-      s2 (str): second sample name
-
-    Returns:
-      Integer: the return value is negative if s1 < s2, zero if
-      s1 == s2 and strictly positive if s1 > s2.
-
-    """
-    prefix1 = extract_prefix(s1)
-    prefix2 = extract_prefix(s2)
-    if prefix1 != prefix2:
-        return cmp(prefix1,prefix2)
-    indx1 = extract_index(s1)
-    indx2 = extract_index(s2)
-    return cmp(indx1,indx2)
 
 def pretty_print_reads(n):
     """
