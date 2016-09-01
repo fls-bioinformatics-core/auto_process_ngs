@@ -6,7 +6,7 @@ import unittest
 import os
 import tempfile
 import shutil
-from auto_process_ngs.fastq_utils import *
+from auto_process_ngs.fastq_utils import assign_barcodes_single_end
 
 fastq_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
 TTTACAACTAGCTTCTCTTTTTCTT
@@ -52,7 +52,7 @@ AGACAGAGTCTTAATTAAAC
 11DFFCFFDGGGB3BF313A
 """
 
-
+# assign_barcodes_single_end
 class TestAssignBarcodesSingleEnd(unittest.TestCase):
     """Tests for the assign_barcodes_single_end function
     """
@@ -69,7 +69,7 @@ class TestAssignBarcodesSingleEnd(unittest.TestCase):
         if os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
     def test_assign_barcodes_single_end(self):
-        """assign_barcodes_single_end: extract barcodes from first 5 bases
+        """assign_barcodes_single_end: extract inline barcodes from first 5 bases
         """
         nreads = assign_barcodes_single_end(self.fastq_in,
                                             self.fastq_out)
