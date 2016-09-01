@@ -266,7 +266,7 @@ class AutoProcess:
                 # Unable to get missing data items
                 logging.warning("Unable to set missing instrument metadata")
 
-    def edit_samplesheet(self,editor='vi'):
+    def edit_samplesheet(self):
         """
         Bring up SampleSheet in an editor
         """
@@ -275,10 +275,7 @@ class AutoProcess:
         if sample_sheet_file is None:
             logging.error("No sample sheet file to edit")
             return
-        editor = editor.split(' ')
-        edit_cmd = applications.Command(editor[0],*editor[1:])
-        edit_cmd.add_args(sample_sheet_file)
-        edit_cmd.run_subprocess()
+        utils.edit_file(sample_sheet_file)
 
     def init_readme(self):
         """
@@ -294,17 +291,14 @@ class AutoProcess:
         else:
             logging.warning("'%s' already exists" % self.readme_file)
 
-    def edit_readme(self,editor='vi'):
+    def edit_readme(self):
         """
         Bring up README in an editor
         """
         if self.readme_file is None:
             logging.error("No README file to edit")
             return
-        editor = editor.split(' ')
-        edit_cmd = applications.Command(editor[0],*editor[1:])
-        edit_cmd.add_args(self.readme_file)
-        edit_cmd.run_subprocess()
+        utils.edit_file(sample_sheet_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
