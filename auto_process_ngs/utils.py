@@ -18,6 +18,27 @@ Utility classes and functions to support auto_process_ngs module.
 Ultimately these should be relocated in the main 'genomics' code
 tree at some point.
 
+Classes:
+
+- AnalysisFastq:
+- AnalysisDir:
+- AnalysisProject:
+- AnalysisSample:
+- MetadataDict:
+- AnalysisDirParameters:
+- AnalysisDirMetadata:
+- AnalysisProjectInfo:
+- ProjectMetadataFile:
+- ZipArchive:
+
+Functions:
+
+- bases_mask_is_paired_end:
+- split_user_host_dir:
+- pretty_print_rows:
+- write_script_file:
+- paginate:
+
 """
 
 #######################################################################
@@ -1485,9 +1506,20 @@ def write_script_file(script_file,contents,append=False,shell=None):
         fp.write("%s\n" % contents)
     os.chmod(script_file,0775)
 
-def paginate_output(text):
+def paginate(text):
     """
     Send text to stdout with pagination
+
+    If the function detects that the stdout is an interactive
+    terminal then the supplied text will be piped via a
+    paginator command.
+
+    The pager command will be the default for ``pydoc``, but
+    can be over-ridden by the ``PAGER`` environment variable.
+
+    If stdout is not a terminal (for example if it's being
+    set to a file, or piped to another command) then the
+    pagination is skipped.
 
     Arguments:
       text (str): text to be printed using pagination
