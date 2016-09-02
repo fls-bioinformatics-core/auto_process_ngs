@@ -31,6 +31,7 @@ import applications
 import utils
 import simple_scheduler
 import bcl2fastq_utils
+import samplesheet_utils
 import settings
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
@@ -265,6 +266,20 @@ class AutoProcess:
                 # Unable to get missing data items
                 logging.warning("Unable to set missing instrument metadata")
 
+    def edit_samplesheet(self):
+        """
+        Bring up SampleSheet in an editor
+        """
+        # Fetch the sample sheet
+        sample_sheet_file = self.params.sample_sheet
+        if sample_sheet_file is None:
+            logging.error("No sample sheet file to edit")
+            return
+        utils.edit_file(sample_sheet_file)
+        # Check updated sample sheet and issue warnings
+        if samplesheet_utils.check_and_warn(sample_sheet_file=sample_sheet_file):
+            logging.error("Sample sheet may have problems, see warnings above")
+
     def init_readme(self):
         """
         Create a new README file
@@ -279,17 +294,14 @@ class AutoProcess:
         else:
             logging.warning("'%s' already exists" % self.readme_file)
 
-    def edit_readme(self,editor='vi'):
+    def edit_readme(self):
         """
         Bring up README in an editor
         """
         if self.readme_file is None:
             logging.error("No README file to edit")
             return
-        editor = editor.split(' ')
-        edit_cmd = applications.Command(editor[0],*editor[1:])
-        edit_cmd.add_args(self.readme_file)
-        edit_cmd.run_subprocess()
+        utils.edit_file(sample_sheet_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -774,18 +786,9 @@ class AutoProcess:
                                                         custom_sample_sheet)
             os.remove(tmp_run_info)
         print "Corrected bases mask: %s" % bases_mask
-        # Print the predicted ouputs
-        projects = sample_sheet.predict_output()
-        print "Predicted output from sample sheet:"
-        print "Project\tSample\tFastq"
-        for project in projects:
-            project_name = project[8:]
-            sample_names = []
-            for sample in projects[project]:
-                sample_name = sample[7:]
-                for fastq_base in projects[project][sample]:
-                    print "%s\t%s\t%s" % (project_name,sample_name,fastq_base)
-                sample_names.append(sample_name)
+        # Generate and print predicted outputs and warnings
+        print samplesheet_utils.predict_outputs(sample_sheet=sample_sheet)
+        samplesheet_utils.check_and_warn(sample_sheet=sample_sheet)
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir

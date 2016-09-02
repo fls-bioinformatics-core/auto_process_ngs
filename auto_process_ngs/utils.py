@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_mgs module
-#     Copyright (C) University of Manchester 2013-2014 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
 #
 ########################################################################
 #
@@ -18,16 +18,40 @@ Utility classes and functions to support auto_process_ngs module.
 Ultimately these should be relocated in the main 'genomics' code
 tree at some point.
 
+Classes:
+
+- AnalysisFastq:
+- AnalysisDir:
+- AnalysisProject:
+- AnalysisSample:
+- MetadataDict:
+- AnalysisDirParameters:
+- AnalysisDirMetadata:
+- AnalysisProjectInfo:
+- ProjectMetadataFile:
+- ZipArchive:
+
+Functions:
+
+- bases_mask_is_paired_end:
+- split_user_host_dir:
+- pretty_print_rows:
+- write_script_file:
+- edit_file:
+- paginate:
+
 """
 
 #######################################################################
 # Imports
 #######################################################################
 
+import sys
 import os
 import fnmatch
 import logging
 import zipfile
+import pydoc
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -1482,3 +1506,63 @@ def write_script_file(script_file,contents,append=False,shell=None):
             fp.write("#!%s\n" % shell)
         fp.write("%s\n" % contents)
     os.chmod(script_file,0775)
+
+def edit_file(filen,editor="vi"):
+    """
+    Send a file to an editor
+
+    Arguments:
+      filen (str): path to the file to be edited
+      editor (str): optional, editor command to be used
+        (will be overriden by user's EDITOR environment
+        variable even if set). Defaults to 'vi'.
+
+    """
+    # Acquire an editor command
+    try:
+        editor = os.environ["EDITOR"]
+    except KeyError:
+        pass
+    if editor is None:
+        logging.critical("No editor specified!")
+        return
+    # Build command line to run the editor
+    editor = str(editor).split(' ')
+    edit_cmd = applications.Command(editor[0],*editor[1:])
+    edit_cmd.add_args(filen)
+    edit_cmd.run_subprocess()
+
+def paginate(text):
+    """
+    Send text to stdout with pagination
+
+    If the function detects that the stdout is an interactive
+    terminal then the supplied text will be piped via a
+    paginator command.
+
+    The pager command will be the default for ``pydoc``, but
+    can be over-ridden by the ``PAGER`` environment variable.
+
+    If stdout is not a terminal (for example if it's being
+    set to a file, or piped to another command) then the
+    pagination is skipped.
+
+    Arguments:
+      text (str): text to be printed using pagination
+
+    """
+    # If stdout is a terminal
+    if os.isatty(sys.stdout.fileno()):
+        # Acquire a pager command
+        try:
+            pager = os.environ["PAGER"]
+        except KeyError:
+            pager = None
+        # Output the prediction with paging
+        if pager is not None:
+            pydoc.pipepager(text,cmd=pager)
+        else:
+            pydoc.pager(text)
+    else:
+        # Stdout not a terminal
+        print text

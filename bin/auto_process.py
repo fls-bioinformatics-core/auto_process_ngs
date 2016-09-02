@@ -41,6 +41,7 @@ settings and project metadata:
 Additional commands are available:
 
     clone
+    samplesheet
     analyse_barcodes
     merge_fastq_dirs
     update_fastq_stats
@@ -75,6 +76,8 @@ import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.samplesheet_utils import predict_outputs
+from auto_process_ngs.utils import paginate
 
 __version__ = auto_process_ngs.get_version()
 __settings = auto_process_ngs.settings.Settings()
@@ -169,6 +172,17 @@ def add_metadata_command(cmdparser):
                  help="Automatically update metadata items where possible "
                  "(e.g. for older analyses which have old or missing metadata "
                  "files)")
+    add_debug_option(p)
+
+def add_samplesheet_command(cmdparser):
+    """Create a parser for the 'samplesheet' command
+    """
+    p = cmdparser.add_command('samplesheet',help="Sample sheet manipulation",
+                              usage="%prog samplesheet [OPTIONS] [ANALYSIS_DIR]",
+                              description="Query and manipulate sample sheets")
+    p.add_option('-e','--edit',action='store_true',dest='edit',default=False,
+                 help="bring up sample sheet file in an editor to make "
+                 "changes manually")
     add_debug_option(p)
 
 def add_make_fastqs_command(cmdparser):
@@ -622,6 +636,7 @@ if __name__ == "__main__":
     add_setup_command(p)
     add_params_command(p)
     add_metadata_command(p)
+    add_samplesheet_command(p)
     add_make_fastqs_command(p)
     add_setup_analysis_dirs_command(p)
     add_run_qc_command(p)
@@ -805,6 +820,15 @@ if __name__ == "__main__":
                                fastq_screen_subset=options.subset,
                                runner=options.runner)
             sys.exit(retcode)
+        elif cmd == 'samplesheet':
+            # Sample sheet operations
+            if options.edit:
+                # Manually edit the sample sheet
+                d.edit_samplesheet()
+            else:
+                # Predict the outputs
+                paginate(predict_outputs(
+                    sample_sheet_file=d.params.sample_sheet))
         elif cmd == 'params':
             # Update the project-specific parameters
             if options.key_value is not None:
