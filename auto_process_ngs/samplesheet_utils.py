@@ -90,6 +90,53 @@ def predict_outputs(sample_sheet=None,sample_sheet_file=None):
                 prediction.append("%s" % '\t'.join([str(i) for i in line]))
     return '\n'.join(prediction)
 
+def check_and_warn(sample_sheet=None,sample_sheet_file=None):
+    """
+    Check for sample sheet problems and issue warnings
+
+    The following checks are performed:
+
+    - closely matching project names
+    - samples with more than one barcode assigned
+    - samples associated with more than one project
+    - invalid lines
+    - invalid characters
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      Boolean: True if problems were identified, False otherwise.
+
+    """
+    # Acquire sample sheet instance
+    if sample_sheet is None:
+        sample_sheet = SampleSheet(sample_sheet_file)
+    # Do checks
+    warnings = False
+    if close_project_names(sample_sheet=sample_sheet):
+        logging.warning("Some projects have similar names: check for typos")
+        warnings = True
+    if samples_with_multiple_barcodes(sample_sheet=sample_sheet):
+        logging.warning("Some samples have more than one barcode assigned")
+        warnings = True
+    if samples_in_multiple_projects(sample_sheet=sample_sheet):
+        logging.warning("Some samples appear in more than one project")
+        warnings = True
+    if has_invalid_characters(text=sample_sheet.show()):
+        logging.warning("Sample sheet file contains invalid characters "
+                        "(non-printing ASCII or non-ASCII)")
+        warnings = True
+    if has_invalid_lines(sample_sheet=sample_sheet):
+        logging.warning("Sample sheet has one or more invalid lines")
+        warnings = True
+    return warnings
+
 def close_project_names(sample_sheet=None,sample_sheet_file=None):
     """
     Return list of closely-matching project names in samplesheet
@@ -213,7 +260,7 @@ def has_invalid_lines(sample_sheet=None,sample_sheet_file=None):
             invalid_lines.append(line)
     return invalid_lines
 
-def has_invalid_characters(filen):
+def has_invalid_characters(filen=None,text=None):
     """
     Check if text file contains any 'invalid' characters
 
@@ -226,11 +273,16 @@ def has_invalid_characters(filen):
         character, False if all characters are valid.
 
     """
-    with open(filen,'r') as fp:
-        for line in fp:
-            for c in line.replace('\n','').replace('\t',''):
-                if ord(c) > 127 or ord(c) < 32:
-                    return True
+    if filen is not None:
+        with open(filen,'r') as fp:
+            for line in fp:
+                for c in set(line.replace('\n','').replace('\t','')):
+                    if ord(c) > 127 or ord(c) < 32:
+                        return True
+    else:
+        for c in set(text.replace('\n','').replace('\t','')):
+            if ord(c) > 127 or ord(c) < 32:
+                return True
     return False
 
 def get_close_names(names):

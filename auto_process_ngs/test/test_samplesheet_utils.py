@@ -147,7 +147,7 @@ class TestHasInvalidCharacters(unittest.TestCase):
         if os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
     def test_file_with_non_printing_ascii_character(self):
-        """has_invalid_characters: detects non-printing ASCII character
+        """has_invalid_characters: detects non-printing ASCII character in file
         """
         non_printing_ascii_file = os.path.join(self.wd,
                                                "test.nonprintingascii")
@@ -156,8 +156,14 @@ class TestHasInvalidCharacters(unittest.TestCase):
 a non-printing ASCII ctrl-S character here\x13
 """)
         self.assertTrue(has_invalid_characters(non_printing_ascii_file))
+    def test_text_with_non_printing_ascii_character(self):
+        """has_invalid_characters: detects non-printing ASCII character in text
+        """
+        self.assertTrue(has_invalid_characters(text=u"""This file contains:
+a non-printing ASCII ctrl-S character here\x13
+"""))
     def test_file_with_non_ascii_character(self):
-        """has_invalid_characters: detects non-ASCII character
+        """has_invalid_characters: detects non-ASCII character in file
         """
         non_ascii_file = os.path.join(self.wd,"test.nonascii")
         with codecs.open(non_ascii_file,'wb',encoding='utf-8') as fp:
@@ -165,6 +171,12 @@ a non-printing ASCII ctrl-S character here\x13
 a non-ASCII character here\x80
 """)
         self.assertTrue(has_invalid_characters(non_ascii_file))
+    def test_text_with_non_ascii_character(self):
+        """has_invalid_characters: detects non-ASCII character in text
+        """
+        self.assertTrue(has_invalid_characters(text=u"""This text contains:
+a non-ASCII character here\x80
+"""))
     def test_file_with_valid_characters(self):
         """has_invalid_characters: works for valid file
         """
@@ -179,6 +191,17 @@ a non-ASCII character here\x80
 - \t\n
 """)
         self.assertFalse(has_invalid_characters(valid_file))
+    def test_text_with_valid_characters(self):
+        """has_invalid_characters: works for valid text
+        """
+        self.assertFalse(has_invalid_characters(text=u"""This file contains valid characters:
+- ABCDEFGHIJKLMNOPQRSTUVWXYZ
+- abcdefghijklmnopqrstuvwxyz
+- 01234567890
+- !"$%^&*()_-+=\|/:;'@#~`?
+- {}[]
+- \t\n
+"""))
 
 class TestCloseNamesFunction(unittest.TestCase):
     def test_close_names(self):
