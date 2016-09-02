@@ -15,8 +15,13 @@ samplesheet_utils.py
 Utilities for handling SampleSheet files:
 
 - predict_outputs: generate expected outputs in human-readable form
-- get_close_names: return closely matching names from a list
+- check_and_warn: check sample sheet for problems and issue warnings
+- close_project_names: check if sample sheet projects look similar
+- samples_with_multiple_barcodes: check for samples with multiple barcodes
+- samples_in_multiple_projects: check for samples assigned to multiple projects
+- has_invalid_lines: check for invalid sample sheet lines
 - has_invalid_characters: check if a file contains invalid characters
+- get_close_names: return closely matching names from a list
 
 """
 
