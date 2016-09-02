@@ -172,10 +172,26 @@ class SampleSheetLinter(SampleSheetPredictor):
             required data) in the sample sheet.
 
         """
+        # Convience variables
+        sample_id = self._sample_sheet.sample_id_column
+        sample_name = self._sample_sheet.sample_name_column
+        sample_project = self._sample_sheet.sample_project_column
+        # Look at first line to see which items have been provided
+        line = self._sample_sheet.data[0]
+        has_sample_id = line[sample_id] != ''
+        has_sample_name = (sample_name is not None) and \
+                          (line[sample_name] != '')
+        has_project = line[sample_project] != ''
         # Look for invalid data lines
         invalid_lines = []
         for line in self._sample_sheet.data:
             if self._sample_sheet.has_lanes and line['Lane'] == '':
+                invalid_lines.append(line)
+            elif has_sample_id and line[sample_id] == '':
+                invalid_lines.append(line)
+            elif has_sample_name and line[sample_name] == '':
+                invalid_lines.append(line)
+            elif has_project and line[sample_project] == '':
                 invalid_lines.append(line)
         return invalid_lines
 

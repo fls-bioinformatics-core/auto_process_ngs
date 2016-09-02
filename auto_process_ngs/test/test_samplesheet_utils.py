@@ -123,7 +123,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         linter = SampleSheetLinter(fp=cStringIO.StringIO(
             self.sample_sheet_without_invalid_lines))
         self.assertFalse(linter.has_invalid_lines())
-    def test_sample_sheet_with_invalid_lines_no_lane(self):
+    def test_sample_sheet_with_invalid_lines_missing_lane(self):
         self.sample_sheet_with_invalid_lines = """[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
@@ -135,6 +135,19 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 """
         linter = SampleSheetLinter(fp=cStringIO.StringIO(
             self.sample_sheet_with_invalid_lines))
+        self.assertTrue(linter.has_invalid_lines())
+    def test_sample_sheet_with_invalid_lines_no_lane(self):
+        self.sample_sheet_with_invalid_lines_no_lane = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+,,,,,,,,Filipe_Greer,
+,,,,,,,,Filipe_Greer,
+"""
+        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+            self.sample_sheet_with_invalid_lines_no_lane))
         self.assertTrue(linter.has_invalid_lines())
 
 class TestLinterHasInvalidCharacters(unittest.TestCase):
