@@ -90,41 +90,6 @@ def predict_outputs(sample_sheet=None,sample_sheet_file=None):
                 prediction.append("%s" % '\t'.join([str(i) for i in line]))
     return '\n'.join(prediction)
 
-def warn_close_names(sample_sheet=None,sample_sheet_file=None):
-    """
-    Issue a warning for each set of closely matching project names
-
-    Arguments:
-      sample_sheet (SampleSheet): if supplied then must be a
-        populated ``SampleSheet`` instance (if ``None`` then
-        data will be loaded from file specified by
-        ``sample_sheet_file``)
-      sample_sheet_file (str): if ``sample_sheet`` is ``None``
-        then read data from the file specified by this argument
-
-    Returns:
-      Boolean: True if there is at least one pair of closely
-        matching project names, False if not.
-
-    """
-    # Set up predictor instance
-    if sample_sheet is None:
-        sample_sheet = SampleSheet(sample_sheet_file)
-    predictor = SampleSheetPredictor(sample_sheet=sample_sheet)
-    # Look for close names
-    close_names = get_close_names(predictor.project_names)
-    for name in close_names:
-        logging.warning("Project '%s': similar to %d others (%s)" %
-                        (name,
-                         len(close_names[name]),
-                         ','.join(close_names[name])))
-    # Return status indicates whether or not there were
-    # closely matching names
-    if close_names:
-        return True
-    else:
-        return False
-
 def close_project_names(sample_sheet=None,sample_sheet_file=None):
     """
     Return list of closely-matching project names in samplesheet
