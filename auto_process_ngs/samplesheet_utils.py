@@ -125,6 +125,149 @@ def warn_close_names(sample_sheet=None,sample_sheet_file=None):
     else:
         return False
 
+def close_project_names(sample_sheet=None,sample_sheet_file=None):
+    """
+    Return list of closely-matching project names in samplesheet
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      Dictionary: keys are project names which have at least one
+        close match; the values for each key are lists with the
+        project names which are close matches.
+
+    """
+    # Set up predictor instance
+    if sample_sheet is None:
+        sample_sheet = SampleSheet(sample_sheet_file)
+    predictor = SampleSheetPredictor(sample_sheet=sample_sheet)
+    # Return close names
+    return get_close_names(predictor.project_names)
+
+def samples_with_multiple_barcodes(sample_sheet=None,sample_sheet_file=None):
+    """
+    Return list of samples which have multiple associated barcodes
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      Dictionary: keys are sample IDs which have more than one
+        associated barcode; the values for each key are lists of
+        the associated barcodes.
+
+    """
+    # Set up predictor instance
+    if sample_sheet is None:
+        sample_sheet = SampleSheet(sample_sheet_file)
+    predictor = SampleSheetPredictor(sample_sheet=sample_sheet)
+    logging.debug(predict_outputs(sample_sheet=sample_sheet))
+    # Look for samples with multiple barcodes
+    multiple_barcodes = {}
+    for project in [predictor.get_project(name)
+                    for name in predictor.project_names]:
+        for sample in [project.get_sample(idx)
+                       for idx in project.sample_ids]:
+            if len(sample.barcode_seqs) > 1:
+                multiple_barcodes[sample.sample_id] = \
+                            [s for s in sample.barcode_seqs]
+    return multiple_barcodes
+
+def samples_in_multiple_projects(sample_sheet=None,
+                                 sample_sheet_file=None):
+    """
+    Return list of samples which are in multiple projects
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      Dictionary: dictionary with sample IDs which appear in
+        multiple projects as keys; the associated values are
+        lists with the project names.
+
+    """
+    # Set up predictor instance
+    if sample_sheet is None:
+        sample_sheet = SampleSheet(sample_sheet_file)
+    predictor = SampleSheetPredictor(sample_sheet=sample_sheet)
+    # Look for samples with multiple projects
+    samples = {}
+    for project in [predictor.get_project(name)
+                    for name in predictor.project_names]:
+        for sample in [project.get_sample(name)
+                       for name in project.sample_ids]:
+            if sample.sample_id not in samples:
+                samples[sample.sample_id] = []
+            samples[sample.sample_id].append(project.name)
+    multiple_projects = {}
+    for sample in samples:
+        if len(samples[sample]) > 1:
+            multiple_projects[sample] = samples[sample]
+    return multiple_projects
+
+def has_invalid_lines(sample_sheet=None,sample_sheet_file=None):
+    """
+    Return list of samplesheet lines which are invalid
+
+    Arguments:
+      sample_sheet (SampleSheet): if supplied then must be a
+        populated ``SampleSheet`` instance (if ``None`` then
+        data will be loaded from file specified by
+        ``sample_sheet_file``)
+      sample_sheet_file (str): if ``sample_sheet`` is ``None``
+        then read data from the file specified by this argument
+
+    Returns:
+      List: list of lines which are invalid (i.e. missing
+        required data) in the sample sheet.
+
+    """
+    # Look for invalid data lines
+    if sample_sheet is None:
+        sample_sheet = SampleSheet(sample_sheet_file)
+    invalid_lines = []
+    for line in sample_sheet.data:
+        if sample_sheet.has_lanes and line['Lane'] == '':
+            invalid_lines.append(line)
+    return invalid_lines
+
+def has_invalid_characters(filen):
+    """
+    Check if text file contains any 'invalid' characters
+
+    In this context a character is 'invalid' if:
+    - it is non-ASCII (decimal code > 127), or
+    - it is a non-printing ASCII character (code < 32)
+
+    Returns:
+      Boolean: True if file contains at least one invalid
+        character, False if all characters are valid.
+
+    """
+    with open(filen,'r') as fp:
+        for line in fp:
+            for c in line.replace('\n','').replace('\t',''):
+                if ord(c) > 127 or ord(c) < 32:
+                    return True
+    return False
+
 def get_close_names(names):
     """
     Given a list of names, find pairs which are similar
@@ -146,23 +289,3 @@ def get_close_names(names):
                     close_names[name1] = []
                 close_names[name1].append(name)
     return close_names
-
-def has_invalid_characters(filen):
-    """
-    Check if text file contains any 'invalid' characters
-
-    In this context a character is 'invalid' if:
-    - it is non-ASCII (decimal code > 127), or
-    - it is a non-printing ASCII character (code < 32)
-
-    Returns:
-      Boolean: True if file contains at least one invalid
-        character, False if all characters are valid.
-
-    """
-    with open(filen,'r') as fp:
-        for line in fp:
-            for c in line.replace('\n','').replace('\t',''):
-                if ord(c) > 127 or ord(c) < 32:
-                    return True
-    return False

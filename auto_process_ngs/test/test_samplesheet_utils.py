@@ -7,22 +7,138 @@ import unittest
 import tempfile
 import shutil
 import codecs
-from auto_process_ngs.samplesheet_utils import get_close_names
+import cStringIO
+from bcftbx.IlluminaData import SampleSheet
+from auto_process_ngs.samplesheet_utils import close_project_names
+from auto_process_ngs.samplesheet_utils import samples_in_multiple_projects
+from auto_process_ngs.samplesheet_utils import samples_with_multiple_barcodes
+from auto_process_ngs.samplesheet_utils import has_invalid_lines
 from auto_process_ngs.samplesheet_utils import has_invalid_characters
+from auto_process_ngs.samplesheet_utils import get_close_names
 
-class TestCloseNamesFunction(unittest.TestCase):
-    def test_close_names(self):
-        """get_close_names: check function returns expected results
-        """
-        self.assertEqual(get_close_names(("Andrew Bloggs",
-                                          "Carl Dewey",
-                                          "Filipe Greer",)),{})
-        self.assertEqual(get_close_names(("Andrew Blogs",
-                                          "Andrew Bloggs",
-                                          "Carl Dewey",
-                                          "Filipe Greer",)),
-                         { "Andrew Bloggs": ["Andrew Blogs"],
-                           "Andrew Blogs": ["Andrew Bloggs"] })
+sample_sheet_header = """[Header]
+IEMFileVersion,4
+Date,4/11/2014
+Workflow,Metagenomics
+Application,Metagenomics 16S rRNA
+Assay,Nextera XT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+150
+150
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+"""
+
+class TestCloseProjectNames(unittest.TestCase):
+    def test_sample_sheet_without_close_project_names(self):
+        self.sample_sheet_no_close_project_names = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_no_close_project_names))
+        self.assertEqual(close_project_names(sample_sheet=iem),{})
+    def test_sample_sheet_with_close_project_names(self):
+        self.sample_sheet_close_project_names = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Blogs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_close_project_names))
+        self.assertEqual(close_project_names(sample_sheet=iem),
+                         { 'Andrew_Bloggs': ['Andrew_Blogs'],
+                           'Andrew_Blogs': ['Andrew_Bloggs'] })
+
+class TestSamplesInMultipleProjects(unittest.TestCase):
+    def test_sample_sheet_without_samples_in_multiple_projects(self):
+        self.sample_sheet_no_samples_in_multiple_projects = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_no_samples_in_multiple_projects))
+        self.assertEqual(samples_in_multiple_projects(sample_sheet=iem),{})
+    def test_sample_sheet_with_samples_in_multiple_projects(self):
+        self.sample_sheet_samples_in_multiple_projects = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs1,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs1,
+2,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs2,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_samples_in_multiple_projects))
+        self.assertEqual(samples_in_multiple_projects(sample_sheet=iem),
+                         { 'AB1': ['Andrew_Bloggs1','Andrew_Bloggs2'] })
+
+class TestSamplesWithMultipleBarcodes(unittest.TestCase):
+    def test_sample_sheet_without_multiple_barcodes(self):
+        self.sample_sheet_without_multiple_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_without_multiple_barcodes))
+        self.assertEqual(samples_with_multiple_barcodes(sample_sheet=iem),{})
+    def test_sample_sheet_with_multiple_barcodes(self):
+        self.sample_sheet_with_multiple_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,AB1,AB1,,,N701,CTGTAGTA,N501,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_with_multiple_barcodes))
+        self.assertEqual(samples_with_multiple_barcodes(sample_sheet=iem),
+                         { 'AB1': ['CGATGTAT-TCTTTCCC','CTGTAGTA-TCTTTCCC'] })
+
+class TestHasInvalidLines(unittest.TestCase):
+    def test_sample_sheet_without_invalid_lines(self):
+        self.sample_sheet_without_invalid_lines = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_without_invalid_lines))
+        self.assertFalse(has_invalid_lines(sample_sheet=iem))
+    def test_sample_sheet_with_invalid_lines_no_lane(self):
+        self.sample_sheet_with_invalid_lines = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+,,,,,,,,,Filipe_Greer,
+,,,,,,,,,Filipe_Greer,
+"""
+        iem = SampleSheet(fp=cStringIO.StringIO(
+            self.sample_sheet_with_invalid_lines))
+        self.assertTrue(has_invalid_lines(sample_sheet=iem))
 
 class TestHasInvalidCharacters(unittest.TestCase):
     def setUp(self):
@@ -63,4 +179,18 @@ a non-ASCII character here\x80
 - \t\n
 """)
         self.assertFalse(has_invalid_characters(valid_file))
+
+class TestCloseNamesFunction(unittest.TestCase):
+    def test_close_names(self):
+        """get_close_names: check function returns expected results
+        """
+        self.assertEqual(get_close_names(("Andrew Bloggs",
+                                          "Carl Dewey",
+                                          "Filipe Greer",)),{})
+        self.assertEqual(get_close_names(("Andrew Blogs",
+                                          "Andrew Bloggs",
+                                          "Carl Dewey",
+                                          "Filipe Greer",)),
+                         { "Andrew Bloggs": ["Andrew Blogs"],
+                           "Andrew Blogs": ["Andrew Bloggs"] })
         
