@@ -8,7 +8,7 @@ import tempfile
 import shutil
 
 from auto_process_ngs.mock import MockAnalysisProject
-from auto_process_ngs.mock import MockQCProducts
+from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import AnalysisSample
 from auto_process_ngs.qc.illumina_qc import QCReporter
@@ -50,11 +50,11 @@ class TestQCReporter(unittest.TestCase):
         os.mkdir(qc_logs)
         for fq in fastq_names:
             # FastQC
-            MockQCProducts.fastqc_v0_11_2(fq,qc_dir)
+            MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
             # Fastq_screen
-            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
-            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
-            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
+            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
         return os.path.join(self.wd,self.analysis_dir.name)
     def test_qcreporter_paired_end(self):
         analysis_dir = self._make_analysis_project(paired_end=True)
@@ -64,6 +64,7 @@ class TestQCReporter(unittest.TestCase):
         self.assertTrue(reporter.paired_end)
         self.assertTrue(reporter.verify())
         reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.fail()
     def test_qcreporter_single_end(self):
         analysis_dir = self._make_analysis_project(paired_end=False)
         project = AnalysisProject('PJB',analysis_dir)
