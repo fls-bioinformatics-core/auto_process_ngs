@@ -3,9 +3,76 @@
 #######################################################################
 
 import unittest
+import os
+import tempfile
+import shutil
 
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import MockQCProducts
+from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import AnalysisSample
+from auto_process_ngs.qc.illumina_qc import QCReporter
 from auto_process_ngs.qc.illumina_qc import get_fastq_pairs
+
+class TestQCReporter(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir (if needed)
+        self.wd = None
+    def tearDown(self):
+        # Remove temporary working dir
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def _make_working_dir(self):
+        # Create a temporary working directory
+        if self.wd is None:
+            self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
+    def _make_analysis_project(self,paired_end=True):
+        # Create a mock Analysis Project directory
+        self._make_working_dir()
+        # Generate names for fastq files to add
+        if paired_end:
+            reads = (1,2)
+        else:
+            reads = (1,)
+        sample_names = ('PJB1','PJB2')
+        fastq_names = []
+        for i,sname in enumerate(sample_names,start=1):
+            for read in reads:
+                fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
+                fastq_names.append(fq)
+        self.analysis_dir = MockAnalysisProject('PJB',fastq_names)
+        # Create the mock directory
+        self.analysis_dir.create(top_dir=self.wd)
+        # Populate with fake QC products
+        qc_dir = os.path.join(self.wd,self.analysis_dir.name,'qc')
+        qc_logs = os.path.join(qc_dir,'logs')
+        os.mkdir(qc_dir)
+        os.mkdir(qc_logs)
+        for fq in fastq_names:
+            # FastQC
+            MockQCProducts.fastqc_v0_11_2(fq,qc_dir)
+            # Fastq_screen
+            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
+            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
+            MockQCProducts.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
+        return os.path.join(self.wd,self.analysis_dir.name)
+    def test_qcreporter_paired_end(self):
+        analysis_dir = self._make_analysis_project(paired_end=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertTrue(reporter.paired_end)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+    def test_qcreporter_single_end(self):
+        analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertFalse(reporter.paired_end)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
+        self.fail()
 
 class TestGetFastqPairsFunction(unittest.TestCase):
     def test_get_fastq_pairs_paired_end(self):
