@@ -64,7 +64,8 @@ class TestQCReporter(unittest.TestCase):
         self.assertTrue(reporter.paired_end)
         self.assertTrue(reporter.verify())
         reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
-        self.fail()
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
     def test_qcreporter_single_end(self):
         analysis_dir = self._make_analysis_project(paired_end=False)
         project = AnalysisProject('PJB',analysis_dir)
@@ -73,7 +74,8 @@ class TestQCReporter(unittest.TestCase):
         self.assertFalse(reporter.paired_end)
         self.assertTrue(reporter.verify())
         reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
-        self.fail()
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.SE.html')))
 
 class TestGetFastqPairsFunction(unittest.TestCase):
     def test_get_fastq_pairs_paired_end(self):
