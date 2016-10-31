@@ -627,12 +627,14 @@ class AnalysisProject:
         try:
             if force or self.verify_qc():
                 # Create HTML report
+                logging.debug("Creating HTML QC report")
                 report_html = os.path.join(self.dirn,"qc_report.html")
                 self.qc.report(title="%s/%s: QC report" % (self.info.run,
                                                            self.name),
                                filename=report_html,
                                relative_links=True)
                 # Create zip file
+                logging.debug("Creating QC report zip archive")
                 analysis_dir = os.path.basename(os.path.dirname(self.dirn))
                 report_zip = os.path.join(self.dirn,
                                           "qc_report.%s.%s.zip" %
