@@ -624,42 +624,53 @@ class AnalysisProject:
         # Generate HTML and zipped QC reports
         # Return name of zip file, or None if there is a problem
         # Set force=True to force reports to be generated
+        if not (force or self.verify_qc()):
+            logging.debug("Failed to generate QC report for %s: QC "
+                          "not verified and force not specified"
+                          % self.name)
+            return None
+        # Create HTML report
+        logging.debug("Creating HTML QC report for %s" % self.name)
         try:
-            if force or self.verify_qc():
-                # Create HTML report
-                logging.debug("Creating HTML QC report")
-                report_html = os.path.join(self.dirn,"qc_report.html")
-                self.qc.report(title="%s/%s: QC report" % (self.info.run,
-                                                           self.name),
-                               filename=report_html,
-                               relative_links=True)
-                # Create zip file
-                logging.debug("Creating QC report zip archive")
-                analysis_dir = os.path.basename(os.path.dirname(self.dirn))
-                report_zip = os.path.join(self.dirn,
-                                          "qc_report.%s.%s.zip" %
-                                          (self.name,analysis_dir))
-                zip_file = ZipArchive(report_zip,relpath=self.dirn,
-                                      prefix="qc_report.%s.%s" %
+            report_html = os.path.join(self.dirn,"qc_report.html")
+            self.qc.report(title="%s/%s: QC report" % (self.info.run,
+                                                       self.name),
+                           filename=report_html,
+                           relative_links=True)
+        except Exception as ex:
+            logging.error("Exception trying to generate QC report "
+                          "for %s: %s" % (self.name,ex))
+            return None
+        # Create zip file
+        logging.debug("Creating zip archive of QC report for %" %
+                      self.name)
+        try:
+            analysis_dir = os.path.basename(os.path.dirname(self.dirn))
+            report_zip = os.path.join(self.dirn,
+                                      "qc_report.%s.%s.zip" %
                                       (self.name,analysis_dir))
-                # Add the HTML report
-                zip_file.add_file(report_html)
-                # Add the FastQC and screen files
-                for sample in self.qc.samples:
-                    for fastqs in sample.fastq_pairs:
-                        for fq in fastqs:
-                            for f in expected_qc_outputs(fq,self.qc_dir):
-                                if f.endswith('.zip'):
-                                    # Exclude .zip file
-                                    continue
-                                if os.path.exists(f):
-                                    zip_file.add(f)
-                # Finished
-                return report_zip
-        except AttributeError,ex:
-            logging.error("Failed to generate QC report for %s: %s"
-                          % (self.name,ex))
-        return None
+            zip_file = ZipArchive(report_zip,relpath=self.dirn,
+                                  prefix="qc_report.%s.%s" %
+                                  (self.name,analysis_dir))
+            # Add the HTML report
+            zip_file.add_file(report_html)
+            # Add the FastQC and screen files
+            for sample in self.qc.samples:
+                for fastqs in sample.fastq_pairs:
+                    for fq in fastqs:
+                        logging.debug("Adding QC outputs for %s" % fq)
+                        for f in expected_qc_outputs(fq,self.qc_dir):
+                            if f.endswith('.zip'):
+                                # Exclude .zip file
+                                continue
+                            if os.path.exists(f):
+                                zip_file.add(f)
+            # Finished
+            return report_zip
+        except Exception as ex:
+            logging.error("Exception trying to generate zip archive "
+                          "of QC report for %s: %s" % (self.name,ex))
+            return None
 
     @property
     def multiple_fastqs(self):
