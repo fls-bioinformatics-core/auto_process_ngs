@@ -2063,7 +2063,8 @@ class AutoProcess:
                                                 log_dir=log_dir)
                         # Create and submit a QC job
                         fastq = os.path.join(project.dirn,'fastqs',fq)
-                        label = "illumina_qc.%s" % str(utils.AnalysisFastq(fq))
+                        label = "illumina_qc.%s.%s" % \
+                                (project.name,str(utils.AnalysisFastq(fq)))
                         qc_cmd = applications.Command('illumina_qc.sh',fastq)
                         if ungzip_fastqs:
                             qc_cmd.add_args('--ungzip-fastqs')
