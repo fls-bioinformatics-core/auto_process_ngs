@@ -490,7 +490,7 @@ class FastqSet:
         self._fastqs = list((fqr1,fqr2))
 
     def __getitem__(self,key):
-        return self._fastqs[key]
+        return self.fastqs[key]
 
     @property
     def r1(self):

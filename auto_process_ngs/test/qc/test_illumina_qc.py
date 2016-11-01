@@ -12,6 +12,7 @@ from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import AnalysisSample
 from auto_process_ngs.qc.illumina_qc import QCReporter
+from auto_process_ngs.qc.illumina_qc import FastqSet
 from auto_process_ngs.qc.illumina_qc import get_fastq_pairs
 
 class TestQCReporter(unittest.TestCase):
@@ -76,6 +77,38 @@ class TestQCReporter(unittest.TestCase):
         reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,'report.SE.html')))
+
+class TestFastqSet(unittest.TestCase):
+    def test_fastqset_PE(self):
+        fqset = FastqSet('/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
+                         '/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
+        # r1/r2 properties
+        self.assertEqual(fqset.r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
+        self.assertEqual(fqset.r2,'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
+        # __getitem__ method
+        self.assertEqual(fqset[0],'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
+        self.assertEqual(fqset[1],'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
+        # fastqs property
+        self.assertEqual(fqset.fastqs,
+                         ['/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
+                         '/data/PB/PB1_ATTAGG_L001_R2_001.fastq'])
+    def test_fastqset_SE(self):
+        fqset = FastqSet('/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
+        # r1/r2 properties
+        self.assertEqual(fqset.r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
+        self.assertEqual(fqset.r2,None)
+        # __getitem__ method
+        self.assertEqual(fqset[0],'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
+        try:
+            fqset[1]
+            self.fail("Attempt to access index 1 should raise IndexError")
+        except IndexError:
+            pass
+        except Exception:
+            self.fail("Attempt to access index 1 should raise IndexError")
+        # fastqs property
+        self.assertEqual(fqset.fastqs,
+                         ['/data/PB/PB1_ATTAGG_L001_R1_001.fastq'])
 
 class TestGetFastqPairsFunction(unittest.TestCase):
     def test_get_fastq_pairs_paired_end(self):
