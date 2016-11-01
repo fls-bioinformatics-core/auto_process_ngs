@@ -1154,32 +1154,55 @@ class AutoProcess:
         if remove_primary_data:
             self.remove_primary_data()
 
-    def get_primary_data(self):
+    def get_primary_data(self,runner=None):
         """Acquire the primary sequencing data (i.e. BCL files)
 
         Copies the primary sequencing data (bcl files etc) to a local area
         using rsync.
 
+        Arguments:
+          runner: (optional) specify a non-default job runner to use
+            for primary data rsync
+
         """
+        # Source and target directories
         data_dir = self.params.data_dir
         self.params["primary_data_dir"] = self.add_directory('primary_data')
+        # Set up runner
+        if runner is not None:
+            runner = fetch_runner(runner)
+        else:
+            runner = self.settings.general.default_runner
+        runner.set_log_dir(self.log_dir)
+        # Run rsync command
+        rsync = applications.general.rsync(data_dir,
+                                           self.params.primary_data_dir,
+                                           prune_empty_dirs=True,
+                                           extra_options=('--copy-links',
+                                                          '--include=*/',
+                                                          '--include=Data/**',
+                                                          '--include=RunInfo.xml',
+                                                          '--include=SampleSheet.csv',
+                                                          '--exclude=*'))
+        print "Running %s" % rsync
+        rsync_job = simple_scheduler.SchedulerJob(runner,
+                                                  rsync.command_line,
+                                                  name='rsync.primary_data',
+                                                  working_dir=os.getcwd())
+        rsync_job.start()
         try:
-            rsync = applications.general.rsync(data_dir,self.params.primary_data_dir,
-                                               prune_empty_dirs=True,
-                                               extra_options=('--copy-links',
-                                                              '--include=*/',
-                                                              '--include=Data/**',
-                                                              '--include=RunInfo.xml',
-                                                              '--include=SampleSheet.csv',
-                                                              '--exclude=*'))
-            print "Running %s" % rsync
-            status = rsync.run_subprocess(log=self.log_path('rsync.primary_data.log'))
-        except Exception, ex:
-            logging.error("Exception getting primary data: %s" % ex)
-            status = -1
-        if status != 0:
-            logging.error("Failed to acquire primary data (status %s)" % status)
-        return status
+            rsync_job.wait()
+        except KeyboardInterrupt:
+            logging.warning("Keyboard interrupt, terminating primary data "
+                            "rsync operation")
+            rsync_job.terminate()
+            return -1
+        exit_code = rsync_job.exit_code
+        print "rsync of primary data completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("Failed to acquire primary data (non-zero "
+                          "exit code returned)")
+        return exit_code
 
     def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
                      sample_sheet=None,bases_mask=None,
