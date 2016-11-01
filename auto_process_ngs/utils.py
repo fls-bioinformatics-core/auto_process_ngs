@@ -642,7 +642,7 @@ class AnalysisProject:
                           "for %s: %s" % (self.name,ex))
             return None
         # Create zip file
-        logging.debug("Creating zip archive of QC report for %" %
+        logging.debug("Creating zip archive of QC report for %s" %
                       self.name)
         try:
             analysis_dir = os.path.basename(os.path.dirname(self.dirn))
