@@ -1577,7 +1577,7 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = fetch_runner(self.settings.general.default_runner)
+            runner = self.settings.general.default_runner
         runner.set_log_dir(self.log_dir)
         # Schedule the jobs needed to do counting
         sched = simple_scheduler.SimpleScheduler(
