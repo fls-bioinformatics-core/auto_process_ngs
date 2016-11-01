@@ -2325,9 +2325,9 @@ class AutoProcess:
                         try:
                             project.qc_report(force=force)
                         except Exception as ex:
-                            logging.error(
-                                "Failed to generate QC report for %s: %s" %
-                                (project.name,ex))
+                            logging.error("publish_qc: failed to generate "
+                                          "QC report for %s: %s" %
+                                          (project.name,ex))
                             qc_zip = None
                 if qc_zip is None:
                     logging.error("Failed to make QC report for %s" % project.name)
@@ -3000,8 +3000,8 @@ class AutoProcess:
                     project.qc_report()
                     print "Updated QC report for %s" % project_name
                 except Exception, ex:
-                    logging.error("Failed to generate QC report for %s" %
-                                  project_name)
+                    logging.error("import_project: failed to generate QC "
+                                  "report for %s" % project_name)
 
     def check_metadata(self,items):
         """

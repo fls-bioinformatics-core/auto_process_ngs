@@ -255,7 +255,10 @@ class QCReporter:
                 fqs_report.add_css_classes('fastqs')
                 # Fastq name(s)
                 fq_r1 = os.path.basename(fq_pair.r1)
-                fq_r2 = os.path.basename(fq_pair.r2)
+                if self.paired_end:
+                    fq_r2 = os.path.basename(fq_pair.r2)
+                else:
+                    fq_r2 = None
                 if self.paired_end:
                     # Create subsections for R1 and R2
                     fqr1_report = fqs_report.add_subsection(fq_r1)
@@ -487,7 +490,7 @@ class FastqSet:
         self._fastqs = list((fqr1,fqr2))
 
     def __getitem__(self,key):
-        return self._fastqs[key]
+        return self.fastqs[key]
 
     @property
     def r1(self):
