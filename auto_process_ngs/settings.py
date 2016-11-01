@@ -101,8 +101,11 @@ class Settings:
             config.read(os.path.join(get_config_dir(),'settings.ini.sample'))
         # General parameters
         self.add_section('general')
-        self.general['default_runner'] = config.get('general','default_runner',
-                                                    'SimpleJobRunner')
+        default_runner = config.get('general','default_runner',
+                                    'SimpleJobRunner')
+        self.general['default_runner'] = config.getrunner('general',
+                                                          'default_runner',
+                                                          'SimpleJobRunner')
         self.general['max_concurrent_jobs'] = config.getint('general',
                                                             'max_concurrent_jobs',12)
         # modulefiles
@@ -141,7 +144,7 @@ class Settings:
         self.add_section('runners')
         for name in ('bcl2fastq','qc','stats',):
             self.runners[name] = config.getrunner('runners',name,
-                                                  self.general.default_runner)
+                                                  default_runner)
         # Information for archiving analyses
         # dirn should be a directory in the form [[user@]host:]path]
         self.add_section('archive')

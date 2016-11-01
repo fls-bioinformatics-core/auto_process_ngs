@@ -1154,32 +1154,55 @@ class AutoProcess:
         if remove_primary_data:
             self.remove_primary_data()
 
-    def get_primary_data(self):
+    def get_primary_data(self,runner=None):
         """Acquire the primary sequencing data (i.e. BCL files)
 
         Copies the primary sequencing data (bcl files etc) to a local area
         using rsync.
 
+        Arguments:
+          runner: (optional) specify a non-default job runner to use
+            for primary data rsync
+
         """
+        # Source and target directories
         data_dir = self.params.data_dir
         self.params["primary_data_dir"] = self.add_directory('primary_data')
+        # Set up runner
+        if runner is not None:
+            runner = fetch_runner(runner)
+        else:
+            runner = self.settings.general.default_runner
+        runner.set_log_dir(self.log_dir)
+        # Run rsync command
+        rsync = applications.general.rsync(data_dir,
+                                           self.params.primary_data_dir,
+                                           prune_empty_dirs=True,
+                                           extra_options=('--copy-links',
+                                                          '--include=*/',
+                                                          '--include=Data/**',
+                                                          '--include=RunInfo.xml',
+                                                          '--include=SampleSheet.csv',
+                                                          '--exclude=*'))
+        print "Running %s" % rsync
+        rsync_job = simple_scheduler.SchedulerJob(runner,
+                                                  rsync.command_line,
+                                                  name='rsync.primary_data',
+                                                  working_dir=os.getcwd())
+        rsync_job.start()
         try:
-            rsync = applications.general.rsync(data_dir,self.params.primary_data_dir,
-                                               prune_empty_dirs=True,
-                                               extra_options=('--copy-links',
-                                                              '--include=*/',
-                                                              '--include=Data/**',
-                                                              '--include=RunInfo.xml',
-                                                              '--include=SampleSheet.csv',
-                                                              '--exclude=*'))
-            print "Running %s" % rsync
-            status = rsync.run_subprocess(log=self.log_path('rsync.primary_data.log'))
-        except Exception, ex:
-            logging.error("Exception getting primary data: %s" % ex)
-            status = -1
-        if status != 0:
-            logging.error("Failed to acquire primary data (status %s)" % status)
-        return status
+            rsync_job.wait()
+        except KeyboardInterrupt:
+            logging.warning("Keyboard interrupt, terminating primary data "
+                            "rsync operation")
+            rsync_job.terminate()
+            return -1
+        exit_code = rsync_job.exit_code
+        print "rsync of primary data completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("Failed to acquire primary data (non-zero "
+                          "exit code returned)")
+        return exit_code
 
     def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
                      sample_sheet=None,bases_mask=None,
@@ -1577,7 +1600,7 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = fetch_runner(self.settings.general.default_runner)
+            runner = self.settings.general.default_runner
         runner.set_log_dir(self.log_dir)
         # Schedule the jobs needed to do counting
         sched = simple_scheduler.SimpleScheduler(
@@ -2073,7 +2096,7 @@ class AutoProcess:
 
     def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
                         chmod=None,group=None,include_bcl2fastq=False,
-                        read_only_fastqs=True,force=False):
+                        read_only_fastqs=True,force=False,runner=None):
         """Copy the analysis directory and contents to an archive area
 
         Copies the contents of the analysis directory to an archive
@@ -2121,6 +2144,8 @@ class AutoProcess:
             permissions.
           force: if True then do archiving even if key metadata items
             are not set; otherwise abort archiving operation.
+          runner: (optional) specify a non-default job runner to use
+            for primary data rsync
 
         Returns:
           UNIX-style integer returncode: 0 = successful termination,
@@ -2173,45 +2198,61 @@ class AutoProcess:
             excludes.append('--exclude=%s' % self.params.unaligned_dir)
         # Log dir
         self.set_log_dir(self.get_log_subdir('archive'))
+        # Set up runner
+        if runner is not None:
+            runner = fetch_runner(runner)
+        else:
+            runner = self.settings.general.default_runner
+        runner.set_log_dir(self.log_dir)
+        # Setup a scheduler for multiple rsync jobs
+        sched = simple_scheduler.SimpleScheduler(
+            runner=runner,
+            max_concurrent=self.settings.general.max_concurrent_jobs)
+        sched.start()
         # If making fastqs read-only then transfer them separately
         if read_only_fastqs:
-            try:
-                rsync_fastqs = applications.general.rsync(self.analysis_dir,archive_dir,
-                                                          prune_empty_dirs=True,
-                                                          dry_run=dry_run,
-                                                          chmod='ugo-w',
-                                                          extra_options=('--include=*/',
-                                                                         '--include=fastqs/**',
-                                                                         '--exclude=*',))
-                print "Running %s" % rsync_fastqs
-                status = rsync_fastqs.run_subprocess(
-                    log=self.log_path('rsync.archive_fastqs.log'))
-            except Exception, ex:
-                logging.error("Exception rsyncing fastqs to archive: %s" % ex)
-                status = -1
-            if status != 0:
-                logging.error("Failed to rsync fastqs to archive (returned status %d)" %
-                              status)
-            # Exclude from main rsync
+            rsync_fastqs = applications.general.rsync(self.analysis_dir,
+                                                      archive_dir,
+                                                      prune_empty_dirs=True,
+                                                      dry_run=dry_run,
+                                                      chmod='ugo-w',
+                                                      extra_options=(
+                                                          '--include=*/',
+                                                          '--include=fastqs/**',
+                                                          '--exclude=*',))
+            print "Running %s" % rsync_fastqs
+            rsync_fastqs_job = sched.submit(rsync_fastqs,
+                                            name="rsync.archive_fastqs")
+            # Exclude fastqs from main rsync
             excludes.append('--exclude=fastqs')
-            # Set returncode
-            retval = status if status != 0 else retval
-        # Run the rsync command
-        try:
-            rsync = applications.general.rsync(self.analysis_dir,archive_dir,
-                                               prune_empty_dirs=True,
-                                               dry_run=dry_run,
-                                               chmod=chmod,
-                                               extra_options=excludes)
-            print "Running %s" % rsync
-            status = rsync.run_subprocess(log=self.log_path('rsync.archive.log'))
-        except Exception, ex:
-            logging.error("Exception rsyncing to archive: %s" % ex)
-            status = -1
-        if status != 0:
-            logging.error("Failed to rsync to archive (returned status %d)" % status)
+        else:
+            rsync_fastqs_job = None
+        # Main rsync command
+        rsync = applications.general.rsync(self.analysis_dir,archive_dir,
+                                           prune_empty_dirs=True,
+                                           dry_run=dry_run,
+                                           chmod=chmod,
+                                           extra_options=excludes)
+        print "Running %s" % rsync
+        rsync_job = sched.submit(rsync,name="rsync.archive")
+        # Wait for scheduler to complete
+        sched.wait()
+        sched.stop()
+        # Check exit status on job(s)
+        if rsync_fastqs_job:
+            exit_code = rsync_fastqs_job.exit_code
+            print "rsync of FASTQs completed: exit code %s" % exit_code
+            if exit_code != 0:
+                logging.error("Failed to copy FASTQs to archive location "
+                              "(non-zero exit code returned)")
+        else:
+            exit_code = 0
+        print "rsync of data completed: exit code %s" % rsync_job.exit_code
+        if rsync_job.exit_code != 0:
+            logging.error("Failed to copy data to archive location "
+                          "(non-zero exit code returned)")
         # Set returncode
-        retval = status if status != 0 else retval
+        retval = exit_code if exit_code != 0 else rsync_job.exit_code
         # Set the group (local copies only)
         if group is not None:
             user,server,dirn = utils.split_user_host_dir(archive_dir)

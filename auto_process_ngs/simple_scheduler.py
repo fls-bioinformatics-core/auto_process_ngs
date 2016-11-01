@@ -647,6 +647,15 @@ class SchedulerJob(Job):
         # Check if job is running
         return self.isRunning()
 
+    @property
+    def exit_code(self):
+        """Return exit code from job
+
+        Wrapper for the 'exit_status' property provided by the
+        'Job' superclass.
+        """
+        return self.exit_status
+
     def start(self):
         """Start the job running
 

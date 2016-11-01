@@ -17,7 +17,7 @@ class TestSettings(unittest.TestCase):
                         "Missing sample file %s" % sample_settings_file)
         s = Settings(sample_settings_file)
         # General settings
-        self.assertEqual(s.general.default_runner,'SimpleJobRunner')
+        self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.run_qc,None)
