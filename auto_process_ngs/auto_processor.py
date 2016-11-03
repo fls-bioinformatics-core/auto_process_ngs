@@ -1409,7 +1409,10 @@ class AutoProcess:
             logging.warning("Keyboard interrupt, terminating bcl2fastq")
             bcl2fastq_job.terminate()
             raise ex
-        print "bcl2fastq completed"
+        exit_code = bcl2fastq_job.exit_code
+        print "bcl2fastq completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("bcl2fastq exited with an error")
         # Verify outputs
         try:
             illumina_data = self.load_illumina_data()
@@ -1419,6 +1422,17 @@ class AutoProcess:
         if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
+            # Get a list of missing FASTQs
+            missing_fastqs = IlluminaData.list_missing_fastqs(illumina_data,
+                                                              sample_sheet)
+            if not missing_fastqs:
+                raise Exception("Verify failed but no missing FASTQs?")
+            missing_fastqs_file = os.path.join(self.log_dir,"missing_fastqs.log")
+            print "Writing list of missing FASTQ files to %s" % \
+                missing_fastqs_file
+            with open(missing_fastqs_file,'w') as fp:
+                for fq in missing_fastqs:
+                    fp.write("%s\n" % fq)
             return
 
     def generate_stats(self,stats_file=None,per_lane_stats_file=None,
