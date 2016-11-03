@@ -20,6 +20,7 @@ import logging
 import shutil
 import time
 import ast
+import gzip
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
@@ -1209,7 +1210,7 @@ class AutoProcess:
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None):
+                     runner=None,create_empty_fastqs=False):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1236,6 +1237,9 @@ class AutoProcess:
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
+          create_empty_fastqs: if True then create empty 'placeholder' fastq
+            files for any missing fastqs after bcl2fastq (must have completed
+            with zero exit status)
         
         """
         # Directories
@@ -1433,6 +1437,15 @@ class AutoProcess:
             with open(missing_fastqs_file,'w') as fp:
                 for fq in missing_fastqs:
                     fp.write("%s\n" % fq)
+            # Create empty FASTQs
+            if create_empty_fastqs:
+                logging.warning("Making 'empty' FASTQs as placeholders")
+                for fq in missing_fastqs:
+                    fastq = os.path.join(self.analysis_dir,
+                                         bcl2fastq_dir,fq)
+                    print "-- %s" % fastq
+                    with open(gzip.GzipFile(filename=fq,mode='wb')) as fp:
+                        fp.write('')
             return
 
     def generate_stats(self,stats_file=None,per_lane_stats_file=None,
