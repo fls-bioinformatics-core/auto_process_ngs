@@ -1444,7 +1444,7 @@ class AutoProcess:
                     fastq = os.path.join(self.analysis_dir,
                                          bcl2fastq_dir,fq)
                     print "-- %s" % fastq
-                    with open(gzip.GzipFile(filename=fq,mode='wb')) as fp:
+                    with open(gzip.GzipFile(filename=fastq,mode='wb')) as fp:
                         fp.write('')
             return
 
