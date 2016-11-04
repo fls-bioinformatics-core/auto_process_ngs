@@ -2487,13 +2487,13 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
                        self.run_reference_id)
         index_page.add("</table>")
-        # Barcodes
+        # Barcode analysis
         if barcode_analysis_dir:
             # Create section
             index_page.add("<h2>Barcode analysis</h2>")
-            index_page.add("<p>Plain text: "
-                           "<a href='barcodes/barcodes.report'>barcodes.report</a>"
-                           "XLS:"
+            index_page.add("<p>Plain text report: "
+                           "<a href='barcodes/barcodes.report'>barcodes.report</a> "
+                           "XLS: "
                            "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
                            "</p>")
             # Create subdir and copy files
