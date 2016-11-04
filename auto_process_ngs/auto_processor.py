@@ -1042,7 +1042,7 @@ class AutoProcess:
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    runner=None):
+                    create_empty_fastqs=False,runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1094,6 +1094,9 @@ class AutoProcess:
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
+          create_empty_fastqs : if True then create empty 'placeholder' fastq
+                                files for any missing fastqs after bcl2fastq
+                                (must have completed with zero exit status)
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
 
@@ -1134,6 +1137,7 @@ class AutoProcess:
                                   minimum_trimmed_read_length=minimum_trimmed_read_length,
                                   mask_short_adapter_reads=mask_short_adapter_reads,
                                   nprocessors=nprocessors,
+                                  create_empty_fastqs=create_empty_fastqs,
                                   runner=runner)
             except Exception,ex:
                 raise Exception("Bcl2fastq stage failed: '%s'" % ex)
