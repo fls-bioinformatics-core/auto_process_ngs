@@ -988,7 +988,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                           })
         if missing:
             # Sort into order of highest to lowest counts
-            missing = sorted(missing,key=lambda x: x.counts,
+            missing = sorted(missing,
+                             key=lambda x: x['counts'],
                              reverse=True)
             # Report
             reporter.add("")
