@@ -1001,8 +1001,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                 reporter.add("\t%s\t%s\t%d\t%.2f%%" %
                              (sample['name'],
                               sample['barcode'],
-                              sample.counts,
-                              percent(sample.counts,
+                              sample['counts'],
+                              percent(sample['counts'],
                                       analysis['total_reads'])))
         if missing_no_counts:
             # Sort into alphabetical order
