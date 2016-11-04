@@ -2419,6 +2419,14 @@ class AutoProcess:
         if not projects:
             logging.error("No projects with QC results to publish")
             return False
+        # Include barcode analysis
+        barcode_analysis_dir = os.path.join(self.analysis_dir,
+                                            'barcode_analysis')
+        if not (os.path.exists(os.path.join(barcode_analysis_dir,
+                                            'barcodes.report')) or
+                os.path.exists(os.path.join(barcode_analysis_dir,
+                                            'barcodes.xls'))):
+            barcode_analysis_dir = None
         # Make a directory for the QC reports
         if not remote:
             # Local directory
@@ -2479,6 +2487,42 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
                        self.run_reference_id)
         index_page.add("</table>")
+        # Barcodes
+        if barcode_analysis_dir:
+            # Create section
+            index_page.add("<h2>Barcode analysis</h2>")
+            index_page.add("<p>Plain text: "
+                           "<a href='barcodes/barcodes.report'>barcodes.report</a>"
+                           "XLS:"
+                           "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
+                           "</p>")
+            # Create subdir and copy files
+            barcodes_dirn = os.path.join(dirn,'barcodes')
+            if not remote:
+                # Local directory
+                bcf_utils.mkdir(barcodes_dirn)
+                for filen in ('barcodes.report','barcodes.xls'):
+                    shutil.copy(os.path.join(barcode_analysis_dir,filen),
+                                barcodes_dirn)
+            else:
+                # Remote directory
+                try:
+                    mkdir_cmd = applications.general.ssh_command(user,server,
+                                                                 ('mkdir',
+                                                                  barcodes_dirn))
+                    print "Running %s" % mkdir_cmd
+                    mkdir_cmd.run_subprocess()
+                    for filen in ('barcodes.report','barcodes.xls'):
+                        scp = applications.general.scp(user,server,
+                                                       os.path.join(
+                                                           barcode_analysis_dir,
+                                                           filen),
+                                                       barcodes_dirn)
+                    print "Running %s" % scp
+                    scp.run_subprocess()
+                except Exception, ex:
+                    raise Exception("Exception copying barcode reports to "
+                                    "remote server: %s" % ex)
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
         index_page.add("<table>")
