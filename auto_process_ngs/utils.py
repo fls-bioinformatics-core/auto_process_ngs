@@ -62,6 +62,7 @@ from qc.illumina_qc import QCReporter
 from qc.illumina_qc import QCSample
 from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
+from .exceptions import MissingParameterFileException
 
 #######################################################################
 # Classes
@@ -271,13 +272,38 @@ class AnalysisDir:
         self.undetermined = None
         # Metadata
         self.metadata = AnalysisDirMetadata()
-        self.metadata.load(os.path.join(self._analysis_dir,
-                                        "metadata.info"))
+        try:
+            metadata_file = os.path.join(self._analysis_dir,
+                                         "metadata.info")
+            self.metadata.load(metadata_file)
+        except Exception as ex:
+            logging.warning("Failed to load metadata file %s: %s" %
+                            (metadata_file,ex))
+            logging.warning("Attempting to load parameter file")
+            try:
+                params = AnalysisDirParameters()
+                parameter_file = os.path.join(self._analysis_dir,
+                                         "auto_process.info")
+                params.load(parameter_file,strict=False)
+                # Attempt to acquire values from parameters
+                for param in ('platform','run_number','source','assay'):
+                    if param not in params:
+                        print "-- %s: missing" % param
+                        continue
+                    print "-- %s: setting to '%s'" % (param,
+                                                      params[param])
+                    self.metadata[param] = params[param]
+            except Exception as ex:
+                # No parameter file either
+                logging.warning("Failed to load parameters: %s" % ex)
+                logging.warning("Perhaps this is not an auto_process project?")
+                raise ex
         # Projects metadata
         try:
             self.projects_metadata = ProjectMetadataFile(
                 os.path.join(self._analysis_dir,"projects.info"))
-        except OSError:
+        except Exception as ex:
+            logging.warning("Failed to load projects metadata: %s" % ex)
             self.projects_metadata = None
         # Run name
         try:
