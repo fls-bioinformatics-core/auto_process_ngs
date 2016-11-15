@@ -971,7 +971,6 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         found_samples = filter(lambda s: s is not None,
                                [analysis.counts[bc].sample
                                 for bc in analysis.barcodes])
-        found_samples = ','.join(found_samples).split(',')
         missing = []
         missing_no_counts = []
         for sample in sample_sheet.samples(lane):
