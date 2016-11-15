@@ -20,6 +20,7 @@ import logging
 import shutil
 import time
 import ast
+import gzip
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
@@ -1041,7 +1042,7 @@ class AutoProcess:
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    runner=None):
+                    create_empty_fastqs=False,runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1093,6 +1094,9 @@ class AutoProcess:
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
+          create_empty_fastqs : if True then create empty 'placeholder' fastq
+                                files for any missing fastqs after bcl2fastq
+                                (must have completed with zero exit status)
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
 
@@ -1133,6 +1137,7 @@ class AutoProcess:
                                   minimum_trimmed_read_length=minimum_trimmed_read_length,
                                   mask_short_adapter_reads=mask_short_adapter_reads,
                                   nprocessors=nprocessors,
+                                  create_empty_fastqs=create_empty_fastqs,
                                   runner=runner)
             except Exception,ex:
                 raise Exception("Bcl2fastq stage failed: '%s'" % ex)
@@ -1209,7 +1214,7 @@ class AutoProcess:
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None):
+                     runner=None,create_empty_fastqs=False):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1236,6 +1241,9 @@ class AutoProcess:
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
+          create_empty_fastqs: if True then create empty 'placeholder' fastq
+            files for any missing fastqs after bcl2fastq (must have completed
+            with zero exit status)
         
         """
         # Directories
@@ -1409,7 +1417,10 @@ class AutoProcess:
             logging.warning("Keyboard interrupt, terminating bcl2fastq")
             bcl2fastq_job.terminate()
             raise ex
-        print "bcl2fastq completed"
+        exit_code = bcl2fastq_job.exit_code
+        print "bcl2fastq completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("bcl2fastq exited with an error")
         # Verify outputs
         try:
             illumina_data = self.load_illumina_data()
@@ -1419,6 +1430,26 @@ class AutoProcess:
         if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
+            # Get a list of missing FASTQs
+            missing_fastqs = IlluminaData.list_missing_fastqs(illumina_data,
+                                                              sample_sheet)
+            if not missing_fastqs:
+                raise Exception("Verify failed but no missing FASTQs?")
+            missing_fastqs_file = os.path.join(self.log_dir,"missing_fastqs.log")
+            print "Writing list of missing FASTQ files to %s" % \
+                missing_fastqs_file
+            with open(missing_fastqs_file,'w') as fp:
+                for fq in missing_fastqs:
+                    fp.write("%s\n" % fq)
+            # Create empty FASTQs
+            if create_empty_fastqs:
+                logging.warning("Making 'empty' FASTQs as placeholders")
+                for fq in missing_fastqs:
+                    fastq = os.path.join(self.analysis_dir,
+                                         bcl2fastq_dir,fq)
+                    print "-- %s" % fastq
+                    with gzip.GzipFile(filename=fastq,mode='wb') as fp:
+                        fp.write('')
             return
 
     def generate_stats(self,stats_file=None,per_lane_stats_file=None,
@@ -2392,6 +2423,14 @@ class AutoProcess:
         if not projects:
             logging.error("No projects with QC results to publish")
             return False
+        # Include barcode analysis
+        barcode_analysis_dir = os.path.join(self.analysis_dir,
+                                            'barcode_analysis')
+        if not (os.path.exists(os.path.join(barcode_analysis_dir,
+                                            'barcodes.report')) or
+                os.path.exists(os.path.join(barcode_analysis_dir,
+                                            'barcodes.xls'))):
+            barcode_analysis_dir = None
         # Make a directory for the QC reports
         if not remote:
             # Local directory
@@ -2452,6 +2491,42 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
                        self.run_reference_id)
         index_page.add("</table>")
+        # Barcode analysis
+        if barcode_analysis_dir:
+            # Create section
+            index_page.add("<h2>Barcode analysis</h2>")
+            index_page.add("<p>Plain text report: "
+                           "<a href='barcodes/barcodes.report'>barcodes.report</a> "
+                           "XLS: "
+                           "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
+                           "</p>")
+            # Create subdir and copy files
+            barcodes_dirn = os.path.join(dirn,'barcodes')
+            if not remote:
+                # Local directory
+                bcf_utils.mkdir(barcodes_dirn)
+                for filen in ('barcodes.report','barcodes.xls'):
+                    shutil.copy(os.path.join(barcode_analysis_dir,filen),
+                                barcodes_dirn)
+            else:
+                # Remote directory
+                try:
+                    mkdir_cmd = applications.general.ssh_command(user,server,
+                                                                 ('mkdir',
+                                                                  barcodes_dirn))
+                    print "Running %s" % mkdir_cmd
+                    mkdir_cmd.run_subprocess()
+                    for filen in ('barcodes.report','barcodes.xls'):
+                        scp = applications.general.scp(user,server,
+                                                       os.path.join(
+                                                           barcode_analysis_dir,
+                                                           filen),
+                                                       barcodes_dirn)
+                    print "Running %s" % scp
+                    scp.run_subprocess()
+                except Exception, ex:
+                    raise Exception("Exception copying barcode reports to "
+                                    "remote server: %s" % ex)
         # Table of projects
         index_page.add("<h2>QC Reports</h2>")
         index_page.add("<table>")

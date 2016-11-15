@@ -12,6 +12,7 @@ use to solve them.
  * :ref:`problem-skip-demultiplexing`
  * :ref:`problem-handling-inline-barcodes`
  * :ref:`problem-no-adapter-trimming`
+ * :ref:`problem-missing-fastqs-after-demultiplexing`
 
 .. _problem-missing-sample-sheet:
 
@@ -304,3 +305,29 @@ however this can effectively be done by setting the adapter sequences in the
 sample sheet to empty strings, for example::
 
     prep_sample_sheet.py -o SampleSheet.csv --set-adapter='' --set-adapter2='' SampleSheet.csv
+
+.. _problem-missing-fastqs-after-demultiplexing:
+
+Missing FASTQ files after demultiplexing by bcl2fastq
+*****************************************************
+
+If no reads match an index sequence in the sample sheet file, ``bcl2fastq``
+will not produce a FASTQ for that sample, leading to a verification
+failure when the auto processor sees that some expected output FASTQs
+are missing.
+
+To workaround this use the ``--create-empty-fastqs`` option when
+(re)running the ``make_fastqs`` command. This will create an empty
+'placeholder' FASTQ for each missing file, which enables verification to
+complete successfully.
+
+.. note::
+
+   Before using this option it is recommended to check that the missing
+   FASTQs are not due to some other problem or error in the data or
+   pipeline.
+
+.. warning::
+
+   Be aware that the empty FASTQs may not be treated as valid input to
+   some external downstream software packages.

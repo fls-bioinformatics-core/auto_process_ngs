@@ -971,7 +971,6 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         found_samples = filter(lambda s: s is not None,
                                [analysis.counts[bc].sample
                                 for bc in analysis.barcodes])
-        found_samples = ','.join(found_samples).split(',')
         missing = []
         missing_no_counts = []
         for sample in sample_sheet.samples(lane):
@@ -988,7 +987,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                           })
         if missing:
             # Sort into order of highest to lowest counts
-            missing = sorted(missing,key=lambda x: x.counts,
+            missing = sorted(missing,
+                             key=lambda x: x['counts'],
                              reverse=True)
             # Report
             reporter.add("")
@@ -1000,8 +1000,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                 reporter.add("\t%s\t%s\t%d\t%.2f%%" %
                              (sample['name'],
                               sample['barcode'],
-                              sample.counts,
-                              percent(sample.counts,
+                              sample['counts'],
+                              percent(sample['counts'],
                                       analysis['total_reads'])))
         if missing_no_counts:
             # Sort into alphabetical order
