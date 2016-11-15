@@ -1,5 +1,5 @@
 # Current version of the library
-__version__ = '0.6.1'
+__version__ = '0.6.2'
 
 def get_version():
     """Returns a string with the current version of the library (e.g., "0.2.0")
