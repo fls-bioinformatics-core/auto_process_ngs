@@ -658,9 +658,12 @@ class AnalysisProject:
         # Create HTML report
         logging.debug("Creating HTML QC report for %s" % self.name)
         try:
+            if self.info.run is not None:
+                title = "%s/%s: QC report" % (self.info.run,self.name)
+            else:
+                title = "%s: QC report" % self.name
             report_html = os.path.join(self.dirn,"qc_report.html")
-            self.qc.report(title="%s/%s: QC report" % (self.info.run,
-                                                       self.name),
+            self.qc.report(title=title,
                            filename=report_html,
                            relative_links=True)
         except Exception as ex:
