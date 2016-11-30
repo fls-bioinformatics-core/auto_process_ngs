@@ -272,7 +272,7 @@ if __name__ == "__main__":
         print "Checking/setting up for sample '%s'" % sample.name
         for fq in sample.fastq:
             if sample.verify_qc(qc_dir,fq):
-                print "-- %s: QC ok"
+                print "-- %s: QC ok" % fq
             else:
                 print "-- %s: setting up QC" % fq
                 qc_cmd = Command('illumina_qc.sh',fq)
@@ -286,10 +286,18 @@ if __name__ == "__main__":
     sched.stop()
 
     # Verify the QC
-    if not project.verify_qc():
-        logging.error("QC failed")
+    announce("Verifying QC")
+    qc_ok = True
+    for sample in samples:
+        for fq in sample.fastq:
+            if not sample.verify_qc(qc_dir,fq):
+                qc_ok = False
+                logging.warning("-- %s: QC failed" %
+                                os.path.basename(fq))
+    if not qc_ok:
+        logging.error("QC failed (see warnings above)")
     else:
         print "QC ok: generating report"
-        project.qc_report()
+        project.qc_report(force=True)
 
 
