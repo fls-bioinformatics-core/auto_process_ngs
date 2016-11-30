@@ -155,10 +155,15 @@ def announce(title):
 
 if __name__ == "__main__":
     # Make a command line parser
-    p = optparse.OptionParser()
+    p = optparse.OptionParser(usage="%prog METADATA FASTQS_DIR DEST")
+    p.add_option('--samples',action='store',
+                 dest='sample_pattern',default=None,
+                 help="simple wildcard-based pattern specifying a subset "
+                 "of samples to run the QC on. If specified then only FASTQs "
+                 "with sample names matching SAMPLE_PATTERN will be examined.")
 
     # Parse the command line
-    opt,args = p.parse_args()
+    opts,args = p.parse_args()
 
     # Get the metadata file name
     try:
@@ -175,6 +180,7 @@ if __name__ == "__main__":
     # Target directory for QC and analysis
     try:
         project_dir = os.path.abspath(args[2])
+        project_name = os.path.basename(project_dir)
     except IndexError:
         p.error("Need to supply a target directory")
 
@@ -182,12 +188,15 @@ if __name__ == "__main__":
     announce("Obtaining list of FASTQs")
     fastqs = sorted(os.listdir(fastqs_dir))
     mapping = {}
+    s_index = 0
+    last_sample_name = None
     for fq in fastqs:
         print fq
         name,barcode,read = fq.split('.')[0:3]
         print "-- %s" % name
         print "-- %s" % barcode
         print "-- %s" % read
+        read_number = int(read[-1])
         entries = metadata.lookup(barcode_r1=barcode)
         if not entries:
             raise KeyError("Can't find barcode '%s' in metadata" %
@@ -201,22 +210,39 @@ if __name__ == "__main__":
         sample_type = entries[0].sample_type
         chip_row_id = entries[0].chip_row_id
         chip_col_id = entries[0].chip_col_id
-        mapping[fq] = "%s_%s_%s.%s.fastq" % (sample_type,
-                                             chip_col_id,
-                                             chip_row_id,
-                                             read)
+        sample_name = "%s_%s_%s" % (sample_type,chip_col_id,chip_row_id)
+        if sample_name != last_sample_name:
+            s_index += 1
+        mapping[fq] = "%s_S%d_R%d_001.fastq" % (sample_name,
+                                                s_index,
+                                                read_number)
+        last_sample_name = sample_name
 
     # Create symlinks with new names
     announce("Creating project dir with symlinks")
     if not os.path.isdir(project_dir):
         mkdir(project_dir)
+        project_fastqs_dir = os.path.join(project_dir,"fastqs")
+        mkdir(project_fastqs_dir)
         for fq in fastqs:
             print "%s -> %s" % (fq,mapping[fq])
             mklink(os.path.join(fastqs_dir,fq),
-                   os.path.join(project_dir,mapping[fq]),
+                   os.path.join(project_fastqs_dir,mapping[fq]),
                    relative=True)
     else:
         logging.warning("'%s' already exists" % project_dir)
+
+    # Get list of samples
+    announce("Acquiring samples")
+    project = AnalysisProject(project_name,project_dir)
+    if opts.sample_pattern is not None:
+        samples = project.get_samples(opts.sample_pattern)
+    else:
+        samples = project.samples
+    if not samples:
+        logging.warning("No samples specified for QC, quitting")
+        sys.exit()
+    print "%d samples matched" % len(samples)
 
     # Set up environment
     if __modulefiles is not None:
@@ -231,29 +257,25 @@ if __name__ == "__main__":
     sched = SimpleScheduler(runner=qc_runner,
                             max_concurrent=max_jobs)
     sched.start()
-    project = AnalysisProject("test1",project_dir)
     qc_dir = os.path.join(project_dir,'qc')
     log_dir = os.path.join(project_dir,'qc','logs')
     if project.qc_dir is None:
         print "Making 'qc' subdirectory..."
         mkdir(qc_dir)
         mkdir(log_dir)
-    if project.verify_qc():
-        print "QC verified for these files"
-    else:
-        for sample in project.samples:
-            print "Checking/setting up for sample '%s'" % sample.name
-            for fq in sample.fastq:
-                if sample.verify_qc(qc_dir,fq):
-                    print "-- %s: QC ok"
-                else:
-                    print "-- %s: setting up QC" % fq
-                    qc_cmd = Command('illumina_qc.sh',fq)
-                    job = sched.submit(qc_cmd,
-                                       wd=project_dir,
-                                       name="qc.%s" % os.path.basename(fq),
-                                       log_dir=log_dir)
-                    print "Job: %s" % job
+    for sample in samples:
+        print "Checking/setting up for sample '%s'" % sample.name
+        for fq in sample.fastq:
+            if sample.verify_qc(qc_dir,fq):
+                print "-- %s: QC ok"
+            else:
+                print "-- %s: setting up QC" % fq
+                qc_cmd = Command('illumina_qc.sh',fq)
+                job = sched.submit(qc_cmd,
+                                   wd=project_dir,
+                                   name="qc.%s" % os.path.basename(fq),
+                                   log_dir=log_dir)
+                print "Job: %s" % job
     # Wait for the scheduler to run all jobs
     sched.wait()
     sched.stop()
