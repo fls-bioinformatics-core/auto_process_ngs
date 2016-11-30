@@ -186,7 +186,8 @@ if __name__ == "__main__":
 
     # Get list of FASTQs and map to new names
     announce("Obtaining list of FASTQs")
-    fastqs = sorted(os.listdir(fastqs_dir))
+    fastqs = sorted(filter(lambda x: x.endswith('.fastq'),
+                           os.listdir(fastqs_dir)))
     mapping = {}
     s_index = 0
     last_sample_name = None
