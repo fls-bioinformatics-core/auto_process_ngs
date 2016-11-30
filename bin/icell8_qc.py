@@ -198,6 +198,10 @@ if __name__ == "__main__":
         print "-- %s" % barcode
         print "-- %s" % read
         read_number = int(read[-1])
+        if barcode == "INVALID":
+            # Special case
+            mapping[fq] = "INVALID_S0_R%d_001.fastq" % read_number
+            continue
         entries = metadata.lookup(barcode_r1=barcode)
         if not entries:
             raise KeyError("Can't find barcode '%s' in metadata" %
