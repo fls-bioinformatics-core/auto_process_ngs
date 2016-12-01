@@ -237,10 +237,13 @@ if __name__ == "__main__":
     announce("Creating project dir with symlinks")
     if not os.path.isdir(project_dir):
         mkdir(project_dir)
-        project_fastqs_dir = os.path.join(project_dir,"fastqs")
+    project_fastqs_dir = os.path.join(project_dir,"fastqs")
+    if not os.path.isdir(project_fastqs_dir):
         mkdir(project_fastqs_dir)
-        for fq in fastqs:
-            print "%s -> %s" % (fq,mapping[fq])
+    for fq in fastqs:
+        print "%s -> %s" % (fq,mapping[fq])
+        target = os.path.join(project_fastqs_dir,mapping[fq])
+        if not os.path.exists(target):
             mklink(os.path.join(fastqs_dir,fq),
                    os.path.join(project_fastqs_dir,mapping[fq]),
                    relative=True)
