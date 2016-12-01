@@ -223,6 +223,16 @@ if __name__ == "__main__":
                                                 read_number)
         last_sample_name = sample_name
 
+    # Write file mapping original fastq names to new ones
+    announce("Writing details of filename mapping")
+    mapping_file = os.path.join(project_dir,
+                                os.path.basename(project_dir)+".mapping")
+    print "Mapping file: %s" % mapping_file
+    with open(mapping_file,'w') as fp:
+        fp.write("#Original name\tNew name\n")
+        for fq in fastqs:
+            fp.write("%s\t%s\n" % (fq,mapping[fq]))
+
     # Create symlinks with new names
     announce("Creating project dir with symlinks")
     if not os.path.isdir(project_dir):
