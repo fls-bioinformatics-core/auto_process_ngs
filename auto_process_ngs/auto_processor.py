@@ -871,16 +871,39 @@ class AutoProcess:
                              force=True)
         # Link to or copy fastqs
         unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
-        clone_unaligned_dir = os.path.join(clone_dir,
-                                           os.path.basename(self.params.unaligned_dir))
-        if not copy_fastqs:
-            # Link to unaligned dir
-            print "Symlinking %s" % clone_unaligned_dir
-            os.symlink(unaligned_dir,clone_unaligned_dir)
+        if os.path.isdir(unaligned_dir):
+            clone_unaligned_dir = os.path.join(clone_dir,
+                                               os.path.basename(
+                                                   self.params.unaligned_dir))
+            if not copy_fastqs:
+                # Link to unaligned dir
+                print "Symlinking %s" % clone_unaligned_dir
+                os.symlink(unaligned_dir,clone_unaligned_dir)
+            else:
+                # Copy unaligned dir
+                print "Copying %s" % clone_unaligned_dir
+                shutil.copytree(unaligned_dir,clone_unaligned_dir)
         else:
-            # Copy unaligned dir
-            print "Copying %s" % clone_unaligned_dir
-            shutil.copytree(unaligned_dir,clone_unaligned_dir)
+            print "No 'unaligned' dir found"
+        # Duplicate project directories
+        projects = self.get_analysis_projects()
+        if projects:
+            print "Duplicating project directories:"
+            for project in self.get_analysis_projects():
+                print "-- %s" % project.name
+                fastqs = project.fastqs
+                new_project = utils.AnalysisProject(
+                    project.name,
+                    os.path.join(clone_dir,project.name),
+                    user=project.info.user,
+                    PI=project.info.PI,
+                    library_type=project.info.library_type,
+                    organism=project.info.organism,
+                    run=project.info.run,
+                    comments=project.info.comments,
+                    platform=project.info.platform)
+                new_project.create_directory(fastqs=fastqs,
+                                             link_to_fastqs=(not copy_fastqs))
         # Copy additional files, if found
         for f in (self.params.sample_sheet,
                   self.params.stats_file,
