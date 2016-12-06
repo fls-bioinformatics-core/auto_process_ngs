@@ -2257,8 +2257,10 @@ class AutoProcess:
                                             name="rsync.archive_fastqs")
             # Exclude fastqs from main rsync
             excludes.append('--exclude=fastqs')
+            wait_for = [rsync_fastqs_job.job_name]
         else:
             rsync_fastqs_job = None
+            wait_for = None
         # Main rsync command
         rsync = applications.general.rsync(self.analysis_dir,archive_dir,
                                            prune_empty_dirs=True,
@@ -2266,7 +2268,8 @@ class AutoProcess:
                                            chmod=chmod,
                                            extra_options=excludes)
         print "Running %s" % rsync
-        rsync_job = sched.submit(rsync,name="rsync.archive")
+        rsync_job = sched.submit(rsync,name="rsync.archive",
+                                 wait_for=wait_for)
         # Wait for scheduler to complete
         sched.wait()
         sched.stop()
