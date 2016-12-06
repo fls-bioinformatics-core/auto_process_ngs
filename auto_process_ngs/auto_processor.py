@@ -302,7 +302,7 @@ class AutoProcess:
         if self.readme_file is None:
             logging.error("No README file to edit")
             return
-        utils.edit_file(sample_sheet_file)
+        utils.edit_file(self.readme_file)
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
