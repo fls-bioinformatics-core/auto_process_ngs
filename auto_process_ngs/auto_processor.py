@@ -1850,49 +1850,83 @@ class AutoProcess:
                 if dirn == primary_unaligned_dir:
                     print "* %s (primary dir)" % dirn
                     primary_illumina_data = illumina_data
+                elif dirn.endswith(".bak") or dirn.startswith("save."):
+                    print "Ignoring %s" % dirn
                 else:
                     print "* %s" % dirn
                     unaligned_dirs[dirn] = illumina_data
-            except Exception, ex:
+            except Exception as ex:
                 logging.debug("Rejecting %s: %s" % (dirn,ex))
         # Check primary unaligned dir
         if primary_illumina_data is None:
-            raise Exception, "Primary dir '%s' doesn't exist, or doesn't contain data?" % \
-                primary_unaligned_dir
+            raise Exception("Primary dir '%s' doesn't exist, or doesn't "
+                            "contain data?" % primary_unaligned_dir)
         # Is there anything to do?
         if not unaligned_dirs:
             print "No extra bcl2fastq output directories found, nothing to do"
             return
-        # Make a directory to move replaced data to
+        # Do sanity checks before proceeding
+        print "Checking primary data directory"
+        fmt = primary_illumina_data.format
+        no_lane_splitting = (len(primary_illumina_data.lanes) == 1) \
+                            and (primary_illumina_data.lanes[0] is None)
+        print "* Format: %s" % fmt
+        print "* no-lane-splitting: %s" % ('yes' if no_lane_splitting
+                                           else 'no')
+        consistent_data = True
+        for unaligned_dir in unaligned_dirs:
+            illumina_data = unaligned_dirs[unaligned_dir]
+            fmt0 = illumina_data.format
+            no_lane_splitting0 = (len(illumina_data.lanes) == 1) \
+                                 and (primary_illumina_data.lanes[0] is None)
+            if (fmt0 != fmt) or (no_lane_splitting0 != no_lane_splitting):
+                print "!!! %s: inconsistent format to primary data dir !!!" \
+                    % unaligned_dir
+                consistent_data = False
+        if not consistent_data:
+            raise Exception("Data directories not consistent with primary "
+                            "dir '%s'" % primary_unaligned_dir)
+        # Make a backup copy of the primary data directory
         if not dry_run:
-            unaligned_backup = self.add_directory("save.%s" % 
-                                                  os.path.basename(primary_unaligned_dir))
+            unaligned_backup = os.path.join(self.analysis_dir,
+                                            "save.%s" %
+                                            os.path.basename(
+                                                primary_unaligned_dir))
+            print "Making backup copy of %s" % primary_unaligned_dir
+            shutil.copytree(os.path.join(self.analysis_dir,
+                                         primary_unaligned_dir),
+                            unaligned_backup)
         # Examine each additional directory and move data as required
         for unaligned_dir in unaligned_dirs:
-            # Deal with projects
-            print "Importing projects from %s:" % unaligned_dir
+            # Import data
+            print "Importing data from %s:" % unaligned_dir
             illumina_data = unaligned_dirs[unaligned_dir]
+            # Deal with projects
             for project in illumina_data.projects:
                 try:
-                    primary_project = primary_illumina_data.get_project(project.name)
-                    print "- '%s' will be replaced by version from %s" % (project.name,
-                                                                          unaligned_dir)
+                    # See if corresponding project also exists in
+                    # target directory
+                    primary_project = primary_illumina_data.get_project(
+                        project.name)
+                    print "- '%s' will be replaced by version from %s" % \
+                        (project.name,unaligned_dir)
                     if not dry_run:
-                        backup_dirn = os.path.join(unaligned_backup,
-                                                   "save.%s" % os.path.basename(project.dirn))
-                        print "- moving %s to %s" % (primary_project.dirn,
-                                                     backup_dirn)
-                        shutil.move(primary_project.dirn,backup_dirn)
+                        print "- removing %s" % primary_project.dirn
+                        shutil.rmtree(primary_project.dirn)
                 except IlluminaData.IlluminaDataError:
+                    # Corresponding project not found in target dir
                     print "- '%s' will be imported from %s"  % (project.name,
                                                                 unaligned_dir)
                 if not dry_run:
-                    print "- moving %s to %s" % (project.dirn,
-                                                 primary_unaligned_dir)
-                    shutil.move(project.dirn,primary_unaligned_dir)
+                    print "- copying %s to %s" % (project.dirn,
+                                                  primary_unaligned_dir)
+                    shutil.copytree(project.dirn,
+                                    primary_unaligned_dir)
             # Deal with undetermined indices
             if illumina_data.undetermined is not None:
-                print "Importing undetermined indices data from %s:" % unaligned_dir
+                print "Importing undetermined indices data from %s:" \
+                    % unaligned_dir
+                if not no_lane_splitting:
                 for lane in illumina_data.undetermined.samples:
                     primary_lane = None
                     for lane0 in primary_illumina_data.undetermined.samples:
