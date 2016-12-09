@@ -79,6 +79,7 @@ class MockAnalysisDir(MockIlluminaData):
                  unaligned_dir='bcl2fastq',
                  fmt='bcl2fastq2',
                  paired_end=True,
+                 lanes=None,
                  no_lane_splitting=False,
                  no_undetermined=False,
                  top_dir=None,
@@ -104,7 +105,7 @@ class MockAnalysisDir(MockIlluminaData):
                                   top_dir=top_dir)
         # Add undetermined
         if not no_undetermined:
-            self.add_undetermined()
+            self.add_undetermined(lanes=lanes)
 
     def create(self):
         """
@@ -270,16 +271,17 @@ class MockAnalysisDirFactory(object):
         """
         Basic analysis dir from bcl2fastq v2
         """
+        if no_lane_splitting:
+            lanes = []
+        else:
+            lanes = [1,2,3,4]
         mad = MockAnalysisDir(run_name,platform,
                               unaligned_dir='bcl2fastq',
                               fmt='bcl2fastq2',
                               paired_end=paired_end,
                               no_lane_splitting=no_lane_splitting,
+                              lanes=lanes,
                               top_dir=top_dir)
-        if no_lane_splitting:
-            lanes = []
-        else:
-            lanes = [1,2,3,4]
         mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
         mad.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=lanes)
@@ -294,12 +296,13 @@ class MockAnalysisDirFactory(object):
         """
         Basic analysis dir from CASAVA/bcl2fastq v1.8
         """
+        lanes = [1,2,3,4]
         mad = MockAnalysisDir(run_name,platform,
                               unaligned_dir='bcl2fastq',
                               fmt='casava',
                               paired_end=paired_end,
+                              lanes=lanes,
                               top_dir=top_dir)
-        lanes = [1,2,3,4]
         mad.add_fastq_batch('AB','AB1','AB1_GCCAAT',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_AGTCAA',lanes=lanes)
         mad.add_fastq_batch('CDE','CDE3','CDE3_GCCAAT',lanes=lanes)
