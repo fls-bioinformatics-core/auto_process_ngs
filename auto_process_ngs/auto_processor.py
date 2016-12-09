@@ -1886,6 +1886,11 @@ class AutoProcess:
         if not consistent_data:
             raise Exception("Data directories not consistent with primary "
                             "dir '%s'" % primary_unaligned_dir)
+        # FIXME work-in-progress for handling undetermined reads if
+        # fastqs produced using --no-lane-splitting
+        if not dry_run:
+            raise NotImplementedError("Can't handle undetermined fastqs "
+                                      "for --no-lane-splitting yet")
         # Make a backup copy of the primary data directory
         if not dry_run:
             unaligned_backup = os.path.join(self.analysis_dir,
@@ -1921,38 +1926,68 @@ class AutoProcess:
                     print "- copying %s to %s" % (project.dirn,
                                                   primary_unaligned_dir)
                     shutil.copytree(project.dirn,
-                                    primary_unaligned_dir)
+                                    os.path.join(primary_unaligned_dir,
+                                                 project.name))
             # Deal with undetermined indices
             if illumina_data.undetermined is not None:
                 print "Importing undetermined indices data from %s:" \
                     % unaligned_dir
-                for lane in illumina_data.undetermined.samples:
-                    primary_lane = None
-                    for lane0 in primary_illumina_data.undetermined.samples:
-                        if lane.name == lane0.name:
-                            primary_lane = lane0
-                            break
-                    # Finished looking for existing data
-                    if primary_lane is not None:
-                        print "- '%s' will be replaced by version from %s" % (lane.name,
-                                                                              unaligned_dir)
-                        if not dry_run:
-                                backup_dirn = os.path.join(
-                                    unaligned_backup,
-                                    "save.%s" % os.path.basename(
-                                        primary_illumina_data.undetermined.dirn))
-                                print "- moving %s to %s" % (primary_lane.dirn,
-                                                             backup_dirn)
-                                shutil.move(primary_lane.dirn,backup_dirn)
-                    else:
-                        print "- '%s' will be imported from %s"  % (lane.name,
-                                                                    unaligned_dir)
-                    if not dry_run:
-                        print "- moving %s to %s" % \
-                            (lane.dirn,primary_illumina_data.undetermined.dirn)
-                        shutil.move(lane.dirn,primary_illumina_data.undetermined.dirn)
+                if no_lane_splitting:
+                    # No lane info: should merge undetermined fastqs
+                    logging.warning("Not implemented for --no-lane-splitting")
+                else:
+                    # Loop over undetermined samples (i.e. lanes) and
+                    # replace undetermined fastqs where necessary
+                    for undetermined_sample in illumina_data.undetermined.samples:
+                        primary_undetermined = None
+                        for undet in primary_illumina_data.undetermined.samples:
+                            if undetermined_sample.name == undet.name:
+                                primary_undetermined = undet
+                                break
+                        # Finished looking for existing data
+                        if primary_undetermined is not None:
+                            print "- '%s' will be replaced by version from %s" % \
+                                (undetermined_sample.name,unaligned_dir)
+                            # Remove original fastqs
+                            for fq in primary_undetermined.fastq:
+                                fastq = os.path.join(primary_undetermined.dirn,fq)
+                                print "- Removing %s" % fastq
+                                if not dry_run:
+                                    os.remove(fastq)
+                        else:
+                            print "- '%s' will be imported from %s" % \
+                                (undetermined_sample.name,unaligned_dir)
+                        # Create the target 'undetermined' dir if it doesn't
+                        # exist
+                        if undetermined_sample.dirn == illumina_data.unaligned_dir:
+                            target_dir = primary_illumina_data.undetermined.dirn
+                        else:
+                            target_dir = os.path.join(
+                                primary_illumina_data.undetermined.dirn,
+                                os.path.basename(undetermined_sample.dirn))
+                        if not os.path.exists(target_dir):
+                            print "- Dir %s will be created" % target_dir
+                            if not dry_run:
+                                bcf_utils.mkdir(target_dir)
+                        # Copy the fastqs
+                        for fq in undetermined_sample.fastq:
+                            fastq = os.path.join(undetermined_sample.dirn,fq)
+                            print "- copying %s to %s" % \
+                                (undetermined_sample.dirn,target_dir)
+                            if not dry_run:
+                                shutil.copy(fastq,target_dir)
             else:
                 print "No undetermined indices found"
+            # Rename the imported unaligned dir
+            unaligned_backup =  os.path.join(self.analysis_dir,
+                                             "save.%s" % unaligned_dir)
+            print "- renaming %s to %s" % (os.path.join(self.analysis_dir,
+                                                        unaligned_dir),
+                                           unaligned_backup)
+            if not dry_run:
+                shutil.move(os.path.join(self.analysis_dir,unaligned_dir),
+                            unaligned_backup)
+        # Stop here in dry run mode
         if dry_run:
             return
         # Reset the bcl2fastq dir
