@@ -1926,7 +1926,6 @@ class AutoProcess:
             if illumina_data.undetermined is not None:
                 print "Importing undetermined indices data from %s:" \
                     % unaligned_dir
-                if not no_lane_splitting:
                 for lane in illumina_data.undetermined.samples:
                     primary_lane = None
                     for lane0 in primary_illumina_data.undetermined.samples:
