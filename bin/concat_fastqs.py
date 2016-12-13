@@ -13,6 +13,7 @@ Concatenate a list of fastq files.
 import optparse
 import os
 import sys
+import logging
 from bcftbx.utils import concatenate_fastq_files
 import auto_process_ngs
 
@@ -42,9 +43,8 @@ if __name__ == "__main__":
             sys.exit(1)
     # Run the concatenation
     try:
-        concatenate_fastqs(fastq_out,fastqs,
-                           verbose=opts.verbose)
+        concatenate_fastq_files(fastq_out,fastqs,
+                                verbose=opts.verbose)
     except Exception as ex:
         logging.critical("Failed with exception: %s" % ex)
         sys.exit(1)
-
