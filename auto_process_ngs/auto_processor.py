@@ -1825,20 +1825,35 @@ class AutoProcess:
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             self.params.sample_sheet)
 
-    def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=True):
-        # Combine multiple output directories from bcl2fastq into
-        # a single directory
-        # It is intended to combine the output from multiple runs
-        # of bcl2fastq into a single 'unaligned'-equivalent directory
-        # It operates in an automatic mode and should detect
-        # additional 'unaligned' dirs on its own.
-        # 
-        # primary_unaligned_dir: the 'unaligned' dir that data from
-        #                        from all others will be put into
-        # dry_run: if True then just report operations
-        #
+    def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
+                         dry_run=False):
+        """
+        Combine multiple 'unaligned' output directories into one
+
+        This method combines the output from multiple runs of
+        CASAVA/bcl2fastq into a single 'unaligned'-equivalent
+        directory.
+
+        Currently it operates in an automatic mode and should
+        detect additional 'unaligned' dirs on its own.
+
+        Arguments:
+          primary_unaligned_dir (str): the 'unaligned' dir that
+            data from from all others will be put into (relative
+            path), unless overridden by 'output_dir' argument
+          output_dir (str): optional, new 'unaligned' dir that
+            will be created to hold merged data (relative path,
+            defaults to 'primary_unaligned_dir')
+          dry_run (boolean): if True then just report operations
+            that would have been performed.
+
+        """
         if primary_unaligned_dir is None:
             raise Exception,"Primary unaligned dir not defined"
+        # Output directory
+        if output_dir is None:
+            output_dir = primary_unaligned_dir
+        print "Fastqs will be merged into '%s'" % output_dir
         # Collect unaligned dirs
         print "Collecting bcl2fastq directories"
         primary_illumina_data = None
@@ -1850,83 +1865,222 @@ class AutoProcess:
                 if dirn == primary_unaligned_dir:
                     print "* %s (primary dir)" % dirn
                     primary_illumina_data = illumina_data
+                elif dirn.endswith(".bak") or dirn.startswith("save."):
+                    print "Ignoring %s" % dirn
                 else:
                     print "* %s" % dirn
                     unaligned_dirs[dirn] = illumina_data
-            except Exception, ex:
+            except Exception as ex:
                 logging.debug("Rejecting %s: %s" % (dirn,ex))
         # Check primary unaligned dir
         if primary_illumina_data is None:
-            raise Exception, "Primary dir '%s' doesn't exist, or doesn't contain data?" % \
-                primary_unaligned_dir
+            raise Exception("Primary dir '%s' doesn't exist, or doesn't "
+                            "contain data?" % primary_unaligned_dir)
         # Is there anything to do?
         if not unaligned_dirs:
             print "No extra bcl2fastq output directories found, nothing to do"
             return
-        # Make a directory to move replaced data to
-        if not dry_run:
-            unaligned_backup = self.add_directory("save.%s" % 
-                                                  os.path.basename(primary_unaligned_dir))
-        # Examine each additional directory and move data as required
+        # Top-level for undetermined reads
+        if primary_illumina_data.undetermined.dirn != \
+           primary_illumina_data.unaligned_dir:
+            undetermined_dir = os.path.basename(
+                primary_illumina_data.undetermined.dirn)
+        else:
+            undetermined_dir = None
+        # Do sanity checks before proceeding
+        print "Checking primary data directory"
+        fmt = primary_illumina_data.format
+        paired_end = primary_illumina_data.paired_end
+        no_lane_splitting = (len(primary_illumina_data.lanes) == 1) \
+                            and (primary_illumina_data.lanes[0] is None)
+        print "* Format: %s" % fmt
+        print "* no-lane-splitting: %s" % ('yes' if no_lane_splitting
+                                           else 'no')
+        print "* paired-end: %s" % ('yes' if paired_end else 'no')
+        print "* undetermined dir: %s" % undetermined_dir
+        consistent_data = True
         for unaligned_dir in unaligned_dirs:
-            # Deal with projects
-            print "Importing projects from %s:" % unaligned_dir
+            illumina_data = unaligned_dirs[unaligned_dir]
+            fmt0 = illumina_data.format
+            no_lane_splitting0 = (len(illumina_data.lanes) == 1) \
+                                 and (primary_illumina_data.lanes[0] is None)
+            if (fmt0 != fmt) or (no_lane_splitting0 != no_lane_splitting):
+                print "!!! %s: inconsistent format to primary data dir !!!" \
+                    % unaligned_dir
+                consistent_data = False
+        if not consistent_data:
+            raise Exception("Data directories not consistent with primary "
+                            "dir '%s'" % primary_unaligned_dir)
+        # Collect the projects from the extra directories
+        projects = []
+        undetermined = []
+        for unaligned_dir in unaligned_dirs:
+            print "Examining projects in %s:" % unaligned_dir
             illumina_data = unaligned_dirs[unaligned_dir]
             for project in illumina_data.projects:
-                try:
-                    primary_project = primary_illumina_data.get_project(project.name)
-                    print "- '%s' will be replaced by version from %s" % (project.name,
-                                                                          unaligned_dir)
-                    if not dry_run:
-                        backup_dirn = os.path.join(unaligned_backup,
-                                                   "save.%s" % os.path.basename(project.dirn))
-                        print "- moving %s to %s" % (primary_project.dirn,
-                                                     backup_dirn)
-                        shutil.move(primary_project.dirn,backup_dirn)
-                except IlluminaData.IlluminaDataError:
-                    print "- '%s' will be imported from %s"  % (project.name,
-                                                                unaligned_dir)
-                if not dry_run:
-                    print "- moving %s to %s" % (project.dirn,
-                                                 primary_unaligned_dir)
-                    shutil.move(project.dirn,primary_unaligned_dir)
-            # Deal with undetermined indices
-            if illumina_data.undetermined is not None:
-                print "Importing undetermined indices data from %s:" % unaligned_dir
-                for lane in illumina_data.undetermined.samples:
-                    primary_lane = None
-                    for lane0 in primary_illumina_data.undetermined.samples:
-                        if lane.name == lane0.name:
-                            primary_lane = lane0
-                            break
-                    # Finished looking for existing data
-                    if primary_lane is not None:
-                        print "- '%s' will be replaced by version from %s" % (lane.name,
-                                                                              unaligned_dir)
-                        if not dry_run:
-                                backup_dirn = os.path.join(
-                                    unaligned_backup,
-                                    "save.%s" % os.path.basename(
-                                        primary_illumina_data.undetermined.dirn))
-                                print "- moving %s to %s" % (primary_lane.dirn,
-                                                             backup_dirn)
-                                shutil.move(primary_lane.dirn,backup_dirn)
-                    else:
-                        print "- '%s' will be imported from %s"  % (lane.name,
-                                                                    unaligned_dir)
-                    if not dry_run:
-                        print "- moving %s to %s" % \
-                            (lane.dirn,primary_illumina_data.undetermined.dirn)
-                        shutil.move(lane.dirn,primary_illumina_data.undetermined.dirn)
+                if not filter(lambda p: p.name == project.name,
+                              projects):
+                    print "- %s: will be merged in" % project.name
+                    projects.append(project)
+                else:
+                    logging.error("collision: %s already exists" %
+                                  project.name)
+                    return
+            # Deal with undetermined reads
+            print "Examining undetermined samples:"
+            if no_lane_splitting:
+                # No lane info: should merge undetermined fastqs
+                for sample in illumina_data.undetermined.samples:
+                    print "- %s: reads will be concatenated" % sample.name
+                    undetermined.append(sample)
             else:
-                print "No undetermined indices found"
-        if dry_run:
-            return
+                for sample in illumina_data.undetermined.samples:
+                    if not filter(lambda s: s.name == sample.name,
+                                  undetermined):
+                        print "- %s: will be merged in" % sample.name
+                        undetermined.append(sample)
+                    else:
+                        logging.error("collision: %s already exists" %
+                                      sample.name)
+                        return
+        # Collect any remaining projects from the primary
+        # unaligned directory
+        print "Examining projects in primary dir %s:" \
+            % primary_unaligned_dir
+        for project in primary_illumina_data.projects:
+            if not filter(lambda p: p.name == project.name,
+                          projects):
+                print "- %s: will be merged in" % project.name
+                projects.append(project)
+            else:
+                print "- %s: already exists, will be discarded" \
+                    % project.name
+        # Sort out the undetermined reads
+        print "Examining undetermined samples:"
+        if no_lane_splitting:
+            # No lane info: should merge undetermined fastqs
+            for sample in primary_illumina_data.undetermined.samples:
+                print "- %s: reads will be concatenated" % sample.name
+                undetermined.insert(0,sample)
+        else:
+            for sample in primary_illumina_data.undetermined.samples:
+                if not filter(lambda s: s.name == sample.name,
+                              undetermined):
+                    print "- %s: will be merged in" % sample.name
+                    undetermined.insert(0,sample)
+                else:
+                    print "- %s: already exists, will be discarded" \
+                        % sample.name
+        # Make a new directory for the merging
+        merge_dir = os.path.join(self.analysis_dir,
+                                 output_dir + ".new")
+        if undetermined_dir is not None:
+            merge_undetermined_dir = os.path.join(merge_dir,
+                                                  undetermined_dir)
+        else:
+             merge_undetermined_dir = os.path.join(merge_dir)
+        if not dry_run:
+            print "Making temporary merge directory %s" % merge_dir
+            bcf_utils.mkdir(merge_dir)
+        # Copy the projects
+        print "Importing projects:"
+        for project in projects:
+            print "- %s" % project.name
+            project_dir = os.path.join(merge_dir,
+                                       os.path.basename(project.dirn))
+            if not dry_run:
+                shutil.copytree(project.dirn,project_dir)
+        # Handle the undetermined reads
+        print "Dealing with undetermined reads:"
+        if no_lane_splitting:
+            # No lane info: merge undetermined fastqs
+            if not dry_run:
+                self.set_log_dir(self.get_log_subdir('merge_fastq_dirs'))
+                runner = self.settings.general.default_runner
+                runner.set_log_dir(self.log_dir)
+                sched = simple_scheduler.SimpleScheduler(runner=runner)
+                sched.start()
+                jobs = []
+            for read in (1,2):
+                if read == 2 and not paired_end:
+                    break
+                cmd = applications.Command('concat_fastqs.py')
+                for sample in undetermined:
+                    fastqs = sample.fastq_subset(read_number=read,
+                                                 full_path=True)
+                    cmd.add_args(*fastqs)
+                cmd.add_args(os.path.join(
+                    merge_undetermined_dir,
+                    "Undetermined_S0_R%s_001.fastq.gz" % read))
+                print "- Running %s" % cmd
+                if not dry_run:
+                    job = sched.submit(cmd,
+                                       name="merge_undetermined.R%s" % read,
+                                       wd=merge_dir)
+                    print "Job: %s" % job
+                    jobs.append(job)
+            if not dry_run:
+                # Wait for scheduler jobs to complete
+                sched.wait()
+                sched.stop()
+                # Check job exit status
+                if filter(lambda j: j.exit_status != 0,jobs):
+                    logging.critical("One or more jobs failed (non-zero "
+                                     "exit status)")
+                    return
+        else:
+            for sample in undetermined:
+                print "- %s" % sample.name
+                if fmt == "bcl2fastq2":
+                    # Need to copy fastqs directly
+                    sample_dir = merge_undetermined_dir
+                    if not dry_run:
+                        for fq in sample.fastq:
+                            src_fq = os.path.join(sample.dirn,fq)
+                            dst_fq = os.path.join(sample_dir,fq)
+                            shutil.copyfile(src_fq,dst_fq)
+                else:
+                    # Just copy directory tree wholesale
+                    sample_dir = os.path.join(merge_undetermined_dir,
+                                              os.path.basename(sample.dirn))
+                    if not dry_run:
+                        shutil.copytree(sample.dirn,sample_dir)
+        # Make expected subdirs for bcl2fastq2
+        if not dry_run and fmt == "bcl2fastq2":
+            for dirn in ('Reports','Stats'):
+                bcf_utils.mkdir(os.path.join(merge_dir,dirn))
+        # Move all the 'old' directories out of the way
+        all_unaligned = [u for u in unaligned_dirs]
+        all_unaligned.append(primary_unaligned_dir)
+        for unaligned_dir in all_unaligned:
+            unaligned_backup = os.path.join(self.analysis_dir,
+                                            "save.%s" %
+                                            unaligned_dir)
+            print "Moving %s to %s" % (unaligned_dir,
+                                       unaligned_backup)
+            if not dry_run:
+                shutil.move(os.path.join(self.analysis_dir,unaligned_dir),
+                            unaligned_backup)
+        # Rename the merged directory
+        print "Renaming %s to %s" % (merge_dir,output_dir)
+        if not dry_run:
+            shutil.move(merge_dir,
+                        os.path.join(self.analysis_dir,output_dir))
         # Reset the bcl2fastq dir
-        self.params['unaligned_dir'] = primary_unaligned_dir
-        # Make a 'projects.merged.info' metadata file
-        merged_project_metadata_file='projects.merged.info'
-        self.make_project_metadata_file(merged_project_metadata_file)
+        if not dry_run:
+            self.params['unaligned_dir'] = output_dir
+        # Make a new 'projects.info' metadata file
+        project_metadata_file = os.path.join(self.analysis_dir,
+                                             'projects.info')
+        if os.path.exists(project_metadata_file):
+            print "Moving existing projects.info file out of the way"
+            if not dry_run:
+                os.rename(project_metadata_file,
+                          os.path.join(self.analysis_dir,
+                                       'save.projects.info'))
+        print "Creating new projects.info file"
+        if not dry_run:
+            self.make_project_metadata_file()
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False,
                             short_fastq_names=False,

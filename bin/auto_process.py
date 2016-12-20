@@ -593,6 +593,10 @@ def add_merge_fastq_dirs_command(cmdparser):
                  help="merge fastqs from additional bcl-to-fastq directories into "
                  "UNALIGNED_DIR. Original data will be moved out of the way first. "
                  "Defaults to 'bcl2fastq'.")
+    p.add_option('--output-dir',action='store',
+                 dest='output_dir',default=None,
+                 help="merge fastqs into OUTPUT_DIR (relative to ANALYSIS_DIR). "
+                 "Defaults to PRIMARY_OUTPUT_DIR.")
     add_dry_run_option(p)
     add_debug_option(p)
 
@@ -796,6 +800,7 @@ if __name__ == "__main__":
                           create_empty_fastqs=options.create_empty_fastqs)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
+                               output_dir=options.output_dir,
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
             d.set_log_dir(d.get_log_subdir(cmd))
