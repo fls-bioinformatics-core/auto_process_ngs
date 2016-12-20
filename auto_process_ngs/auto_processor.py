@@ -1953,13 +1953,13 @@ class AutoProcess:
             # No lane info: should merge undetermined fastqs
             for sample in primary_illumina_data.undetermined.samples:
                 print "- %s: reads will be concatenated" % sample.name
-                undetermined.append(sample)
+                undetermined.insert(0,sample)
         else:
             for sample in primary_illumina_data.undetermined.samples:
                 if not filter(lambda s: s.name == sample.name,
                               undetermined):
                     print "- %s: will be merged in" % sample.name
-                    undetermined.append(sample)
+                    undetermined.insert(0,sample)
                 else:
                     print "- %s: already exists, will be discarded" \
                         % sample.name

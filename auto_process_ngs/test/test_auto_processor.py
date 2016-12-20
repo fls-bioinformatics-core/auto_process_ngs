@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import os
+import gzip
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
@@ -95,6 +96,23 @@ class TestAutoProcessSetup(unittest.TestCase):
             '160621_M00879_0087_000000000-AGEW9'))
 
 
+fastq_reads_r1 = (
+    "@HISEQ:1:000000000-A2Y1L:1:1101:19264:2433 1:N:0:AGATCGC",
+    "AGATAGCCGA","+","?????BBB@B",
+    "@HISEQ:1:000000000-A2Y1L:1:1101:18667:2435 1:N:0:AGATCGC",
+    "ATATATTCAT","+","?????BBBDD",
+    "@HISEQ:1:000000000-A2Y1L:1:1101:17523:2436 1:N:0:AGATCGC",
+    "CATCACTACC","+","?<,<?BBBBB"
+)
+fastq_reads_r2 = (
+    "@HISEQ:1:000000000-A2Y1L:1:1101:19264:2433 2:N:0:AGATCGC",
+    "GCCGATATGC","+","??A??ABBDD",
+    "@HISEQ:1:000000000-A2Y1L:1:1101:18667:2435 2:N:0:AGATCGC",
+    "GATGACATCA","+","?????BBBDD",
+    "@HISEQ:1:000000000-A2Y1L:1:1101:17523:2436 2:N:0:AGATCGC",
+    "GAATATAGAA","+","??AAABBBDD"
+)
+
 class TestAutoProcessMergeFastqDirs(unittest.TestCase):
     """
     Tests for AutoProcess.merge_fastq_dirs
@@ -147,6 +165,16 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
         os.remove(os.path.join(m1,'projects.info'))
+        # Add content to the undetermined fastqs
+        for n,dirn in enumerate(('bcl2fastq.AB','bcl2fastq.CDE')):
+            undetermined_r1 = os.path.join(m1,dirn,'Undetermined_S0_R1_001.fastq.gz')
+            undetermined_r2 = os.path.join(m1,dirn,'Undetermined_S0_R2_001.fastq.gz')
+            with gzip.GzipFile(undetermined_r1,'wb') as fq:
+                for i in xrange(4):
+                    fq.write("%s\n" % fastq_reads_r1[n*4+i])
+            with gzip.GzipFile(undetermined_r2,'wb') as fq:
+                for i in xrange(4):
+                    fq.write("%s\n" % fastq_reads_r2[n*4+i])
         print m2
         return m1
 
@@ -256,6 +284,17 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
                   'Undetermined_S0_R1_001.fastq.gz',
                   'Undetermined_S0_R2_001.fastq.gz',):
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.AB',f))
+        # Check merge of undetermined fastqs
+        undetermined_r1 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read()
+        expected_r1 = '\n'.join(fastq_reads_r1[:8])+'\n'
+        self.assertEqual(undetermined_r1,expected_r1)
+        undetermined_r2 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read()
+        expected_r2 = '\n'.join(fastq_reads_r2[:8])+'\n'
+        self.assertEqual(undetermined_r2,expected_r2)
 
     def test_bcl2fastq2(self):
         """
