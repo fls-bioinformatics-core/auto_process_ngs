@@ -125,9 +125,12 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         # Move to working dir
         os.chdir(self.dirn)
         # Placeholders for test objects
-        self.analysis_dir = None
+        self.ap = None
 
     def tearDown(self):
+        # Delete autoprocessor object
+        if self.ap is not None:
+            del(self.ap)
         # Return to original dir
         os.chdir(self.pwd)
         # Remove the temporary test directory
@@ -164,7 +167,6 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         # Remove unwanted project dirs and files
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
-        os.remove(os.path.join(m1,'projects.info'))
         # Add content to the undetermined fastqs
         for n,dirn in enumerate(('bcl2fastq.AB','bcl2fastq.CDE')):
             undetermined_r1 = os.path.join(m1,dirn,'Undetermined_S0_R1_001.fastq.gz')
@@ -209,7 +211,6 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         # Remove unwanted project dirs and files
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
-        os.remove(os.path.join(m1,'projects.info'))
         print m2
         return m1
 
@@ -244,7 +245,6 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         # Remove unwanted project dirs and files
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
-        os.remove(os.path.join(m1,'projects.info'))
         print m2
         return m1
 
@@ -266,8 +266,8 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         """
         analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
         # Merge the unaligned dirs
-        ap = AutoProcess(analysis_dir)
-        ap.merge_fastq_dirs("bcl2fastq.AB")
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.AB")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.CDE'))
@@ -295,6 +295,15 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
             'rb').read()
         expected_r2 = '\n'.join(fastq_reads_r2[:8])+'\n'
         self.assertEqual(undetermined_r2,expected_r2)
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
 
     def test_bcl2fastq2(self):
         """
@@ -302,8 +311,8 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         """
         analysis_dir = self._setup_bcl2fastq2()
         # Merge the unaligned dirs
-        ap = AutoProcess(analysis_dir)
-        ap.merge_fastq_dirs("bcl2fastq.lanes1-2")
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
@@ -334,6 +343,15 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
                   'Undetermined_S0_L004_R1_001.fastq.gz',
                   'Undetermined_S0_L004_R2_001.fastq.gz'):
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.lanes1-2',f))
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
 
     def test_casava(self):
         """
@@ -341,8 +359,8 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         """
         analysis_dir = self._setup_casava()
         # Merge the unaligned dirs
-        ap = AutoProcess(analysis_dir)
-        ap.merge_fastq_dirs("bcl2fastq.lanes1-2")
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
@@ -373,6 +391,15 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
                   'Undetermined_indices/Sample_lane4/lane4_Undetermined_L004_R1_001.fastq.gz',
                   'Undetermined_indices/Sample_lane4/lane4_Undetermined_L004_R2_001.fastq.gz'):
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.lanes1-2',f))
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
     
 class TestAutoProcessImportProject(unittest.TestCase):
     """Tests for AutoProcess.import_project

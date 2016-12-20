@@ -108,15 +108,6 @@ dual indexes).
        auto_process.py params --set stats_file=statistics.info
        auto_process.py update_fastq_stats
 
-6. **Update projects.info file**
-
-   Once the merge has been performed there will be a new
-   ``projects.merged.info`` file. This should be used to overwrite
-   the ``projects.info`` file::
-
-       mv projects.merged.info projects.info
-       auto_process.py params --set project_metadata=projects.info
-
 The remaining processing should then be performed as normal.
 
 .. note::

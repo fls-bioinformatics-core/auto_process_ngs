@@ -2059,14 +2059,21 @@ class AutoProcess:
             shutil.move(merge_dir,
                         os.path.join(self.analysis_dir,
                                      primary_unaligned_dir))
-        # Stop here in dry run mode
-        if dry_run:
-            return
         # Reset the bcl2fastq dir
-        self.params['unaligned_dir'] = primary_unaligned_dir
-        # Make a 'projects.merged.info' metadata file
-        merged_project_metadata_file='projects.merged.info'
-        self.make_project_metadata_file(merged_project_metadata_file)
+        if not dry_run:
+            self.params['unaligned_dir'] = primary_unaligned_dir
+        # Make a new 'projects.info' metadata file
+        project_metadata_file = os.path.join(self.analysis_dir,
+                                             'projects.info')
+        if os.path.exists(project_metadata_file):
+            print "Moving existing projects.info file out of the way"
+            if not dry_run:
+                os.rename(project_metadata_file,
+                          os.path.join(self.analysis_dir,
+                                       'save.projects.info'))
+        print "Creating new projects.info file"
+        if not dry_run:
+            self.make_project_metadata_file()
 
     def setup_analysis_dirs(self,ignore_missing_metadata=False,
                             short_fastq_names=False,
