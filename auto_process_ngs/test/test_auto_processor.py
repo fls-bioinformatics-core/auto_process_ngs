@@ -264,6 +264,150 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         self.assertFalse(os.path.isfile(path),
                         "File '%s' shouldn't exist" % path)
 
+    def test_bcl2fastq2_no_lane_splitting_new_output_dir(self):
+        """
+        AutoProcess.merge_fastq_dirs: bcl2fastq v2 output with --no-lane-splitting, new output dir
+        """
+        analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.AB",output_dir="bcl2fastq")
+        # Check outputs
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.CDE'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.AB'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.CDE'))
+        for f in ('AB/AB1_S1_R1_001.fastq.gz',
+                  'AB/AB1_S1_R2_001.fastq.gz',
+                  'AB/AB2_S2_R1_001.fastq.gz',
+                  'AB/AB2_S2_R2_001.fastq.gz',
+                  'CDE/CDE3_S3_R1_001.fastq.gz',
+                  'CDE/CDE3_S3_R2_001.fastq.gz',
+                  'CDE/CDE4_S4_R1_001.fastq.gz',
+                  'CDE/CDE4_S4_R2_001.fastq.gz',
+                  'Undetermined_S0_R1_001.fastq.gz',
+                  'Undetermined_S0_R2_001.fastq.gz',):
+            self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq',f))
+        # Check merge of undetermined fastqs
+        undetermined_r1 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq','Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read()
+        expected_r1 = '\n'.join(fastq_reads_r1[:8])+'\n'
+        self.assertEqual(undetermined_r1,expected_r1)
+        undetermined_r2 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq','Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read()
+        expected_r2 = '\n'.join(fastq_reads_r2[:8])+'\n'
+        self.assertEqual(undetermined_r2,expected_r2)
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
+
+    def test_bcl2fastq2_new_output_dir(self):
+        """
+        AutoProcess.merge_fastq_dirs: bcl2fastq v2 output, new output dir
+        """
+        analysis_dir = self._setup_bcl2fastq2()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2",output_dir="bcl2fastq")
+        # Check outputs
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.lanes1-2'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.lanes3-4'))
+        for f in ('AB/AB1_S1_L001_R1_001.fastq.gz',
+                  'AB/AB1_S1_L001_R2_001.fastq.gz',
+                  'AB/AB2_S2_L001_R1_001.fastq.gz',
+                  'AB/AB2_S2_L001_R2_001.fastq.gz',
+                  'AB/AB1_S1_L002_R1_001.fastq.gz',
+                  'AB/AB1_S1_L002_R2_001.fastq.gz',
+                  'AB/AB2_S2_L002_R1_001.fastq.gz',
+                  'AB/AB2_S2_L002_R2_001.fastq.gz',
+                  'CDE/CDE3_S3_L003_R1_001.fastq.gz',
+                  'CDE/CDE3_S3_L003_R2_001.fastq.gz',
+                  'CDE/CDE4_S4_L003_R1_001.fastq.gz',
+                  'CDE/CDE4_S4_L003_R2_001.fastq.gz',
+                  'CDE/CDE3_S3_L004_R1_001.fastq.gz',
+                  'CDE/CDE3_S3_L004_R2_001.fastq.gz',
+                  'CDE/CDE4_S4_L004_R1_001.fastq.gz',
+                  'CDE/CDE4_S4_L004_R2_001.fastq.gz',
+                  'Undetermined_S0_L001_R1_001.fastq.gz',
+                  'Undetermined_S0_L001_R2_001.fastq.gz',
+                  'Undetermined_S0_L002_R1_001.fastq.gz',
+                  'Undetermined_S0_L002_R2_001.fastq.gz',
+                  'Undetermined_S0_L003_R1_001.fastq.gz',
+                  'Undetermined_S0_L003_R2_001.fastq.gz',
+                  'Undetermined_S0_L004_R1_001.fastq.gz',
+                  'Undetermined_S0_L004_R2_001.fastq.gz'):
+            self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq',f))
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
+
+    def test_casava_new_output_dir(self):
+        """
+        AutoProcess.merge_fastq_dirs: casava/bcl2fastq v1.8.* output, new output dir
+        """
+        analysis_dir = self._setup_casava()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2",output_dir="bcl2fastq")
+        # Check outputs
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.lanes1-2'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.lanes3-4'))
+        for f in ('Project_AB/Sample_AB1/AB1_GCCAAT_L001_R1_001.fastq.gz',
+                  'Project_AB/Sample_AB1/AB1_GCCAAT_L001_R2_001.fastq.gz',
+                  'Project_AB/Sample_AB2/AB2_AGTCAA_L001_R1_001.fastq.gz',
+                  'Project_AB/Sample_AB2/AB2_AGTCAA_L001_R2_001.fastq.gz',
+                  'Project_AB/Sample_AB1/AB1_GCCAAT_L002_R1_001.fastq.gz',
+                  'Project_AB/Sample_AB1/AB1_GCCAAT_L002_R2_001.fastq.gz',
+                  'Project_AB/Sample_AB2/AB2_AGTCAA_L002_R1_001.fastq.gz',
+                  'Project_AB/Sample_AB2/AB2_AGTCAA_L002_R2_001.fastq.gz',
+                  'Project_CDE/Sample_CDE3/CDE3_GCCAAT_L003_R1_001.fastq.gz',
+                  'Project_CDE/Sample_CDE3/CDE3_GCCAAT_L003_R2_001.fastq.gz',
+                  'Project_CDE/Sample_CDE4/CDE4_AGTCAA_L003_R1_001.fastq.gz',
+                  'Project_CDE/Sample_CDE4/CDE4_AGTCAA_L003_R2_001.fastq.gz',
+                  'Project_CDE/Sample_CDE3/CDE3_GCCAAT_L004_R1_001.fastq.gz',
+                  'Project_CDE/Sample_CDE3/CDE3_GCCAAT_L004_R2_001.fastq.gz',
+                  'Project_CDE/Sample_CDE4/CDE4_AGTCAA_L004_R1_001.fastq.gz',
+                  'Project_CDE/Sample_CDE4/CDE4_AGTCAA_L004_R2_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane1/lane1_Undetermined_L001_R1_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane1/lane1_Undetermined_L001_R2_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane2/lane2_Undetermined_L002_R1_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane2/lane2_Undetermined_L002_R2_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane3/lane3_Undetermined_L003_R1_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane3/lane3_Undetermined_L003_R2_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane4/lane4_Undetermined_L004_R1_001.fastq.gz',
+                  'Undetermined_indices/Sample_lane4/lane4_Undetermined_L004_R2_001.fastq.gz'):
+            self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq',f))
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
+
     def test_bcl2fastq2_no_lane_splitting(self):
         """
         AutoProcess.merge_fastq_dirs: bcl2fastq v2 output with --no-lane-splitting

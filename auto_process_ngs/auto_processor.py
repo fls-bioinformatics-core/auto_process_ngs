@@ -1825,7 +1825,8 @@ class AutoProcess:
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             self.params.sample_sheet)
 
-    def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=False):
+    def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
+                         dry_run=False):
         """
         Combine multiple 'unaligned' output directories into one
 
@@ -1839,13 +1840,20 @@ class AutoProcess:
         Arguments:
           primary_unaligned_dir (str): the 'unaligned' dir that
             data from from all others will be put into (relative
-            path)
+            path), unless overridden by 'output_dir' argument
+          output_dir (str): optional, new 'unaligned' dir that
+            will be created to hold merged data (relative path,
+            defaults to 'primary_unaligned_dir')
           dry_run (boolean): if True then just report operations
             that would have been performed.
 
         """
         if primary_unaligned_dir is None:
             raise Exception,"Primary unaligned dir not defined"
+        # Output directory
+        if output_dir is None:
+            output_dir = primary_unaligned_dir
+        print "Fastqs will be merged into '%s'" % output_dir
         # Collect unaligned dirs
         print "Collecting bcl2fastq directories"
         primary_illumina_data = None
@@ -1965,7 +1973,7 @@ class AutoProcess:
                         % sample.name
         # Make a new directory for the merging
         merge_dir = os.path.join(self.analysis_dir,
-                                 primary_unaligned_dir + ".new")
+                                 output_dir + ".new")
         if undetermined_dir is not None:
             merge_undetermined_dir = os.path.join(merge_dir,
                                                   undetermined_dir)
@@ -2054,14 +2062,13 @@ class AutoProcess:
                 shutil.move(os.path.join(self.analysis_dir,unaligned_dir),
                             unaligned_backup)
         # Rename the merged directory
-        print "Renaming %s to %s" % (merge_dir,primary_unaligned_dir)
+        print "Renaming %s to %s" % (merge_dir,output_dir)
         if not dry_run:
             shutil.move(merge_dir,
-                        os.path.join(self.analysis_dir,
-                                     primary_unaligned_dir))
+                        os.path.join(self.analysis_dir,output_dir))
         # Reset the bcl2fastq dir
         if not dry_run:
-            self.params['unaligned_dir'] = primary_unaligned_dir
+            self.params['unaligned_dir'] = output_dir
         # Make a new 'projects.info' metadata file
         project_metadata_file = os.path.join(self.analysis_dir,
                                              'projects.info')
