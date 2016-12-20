@@ -260,6 +260,10 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         self.assertTrue(os.path.isfile(path),
                         "Missing file '%s'" % path)
 
+    def _assert_file_doesnt_exist(self,path):
+        self.assertFalse(os.path.isfile(path),
+                        "File '%s' shouldn't exist" % path)
+
     def test_bcl2fastq2_no_lane_splitting(self):
         """
         AutoProcess.merge_fastq_dirs: bcl2fastq v2 output with --no-lane-splitting
@@ -400,7 +404,55 @@ AB	AB1,AB2	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
-    
+
+    def test_bcl2fastq2_no_lane_splitting_dry_run(self):
+        """
+        AutoProcess.merge_fastq_dirs: dry run on bcl2fastq v2 output with --no-lane-splitting
+        """
+        analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.AB",dry_run=True)
+        # Check outputs
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.CDE'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.AB'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.CDE'))
+        # Check projects.info files
+        self._assert_file_doesnt_exist(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+
+    def test_bcl2fastq2_dry_run(self):
+        """
+        AutoProcess.merge_fastq_dirs: dry run on bcl2fastq v2 output
+        """
+        analysis_dir = self._setup_bcl2fastq2()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2",dry_run=True)
+        # Check outputs
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes1-2'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes3-4'))
+        # Check projects.info files
+        self._assert_file_doesnt_exist(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+
+    def test_casava_dry_run(self):
+        """
+        AutoProcess.merge_fastq_dirs: dry run on casava/bcl2fastq v1.8.* output
+        """
+        analysis_dir = self._setup_casava()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir)
+        self.ap.merge_fastq_dirs("bcl2fastq.lanes1-2",dry_run=True)
+        # Check outputs
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes1-2'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes3-4'))
+
 class TestAutoProcessImportProject(unittest.TestCase):
     """Tests for AutoProcess.import_project
 
