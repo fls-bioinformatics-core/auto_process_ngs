@@ -1825,7 +1825,7 @@ class AutoProcess:
         return IlluminaData.verify_run_against_sample_sheet(illumina_data,
                                                             self.params.sample_sheet)
 
-    def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=True):
+    def merge_fastq_dirs(self,primary_unaligned_dir,dry_run=False):
         """
         Combine multiple 'unaligned' output directories into one
 
