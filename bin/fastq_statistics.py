@@ -16,12 +16,6 @@ Generate statistics for fastq files for an Illumina sequencing run.
 """
 
 #######################################################################
-# Module metadata
-#######################################################################
-
-__version__ = "0.1.0"
-
-#######################################################################
 # Import modules that this module depends on
 #######################################################################
 
@@ -43,6 +37,9 @@ import bcftbx.FASTQFile as FASTQFile
 import bcftbx.utils as bcf_utils
 import auto_process_ngs.stats as auto_process_stats
 from multiprocessing import Pool
+
+from auto_process_ngs import get_version
+__version__ = get_version()
 
 #######################################################################
 # Functions
