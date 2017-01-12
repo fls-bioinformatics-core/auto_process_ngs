@@ -24,7 +24,6 @@ import sys
 import optparse
 import logging
 import time
-import subprocess
 
 # Put .. onto Python search path for modules
 SHARE_DIR = os.path.abspath(
@@ -33,16 +32,15 @@ SHARE_DIR = os.path.abspath(
 sys.path.append(SHARE_DIR)
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
-import bcftbx.FASTQFile as FASTQFile 
 import bcftbx.utils as bcf_utils
-import auto_process_ngs.stats as auto_process_stats
 from multiprocessing import Pool
+from auto_process_ngs.stats import FastqReadCounter
 
 from auto_process_ngs import get_version
 __version__ = get_version()
 
 #######################################################################
-# Functions
+# Classes
 #######################################################################
 
 class FastqStats:
@@ -70,108 +68,6 @@ class FastqStats:
     @property
     def read_number(self):
         return IlluminaData.IlluminaFastq(self.name).read_number
-
-class FastqReadCounter:
-    """
-    Implements various methods for counting reads in FASTQ file
-
-    The methods are:
-
-    - simple: a wrapper for the FASTQFile.nreads() function
-    - fastqiterator: counts reads using FASTQFile.FastqIterator
-    - zcat_wc: runs 'zcat | wc -l' in the shell
-    - reads_per_lane: counts reads by lane using FastqIterator
-
-    """
-    @staticmethod
-    def simple(fastq=None,fp=None):
-        """
-        Return number of reads in a FASTQ file
-
-        Uses the FASTQFile.nreads function to do the counting.
-
-        Arguments:
-          fastq: fastq(.gz) file
-          fp: open file descriptor for fastq file
-
-        Returns:
-          Number of reads
-
-        """
-        return FASTQFile.nreads
-    @staticmethod
-    def fastqiterator(fastq=None,fp=None):
-        """
-        Return number of reads in a FASTQ file
-
-        Uses the FASTQFile.FastqIterator class to do the
-        counting.
-
-        Arguments:
-          fastq: fastq(.gz) file
-          fp: open file descriptor for fastq file
-
-        Returns:
-          Number of reads
-
-        """
-        nreads = 0
-        for r in FASTQFile.FastqIterator(fastq_file=fastq,fp=fp):
-            nreads += 1
-        return nreads
-    @staticmethod
-    def zcat_wc(fastq=None,fp=None):
-        """
-        Return number of reads in a FASTQ file
-
-        Uses a system call to run 'zcat FASTQ | wc -l' to do
-        the counting.
-
-        Note that this can only operate on fastq files (not
-        on streams provided via the 'fp' argument; this will
-        raise an exception).
-
-        Arguments:
-          fastq: fastq(.gz) file
-          fp: open file descriptor for fastq file
-
-        Returns:
-          Number of reads
-
-        """
-        if fastq is None:
-            raise Exception("zcat_wc: can only operate on a file")
-        output = subprocess.check_output(("zcat %s | wc -l" % fastq),
-                                         shell=True)
-        try:
-            return int(output)/4
-        except Exception,ex:
-            raise Exception("zcat_wc returned: %s" % output)
-    @staticmethod
-    def reads_per_lane(fastq=None,fp=None):
-        """
-        Return counts of reads in each lane of FASTQ file
-
-        Uses the FASTQFile.FastqIterator class to do the
-        counting, with counts split by lane.
-
-        Arguments:
-          fastq: fastq(.gz) file
-          fp: open file descriptor for fastq file
-
-        Returns:
-          Dictionary where keys are lane numbers (as integers)
-            and values are number of reads in that lane.
-
-        """
-        nreads = {}
-        for r in FASTQFile.FastqIterator(fastq_file=fastq,fp=fp):
-            lane = int(r.seqid.flowcell_lane)
-            try:
-                nreads[lane] += 1
-            except KeyError:
-                nreads[lane] = 1
-        return nreads
 
 #######################################################################
 # Functions
