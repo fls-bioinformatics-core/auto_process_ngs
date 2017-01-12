@@ -11,9 +11,11 @@ stats.py
 Classes and functions for collecting and reporting statistics for
 a run:
 
+- FastqStats: container for storing data about a FASTQ file
 - FastqReadCounter: implements various methods for counting reads
   in FASTQ files
-
+- collect_fastq_data: collect data from FASTQ file in a FastqStats
+  instance
 """
 
 #######################################################################
@@ -21,14 +23,60 @@ a run:
 #######################################################################
 
 import sys
+import os
+import time
 import subprocess
 import bcftbx.TabFile as tf
 import bcftbx.FASTQFile as FASTQFile
+import bcftbx.utils as bcf_utils
 from bcftbx.IlluminaData import IlluminaFastq
 
 #######################################################################
 # Classes
 #######################################################################
+
+class FastqStats:
+    """Container for storing data about a FASTQ file
+
+    This is a convenience wrapper for holding together data
+    for a FASTQ file (full path, associated project and sample
+    names, number of reads and filesize).
+    """
+    def __init__(self,fastq,project,sample):
+        """
+        Create a new FastqStats instance
+
+        Arguments:
+          fastq (str): full path to FASTQ file
+          project (str): project name associated
+            with FASTQ file
+          sample (str): sample name associated
+            with FASTQ file
+        """
+        self.fastq = fastq
+        self.project = project
+        self.sample = sample
+        self.nreads = None
+        self.fsize = None
+        self.reads_by_lane = {}
+    @property
+    def name(self):
+        """
+        FASTQ file name without leading directory
+        """
+        return os.path.basename(self.fastq)
+    @property
+    def lanes(self):
+        """
+        Lane numbers associated with the FASTQ file
+        """
+        return sorted(self.reads_by_lane.keys())
+    @property
+    def read_number(self):
+        """
+        Read number extracted from the FASTQ name
+        """
+        return IlluminaFastq(self.name).read_number
 
 class FastqReadCounter:
     """
@@ -138,6 +186,62 @@ class FastqReadCounter:
 #######################################################################
 # Functions
 #######################################################################
+
+def collect_fastq_data(fqstats):
+    """
+    Collect data from FASTQ file in a FastqStats instance
+
+    Given a FastqStats instance, collects and sets the
+    following properties derived from the corresponding
+    FASTQ file stored in that instance:
+
+    - nreads: total number of reads
+    - fsize: file size
+    - reads_by_lane: (R1 FASTQs only) dictionary
+      where keys are lane numbers and values are
+      read counts
+
+    Note that if the FASTQ file is an R2 file then the
+    reads per lane will not be set.
+
+    Arguments:
+      fqstats (FastqStats): FastqStats instance
+
+    Returns:
+      FastqStats: input FastqStats instance with the
+        appropriated properties updated.
+    """
+    fqs = fqstats
+    fastq = fqs.fastq
+    fastq_name = fqs.name
+    print "* %s: starting" % fastq_name
+    start_time = time.time()
+    sys.stdout.flush()
+    if fqs.read_number == 1:
+        # Do full processing for R1 fastqs
+        lane = IlluminaFastq(fastq_name).lane_number
+        if lane is not None:
+            # Lane number is in file name
+            fqs.reads_by_lane[lane] = \
+                FastqReadCounter.zcat_wc(fastq)
+        else:
+            # Need to get lane(s) from read headers
+            fqs.reads_by_lane = \
+                FastqReadCounter.reads_per_lane(fastq)
+        # Store total reads
+        fqs.nreads = sum([fqs.reads_by_lane[x]
+                          for x in fqs.lanes])
+    else:
+        # Only get total reads for R2 fastqs
+        fqs.nreads = FastqReadCounter.zcat_wc(fastq)
+    fqs.fsize = os.path.getsize(fastq)
+    print "- %s: finished" % fastq_name
+    end_time = time.time()
+    print "- %s: %d reads, %s" % (fastq_name,
+                                  fqs.nreads,
+                                  bcf_utils.format_file_size(fqs.fsize))
+    print "- %s: took %f.2s" % (fastq_name,(end_time-start_time))
+    return fqs
 
 def report_per_lane_stats(stats_file,out_file=None):
     """

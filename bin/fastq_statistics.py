@@ -23,7 +23,6 @@ import os
 import sys
 import optparse
 import logging
-import time
 
 # Put .. onto Python search path for modules
 SHARE_DIR = os.path.abspath(
@@ -34,40 +33,11 @@ import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
 from multiprocessing import Pool
-from auto_process_ngs.stats import FastqReadCounter
+from auto_process_ngs.stats import FastqStats
+from auto_process_ngs.stats import collect_fastq_data
 
 from auto_process_ngs import get_version
 __version__ = get_version()
-
-#######################################################################
-# Classes
-#######################################################################
-
-class FastqStats:
-    """Container for storing data for a Fastq file
-
-    This is a convenience wrapper for holding together data
-    for a fastq file (full path, associated project and sample
-    names, number of reads and filesize), for use with the
-    'get_stats_for_file' and 'map' functions.
-
-    """
-    def __init__(self,fastq,project,sample):
-        self.fastq = fastq
-        self.project = project
-        self.sample = sample
-        self.nreads = None
-        self.fsize = None
-        self.reads_by_lane = {}
-    @property
-    def name(self):
-        return os.path.basename(self.fastq)
-    @property
-    def lanes(self):
-        return sorted(self.reads_by_lane.keys())
-    @property
-    def read_number(self):
-        return IlluminaData.IlluminaFastq(self.name).read_number
 
 #######################################################################
 # Functions
@@ -100,84 +70,6 @@ def get_fastqs(illumina_data):
                                          lane.name))
     return fastqs
 
-def get_stats_for_file(fq,read_counter=FastqReadCounter.zcat_wc):
-    """Generate statistics for a single fastq file
-
-    Given a FastqStats object, set the 'nreads' property to
-    the number of reads and the 'fsize' property to the file
-    size for the corresponding fastq file.
-
-    Arguments:
-      fq: FastqStats object with 'fastq' property set to the
-        full path for a Fastq file
-      read_counter: optional, specify function to use for
-        counting reads in the fastq file
-
-    Returns:
-      Input FastqStats object with the 'nreads' and 'fsize'
-      properties set.
-
-    """
-    print "* %s: starting" % fq.name
-    start_time = time.time()
-    sys.stdout.flush()
-    fq.nreads = read_counter(fq.fastq)
-    fq.fsize = os.path.getsize(fq.fastq)
-    print "- %s: finished" % fq.name
-    end_time = time.time()
-    print "- %s: %d reads, %s" % (fq.name,
-                                  fq.nreads,
-                                  bcf_utils.format_file_size(fq.fsize))
-    print "- %s: took %f.2s" % (fq.name,(end_time-start_time))
-    return fq
-
-def get_per_lane_stats_for_file(fq):
-    """
-    Collect statistics for a single fastq file
-
-    Given a FastqStats object, sets the following properties
-    for the corresponding FASTQ file:
-
-    - nreads: total number of reads
-    - fsize: file size
-    - reads_by_lane: (R1 FASTQs only) dictionary where keys
-      are lane numbers and values are read counts
-
-    Arguments:
-      fq: FastqStats object with 'fastq' property set to the
-        full path for a Fastq file
-
-    Returns:
-      Input FastqStats object with the 'nreads', 'fsize'
-      and 'reads_by_lane' (if R1) properties set.
-
-    """
-    print "* %s: starting" % fq.name
-    start_time = time.time()
-    sys.stdout.flush()
-    if fq.read_number == 1:
-        # Do full processing for R1 fastqs
-        lane = IlluminaData.IlluminaFastq(fq.name).lane_number
-        if lane is not None:
-            # Lane number is in file name
-            fq.reads_by_lane[lane] = FastqReadCounter.zcat_wc(fq.fastq)
-        else:
-            # Need to get lane(s) from read headers
-            fq.reads_by_lane = FastqReadCounter.reads_per_lane(fq.fastq)
-        # Store total reads
-        fq.nreads = sum([fq.reads_by_lane[x] for x in fq.lanes])
-    else:
-        # Only get total reads for R2 fastqs
-        fq.nreads = FastqReadCounter.zcat_wc(fq.fastq)
-    fq.fsize = os.path.getsize(fq.fastq)
-    print "- %s: finished" % fq.name
-    end_time = time.time()
-    print "- %s: %d reads, %s" % (fq.name,
-                                  fq.nreads,
-                                  bcf_utils.format_file_size(fq.fsize))
-    print "- %s: took %f.2s" % (fq.name,(end_time-start_time))
-    return fq
-
 def fastq_statistics(illumina_data,n_processors=1):
     """Generate statistics for fastq outputs from an Illumina run
 
@@ -200,12 +92,12 @@ def fastq_statistics(illumina_data,n_processors=1):
     if n_processors > 1:
         # Multiple cores
         pool = Pool(n_processors)
-        results = pool.map(get_per_lane_stats_for_file,fastqs)
+        results = pool.map(collect_fastq_data,fastqs)
         pool.close()
         pool.join()
     else:
         # Single core
-        results = map(get_per_lane_stats_for_file,fastqs)
+        results = map(collect_fastq_data,fastqs)
     # Per-file stats
     stats = TabFile.TabFile(column_names=('Project',
                                           'Sample',
