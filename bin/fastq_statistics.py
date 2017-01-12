@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_stats.py: get statistics for fastq files from Illumina run
-#     Copyright (C) University of Manchester 2013-14 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17 Peter Briggs
 #
 ########################################################################
 #
@@ -63,9 +63,16 @@ class FastqStats:
         self.sample = sample
         self.nreads = None
         self.fsize = None
+        self.reads_by_lane = {}
     @property
     def name(self):
         return os.path.basename(self.fastq)
+    @property
+    def lanes(self):
+        return sorted(self.reads_by_lane.keys())
+    @property
+    def read_number(self):
+        return IlluminaData.IlluminaFastq(self.name).read_number
 
 class FastqReadCounter:
     """
@@ -76,6 +83,7 @@ class FastqReadCounter:
     - simple: a wrapper for the FASTQFile.nreads() function
     - fastqiterator: counts reads using FASTQFile.FastqIterator
     - zcat_wc: runs 'zcat | wc -l' in the shell
+    - reads_per_lane: counts reads by lane using FastqIterator
 
     """
     @staticmethod
@@ -142,6 +150,31 @@ class FastqReadCounter:
             return int(output)/4
         except Exception,ex:
             raise Exception("zcat_wc returned: %s" % output)
+    @staticmethod
+    def reads_per_lane(fastq=None,fp=None):
+        """
+        Return counts of reads in each lane of FASTQ file
+
+        Uses the FASTQFile.FastqIterator class to do the
+        counting, with counts split by lane.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Dictionary where keys are lane numbers (as integers)
+            and values are number of reads in that lane.
+
+        """
+        nreads = {}
+        for r in FASTQFile.FastqIterator(fastq_file=fastq,fp=fp):
+            lane = int(r.seqid.flowcell_lane)
+            try:
+                nreads[lane] += 1
+            except KeyError:
+                nreads[lane] = 1
+        return nreads
 
 #######################################################################
 # Functions
@@ -149,14 +182,6 @@ class FastqReadCounter:
 
 def get_fastqs(illumina_data):
     """Get a list of fastq files from an Illumina run
-
-    Given a directory with fastq(.gz) files arranged in the same
-    structure as the output from bcl2fastq (i.e. subdirectory
-    'Unaligned', then project directories within this called
-    'Project_<NAME>', each containing sample directories called
-    'Sample_<NAME>', and each of these containing fastq files),
-    return a list of FastqStats objects representing each of the
-    fastq files.
 
     Arguments:
       illumina_data: populated IlluminaData object describing the
@@ -213,14 +238,58 @@ def get_stats_for_file(fq,read_counter=FastqReadCounter.zcat_wc):
     print "- %s: took %f.2s" % (fq.name,(end_time-start_time))
     return fq
 
+def get_per_lane_stats_for_file(fq):
+    """
+    Collect statistics for a single fastq file
+
+    Given a FastqStats object, sets the following properties
+    for the corresponding FASTQ file:
+
+    - nreads: total number of reads
+    - fsize: file size
+    - reads_by_lane: (R1 FASTQs only) dictionary where keys
+      are lane numbers and values are read counts
+
+    Arguments:
+      fq: FastqStats object with 'fastq' property set to the
+        full path for a Fastq file
+
+    Returns:
+      Input FastqStats object with the 'nreads', 'fsize'
+      and 'reads_by_lane' (if R1) properties set.
+
+    """
+    print "* %s: starting" % fq.name
+    start_time = time.time()
+    sys.stdout.flush()
+    if fq.read_number == 1:
+        # Do full processing for R1 fastqs
+        lane = IlluminaData.IlluminaFastq(fq.name).lane_number
+        if lane is not None:
+            # Lane number is in file name
+            fq.reads_by_lane[lane] = FastqReadCounter.zcat_wc(fq.fastq)
+        else:
+            # Need to get lane(s) from read headers
+            fq.reads_by_lane = FastqReadCounter.reads_per_lane(fq.fastq)
+        # Store total reads
+        fq.nreads = sum([fq.reads_by_lane[x] for x in fq.lanes])
+    else:
+        # Only get total reads for R2 fastqs
+        fq.nreads = FastqReadCounter.zcat_wc(fq.fastq)
+    fq.fsize = os.path.getsize(fq.fastq)
+    print "- %s: finished" % fq.name
+    end_time = time.time()
+    print "- %s: %d reads, %s" % (fq.name,
+                                  fq.nreads,
+                                  bcf_utils.format_file_size(fq.fsize))
+    print "- %s: took %f.2s" % (fq.name,(end_time-start_time))
+    return fq
+
 def fastq_statistics(illumina_data,n_processors=1):
     """Generate statistics for fastq outputs from an Illumina run
 
     Given a directory with fastq(.gz) files arranged in the same
-    structure as the output from bcl2fastq (i.e. subdirectory
-    'Unaligned', then project directories within this called
-    'Project_<NAME>', each containing sample directories called
-    'Sample_<NAME>', and each of these containing fastq files),
+    structure as the output from bcl2fastq or bcl2fastq2,
     generate statistics for each file.
 
     Arguments:
@@ -234,22 +303,23 @@ def fastq_statistics(illumina_data,n_processors=1):
       Populated TabFile object containing the statistics.
 
     """
+    fastqs = get_fastqs(illumina_data)
+    if n_processors > 1:
+        # Multiple cores
+        pool = Pool(n_processors)
+        results = pool.map(get_per_lane_stats_for_file,fastqs)
+        pool.close()
+        pool.join()
+    else:
+        # Single core
+        results = map(get_per_lane_stats_for_file,fastqs)
+    # Per-file stats
     stats = TabFile.TabFile(column_names=('Project',
                                           'Sample',
                                           'Fastq',
                                           'Size',
                                           'Nreads',
                                           'Paired_end'))
-    fastqs = get_fastqs(illumina_data)
-    if n_processors > 1:
-        # Multiple cores
-        pool = Pool(n_processors)
-        results = pool.map(get_stats_for_file,fastqs)
-        pool.close()
-        pool.join()
-    else:
-        # Single core
-        results = map(get_stats_for_file,fastqs)
     for fastq in results:
         stats.append(data=(fastq.project,
                            fastq.sample,
@@ -257,9 +327,37 @@ def fastq_statistics(illumina_data,n_processors=1):
                            bcf_utils.format_file_size(fastq.fsize),
                            fastq.nreads,
                            'Y' if illumina_data.paired_end else 'N'))
-    return stats
+    # Per-lane stats
+    stats_per_lane = TabFile.TabFile(column_names=('Project',
+                                                   'Sample',
+                                                   'Fastq',))
+    results_r1 = filter(lambda f: f.read_number == 1,results)
+    # Determine which lanes are present and append
+    # columns for each
+    lanes = set()
+    for fastq in results_r1:
+        print "%s: %s" % (fastq.name,fastq.lanes)
+        for lane in fastq.lanes:
+            lanes.add(lane)
+    lanes = sorted(list(lanes))
+    print "%s" % lanes
+    for lane in lanes:
+        stats_per_lane.appendColumn("L%s" % lane)
+    # Write the number of reads in each lane
+    for fastq in results_r1:
+        data = [fastq.project,
+                fastq.sample,
+                fastq.name,]
+        for lane in lanes:
+            try:
+                data.append(fastq.reads_by_lane[lane])
+            except:
+                data.append('')
+        stats_per_lane.append(data=data)
+    # Return the data
+    return (stats,stats_per_lane)
 
-def sequencer_stats(stats):
+def sequencer_stats(stats_per_lane):
     """Generate per-lane statistics for an Illumina run
 
     Given a populated TabFile object containing data about each
@@ -280,29 +378,76 @@ def sequencer_stats(stats):
                                                     'Total reads',
                                                     'Assigned reads',
                                                     'Unassigned reads'))
-    # Get the data for each lane
-    for lane in xrange(1,9):
-        data = []
-        pattern = "_L00%d_R1_001.fastq.gz" % lane
-        total_reads = 0
-        assigned_reads = 0
-        unassigned_reads = 0
-        for line in stats:
-            if line['Fastq'].endswith(pattern):
-                data.append(line)
-                nreads = line['Nreads']
-                total_reads += nreads
-                if line['Project'] != 'Undetermined_indices':
-                    assigned_reads += nreads
-                else:
-                    unassigned_reads += nreads
-        if not data:
-            continue
-        sequencer_stats.append(data=("Lane %d" % lane,
+    # Figure out lanes
+    lanes = stats_per_lane.header()[3:]
+    assigned = {}
+    unassigned = {}
+    # Count assigned and unassigned (= undetermined) reads
+    for line in stats_per_lane:
+        if line['Project'] != 'Undetermined_indices':
+            for lane in lanes:
+                if line[lane]:
+                    try:
+                        assigned[lane] += line[lane]
+                    except KeyError:
+                        assigned[lane] = line[lane]
+        else:
+            for lane in lanes:
+                if line[lane]:
+                    try:
+                        unassigned[lane] += line[lane]
+                    except KeyError:
+                        unassigned[lane] = line[lane]
+    # Write out data for each lane
+    for lane in lanes:
+        lane_number = int(lane[1:])
+        assigned_reads = assigned[lane]
+        unassigned_reads = unassigned[lane]
+        total_reads = assigned_reads + unassigned_reads
+        sequencer_stats.append(data=("Lane %d" % lane_number,
                                      total_reads,
                                      assigned_reads,
                                      unassigned_reads))
+    # Return the data
     return sequencer_stats
+
+def report_sample_stats(stats_per_lane,out_file):
+    """
+    Report of reads per sample in each lane for an Illumina run
+
+    Given a populated TabFile object containing per-lane data
+    about each fastq(.gz) file from an Illumina run (as generated
+    by the 'fastq_statistics' function), report the number of reads
+    for each sample in each lane plus the total reads for each
+    lane.
+
+    Arguments:
+      stats_per_lane: populated TabFile object with per-lane data
+        for each FASTQ from fastq_statistics.
+    """
+    # Determine output stream
+    if out_file is None:
+        fp = sys.stdout
+    else:
+        fp = open(out_file,'w')
+    # Report
+    lanes = stats_per_lane.header()[3:]
+    for lane in lanes:
+        lane_number = int(lane[1:])
+        samples = filter(lambda x: bool(x[lane]),stats_per_lane)
+        total_reads = sum([s[lane] for s in samples])
+        fp.write("\nLane %d\n" % lane_number)
+        fp.write("Total reads = %d\n" % total_reads)
+        for sample in samples:
+            sample_name = "%s/%s" % (sample['Project'],
+                                     sample['Sample'])
+            nreads = float(sample[lane])
+            fp.write("- %s\t%d\t%.1f%%\n" % (sample_name,
+                                             nreads,
+                                             nreads/total_reads*100.0))
+    # Close file
+    if out_file is not None:
+        fp.close()
 
 #######################################################################
 # Main program
@@ -354,39 +499,26 @@ if __name__ == '__main__':
     if options.debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
-    # Get the raw data
-    stats = None
-    filein = os.path.join(args[0],'statistics.info')
-    if os.path.isfile(filein):
-        # Existing statistics file detected, read data from here
-        logging.warning("Existing statistics file detected")
-        if not options.force:
-            stats = TabFile.TabFile(filen=filein,first_line_is_header=True)
-        else:
-            logging.warning("--force specified, statistics will be regenerated")
-    if stats is None:
-        # (Re)create statistics from raw files
-        try:
-            illumina_data = IlluminaData.IlluminaData(args[0],
-                                                      unaligned_dir=options.unaligned_dir)
-        except IlluminaData.IlluminaDataError,ex:
-            logging.error("Failed to get data from %s: %s" % (args[0],ex))
-            sys.exit(1)
-        # Generate statistics for fastq files
-        stats = fastq_statistics(illumina_data,n_processors=options.n)
-        stats.write(options.stats_file,include_header=True)
+    # Get the data from FASTQ files
+    try:
+        illumina_data = IlluminaData.IlluminaData(
+            args[0],
+            unaligned_dir=options.unaligned_dir)
+    except IlluminaData.IlluminaDataError,ex:
+        logging.error("Failed to get data from %s: %s" % (args[0],ex))
+        sys.exit(1)
+    # Generate statistics for fastq files
+    stats,per_lane = fastq_statistics(illumina_data,
+                                      n_processors=options.n)
+    stats.write(options.stats_file,include_header=True)
     print "Statistics written to %s" % options.stats_file
-    # Per-lane sequencer statistics
-    if illumina_data.lanes == [None]:
-        print "No lane information: per-lane statistics not generated"
-    else:
-        auto_process_stats.report_per_lane_stats(options.stats_file,
-                                                 options.per_lane_stats_file)
-        print "Per-lane sequencer stats written to %s" % \
-            options.per_lane_stats_file
-        # Summary of per-lane sequencer stats
-        per_lane_stats_summary
-        seqstats = sequencer_stats(stats)
-        seqstats.write(seq_stats_file,include_header=True)
-        print "Summary of per-lane sequencer stats written to %s" % \
-            seq_stats_file
+    per_lane.write(options.per_lane_stats_file,include_header=True)
+    print "Per-lane sequencer stats written to %s" % \
+        options.per_lane_stats_file
+    seqstats = sequencer_stats(per_lane)
+    seq_stats_file="per_lane_statistics.summary"
+    seqstats.write(seq_stats_file,include_header=True)
+    print "Summary of per-lane sequencer stats written to %s" % \
+        seq_stats_file
+    report_sample_stats(per_lane,"sample_stats.info")
+    sys.exit()
