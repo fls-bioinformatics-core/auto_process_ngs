@@ -166,7 +166,7 @@ class FastqStatistics:
         """
         return [("L%d" % l) for l in self._lanes]
 
-    def report_full_stats(self,out_file):
+    def report_full_stats(self,out_file=None):
         """
         Report all statistics gathered for all FASTQs
 
@@ -187,7 +187,7 @@ class FastqStatistics:
         if out_file is not None:
             fp.close()
 
-    def report_basic_stats(self,out_file):
+    def report_basic_stats(self,out_file=None):
         """
         Report the 'basic' statistics
 
@@ -261,7 +261,7 @@ class FastqStatistics:
         if out_file is not None:
             fp.close()
 
-    def report_per_lane_summary_stats(self,out_file):
+    def report_per_lane_summary_stats(self,out_file=None):
         """
         Report summary of total and unassigned reads per-lane
 
@@ -278,7 +278,9 @@ class FastqStatistics:
         per_lane_stats = TabFile(column_names=('Lane',
                                                'Total reads',
                                                'Assigned reads',
-                                               'Unassigned reads'))
+                                               'Unassigned reads',
+                                               '%assigned',
+                                               '%unassigned'))
         assigned = {}
         unassigned = {}
         # Count assigned and unassigned (= undetermined) reads
@@ -300,10 +302,14 @@ class FastqStatistics:
             assigned_reads = assigned[lane]
             unassigned_reads = unassigned[lane]
             total_reads = assigned_reads + unassigned_reads
+            percent_assigned = float(assigned_reads)/float(total_reads)*100.0
+            percent_unassigned = float(unassigned_reads)/float(total_reads)*100.0
             per_lane_stats.append(data=("Lane %d" % lane_number,
                                         total_reads,
                                         assigned_reads,
-                                        unassigned_reads))
+                                        unassigned_reads,
+                                        "%.2f" % percent_assigned,
+                                        "%.2f" % percent_unassigned))
         # Write to file
         per_lane_stats.write(fp=fp,include_header=True)
         # Close file
