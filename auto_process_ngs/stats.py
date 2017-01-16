@@ -11,11 +11,14 @@ stats.py
 Classes and functions for collecting and reporting statistics for
 a run:
 
+- FastqStatistics: collects and reports stats on FASTQs from an
+  Illumina sequencing run
 - FastqStats: container for storing data about a FASTQ file
 - FastqReadCounter: implements various methods for counting reads
   in FASTQ files
 - collect_fastq_data: collect data from FASTQ file in a FastqStats
   instance
+
 """
 
 #######################################################################
@@ -26,14 +29,286 @@ import sys
 import os
 import time
 import subprocess
-import bcftbx.TabFile as tf
+from multiprocessing import Pool
 import bcftbx.FASTQFile as FASTQFile
 import bcftbx.utils as bcf_utils
 from bcftbx.IlluminaData import IlluminaFastq
+from bcftbx.TabFile import TabFile
 
 #######################################################################
 # Classes
 #######################################################################
+
+class FastqStatistics:
+    """
+    Class for collecting and reporting stats on Illumina FASTQs
+
+    Given a directory with fastq(.gz) files arranged in the same
+    structure as the output from bcl2fastq or bcl2fastq2,
+    collects statistics for each file and provides methods for
+    reporting different aspects.
+
+    Example usage:
+
+    >>> from IlluminaData import IlluminaData
+    >>> data = IlluminaData('120117_BLAH_JSHJHXXX','bcl2fastq')
+    >>> stats = FastqStatistics(data)
+    >>> stats.report_basic_stats('basic_stats.out')
+
+    """
+    def __init__(self,illumina_data,n_processors=1):
+        """
+        Create a new FastqStatistics instance
+
+        Arguments:
+          illumina_data: populated IlluminaData object describing the
+            run.
+          n_processors: number of processors to use (if 1>1 then uses
+            the multiprocessing library to run the statistics gathering
+            using multiple cores).
+        """
+        self._illumina_data = illumina_data
+        self._n_processors = n_processors
+        self._stats = None
+        self._lane_names = []
+        self._get_data()
+
+    def _get_data(self):
+        """
+        Collect statistics for FASTQ outputs from an Illumina run
+        """
+        # Collect FASTQ files
+        fastqstats = []
+        for project in self._illumina_data.projects:
+            for sample in project.samples:
+                for fastq in sample.fastq:
+                    fastqstats.append(
+                        FastqStats(os.path.join(sample.dirn,fastq),
+                                   project.name,
+                                   sample.name))
+        # Gather same information for undetermined reads (if present)
+        if self._illumina_data.undetermined is not None:
+            for lane in self._illumina_data.undetermined.samples:
+                for fastq in lane.fastq:
+                    fastqstats.append(
+                        FastqStats(os.path.join(lane.dirn,fastq),
+                                   self._illumina_data.undetermined.name,
+                                   lane.name))
+        # Collect the data for each file
+        if self._n_processors > 1:
+            # Multiple cores
+            pool = Pool(self._n_processors)
+            results = pool.map(collect_fastq_data,fastqstats)
+            pool.close()
+            pool.join()
+        else:
+            # Single core
+            results = map(collect_fastq_data,fastqstats)
+        # Set up class to hold all collected data
+        self._stats = TabFile(column_names=('Project',
+                                            'Sample',
+                                            'Fastq',
+                                            'Size',
+                                            'Nreads',
+                                            'Paired_end',
+                                            'Read_number'))
+        # Split result sets into R1 and R2
+        results_r1 = filter(lambda f: f.read_number == 1,results)
+        results_r2 = filter(lambda f: f.read_number == 2,results)
+        # Determine which lanes are present and append
+        # columns for each
+        lanes = set()
+        for fastq in results_r1:
+            print "%s: %s" % (fastq.name,fastq.lanes)
+            for lane in fastq.lanes:
+                lanes.add(lane)
+        self._lanes = sorted(list(lanes))
+        print "Lanes: %s" % self._lanes
+        for lane in self._lanes:
+            self._stats.appendColumn("L%s" % lane)
+        # Copy reads per lane from R1 FASTQs into R2
+        for r2_fastq in results_r2:
+            # Get corresponding R1 name
+            print "-- Fastq R2: %s" % r2_fastq.name
+            r1_fastq_name = IlluminaFastq(r2_fastq.name)
+            r1_fastq_name.read_number = 1
+            r1_fastq_name = str(r1_fastq_name)
+            print "--       R1: %s" % r1_fastq_name
+            # Locate corresponding data
+            r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
+                              results_r1)[0]
+            r2_fastq.reads_by_lane = dict(r1_fastq.reads_by_lane)
+        # Write the data into the tabfile
+        paired_end = ('Y' if self._illumina_data.paired_end else 'N')
+        for fastq in results:
+            data = [fastq.project,
+                    fastq.sample,
+                    fastq.name,
+                    bcf_utils.format_file_size(fastq.fsize),
+                    fastq.nreads,
+                    paired_end,
+                    fastq.read_number]
+            for lane in lanes:
+                try:
+                    data.append(fastq.reads_by_lane[lane])
+                except:
+                    data.append('')
+            self._stats.append(data=data)
+        # Write raw stats data
+        self._stats.write("statistics_all.info",include_header=True)
+        # Return the data
+        return self._stats
+
+    @property
+    def lane_names(self):
+        """
+        Return list of lane names (e.g. ['L1','L2',...])
+        """
+        return [("L%d" % l) for l in self._lanes]
+
+    def report_full_stats(self,out_file):
+        """
+        Report all statistics gathered for all FASTQs
+
+        Essentially a dump of all the data.
+
+        Arguments:
+          out_file (str): name of file to write report
+            to (defaults to stdout)
+        """
+        # Determine output stream
+        if out_file is None:
+            fp = sys.stdout
+        else:
+            fp = open(out_file,'w')
+        # Report
+        self._stats.write(fp=fp,include_header=True)
+        # Close file
+        if out_file is not None:
+            fp.close()
+
+    def report_basic_stats(self,out_file):
+        """
+        Report the 'basic' statistics
+
+        For each FASTQ file, report the following information:
+
+        - Project name
+        - Sample name
+        - FASTQ file name (without leading directory)
+        - Size (human-readable)
+        - Nreads (number of reads)
+        - Paired_end ('Y' for paired-end, 'N' for single-end)
+
+        Arguments:
+          out_file (str): name of file to write report
+            to (defaults to stdout)
+        """
+        # Determine output stream
+        if out_file is None:
+            fp = sys.stdout
+        else:
+            fp = open(out_file,'w')
+        # Report
+        stats = TabFile(column_names=('Project',
+                                      'Sample',
+                                      'Fastq',
+                                      'Size',
+                                      'Nreads',
+                                      'Paired_end'))
+        for line in self._stats:
+            data = [line[c] for c in stats.header()]
+            stats.append(data=data)
+        stats.write(fp=fp,include_header=True)
+        # Close file
+        if out_file is not None:
+            fp.close()
+
+    def report_per_lane_sample_stats(self,out_file=None):
+        """
+        Report of reads per sample in each lane
+
+        Reports the number of reads for each sample in each
+        lane plus the total reads for each lane.
+
+        Arguments:
+          out_file (str): name of file to write report
+            to (defaults to stdout)
+        """
+        # Determine output stream
+        if out_file is None:
+            fp = sys.stdout
+        else:
+            fp = open(out_file,'w')
+        # Report
+        lanes = self.lane_names
+        for lane in lanes:
+            lane_number = int(lane[1:])
+            samples = filter(lambda x:
+                             x['Read_number'] == 1 and bool(x[lane]),
+                             self._stats)
+            total_reads = sum([s[lane] for s in samples])
+            fp.write("\nLane %d\n" % lane_number)
+            fp.write("Total reads = %d\n" % total_reads)
+            for sample in samples:
+                sample_name = "%s/%s" % (sample['Project'],
+                                         sample['Sample'])
+                nreads = float(sample[lane])
+                fp.write("- %s\t%d\t%.1f%%\n" % (sample_name,
+                                                 nreads,
+                                                 nreads/total_reads*100.0))
+        # Close file
+        if out_file is not None:
+            fp.close()
+
+    def report_per_lane_summary_stats(self,out_file):
+        """
+        Report summary of total and unassigned reads per-lane
+
+        Arguments:
+          out_file (str): name of file to write report
+            to (defaults to stdout)
+        """
+        # Determine output stream
+        if out_file is None:
+            fp = sys.stdout
+        else:
+            fp = open(out_file,'w')
+        # Set up TabFile to hold the data collected
+        per_lane_stats = TabFile(column_names=('Lane',
+                                               'Total reads',
+                                               'Assigned reads',
+                                               'Unassigned reads'))
+        assigned = {}
+        unassigned = {}
+        # Count assigned and unassigned (= undetermined) reads
+        for line in filter(lambda x: x['Read_number'] == 1,
+                           self._stats):
+            if line['Project'] != 'Undetermined_indices':
+                counts = assigned
+            else:
+                counts = unassigned
+            for lane in self.lane_names:
+                if line[lane]:
+                    try:
+                        counts[lane] += line[lane]
+                    except KeyError:
+                        counts[lane] = line[lane]
+        # Write out data for each lane
+        for lane in self.lane_names:
+            lane_number = int(lane[1:])
+            assigned_reads = assigned[lane]
+            unassigned_reads = unassigned[lane]
+            total_reads = assigned_reads + unassigned_reads
+            per_lane_stats.append(data=("Lane %d" % lane_number,
+                                        total_reads,
+                                        assigned_reads,
+                                        unassigned_reads))
+        # Write to file
+        per_lane_stats.write(fp=fp,include_header=True)
+        # Close file
+        if out_file is not None:
+            fp.close()
 
 class FastqStats:
     """Container for storing data about a FASTQ file
@@ -268,7 +543,7 @@ def report_per_lane_stats(stats_file,out_file=None):
 
     """
     # Read in data
-    stats = tf.TabFile(stats_file,first_line_is_header=True)
+    stats = TabFile(stats_file,first_line_is_header=True)
     data = dict()
     for line in stats:
         # Collect sample name, lane etc
