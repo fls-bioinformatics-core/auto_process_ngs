@@ -162,6 +162,13 @@ class FastqStatistics:
         """
         return [("L%d" % l) for l in self._lanes]
 
+    @property
+    def raw(self):
+        """
+        Return the 'raw' statistics TabFile instance
+        """
+        return self._stats
+
     def report_full_stats(self,out_file=None):
         """
         Report all statistics gathered for all FASTQs
