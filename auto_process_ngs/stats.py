@@ -154,10 +154,6 @@ class FastqStatistics:
                 except:
                     data.append('')
             self._stats.append(data=data)
-        # Write raw stats data
-        self._stats.write("statistics_all.info",include_header=True)
-        # Return the data
-        return self._stats
 
     @property
     def lane_names(self):
