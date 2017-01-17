@@ -57,19 +57,30 @@ if __name__ == '__main__':
                               description="Generate statistics for FASTQ "
                               "files in ILLUMINA_RUN_DIR (top-level "
                               "directory of a processed Illumina run)")
+    p.add_option("--unaligned",action="store",dest="unaligned_dir",
+                 default="Unaligned",
+                 help="specify an alternative name for the 'Unaligned' "
+                 "directory containing the fastq.gz files")
     p.add_option('-o','--output',action="store",dest="stats_file",
                  default='statistics.info',
                  help="name of output file for per-file statistics (default "
                  "is 'statistics.info')")
     p.add_option('-p','--per-lane-stats',action="store",
-                 dest="per_lane_stats_file",default='per_lane_statistics.info',
+                 dest="per_lane_stats_file",
+                 default='per_lane_statistics.info',
                  help="name of output file for per-lane statistics (default "
                  "is 'per_lane_statistics.info')")
-    p.add_option("--unaligned",action="store",dest="unaligned_dir",
-                 default="Unaligned",
-                 help="specify an alternative name for the 'Unaligned' "
-                 "directory containing the fastq.gz files")
-    p.add_option("--nprocessors",action="store",dest="n",
+    p.add_option('-s','--per-lane-sample-stats',action="store",
+                 dest="per_lane_sample_stats_file",
+                 default='per_lane_sample_stats.info',
+                 help="name of output file for per-lane statistics (default "
+                 "is 'per_lane_sample_stats.info')")
+    p.add_option('-f','--full-stats',action="store",
+                 dest="full_stats_file",
+                 default='statistics_full.info',
+                 help="name of output file for full statistics (default "
+                 "is 'statistics_full.info')")
+    p.add_option('-n',"--nprocessors",action="store",dest="n",
                  default=1,type='int',
                  help="spread work across N processors/cores (default is 1)")
     p.add_option("--force",action="store_true",dest="force",default=False,
@@ -105,9 +116,12 @@ if __name__ == '__main__':
     stats = FastqStatistics(illumina_data,
                             n_processors=options.n)
     stats.report_basic_stats(options.stats_file)
-    stats.report_per_lane_sample_stats("per_lane_sample_stats.info")
-    stats.report_per_lane_summary_stats(options.per_lane_stats_file)
-    stats.report_full_stats("statistics_full.info")
     print "Basic statistics written to %s" % options.stats_file
+    stats.report_per_lane_sample_stats(options.per_lane_sample_stats_file)
+    print "Per-lane sample statistics written to %s" % \
+        options.per_lane_sample_stats_file
+    stats.report_per_lane_summary_stats(options.per_lane_stats_file)
     print "Per-lane summary statistics written to %s" % \
         options.per_lane_stats_file
+    stats.report_full_stats(options.full_stats_file)
+    print "Full statistics written to %s" % options.full_stats_file
