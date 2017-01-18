@@ -63,7 +63,7 @@ class FastqStatistics:
         Arguments:
           illumina_data: populated IlluminaData object describing the
             run.
-          n_processors: number of processors to use (if 1>1 then uses
+          n_processors: number of processors to use (if >1 then uses
             the multiprocessing library to run the statistics gathering
             using multiple cores).
         """
