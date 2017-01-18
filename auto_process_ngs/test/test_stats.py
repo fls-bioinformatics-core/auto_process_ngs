@@ -316,6 +316,39 @@ class TestFastqStatisticsCasava(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_sample_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_casava()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_sample_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""
+Lane 1
+Total reads = 10
+- AB/AB1	3	30.0%
+- AB/AB2	5	50.0%
+- Undetermined_indices/lane1	2	20.0%
+
+Lane 2
+Total reads = 6
+- AB/AB1	2	33.3%
+- AB/AB2	3	50.0%
+- Undetermined_indices/lane2	1	16.7%
+
+Lane 3
+Total reads = 19
+- CDE/CDE3	7	36.8%
+- CDE/CDE4	8	42.1%
+- Undetermined_indices/lane3	4	21.1%
+
+Lane 4
+Total reads = 11
+- CDE/CDE3	2	18.2%
+- CDE/CDE4	6	54.5%
+- Undetermined_indices/lane4	3	27.3%
+""")
     def test_report_per_lane_summary_stats(self):
         fp = cStringIO.StringIO()
         self._setup_casava()
@@ -460,6 +493,39 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_sample_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_sample_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""
+Lane 1
+Total reads = 10
+- AB/AB1	3	30.0%
+- AB/AB2	5	50.0%
+- Undetermined_indices/lane1	2	20.0%
+
+Lane 2
+Total reads = 6
+- AB/AB1	2	33.3%
+- AB/AB2	3	50.0%
+- Undetermined_indices/lane2	1	16.7%
+
+Lane 3
+Total reads = 19
+- CDE/CDE3	7	36.8%
+- CDE/CDE4	8	42.1%
+- Undetermined_indices/lane3	4	21.1%
+
+Lane 4
+Total reads = 11
+- CDE/CDE3	2	18.2%
+- CDE/CDE4	6	54.5%
+- Undetermined_indices/lane4	3	27.3%
+""")
     def test_report_per_lane_summary_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2()
@@ -587,6 +653,39 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_sample_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2_no_lane_splitting()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_sample_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""
+Lane 1
+Total reads = 10
+- AB/AB1	3	30.0%
+- AB/AB2	5	50.0%
+- Undetermined_indices/undetermined	2	20.0%
+
+Lane 2
+Total reads = 6
+- AB/AB1	2	33.3%
+- AB/AB2	3	50.0%
+- Undetermined_indices/undetermined	1	16.7%
+
+Lane 3
+Total reads = 19
+- CDE/CDE3	7	36.8%
+- CDE/CDE4	8	42.1%
+- Undetermined_indices/undetermined	4	21.1%
+
+Lane 4
+Total reads = 11
+- CDE/CDE3	2	18.2%
+- CDE/CDE4	6	54.5%
+- Undetermined_indices/undetermined	3	27.3%
+""")
     def test_report_per_lane_summary_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()

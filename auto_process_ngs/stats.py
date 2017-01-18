@@ -227,7 +227,7 @@ class FastqStatistics:
         if out_file is not None:
             fp.close()
 
-    def report_per_lane_sample_stats(self,out_file=None):
+    def report_per_lane_sample_stats(self,out_file=None,fp=None):
         """
         Report of reads per sample in each lane
 
@@ -245,13 +245,19 @@ class FastqStatistics:
 
         Arguments:
           out_file (str): name of file to write report
-            to (defaults to stdout)
+            to (used if 'fp' is not supplied)
+          fp (File): File-like object open for writing
+            (defaults to stdout if 'out_file' also not
+            supplied)
         """
         # Determine output stream
-        if out_file is None:
-            fp = sys.stdout
+        if fp is None:
+            if out_file is None:
+                fpp = sys.stdout
+            else:
+                fpp = open(out_file,'w')
         else:
-            fp = open(out_file,'w')
+            fpp = fp
         # Report
         lanes = self.lane_names
         for lane in lanes:
@@ -260,18 +266,18 @@ class FastqStatistics:
                              x['Read_number'] == 1 and bool(x[lane]),
                              self._stats)
             total_reads = sum([s[lane] for s in samples])
-            fp.write("\nLane %d\n" % lane_number)
-            fp.write("Total reads = %d\n" % total_reads)
+            fpp.write("\nLane %d\n" % lane_number)
+            fpp.write("Total reads = %d\n" % total_reads)
             for sample in samples:
                 sample_name = "%s/%s" % (sample['Project'],
                                          sample['Sample'])
                 nreads = float(sample[lane])
-                fp.write("- %s\t%d\t%.1f%%\n" % (sample_name,
-                                                 nreads,
-                                                 nreads/total_reads*100.0))
+                fpp.write("- %s\t%d\t%.1f%%\n" % (sample_name,
+                                                  nreads,
+                                                  nreads/total_reads*100.0))
         # Close file
-        if out_file is not None:
-            fp.close()
+        if fp is None and out_file is not None:
+            fpp.close()
 
     def report_per_lane_summary_stats(self,out_file=None,fp=None):
         """
