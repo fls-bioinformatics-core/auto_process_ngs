@@ -176,7 +176,7 @@ class FastqStatistics:
         """
         return self._stats
 
-    def report_full_stats(self,out_file=None):
+    def report_full_stats(self,out_file=None,fp=None):
         """
         Report all statistics gathered for all FASTQs
 
@@ -184,18 +184,24 @@ class FastqStatistics:
 
         Arguments:
           out_file (str): name of file to write report
-            to (defaults to stdout)
+            to (used if 'fp' is not supplied)
+          fp (File): File-like object open for writing
+            (defaults to stdout if 'out_file' also not
+            supplied)
         """
         # Determine output stream
-        if out_file is None:
-            fp = sys.stdout
+        if fp is None:
+            if out_file is None:
+                fpp = sys.stdout
+            else:
+                fpp = open(out_file,'w')
         else:
-            fp = open(out_file,'w')
+            fpp = fp
         # Report
-        self._stats.write(fp=fp,include_header=True)
+        self._stats.write(fp=fpp,include_header=True)
         # Close file
-        if out_file is not None:
-            fp.close()
+        if fp is None and out_file is not None:
+            fpp.close()
 
     def report_basic_stats(self,out_file=None,fp=None):
         """
