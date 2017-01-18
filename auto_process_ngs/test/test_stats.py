@@ -225,7 +225,7 @@ class TestFastqStatisticsCasava(unittest.TestCase):
         ]
     def tearDown(self):
         # Remove the temporary test directory
-        #shutil.rmtree(self.dirn)
+        shutil.rmtree(self.dirn)
         pass
     def _setup_casava(self):
         # Create a mock casava dir structure
@@ -425,7 +425,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
         ]
     def tearDown(self):
         # Remove the temporary test directory
-        #shutil.rmtree(self.dirn)
+        shutil.rmtree(self.dirn)
         pass
     def _setup_bcl2fastq2(self):
         # Create a mock bcl2fastq dir structure
@@ -514,6 +514,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+            self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2()
@@ -532,6 +533,185 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
             self.assertEqual(line[2],expctd[2]) # Fastq
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
+    def test_report_per_lane_sample_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_sample_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""
+Lane 1
+Total reads = 10
+- AB/AB1	3	30.0%
+- AB/AB2	5	50.0%
+- Undetermined_indices/lane1	2	20.0%
+
+Lane 2
+Total reads = 6
+- AB/AB1	2	33.3%
+- AB/AB2	3	50.0%
+- Undetermined_indices/lane2	1	16.7%
+
+Lane 3
+Total reads = 19
+- CDE/CDE3	7	36.8%
+- CDE/CDE4	8	42.1%
+- Undetermined_indices/lane3	4	21.1%
+
+Lane 4
+Total reads = 11
+- CDE/CDE3	2	18.2%
+- CDE/CDE4	6	54.5%
+- Undetermined_indices/lane4	3	27.3%
+""")
+    def test_report_per_lane_summary_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_summary_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
+Lane 1	10	8	2	80.0	20.0
+Lane 2	6	5	1	83.33	16.67
+Lane 3	19	15	4	78.95	21.05
+Lane 4	11	8	3	72.73	27.27
+""")
+
+class TestFastqStatisticsBcl2fastq2SingleEnd(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+        # Expected data
+        self.expected = [
+            ['AB','AB1','AB1_S1_L001_R1_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_S1_L002_R1_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB2','AB2_S2_L001_R1_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_S2_L002_R1_001.fastq.gz',3,{'L2':3}],
+            ['CDE','CDE3','CDE3_S3_L003_R1_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_S3_L004_R1_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE4','CDE4_S4_L003_R1_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_S4_L004_R1_001.fastq.gz',6,{'L4':6}],
+            ['Undetermined_indices','lane1',
+             'Undetermined_S0_L001_R1_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane2',
+             'Undetermined_S0_L002_R1_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane3',
+             'Undetermined_S0_L003_R1_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane4',
+             'Undetermined_S0_L004_R1_001.fastq.gz',3,{'L4':3}],
+        ]
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+        pass
+    def _setup_bcl2fastq2(self):
+        # Create a mock bcl2fastq dir structure
+        mock_data = AugmentedMockIlluminaData(
+            '151125_S00879_0001_000000000-ABCDE1_analysis',
+            'bcl2fastq2',
+            unaligned_dir='bcl2fastq',
+            paired_end=False,
+            no_lane_splitting=False,
+            top_dir=self.dirn)
+        mock_data.add_fastq_batch('AB','AB1','AB1_S1',lanes=[1,2])
+        mock_data.add_fastq_batch('AB','AB2','AB2_S2',lanes=[1,2])
+        mock_data.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=[3,4])
+        mock_data.add_fastq_batch('CDE','CDE4','CDE4_S4',lanes=[3,4])
+        mock_data.add_undetermined(lanes=(1,2,3,4))
+        # Create on disk
+        mock_data.create()
+        # Populate the FASTQs with 'fake' reads
+        reads = {
+            "AB": {
+                "AB1": { 1:3, 2:2 },
+                "AB2": { 1:5, 2:3 },
+            },
+            "CDE": {
+                "CDE3": { 3:7, 4:2 },
+                "CDE4": { 3:8, 4:6 },
+            },
+            "Undetermined_indices": {
+                "Undetermined": { 1: 2, 2: 1, 3: 4, 4: 3 },
+            },
+        }
+        s_indices = {
+            "AB1": "S1",
+            "AB2": "S2",
+            "CDE3": "S3",
+            "CDE4": "S4"
+        }
+        for project in reads:
+            for sample in reads[project]:
+                for lane in reads[project][sample]:
+                    try:
+                        s_index = s_indices[sample]
+                    except KeyError:
+                        s_index = "S0"
+                    nreads = reads[project][sample][lane]
+                    if project != "Undetermined_indices":
+                        project_name = project
+                    else:
+                        project_name = ""
+                    fastq = os.path.join(
+                        project_name,
+                        "%s_%s_L%03d_R1_001.fastq.gz" %
+                        (sample,s_index,lane))
+                    mock_data.populate_fastq(fastq,nreads)
+        # Store the location of the mock data
+        self.illumina_data = mock_data.dirn
+    def test_fastqstatistics_bcl2fastq2(self):
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        self.assertEqual(fqstatistics.lane_names,
+                         ['L1','L2','L3','L4'])
+        # Check "raw" stored data
+        self.assertEqual(fqstatistics.raw.header(),
+                         ['Project',
+                          'Sample',
+                          'Fastq',
+                          'Size',
+                          'Nreads',
+                          'Paired_end',
+                          'Read_number',
+                          'L1','L2','L3','L4'])
+        self.assertEqual(len(fqstatistics.raw),12)
+        for line,expctd in zip(fqstatistics.raw,self.expected):
+            self.assertEqual(line['Project'],expctd[0])
+            self.assertEqual(line['Sample'],expctd[1])
+            self.assertEqual(line['Fastq'],expctd[2])
+            self.assertEqual(line['Nreads'],expctd[3])
+            for lane in ('L1','L2','L3','L4'):
+                if lane in expctd[4]:
+                    self.assertEqual(line[lane],expctd[4][lane])
+                else:
+                    self.assertEqual(line[lane],'')
+            self.assertEqual(line['Read_number'],1)
+            self.assertEqual(line['Paired_end'],'N')
+    def test_report_basic_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_basic_stats(fp=fp)
+        stats = fp.getvalue().strip('\n').split('\n')
+        self.assertEqual(len(stats),13)
+        self.assertEqual(stats[0],"#Project	Sample	Fastq	Size	Nreads	Paired_end")
+        for line,expctd in zip(stats[1:],self.expected):
+            line = line.split('\t')
+            self.assertEqual(line[0],expctd[0]) # Project
+            self.assertEqual(line[1],expctd[1]) # Sample
+            self.assertEqual(line[2],expctd[2]) # Fastq
+            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[5],'N') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2()
@@ -603,7 +783,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
         ]
     def tearDown(self):
         # Remove the temporary test directory
-        #shutil.rmtree(self.dirn)
+        shutil.rmtree(self.dirn)
         pass
     def _setup_bcl2fastq2_no_lane_splitting(self):
         # Create mock bcl2fastq2 dir structure with no lane splitting
@@ -693,6 +873,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+            self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()
