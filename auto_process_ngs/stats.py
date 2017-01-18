@@ -190,7 +190,7 @@ class FastqStatistics:
         if out_file is not None:
             fp.close()
 
-    def report_basic_stats(self,out_file=None):
+    def report_basic_stats(self,out_file=None,fp=None):
         """
         Report the 'basic' statistics
 
@@ -205,13 +205,19 @@ class FastqStatistics:
 
         Arguments:
           out_file (str): name of file to write report
-            to (defaults to stdout)
+            to (used if 'fp' is not supplied)
+          fp (File): File-like object open for writing
+            (defaults to stdout if 'out_file' also not
+            supplied)
         """
         # Determine output stream
-        if out_file is None:
-            fp = sys.stdout
+        if fp is None:
+            if out_file is None:
+                fpp = sys.stdout
+            else:
+                fpp = open(out_file,'w')
         else:
-            fp = open(out_file,'w')
+            fpp = fp
         # Report
         stats = TabFile(column_names=('Project',
                                       'Sample',
@@ -222,10 +228,10 @@ class FastqStatistics:
         for line in self._stats:
             data = [line[c] for c in stats.header()]
             stats.append(data=data)
-        stats.write(fp=fp,include_header=True)
+        stats.write(fp=fpp,include_header=True)
         # Close file
-        if out_file is not None:
-            fp.close()
+        if fp is None and out_file is not None:
+            fpp.close()
 
     def report_per_lane_sample_stats(self,out_file=None,fp=None):
         """

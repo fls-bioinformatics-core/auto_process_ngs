@@ -188,6 +188,41 @@ class TestFastqStatisticsCasava(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+        # Expected data
+        self.expected = [
+            ['AB','AB1','AB1_GCCAAT_L001_R1_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_GCCAAT_L001_R2_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_GCCAAT_L002_R1_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB1','AB1_GCCAAT_L002_R2_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB2','AB2_AGTCAA_L001_R1_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_AGTCAA_L001_R2_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_AGTCAA_L002_R1_001.fastq.gz',3,{'L2':3}],
+            ['AB','AB2','AB2_AGTCAA_L002_R2_001.fastq.gz',3,{'L2':3}],
+            ['CDE','CDE3','CDE3_GCCAAT_L003_R1_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_GCCAAT_L003_R2_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_GCCAAT_L004_R1_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE3','CDE3_GCCAAT_L004_R2_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE4','CDE4_AGTCAA_L003_R1_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_AGTCAA_L003_R2_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_AGTCAA_L004_R1_001.fastq.gz',6,{'L4':6}],
+            ['CDE','CDE4','CDE4_AGTCAA_L004_R2_001.fastq.gz',6,{'L4':6}],
+            ['Undetermined_indices','lane1',
+             'lane1_Undetermined_L001_R1_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane1',
+             'lane1_Undetermined_L001_R2_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane2',
+             'lane2_Undetermined_L002_R1_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane2',
+             'lane2_Undetermined_L002_R2_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane3',
+             'lane3_Undetermined_L003_R1_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane3',
+             'lane3_Undetermined_L003_R2_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane4',
+             'lane4_Undetermined_L004_R1_001.fastq.gz',3,{'L4':3}],
+            ['Undetermined_indices','lane4',
+             'lane4_Undetermined_L004_R2_001.fastq.gz',3,{'L4':3}],
+        ]
     def tearDown(self):
         # Remove the temporary test directory
         #shutil.rmtree(self.dirn)
@@ -270,41 +305,7 @@ class TestFastqStatisticsCasava(unittest.TestCase):
                           'Read_number',
                           'L1','L2','L3','L4'])
         self.assertEqual(len(fqstatistics.raw),24)
-        expected = [
-            ['AB','AB1','AB1_GCCAAT_L001_R1_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_GCCAAT_L001_R2_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_GCCAAT_L002_R1_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB1','AB1_GCCAAT_L002_R2_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB2','AB2_AGTCAA_L001_R1_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_AGTCAA_L001_R2_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_AGTCAA_L002_R1_001.fastq.gz',3,{'L2':3}],
-            ['AB','AB2','AB2_AGTCAA_L002_R2_001.fastq.gz',3,{'L2':3}],
-            ['CDE','CDE3','CDE3_GCCAAT_L003_R1_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_GCCAAT_L003_R2_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_GCCAAT_L004_R1_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE3','CDE3_GCCAAT_L004_R2_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE4','CDE4_AGTCAA_L003_R1_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_AGTCAA_L003_R2_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_AGTCAA_L004_R1_001.fastq.gz',6,{'L4':6}],
-            ['CDE','CDE4','CDE4_AGTCAA_L004_R2_001.fastq.gz',6,{'L4':6}],
-            ['Undetermined_indices','lane1',
-             'lane1_Undetermined_L001_R1_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane1',
-             'lane1_Undetermined_L001_R2_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane2',
-             'lane2_Undetermined_L002_R1_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane2',
-             'lane2_Undetermined_L002_R2_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane3',
-             'lane3_Undetermined_L003_R1_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane3',
-             'lane3_Undetermined_L003_R2_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane4',
-             'lane4_Undetermined_L004_R1_001.fastq.gz',3,{'L4':3}],
-            ['Undetermined_indices','lane4',
-             'lane4_Undetermined_L004_R2_001.fastq.gz',3,{'L4':3}],
-        ]
-        for line,expctd in zip(fqstatistics.raw,expected):
+        for line,expctd in zip(fqstatistics.raw,self.expected):
             self.assertEqual(line['Project'],expctd[0])
             self.assertEqual(line['Sample'],expctd[1])
             self.assertEqual(line['Fastq'],expctd[2])
@@ -316,6 +317,25 @@ class TestFastqStatisticsCasava(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+            self.assertEqual(line['Paired_end'],'Y')
+    def test_report_basic_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_casava()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_basic_stats(fp=fp)
+        stats = fp.getvalue().strip('\n').split('\n')
+        self.assertEqual(len(stats),25)
+        self.assertEqual(stats[0],"#Project	Sample	Fastq	Size	Nreads	Paired_end")
+        for line,expctd in zip(stats[1:],self.expected):
+            line = line.split('\t')
+            self.assertEqual(line[0],expctd[0]) # Project
+            self.assertEqual(line[1],expctd[1]) # Sample
+            self.assertEqual(line[2],expctd[2]) # Fastq
+            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = cStringIO.StringIO()
         self._setup_casava()
@@ -368,6 +388,41 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+        # Expected data
+        self.expected = [
+            ['AB','AB1','AB1_S1_L001_R1_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_S1_L001_R2_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_S1_L002_R1_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB1','AB1_S1_L002_R2_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB2','AB2_S2_L001_R1_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_S2_L001_R2_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_S2_L002_R1_001.fastq.gz',3,{'L2':3}],
+            ['AB','AB2','AB2_S2_L002_R2_001.fastq.gz',3,{'L2':3}],
+            ['CDE','CDE3','CDE3_S3_L003_R1_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_S3_L003_R2_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_S3_L004_R1_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE3','CDE3_S3_L004_R2_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE4','CDE4_S4_L003_R1_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_S4_L003_R2_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_S4_L004_R1_001.fastq.gz',6,{'L4':6}],
+            ['CDE','CDE4','CDE4_S4_L004_R2_001.fastq.gz',6,{'L4':6}],
+            ['Undetermined_indices','lane1',
+             'Undetermined_S0_L001_R1_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane1',
+             'Undetermined_S0_L001_R2_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane2',
+             'Undetermined_S0_L002_R1_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane2',
+             'Undetermined_S0_L002_R2_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane3',
+             'Undetermined_S0_L003_R1_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane3',
+             'Undetermined_S0_L003_R2_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane4',
+             'Undetermined_S0_L004_R1_001.fastq.gz',3,{'L4':3}],
+            ['Undetermined_indices','lane4',
+             'Undetermined_S0_L004_R2_001.fastq.gz',3,{'L4':3}],
+        ]
     def tearDown(self):
         # Remove the temporary test directory
         #shutil.rmtree(self.dirn)
@@ -447,41 +502,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                           'Read_number',
                           'L1','L2','L3','L4'])
         self.assertEqual(len(fqstatistics.raw),24)
-        expected = [
-            ['AB','AB1','AB1_S1_L001_R1_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_S1_L001_R2_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_S1_L002_R1_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB1','AB1_S1_L002_R2_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB2','AB2_S2_L001_R1_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_S2_L001_R2_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_S2_L002_R1_001.fastq.gz',3,{'L2':3}],
-            ['AB','AB2','AB2_S2_L002_R2_001.fastq.gz',3,{'L2':3}],
-            ['CDE','CDE3','CDE3_S3_L003_R1_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_S3_L003_R2_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_S3_L004_R1_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE3','CDE3_S3_L004_R2_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE4','CDE4_S4_L003_R1_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_S4_L003_R2_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_S4_L004_R1_001.fastq.gz',6,{'L4':6}],
-            ['CDE','CDE4','CDE4_S4_L004_R2_001.fastq.gz',6,{'L4':6}],
-            ['Undetermined_indices','lane1',
-             'Undetermined_S0_L001_R1_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane1',
-             'Undetermined_S0_L001_R2_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane2',
-             'Undetermined_S0_L002_R1_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane2',
-             'Undetermined_S0_L002_R2_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane3',
-             'Undetermined_S0_L003_R1_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane3',
-             'Undetermined_S0_L003_R2_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane4',
-             'Undetermined_S0_L004_R1_001.fastq.gz',3,{'L4':3}],
-            ['Undetermined_indices','lane4',
-             'Undetermined_S0_L004_R2_001.fastq.gz',3,{'L4':3}],
-        ]
-        for line,expctd in zip(fqstatistics.raw,expected):
+        for line,expctd in zip(fqstatistics.raw,self.expected):
             self.assertEqual(line['Project'],expctd[0])
             self.assertEqual(line['Sample'],expctd[1])
             self.assertEqual(line['Fastq'],expctd[2])
@@ -493,6 +514,24 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_basic_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_basic_stats(fp=fp)
+        stats = fp.getvalue().strip('\n').split('\n')
+        self.assertEqual(len(stats),25)
+        self.assertEqual(stats[0],"#Project	Sample	Fastq	Size	Nreads	Paired_end")
+        for line,expctd in zip(stats[1:],self.expected):
+            line = line.split('\t')
+            self.assertEqual(line[0],expctd[0]) # Project
+            self.assertEqual(line[1],expctd[1]) # Sample
+            self.assertEqual(line[2],expctd[2]) # Fastq
+            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2()
@@ -545,6 +584,23 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+        # Expected data
+        self.expected = [
+            ['AB','AB1','AB1_S1_R1_001.fastq.gz',5,{'L1':3,'L2':2}],
+            ['AB','AB1','AB1_S1_R2_001.fastq.gz',5,{'L1':3,'L2':2}],
+            ['AB','AB2','AB2_S2_R1_001.fastq.gz',8,{'L1':5,'L2':3}],
+            ['AB','AB2','AB2_S2_R2_001.fastq.gz',8,{'L1':5,'L2':3}],
+            ['CDE','CDE3','CDE3_S3_R1_001.fastq.gz',9,{'L3':7,'L4':2}],
+            ['CDE','CDE3','CDE3_S3_R2_001.fastq.gz',9,{'L3':7,'L4':2}],
+            ['CDE','CDE4','CDE4_S4_R1_001.fastq.gz',14,{'L3':8,'L4':6}],
+            ['CDE','CDE4','CDE4_S4_R2_001.fastq.gz',14,{'L3':8,'L4':6}],
+            ['Undetermined_indices','undetermined',
+             'Undetermined_S0_R1_001.fastq.gz',10,
+             {'L1':2,'L2':1,'L3':4,'L4':3}],
+            ['Undetermined_indices','undetermined',
+             'Undetermined_S0_R2_001.fastq.gz',10,
+             {'L1':2,'L2':1,'L3':4,'L4':3}],
+        ]
     def tearDown(self):
         # Remove the temporary test directory
         #shutil.rmtree(self.dirn)
@@ -625,23 +681,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                           'L1','L2','L3','L4'])
         # Check "raw" stored data
         self.assertEqual(len(fqstatistics.raw),10)
-        expected = [
-            ['AB','AB1','AB1_S1_R1_001.fastq.gz',5,{'L1':3,'L2':2}],
-            ['AB','AB1','AB1_S1_R2_001.fastq.gz',5,{'L1':3,'L2':2}],
-            ['AB','AB2','AB2_S2_R1_001.fastq.gz',8,{'L1':5,'L2':3}],
-            ['AB','AB2','AB2_S2_R2_001.fastq.gz',8,{'L1':5,'L2':3}],
-            ['CDE','CDE3','CDE3_S3_R1_001.fastq.gz',9,{'L3':7,'L4':2}],
-            ['CDE','CDE3','CDE3_S3_R2_001.fastq.gz',9,{'L3':7,'L4':2}],
-            ['CDE','CDE4','CDE4_S4_R1_001.fastq.gz',14,{'L3':8,'L4':6}],
-            ['CDE','CDE4','CDE4_S4_R2_001.fastq.gz',14,{'L3':8,'L4':6}],
-            ['Undetermined_indices','undetermined',
-             'Undetermined_S0_R1_001.fastq.gz',10,
-             {'L1':2,'L2':1,'L3':4,'L4':3}],
-            ['Undetermined_indices','undetermined',
-             'Undetermined_S0_R2_001.fastq.gz',10,
-             {'L1':2,'L2':1,'L3':4,'L4':3}],
-        ]
-        for line,expctd in zip(fqstatistics.raw,expected):
+        for line,expctd in zip(fqstatistics.raw,self.expected):
             self.assertEqual(line['Project'],expctd[0])
             self.assertEqual(line['Sample'],expctd[1])
             self.assertEqual(line['Fastq'],expctd[2])
@@ -653,6 +693,24 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_basic_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2_no_lane_splitting()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_basic_stats(fp=fp)
+        stats = fp.getvalue().strip('\n').split('\n')
+        self.assertEqual(len(stats),11)
+        self.assertEqual(stats[0],"#Project	Sample	Fastq	Size	Nreads	Paired_end")
+        for line,expctd in zip(stats[1:],self.expected):
+            line = line.split('\t')
+            self.assertEqual(line[0],expctd[0]) # Project
+            self.assertEqual(line[1],expctd[1]) # Sample
+            self.assertEqual(line[2],expctd[2]) # Fastq
+            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = cStringIO.StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()
