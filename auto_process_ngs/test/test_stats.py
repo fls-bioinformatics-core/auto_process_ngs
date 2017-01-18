@@ -115,9 +115,42 @@ AAAAAEEEEEEEEEEEEEEEE/EE/
 
 # Mock classes
 class AugmentedMockIlluminaData(MockIlluminaData):
+    """
+    Modified  MockIlluminaData to add content to FASTQ files
+
+    This version adds a 'populate_fastq' method that can
+    be used to generate or append content to a FASTQ file.
+    """
     def __init__(self,name,package,**kws):
         MockIlluminaData.__init__(self,name,package,**kws)
     def populate_fastq(self,path,nreads,lane=None,append=False):
+        """
+        Write or append content to a FASTQ file
+
+        Writes the specified number of reads to the named
+        FASTQ file.
+
+        Read headers will be written to have the appropriate
+        read number (extracted from the FASTQ name) and
+        lane number.
+
+        The sequence and quality data in the reads are
+        identical for every read.
+
+        Arguments:
+          path (str): path to the FASTQ file
+          nreads (int): number of reads to generate
+          lane (int): optional, explicitly specify the lane
+            number for read headers (by default will be
+            extracted from the FASTQ name, if possible)
+          append (boolean): if True then append the reads to
+            the FASTQ file (default is to overwrite any
+            existing reads)
+
+        Raises:
+          Exception if lane is not supplied and can't be
+            extracted from the FASTQ name.
+        """
         # Extract read number from name
         read_number = IlluminaFastq(path).read_number
         # Extract lane from name, if not explicitly specified
@@ -150,7 +183,7 @@ GCCGATATGC
                 fq.write(r)
 
 # FastqStatistics
-class TestFastqStatistics(unittest.TestCase):
+class TestFastqStatisticsCasava(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
@@ -217,6 +250,80 @@ class TestFastqStatistics(unittest.TestCase):
                         mock_data.populate_fastq(fastq,nreads)
         # Store the location of the mock data
         self.illumina_data = mock_data.dirn
+    def test_fastqstatistics_casava(self):
+        self._setup_casava()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        self.assertEqual(fqstatistics.lane_names,
+                         ['L1','L2','L3','L4'])
+        # Check "raw" stored data
+        self.assertEqual(fqstatistics.raw.header(),
+                         ['Project',
+                          'Sample',
+                          'Fastq',
+                          'Size',
+                          'Nreads',
+                          'Paired_end',
+                          'Read_number',
+                          'L1','L2','L3','L4'])
+        self.assertEqual(len(fqstatistics.raw),24)
+        expected = [
+            ['AB','AB1','AB1_GCCAAT_L001_R1_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_GCCAAT_L001_R2_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_GCCAAT_L002_R1_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB1','AB1_GCCAAT_L002_R2_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB2','AB2_AGTCAA_L001_R1_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_AGTCAA_L001_R2_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_AGTCAA_L002_R1_001.fastq.gz',3,{'L2':3}],
+            ['AB','AB2','AB2_AGTCAA_L002_R2_001.fastq.gz',3,{'L2':3}],
+            ['CDE','CDE3','CDE3_GCCAAT_L003_R1_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_GCCAAT_L003_R2_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_GCCAAT_L004_R1_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE3','CDE3_GCCAAT_L004_R2_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE4','CDE4_AGTCAA_L003_R1_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_AGTCAA_L003_R2_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_AGTCAA_L004_R1_001.fastq.gz',6,{'L4':6}],
+            ['CDE','CDE4','CDE4_AGTCAA_L004_R2_001.fastq.gz',6,{'L4':6}],
+            ['Undetermined_indices','lane1',
+             'lane1_Undetermined_L001_R1_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane1',
+             'lane1_Undetermined_L001_R2_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane2',
+             'lane2_Undetermined_L002_R1_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane2',
+             'lane2_Undetermined_L002_R2_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane3',
+             'lane3_Undetermined_L003_R1_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane3',
+             'lane3_Undetermined_L003_R2_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane4',
+             'lane4_Undetermined_L004_R1_001.fastq.gz',3,{'L4':3}],
+            ['Undetermined_indices','lane4',
+             'lane4_Undetermined_L004_R2_001.fastq.gz',3,{'L4':3}],
+        ]
+        for line,expctd in zip(fqstatistics.raw,expected):
+            self.assertEqual(line['Project'],expctd[0])
+            self.assertEqual(line['Sample'],expctd[1])
+            self.assertEqual(line['Fastq'],expctd[2])
+            self.assertEqual(line['Nreads'],expctd[3])
+            for lane in ('L1','L2','L3','L4'):
+                if lane in expctd[4]:
+                    self.assertEqual(line[lane],expctd[4][lane])
+                else:
+                    self.assertEqual(line[lane],'')
+            self.assertEqual(line['Read_number'],
+                             IlluminaFastq(expctd[2]).read_number)
+
+class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+    def tearDown(self):
+        # Remove the temporary test directory
+        #shutil.rmtree(self.dirn)
+        pass
     def _setup_bcl2fastq2(self):
         # Create a mock bcl2fastq dir structure
         mock_data = AugmentedMockIlluminaData(
@@ -273,6 +380,80 @@ class TestFastqStatistics(unittest.TestCase):
                         mock_data.populate_fastq(fastq,nreads)
         # Store the location of the mock data
         self.illumina_data = mock_data.dirn
+    def test_fastqstatistics_bcl2fastq2(self):
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        self.assertEqual(fqstatistics.lane_names,
+                         ['L1','L2','L3','L4'])
+        # Check "raw" stored data
+        self.assertEqual(fqstatistics.raw.header(),
+                         ['Project',
+                          'Sample',
+                          'Fastq',
+                          'Size',
+                          'Nreads',
+                          'Paired_end',
+                          'Read_number',
+                          'L1','L2','L3','L4'])
+        self.assertEqual(len(fqstatistics.raw),24)
+        expected = [
+            ['AB','AB1','AB1_S1_L001_R1_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_S1_L001_R2_001.fastq.gz',3,{'L1':3}],
+            ['AB','AB1','AB1_S1_L002_R1_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB1','AB1_S1_L002_R2_001.fastq.gz',2,{'L2':2}],
+            ['AB','AB2','AB2_S2_L001_R1_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_S2_L001_R2_001.fastq.gz',5,{'L1':5}],
+            ['AB','AB2','AB2_S2_L002_R1_001.fastq.gz',3,{'L2':3}],
+            ['AB','AB2','AB2_S2_L002_R2_001.fastq.gz',3,{'L2':3}],
+            ['CDE','CDE3','CDE3_S3_L003_R1_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_S3_L003_R2_001.fastq.gz',7,{'L3':7}],
+            ['CDE','CDE3','CDE3_S3_L004_R1_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE3','CDE3_S3_L004_R2_001.fastq.gz',2,{'L4':2}],
+            ['CDE','CDE4','CDE4_S4_L003_R1_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_S4_L003_R2_001.fastq.gz',8,{'L3':8}],
+            ['CDE','CDE4','CDE4_S4_L004_R1_001.fastq.gz',6,{'L4':6}],
+            ['CDE','CDE4','CDE4_S4_L004_R2_001.fastq.gz',6,{'L4':6}],
+            ['Undetermined_indices','lane1',
+             'Undetermined_S0_L001_R1_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane1',
+             'Undetermined_S0_L001_R2_001.fastq.gz',2,{'L1':2}],
+            ['Undetermined_indices','lane2',
+             'Undetermined_S0_L002_R1_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane2',
+             'Undetermined_S0_L002_R2_001.fastq.gz',1,{'L2':1}],
+            ['Undetermined_indices','lane3',
+             'Undetermined_S0_L003_R1_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane3',
+             'Undetermined_S0_L003_R2_001.fastq.gz',4,{'L3':4}],
+            ['Undetermined_indices','lane4',
+             'Undetermined_S0_L004_R1_001.fastq.gz',3,{'L4':3}],
+            ['Undetermined_indices','lane4',
+             'Undetermined_S0_L004_R2_001.fastq.gz',3,{'L4':3}],
+        ]
+        for line,expctd in zip(fqstatistics.raw,expected):
+            self.assertEqual(line['Project'],expctd[0])
+            self.assertEqual(line['Sample'],expctd[1])
+            self.assertEqual(line['Fastq'],expctd[2])
+            self.assertEqual(line['Nreads'],expctd[3])
+            for lane in ('L1','L2','L3','L4'):
+                if lane in expctd[4]:
+                    self.assertEqual(line[lane],expctd[4][lane])
+                else:
+                    self.assertEqual(line[lane],'')
+            self.assertEqual(line['Read_number'],
+                             IlluminaFastq(expctd[2]).read_number)
+
+class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestFastqStats')
+    def tearDown(self):
+        # Remove the temporary test directory
+        #shutil.rmtree(self.dirn)
+        pass
     def _setup_bcl2fastq2_no_lane_splitting(self):
         # Create mock bcl2fastq2 dir structure with no lane splitting
         mock_data = AugmentedMockIlluminaData(
@@ -330,134 +511,6 @@ class TestFastqStatistics(unittest.TestCase):
                                                  append=True)
         # Store the location of the mock data
         self.illumina_data = mock_data.dirn
-    def test_fastqstatistics_casava(self):
-        self._setup_casava()
-        fqstatistics = FastqStatistics(
-            IlluminaData(
-                self.illumina_data,
-                unaligned_dir="bcl2fastq"))
-        self.assertEqual(fqstatistics.lane_names,
-                         ['L1','L2','L3','L4'])
-        self.assertEqual(fqstatistics.raw.header(),
-                         ['Project',
-                          'Sample',
-                          'Fastq',
-                          'Size',
-                          'Nreads',
-                          'Paired_end',
-                          'Read_number',
-                          'L1','L2','L3','L4'])
-        self.assertEqual(len(fqstatistics.raw),24)
-        expected = [
-            ['AB','AB1','AB1_GCCAAT_L001_R1_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_GCCAAT_L001_R2_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_GCCAAT_L002_R1_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB1','AB1_GCCAAT_L002_R2_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB2','AB2_AGTCAA_L001_R1_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_AGTCAA_L001_R2_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_AGTCAA_L002_R1_001.fastq.gz',3,{'L2':3}],
-            ['AB','AB2','AB2_AGTCAA_L002_R2_001.fastq.gz',3,{'L2':3}],
-            ['CDE','CDE3','CDE3_GCCAAT_L003_R1_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_GCCAAT_L003_R2_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_GCCAAT_L004_R1_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE3','CDE3_GCCAAT_L004_R2_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE4','CDE4_AGTCAA_L003_R1_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_AGTCAA_L003_R2_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_AGTCAA_L004_R1_001.fastq.gz',6,{'L4':6}],
-            ['CDE','CDE4','CDE4_AGTCAA_L004_R2_001.fastq.gz',6,{'L4':6}],
-            ['Undetermined_indices','lane1',
-             'lane1_Undetermined_L001_R1_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane1',
-             'lane1_Undetermined_L001_R2_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane2',
-             'lane2_Undetermined_L002_R1_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane2',
-             'lane2_Undetermined_L002_R2_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane3',
-             'lane3_Undetermined_L003_R1_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane3',
-             'lane3_Undetermined_L003_R2_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane4',
-             'lane4_Undetermined_L004_R1_001.fastq.gz',3,{'L4':3}],
-            ['Undetermined_indices','lane4',
-             'lane4_Undetermined_L004_R2_001.fastq.gz',3,{'L4':3}],
-        ]
-        for line,expctd in zip(fqstatistics.raw,expected):
-            self.assertEqual(line['Project'],expctd[0])
-            self.assertEqual(line['Sample'],expctd[1])
-            self.assertEqual(line['Fastq'],expctd[2])
-            self.assertEqual(line['Nreads'],expctd[3])
-            for lane in ('L1','L2','L3','L4'):
-                if lane in expctd[4]:
-                    self.assertEqual(line[lane],expctd[4][lane])
-                else:
-                    self.assertEqual(line[lane],'')
-            self.assertEqual(line['Read_number'],
-                             IlluminaFastq(expctd[2]).read_number)
-    def test_fastqstatistics_bcl2fastq2(self):
-        self._setup_bcl2fastq2()
-        fqstatistics = FastqStatistics(
-            IlluminaData(
-                self.illumina_data,
-                unaligned_dir="bcl2fastq"))
-        self.assertEqual(fqstatistics.lane_names,
-                         ['L1','L2','L3','L4'])
-        self.assertEqual(fqstatistics.raw.header(),
-                         ['Project',
-                          'Sample',
-                          'Fastq',
-                          'Size',
-                          'Nreads',
-                          'Paired_end',
-                          'Read_number',
-                          'L1','L2','L3','L4'])
-        self.assertEqual(len(fqstatistics.raw),24)
-        expected = [
-            ['AB','AB1','AB1_S1_L001_R1_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_S1_L001_R2_001.fastq.gz',3,{'L1':3}],
-            ['AB','AB1','AB1_S1_L002_R1_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB1','AB1_S1_L002_R2_001.fastq.gz',2,{'L2':2}],
-            ['AB','AB2','AB2_S2_L001_R1_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_S2_L001_R2_001.fastq.gz',5,{'L1':5}],
-            ['AB','AB2','AB2_S2_L002_R1_001.fastq.gz',3,{'L2':3}],
-            ['AB','AB2','AB2_S2_L002_R2_001.fastq.gz',3,{'L2':3}],
-            ['CDE','CDE3','CDE3_S3_L003_R1_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_S3_L003_R2_001.fastq.gz',7,{'L3':7}],
-            ['CDE','CDE3','CDE3_S3_L004_R1_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE3','CDE3_S3_L004_R2_001.fastq.gz',2,{'L4':2}],
-            ['CDE','CDE4','CDE4_S4_L003_R1_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_S4_L003_R2_001.fastq.gz',8,{'L3':8}],
-            ['CDE','CDE4','CDE4_S4_L004_R1_001.fastq.gz',6,{'L4':6}],
-            ['CDE','CDE4','CDE4_S4_L004_R2_001.fastq.gz',6,{'L4':6}],
-            ['Undetermined_indices','lane1',
-             'Undetermined_S0_L001_R1_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane1',
-             'Undetermined_S0_L001_R2_001.fastq.gz',2,{'L1':2}],
-            ['Undetermined_indices','lane2',
-             'Undetermined_S0_L002_R1_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane2',
-             'Undetermined_S0_L002_R2_001.fastq.gz',1,{'L2':1}],
-            ['Undetermined_indices','lane3',
-             'Undetermined_S0_L003_R1_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane3',
-             'Undetermined_S0_L003_R2_001.fastq.gz',4,{'L3':4}],
-            ['Undetermined_indices','lane4',
-             'Undetermined_S0_L004_R1_001.fastq.gz',3,{'L4':3}],
-            ['Undetermined_indices','lane4',
-             'Undetermined_S0_L004_R2_001.fastq.gz',3,{'L4':3}],
-        ]
-        for line,expctd in zip(fqstatistics.raw,expected):
-            self.assertEqual(line['Project'],expctd[0])
-            self.assertEqual(line['Sample'],expctd[1])
-            self.assertEqual(line['Fastq'],expctd[2])
-            self.assertEqual(line['Nreads'],expctd[3])
-            for lane in ('L1','L2','L3','L4'):
-                if lane in expctd[4]:
-                    self.assertEqual(line[lane],expctd[4][lane])
-                else:
-                    self.assertEqual(line[lane],'')
-            self.assertEqual(line['Read_number'],
-                             IlluminaFastq(expctd[2]).read_number)
     def test_fastqstatistics_bcl2fastq2_no_lane_splitting(self):
         self._setup_bcl2fastq2_no_lane_splitting()
         fqstatistics = FastqStatistics(
@@ -475,6 +528,7 @@ class TestFastqStatistics(unittest.TestCase):
                           'Paired_end',
                           'Read_number',
                           'L1','L2','L3','L4'])
+        # Check "raw" stored data
         self.assertEqual(len(fqstatistics.raw),10)
         expected = [
             ['AB','AB1','AB1_S1_R1_001.fastq.gz',5,{'L1':3,'L2':2}],
