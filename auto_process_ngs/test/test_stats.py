@@ -7,6 +7,7 @@ import unittest
 import tempfile
 import shutil
 import gzip
+import cStringIO
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import IlluminaData
@@ -315,6 +316,20 @@ class TestFastqStatisticsCasava(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_summary_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_casava()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_summary_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
+Lane 1	10	8	2	80.0	20.0
+Lane 2	6	5	1	83.33	16.67
+Lane 3	19	15	4	78.95	21.05
+Lane 4	11	8	3	72.73	27.27
+""")
 
 class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
     def setUp(self):
@@ -445,6 +460,20 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_summary_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_summary_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
+Lane 1	10	8	2	80.0	20.0
+Lane 2	6	5	1	83.33	16.67
+Lane 3	19	15	4	78.95	21.05
+Lane 4	11	8	3	72.73	27.27
+""")
 
 class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
     def setUp(self):
@@ -558,6 +587,20 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                     self.assertEqual(line[lane],'')
             self.assertEqual(line['Read_number'],
                              IlluminaFastq(expctd[2]).read_number)
+    def test_report_per_lane_summary_stats(self):
+        fp = cStringIO.StringIO()
+        self._setup_bcl2fastq2_no_lane_splitting()
+        fqstatistics = FastqStatistics(
+            IlluminaData(
+                self.illumina_data,
+                unaligned_dir="bcl2fastq"))
+        fqstatistics.report_per_lane_summary_stats(fp=fp)
+        self.assertEqual(fp.getvalue(),"""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
+Lane 1	10	8	2	80.0	20.0
+Lane 2	6	5	1	83.33	16.67
+Lane 3	19	15	4	78.95	21.05
+Lane 4	11	8	3	72.73	27.27
+""")
 
 # FastqStats
 class TestFastqStats(unittest.TestCase):

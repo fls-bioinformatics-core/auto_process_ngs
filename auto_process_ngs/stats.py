@@ -273,19 +273,25 @@ class FastqStatistics:
         if out_file is not None:
             fp.close()
 
-    def report_per_lane_summary_stats(self,out_file=None):
+    def report_per_lane_summary_stats(self,out_file=None,fp=None):
         """
         Report summary of total and unassigned reads per-lane
 
         Arguments:
           out_file (str): name of file to write report
-            to (defaults to stdout)
+            to (used if 'fp' is not supplied)
+          fp (File): File-like object open for writing
+            (defaults to stdout if 'out_file' also not
+            supplied)
         """
         # Determine output stream
-        if out_file is None:
-            fp = sys.stdout
+        if fp is None:
+            if out_file is None:
+                fpp = sys.stdout
+            else:
+                fpp = open(out_file,'w')
         else:
-            fp = open(out_file,'w')
+            fpp = fp
         # Set up TabFile to hold the data collected
         per_lane_stats = TabFile(column_names=('Lane',
                                                'Total reads',
@@ -323,10 +329,10 @@ class FastqStatistics:
                                         "%.2f" % percent_assigned,
                                         "%.2f" % percent_unassigned))
         # Write to file
-        per_lane_stats.write(fp=fp,include_header=True)
+        per_lane_stats.write(fp=fpp,include_header=True)
         # Close file
-        if out_file is not None:
-            fp.close()
+        if fp is None and out_file is not None:
+            fpp.close()
 
 class FastqStats:
     """Container for storing data about a FASTQ file
