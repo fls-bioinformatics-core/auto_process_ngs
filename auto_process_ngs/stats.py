@@ -35,6 +35,10 @@ import bcftbx.utils as bcf_utils
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
 
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -119,21 +123,24 @@ class FastqStatistics:
         # columns for each
         lanes = set()
         for fastq in results_r1:
-            print "%s: %s" % (fastq.name,fastq.lanes)
+            logger.debug("-- %s: lanes %s" %
+                         (fastq.name,
+                          ','.join([str(l) for l in fastq.lanes])))
             for lane in fastq.lanes:
                 lanes.add(lane)
         self._lanes = sorted(list(lanes))
-        print "Lanes: %s" % self._lanes
+        logger.debug("Lanes found: %s" %
+                     ','.join([str(l) for l in self._lanes]))
         for lane in self._lanes:
             self._stats.appendColumn("L%s" % lane)
         # Copy reads per lane from R1 FASTQs into R2
         for r2_fastq in results_r2:
             # Get corresponding R1 name
-            print "-- Fastq R2: %s" % r2_fastq.name
+            logger.debug("-- Fastq R2: %s" % r2_fastq.name)
             r1_fastq_name = IlluminaFastq(r2_fastq.name)
             r1_fastq_name.read_number = 1
             r1_fastq_name = str(r1_fastq_name)
-            print "--       R1: %s" % r1_fastq_name
+            logger.debug("--    -> R1: %s" % r1_fastq_name)
             # Locate corresponding data
             r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
                               results_r1)[0]
@@ -551,5 +558,5 @@ def collect_fastq_data(fqstats):
     print "- %s: %d reads, %s" % (fastq_name,
                                   fqs.nreads,
                                   bcf_utils.format_file_size(fqs.fsize))
-    print "- %s: took %f.2s" % (fastq_name,(end_time-start_time))
+    print "- %s: took %.2fs" % (fastq_name,(end_time-start_time))
     return fqs

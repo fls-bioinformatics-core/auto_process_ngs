@@ -32,7 +32,6 @@ an Illumina sequencing run:
 import os
 import sys
 import optparse
-import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
@@ -42,14 +41,18 @@ from auto_process_ngs.stats import FastqStats
 from auto_process_ngs import get_version
 __version__ = get_version()
 
+# Initialise logging
+import logging
+logger = logging.getLogger("fastq_statistics")
+
+# Format logging
+logging.basicConfig(format='%(levelname)s %(name)s: %(message)s')
+
 #######################################################################
 # Main program
 #######################################################################
 
 if __name__ == '__main__':
-
-    # Set up logger formatting
-    logging.basicConfig(format='%(levelname)s %(message)s')
 
     # Process command line
     p = optparse.OptionParser(usage="%prog [OPTIONS] ILLUMINA_RUN_DIR",
@@ -83,26 +86,36 @@ if __name__ == '__main__':
     p.add_option('-n',"--nprocessors",action="store",dest="n",
                  default=1,type='int',
                  help="spread work across N processors/cores (default is 1)")
-    p.add_option("--force",action="store_true",dest="force",default=False,
-                 help="force regeneration of statistics from fastq files")
     p.add_option("--debug",action="store_true",dest="debug",default=False,
                  help="turn on debugging output")
+    # Deprecated options
+    deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
+    deprecated.add_option("--force",action="store_true",dest="force",
+                          default=False,
+                          help="does nothing: retained for backwards "
+                          "compatibility")
+    p.add_option_group(deprecated)
     options,args = p.parse_args()
     if len(args) != 1:
         p.error("expects a single argument (input directory)")
 
     # Report settings etc
-    print "Source dir    : %s" % args[0]
-    print "Unaligned dir : %s" % options.unaligned_dir
-    print "Stats file    : %s" % options.stats_file
-    print "Per-lane stats: %s" % options.per_lane_stats_file
-    print "Nprocessors   : %s" % options.n
-    print "Force?        : %s" % options.force
-    print "Debug?        : %s" % options.debug
+    print "Source directory      : %s" % args[0]
+    print "Unaligned subdirectory: %s" % options.unaligned_dir
+    print "Basic stats file      : %s" % options.stats_file
+    print "Full stats file       : %s" % options.full_stats_file
+    print "Per-lane summary stats: %s" % options.per_lane_stats_file
+    print "Per-lane sample stats : %s" % options.per_lane_sample_stats_file
+    print "Number of processors  : %s" % options.n
+    print "Debug?                : %s" % ('yes' if options.debug else 'no')
+
+    # Ignore 'force'
+    if options.force:
+        logger.warn("ignoring deprecated option '--force'")
 
     # Handle debugging output if requested
     if options.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger("auto_process_ngs").setLevel(logging.DEBUG)
 
     # Get the data from FASTQ files
     try:
@@ -110,7 +123,7 @@ if __name__ == '__main__':
             args[0],
             unaligned_dir=options.unaligned_dir)
     except IlluminaData.IlluminaDataError,ex:
-        logging.error("Failed to get data from %s: %s" % (args[0],ex))
+        logger.critical("failed to get data from %s: %s" % (args[0],ex))
         sys.exit(1)
     # Generate statistics for fastq files
     stats = FastqStatistics(illumina_data,
