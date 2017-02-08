@@ -343,7 +343,11 @@ class FastqStatistics:
         for lane in self.lane_names:
             lane_number = int(lane[1:])
             assigned_reads = assigned[lane]
-            unassigned_reads = unassigned[lane]
+            try:
+                unassigned_reads = unassigned[lane]
+            except KeyError:
+                # lane doesn't have any unassigned reads
+                unassigned_reads = 0
             total_reads = assigned_reads + unassigned_reads
             percent_assigned = float(assigned_reads)/float(total_reads)*100.0
             percent_unassigned = float(unassigned_reads)/float(total_reads)*100.0
