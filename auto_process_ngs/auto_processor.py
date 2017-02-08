@@ -752,17 +752,18 @@ class AutoProcess:
             if tmp_sample_sheet is None:
                 logging.error("Unable to acquire sample sheet")
                 return
+            # Keep a copy of the original sample sheet
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
+            print "Copying original sample sheetd to %s" % original_sample_sheet
+            shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
+            # Set the permissions for the original SampleSheet
+            os.chmod(original_sample_sheet,0664)
             # Process acquired sample sheet
             custom_sample_sheet = os.path.join(self.analysis_dir,
                                                'custom_SampleSheet.csv')
             sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
                 tmp_sample_sheet,custom_sample_sheet)
-            print "Keeping copy of original sample sheet"
-            original_sample_sheet = os.path.join(self.analysis_dir,
-                                                 'SampleSheet.orig.csv')
-            os.rename(tmp_sample_sheet,original_sample_sheet)
-            # Set the permissions for the original SampleSheet
-            os.chmod(original_sample_sheet,0664)
         else:
             sample_sheet = IlluminaData.SampleSheet(custom_sample_sheet)
             original_sample_sheet = os.path.join(self.analysis_dir,
