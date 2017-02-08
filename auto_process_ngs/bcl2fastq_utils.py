@@ -405,9 +405,14 @@ def check_barcode_collisions(sample_sheet_file,nmismatches):
                 indx = line['index'].strip()
             except KeyError:
                 # Try CASAVA format
-                indx = line['Index'].strip()
-                if not indx:
-                    indx = None
+                try:
+                    indx = line['Index'].strip()
+                except KeyError:
+                    # No index columns
+                    indx = ""
+        # Explicitly set empty index to None
+        if not indx:
+            indx = None
         try:
             barcodes[lane].append(indx)
         except KeyError:
