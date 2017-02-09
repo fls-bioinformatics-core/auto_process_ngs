@@ -1560,6 +1560,10 @@ class AutoProcess:
             logging.warning("Keyboard interrupt, terminating fastq_statistics")
             fastq_statistics_job.terminate()
             raise ex
+        exit_code = fastq_statistics_job.exit_code
+        print "fastq_statstics.py completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("fastq_statstics.py exited with an error")
         self.params['stats_file'] = stats_file
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
