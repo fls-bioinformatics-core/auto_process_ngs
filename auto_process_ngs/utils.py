@@ -30,6 +30,7 @@ Classes:
 - AnalysisProjectInfo:
 - ProjectMetadataFile:
 - ZipArchive:
+- OutputFiles:
 
 Functions:
 
@@ -1349,6 +1350,84 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+class OutputFiles:
+    """Class for managing multiple output files
+
+    Usage:
+
+    Create a new OutputFiles instance:
+    >>> fp = OutputFiles()
+
+    Set up files against keys:
+    >>> fp.open('file1','first_file.txt')
+    >>> fp.open('file2','second_file.txt')
+
+    Write content to files:
+    >>> fp.write('file1','some content for first file')
+    >>> fp.write('file2','content for\nsecond file')
+
+    Finish and close all open files
+    >>> fp.close()
+
+    """
+    def __init__(self,base_dir=None):
+        """Create a new OutputFiles instance
+
+        Arguments:
+          base_dir (str): optional 'base' directory
+            which files will be created relative to
+
+        """
+        self._fp = dict()
+        self._file = dict()
+        self._base_dir = base_dir
+
+    def open(self,name,filen):
+        """Open a new output file
+
+        'name' is the handle used to reference the
+        file when using the 'write' and 'close' methods.
+
+        'filen' is the name of the file, and is unrelated
+        to the handle.
+
+        """
+        if self._base_dir is not None:
+            filen = os.path.join(self._base_dir,filen)
+        else:
+            filen = os.path.abspath(filen)
+        self._file[name] = filen
+        self._fp[name] = open(filen,'w')
+
+    def write(self,name,s):
+        """Write content to file
+
+        Writes 's' as a newline-terminated string to the
+        file that is referenced with the handle 'name'.
+
+        """
+        self._fp[name].write("%s\n" % s)
+
+    def file_name(self,name):
+        """Get the file name associated with a handle
+
+        """
+        return self._file[name]
+
+    def close(self,name=None):
+        """Close one or all open files
+
+        If a 'name' is specified then only the file matching
+        that handle will be closed; with no arguments all
+        open files will be closed.
+
+        """
+        if name is not None:
+            self._fp[name].close()
+        else:
+            for name in self._fp:
+                self._fp[name].close()
 
 class ZipArchive(object):
     """

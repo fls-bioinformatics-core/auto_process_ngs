@@ -825,6 +825,41 @@ class TestZipArchive(unittest.TestCase):
                             "'%s' in zip file but shouldn't be"
                             % name)
 
+class TestOutputFiles(unittest.TestCase):
+    """
+    Tests for the OutputFiles class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_outputfile')
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_outputfiles(self):
+        out = OutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt'))
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_outputfiles_with_basedir(self):
+        out = OutputFiles(self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 
