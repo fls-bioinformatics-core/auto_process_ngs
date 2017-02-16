@@ -33,6 +33,7 @@ INLINE_BARCODE_LENGTH = 11
 UMI_LENGTH = 10
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
+BATCH_SIZE = 500
 
 ######################################################################
 # Classes
@@ -77,22 +78,27 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("FQ_R1",help="R1 FASTQ file")
     p.add_argument("FQ_R2",help="Matching R2 FASTQ file")
+    p.add_argument("-w","--well-list",
+                   dest="well_list_file",default=None,
+                   help="iCell8 'well list' file")
+    p.add_argument("-m","--mode",
+                   dest="splitting_mode",default="barcodes",
+                   choices=["barcodes","batch","none"],
+                   help="how to split the input FASTQs (default: "
+                   "'barcodes')")
+    p.add_argument("-b","--basename",
+                   default="icell8",
+                   help="basename for output FASTQ files (default: "
+                   "'icell8')")
+    p.add_argument("-o","--outdir",
+                   dest="out_dir",default=None,
+                   help="directory to write output FASTQ files to "
+                   "(default: current directory)")
     p.add_argument("-l",
                    type=int,dest='inline_barcode_length',
                    default=INLINE_BARCODE_LENGTH,
                    help="length of inline barcodes (default: %d)" %
                    INLINE_BARCODE_LENGTH)
-    p.add_argument("-b","--basename",
-                   default="icell8",
-                   help="basename for output FASTQ files (default: "
-                   "'icell8')")
-    p.add_argument("-w","--well-list",
-                   dest="well_list_file",default=None,
-                   help="iCell8 'well list' file")
-    p.add_argument("-o","--outdir",
-                   dest="out_dir",default=None,
-                   help="directory to write output FASTQ files to "
-                   "(default: current directory)")
     args = p.parse_args()
     
     # Initialise positions for inline barcode and UMI
@@ -107,9 +113,11 @@ if __name__ == "__main__":
     # Get well list and expected barcodes
     well_list = ICell8WellList(args.well_list_file)
     expected_barcodes = well_list.barcodes()
+    print "%d expected barcodes" % len(expected_barcodes)
 
     # Count barcodes and rejections
     barcodes = {}
+    filtered = 0
     unassigned = 0
     nopenfiles = 0
     
@@ -118,6 +126,7 @@ if __name__ == "__main__":
         mkdir(args.out_dir)
     output_fqs = OutputFiles(base_dir=args.out_dir)
     basename = args.basename
+    batch_number = 0
 
     # Iterate over read pairs from the Fastqs
     for n,read_pair in enumerate(izip(FastqIterator(args.FQ_R1),
@@ -141,7 +150,7 @@ if __name__ == "__main__":
             assignment = "unassigned"
             unassigned += 1
         else:
-            # Filter on quality
+            # Do filtering and splitting
             assignment = inline_barcode
             try:
                 barcodes[inline_barcode]['unfiltered'] += 1
@@ -166,7 +175,18 @@ if __name__ == "__main__":
                                   % n)
                     assignment = 'failed_UMI_quality'
                     barcodes[inline_barcode]['failed_UMI'] += 1
-        # Write to appropriate output files
+        # Assign read pair to appropriate output files
+        if assignment == inline_barcode:
+            filtered += 1
+            if args.splitting_mode == "batch":
+                # Output to a batch-specific file pair
+                if (filtered - 1) % BATCH_SIZE == 0:
+                    batch_number += 1
+                assignment = "B%03d" % batch_number
+            elif args.splitting_mode == "none":
+                # Output to a single file pair
+                assignment = "filtered"
+        # Write read pair
         fq_r1 = "%s_R1" % assignment
         fq_r2 = "%s_R2" % assignment
         if fq_r1 not in output_fqs:
@@ -199,8 +219,7 @@ if __name__ == "__main__":
             nopenfiles = 0
     # Close output files
     output_fqs.close()
-        
-    # Report barcodes
+    # Report barcode and filtering statistics
     barcode_list = sorted(barcodes.keys(),
                           cmp=lambda x,y: cmp(barcodes[x],barcodes[y]),
                           reverse=True)
@@ -226,4 +245,4 @@ if __name__ == "__main__":
     print "Unassigned reads        :\t%d" % unassigned
     print "Failed barcode quality  :\t%d" % failed_barcode
     print "Failed UMI quality      :\t%d" % failed_umi
-    print "Total reads (filtered)  :\t%d" % (assigned-failed_barcode-failed_umi)
+    print "Total reads (filtered)  :\t%d" % filtered
