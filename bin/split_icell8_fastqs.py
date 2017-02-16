@@ -112,7 +112,6 @@ if __name__ == "__main__":
     barcodes = {}
     unassigned = 0
     nopenfiles = 0
-    assignments = []
     
     # Output Fastqs
     if args.out_dir is not None:
@@ -171,21 +170,29 @@ if __name__ == "__main__":
         fq_r1 = "%s_R1" % assignment
         fq_r2 = "%s_R2" % assignment
         if fq_r1 not in output_fqs:
-            output_fqs.open(fq_r1,"%s.%s.r1.fastq" % (basename,assignment),
-                            append=(assignment in assignments))
+            try:
+                # Try to reopen file and append
+                output_fqs.open(fq_r1,append=True)
+            except KeyError:
+                # Open new file
+                output_fqs.open(fq_r1,
+                                "%s.%s.r1.fastq" % (basename,assignment))
             nopenfiles += 1
             ##print "%d: %d files open..." % (n,nopenfiles)
         output_fqs.write(fq_r1,"%s" % r1)
         if fq_r2 not in output_fqs:
-            output_fqs.open(fq_r2,"%s.%s.r2.fastq" % (basename,assignment),
-                            append=(assignment in assignments))
+            try:
+                # Try to reopen file and append
+                output_fqs.open(fq_r2,append=True)
+            except KeyError:
+                # Open new file
+                output_fqs.open(fq_r2,
+                                "%s.%s.r2.fastq" % (basename,assignment))
             nopenfiles += 1
             ##print "%d: %d files open..." % (n,nopenfiles)
         output_fqs.write(fq_r2,"%s" % r2)
         # FIXME close the files if it looks like we have too
         # many open at once (to avoid IOError [Errno 24])
-        if assignment not in assignments:
-            assignments.append(assignment)
         if nopenfiles > MAX_OPEN_FILES:
             logging.debug("*** Closing output files ***")
             output_fqs.close()
