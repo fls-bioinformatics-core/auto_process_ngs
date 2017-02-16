@@ -1367,6 +1367,17 @@ class OutputFiles:
     >>> fp.write('file1','some content for first file')
     >>> fp.write('file2','content for\nsecond file')
 
+    Append content to an existing file:
+    >>> fp.open('file3','third_file.txt',append=True)
+    >>> fp.write('file2','appended content')
+
+    Check if key exists and associated file handle is
+    available for writing:
+    >>> 'file1' in fp
+    True
+    >>> 'file3' in fp
+    False
+
     Finish and close all open files
     >>> fp.close()
 
@@ -1383,7 +1394,7 @@ class OutputFiles:
         self._file = dict()
         self._base_dir = base_dir
 
-    def open(self,name,filen):
+    def open(self,name,filen,append=False):
         """Open a new output file
 
         'name' is the handle used to reference the
@@ -1392,16 +1403,24 @@ class OutputFiles:
         'filen' is the name of the file, and is unrelated
         to the handle.
 
+        If 'append' is True then append to an existing
+        file rather than overwriting (i.e. use mode 'a'
+        instead of 'w').
+
         """
+        if append:
+            mode = 'a'
+        else:
+            mode = 'w'
         if self._base_dir is not None:
             filen = os.path.join(self._base_dir,filen)
         else:
             filen = os.path.abspath(filen)
         self._file[name] = filen
-        self._fp[name] = open(filen,'w')
+        self._fp[name] = open(filen,mode)
 
     def write(self,name,s):
-        """Write content to file
+        """Write content to file (newline-terminated)
 
         Writes 's' as a newline-terminated string to the
         file that is referenced with the handle 'name'.
@@ -1411,6 +1430,11 @@ class OutputFiles:
 
     def file_name(self,name):
         """Get the file name associated with a handle
+
+        NB the file name will be available even if the
+        file has been closed.
+
+        Raises KeyError if the key doesn't exist.
 
         """
         return self._file[name]
@@ -1425,9 +1449,14 @@ class OutputFiles:
         """
         if name is not None:
             self._fp[name].close()
+            del(self._fp[name])
         else:
-            for name in self._fp:
-                self._fp[name].close()
+            names = self._fp.keys()
+            for name in names:
+                self.close(name)
+
+    def __contains__(self,name):
+        return name in self._fp
 
 class ZipArchive(object):
     """
