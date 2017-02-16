@@ -1381,6 +1381,14 @@ class OutputFiles:
     Finish and close all open files
     >>> fp.close()
 
+    Reopen and append to a previously opened and closed
+    file:
+    >>> fp.open('file4','fourth_file.txt')
+    >>> fp.write('file4','some content')
+    >>> fp.close('file4')
+    >>> fp.open('file4',append=True)
+    >>> fp.write('file4','more content')
+
     """
     def __init__(self,base_dir=None):
         """Create a new OutputFiles instance
@@ -1394,14 +1402,16 @@ class OutputFiles:
         self._file = dict()
         self._base_dir = base_dir
 
-    def open(self,name,filen,append=False):
+    def open(self,name,filen=None,append=False):
         """Open a new output file
 
         'name' is the handle used to reference the
         file when using the 'write' and 'close' methods.
 
         'filen' is the name of the file, and is unrelated
-        to the handle.
+        to the handle. If not supplied then 'name' must
+        be associated with a previously closed file (which
+        will be reopened).
 
         If 'append' is True then append to an existing
         file rather than overwriting (i.e. use mode 'a'
@@ -1412,7 +1422,9 @@ class OutputFiles:
             mode = 'a'
         else:
             mode = 'w'
-        if self._base_dir is not None:
+        if filen is None:
+            filen = self.file_name(name)
+        elif self._base_dir is not None:
             filen = os.path.join(self._base_dir,filen)
         else:
             filen = os.path.abspath(filen)

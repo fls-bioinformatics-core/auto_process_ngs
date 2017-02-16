@@ -889,6 +889,35 @@ class TestOutputFiles(unittest.TestCase):
                          "test1 already exists\nSome test text\n")
         self.assertEqual(open(out.file_name('test2'),'r').read(),
                          "Some more\ntest text\n")
+    def test_outputfiles_reopen(self):
+        out = OutputFiles(base_dir=self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+        # Reopen files
+        out.open('test1',append=True)
+        out.open('test2')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some extra test text')
+        out.write('test2','Some different\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\nSome extra test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some different\ntest text\n")
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
