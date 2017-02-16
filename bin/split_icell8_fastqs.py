@@ -33,7 +33,7 @@ INLINE_BARCODE_LENGTH = 11
 UMI_LENGTH = 10
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
-BATCH_SIZE = 500
+DEFAULT_BATCH_SIZE = 500
 
 ######################################################################
 # Classes
@@ -86,6 +86,10 @@ if __name__ == "__main__":
                    choices=["barcodes","batch","none"],
                    help="how to split the input FASTQs (default: "
                    "'barcodes')")
+    p.add_argument("-s","--size",type=int,
+                   dest="batch_size",default=DEFAULT_BATCH_SIZE,
+                   help="number of reads per batch in 'batch' mode "
+                   "(default: %d)" % DEFAULT_BATCH_SIZE)
     p.add_argument("-b","--basename",
                    default="icell8",
                    help="basename for output FASTQ files (default: "
@@ -180,7 +184,7 @@ if __name__ == "__main__":
             filtered += 1
             if args.splitting_mode == "batch":
                 # Output to a batch-specific file pair
-                if (filtered - 1) % BATCH_SIZE == 0:
+                if (filtered - 1) % args.batch_size == 0:
                     batch_number += 1
                 assignment = "B%03d" % batch_number
             elif args.splitting_mode == "none":
