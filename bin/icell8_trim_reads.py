@@ -131,10 +131,10 @@ if __name__ == "__main__":
                                '--max-n',0.7,
                                '-q',25)
         # Output pair (nb R2 then R1)
-        fqr1_out = '.'.join(os.path.basename(fqr1_in).split('.')[0:-2]) \
-                   + '.trimmed.r1.fastq'
-        fqr2_out = '.'.join(os.path.basename(fqr2_in).split('.')[0:-2]) \
-                   + '.trimmed.r2.fastq'
+        fqr1_out = '.'.join(os.path.basename(fqr1_in).split('.')[0:-1]) \
+                   + '.trimmed.fastq'
+        fqr2_out = '.'.join(os.path.basename(fqr2_in).split('.')[0:-1]) \
+                   + '.trimmed.fastq'
         cutadapt_cmd.add_args('-o',fqr2_out,
                               '-p',fqr1_out)
         # Input pair (nb R2 then R1)
