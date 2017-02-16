@@ -1764,6 +1764,10 @@ class OutputFiles:
         file rather than overwriting (i.e. use mode 'a'
         instead of 'w').
 
+        If 'append' is True then append to an existing
+        file rather than overwriting (i.e. use mode 'a'
+        instead of 'w').
+
         """
         if append:
             mode = 'a'
