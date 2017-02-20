@@ -29,6 +29,7 @@ from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
+from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs import envmod
 
 import logging
@@ -46,38 +47,6 @@ __settings = auto_process_ngs.settings.Settings()
 ######################################################################
 # Functions
 ######################################################################
-
-def pair_fastqs(fastqs):
-    """
-    Automagically pair up FASTQs files
-    """
-    fq_pairs = []
-    seq_ids = {}
-    for fq in [os.path.abspath(fq) for fq in fastqs]:
-        # Get header from first read
-        for r in FastqIterator(fq):
-            seq_id = r.seqid
-            break
-        fq_pair = None
-        for fq1 in seq_ids:
-            if seq_id.is_pair_of(seq_ids[fq1]):
-                # Found a pair
-                if seq_id.pair_id == '1':
-                    fq_pair = (fq,fq1)
-                else:
-                    fq_pair = (fq1,fq)
-                fq_pairs.append(fq_pair)
-                logging.debug("*** Paired: %s\n"
-                              "          : %s" % fq_pair)
-                # Remove paired fastq
-                del(seq_ids[fq1])
-                break
-        if fq_pair is None:
-            # Unable to pair, store for now
-            logging.debug("Unpaired: %s" % fq)
-            seq_ids[fq] = seq_id
-    # Return paired and upaired fastqs
-    return (fq_pairs,seq_ids.keys())
 
 ######################################################################
 # Main
