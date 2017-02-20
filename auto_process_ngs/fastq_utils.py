@@ -15,6 +15,7 @@ fastq_utils.py
 Utility functions for operating on Fastq files:
 
 - assign_barcodes_single_end: extract and assign inline barcodes
+- pair_fastqs: automagically pair up FASTQ files
 
 """
 
@@ -22,7 +23,9 @@ Utility functions for operating on Fastq files:
 # Imports
 #######################################################################
 
+import os
 import gzip
+import logging
 from bcftbx.FASTQFile import FastqIterator
 
 #######################################################################
@@ -71,3 +74,52 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         nread += 1
     print "Finished (%d reads processed)" % nread
     return nread
+
+def pair_fastqs(fastqs):
+    """
+    Automagically pair up FASTQ files
+
+    Given a list of FASTQ files, generate a list of R1/R2
+    pairs by examining the header for the first read in
+    each file.
+
+    Arguments:
+      fastqs (list): list of paths to FASTQ files which
+        will be paired.
+
+    Returns:
+      Tuple: pair of lists of the form (paired,unpaired),
+        where `paired` is a list of tuples consisting of
+        FASTQ R1/R2 pairs and `unpaired` is a list of
+        FASTQs which couldn't be paired.
+    """
+    fq_pairs = []
+    seq_ids = {}
+    for fq in [os.path.abspath(fq) for fq in fastqs]:
+        # Get header from first read
+        for r in FastqIterator(fq):
+            seq_id = r.seqid
+            break
+        fq_pair = None
+        for fq1 in seq_ids:
+            if seq_id.is_pair_of(seq_ids[fq1]):
+                # Found a pair
+                if seq_id.pair_id == '1':
+                    fq_pair = (fq,fq1)
+                else:
+                    fq_pair = (fq1,fq)
+                fq_pairs.append(fq_pair)
+                logging.debug("*** Paired: %s\n"
+                              "          : %s" % fq_pair)
+                # Remove paired fastq
+                del(seq_ids[fq1])
+                break
+        if fq_pair is None:
+            # Unable to pair, store for now
+            logging.debug("Unpaired: %s" % fq)
+            seq_ids[fq] = seq_id
+    # Sort pairs into order
+    fq_pairs = sorted(fq_pairs,lambda x,y: cmp(x[0],y[0]))
+    unpaired = sorted(seq_ids.keys())
+    # Return paired and upaired fastqs
+    return (fq_pairs,unpaired)
