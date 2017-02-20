@@ -22,6 +22,7 @@ from itertools import izip
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
+from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.utils import OutputFiles
 
 ######################################################################
@@ -34,40 +35,6 @@ UMI_LENGTH = 10
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
 DEFAULT_BATCH_SIZE = 500
-
-######################################################################
-# Classes
-######################################################################
-
-class ICell8WellList(object):
-    """
-    Class representing an iCell8 well list file
-
-    The file is tab-delimited and consists of an uncommented header
-    line which lists the fields ('Row','Col','Candidate',...),
-    followed by lines of data.
-
-    The key columns are 'Sample' (gives the cell type) and 'Barcode'
-    (the inline barcode sequence).
-    """
-    def __init__(self,well_list_file):
-        self._data = TabFile(filen=well_list_file,
-                             first_line_is_header=True)
-    def barcodes(self):
-        """
-        Return a list of barcodes
-        """
-        return [x['Barcode'] for x in self._data]
-    def sample(self,barcode):
-        """
-        Return sample (=cell type) corresponding to barcode
-        """
-        samples = self._data.lookup('Barcode',barcode)
-        return samples[0]['Sample']
-
-######################################################################
-# Functions
-######################################################################
 
 ######################################################################
 # Main
