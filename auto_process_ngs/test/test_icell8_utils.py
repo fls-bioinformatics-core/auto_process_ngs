@@ -61,3 +61,4 @@ class TestICell8WellList(unittest.TestCase):
         self.assertEqual(well_list.sample('AACCGCGCTCA'),'d1.2')
         self.assertEqual(well_list.sample('AACCTTGCAAG'),'ESC2')
         self.assertEqual(well_list.sample('AACCAACCGCA'),'d1.2')
+        self.assertRaises(KeyError,well_list.sample,'NNNNNNNNNNN')

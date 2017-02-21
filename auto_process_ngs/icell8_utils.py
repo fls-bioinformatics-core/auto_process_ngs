@@ -48,4 +48,7 @@ class ICell8WellList(object):
         Return sample (=cell type) corresponding to barcode
         """
         samples = self._data.lookup('Barcode',barcode)
-        return samples[0]['Sample']
+        try:
+            return samples[0]['Sample']
+        except IndexError:
+            raise KeyError("Failed to locate sample for '%s'" % barcode)
