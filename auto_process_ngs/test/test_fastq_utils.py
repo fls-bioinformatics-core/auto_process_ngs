@@ -142,6 +142,12 @@ class TestPairFastqs(unittest.TestCase):
         self.fastq2_r2 = os.path.join(self.wd,'test2_r2.fq')
         with open(self.fastq2_r2,'w') as fp:
             fp.write(fastq2_r2)
+        self.empty_r1 = os.path.join(self.wd,'empty_r1.fq')
+        with open(self.empty_r1,'w') as fp:
+            fp.write('')
+        self.empty_r2 = os.path.join(self.wd,'empty_r2.fq')
+        with open(self.empty_r2,'w') as fp:
+            fp.write('')
     def tearDown(self):
         # Remove temporary working dir
         if os.path.isdir(self.wd):
@@ -173,3 +179,10 @@ class TestPairFastqs(unittest.TestCase):
                   self.fastq1_r1,]
         self.assertEqual(pair_fastqs(fastqs),
                          ([],[self.fastq1_r1,self.fastq2_r2]))
+    def test_pair_fastqs_empty_files(self):
+        """pair_fastqs: handle set of FASTQs with 'empty' pairs
+        """
+        fastqs = [self.empty_r1,
+                  self.empty_r2]
+        self.assertEqual(pair_fastqs(fastqs),
+                         ([],[self.empty_r1,self.empty_r2]))

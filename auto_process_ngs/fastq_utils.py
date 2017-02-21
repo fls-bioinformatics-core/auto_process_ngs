@@ -95,11 +95,17 @@ def pair_fastqs(fastqs):
     """
     fq_pairs = []
     seq_ids = {}
+    bad_files = []
     for fq in [os.path.abspath(fq) for fq in fastqs]:
         # Get header from first read
+        seq_id = None
         for r in FastqIterator(fq):
             seq_id = r.seqid
             break
+        if seq_id is None:
+            logging.debug("'Bad' file: %s" % fq)
+            bad_files.append(fq)
+            continue
         fq_pair = None
         for fq1 in seq_ids:
             if seq_id.is_pair_of(seq_ids[fq1]):
@@ -120,6 +126,6 @@ def pair_fastqs(fastqs):
             seq_ids[fq] = seq_id
     # Sort pairs into order
     fq_pairs = sorted(fq_pairs,lambda x,y: cmp(x[0],y[0]))
-    unpaired = sorted(seq_ids.keys())
+    unpaired = sorted(seq_ids.keys() + bad_files)
     # Return paired and upaired fastqs
     return (fq_pairs,unpaired)
