@@ -918,6 +918,22 @@ class TestOutputFiles(unittest.TestCase):
                          "Some test text\nSome extra test text\n")
         self.assertEqual(open(out.file_name('test2'),'r').read(),
                          "Some different\ntest text\n")
+    def test_outputfiles_len(self):
+        out = OutputFiles(base_dir=self.wd)
+        self.assertEqual(len(out),0)
+        out.open('test1','test1.txt')
+        self.assertEqual(len(out),1)
+        out.close('test1')
+        self.assertEqual(len(out),0)
+        out.open('test2','test2.txt')
+        out.open('test3','test3.txt')
+        self.assertEqual(len(out),2)
+        out.open('test1',append=True)
+        self.assertEqual(len(out),3)
+        out.close()
+        self.assertEqual(len(out),0)
+        out.open('test2',append=True)
+        self.assertEqual(len(out),1)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function

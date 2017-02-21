@@ -1470,6 +1470,9 @@ class OutputFiles:
     def __contains__(self,name):
         return name in self._fp
 
+    def __len__(self):
+        return len(self._fp.keys())
+
 class ZipArchive(object):
     """
     Utility class for creating .zip archive files
