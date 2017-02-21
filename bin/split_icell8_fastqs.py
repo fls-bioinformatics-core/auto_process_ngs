@@ -19,10 +19,12 @@ import sys
 import logging
 import argparse
 from itertools import izip
+from collections import Iterator
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8_utils import ICell8WellList
+from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import OutputFiles
 
 ######################################################################
@@ -37,6 +39,45 @@ UMI_QUALITY_CUTOFF = 30
 DEFAULT_BATCH_SIZE = 500
 
 ######################################################################
+# Classes
+######################################################################
+
+class ICell8ReadPair(object):
+    def __init__(self,r1,r2):
+        if not r1.seqid.is_pair_of(r2.seqid):
+            raise Exception("Reads are not paired")
+        self._r1 = r1
+        self._r2 = r2
+    @property
+    def r1(self):
+        return self._r1
+    @property
+    def r2(self):
+        return self._r2
+    @property
+    def barcode(self):
+        return self._r1.sequence[0:INLINE_BARCODE_LENGTH]
+    @property
+    def umi(self):
+        return self._r1.sequence[INLINE_BARCODE_LENGTH:
+                                 INLINE_BARCODE_LENGTH+UMI_LENGTH]
+    @property
+    def min_barcode_quality(self):
+        return min(self._r1.quality[0:INLINE_BARCODE_LENGTH])
+    @property
+    def min_umi_quality(self):
+        return min(self._r1.quality[INLINE_BARCODE_LENGTH:
+                                    INLINE_BARCODE_LENGTH+UMI_LENGTH])
+
+class ICell8FastqIterator(Iterator):
+    def __init__(self,fqr1,fqr2):
+        self._fqr1 = FastqIterator(fqr1)
+        self._fqr2 = FastqIterator(fqr2)
+    def next(self):
+        return ICell8ReadPair(self._fqr1.next(),
+                              self._fqr2.next())
+
+######################################################################
 # Main
 ######################################################################
 
@@ -45,6 +86,7 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("FQ_R1",help="R1 FASTQ file")
     p.add_argument("FQ_R2",help="Matching R2 FASTQ file")
+    p.add_argument("FQ",nargs='*',help="Additional FASTQ file pairs")
     p.add_argument("-w","--well-list",
                    dest="well_list_file",default=None,
                    help="iCell8 'well list' file")
@@ -65,17 +107,10 @@ if __name__ == "__main__":
                    dest="out_dir",default=None,
                    help="directory to write output FASTQ files to "
                    "(default: current directory)")
-    p.add_argument("-l",
-                   type=int,dest='inline_barcode_length',
-                   default=INLINE_BARCODE_LENGTH,
-                   help="length of inline barcodes (default: %d)" %
-                   INLINE_BARCODE_LENGTH)
+    p.add_argument("-f","--stats_file",
+                   dest="stats_file",default=None,
+                   help="output file for statistics")
     args = p.parse_args()
-    
-    # Initialise positions for inline barcode and UMI
-    bc_start = 0
-    umi_start = args.inline_barcode_length + bc_start
-    umi_end = umi_start + UMI_LENGTH
 
     # Convert quality cutoffs to character encoding
     barcode_quality_cutoff = chr(INLINE_BARCODE_QUALITY_CUTOFF + 33)
@@ -87,133 +122,140 @@ if __name__ == "__main__":
     print "%d expected barcodes" % len(expected_barcodes)
 
     # Count barcodes and rejections
-    barcodes = {}
-    filtered = 0
     unassigned = 0
-    nopenfiles = 0
-    
+    filtered = 0
+    unfiltered_counts = {}
+    filtered_counts = {}
+    unfiltered_umis = {}
+    filtered_umis = {}
+
+    # Input Fastqs
+    fastqs = [args.FQ_R1,args.FQ_R2]
+    for fq in args.FQ:
+        fastqs.append(fq)
+    fastqs = pair_fastqs(fastqs)[0]
+
     # Output Fastqs
     if args.out_dir is not None:
         mkdir(args.out_dir)
     output_fqs = OutputFiles(base_dir=args.out_dir)
     basename = args.basename
-    batch_number = 0
 
-    # Iterate over read pairs from the Fastqs
-    for n,read_pair in enumerate(izip(FastqIterator(args.FQ_R1),
-                                      FastqIterator(args.FQ_R2))):
-        # Check reads are a pair
-        r1,r2 = read_pair
-        if not r1.seqid.is_pair_of(r2.seqid):
-            logging.critical("Read #%d: unpaired read headers detected"
-                             % n)
-            sys.exit(1)
-        # Extract the inline barcode and UMI
-        try:
-            inline_barcode = r1.sequence[bc_start:umi_start]
-            umi = r1.sequence[umi_start:umi_end]
-        except IndexError:
-            logging.critical("Read #%d: unable to extract inline "
-                             "barcode or UMI" % n)
-            sys.exit(1)
-        # Check that barcode is one we expected
-        if inline_barcode not in expected_barcodes:
-            assignment = "unassigned"
-            unassigned += 1
-        else:
-            # Do filtering and splitting
-            assignment = inline_barcode
+    # Iterate over pairs of Fastqs
+    for fastq_pair in fastqs:
+        # Iterate over read pairs from the Fastqs
+        print "-- %s\n   %s" % fastq_pair
+        for read_pair in ICell8FastqIterator(*fastq_pair):
+            # Count the barcodes and unique UMIs
+            inline_barcode = read_pair.barcode
+            umi = read_pair.umi
             try:
-                barcodes[inline_barcode]['unfiltered'] += 1
+                unfiltered_counts[inline_barcode] += 1
+                if umi not in unfiltered_umis[inline_barcode]:
+                    unfiltered_umis[inline_barcode].append(umi)
             except KeyError:
-                logging.debug("New barcode: %s" % inline_barcode)
-                barcodes[inline_barcode] = {
-                    'unfiltered': 1,
-                    'failed_barcode': 0,
-                    'failed_UMI': 0,
-                }
-                # Barcode quality filter
-                min_barcode_quality = min(r1.quality[bc_start:umi_start])
-                if min_barcode_quality < barcode_quality_cutoff:
-                    logging.debug("Read #%d: failed barcode quality filter"
-                                  % n)
-                    assignment = 'failed_barcode_quality'
-                    barcodes[inline_barcode]['failed_barcode'] += 1
-                # UMI quality filter
-                min_umi_quality = min(r1.quality[umi_start:umi_end])
-                if min_umi_quality < umi_quality_cutoff:
-                    logging.debug("Read #%d: failed UMI quality filter"
-                                  % n)
-                    assignment = 'failed_UMI_quality'
-                    barcodes[inline_barcode]['failed_UMI'] += 1
-        # Assign read pair to appropriate output files
-        if assignment == inline_barcode:
-            filtered += 1
-            if args.splitting_mode == "batch":
-                # Output to a batch-specific file pair
-                if (filtered - 1) % args.batch_size == 0:
-                    batch_number += 1
-                assignment = "B%03d" % batch_number
-            elif args.splitting_mode == "none":
-                # Output to a single file pair
-                assignment = "filtered"
-        # Write read pair
-        fq_r1 = "%s_R1" % assignment
-        fq_r2 = "%s_R2" % assignment
-        if fq_r1 not in output_fqs:
-            try:
-                # Try to reopen file and append
-                output_fqs.open(fq_r1,append=True)
-            except KeyError:
-                # Open new file
-                output_fqs.open(fq_r1,
-                                "%s.%s.r1.fastq" % (basename,assignment))
-            nopenfiles += 1
-            ##print "%d: %d files open..." % (n,nopenfiles)
-        output_fqs.write(fq_r1,"%s" % r1)
-        if fq_r2 not in output_fqs:
-            try:
-                # Try to reopen file and append
-                output_fqs.open(fq_r2,append=True)
-            except KeyError:
-                # Open new file
-                output_fqs.open(fq_r2,
-                                "%s.%s.r2.fastq" % (basename,assignment))
-            nopenfiles += 1
-            ##print "%d: %d files open..." % (n,nopenfiles)
-        output_fqs.write(fq_r2,"%s" % r2)
+                unfiltered_counts[inline_barcode] = 1
+                unfiltered_umis[inline_barcode] = []
+            # Do filtering
+            if inline_barcode not in expected_barcodes:
+                assign_to = "unassigned"
+                unassigned += 1
+            elif read_pair.min_barcode_quality < barcode_quality_cutoff:
+                assign_to = "failed_barcode"
+            elif read_pair.min_umi_quality < umi_quality_cutoff:
+                assign_to = "failed_umi"
+            else:
+                assign_to = inline_barcode
+                filtered += 1
+            logging.debug("%s" % '\t'.join([assign_to,
+                                            inline_barcode,
+                                            umi,
+                                            read_pair.min_barcode_quality,
+                                            read_pair.min_umi_quality]))
+            # Post filtering counts
+            if assign_to == inline_barcode:
+                try:
+                    filtered_counts[inline_barcode] += 1
+                    if umi not in filtered_umis[inline_barcode]:
+                        filtered_umis[inline_barcode].append(umi)
+                except KeyError:
+                    filtered_counts[inline_barcode] = 1
+                    filtered_umis[inline_barcode] = []
+                # Reassign read pair to appropriate output files
+                if args.splitting_mode == "batch":
+                    # Output to a batch-specific file pair
+                    batch_number = filtered/args.batch_size
+                    assign_to = "B%03d" % batch_number
+                elif args.splitting_mode == "none":
+                    # Output to a single file pair
+                    assign_to = "filtered"
+            # Write read pair
+            fq_r1 = "%s_R1" % assign_to
+            fq_r2 = "%s_R2" % assign_to
+            if fq_r1 not in output_fqs:
+                try:
+                    # Try to reopen file and append
+                    output_fqs.open(fq_r1,append=True)
+                except KeyError:
+                    # Open new file
+                    output_fqs.open(fq_r1,
+                                    "%s.%s.r1.fastq" % (basename,assign_to))
+            output_fqs.write(fq_r1,"%s" % read_pair.r1)
+            if fq_r2 not in output_fqs:
+                try:
+                    # Try to reopen file and append
+                    output_fqs.open(fq_r2,append=True)
+                except KeyError:
+                    # Open new file
+                    output_fqs.open(fq_r2,
+                                    "%s.%s.r2.fastq" % (basename,assign_to))
+            output_fqs.write(fq_r2,"%s" % read_pair.r2)
         # FIXME close the files if it looks like we have too
         # many open at once (to avoid IOError [Errno 24])
-        if nopenfiles > MAX_OPEN_FILES:
+        if len(output_fqs) > MAX_OPEN_FILES:
             logging.debug("*** Closing output files ***")
             output_fqs.close()
-            nopenfiles = 0
     # Close output files
     output_fqs.close()
+
     # Report barcode and filtering statistics
-    barcode_list = sorted(barcodes.keys(),
-                          cmp=lambda x,y: cmp(barcodes[x],barcodes[y]),
+    barcode_list = sorted(unfiltered_counts.keys(),
+                          key=lambda bc: unfiltered_counts[bc],
                           reverse=True)
-    for barcode in barcode_list:
-        line = [barcode,
-                well_list.sample(barcode),
-                barcodes[barcode]['unfiltered'],
-                barcodes[barcode]['failed_barcode'],
-                barcodes[barcode]['failed_UMI']
-        ]
-        print "%s" % '\t'.join([str(x) for x in line])
-    assigned = sum([barcodes[b]['unfiltered'] for b in barcode_list])
-    total_unfiltered = assigned + unassigned
-    failed_barcode = sum([barcodes[b]['failed_barcode']
-                          for b in barcode_list])
-    failed_umi = sum([barcodes[b]['failed_UMI']
-                      for b in barcode_list])
-    print "For all barcodes:"
-    print "-----------------"
-    print "Number of barcodes found:\t%d/%d" % (len(barcode_list),
+    if args.stats_file is not None:
+        stats_file = TabFile(column_names=('Barcode',
+                                           'Sample',
+                                           'Nreads_pre_filter',
+                                           'Unique_UMIs_pre_filter',
+                                           'Nreads_post_filter',
+                                           'Unique_UMIs_post_filter'))
+        for barcode in barcode_list:
+            if barcode in expected_barcodes:
+                line = [barcode,
+                        well_list.sample(barcode),
+                        unfiltered_counts[barcode],
+                        len(unfiltered_umis[barcode])]
+            else:
+                line = [barcode,
+                        '',
+                        unfiltered_counts[barcode],
+                        len(unfiltered_umis[barcode])]
+            if barcode in filtered_counts:
+                line.extend([filtered_counts[barcode],
+                             len(filtered_umis[barcode])])
+            else:
+                line.extend(['',''])
+            stats_file.append(data=line)
+        stats_file.write(args.stats_file,include_header=True)
+
+    # Summary output to screen
+    assigned = sum([unfiltered_counts[b] for b in barcode_list])
+    total_reads = assigned + unassigned
+    print "Summary:"
+    print "--------"
+    print "Number of barcodes      :\t%d" % len(barcode_list)
+    print "Number of barcodes found:\t%d/%d" % (len(filtered_counts.keys()),
                                                 len(expected_barcodes))
-    print "Total reads (unfiltered):\t%d" % total_unfiltered
+    print "Total reads (unfiltered):\t%d" % assigned
     print "Unassigned reads        :\t%d" % unassigned
-    print "Failed barcode quality  :\t%d" % failed_barcode
-    print "Failed UMI quality      :\t%d" % failed_umi
     print "Total reads (filtered)  :\t%d" % filtered
