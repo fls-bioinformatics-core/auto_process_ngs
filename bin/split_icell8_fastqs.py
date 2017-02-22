@@ -18,13 +18,10 @@ FASTQ files based on the inline barcodes in read 1.
 import sys
 import logging
 import argparse
-from itertools import izip
-from collections import Iterator
-from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8ReadPair
+from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import OutputFiles
 
@@ -36,18 +33,6 @@ MAX_OPEN_FILES = 100
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
 DEFAULT_BATCH_SIZE = 500
-
-######################################################################
-# Classes
-######################################################################
-
-class ICell8FastqIterator(Iterator):
-    def __init__(self,fqr1,fqr2):
-        self._fqr1 = FastqIterator(fqr1)
-        self._fqr2 = FastqIterator(fqr2)
-    def next(self):
-        return ICell8ReadPair(self._fqr1.next(),
-                              self._fqr2.next())
 
 ######################################################################
 # Main
