@@ -36,6 +36,13 @@ class ICell8WellList(object):
     (the inline barcode sequence).
     """
     def __init__(self,well_list_file):
+        """
+        Create a new ICell8WellList instance.
+
+        Arguments:
+          well_list_file (str): path to the well list
+            file.
+        """
         self._data = TabFile(filen=well_list_file,
                              first_line_is_header=True)
     def barcodes(self):
@@ -43,6 +50,7 @@ class ICell8WellList(object):
         Return a list of barcodes
         """
         return [x['Barcode'] for x in self._data]
+
     def sample(self,barcode):
         """
         Return sample (=cell type) corresponding to barcode
