@@ -33,7 +33,7 @@ from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import strip_ext
 from auto_process_ngs.applications import Command
 from auto_process_ngs.utils import OutputFiles
-from split_icell8_fastqs import ICell8FastqIterator
+from auto_process_ngs.icell8_utils import ICell8FastqIterator
 
 import logging
 logging.basicConfig(format='%(levelname) 8s: %(message)s')
