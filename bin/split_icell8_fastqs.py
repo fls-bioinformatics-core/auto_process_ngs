@@ -24,6 +24,7 @@ from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8_utils import ICell8WellList
+from auto_process_ngs.icell8_utils import ICell8ReadPair
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import OutputFiles
 
@@ -32,8 +33,6 @@ from auto_process_ngs.utils import OutputFiles
 ######################################################################
 
 MAX_OPEN_FILES = 100
-INLINE_BARCODE_LENGTH = 11
-UMI_LENGTH = 10
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
 DEFAULT_BATCH_SIZE = 500
@@ -41,33 +40,6 @@ DEFAULT_BATCH_SIZE = 500
 ######################################################################
 # Classes
 ######################################################################
-
-class ICell8ReadPair(object):
-    def __init__(self,r1,r2):
-        if not r1.seqid.is_pair_of(r2.seqid):
-            raise Exception("Reads are not paired")
-        self._r1 = r1
-        self._r2 = r2
-    @property
-    def r1(self):
-        return self._r1
-    @property
-    def r2(self):
-        return self._r2
-    @property
-    def barcode(self):
-        return self._r1.sequence[0:INLINE_BARCODE_LENGTH]
-    @property
-    def umi(self):
-        return self._r1.sequence[INLINE_BARCODE_LENGTH:
-                                 INLINE_BARCODE_LENGTH+UMI_LENGTH]
-    @property
-    def min_barcode_quality(self):
-        return min(self._r1.quality[0:INLINE_BARCODE_LENGTH])
-    @property
-    def min_umi_quality(self):
-        return min(self._r1.quality[INLINE_BARCODE_LENGTH:
-                                    INLINE_BARCODE_LENGTH+UMI_LENGTH])
 
 class ICell8FastqIterator(Iterator):
     def __init__(self,fqr1,fqr2):
