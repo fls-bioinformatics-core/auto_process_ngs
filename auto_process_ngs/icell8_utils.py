@@ -18,6 +18,9 @@ iCell8 platform:
 # Imports
 #######################################################################
 
+from itertools import izip
+from collections import Iterator
+from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 
 ######################################################################
@@ -132,3 +135,28 @@ class ICell8ReadPair(object):
         """
         return min(self._r1.quality[INLINE_BARCODE_LENGTH:
                                     INLINE_BARCODE_LENGTH+UMI_LENGTH])
+
+class ICell8FastqIterator(Iterator):
+    """
+    Class for iterating over an iCell8 R1/R2 FASTQ-pair
+
+    The iterator returns a set of ICell8ReadPair
+    instances, for example:
+
+    >>> for pair in ICell8FastqIterator(fq1,fq2):
+    >>>   print "-- R1: %s" % pair.r1
+    >>>   print "   R2: %s" % pair.r2
+    """
+    def __init__(self,fqr1,fqr2):
+        """
+        Create a new ICell8FastqIterator instance
+
+        Arguments:
+          fqr1 (str): path to the R1 FASTQ file
+          fqr2 (str): path to the R2 FASTQ
+        """
+        self._fqr1 = FastqIterator(fqr1)
+        self._fqr2 = FastqIterator(fqr2)
+    def next(self):
+        return ICell8ReadPair(self._fqr1.next(),
+                              self._fqr2.next())

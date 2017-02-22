@@ -9,6 +9,7 @@ import shutil
 from bcftbx.FASTQFile import FastqRead
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8ReadPair
+from auto_process_ngs.icell8_utils import ICell8FastqIterator
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -129,3 +130,67 @@ AGAAGAGTACCTGGAAAATGTTGGCG
         pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
                               self._fastqread(icell8_read_pair['r2']))
         self.assertEqual(pair.min_umi_quality,'E')
+
+# ICell8FastqIterator
+icell8_fastq_r1 = """@NB500968:70:HCYMKBGX2:1:11101:22672:1659 1:N:0:1
+GTTCCTGATTAAGTCAAGTGCTGGGG
++
+AAAAAEEEEEEEEEEEEEEEE//6//
+@NB500968:70:HCYMKBGX2:1:11101:24365:2047 1:N:0:1
+AGAAGAGTACCTGGAAAATGTTGGCG
++
+6AAAAEEEEEEEEEEAEEEEE/<6//
+@NB500968:70:HCYMKBGX2:1:11101:24470:3201 1:N:0:1
+GTCTGCAACGCGGAGGCCGGATCGCG
++
+AAAAAEEEEEEEEEEEEEEEE/////
+"""
+
+icell8_fastq_r2 = """@NB500968:70:HCYMKBGX2:1:11101:22672:1659 2:N:0:1
+CCCATGAGACTTAAGAATCACACAGACCTTGGACTTTCCTGATTTCACGGGACGCTGCTCTGAGAGTGAAATTGGGCCTTCTGTAAATATGTGAAGTGTGGTTTCTTTTCAAACCTTATATGGCCCTGCA
++
+AAAAAEAEEEEEEEE/EEEEEEEEE/EEEEEEEEEEEEEEAAEAEEAEEEE<EEEEAEEEEEEEAEEE<EEEEEAAEEEEEEAAEEEAAEAE<AEEA/</<AEE<AEEEEA/6AAEE/AEE/AAEEA<A<
+@NB500968:70:HCYMKBGX2:1:11101:24365:2047 2:N:0:1
+CTACACGACGCGGGAACCGGGCGTGGTGGCGCACGCCTTTAATCCCAGCACTTGGGAGGCAGAGGCAGGCGGATTTCTGAGTTCGAGGCCAGCCTGGTCTACAAAGTGAGTTCCAGGAAAGCCAGGGCTA
++
+AAAAAEEEE6AEEEEEEA/EEEEEEEEEAEEE6EEEE/EEEEEEEEAEEAEEEEEAEEEEEE/<<E<EEEEEEAEAE//AEEAA<AE/EEAEEEEEEAEEAA/AEAEAE/EEA<<EE/<A<EE<A//<A/
+@NB500968:70:HCYMKBGX2:1:11101:24470:3201 2:N:0:1
+TTCCCTACACGACGCGGGGGTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATAAAAAAAAAAAAAAAGAGGAAAGAGGAAAGAAAGAGG
++
+AAAAAEEEEEEEEEE///EA/EEEEEEEEEAEEEEEEEEEEEEE<EEE/EEEEEEAEEE/E<EEEEEAE6AA<AE//<///////////////////////////////////////////////////6
+"""
+
+class TestICell8WellList(unittest.TestCase):
+    """Tests for the ICell8FastqIterator class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.ICell8FastqIterator')
+        # Test files
+        self.r1 = os.path.join(self.wd,'icell8.r1.fq')
+        with open(self.r1,'w') as fp:
+            fp.write(icell8_fastq_r1)
+        self.r2 = os.path.join(self.wd,'icell8.r2.fq')
+        with open(self.r2,'w') as fp:
+            fp.write(icell8_fastq_r2)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_icell8fastqiterator(self):
+        """ICell8FastqIterator: iterate over read pairs
+        """
+        fqr1_data = ""
+        fqr2_data = ""
+        for i,pair in enumerate(ICell8FastqIterator(self.r1,self.r2)):
+            self.assertTrue(isinstance(pair.r1,FastqRead))
+            self.assertTrue(isinstance(pair.r2,FastqRead))
+            n = i*4
+            self.assertEqual(str(pair.r1),
+                             '\n'.join(icell8_fastq_r1.split('\n')[n:n+4]))
+            self.assertEqual(str(pair.r2),
+                             '\n'.join(icell8_fastq_r2.split('\n')[n:n+4]))
+            fqr1_data += "%s\n" % pair.r1
+            fqr2_data += "%s\n" % pair.r2
+        self.assertEqual(fqr1_data,icell8_fastq_r1)
+        self.assertEqual(fqr2_data,icell8_fastq_r2)
