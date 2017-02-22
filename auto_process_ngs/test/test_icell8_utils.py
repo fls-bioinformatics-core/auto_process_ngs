@@ -6,7 +6,9 @@ import unittest
 import os
 import tempfile
 import shutil
+from bcftbx.FASTQFile import FastqRead
 from auto_process_ngs.icell8_utils import ICell8WellList
+from auto_process_ngs.icell8_utils import ICell8ReadPair
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -19,6 +21,19 @@ well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	C
 0	54	True	True	ESC2	AACCTTGCAAG	Good	1	0	290		35		10150		0.9533346		1	1	1	1	7	7	A1	Pos9_Hoechst_A10.tif	Pos9_TexasRed_A10.tif
 0	63	True	True	d1.2	AACCAACCGCA	Good	1	0	247		24		5928		1		1	1	1	2	4	7	A2		Pos10_Hoechst_A11.tif	Pos10_TexasRed_A11.tif
 """
+
+icell8_read_pair = {
+    'r1': """@NB500968:70:HCYMKBGX2:1:11101:22672:1659 1:N:0:1
+GTTCCTGATTAAGTCAAGTGCTGGGG
++
+AAAAAEEEEEEEEEEEEEEEE//6//
+""",
+    'r2': """@NB500968:70:HCYMKBGX2:1:11101:22672:1659 2:N:0:1
+CCCATGAGACTTAAGAATCACACAGACCTTGGACTTTCCTGATTTCACGGGACGCTGCTCTGAGAGTGAAATTGGGCCTTCTGTAAATATGTGAAGTGTGGTTTCTTTTCAAACCTTATATGGCCCTGCA
++
+AAAAAEAEEEEEEEE/EEEEEEEEE/EEEEEEEEEEEEEEAAEAEEAEEEE<EEEEAEEEEEEEAEEE<EEEEEAAEEEEEEAAEEEAAEAE<AEEA/</<AEE<AEEEEA/6AAEE/AEE/AAEEA<A<
+"""
+}
 
 # ICell8WellList
 class TestICell8WellList(unittest.TestCase):
@@ -62,3 +77,55 @@ class TestICell8WellList(unittest.TestCase):
         self.assertEqual(well_list.sample('AACCTTGCAAG'),'ESC2')
         self.assertEqual(well_list.sample('AACCAACCGCA'),'d1.2')
         self.assertRaises(KeyError,well_list.sample,'NNNNNNNNNNN')
+
+# ICell8ReadPair
+class TestICell8ReadPair(unittest.TestCase):
+    """Tests for the ICell8ReadPair class
+    """
+    def _fastqread(self,s):
+        # Return populated FastqRead object given a multiline
+        # string
+        return FastqRead(*s.rstrip('\n').split('\n'))
+    def test_icell_read_pair_init(self):
+        """ICell8ReadPair: create read pair
+        """
+        pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
+                              self._fastqread(icell8_read_pair['r2']))
+        self.assertEqual(pair.r1,self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(pair.r2,self._fastqread(icell8_read_pair['r2']))
+    def test_icell_read_pair_init_bad_pair(self):
+        """ICell8ReadPair: fail when reads are not a pair
+        """
+        alt_r1 = """@NB500968:70:HCYMKBGX2:1:11101:24365:2047 1:N:0:1
+AGAAGAGTACCTGGAAAATGTTGGCG
++
+6AAAAEEEEEEEEEEAEEEEE/<6//
+"""
+        self.assertRaises(Exception,
+                          ICell8ReadPair,
+                          self._fastqread(alt_r1),
+                          self._fastqread(icell8_read_pair['r2']))
+    def test_icell8_read_pair_barcode(self):
+        """ICell8ReadPair: get barcode
+        """
+        pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
+                              self._fastqread(icell8_read_pair['r2']))
+        self.assertEqual(pair.barcode,"GTTCCTGATTA")
+    def test_icell8_read_pair_umi(self):
+        """ICell8ReadPair: get UMI
+        """
+        pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
+                              self._fastqread(icell8_read_pair['r2']))
+        self.assertEqual(pair.umi,"AGTCAAGTGC")
+    def test_icell8_read_pair_min_barcode_quality(self):
+        """ICell8ReadPair: get minimum quality score for barcode
+        """
+        pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
+                              self._fastqread(icell8_read_pair['r2']))
+        self.assertEqual(pair.min_barcode_quality,'A')
+    def test_icell8_read_pair_min_umi_quality(self):
+        """ICell8ReadPair: get minimum quality score for UMI
+        """
+        pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
+                              self._fastqread(icell8_read_pair['r2']))
+        self.assertEqual(pair.min_umi_quality,'E')

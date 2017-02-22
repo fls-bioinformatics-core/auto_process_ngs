@@ -21,6 +21,13 @@ iCell8 platform:
 from bcftbx.TabFile import TabFile
 
 ######################################################################
+# Magic numbers
+######################################################################
+
+INLINE_BARCODE_LENGTH = 11
+UMI_LENGTH = 10
+
+######################################################################
 # Classes
 ######################################################################
 
@@ -60,3 +67,68 @@ class ICell8WellList(object):
             return samples[0]['Sample']
         except IndexError:
             raise KeyError("Failed to locate sample for '%s'" % barcode)
+
+class ICell8ReadPair(object):
+    """
+    Class representing an iCell8 R1/R2 read-pair
+    """
+    def __init__(self,r1,r2):
+        """
+        Create a new ICell8ReadPair instance.
+
+        Arguments:
+          r1 (FastqRead): the R1 read in the pair
+          r2 (FasrqRead): the R2 read
+        """
+        if not r1.seqid.is_pair_of(r2.seqid):
+            raise Exception("Reads are not paired")
+        self._r1 = r1
+        self._r2 = r2
+
+    @property
+    def r1(self):
+        """
+        R1 read from the pair
+        """
+        return self._r1
+
+    @property
+    def r2(self):
+        """
+        R2 read from the pair
+        """
+        return self._r2
+
+    @property
+    def barcode(self):
+        """
+        Inline barcode sequence extracted from the R1 read
+        """
+        return self._r1.sequence[0:INLINE_BARCODE_LENGTH]
+
+    @property
+    def umi(self):
+        """
+        UMI sequence extracted from the R1 read
+        """
+        return self._r1.sequence[INLINE_BARCODE_LENGTH:
+                                 INLINE_BARCODE_LENGTH+UMI_LENGTH]
+
+    @property
+    def min_barcode_quality(self):
+        """
+        Minimum inline barcode quality score
+
+        The score is encoded as a character e.g. '/' or 'A'.
+        """
+        return min(self._r1.quality[0:INLINE_BARCODE_LENGTH])
+
+    @property
+    def min_umi_quality(self):
+        """
+        Minimum UMI sequence quality score
+
+        The score is encoded as a character e.g. '/' or 'A'.
+        """
+        return min(self._r1.quality[INLINE_BARCODE_LENGTH:
+                                    INLINE_BARCODE_LENGTH+UMI_LENGTH])
