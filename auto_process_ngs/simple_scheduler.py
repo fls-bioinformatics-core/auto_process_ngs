@@ -638,6 +638,7 @@ class SchedulerJob(Job):
         self.job_name = name
         self.log_dir = log_dir
         self.waiting_for = list(wait_for)
+        self.command = ' '.join([str(arg) for arg in args])
         if name is None:
             name = args[0]
         if working_dir is None:
@@ -760,7 +761,8 @@ class SchedulerReporter:
     Template name     Used when           Available dictionary keys
     ---------------------------------------------------------------
     job_scheduled     Job is submitted    job_name, job_number,job_id,
-                                          waiting_for, time_stamp
+                                          waiting_for, time_stamp,
+                                          command
     job_start         Job starts running  as 'job_scheduled'
     job_end           Job finishes        as 'job_scheduled'
     group_added       Group is created    group_name, group_id, time_stamp
@@ -828,7 +830,8 @@ class SchedulerReporter:
                  'job_name'   : job.job_name,
                  'job_id'     : job.job_id,
                  'waiting_for': ', '.join(["'%s'" % s for s in job.waiting_for]) if job.waiting_for else '',
-                 'time_stamp' : date_and_time() }
+                 'time_stamp' : date_and_time(),
+                 'command'    : job.command }
 
     def _group_dict(self,group):
         """Return dictionary of keywords derived from group instance
