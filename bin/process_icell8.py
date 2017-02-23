@@ -29,6 +29,12 @@ from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.fastq_utils import pair_fastqs
 
 ######################################################################
+# Magic numbers
+######################################################################
+
+DEFAULT_BATCH_SIZE = 50000000
+
+######################################################################
 # Main
 ######################################################################
 
@@ -53,6 +59,11 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "'bowtie2')")
+    p.add_argument("-s","--size",type=int,
+                   dest="batch_size",default=DEFAULT_BATCH_SIZE,
+                   help="number of reads per batch when splitting "
+                   "FASTQ files for processing (default: %s)" %
+                   DEFAULT_BATCH_SIZE)
     args = p.parse_args()
 
     # Get the input FASTQ file pairs
@@ -109,7 +120,7 @@ if __name__ == "__main__":
                                    '-w',os.path.abspath(args.WELL_LIST),
                                    '-o',split_dir,
                                    '-m','batch',
-                                   '-s',5000)
+                                   '-s',args.batch_size)
     filter_and_split_cmd.add_args(*fastqs)
     # Submit the job
     filter_and_split = sched.submit(filter_and_split_cmd,
