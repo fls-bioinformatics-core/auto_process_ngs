@@ -167,11 +167,11 @@ if __name__ == "__main__":
                     output_fqs.open(fq_r2,
                                     "%s.%s.r2.fastq" % (basename,assign_to))
             output_fqs.write(fq_r2,"%s" % read_pair.r2)
-        # FIXME close the files if it looks like we have too
-        # many open at once (to avoid IOError [Errno 24])
-        if len(output_fqs) > MAX_OPEN_FILES:
-            logging.debug("*** Closing output files ***")
-            output_fqs.close()
+            # FIXME close the files if it looks like we have too
+            # many open at once (to avoid IOError [Errno 24])
+            if len(output_fqs) > MAX_OPEN_FILES:
+                logging.debug("*** Closing output files ***")
+                output_fqs.close()
     # Close output files
     output_fqs.close()
 
