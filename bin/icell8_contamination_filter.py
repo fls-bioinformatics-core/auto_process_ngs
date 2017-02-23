@@ -236,7 +236,11 @@ if __name__ == "__main__":
                    (contam_tag == nohits_contaminants))
         if read_ok:
             output_fqs.write('fqr1',pair.r1)
-            output_fqs.write('fqr1',pair.r2)
+            output_fqs.write('fqr2',pair.r2)
 
     # Close the output files
     output_fqs.close()
+
+    # Remove the tagged fastqs
+    os.remove(preferred_tagged_fq)
+    os.remove(contaminants_tagged_fq)
