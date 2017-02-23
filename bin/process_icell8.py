@@ -8,7 +8,6 @@ process_icell8.py
 
 Utility to peform initial processing of data from Wafergen iCell8
 platform.
-
 """
 
 ######################################################################
@@ -21,10 +20,12 @@ import logging
 import argparse
 import glob
 from bcftbx.utils import mkdir
+from bcftbx.utils import strip_ext
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
+from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.fastq_utils import pair_fastqs
 
 ######################################################################
@@ -34,8 +35,6 @@ from auto_process_ngs.fastq_utils import pair_fastqs
 if __name__ == "__main__":
     # Handle the command line
     p = argparse.ArgumentParser()
-    #p.add_argument("FQ_R1",help="R1 FASTQ file")
-    #p.add_argument("FQ_R2",help="Matching R2 FASTQ file")
     p.add_argument("WELL_LIST",help="Well list file")
     p.add_argument("--unaligned",
                    dest="unaligned_dir",default="bcl2fastq",
@@ -68,36 +67,56 @@ if __name__ == "__main__":
     # Set up a scheduler for running jobs
     icell8_qc_runner = SimpleJobRunner()
     max_jobs = 4
+    sched_reporter = SchedulerReporter(
+        job_start="Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
+        job_end=  "Finished #%(job_number)d: %(job_name)s"
+    )
     sched = SimpleScheduler(runner=icell8_qc_runner,
-                            max_concurrent=max_jobs)
+                            max_concurrent=max_jobs,
+                            reporter=sched_reporter)
     sched.start()
 
     # Make top-level output dirs
-    log_dir = os.path.join(os.getcwd(),"logs")
     icell8_dir = os.path.join(os.getcwd(),"icell8")
-    stats_dir = os.path.join(os.getcwd(),"stats")
-    for dirn in (log_dir,icell8_dir,stats_dir):
+    log_dir = os.path.join(icell8_dir,"logs")
+    stats_dir = os.path.join(icell8_dir,"stats")
+    for dirn in (icell8_dir,log_dir,stats_dir):
         mkdir(dirn)
+
+    # Initial stats
+    stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
+    icell8_stats_cmd = Command('icell8_stats.py',
+                               '-f',stats_file,
+                               '-w',os.path.abspath(args.WELL_LIST))
+    icell8_stats_cmd.add_args(*fastqs)
+    icell8_stats = sched.submit(icell8_stats_cmd,
+                                wd=icell8_dir,
+                                name="initial_stats.%s" %
+                                os.path.basename(fastqs[0]),
+                                log_dir=log_dir)
+    icell8_stats.wait()
+    #sched.wait()
+    if icell8_stats.exit_code != 0:
+        logging.critical("Initial stats stage failed (exit code %d)"
+                         % icell8_stats.exit_code)
+        sys.exit(1)
+    print "*** Initial statistics stage completed ***"
 
     # Setup the filter and splitting job
     split_dir = os.path.join(icell8_dir,"filter_and_split")
     mkdir(split_dir)
-    stats_file = os.path.join(stats_dir,"stats.filter.tsv")
     filter_and_split_cmd = Command('split_icell8_fastqs.py',
                                    '-w',os.path.abspath(args.WELL_LIST),
                                    '-o',split_dir,
                                    '-m','batch',
-                                   '-s',5000,
-                                   '-f',stats_file)
+                                   '-s',5000)
     filter_and_split_cmd.add_args(*fastqs)
     # Submit the job
-    print "Running %s" % filter_and_split_cmd
     filter_and_split = sched.submit(filter_and_split_cmd,
                                     wd=split_dir,
                                     name="filter_and_split.%s" %
                                     os.path.basename(fastqs[0]),
                                     log_dir=log_dir)
-    print "Job: %s" % filter_and_split
     # Wait for the job to complete
     # (necessary as we don't know ahead of time what the
     # names of the batched files will be)
@@ -108,9 +127,27 @@ if __name__ == "__main__":
         sys.exit(1)
     print "*** Quality filter and splitting stage completed ***"
 
-    # Collect the files for the read trimming step
-    fastq_pairs = pair_fastqs(
-        glob.glob(os.path.join(split_dir,"*.B*.r*.fastq")))[0]
+    # Collect the post-filtering files for stats and read trimming
+    filtered_fastqs = glob.glob(os.path.join(split_dir,"*.B*.r*.fastq"))
+    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
+
+    # Post quality filter stats
+    icell8_stats_cmd = Command('icell8_stats.py',
+                               '-f',stats_file,
+                               '--suffix','_quality_filtered',
+                               '--append',)
+    icell8_stats_cmd.add_args(*filtered_fastqs)
+    icell8_stats = sched.submit(icell8_stats_cmd,
+                                wd=icell8_dir,
+                                name="post_quality_filter_stats.%s" %
+                                os.path.basename(fastqs[0]),
+                                log_dir=log_dir)
+    icell8_stats.wait()
+    if icell8_stats.exit_code != 0:
+        logging.critical("Post-quality filter stats stage failed (exit code %d)"
+                         % icell8_stats.exit_code)
+        sys.exit(1)
+    print "*** Post-quality filter statistics stage completed ***"
     
     # Set up the cutadapt jobs as a group
     trim_reads = sched.group("trim_reads.%s" % os.path.basename(fastqs[0]))
@@ -130,21 +167,19 @@ if __name__ == "__main__":
             '--max-n',0.7,
             '-q',25)
         # Output pair (nb R2 then R1)
-        fqr1_out = '.'.join(os.path.basename(fqr1_in).split('.')[0:-1]) \
+        fqr1_out = strip_ext(os.path.basename(fqr1_in),'.fastq') \
                    + '.trimmed.fastq'
-        fqr2_out = '.'.join(os.path.basename(fqr2_in).split('.')[0:-1]) \
+        fqr2_out = strip_ext(os.path.basename(fqr2_in),'.fastq') \
                    + '.trimmed.fastq'
         cutadapt_cmd.add_args('-o',fqr2_out,
                               '-p',fqr1_out)
         # Input pair (nb R2 then R1)
         cutadapt_cmd.add_args(fqr2_in,fqr1_in)
         # Submit the job
-        print "Running %s" % cutadapt_cmd
         job = trim_reads.add(cutadapt_cmd,
                              wd=trim_dir,
                              name="cutadapt.%s" % os.path.basename(fqr1_in),
                              log_dir=log_dir)
-        print "Job: %s" % job
     trim_reads.close()
     trim_reads.wait()
     exit_code = max([j.exit_code for j in trim_reads.jobs])
@@ -154,9 +189,27 @@ if __name__ == "__main__":
         sys.exit(1)
     print "*** Read trimming stage completed ***"
 
-    # Collect the files for the contamination filter step
-    fastq_pairs = pair_fastqs(
-        glob.glob(os.path.join(trim_dir,"*.r*.trimmed.fastq")))[0]
+    # Collect the files for stats and contamination filter step
+    trimmed_fastqs = glob.glob(os.path.join(trim_dir,"*.trimmed.fastq"))
+    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
+
+    # Post read trimming stats
+    icell8_stats_cmd = Command('icell8_stats.py',
+                               '-f',stats_file,
+                               '--suffix','_trimmed',
+                               '--append',)
+    icell8_stats_cmd.add_args(*trimmed_fastqs)
+    icell8_stats = sched.submit(icell8_stats_cmd,
+                                wd=icell8_dir,
+                                name="post_trimming_stats.%s" %
+                                os.path.basename(fastqs[0]),
+                                log_dir=log_dir)
+    icell8_stats.wait()
+    if icell8_stats.exit_code != 0:
+        logging.critical("Post-trimming stats stage failed (exit code %d)"
+                         % icell8_stats.exit_code)
+        sys.exit(1)
+    print "*** Post-trimming statistics stage completed ***"
 
     # Set up the contaminant filter jobs as a group
     contaminant_filter = sched.group("contaminant_filter.%s" %
@@ -174,21 +227,15 @@ if __name__ == "__main__":
             '-o',contaminant_filter_dir,
             '-a',args.aligner,
             fqr1_in,fqr2_in)
-        # Output pair (nb R2 then R1)
-        ##fqr1_out = '.'.join(os.path.basename(fqr1_in).split('.')[0:-1]) \
-        ##           + '.filtered.fastq'
-        ##fqr2_out = '.'.join(os.path.basename(fqr2_in).split('.')[0:-1]) \
-        ##           + '.filtered.fastq'
-        ##contaminant_filter_cmd.add_args(fqr1_out,fqr1_out)
         # Submit the job
-        print "Running %s" % contaminant_filter_cmd
+        ##print "Running %s" % contaminant_filter_cmd
         job = contaminant_filter.add(
             contaminant_filter_cmd,
             wd=contaminant_filter_dir,
             name="contaminant_filter.%s" %
             os.path.basename(fqr1_in),
             log_dir=log_dir)
-        print "Job: %s" % job
+        ##print "Job: %s" % job
     contaminant_filter.close()
     contaminant_filter.wait()
     exit_code = max([j.exit_code for j in contaminant_filter.jobs])
@@ -197,6 +244,26 @@ if __name__ == "__main__":
                          % exit_code)
         sys.exit(exit_code)
     print "*** Contaminant filtering stage completed ***"
+
+    # Post contaminant filter stats
+    filtered_fastqs = glob.glob(os.path.join(contaminant_filter_dir,
+                                             "*.trimmed.filtered.fastq"))
+    icell8_stats_cmd = Command('icell8_stats.py',
+                               '-f',stats_file,
+                               '--suffix','_contaminant_filtered',
+                               '--append',)
+    icell8_stats_cmd.add_args(*filtered_fastqs)
+    icell8_stats = sched.submit(icell8_stats_cmd,
+                                wd=icell8_dir,
+                                name="post_contaminant_filter_stats.%s" %
+                                os.path.basename(fastqs[0]),
+                                log_dir=log_dir)
+    icell8_stats.wait()
+    if icell8_stats.exit_code != 0:
+        logging.critical("Post-contaminant filter stats stage failed (exit code %d)"
+                         % icell8_stats.exit_code)
+        sys.exit(1)
+    print "*** Post-contaminant filter statistics stage completed ***"
 
     # Finish
     sched.stop()
