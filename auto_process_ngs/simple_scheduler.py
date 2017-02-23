@@ -633,7 +633,6 @@ class SchedulerJob(Job):
         """Create a new SchedulerJob instance
 
         """
-
         self.job_number = job_number
         self.job_name = name
         self.log_dir = log_dir
@@ -669,7 +668,9 @@ class SchedulerJob(Job):
         Returns True if the job has finished running, False
         otherwise.
         """
-        return (self.end_time is not None)
+        # NB need to invoke is_running to force implicit update
+        # of job status
+        return ((not self.is_running) and (self.end_time is not None))
 
     @property
     def exit_code(self):
@@ -697,18 +698,40 @@ class SchedulerJob(Job):
             self.runner.set_log_dir(runner_log_dir)
         return job_id
 
-    def wait(self,poll_interval=5):
+    def wait(self,poll_interval=5,timeout=None):
         """Wait for the job to complete
+
+        This method blocks while waiting for the job to finish
+        running.
+
+        NB if the job is not created by submission to a scheduler
+        or group then it's up to the calling subprogram to ensure
+        that the job is started before the 'wait' method is
+        invoked.
 
         Arguments:
           poll_interval: optional, number of seconds to wait in
             between checking if the job has completed (default: 5
             seconds)
+          timeout: optional, if set then is the maximum time
+            in seconds that the job will be allowed to run before
+            it's terminated and a SchedulerTimeout exception
+            is raised
 
         """
-        logging.debug("Waiting for job #%s..." % self.job_number)
-        while (self.job_id is None) or (not self.completed):
+        logging.debug("Waiting for job #%s (%s)..." % (self.job_number,
+                                                       self.job_id))
+        wait_time = 0
+        while ((self.job_id is None) or (not self.completed)):
+            # Check for timeout
+            if timeout is not None and wait_time > timeout:
+                self.terminate()
+                raise SchedulerTimeout(
+                    "Job #%s (%s): timeout exceeded (%ss)" %
+                    (self.job_number,self.job_id,timeout))
+            # Wait before polling again
             time.sleep(poll_interval)
+            wait_time += poll_interval
         logging.debug("Job #%s finished" % self.job_number)
 
     def __repr__(self):
@@ -967,6 +990,16 @@ def default_scheduler_reporter():
         group_added="Group has been added: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)",
         group_end="Group completed: #%(group_id)d: \"%(group_name)s\" (%(time_stamp)s)"
     )
+
+#######################################################################
+# Exception classes
+#######################################################################
+
+class SchedulerException(Exception):
+    """Base class for errors with simple scheduler code"""
+
+class SchedulerTimeout(SchedulerException):
+    """Timeout limit exceeded"""
 
 #######################################################################
 # Main program (example)

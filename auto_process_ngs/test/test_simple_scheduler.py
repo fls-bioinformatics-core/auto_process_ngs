@@ -7,7 +7,10 @@ import os
 import sys
 import time
 import logging
+import tempfile
+import shutil
 from bcftbx.JobRunner import BaseJobRunner
+from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.simple_scheduler import *
 
 class MockJobRunner(BaseJobRunner):
@@ -564,6 +567,14 @@ class TestSchedulerJob(unittest.TestCase):
     """Unit tests for SchedulerJob class
 
     """
+    def setUp(self):
+        # Placeholder for temporary log directory
+        self.log_dir = None
+
+    def tearDown(self):
+        if self.log_dir is not None:
+            shutil.rmtree(self.log_dir)
+
     def test_scheduler_job_basic(self):
         """Basic test of SchedulerJob
 
@@ -604,6 +615,50 @@ class TestSchedulerJob(unittest.TestCase):
         job.terminate()
         self.assertFalse(job.is_running)
         self.assertTrue(job.completed)
+
+    def test_scheduler_job_wait(self):
+        """Wait for SchedulerJob to complete
+        """
+        self.log_dir = tempfile.mkdtemp()
+        job = SchedulerJob(
+            SimpleJobRunner(log_dir=self.log_dir),
+            ['sleep','5'])
+        self.assertFalse(job.completed)
+        try:
+            job.start()
+            job.wait(poll_interval=0.01,timeout=10)
+        except SchedulerTimeout:
+            self.fail("'wait' timed out")
+        self.assertTrue(job.completed)
+
+    def test_submitted_scheduler_job_wait(self):
+        """Wait for submitted SchedulerJob to complete
+        """
+        self.log_dir = tempfile.mkdtemp()
+        sched = SimpleScheduler(
+            runner=SimpleJobRunner(log_dir=self.log_dir),
+            poll_interval=0.01)
+        sched.start()
+        job = sched.submit(['sleep','5'])
+        self.assertFalse(job.completed)
+        try:
+            job.wait(poll_interval=0.01,timeout=10)
+        except SchedulerTimeout:
+            self.fail("'wait' timed out")
+        self.assertTrue(job.completed)
+
+    def test_scheduler_job_wait_timeout_raises_exception(self):
+        """SchedulerJob raises exception if 'wait' timeout exceeded
+        """
+        self.log_dir = tempfile.mkdtemp()
+        job = SchedulerJob(
+            SimpleJobRunner(log_dir=self.log_dir),
+            ['sleep','1000'])
+        job.start()
+        self.assertRaises(SchedulerTimeout,
+                          job.wait,
+                          poll_interval=0.01,
+                          timeout=5)
 
 class TestSchedulerReporter(unittest.TestCase):
     """Unit tests for SchedulerReporter class
