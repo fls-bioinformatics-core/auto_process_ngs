@@ -532,9 +532,23 @@ class SchedulerGroup:
         for job in self.__jobs:
             if not job.submitted:
                 return True
-            elif job.is_running:
+            elif not job.completed:
                 return True
         return False
+
+    @property
+    def completed(self):
+        """Test whether group has completed
+
+        Returns True if all the jobs in the group have
+        completed, False otherwise.
+        """
+        if not self.closed:
+            return False
+        for job in self.__jobs:
+            if not job.completed:
+                return False
+        return True
 
     def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[]):
         """Add a request to run a job
@@ -648,6 +662,15 @@ class SchedulerJob(Job):
         return self.isRunning()
 
     @property
+    def completed(self):
+        """Test if a job has completed
+
+        Returns True if the job has finished running, False
+        otherwise.
+        """
+        return (self.end_time is not None)
+
+    @property
     def exit_code(self):
         """Return exit code from job
 
@@ -683,7 +706,7 @@ class SchedulerJob(Job):
 
         """
         logging.debug("Waiting for job #%s..." % self.job_number)
-        while self.job_id is None or self.is_running:
+        while (self.job_id is None) or (not self.completed):
             time.sleep(poll_interval)
         logging.debug("Job #%s finished" % self.job_number)
 
