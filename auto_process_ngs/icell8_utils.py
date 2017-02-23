@@ -11,7 +11,8 @@ Utility classes and functions for processing the outputs from Wafergen's
 iCell8 platform:
 
 - ICell8WellList: class representing iCell8 well list file
-
+- ICell8ReadPair: class representing an iCell8 R1/R2 read-pair
+- ICell8FastqIterator: class for iterating over iCell8 R1/R2 FASTQ-pair
 """
 
 #######################################################################
