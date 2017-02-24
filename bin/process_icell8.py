@@ -22,7 +22,7 @@ import glob
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
 from bcftbx.IlluminaData import IlluminaData
-from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
@@ -59,6 +59,10 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "'bowtie2')")
+    p.add_argument("-r","--runner",
+                   dest="runner",default="SimpleJobRunner",
+                   help="explicitly specify a runner definition for "
+                   "running pipeline jobs (e.g. 'GEJobRunner(-j y)')")
     p.add_argument("-s","--size",type=int,
                    dest="batch_size",default=DEFAULT_BATCH_SIZE,
                    help="number of reads per batch when splitting "
@@ -76,7 +80,7 @@ if __name__ == "__main__":
                 fastqs.append(os.path.join(sample.dirn,fq))
 
     # Set up a scheduler for running jobs
-    icell8_qc_runner = SimpleJobRunner()
+    icell8_qc_runner = runner = fetch_runner(args.runner)
     max_jobs = 4
     sched_reporter = SchedulerReporter(
         job_start="Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
