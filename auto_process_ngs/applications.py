@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17 Peter Briggs
 #
 ########################################################################
 #
@@ -235,6 +235,36 @@ class Command:
         ftmp.seek(0)
         output = ftmp.read()
         return (status,output)
+
+    def make_wrapper_script(self,shell=None,filen=None,fp=None):
+        """Wrap the command in a script
+
+        Returns a string which can be injected into a file and
+        run as a script.
+
+        Arguments:
+          shell (str): optional, if set then will be written
+            to the wrapper script shebang (#!)
+          filen (str): optional, if set then wrapper script will
+            be written to a file with this path
+          fp (File): optional, if set then must be a File-like
+            object opened for writing, to which the wrapper script
+            will be written
+
+        Returns:
+          String: the wrapper script contents.
+        """
+        script = []
+        if shell is not None:
+            script.append("#!%s" % shell)
+        script.append(str(self))
+        script = '\n'.join(script)
+        if fp is not None:
+            fp.write(script)
+        if filen is not None:
+            with open(filen,'w') as fp:
+                fp.write(script)
+        return script
 
 class bcl2fastq:
     """Bcl to fastq conversion line applications

@@ -3,6 +3,7 @@
 #######################################################################
 from auto_process_ngs.applications import *
 import unittest
+import cStringIO
 
 class TestCommand(unittest.TestCase):
 
@@ -56,6 +57,18 @@ class TestCommand(unittest.TestCase):
         self.assertTrue(cmd.has_exe)
         cmd = Command('cannot_possibly_exist_3')
         self.assertFalse(cmd.has_exe)
+
+    def test_make_wrapper_script(self):
+        """Check 'make_wrapper_script' method works
+        """
+        cmd = Command('echo','hello')
+        self.assertEqual(cmd.make_wrapper_script(),
+                         "echo hello")
+        self.assertEqual(cmd.make_wrapper_script(shell="/bin/bash"),
+                         "#!/bin/bash\necho hello")
+        fp = cStringIO.StringIO()
+        cmd.make_wrapper_script(fp=fp)
+        self.assertEqual(fp.getvalue(),"echo hello")
 
 class TestBcl2Fastq(unittest.TestCase):
 
