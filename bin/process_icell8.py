@@ -109,8 +109,7 @@ if __name__ == "__main__":
                                 name="initial_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    icell8_stats.wait()
-    #sched.wait()
+    sched.wait()
     if icell8_stats.exit_code != 0:
         logging.critical("Initial stats stage failed (exit code %d)"
                          % icell8_stats.exit_code)
@@ -135,7 +134,7 @@ if __name__ == "__main__":
     # Wait for the job to complete
     # (necessary as we don't know ahead of time what the
     # names of the batched files will be)
-    filter_and_split.wait()
+    sched.wait()
     if filter_and_split.exit_code != 0:
         logging.critical("Filter/split stage failed (exit code %d)"
                          % filter_and_split.exit_code)
@@ -157,7 +156,7 @@ if __name__ == "__main__":
                                 name="post_quality_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    icell8_stats.wait()
+    sched.wait()
     if icell8_stats.exit_code != 0:
         logging.critical("Post-quality filter stats stage failed (exit code %d)"
                          % icell8_stats.exit_code)
@@ -196,7 +195,7 @@ if __name__ == "__main__":
                              name="cutadapt.%s" % os.path.basename(fqr1_in),
                              log_dir=log_dir)
     trim_reads.close()
-    trim_reads.wait()
+    sched.wait()
     exit_code = max([j.exit_code for j in trim_reads.jobs])
     if exit_code != 0:
         logging.critical("Read trimming stage failed (exit code %d)"
@@ -219,7 +218,7 @@ if __name__ == "__main__":
                                 name="post_trimming_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    icell8_stats.wait()
+    sched.wait()
     if icell8_stats.exit_code != 0:
         logging.critical("Post-trimming stats stage failed (exit code %d)"
                          % icell8_stats.exit_code)
@@ -243,16 +242,14 @@ if __name__ == "__main__":
             '-a',args.aligner,
             fqr1_in,fqr2_in)
         # Submit the job
-        ##print "Running %s" % contaminant_filter_cmd
         job = contaminant_filter.add(
             contaminant_filter_cmd,
             wd=contaminant_filter_dir,
             name="contaminant_filter.%s" %
             os.path.basename(fqr1_in),
             log_dir=log_dir)
-        ##print "Job: %s" % job
     contaminant_filter.close()
-    contaminant_filter.wait()
+    sched.wait()
     exit_code = max([j.exit_code for j in contaminant_filter.jobs])
     if exit_code != 0:
         logging.critical("Contaminant filtering stage failed (exit code %d)"
@@ -273,7 +270,7 @@ if __name__ == "__main__":
                                 name="post_contaminant_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    icell8_stats.wait()
+    sched.wait()
     if icell8_stats.exit_code != 0:
         logging.critical("Post-contaminant filter stats stage failed (exit code %d)"
                          % icell8_stats.exit_code)
