@@ -95,7 +95,8 @@ if __name__ == "__main__":
     icell8_dir = os.path.join(os.getcwd(),"icell8")
     log_dir = os.path.join(icell8_dir,"logs")
     stats_dir = os.path.join(icell8_dir,"stats")
-    for dirn in (icell8_dir,log_dir,stats_dir):
+    scripts_dir = os.path.join(icell8_dir,"scripts")
+    for dirn in (icell8_dir,log_dir,stats_dir,scripts_dir):
         mkdir(dirn)
 
     # Initial stats
@@ -143,7 +144,6 @@ if __name__ == "__main__":
 
     # Collect the post-filtering files for stats and read trimming
     filtered_fastqs = glob.glob(os.path.join(split_dir,"*.B*.r*.fastq"))
-    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
 
     # Post quality filter stats
     icell8_stats_cmd = Command('icell8_stats.py',
@@ -151,7 +151,11 @@ if __name__ == "__main__":
                                '--suffix','_quality_filtered',
                                '--append',)
     icell8_stats_cmd.add_args(*filtered_fastqs)
-    icell8_stats = sched.submit(icell8_stats_cmd,
+    icell8_stats_script = os.path.join(scripts_dir,
+                                       "icell8_stats_quality_filtered.sh")
+    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
+                                         shell="/bin/bash")
+    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_quality_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
@@ -164,6 +168,7 @@ if __name__ == "__main__":
     print "*** Post-quality filter statistics stage completed ***"
     
     # Set up the cutadapt jobs as a group
+    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
     trim_reads = sched.group("trim_reads.%s" % os.path.basename(fastqs[0]))
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
@@ -205,7 +210,6 @@ if __name__ == "__main__":
 
     # Collect the files for stats and contamination filter step
     trimmed_fastqs = glob.glob(os.path.join(trim_dir,"*.trimmed.fastq"))
-    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
 
     # Post read trimming stats
     icell8_stats_cmd = Command('icell8_stats.py',
@@ -213,7 +217,11 @@ if __name__ == "__main__":
                                '--suffix','_trimmed',
                                '--append',)
     icell8_stats_cmd.add_args(*trimmed_fastqs)
-    icell8_stats = sched.submit(icell8_stats_cmd,
+    icell8_stats_script = os.path.join(scripts_dir,
+                                       "icell8_stats_trimmed.sh")
+    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
+                                         shell="/bin/bash")
+    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_trimming_stats.%s" %
                                 os.path.basename(fastqs[0]),
@@ -228,6 +236,7 @@ if __name__ == "__main__":
     # Set up the contaminant filter jobs as a group
     contaminant_filter = sched.group("contaminant_filter.%s" %
                                      os.path.basename(fastqs[0]))
+    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
         fqr1_in,fqr2_in = pair
@@ -265,7 +274,11 @@ if __name__ == "__main__":
                                '--suffix','_contaminant_filtered',
                                '--append',)
     icell8_stats_cmd.add_args(*filtered_fastqs)
-    icell8_stats = sched.submit(icell8_stats_cmd,
+    icell8_stats_script = os.path.join(scripts_dir,
+                                       "icell8_stats_contaminant_filtered.sh")
+    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
+                                         shell="/bin/bash")
+    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_contaminant_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
