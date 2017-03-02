@@ -46,6 +46,10 @@ if __name__ == "__main__":
                    dest="unaligned_dir",default="bcl2fastq",
                    help="'unaligned' dir with output from "
                    "bcl2fastq")
+    p.add_argument("-o","--outdir",
+                   dest="outdir",default="icell8",
+                   help="directory to write outputs to "
+                   "(default: 'CWD/icell8')")
     p.add_argument("-p","--preferred",
                    dest="preferred_conf",
                    help="fastq_screen 'conf' file with the "
@@ -92,7 +96,7 @@ if __name__ == "__main__":
     sched.start()
 
     # Make top-level output dirs
-    icell8_dir = os.path.join(os.getcwd(),"icell8")
+    icell8_dir = os.path.abspath(args.outdir)
     log_dir = os.path.join(icell8_dir,"logs")
     stats_dir = os.path.join(icell8_dir,"stats")
     scripts_dir = os.path.join(icell8_dir,"scripts")
