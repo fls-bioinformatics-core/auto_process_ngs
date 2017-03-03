@@ -59,7 +59,7 @@ if __name__ == "__main__":
                    help="fastq_screen 'conf' file with the "
                    "'contaminant' genome indices")
     p.add_argument("-a","--aligner",
-                   dest="aligner",default="barcodes",
+                   dest="aligner",default="bowtie2",
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "'bowtie2')")
