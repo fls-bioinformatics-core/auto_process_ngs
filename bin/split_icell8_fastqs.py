@@ -18,6 +18,7 @@ FASTQ files based on the inline barcodes in read 1.
 import sys
 import logging
 import argparse
+import time
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8_utils import ICell8WellList
@@ -102,17 +103,20 @@ if __name__ == "__main__":
     for fastq_pair in fastqs:
         # Iterate over read pairs from the Fastqs
         print "-- %s\n   %s" % fastq_pair
-        for read_pair in ICell8FastqIterator(*fastq_pair):
+        print "   Starting at %s" % time.ctime()
+        for i,read_pair in enumerate(ICell8FastqIterator(*fastq_pair),start=1):
             # Count the barcodes and unique UMIs
+            if (i % 100000) == 0:
+                print "   Examining read pair #%d (%s)" % \
+                    (i,time.ctime())            
             inline_barcode = read_pair.barcode
             umi = read_pair.umi
             try:
                 unfiltered_counts[inline_barcode] += 1
-                if umi not in unfiltered_umis[inline_barcode]:
-                    unfiltered_umis[inline_barcode].append(umi)
+                unfiltered_umis[inline_barcode].add(umi)
             except KeyError:
                 unfiltered_counts[inline_barcode] = 1
-                unfiltered_umis[inline_barcode] = []
+                unfiltered_umis[inline_barcode] = set((umi,))
             # Do filtering
             if inline_barcode not in expected_barcodes:
                 assign_to = "unassigned"
@@ -133,11 +137,10 @@ if __name__ == "__main__":
             if assign_to == inline_barcode:
                 try:
                     filtered_counts[inline_barcode] += 1
-                    if umi not in filtered_umis[inline_barcode]:
-                        filtered_umis[inline_barcode].append(umi)
+                    filtered_umis[inline_barcode].add(umi)
                 except KeyError:
                     filtered_counts[inline_barcode] = 1
-                    filtered_umis[inline_barcode] = []
+                    filtered_umis[inline_barcode] = set((umi,))
                 # Reassign read pair to appropriate output files
                 if args.splitting_mode == "batch":
                     # Output to a batch-specific file pair
@@ -172,6 +175,7 @@ if __name__ == "__main__":
             if len(output_fqs) > MAX_OPEN_FILES:
                 logging.debug("*** Closing output files ***")
                 output_fqs.close()
+        print "   Finished at %s" % time.ctime()
     # Close output files
     output_fqs.close()
 
