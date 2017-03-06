@@ -17,6 +17,7 @@ Wafergen iCell8.
 import os
 import sys
 import argparse
+import time
 from bcftbx.TabFile import TabFile
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.icell8_utils import ICell8WellList
@@ -35,7 +36,13 @@ class ICell8Stats(object):
         self._counts = {}
         self._umis = {}
         for fqr1,fqr2 in pair_fastqs(fastqs)[0]:
-            for pair in ICell8FastqIterator(fqr1,fqr2):
+            print "-- %s" % fqr1
+            print "   %s" % fqr2
+            print "   Starting at %s" % time.ctime()
+            for i,pair in enumerate(ICell8FastqIterator(fqr1,fqr2),start=1):
+                if (i % 100000) == 0:
+                    print "   Examining read pair #%d (%s)" % \
+                        (i,time.ctime())
                 inline_barcode = pair.barcode
                 umi = pair.umi
                 try:
@@ -43,10 +50,10 @@ class ICell8Stats(object):
                 except KeyError:
                     self._counts[inline_barcode] = 1
                 try:
-                    if umi not in self._umis[inline_barcode]:
-                        self._umis[inline_barcode].append(umi)
+                    self._umis[inline_barcode].add(umi)
                 except KeyError:
-                    self._umis[inline_barcode] = [umi]
+                    self._umis[inline_barcode] = set((umi,))
+            print "   Finished at %s" % time.ctime()
         for barcode in self._umis:
             self._umis[barcode] = sorted(self._umis[barcode])
 
@@ -70,14 +77,12 @@ class ICell8Stats(object):
         """
         """
         if barcode is not None:
-            return [u for u in self._umis[barcode]]
+            return list(self._umis[barcode])
         else:
-            umis = []
+            umis = set()
             for b in self.barcodes():
-                for u in self._umis[b]:
-                    if u not in umis:
-                        umis.append(u)
-            return umis
+                umis.update(self.unique_umis(b))
+            return list(umis)
 
 ######################################################################
 # Main
@@ -152,6 +157,4 @@ if __name__ == "__main__":
     print "#barcodes   : %s" % len(stats.barcodes())
     print "#reads      : %s" % stats.nreads()
     print "#unique umis: %s" % len(stats.unique_umis())
-    
-    
-
+    print "Finished: %s" % time.ctime()
