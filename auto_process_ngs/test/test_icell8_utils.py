@@ -10,6 +10,7 @@ from bcftbx.FASTQFile import FastqRead
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8ReadPair
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8_utils import ICell8Stats
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -194,3 +195,42 @@ class TestICell8WellList(unittest.TestCase):
             fqr2_data += "%s\n" % pair.r2
         self.assertEqual(fqr1_data,icell8_fastq_r1)
         self.assertEqual(fqr2_data,icell8_fastq_r2)
+
+class TestICell8Stats(unittest.TestCase):
+    """Tests for the ICell8Stats class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.ICell8FastqIterator')
+        # Test files
+        self.r1 = os.path.join(self.wd,'icell8.r1.fq')
+        with open(self.r1,'w') as fp:
+            fp.write(icell8_fastq_r1)
+        self.r2 = os.path.join(self.wd,'icell8.r2.fq')
+        with open(self.r2,'w') as fp:
+            fp.write(icell8_fastq_r2)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_icell8stats(self):
+        """ICell8Stats: collect stats from FASTQ R1/R2 pair
+        """
+        fastqs = (self.r1,self.r2)
+        stats = ICell8Stats(*fastqs)
+        self.assertEqual(stats.nreads(),3)
+        self.assertEqual(stats.barcodes(),['AGAAGAGTACC',
+                                           'GTCTGCAACGC',
+                                           'GTTCCTGATTA',])
+        self.assertEqual(stats.nreads('GTTCCTGATTA'),1)
+        self.assertEqual(stats.nreads('AGAAGAGTACC'),1)
+        self.assertEqual(stats.nreads('GTCTGCAACGC'),1)
+        self.assertEqual(stats.unique_umis(),['AGTCAAGTGC',
+                                              'GGAGGCCGGA',
+                                              'TGGAAAATGT'])
+        self.assertEqual(stats.unique_umis('GTTCCTGATTA'),
+                         ['AGTCAAGTGC'])
+        self.assertEqual(stats.unique_umis('AGAAGAGTACC'),
+                         ['TGGAAAATGT'])
+        self.assertEqual(stats.unique_umis('GTCTGCAACGC'),
+                         ['GGAGGCCGGA'])

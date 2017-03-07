@@ -19,10 +19,12 @@ iCell8 platform:
 # Imports
 #######################################################################
 
+import time
 from itertools import izip
 from collections import Iterator
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
+from .fastq_utils import pair_fastqs
 
 ######################################################################
 # Magic numbers
@@ -161,3 +163,103 @@ class ICell8FastqIterator(Iterator):
     def next(self):
         return ICell8ReadPair(self._fqr1.next(),
                               self._fqr2.next())
+
+class ICell8Stats(object):
+    """
+    Class for gathering statistics on iCell8 FASTQ pairs
+
+    Given a set of paths to FASTQ R1/R2 file
+    pairs, collects statistics on the number of
+    reads, barcodes and unique UMIs.
+
+    NB the list of "unique" UMIs are where each UMI
+    appears only once. Each UMI may appear multiple times
+    across the FASTQ files.
+
+    """
+    def __init__(self,*fastqs):
+        """
+        Create a new ICell8Stats instance
+
+        Arguments:
+          fastqs: set of paths to ICell8 R1/R2 FASTQ
+            file pairs to be processed
+        """
+        self._counts = {}
+        self._umis = {}
+        for fqr1,fqr2 in pair_fastqs(fastqs)[0]:
+            print "-- %s" % fqr1
+            print "   %s" % fqr2
+            print "   Starting at %s" % time.ctime()
+            for i,pair in enumerate(ICell8FastqIterator(fqr1,fqr2),start=1):
+                if (i % 100000) == 0:
+                    print "   Examining read pair #%d (%s)" % \
+                        (i,time.ctime())
+                inline_barcode = pair.barcode
+                umi = pair.umi
+                try:
+                    self._counts[inline_barcode] += 1
+                except KeyError:
+                    self._counts[inline_barcode] = 1
+                try:
+                    self._umis[inline_barcode].add(umi)
+                except KeyError:
+                    self._umis[inline_barcode] = set((umi,))
+            print "   Finished at %s" % time.ctime()
+        for barcode in self._umis:
+            self._umis[barcode] = sorted(self._umis[barcode])
+
+    def barcodes(self):
+        """
+        Return list of barcodes from the FASTQs
+        """
+        return sorted([b for b in self._counts.keys()])
+
+    def nreads(self,barcode=None):
+        """
+        Return total number of reads, or per barcode
+
+        Invoked without arguments, returns the
+        total number of reads analysed. If a barcode
+        is specified then returns the number of reads
+        with that barcode.
+
+        Arguments:
+          barcode (str): optional, specify barcode
+            for which the read count will be returned.
+
+        Returns:
+          Integer: number of reads.
+        """
+        if barcode is not None:
+            return self._counts[barcode]
+        else:
+            nreads = 0
+            for b in self.barcodes():
+                nreads += self.nreads(b)
+            return nreads
+
+    def unique_umis(self,barcode=None):
+        """
+        Return all unique UMIs, or by barcode
+
+        Invoked without arguments, returns a list
+        of unique UMIs found across the files. If a
+        barcode is specified then returns a list of
+        UMIs associated with that barcode.
+
+        Arguments:
+          barcode (str): optional, specify barcode
+            for which the list of unique UMIs will be
+            returned.
+
+        Returns:
+          List: list of unique UMI sequences.
+        """
+        if barcode is not None:
+            return sorted(list(self._umis[barcode]))
+        else:
+            umis = set()
+            for b in self.barcodes():
+                umis.update(self.unique_umis(b))
+            return sorted(list(umis))
