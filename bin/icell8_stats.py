@@ -17,72 +17,9 @@ Wafergen iCell8.
 import os
 import sys
 import argparse
-import time
 from bcftbx.TabFile import TabFile
-from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
-
-######################################################################
-# Classes
-######################################################################
-
-class ICell8Stats(object):
-    """
-    """
-    def __init__(self,*fastqs):
-        """
-        """
-        self._counts = {}
-        self._umis = {}
-        for fqr1,fqr2 in pair_fastqs(fastqs)[0]:
-            print "-- %s" % fqr1
-            print "   %s" % fqr2
-            print "   Starting at %s" % time.ctime()
-            for i,pair in enumerate(ICell8FastqIterator(fqr1,fqr2),start=1):
-                if (i % 100000) == 0:
-                    print "   Examining read pair #%d (%s)" % \
-                        (i,time.ctime())
-                inline_barcode = pair.barcode
-                umi = pair.umi
-                try:
-                    self._counts[inline_barcode] += 1
-                except KeyError:
-                    self._counts[inline_barcode] = 1
-                try:
-                    self._umis[inline_barcode].add(umi)
-                except KeyError:
-                    self._umis[inline_barcode] = set((umi,))
-            print "   Finished at %s" % time.ctime()
-        for barcode in self._umis:
-            self._umis[barcode] = sorted(self._umis[barcode])
-
-    def barcodes(self):
-        """
-        """
-        return [b for b in self._counts.keys()]
-
-    def nreads(self,barcode=None):
-        """
-        """
-        if barcode is not None:
-            return self._counts[barcode]
-        else:
-            nreads = 0
-            for b in self.barcodes():
-                nreads += self.nreads(b)
-            return nreads
-
-    def unique_umis(self,barcode=None):
-        """
-        """
-        if barcode is not None:
-            return list(self._umis[barcode])
-        else:
-            umis = set()
-            for b in self.barcodes():
-                umis.update(self.unique_umis(b))
-            return list(umis)
+from auto_process_ngs.icell8_utils import ICell8Stats
 
 ######################################################################
 # Main
