@@ -17,6 +17,7 @@ Wafergen iCell8.
 import os
 import sys
 import argparse
+import time
 from bcftbx.TabFile import TabFile
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8Stats
