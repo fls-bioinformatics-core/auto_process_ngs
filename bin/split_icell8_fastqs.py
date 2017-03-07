@@ -51,7 +51,11 @@ if __name__ == "__main__":
     p.add_argument("-m","--mode",
                    dest="splitting_mode",default="barcodes",
                    choices=["barcodes","batch","none"],
-                   help="how to split the input FASTQs (default: "
+                   help="how to split the input FASTQs: 'barcodes' "
+                   "(one FASTQ pair per barcode), 'batch' (one or "
+                   "more FASTQ pairs with fixed number of reads not "
+                   "exceeding BATCH_SIZE), or 'none' (output all "
+                   "reads to a single FASTQ pair) (default: "
                    "'barcodes')")
     p.add_argument("-s","--size",type=int,
                    dest="batch_size",default=DEFAULT_BATCH_SIZE,
@@ -68,6 +72,10 @@ if __name__ == "__main__":
     p.add_argument("-f","--stats_file",
                    dest="stats_file",default=None,
                    help="output file for statistics")
+    p.add_argument("-n","--no-filter",
+                   dest='no_filter',action='store_true',
+                   help="don't filter reads by barcode and UMI "
+                   "quality (default: do filter reads)")
     args = p.parse_args()
 
     # Convert quality cutoffs to character encoding
@@ -78,6 +86,9 @@ if __name__ == "__main__":
     well_list = ICell8WellList(args.well_list_file)
     expected_barcodes = well_list.barcodes()
     print "%d expected barcodes" % len(expected_barcodes)
+
+    # Filtering mode
+    do_filter = not args.no_filter
 
     # Count barcodes and rejections
     unassigned = 0
@@ -117,22 +128,27 @@ if __name__ == "__main__":
             except KeyError:
                 unfiltered_counts[inline_barcode] = 1
                 unfiltered_umis[inline_barcode] = set((umi,))
-            # Do filtering
-            if inline_barcode not in expected_barcodes:
-                assign_to = "unassigned"
-                unassigned += 1
-            elif read_pair.min_barcode_quality < barcode_quality_cutoff:
-                assign_to = "failed_barcode"
-            elif read_pair.min_umi_quality < umi_quality_cutoff:
-                assign_to = "failed_umi"
+            if do_filter:
+                # Do filtering
+                if inline_barcode not in expected_barcodes:
+                    assign_to = "unassigned"
+                    unassigned += 1
+                elif read_pair.min_barcode_quality < barcode_quality_cutoff:
+                    assign_to = "failed_barcode"
+                elif read_pair.min_umi_quality < umi_quality_cutoff:
+                    assign_to = "failed_umi"
+                else:
+                    assign_to = inline_barcode
+                    filtered += 1
+                logging.debug("%s" % '\t'.join([assign_to,
+                                                inline_barcode,
+                                                umi,
+                                                read_pair.min_barcode_quality,
+                                                read_pair.min_umi_quality]))
             else:
+                # No filtering
                 assign_to = inline_barcode
                 filtered += 1
-            logging.debug("%s" % '\t'.join([assign_to,
-                                            inline_barcode,
-                                            umi,
-                                            read_pair.min_barcode_quality,
-                                            read_pair.min_umi_quality]))
             # Post filtering counts
             if assign_to == inline_barcode:
                 try:
@@ -214,9 +230,10 @@ if __name__ == "__main__":
     total_reads = assigned + unassigned
     print "Summary:"
     print "--------"
-    print "Number of barcodes      :\t%d" % len(barcode_list)
-    print "Number of barcodes found:\t%d/%d" % (len(filtered_counts.keys()),
-                                                len(expected_barcodes))
-    print "Total reads (unfiltered):\t%d" % assigned
-    print "Unassigned reads        :\t%d" % unassigned
-    print "Total reads (filtered)  :\t%d" % filtered
+    print "Number of barcodes         : %d" % len(barcode_list)
+    print "Number of expected barcodes: %d/%d" % \
+        (len(filtered_counts.keys()),
+         len(expected_barcodes))
+    print "Total reads (unfiltered)   : %d" % assigned
+    print "Total reads (filtered)     : %d" % filtered
+    print "Unassigned reads           : %d" % unassigned
