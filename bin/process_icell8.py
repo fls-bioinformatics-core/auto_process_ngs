@@ -28,11 +28,15 @@ from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.fastq_utils import pair_fastqs
 
+# Fetch configuration settings
+import auto_process_ngs.settings
+__settings = auto_process_ngs.settings.Settings()
+
 ######################################################################
 # Magic numbers
 ######################################################################
 
-DEFAULT_BATCH_SIZE = 50000000
+DEFAULT_BATCH_SIZE = 5000000
 
 ######################################################################
 # Main
@@ -72,6 +76,12 @@ if __name__ == "__main__":
                    help="number of reads per batch when splitting "
                    "FASTQ files for processing (default: %s)" %
                    DEFAULT_BATCH_SIZE)
+    p.add_argument("-m","--max-jobs",type=int,
+                   dest="max_jobs",
+                   default= __settings.general.max_concurrent_jobs,
+                   help="maxiumum number of concurrent jobs to run "
+                   "(default: %d)"
+                   % __settings.general.max_concurrent_jobs)
     args = p.parse_args()
 
     # Get the input FASTQ file pairs
@@ -84,8 +94,8 @@ if __name__ == "__main__":
                 fastqs.append(os.path.join(sample.dirn,fq))
 
     # Set up a scheduler for running jobs
-    icell8_qc_runner = runner = fetch_runner(args.runner)
-    max_jobs = 4
+    icell8_qc_runner = fetch_runner(args.runner)
+    max_jobs = args.max_jobs
     sched_reporter = SchedulerReporter(
         job_start="Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
         job_end=  "Finished #%(job_number)d: %(job_name)s"
@@ -173,12 +183,12 @@ if __name__ == "__main__":
     
     # Set up the cutadapt jobs as a group
     fastq_pairs = pair_fastqs(filtered_fastqs)[0]
+    trim_dir = os.path.join(icell8_dir,"trim_reads")
+    mkdir(trim_dir)
     trim_reads = sched.group("trim_reads.%s" % os.path.basename(fastqs[0]))
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
         fqr1_in,fqr2_in = pair
-        trim_dir = os.path.join(icell8_dir,"trim_reads")
-        mkdir(trim_dir)
         cutadapt_cmd = Command(
             'cutadapt',
             '-a','AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT',
@@ -238,15 +248,15 @@ if __name__ == "__main__":
     print "*** Post-trimming statistics stage completed ***"
 
     # Set up the contaminant filter jobs as a group
+    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
+    contaminant_filter_dir = os.path.join(icell8_dir,
+                                          "contaminant_filter")
+    mkdir(contaminant_filter_dir)
     contaminant_filter = sched.group("contaminant_filter.%s" %
                                      os.path.basename(fastqs[0]))
-    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
         fqr1_in,fqr2_in = pair
-        contaminant_filter_dir = os.path.join(icell8_dir,
-                                              "contaminant_filter")
-        mkdir(contaminant_filter_dir)
         contaminant_filter_cmd = Command(
             'icell8_contamination_filter.py',
             '-p',os.path.abspath(args.preferred_conf),
@@ -293,6 +303,31 @@ if __name__ == "__main__":
                          % icell8_stats.exit_code)
         sys.exit(1)
     print "*** Post-contaminant filter statistics stage completed ***"
+
+    # Rebatch reads by barcode
+    barcoded_fastqs_dir = os.path.join(icell8_dir,"barcoded_fastqs")
+    mkdir(barcoded_fastqs_dir)
+    split_barcodes_cmd = Command('split_icell8_fastqs.py',
+                                 '-w',os.path.abspath(args.WELL_LIST),
+                                 '-o',barcoded_fastqs_dir,
+                                 '-m','barcodes',
+                                 '--no-filter')
+    split_barcodes_cmd.add_args(*filtered_fastqs)
+    split_barcodes_script = os.path.join(scripts_dir,
+                                         "icell8_split_barcodes.sh")
+    split_barcodes_cmd.make_wrapper_script(filen=split_barcodes_script,
+                                           shell="/bin/bash")
+    split_barcodes = sched.submit(Command('/bin/bash',split_barcodes_script),
+                                  wd=icell8_dir,
+                                  name="split_barcodes.%s" %
+                                  os.path.basename(fastqs[0]),
+                                  log_dir=log_dir)
+    sched.wait()
+    if split_barcodes.exit_code != 0:
+        logging.critical("Rebatching reads by barcode failed (exit code %d)"
+                         % split_barcodes.exit_code)
+        sys.exit(1)
+    print "*** Rebatching reads by barcodes completed ***"
 
     # Finish
     sched.stop()
