@@ -87,6 +87,14 @@ class TestSimpleScheduler(unittest.TestCase):
     """Unit tests for SimpleScheduler class
 
     """
+    def setUp(self):
+        # Placeholder for temporary log directory
+        self.log_dir = None
+
+    def tearDown(self):
+        if self.log_dir is not None:
+            shutil.rmtree(self.log_dir)
+
     def test_simple_scheduler(self):
         """Start and stop without running any jobs
 
@@ -561,6 +569,34 @@ class TestSimpleScheduler(unittest.TestCase):
         job_2.terminate()
         job_3.terminate()
         time.sleep(0.1)
+        sched.stop()
+
+    def test_simple_scheduler_wait_for(self):
+        """Wait for named jobs to complete
+
+        """
+        self.log_dir = tempfile.mkdtemp()
+        sched = SimpleScheduler(runner=SimpleJobRunner(log_dir=self.log_dir),
+                                poll_interval=0.01)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'],name='sleep_10')
+        job_2 = sched.submit(['sleep','30'],name='sleep_30')
+        job_3 = sched.submit(['sleep','5'],name='sleep_5')
+        self.assertFalse(job_1.completed)
+        self.assertFalse(job_2.completed)
+        self.assertFalse(job_3.completed)
+        # Wait for job to finish
+        try:
+            sched.wait_for(('sleep_5','sleep_10'),timeout=10)
+        except SchedulerTimeout:
+            sched.stop()
+            job_1.terminate()
+            job_2.terminate()
+            job_3.terminate()
+            self.fail("'wait_for' timed out")
+        self.assertTrue(job_1.completed)
+        self.assertFalse(job_2.completed)
+        self.assertTrue(job_3.completed)
         sched.stop()
 
 class TestSchedulerJob(unittest.TestCase):

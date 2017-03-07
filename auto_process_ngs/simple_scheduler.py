@@ -224,6 +224,43 @@ class SimpleScheduler(threading.Thread):
                 job.terminate()
             print "Finished"
 
+    def wait_for(self,names,timeout=None):
+        """Wait until the named jobs/groups have completed
+
+        Arguments:
+          names: a list or tuple of job and/or group names
+            which the scheduler will wait to complete
+          timeout: optional, if set then is the maximum time
+            in seconds that the job will be allowed to run before
+            it's terminated and a SchedulerTimeout exception
+            is raised
+
+        """
+        try:
+            wait_time = 0
+            while True:
+                completed = True
+                for name in names:
+                    completed = (completed and (name in self.__finished_names))
+                if completed:
+                    return
+                if timeout is not None and wait_time > timeout:
+                    raise SchedulerTimeout(
+                        "Timeout exceeded waiting for %s (%ss)" %
+                        (names,timeout))
+                time.sleep(self.__poll_interval)
+        except KeyBoardInterrupt:
+            print "KeyboardInterrupt"
+            self.stop()
+            print "Terminating running jobs:"
+            for job in self.__running:
+                print "\t#%d (%s): \"%s\" (%s)" % (job.job_number,
+                                                   job.job_id,
+                                                   job.name,
+                                                   date_and_time(job.start_time))
+                job.terminate()
+            print "Finished"
+
     def submit(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[],
                callbacks=[]):
         """Submit a request to run a job
