@@ -81,7 +81,11 @@ def check_status(name,jobs,sched):
 
 if __name__ == "__main__":
     # Handle the command line
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(
+        description="Perform initial QC on FASTQs from Wafergen "
+        "ICell8: assign to barcodes, filter on barcode & UMI quality, "
+        "trim reads, perform contaminant filtering and split by "
+        "barcode.")
     p.add_argument("WELL_LIST",help="Well list file")
     p.add_argument("--unaligned",
                    dest="unaligned_dir",default="bcl2fastq",
