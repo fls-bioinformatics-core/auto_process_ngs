@@ -165,6 +165,10 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "'bowtie2')")
+    p.add_argument("-n","--threads",
+                   type=int,default=1,
+                   help="number of threads to run fastq_screen with "
+                   "(default: 1)")
     args = p.parse_args()
 
     # Input FASTQ pair
@@ -189,6 +193,7 @@ if __name__ == "__main__":
     # Screen against 'preferred' genomes
     tagged_fastq = fastq_screen_tag(preferred_conf,fqr2,
                                     aligner=args.aligner,
+                                    threads=args.threads,
                                     out_dir=out_dir,
                                     tempdir=out_dir)
     preferred_tagged_fq = strip_ext(tagged_fastq,'.fastq') + '.' + \
@@ -200,6 +205,7 @@ if __name__ == "__main__":
     # Screen against 'contaminants' genomes
     tagged_fastq = fastq_screen_tag(contaminants_conf,fqr2,
                                     aligner=args.aligner,
+                                    threads=args.threads,
                                     out_dir=out_dir,
                                     tempdir=out_dir)
     contaminants_tagged_fq = strip_ext(tagged_fastq,'.fastq') + '.' + \
