@@ -102,10 +102,19 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "'bowtie2')")
-    p.add_argument("-r","--runner",
-                   dest="runner",default="SimpleJobRunner",
-                   help="explicitly specify a runner definition for "
-                   "running pipeline jobs (e.g. 'GEJobRunner(-j y)')")
+    p.add_argument("-n","--threads",type=int,
+                   dest="threads",default=1,
+                   help="number of threads to use with fastq_screen "
+                   "(default: 1)")
+    p.add_argument("-r","--runner",metavar="STAGE=RUNNER",
+                   action="append",dest="runners",default=list(),
+                   help="explicitly specify runner definitions for "
+                   "running pipeline jobs at each stage. STAGE "
+                   "can be one of 'default','contaminant_filter'. "
+                   "RUNNER must be a valid job runner specification "
+                   "e.g. 'GEJobRunner(-j y)'. Multiple --runner "
+                   "arguments can be specified (default: "
+                   "SimpleJobRunner)")
     p.add_argument("-s","--size",type=int,
                    dest="batch_size",default=DEFAULT_BATCH_SIZE,
                    help="number of reads per batch when splitting "
@@ -119,6 +128,43 @@ if __name__ == "__main__":
                    % __settings.general.max_concurrent_jobs)
     args = p.parse_args()
 
+    # Deal with job runners
+    stages = ('default','contaminant_filter')
+    runners = dict()
+    for runner in args.runners:
+        try:
+            stage,runner_spec = runner.split('=')
+        except ValueError: # too few values to unpack
+            stage = 'default'
+            runner_spec = runner
+        if stage not in stages:
+            logging.fatal("Bad stage for --runner option: %s" % stage)
+            sys.exit(1)
+        runners[stage] = fetch_runner(runner_spec)
+    try:
+        default_runner = runners['default']
+    except KeyError:
+        default_runner = fetch_runner('SimpleJobRunner')
+    for stage in stages:
+        if stage not in runners:
+            runners[stage] = default_runner
+
+    # Other settings
+    max_jobs = args.max_jobs
+
+    # Report settings
+    print "Unaligned dir     : %s" % args.unaligned_dir
+    print "Output dir        : %s" % args.outdir
+    print "Batch size (reads): %s" % args.batch_size
+    print "Preferred genomes screen: %s" % args.preferred_conf
+    print "Contaminants screen     : %s" % args.contaminants_conf
+    print "Fastq_screen aligner    : %s" % args.aligner
+    print "Fastq_screen threads    : %s" % args.threads
+    print "Job runners:"
+    for stage in stages:
+        print "-- %20s: %s" % (stage,runners[stage])
+    print "Maximum concurrent jobs : %s" % max_jobs
+
     # Get the input FASTQ file pairs
     illumina_data = IlluminaData(os.getcwd(),
                                  unaligned_dir=args.unaligned_dir)
@@ -129,13 +175,11 @@ if __name__ == "__main__":
                 fastqs.append(os.path.join(sample.dirn,fq))
 
     # Set up a scheduler for running jobs
-    icell8_qc_runner = fetch_runner(args.runner)
-    max_jobs = args.max_jobs
     sched_reporter = SchedulerReporter(
         job_start="Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
         job_end=  "Finished #%(job_number)d: %(job_name)s"
     )
-    sched = SimpleScheduler(runner=icell8_qc_runner,
+    sched = SimpleScheduler(runner=runners['default'],
                             max_concurrent=max_jobs,
                             reporter=sched_reporter)
     sched.start()
@@ -286,6 +330,7 @@ if __name__ == "__main__":
             '-c',os.path.abspath(args.contaminants_conf),
             '-o',contaminant_filter_dir,
             '-a',args.aligner,
+            '-n',args.threads,
             fqr1_in,fqr2_in)
         # Submit the job
         job = contaminant_filter.add(
@@ -293,7 +338,8 @@ if __name__ == "__main__":
             wd=contaminant_filter_dir,
             name="contaminant_filter.%s" %
             os.path.basename(fqr1_in),
-            log_dir=log_dir)
+            log_dir=log_dir,
+            runner=runners['contaminant_filter'])
     contaminant_filter.close()
     sched.wait_for((contaminant_filter.name,))
     exit_code = max([j.exit_code for j in contaminant_filter.jobs])
