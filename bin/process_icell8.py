@@ -175,7 +175,15 @@ if __name__ == "__main__":
     print "Output dir        : %s" % args.outdir
     print "Batch size (reads): %s" % args.batch_size
     print "Preferred genomes screen: %s" % args.preferred_conf
+    with open(args.preferred_conf) as fp:
+        for line in fp:
+            if line.startswith("DATABASE"):
+                print "-- %s" % line.split('\t')[1]
     print "Contaminants screen     : %s" % args.contaminants_conf
+    with open(args.contaminants_conf) as fp:
+        for line in fp:
+            if line.startswith("DATABASE"):
+                print "-- %s" % line.split('\t')[1]
     print "Fastq_screen aligner    : %s" % args.aligner
     print "Fastq_screen threads    : %s" % args.threads
     print "Maximum concurrent jobs : %s" % max_jobs
