@@ -27,6 +27,7 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.fastq_utils import pair_fastqs
+from auto_process_ngs.utils import AnalysisFastq
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
@@ -192,6 +193,12 @@ if __name__ == "__main__":
         for sample in project.samples:
             for fq in sample.fastq:
                 fastqs.append(os.path.join(sample.dirn,fq))
+    if not fastqs:
+        logging.fatal("No FASTQs found in %s" % args.unaligned_dir)
+        sys.exit(1)
+
+    # Basename for output fastqs and job names etc
+    basename = AnalysisFastq(fastqs[0]).sample_name
 
     # Set up a scheduler for running jobs
     sched_reporter = SchedulerReporter(
@@ -219,8 +226,7 @@ if __name__ == "__main__":
     icell8_stats_cmd.add_args(*fastqs)
     icell8_stats = sched.submit(icell8_stats_cmd,
                                 wd=icell8_dir,
-                                name="initial_stats.%s" %
-                                os.path.basename(fastqs[0]),
+                                name="initial_stats.%s" % basename,
                                 log_dir=log_dir)
     sched.callback("Initial statistics",
                    check_status,wait_for=(icell8_stats.name,))
@@ -230,6 +236,7 @@ if __name__ == "__main__":
     mkdir(split_dir)
     filter_and_split_cmd = Command('split_icell8_fastqs.py',
                                    '-w',os.path.abspath(args.WELL_LIST),
+                                   '-b',basename,
                                    '-o',split_dir,
                                    '-m','batch',
                                    '-s',args.batch_size)
@@ -238,7 +245,7 @@ if __name__ == "__main__":
     filter_and_split = sched.submit(filter_and_split_cmd,
                                     wd=split_dir,
                                     name="filter_and_split.%s" %
-                                    os.path.basename(fastqs[0]),
+                                    basename,
                                     log_dir=log_dir)
     # Wait for the filtering job to complete
     # (necessary as we don't know ahead of time what the
@@ -266,7 +273,7 @@ if __name__ == "__main__":
     icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_quality_filter_stats.%s" %
-                                os.path.basename(fastqs[0]),
+                                basename,
                                 log_dir=log_dir)
     sched.callback("Post-quality filter statistics",
                    check_status,wait_for=(icell8_stats.name,))
@@ -275,7 +282,7 @@ if __name__ == "__main__":
     fastq_pairs = pair_fastqs(filtered_fastqs)[0]
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
     mkdir(trim_dir)
-    trim_reads = sched.group("trim_reads.%s" % os.path.basename(fastqs[0]))
+    trim_reads = sched.group("trim_reads.%s" % basename)
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
         fqr1_in,fqr2_in = pair
@@ -328,7 +335,7 @@ if __name__ == "__main__":
     icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_trimming_stats.%s" %
-                                os.path.basename(fastqs[0]),
+                                basename,
                                 log_dir=log_dir)
     sched.callback("Post-trimming statistics",
                    check_status,wait_for=(icell8_stats.name,))
@@ -338,8 +345,7 @@ if __name__ == "__main__":
     contaminant_filter_dir = os.path.join(icell8_dir,
                                           "_fastqs.contaminant_filter")
     mkdir(contaminant_filter_dir)
-    contaminant_filter = sched.group("contaminant_filter.%s" %
-                                     os.path.basename(fastqs[0]))
+    contaminant_filter = sched.group("contaminant_filter.%s" % basename)
     for pair in fastq_pairs:
         print "-- %s\n   %s" % (pair[0],pair[1])
         fqr1_in,fqr2_in = pair
@@ -383,7 +389,7 @@ if __name__ == "__main__":
     icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_contaminant_filter_stats.%s" %
-                                os.path.basename(fastqs[0]),
+                                basename,
                                 log_dir=log_dir)
     sched.callback("Post-contaminant filter statistics",
                    check_status,wait_for=(icell8_stats.name,))
@@ -394,6 +400,7 @@ if __name__ == "__main__":
     split_barcodes_cmd = Command('split_icell8_fastqs.py',
                                  '-w',os.path.abspath(args.WELL_LIST),
                                  '-o',barcoded_fastqs_dir,
+                                 '-b',basename,
                                  '-m','barcodes',
                                  '--no-filter')
     split_barcodes_cmd.add_args(*filtered_fastqs)
@@ -403,8 +410,7 @@ if __name__ == "__main__":
                                            shell="/bin/bash")
     split_barcodes = sched.submit(Command('/bin/bash',split_barcodes_script),
                                   wd=icell8_dir,
-                                  name="split_barcodes.%s" %
-                                  os.path.basename(fastqs[0]),
+                                  name="split_barcodes.%s" % basename,
                                   log_dir=log_dir)
     sched.wait()
     if split_barcodes.exit_code != 0:
