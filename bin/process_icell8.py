@@ -132,7 +132,7 @@ if __name__ == "__main__":
     print "*** Initial statistics stage completed ***"
 
     # Setup the filter and splitting job
-    split_dir = os.path.join(icell8_dir,"filter_and_split")
+    split_dir = os.path.join(icell8_dir,"_fastqs.filter_and_split")
     mkdir(split_dir)
     filter_and_split_cmd = Command('split_icell8_fastqs.py',
                                    '-w',os.path.abspath(args.WELL_LIST),
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                                     name="filter_and_split.%s" %
                                     os.path.basename(fastqs[0]),
                                     log_dir=log_dir)
-    # Wait for the job to complete
+    # Wait for the filtering job to complete
     # (necessary as we don't know ahead of time what the
     # names of the batched files will be)
     sched.wait()
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     
     # Set up the cutadapt jobs as a group
     fastq_pairs = pair_fastqs(filtered_fastqs)[0]
-    trim_dir = os.path.join(icell8_dir,"trim_reads")
+    trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
     mkdir(trim_dir)
     trim_reads = sched.group("trim_reads.%s" % os.path.basename(fastqs[0]))
     for pair in fastq_pairs:
@@ -250,7 +250,7 @@ if __name__ == "__main__":
     # Set up the contaminant filter jobs as a group
     fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
     contaminant_filter_dir = os.path.join(icell8_dir,
-                                          "contaminant_filter")
+                                          "_fastqs.contaminant_filter")
     mkdir(contaminant_filter_dir)
     contaminant_filter = sched.group("contaminant_filter.%s" %
                                      os.path.basename(fastqs[0]))
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     print "*** Post-contaminant filter statistics stage completed ***"
 
     # Rebatch reads by barcode
-    barcoded_fastqs_dir = os.path.join(icell8_dir,"barcoded_fastqs")
+    barcoded_fastqs_dir = os.path.join(icell8_dir,"fastqs")
     mkdir(barcoded_fastqs_dir)
     split_barcodes_cmd = Command('split_icell8_fastqs.py',
                                  '-w',os.path.abspath(args.WELL_LIST),
@@ -328,6 +328,21 @@ if __name__ == "__main__":
                          % split_barcodes.exit_code)
         sys.exit(1)
     print "*** Rebatching reads by barcodes completed ***"
+
+    # Make hard links to the unassigned and failed barcode/quality
+    # fastq files from the filter step
+    extra_fastqs = glob.glob(
+        os.path.join(split_dir,"*.unassigned.r*.fastq"))
+    extra_fastqs.extend(glob.glob(
+        os.path.join(split_dir,"*.failed_barcode.r*.fastq")))
+    extra_fastqs.extend(glob.glob(
+        os.path.join(split_dir,"*.failed_umi.r*.fastq")))
+    for fastq in extra_fastqs:
+        print "Linking: %s" % (os.path.basename(fastq))
+        fq = os.path.join(barcoded_fastqs_dir,
+                          os.path.basename(fastq))
+        os.link(fastq,fq)
+    print "*** Linking unassigned and failed barcode/UMIs completed ***"
 
     # Finish
     sched.stop()
