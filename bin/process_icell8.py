@@ -27,6 +27,7 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.fastq_utils import pair_fastqs
+import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
 import auto_process_ngs.settings
@@ -126,7 +127,19 @@ if __name__ == "__main__":
                    help="maxiumum number of concurrent jobs to run "
                    "(default: %d)"
                    % __settings.general.max_concurrent_jobs)
+    p.add_argument('--modulefiles',action='store',
+                   dest='modulefiles',default=None,
+                   help="comma-separated list of environment "
+                   "modules to load before executing commands "
+                   "(overrides any modules specified in the global "
+                   "settings)")
     args = p.parse_args()
+
+    # Deal with module files
+    if args.modulefiles is not None:
+        modulefiles = args.modulefiles.split(',')
+        for modulefile in modulefiles:
+            envmod.load(modulefile)
 
     # Deal with job runners
     stages = ('default','contaminant_filter')
@@ -160,10 +173,16 @@ if __name__ == "__main__":
     print "Contaminants screen     : %s" % args.contaminants_conf
     print "Fastq_screen aligner    : %s" % args.aligner
     print "Fastq_screen threads    : %s" % args.threads
+    print "Maximum concurrent jobs : %s" % max_jobs
     print "Job runners:"
     for stage in stages:
-        print "-- %20s: %s" % (stage,runners[stage])
-    print "Maximum concurrent jobs : %s" % max_jobs
+        print "-- %s: %s" % (stage,runners[stage])
+    print "Environment modules:"
+    if args.modulefiles is not None:
+        for modulefile in modulefiles:
+            print "-- %s" % modulefile
+    else:
+        print "-- No modulefiles"
 
     # Get the input FASTQ file pairs
     illumina_data = IlluminaData(os.getcwd(),
