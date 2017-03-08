@@ -67,7 +67,7 @@ def check_status(name,jobs,sched):
     for job in jobs:
         exit_code = job.exit_code
         if exit_code != 0:
-            logging.critical("Job '%s' failed: exit code %d"
+            logging.critical("Job '%s' failed: exit code %s"
                              % (job.name,exit_code))
             sched.stop()
             sys.exit(1)
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     # names of the batched files will be)
     sched.wait_for((filter_and_split.name,))
     if filter_and_split.exit_code != 0:
-        logging.critical("Filter/split stage failed (exit code %d)"
+        logging.critical("Filter/split stage failed (exit code %s)"
                          % filter_and_split.exit_code)
         sys.exit(1)
     print "*** Quality filter and splitting stage completed ***"
@@ -244,7 +244,7 @@ if __name__ == "__main__":
     sched.wait_for((trim_reads.name,))
     exit_code = max([j.exit_code for j in trim_reads.jobs])
     if exit_code != 0:
-        logging.critical("Read trimming stage failed (exit code %d)"
+        logging.critical("Read trimming stage failed (exit code %s)"
                          % exit_code)
         sys.exit(1)
     print "*** Read trimming stage completed ***"
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     sched.wait_for((contaminant_filter.name,))
     exit_code = max([j.exit_code for j in contaminant_filter.jobs])
     if exit_code != 0:
-        logging.critical("Contaminant filtering stage failed (exit code %d)"
+        logging.critical("Contaminant filtering stage failed (exit code %s)"
                          % exit_code)
         sys.exit(exit_code)
     print "*** Contaminant filtering stage completed ***"
@@ -343,7 +343,7 @@ if __name__ == "__main__":
                                   log_dir=log_dir)
     sched.wait()
     if split_barcodes.exit_code != 0:
-        logging.critical("Rebatching reads by barcode failed (exit code %d)"
+        logging.critical("Rebatching reads by barcode failed (exit code %s)"
                          % split_barcodes.exit_code)
         sys.exit(1)
     print "*** Rebatching reads by barcodes completed ***"
