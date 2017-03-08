@@ -178,12 +178,10 @@ if __name__ == "__main__":
     print "Job runners:"
     for stage in stages:
         print "-- %s: %s" % (stage,runners[stage])
-    print "Environment modules:"
     if args.modulefiles is not None:
+        print "Environment modules:"
         for modulefile in modulefiles:
             print "-- %s" % modulefile
-    else:
-        print "-- No modulefiles"
 
     # Get the input FASTQ file pairs
     illumina_data = IlluminaData(os.getcwd(),
