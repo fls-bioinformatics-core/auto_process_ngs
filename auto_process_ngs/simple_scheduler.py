@@ -249,7 +249,7 @@ class SimpleScheduler(threading.Thread):
                         "Timeout exceeded waiting for %s (%ss)" %
                         (names,timeout))
                 time.sleep(self.__poll_interval)
-        except KeyBoardInterrupt:
+        except KeyboardInterrupt:
             print "KeyboardInterrupt"
             self.stop()
             print "Terminating running jobs:"
