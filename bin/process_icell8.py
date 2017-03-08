@@ -212,6 +212,10 @@ if __name__ == "__main__":
 
     # Make top-level output dirs
     icell8_dir = os.path.abspath(args.outdir)
+    if os.path.exists(icell8_dir):
+        logging.fatal("Output destination '%s': already exists" %
+                      icell8_dir)
+        sys.exit(1)
     log_dir = os.path.join(icell8_dir,"logs")
     stats_dir = os.path.join(icell8_dir,"stats")
     scripts_dir = os.path.join(icell8_dir,"scripts")
