@@ -39,6 +39,41 @@ __settings = auto_process_ngs.settings.Settings()
 DEFAULT_BATCH_SIZE = 5000000
 
 ######################################################################
+# Functions
+######################################################################
+
+def check_status(name,jobs,sched):
+    """
+    Check the exit status of a set of jobs
+
+    This function is not called directly, instead it should be
+    passed as part of a callback to check the exit status of a
+    job or group of jobs from the scheduler.
+
+    For example:
+
+    >>> sched.callback("My job",check_status,wait_for(('my_job',))
+
+    If any of the jobs have a non-zero exit status then
+    the program is terminated.
+
+    Arguments:
+      name (str): name for the callback
+      jobs (list): list of SchedulerJob instances
+      sched (SimpleScheduler): scheduler instance
+
+    """
+    print "*** %s completed ***" % name
+    for job in jobs:
+        exit_code = job.exit_code
+        if exit_code != 0:
+            logging.critical("Job '%s' failed: exit code %d"
+                             % (job.name,exit_code))
+            sched.stop()
+            sys.exit(1)
+    print "%s: ok" % name
+
+######################################################################
 # Main
 ######################################################################
 
@@ -124,12 +159,8 @@ if __name__ == "__main__":
                                 name="initial_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    sched.wait()
-    if icell8_stats.exit_code != 0:
-        logging.critical("Initial stats stage failed (exit code %d)"
-                         % icell8_stats.exit_code)
-        sys.exit(1)
-    print "*** Initial statistics stage completed ***"
+    sched.callback("Initial statistics",
+                   check_status,wait_for=(icell8_stats.name,))
 
     # Setup the filter and splitting job
     split_dir = os.path.join(icell8_dir,"_fastqs.filter_and_split")
@@ -149,7 +180,7 @@ if __name__ == "__main__":
     # Wait for the filtering job to complete
     # (necessary as we don't know ahead of time what the
     # names of the batched files will be)
-    sched.wait()
+    sched.wait_for((filter_and_split.name,))
     if filter_and_split.exit_code != 0:
         logging.critical("Filter/split stage failed (exit code %d)"
                          % filter_and_split.exit_code)
@@ -174,12 +205,8 @@ if __name__ == "__main__":
                                 name="post_quality_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    sched.wait()
-    if icell8_stats.exit_code != 0:
-        logging.critical("Post-quality filter stats stage failed (exit code %d)"
-                         % icell8_stats.exit_code)
-        sys.exit(1)
-    print "*** Post-quality filter statistics stage completed ***"
+    sched.callback("Post-quality filter statistics",
+                   check_status,wait_for=(icell8_stats.name,))
     
     # Set up the cutadapt jobs as a group
     fastq_pairs = pair_fastqs(filtered_fastqs)[0]
@@ -214,7 +241,7 @@ if __name__ == "__main__":
                              name="cutadapt.%s" % os.path.basename(fqr1_in),
                              log_dir=log_dir)
     trim_reads.close()
-    sched.wait()
+    sched.wait_for((trim_reads.name,))
     exit_code = max([j.exit_code for j in trim_reads.jobs])
     if exit_code != 0:
         logging.critical("Read trimming stage failed (exit code %d)"
@@ -240,12 +267,8 @@ if __name__ == "__main__":
                                 name="post_trimming_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    sched.wait()
-    if icell8_stats.exit_code != 0:
-        logging.critical("Post-trimming stats stage failed (exit code %d)"
-                         % icell8_stats.exit_code)
-        sys.exit(1)
-    print "*** Post-trimming statistics stage completed ***"
+    sched.callback("Post-trimming statistics",
+                   check_status,wait_for=(icell8_stats.name,))
 
     # Set up the contaminant filter jobs as a group
     fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
@@ -272,7 +295,7 @@ if __name__ == "__main__":
             os.path.basename(fqr1_in),
             log_dir=log_dir)
     contaminant_filter.close()
-    sched.wait()
+    sched.wait_for((contaminant_filter.name,))
     exit_code = max([j.exit_code for j in contaminant_filter.jobs])
     if exit_code != 0:
         logging.critical("Contaminant filtering stage failed (exit code %d)"
@@ -297,12 +320,8 @@ if __name__ == "__main__":
                                 name="post_contaminant_filter_stats.%s" %
                                 os.path.basename(fastqs[0]),
                                 log_dir=log_dir)
-    sched.wait()
-    if icell8_stats.exit_code != 0:
-        logging.critical("Post-contaminant filter stats stage failed (exit code %d)"
-                         % icell8_stats.exit_code)
-        sys.exit(1)
-    print "*** Post-contaminant filter statistics stage completed ***"
+    sched.callback("Post-contaminant filter statistics",
+                   check_status,wait_for=(icell8_stats.name,))
 
     # Rebatch reads by barcode
     barcoded_fastqs_dir = os.path.join(icell8_dir,"fastqs")
