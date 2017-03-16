@@ -113,12 +113,14 @@ AGAAGAGTACCTGGAAAATGTTGGCG
         pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
                               self._fastqread(icell8_read_pair['r2']))
         self.assertEqual(pair.barcode,"GTTCCTGATTA")
+        self.assertEqual(pair.barcode_quality,"AAAAAEEEEEE")
     def test_icell8_read_pair_umi(self):
         """ICell8ReadPair: get UMI
         """
         pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
                               self._fastqread(icell8_read_pair['r2']))
         self.assertEqual(pair.umi,"AGTCAAGTGC")
+        self.assertEqual(pair.umi_quality,"EEEEEEEEEE")
     def test_icell8_read_pair_min_barcode_quality(self):
         """ICell8ReadPair: get minimum quality score for barcode
         """
