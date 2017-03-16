@@ -248,6 +248,11 @@ if __name__ == "__main__":
                                 log_dir=log_dir)
     # Wait for the batching job to complete
     sched.wait_for((batch_fastqs.name,))
+    if batch_fastqs.exit_code != 0:
+        logging.critical("Fastq batching stage failed (exit code %s)"
+                         % batch_fastqs.exit_code)
+        sys.exit(1)
+    print "*** Fastq batching stage completed ***"
 
     # Collect the batched files for processing
     batched_fastqs = glob.glob(os.path.join(batch_dir,"*.B*.r*.fastq"))
