@@ -518,21 +518,6 @@ if __name__ == "__main__":
         sys.exit(exit_code)
     print "*** Merging barcoded FASTQs stage completed ***"
 
-    # Make hard links to the unassigned and failed barcode/quality
-    # fastq files from the filter step
-    ##extra_fastqs = glob.glob(
-    ##    os.path.join(filter_dir,"*.unassigned.r*.fastq"))
-    ##extra_fastqs.extend(glob.glob(
-    ##    os.path.join(filter_dir,"*.failed_barcode.r*.fastq")))
-    ##extra_fastqs.extend(glob.glob(
-    ##    os.path.join(filter_dir,"*.failed_umi.r*.fastq")))
-    ##for fastq in extra_fastqs:
-    ##    print "Linking: %s" % (os.path.basename(fastq))
-    ##    fq = os.path.join(final_fastqs_dir,
-    ##                      os.path.basename(fastq))
-    ##    os.link(fastq,fq)
-    ##print "*** Linking unassigned and failed barcode/UMIs completed ***"
-
     # Finish
     sched.wait()
     print "All jobs completed"
