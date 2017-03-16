@@ -86,7 +86,7 @@ if __name__ == "__main__":
         "ICell8: assign to barcodes, filter on barcode & UMI quality, "
         "trim reads, perform contaminant filtering and split by "
         "barcode.")
-    p.add_argument("WELL_LIST",help="Well list file")
+    p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
     p.add_argument("--unaligned",
                    dest="unaligned_dir",default="bcl2fastq",
                    help="'unaligned' dir with output from "
@@ -168,10 +168,12 @@ if __name__ == "__main__":
             runners[stage] = default_runner
 
     # Other settings
+    well_list = os.path.abspath(args.well_list)
     max_jobs = args.max_jobs
 
     # Report settings
     print "Unaligned dir     : %s" % args.unaligned_dir
+    print "Well list file    : %s" % well_list
     print "Output dir        : %s" % args.outdir
     print "Batch size (reads): %s" % args.batch_size
     print "Preferred genomes screen: %s" % args.preferred_conf
@@ -232,12 +234,30 @@ if __name__ == "__main__":
     for dirn in (icell8_dir,log_dir,stats_dir,scripts_dir):
         mkdir(dirn)
 
+    # Split fastqs into batches
+    batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
+    mkdir(batch_dir)
+    batch_fastqs_cmd = Command('batch_fastqs.py',
+                               '-s',args.batch_size,
+                               '-o',batch_dir,
+                               '-b',basename)
+    batch_fastqs_cmd.add_args(*fastqs)
+    batch_fastqs = sched.submit(batch_fastqs_cmd,
+                                wd=icell8_dir,
+                                name="batch_fastqs.%s" % basename,
+                                log_dir=log_dir)
+    # Wait for the batching job to complete
+    sched.wait_for((batch_fastqs.name,))
+
+    # Collect the batched files for processing
+    batched_fastqs = glob.glob(os.path.join(batch_dir,"*.B*.r*.fastq"))
+
     # Initial stats
     stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
     icell8_stats_cmd = Command('icell8_stats.py',
                                '-f',stats_file,
-                               '-w',os.path.abspath(args.WELL_LIST))
-    icell8_stats_cmd.add_args(*fastqs)
+                               '-w',well_list)
+    icell8_stats_cmd.add_args(*batched_fastqs)
     icell8_stats = sched.submit(icell8_stats_cmd,
                                 wd=icell8_dir,
                                 name="initial_stats.%s" % basename,
@@ -245,34 +265,39 @@ if __name__ == "__main__":
     sched.callback("Initial statistics",
                    check_status,wait_for=(icell8_stats.name,))
 
-    # Setup the filter and splitting job
-    split_dir = os.path.join(icell8_dir,"_fastqs.filter_and_split")
-    mkdir(split_dir)
-    filter_and_split_cmd = Command('split_icell8_fastqs.py',
-                                   '-w',os.path.abspath(args.WELL_LIST),
-                                   '-b',basename,
-                                   '-o',split_dir,
-                                   '-m','batch',
-                                   '-s',args.batch_size)
-    filter_and_split_cmd.add_args(*fastqs)
-    # Submit the job
-    filter_and_split = sched.submit(filter_and_split_cmd,
-                                    wd=split_dir,
-                                    name="filter_and_split.%s" %
-                                    basename,
-                                    log_dir=log_dir)
-    # Wait for the filtering job to complete
-    # (necessary as we don't know ahead of time what the
-    # names of the batched files will be)
-    sched.wait_for((filter_and_split.name,))
-    if filter_and_split.exit_code != 0:
-        logging.critical("Filter/split stage failed (exit code %s)"
-                         % filter_and_split.exit_code)
+    # Setup the quality filter jobs as a group
+    fastq_pairs = pair_fastqs(batched_fastqs)[0]
+    filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
+    mkdir(filter_dir)
+    quality_filter = sched.group("quality_filter.%s" % basename)
+    for pair in fastq_pairs:
+        print "-- %s\n   %s" % (pair[0],pair[1])
+        batch_basename = os.path.basename(pair[0])[:-len(".r1.fastq")]
+        print "   %s" % batch_basename
+        filter_cmd = Command('split_icell8_fastqs.py',
+                             '-w',well_list,
+                             '-b',batch_basename,
+                             '-o',filter_dir,
+                             '-m','none')
+        filter_cmd.add_args(*pair)
+        # Submit the job
+        job = quality_filter.add(filter_cmd,
+                                 wd=filter_dir,
+                                 name="quality_filter.%s" %
+                                 batch_basename,
+                                 log_dir=log_dir)
+    quality_filter.close()
+    sched.wait_for((quality_filter.name,))
+    exit_code = max([j.exit_code for j in quality_filter.jobs])
+    if exit_code != 0:
+        logging.critical("Quality filtering stage failed (exit code %s)"
+                         % exit_code)
         sys.exit(1)
-    print "*** Quality filter and splitting stage completed ***"
+    print "*** Quality filtering stage completed ***"
 
     # Collect the post-filtering files for stats and read trimming
-    filtered_fastqs = glob.glob(os.path.join(split_dir,"*.B*.r*.fastq"))
+    filtered_fastqs = glob.glob(os.path.join(filter_dir,
+                                             "*.B*.filtered.r*.fastq"))
 
     # Post quality filter stats
     icell8_stats_cmd = Command('icell8_stats.py',
@@ -409,44 +434,101 @@ if __name__ == "__main__":
                    check_status,wait_for=(icell8_stats.name,))
 
     # Rebatch reads by barcode
-    barcoded_fastqs_dir = os.path.join(icell8_dir,"fastqs")
+    # First: split each batch by barcode
+    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
+    barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.barcodes")
     mkdir(barcoded_fastqs_dir)
-    split_barcodes_cmd = Command('split_icell8_fastqs.py',
-                                 '-w',os.path.abspath(args.WELL_LIST),
-                                 '-o',barcoded_fastqs_dir,
-                                 '-b',basename,
-                                 '-m','barcodes',
-                                 '--no-filter')
-    split_barcodes_cmd.add_args(*filtered_fastqs)
-    split_barcodes_script = os.path.join(scripts_dir,
-                                         "icell8_split_barcodes.sh")
-    split_barcodes_cmd.make_wrapper_script(filen=split_barcodes_script,
-                                           shell="/bin/bash")
-    split_barcodes = sched.submit(Command('/bin/bash',split_barcodes_script),
-                                  wd=icell8_dir,
-                                  name="split_barcodes.%s" % basename,
-                                  log_dir=log_dir)
-    sched.wait()
-    if split_barcodes.exit_code != 0:
-        logging.critical("Rebatching reads by barcode failed (exit code %s)"
-                         % split_barcodes.exit_code)
+    split_barcodes = sched.group("split_barcodes.%s" % basename)
+    for pair in fastq_pairs:
+        print "-- %s\n   %s" % (pair[0],pair[1])
+        batch_basename = os.path.basename(pair[0])[:-len(".r1.fastq")+1]
+        print "   %s" % batch_basename
+        split_cmd = Command('split_icell8_fastqs.py',
+                            '-o',barcoded_fastqs_dir,
+                            '-b',batch_basename,
+                            '-m','barcodes',
+                            '--no-filter')
+        split_cmd.add_args(*pair)
+        # Submit the job
+        job = split_barcodes.add(split_cmd,
+                                 wd=barcoded_fastqs_dir,
+                                 name="split_barcodes.%s" %
+                                 batch_basename,
+                                 log_dir=log_dir)
+    split_barcodes.close()
+    sched.wait_for((split_barcodes.name,))
+    exit_code = max([j.exit_code for j in split_barcodes.jobs])
+    if exit_code != 0:
+        logging.critical("Splitting by barcodes stage failed (exit code %s)"
+                         % exit_code)
         sys.exit(1)
-    print "*** Rebatching reads by barcodes completed ***"
+    print "*** Splitting by barcodes stage completed ***"
+    # Second: merge across batches
+    barcoded_fastqs = glob.glob(os.path.join(barcoded_fastqs_dir,
+                                             "*.B*.*.fastq"))
+    for name in ("unassigned","failed_barcode","failed_umi"):
+        barcoded_fastqs.extend(glob.glob(
+            os.path.join(filter_dir,"*.%s.r*.fastq" % name)))
+    fastq_pairs = pair_fastqs(barcoded_fastqs)[0]
+    # Group file pairs by barcode
+    fastq_groups = dict()
+    for pair in fastq_pairs:
+        barcode = pair[0].split('.')[-3]
+        try:
+            fastq_groups[barcode].append(pair)
+        except KeyError:
+            fastq_groups[barcode] = [pair,]
+    # Merge (concat) each group into a single pair
+    final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
+    mkdir(final_fastqs_dir)
+    merge_fastqs = sched.group("merge_fastqs.%s" % basename)
+    for barcode in fastq_groups:
+        print "Barcode: %s" % barcode
+        merge_cmd = Command('split_icell8_fastqs.py',
+                            '-o',final_fastqs_dir,
+                            '-b',basename,
+                            '-m','barcodes',
+                            '-n')
+        fastq_pairs = fastq_groups[barcode]
+        for pair in fastq_pairs:
+            print "-- %s\n   %s" % (pair[0],pair[1])
+            merge_cmd.add_args(*pair)
+        merge_fastqs_script = os.path.join(scripts_dir,
+                                           "merge_fastqs.%s.sh" %
+                                           barcode)
+        merge_cmd.make_wrapper_script(filen=merge_fastqs_script,
+                                      shell="/bin/bash")
+        job = merge_fastqs.add(Command('/bin/bash',merge_fastqs_script),
+                               wd=icell8_dir,
+                               name="merge_fastqs.%s.%s" % (basename,
+                                                            barcode),
+                               log_dir=log_dir)
+    merge_fastqs.close()
+    # Wait for merging barcodes to complete
+    sched.wait_for((merge_fastqs.name,))
+    exit_code = max([j.exit_code for j in merge_fastqs.jobs])
+    if exit_code != 0:
+        logging.critical("Merging barcoded FASTQs failed (exit code %s)"
+                         % exit_code)
+        sys.exit(exit_code)
+    print "*** Merging barcoded FASTQs stage completed ***"
 
     # Make hard links to the unassigned and failed barcode/quality
     # fastq files from the filter step
-    extra_fastqs = glob.glob(
-        os.path.join(split_dir,"*.unassigned.r*.fastq"))
-    extra_fastqs.extend(glob.glob(
-        os.path.join(split_dir,"*.failed_barcode.r*.fastq")))
-    extra_fastqs.extend(glob.glob(
-        os.path.join(split_dir,"*.failed_umi.r*.fastq")))
-    for fastq in extra_fastqs:
-        print "Linking: %s" % (os.path.basename(fastq))
-        fq = os.path.join(barcoded_fastqs_dir,
-                          os.path.basename(fastq))
-        os.link(fastq,fq)
-    print "*** Linking unassigned and failed barcode/UMIs completed ***"
+    ##extra_fastqs = glob.glob(
+    ##    os.path.join(filter_dir,"*.unassigned.r*.fastq"))
+    ##extra_fastqs.extend(glob.glob(
+    ##    os.path.join(filter_dir,"*.failed_barcode.r*.fastq")))
+    ##extra_fastqs.extend(glob.glob(
+    ##    os.path.join(filter_dir,"*.failed_umi.r*.fastq")))
+    ##for fastq in extra_fastqs:
+    ##    print "Linking: %s" % (os.path.basename(fastq))
+    ##    fq = os.path.join(final_fastqs_dir,
+    ##                      os.path.basename(fastq))
+    ##    os.link(fastq,fq)
+    ##print "*** Linking unassigned and failed barcode/UMIs completed ***"
 
     # Finish
+    sched.wait()
+    print "All jobs completed"
     sched.stop()
