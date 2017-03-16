@@ -31,6 +31,7 @@ from itertools import izip
 from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import strip_ext
+from bcftbx.utils import find_program
 from auto_process_ngs.applications import Command
 from auto_process_ngs.utils import OutputFiles
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
@@ -182,6 +183,12 @@ if __name__ == "__main__":
     contaminants_conf = args.contaminants_conf
     if contaminants_conf is not None:
         contaminants_conf = os.path.abspath(contaminants_conf)
+
+    # Check for underlying programs
+    for prog in ("fastq_screen",args.aligner):
+        if find_program(prog) is None:
+            logging.critical("couldn't find '%s'" % prog)
+            sys.exit(1)
 
     # Make output dir
     if args.out_dir is not None:
