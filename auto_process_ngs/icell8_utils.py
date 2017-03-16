@@ -114,6 +114,13 @@ class ICell8ReadPair(object):
         return self._r1.sequence[0:INLINE_BARCODE_LENGTH]
 
     @property
+    def barcode_quality(self):
+        """
+        Inline barcode sequence quality extracted from the R1 read
+        """
+        return self._r1.quality[0:INLINE_BARCODE_LENGTH]
+
+    @property
     def umi(self):
         """
         UMI sequence extracted from the R1 read
@@ -122,13 +129,21 @@ class ICell8ReadPair(object):
                                  INLINE_BARCODE_LENGTH+UMI_LENGTH]
 
     @property
+    def umi_quality(self):
+        """
+        UMI sequence quality extracted from the R1 read
+        """
+        return self._r1.quality[INLINE_BARCODE_LENGTH:
+                                INLINE_BARCODE_LENGTH+UMI_LENGTH]
+
+    @property
     def min_barcode_quality(self):
         """
         Minimum inline barcode quality score
 
         The score is encoded as a character e.g. '/' or 'A'.
         """
-        return min(self._r1.quality[0:INLINE_BARCODE_LENGTH])
+        return min(self.barcode_quality)
 
     @property
     def min_umi_quality(self):
@@ -137,8 +152,7 @@ class ICell8ReadPair(object):
 
         The score is encoded as a character e.g. '/' or 'A'.
         """
-        return min(self._r1.quality[INLINE_BARCODE_LENGTH:
-                                    INLINE_BARCODE_LENGTH+UMI_LENGTH])
+        return min(self.umi_quality)
 
 class ICell8FastqIterator(Iterator):
     """
