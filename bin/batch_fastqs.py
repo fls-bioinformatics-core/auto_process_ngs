@@ -79,8 +79,8 @@ def split_fastqs(fastq_pairs,basename,batch_size):
     fpr1_out.close()
     fpr2_out.close()
     print "Finished at %s" % time.ctime()
-    print "Handled %d reads in %.0fs)" % (n,
-                                          time.time()-start_time)
+    print "Handled %d reads in %.0fs" % (n,
+                                         time.time()-start_time)
 
 def merge_fastqs(fastq_pairs,basename):
     start_time = time.time()
@@ -108,8 +108,8 @@ def merge_fastqs(fastq_pairs,basename):
     fpr1_out.close()
     fpr2_out.close()
     print "Finished at %s" % time.ctime()
-    print "Handled %d reads in %.0fs)" % (ntot,
-                                          time.time()-start_time)
+    print "Handled %d reads in %.0fs" % (ntot,
+                                         time.time()-start_time)
 
 ######################################################################
 # Main
