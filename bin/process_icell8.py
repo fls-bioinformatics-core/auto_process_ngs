@@ -475,45 +475,70 @@ if __name__ == "__main__":
     # Second: merge across batches
     barcoded_fastqs = glob.glob(os.path.join(barcoded_fastqs_dir,
                                              "*.B*.*.fastq"))
-    for name in ("unassigned","failed_barcode","failed_umi"):
-        barcoded_fastqs.extend(glob.glob(
-            os.path.join(filter_dir,"*.%s.r*.fastq" % name)))
-    fastq_pairs = pair_fastqs(barcoded_fastqs)[0]
-    # Group file pairs by barcode
+    # Get barcodes
+    barcodes = set()
+    for fq in barcoded_fastqs:
+        barcode = os.path.basename(fq).split('.')[-3]
+        barcodes.add(barcode)
+    barcodes = sorted(list(barcodes))
+    # Group files by barcode
     fastq_groups = dict()
-    for pair in fastq_pairs:
-        barcode = pair[0].split('.')[-3]
-        try:
-            fastq_groups[barcode].append(pair)
-        except KeyError:
-            fastq_groups[barcode] = [pair,]
-    # Merge (concat) each group into a single pair
+    for barcode in barcodes:
+        fastqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
+                                    fq.endswith("%s.r2.fastq" % barcode)),
+                        barcoded_fastqs)
+        fastq_groups[barcode] = fastqs
+    # Group barcodes into subgroups
+    GROUP_LEN = 25
+    barcode_groups = [barcodes[i:i+GROUP_LEN]
+                      for i in xrange(0,len(barcodes),GROUP_LEN)]
+    # Merge (concat) fastqs into single pairs per barcode
     final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
     mkdir(final_fastqs_dir)
     merge_fastqs = sched.group("merge_fastqs.%s" % basename)
-    for barcode in fastq_groups:
-        print "Barcode: %s" % barcode
+    for i,barcode_group in enumerate(barcode_groups):
+        group_name = "barcodes%06d" % i
+        print "Barcode group: %s" % group_name
         merge_cmd = Command('split_icell8_fastqs.py',
                             '-o',final_fastqs_dir,
                             '-b',basename,
                             '-m','barcodes',
                             '-n')
-        fastq_pairs = fastq_groups[barcode]
-        for pair in fastq_pairs:
-            print "-- %s\n   %s" % (pair[0],pair[1])
-            merge_cmd.add_args(*pair)
+        for barcode in barcode_group:
+            print "-- %s" % barcode
+            merge_cmd.add_args(*fastq_groups[barcode])
         merge_fastqs_script = os.path.join(scripts_dir,
                                            "merge_fastqs.%s.sh" %
-                                           barcode)
+                                           group_name)
         merge_cmd.make_wrapper_script(filen=merge_fastqs_script,
                                       shell="/bin/bash")
         job = merge_fastqs.add(Command('/bin/bash',merge_fastqs_script),
                                wd=icell8_dir,
                                name="merge_fastqs.%s.%s" % (basename,
-                                                            barcode),
+                                                            group_name),
                                log_dir=log_dir)
+    # Deal with unassigned and failed quality reads
+    for name in ("unassigned","failed_barcode","failed_umi"):
+        fastqs = glob.glob(os.path.join(filter_dir,"*.%s.r*.fastq" % name))
+        if not fastqs:
+            continue
+        merge_cmd = Command('batch_fastqs.py',
+                            '-o',final_fastqs_dir,
+                            '-b','%s.%s' % (basename,name),
+                            '-m')
+        merge_cmd.add_args(*fastqs)
+        merge_fastqs_script = os.path.join(scripts_dir,
+                                           "merge_fastqs.%s.sh" %
+                                           name)
+        merge_cmd.make_wrapper_script(filen=merge_fastqs_script,
+                                      shell="/bin/bash")
+        job = merge_fastqs.add(Command('/bin/bash',merge_fastqs_script),
+                               wd=icell8_dir,
+                               name="merge_fastqs.%s.%s" % (basename,
+                                                            name),
+                               log_dir=log_dir)
+    # Close group and wait for merging barcodes to complete
     merge_fastqs.close()
-    # Wait for merging barcodes to complete
     sched.wait_for((merge_fastqs.name,))
     exit_code = max([j.exit_code for j in merge_fastqs.jobs])
     if exit_code != 0:
