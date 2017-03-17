@@ -234,6 +234,19 @@ if __name__ == "__main__":
     for dirn in (icell8_dir,log_dir,stats_dir,scripts_dir):
         mkdir(dirn)
 
+    # Initial stats
+    stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
+    icell8_stats_cmd = Command('icell8_stats.py',
+                               '-f',stats_file,
+                               '-w',well_list)
+    icell8_stats_cmd.add_args(*fastqs)
+    initial_stats = sched.submit(icell8_stats_cmd,
+                                 wd=icell8_dir,
+                                 name="initial_stats.%s" % basename,
+                                 log_dir=log_dir)
+    sched.callback("Initial statistics",
+                   check_status,wait_for=(initial_stats.name,))
+
     # Split fastqs into batches
     batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
     mkdir(batch_dir)
@@ -256,19 +269,6 @@ if __name__ == "__main__":
 
     # Collect the batched files for processing
     batched_fastqs = glob.glob(os.path.join(batch_dir,"*.B*.r*.fastq"))
-
-    # Initial stats
-    stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
-    icell8_stats_cmd = Command('icell8_stats.py',
-                               '-f',stats_file,
-                               '-w',well_list)
-    icell8_stats_cmd.add_args(*batched_fastqs)
-    icell8_stats = sched.submit(icell8_stats_cmd,
-                                wd=icell8_dir,
-                                name="initial_stats.%s" % basename,
-                                log_dir=log_dir)
-    sched.callback("Initial statistics",
-                   check_status,wait_for=(icell8_stats.name,))
 
     # Setup the quality filter jobs as a group
     fastq_pairs = pair_fastqs(batched_fastqs)[0]
@@ -314,13 +314,14 @@ if __name__ == "__main__":
                                        "icell8_stats_quality_filtered.sh")
     icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
                                          shell="/bin/bash")
-    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
+    filter_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
                                 wd=icell8_dir,
                                 name="post_quality_filter_stats.%s" %
                                 basename,
-                                log_dir=log_dir)
+                                log_dir=log_dir,
+                                wait_for=(initial_stats.name,))
     sched.callback("Post-quality filter statistics",
-                   check_status,wait_for=(icell8_stats.name,))
+                   check_status,wait_for=(filter_stats.name,))
     
     # Set up the cutadapt jobs as a group
     fastq_pairs = pair_fastqs(filtered_fastqs)[0]
@@ -376,13 +377,14 @@ if __name__ == "__main__":
                                        "icell8_stats_trimmed.sh")
     icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
                                          shell="/bin/bash")
-    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
-                                wd=icell8_dir,
-                                name="post_trimming_stats.%s" %
-                                basename,
-                                log_dir=log_dir)
+    trim_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
+                              wd=icell8_dir,
+                              name="post_trimming_stats.%s" %
+                              basename,
+                              log_dir=log_dir,
+                              wait_for=(filter_stats.name,))
     sched.callback("Post-trimming statistics",
-                   check_status,wait_for=(icell8_stats.name,))
+                   check_status,wait_for=(trim_stats.name,))
 
     # Set up the contaminant filter jobs as a group
     fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
@@ -430,13 +432,15 @@ if __name__ == "__main__":
                                        "icell8_stats_contaminant_filtered.sh")
     icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
                                          shell="/bin/bash")
-    icell8_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
-                                wd=icell8_dir,
-                                name="post_contaminant_filter_stats.%s" %
-                                basename,
-                                log_dir=log_dir)
+    contaminant_filter_stats = sched.submit(
+        Command('/bin/bash',icell8_stats_script),
+        wd=icell8_dir,
+        name="post_contaminant_filter_stats.%s" %
+        basename,
+        log_dir=log_dir,
+        wait_for=(trim_stats.name,))
     sched.callback("Post-contaminant filter statistics",
-                   check_status,wait_for=(icell8_stats.name,))
+                   check_status,wait_for=(contaminant_filter_stats.name,))
 
     # Rebatch reads by barcode
     # First: split each batch by barcode
