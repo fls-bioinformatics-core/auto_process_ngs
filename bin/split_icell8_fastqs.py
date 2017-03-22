@@ -297,10 +297,6 @@ def main():
                                     "%s.%s.r2.fastq" %
                                     (basename,assign_to))
             output_fqs.write(fq_r2,"%s" % read_pair.r2)
-            # DEBUGGING: break here
-            if (i % 10000000) == 0:
-                print "*** BREAKING (debugging) ***"
-                break
         print "   Finished at %s" % time.ctime()
         print "   (Took %.0fs)" % (time.time()-start_time)
     # Close output files
