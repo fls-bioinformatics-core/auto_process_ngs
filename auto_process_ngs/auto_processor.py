@@ -291,7 +291,7 @@ class AutoProcess:
             with open(readme_file,'w') as fp:
                 title = "Processing notes for %s" % \
                         os.path.basename(self.analysis_dir)
-                fp.write("%s\n%s\n\n\n--" % (title,'='*len(title)))
+                fp.write("%s\n%s\n" % (title,'='*len(title)))
         else:
             logging.warning("'%s' already exists" % self.readme_file)
 
@@ -302,7 +302,8 @@ class AutoProcess:
         if self.readme_file is None:
             logging.error("No README file to edit")
             return
-        utils.edit_file(self.readme_file)
+        utils.edit_file(self.readme_file,
+                        append="\n[%s]" % time.ctime())
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object

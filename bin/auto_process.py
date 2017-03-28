@@ -65,6 +65,7 @@ import sys
 import os
 import subprocess
 import optparse
+import time
 import bcftbx.utils as bcf_utils
 from bcftbx.cmdparse import CommandParser
 from bcftbx.cmdparse import add_debug_option
@@ -518,6 +519,8 @@ def add_readme_command(cmdparser):
                  help="display the contents of the README file")
     p.add_option('-e','--edit',action='store_true',dest='edit',default=False,
                  help="bring up README file in an editor to make changes")
+    p.add_option('-m','--message',action='store',dest='message',default=None,
+                 help="append MESSAGE text to the README file")
     add_debug_option(p)
 
 def add_clone_command(cmdparser):
@@ -881,15 +884,24 @@ if __name__ == "__main__":
         elif cmd == 'readme':
             if options.init:
                 d.init_readme()
-            elif options.edit:
-                d.edit_readme()
             else:
-                if d.readme_file is not None:
-                    print d.readme_file
-                    if options.view:
-                        paginate(open(d.readme_file,'r').read())
-                else:
+                if d.readme_file is None:
                     print "No README file for %s" % d.analysis_dir
+                else:
+                    if options.message:
+                        message = '\n'.join(
+                            bcf_utils.split_into_lines(
+                                "[%s]\n%s" % (time.ctime(),
+                                              str(options.message)),
+                                80,sympathetic=True))
+                        with open(d.readme_file,'a') as fp:
+                            fp.write("\n%s\n" % message)
+                    elif options.edit:
+                        d.edit_readme()
+                    else:
+                        print d.readme_file
+                        if options.view:
+                            paginate(open(d.readme_file,'r').read())
         elif cmd == 'archive':
             retcode = d.copy_to_archive(archive_dir=options.archive_dir,
                                         platform=options.platform,
