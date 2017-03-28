@@ -280,7 +280,7 @@ if __name__ == "__main__":
             sys.stderr.write("ERROR zip file '%s' already exists" % zip_file)
             sys.exit(1)
         print "Creating zip file %s" % zip_file
-        zz = zipfile.ZipFile(zip_file,'w')
+        zz = zipfile.ZipFile(zip_file,'w',allowZip64=True)
         # Add fastqs
         for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             zz.write(fq,arcname=os.path.basename(fq))
