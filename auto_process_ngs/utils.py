@@ -52,12 +52,14 @@ import fnmatch
 import logging
 import zipfile
 import pydoc
+import tempfile
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
+from bcftbx.Md5sum import md5sum
 from qc.illumina_qc import QCReporter
 from qc.illumina_qc import QCSample
 from qc.illumina_qc import expected_qc_outputs
@@ -1546,15 +1548,23 @@ def write_script_file(script_file,contents,append=False,shell=None):
         fp.write("%s\n" % contents)
     os.chmod(script_file,0775)
 
-def edit_file(filen,editor="vi"):
+def edit_file(filen,editor="vi",append=None):
     """
     Send a file to an editor
+
+    Creates a temporary copy of a file and opens an
+    editor to allow the user to make changes. Any
+    edits are saved back to the original file.
 
     Arguments:
       filen (str): path to the file to be edited
       editor (str): optional, editor command to be used
         (will be overriden by user's EDITOR environment
         variable even if set). Defaults to 'vi'.
+      append (str): optional, if set then append the
+        supplied text to the end of the file before
+        editing. NB the text will only be kept if the
+        user saves a change to the file in the editor.
 
     """
     # Acquire an editor command
@@ -1565,11 +1575,29 @@ def edit_file(filen,editor="vi"):
     if editor is None:
         logging.critical("No editor specified!")
         return
+    # Make a temporary copy for editing
+    f,tmpfile = tempfile.mkstemp()
+    os.fdopen(f).close()
+    with open(tmpfile,'w') as fp:
+        if os.path.exists(filen):
+            fp.write(open(filen,'r').read())
+        else:
+            fp.write()
+        if append:
+            fp.write("%s\n" % str(append))
+    checksum = md5sum(tmpfile)
     # Build command line to run the editor
     editor = str(editor).split(' ')
     edit_cmd = applications.Command(editor[0],*editor[1:])
-    edit_cmd.add_args(filen)
+    edit_cmd.add_args(tmpfile)
     edit_cmd.run_subprocess()
+    # Finished
+    if md5sum(tmpfile) != checksum:
+        with open(filen,'w') as fp:
+            fp.write(open(tmpfile,'r').read())
+            os.remove(tmpfile)
+    else:
+        logging.warning("no changes to write")
 
 def paginate(text):
     """
