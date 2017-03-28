@@ -514,7 +514,9 @@ def add_readme_command(cmdparser):
                               "analysis directory DIR.")
     p.add_option('--init',action='store_true',dest='init',default=False,
                  help="create a new README file")
-    p.add_option('--edit',action='store_true',dest='edit',default=False,
+    p.add_option('-v','--view',action='store_true',dest='view',default=False,
+                 help="display the contents of the README file")
+    p.add_option('-e','--edit',action='store_true',dest='edit',default=False,
                  help="bring up README file in an editor to make changes")
     add_debug_option(p)
 
@@ -884,6 +886,8 @@ if __name__ == "__main__":
             else:
                 if d.readme_file is not None:
                     print d.readme_file
+                    if options.view:
+                        paginate(open(d.readme_file,'r').read())
                 else:
                     print "No README file for %s" % d.analysis_dir
         elif cmd == 'archive':
