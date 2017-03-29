@@ -233,39 +233,25 @@ class AutoProcess:
         # Run name
         if self.metadata.run_name is None:
             print "Attempting to set missing 'run_name' metadata item"
-            if self.has_parameter_file and self.params.data_dir is not None:
-                # Get run name from data directory
-                self.metadata['run_name'] = os.path.basename(
-                    self.params.data_dir)
-            elif self.analysis_dir.endswith('_analysis'):
-                # Guess from analysis dir name
-                self.metadata['run_name'] = os.path.basename(
-                    self.analysis_dir[:len('_analysis')])
-            else:
-                # Unknown run name
-                logging.warning("Unable to identify or guess run name")
+            self.metadata['run_name'] = self.run_name
         # Instrument-related metadata
         if self.metadata.instrument_name is None or \
            self.metadata.instrument_datestamp is None or \
            self.metadata.instrument_run_number is None:
             print "Attempting to set missing instrument metadata items"
-            if self.metadata.run_name is not None:
-                # Extract from run name
-                try:
-                    datestamp,instrument,run_number = \
-                        IlluminaData.split_run_name(self.metadata.run_name)
-                    if self.metadata.instrument_name is None:
-                        self.metadata['instrument_name'] = instrument
-                    if self.metadata.instrument_datestamp is None:
-                        self.metadata['instrument_datestamp'] = datestamp
-                    if self.metadata.instrument_run_number is None:
-                        self.metadata['instrument_run_number'] = run_number
-                except Exception, ex:
-                    logging.warning("Unable to extract information from "
-                                    "run name")
-            else:
-                # Unable to get missing data items
-                logging.warning("Unable to set missing instrument metadata")
+            # Extract from run name
+            try:
+                datestamp,instrument,run_number = \
+                    IlluminaData.split_run_name(self.run_name)
+                if self.metadata.instrument_name is None:
+                    self.metadata['instrument_name'] = instrument
+                if self.metadata.instrument_datestamp is None:
+                    self.metadata['instrument_datestamp'] = datestamp
+                if self.metadata.instrument_run_number is None:
+                    self.metadata['instrument_run_number'] = run_number
+            except Exception, ex:
+                logging.warning("Unable to extract missing instrument metadata "
+                                "from run name")
 
     def edit_samplesheet(self):
         """
@@ -536,6 +522,20 @@ class AutoProcess:
         self.save_metadata()
 
     @property
+    def run_name(self):
+        # Return run name
+        if self.metadata.run_name is not None:
+            return self.metadata.run_name
+        elif self.params.data_dir is not None:
+            return os.path.basename(self.params.data_dir)
+        else:
+            run_name = os.path.basename(self.params.analysis_dir)
+            if run_name.endswith('_analysis'):
+                # Strip trailing _analysis
+                run_name = run_name[:-len('_analysis')]
+            return run_name
+
+    @property
     def log_dir(self):
         # Generate and return full path to log directory
         return self.add_directory(self._log_dir)
@@ -590,7 +590,7 @@ class AutoProcess:
 
         """
         # Extract information from run name
-        run_name = os.path.basename(self.analysis_dir)
+        run_name = self.run_name
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
         except Exception, ex:
@@ -633,11 +633,7 @@ class AutoProcess:
             if facility_run_number is not None:
                 run_id += "#%s" % facility_run_number
         else:
-            if run_name.endswith('_analysis'):
-                # Strip trailing _analysis
-                run_id = run_name[:-len('_analysis')]
-            else:
-                run_id = run_name
+            run_id = run_name
         return run_id
 
     @property
@@ -797,7 +793,7 @@ class AutoProcess:
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
         # Store the metadata
-        self.metadata['run_name'] = os.path.basename(data_dir)
+        self.metadata['run_name'] = self.run_name
         self.metadata['platform'] = platform
         self.metadata['instrument_name'] = instrument
         self.metadata['instrument_datestamp'] = datestamp
@@ -2125,10 +2121,7 @@ class AutoProcess:
         n_projects = 0
         for line in project_metadata:
             # Acquire the run name
-            if self.params.data_dir is not None:
-                run_name = os.path.basename(self.params.data_dir)
-            else:
-                run_name = os.path.basename(self.params.analysis_dir)
+            run_name = self.run_name
             # Look up project data
             project_name = line['Project']
             user = line['User']
@@ -3021,19 +3014,13 @@ class AutoProcess:
         datestamp = None
         instrument = None
         run_number = None
-        if self.params.data_dir is not None:
-            run_name = os.path.basename(self.params.data_dir)
-            try:
-                datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-            except Exception, ex:
-                logging.warning("Unable to extract information from run name '%s'" \
-                                % run_name)
-                logging.warning("Exception: %s" % ex)
-        else:
-            run_name = os.path.basename(self.analysis_dir)
-            if run_name.endswith('_analysis'):
-                # Strip trailing _analysis
-                run_name = run_name[:-len('_analysis')]
+        run_name = self.run_name
+        try:
+            datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
+        except Exception, ex:
+            logging.warning("Unable to extract information from run name '%s'" \
+                            % run_name)
+            logging.warning("Exception: %s" % ex)
         if self.metadata.platform is not None:
             platform = self.metadata.platform.upper()
         else:
@@ -3190,7 +3177,7 @@ class AutoProcess:
         # Acquire data
         analysis_dir = utils.AnalysisDir(self.analysis_dir)
         # General information
-        run_name = os.path.basename(self.analysis_dir)
+        run_name = self.run_name
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
             run_number = run_number.lstrip('0')
