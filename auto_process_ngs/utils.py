@@ -1102,6 +1102,7 @@ class AnalysisDirParameters(MetadataDict):
     project_metadata: name of the project metadata file
     primary_data_dir: directory used to hold copies of primary data
     unaligned_dir: output directory for bcl2fastq conversion
+    barcode_analysis_dir: directory holding barcode analysis outputs
     stats_file: name of file with per-fastq statistics
     per_lane_stats_file: name of file with per-lane statistics
 
@@ -1123,6 +1124,7 @@ class AnalysisDirParameters(MetadataDict):
                                   'project_metadata':'project_metadata',
                                   'primary_data_dir':'primary_data_dir',
                                   'unaligned_dir':'unaligned_dir',
+                                  'barcode_analysis_dir':'barcode_analysis_dir',
                                   'stats_file':'stats_file',
                                   'per_lane_stats_file':'per_lane_stats_file',
                               },

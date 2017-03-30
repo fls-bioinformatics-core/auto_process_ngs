@@ -554,9 +554,10 @@ def add_analyse_barcodes_command(cmdparser):
                  help="specify which lanes to analyse barcodes for (default is to do "
                  "analysis for all lanes).")
     p.add_option('--mismatches',action='store',dest='mismatches',
-                 default=0,type='int',
+                 default=None,type='int',
                  help="maximum number of mismatches to use when grouping "
-                 "similar barcodes (default is 0, i.e. no grouping)")
+                 "similar barcodes (default is to determine automatically "
+                 "from the bases mask)")
     p.add_option('--cutoff',action='store',dest='cutoff',
                  default=0.001,type='float',
                  help="exclude barcodes with a smaller fraction of "
@@ -570,6 +571,10 @@ def add_analyse_barcodes_command(cmdparser):
                  dest="barcode_analysis_dir",default=None,
                  help="specify subdirectory where barcode analysis will "
                  "be performed and outputs will be written")
+    p.add_option('--force',action='store_true',
+                 dest="force",default=False,
+                 help="discard and regenerate counts (by default existing "
+                 "counts will be used)")
     add_runner_option(p)
     add_debug_option(p)
     # Deprecated options
@@ -825,7 +830,8 @@ if __name__ == "__main__":
                                cutoff=options.cutoff,
                                sample_sheet=options.sample_sheet,
                                barcode_analysis_dir=options.barcode_analysis_dir,
-                               runner=options.runner)
+                               runner=options.runner,
+                               force=options.force)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(ignore_missing_metadata=
                                   options.ignore_missing_metadata,

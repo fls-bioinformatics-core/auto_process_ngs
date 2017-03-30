@@ -1563,7 +1563,8 @@ class AutoProcess:
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
                          mismatches=None,cutoff=None,
                          barcode_analysis_dir=None,
-                         sample_sheet=None,runner=None):
+                         sample_sheet=None,runner=None,
+                         force=False):
         """Analyse the barcode sequences for FASTQs for each specified lane
 
         Run 'analyse_barcodes.py' for one or more lanes, to analyse the
@@ -1576,7 +1577,8 @@ class AutoProcess:
           lanes: a list of lane numbers (integers) to perform the analysis
             for. Default is to analyse all lanes.
           mismatches: optional, maximum number of mismatches to consider
-            when grouping similar barcodes (default is 1)
+            when grouping similar barcodes; default is to determine it
+            automatically from the bases mask
           cutoff: optional, exclude barcodes with a smaller fraction of
             associated reads than specified cutoff from reporting (e.g.
             '0.001' excludes barcodes with < 0.1% of reads); default is to
@@ -1588,7 +1590,9 @@ class AutoProcess:
             subdirectory to use for barcode analysis. Counts will be
             written to and read from the 'counts' subdirectory of this
             directory (defaults to 'barcode_analysis')
-          runner: set a non-default job runner.
+          runner: set a non-default job runner
+          force: if True then forces regeneration of any existing counts
+            (default is to reuse existing counts).
         
         """
         # Sort out parameters
@@ -1599,13 +1603,19 @@ class AutoProcess:
         # Load data
         illumina_data = self.load_illumina_data(unaligned_dir=unaligned_dir)
         # Handle barcode analysis subdirectories
-        if barcode_analysis_dir is None:
+        if barcode_analysis_dir is not None:
             # Create a subdirectory for barcode analysis
-            barcode_analysis_dir = 'barcode_analysis'
+            self.params['barcode_analysis_dir'] = barcode_analysis_dir
+        elif self.params['barcode_analysis_dir'] is None:
+            self.params['barcode_analysis_dir'] = 'barcode_analysis'
+        barcode_analysis_dir = self.params['barcode_analysis_dir']
+        # Create barcode and count file subdirectories
         barcode_dir = self.add_directory(barcode_analysis_dir)
-        # Create a subdirectory for count files
-        counts_dir = self.add_directory(os.path.join(barcode_analysis_dir,
-                                                     'counts'))
+        counts_dir = os.path.join(barcode_analysis_dir,'counts')
+        if os.path.exists(counts_dir) and force:
+            print "Removing existing counts data"
+            shutil.rmtree(counts_dir)
+        self.add_directory(counts_dir)
         # Map fastq files to counts files
         counts_files = {}
         for project in illumina_data.projects:
@@ -1711,8 +1721,10 @@ class AutoProcess:
         if cutoff is not None:
             barcode_report_cmd.add_args('--cutoff',cutoff)
         # Mismatches
-        if mismatches is not None:
-            barcode_report_cmd.add_args('--mismatches',mismatches)
+        if mismatches is None:
+            mismatches = bcl2fastq_utils.get_nmismatches(
+                self.params.bases_mask)
+        barcode_report_cmd.add_args('--mismatches',mismatches)
         # Add the list of count files to process
         barcode_report_cmd.add_args('-c')
         for counts_file in [counts_files[f] for f in req_counts]:
