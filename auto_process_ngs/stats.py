@@ -324,8 +324,12 @@ class FastqStatistics:
                                                'Unassigned reads',
                                                '%assigned',
                                                '%unassigned'))
+        # Initialise counts for each lane
         assigned = {}
         unassigned = {}
+        for lane in self.lane_names:
+            assigned[lane] = 0
+            unassigned[lane] = 0
         # Count assigned and unassigned (= undetermined) reads
         for line in filter(lambda x: x['Read_number'] == 1,
                            self._stats):
