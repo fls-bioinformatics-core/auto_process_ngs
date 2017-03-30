@@ -30,6 +30,8 @@ from bcftbx.IlluminaData import normalise_barcode
 from bcftbx.utils import AttributeDictionary
 from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.simple_xls import XLSStyle
+from .docwriter import Document
+from .docwriter import Table
 
 #######################################################################
 # Classes
@@ -800,6 +802,10 @@ class Reporter(object):
 
     >>> r.write_xls("report.xls")
 
+    Write as HTML:
+
+    >>> r.write_html("report.html",title="Barcodes")
+
     """
     def __init__(self):
         """
@@ -878,6 +884,68 @@ class Reporter(object):
                 style = XLSStyle(bold=True)
             ws.append_row(data=content.split('\t'),style=style)
         wb.save_as_xls(xls_file)
+
+    def write_html(self,html_file,title=None,no_styles=False):
+        """
+        Write the report to a HTML file
+        """
+        if title is None:
+            title = "Barcodes Report"
+        html = Document(title)
+        section = None
+        table = None
+        for item in self._content:
+            content = item[0]
+            attrs = item[1]
+            style = None
+            # Check if it's tabular data
+            is_tabular = (len(content.split('\t')) > 1)
+            if is_tabular:
+                # Deal with table data
+                items = content.split('\t')
+                if table is None:
+                    # New table
+                    header = items
+                    table = Table(columns=header)
+                    section = html.add_section()
+                    section.add(table)
+                else:
+                    # Append to existing table
+                    table.add_row(**dict(zip(header,items)))
+            else:
+                # Not a table
+                if attrs.get('title',False):
+                    # New section with title
+                    section = html.add_section(title=content)
+                    continue
+                if table is not None:
+                    # New section after table (no title)
+                    section = html.add_section()
+                    table = None
+                if content:
+                    section.add(content)
+        # Add styles
+        if not no_styles:
+            html.add_css_rule("h1 { background-color: #42AEC2;\n"
+                              "     color: white;\n"
+                              "     padding: 5px 10px; }")
+            html.add_css_rule("h2 { background-color: #8CC63F;\n"
+                              "     color: white;\n"
+                              "     display: inline-block;\n"
+                              "     padding: 5px 15px;\n"
+                              "     margin: 0;\n"
+                              "     border-top-left-radius: 20;\n"
+                              "     border-bottom-right-radius: 20; }")
+            html.add_css_rule("table { border: solid 1px grey;\n"
+                              "        font-size: 80% }")
+            html.add_css_rule("table th { background-color: grey;\n"
+                              "           color: white;\n"
+                              "           padding: 2px 5px; }")
+            html.add_css_rule("table td { text-align: right;\n"
+                              "           padding: 2px 5px;\n"
+                              "           border-bottom: solid 1px lightgray; }")
+        # Write to file
+        html.write(html_file)
 
 #######################################################################
 # Functions

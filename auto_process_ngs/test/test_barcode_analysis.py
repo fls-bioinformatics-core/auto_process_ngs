@@ -920,6 +920,49 @@ Lorem ipsum
         reporter.write_xls(report_xls)
         self.assertTrue(os.path.isfile(report_xls))
 
+    def test_write_html(self):
+        """Reporter: can write to a HTML file
+        """
+        self._make_working_dir()
+        reporter = Reporter()
+        reporter.add("This is a Test",title=True)
+        reporter.add("Lorem ipsum")
+        reporter.add("Column1\tColumn2",heading=True)
+        reporter.add("1\t2")
+        reporter.add("3\t4")
+        reporter.add("Lorem more ipsum")
+        report_html = os.path.join(self.wd,"report.html")
+        reporter.write_html(report_html,
+                            title="Test Document",
+                            no_styles=True)
+        self.assertTrue(os.path.isfile(report_html))
+        expected_contents = """<html>
+<head>
+<title>Test Document</title>
+</head>
+<body>
+<h1>Test Document</h1>
+<div id='This is a Test'>
+<h2>This is a Test</h2>
+<p>Lorem ipsum</p>
+</div>
+<div>
+<table>
+
+<tr><th>Column1</th><th>Column2</th></tr>
+<tr><td>1</td><td>2</td></tr>
+<tr><td>3</td><td>4</td></tr>
+</table>
+</div>
+<div>
+<p>Lorem more ipsum</p>
+</div></body>
+</html>
+"""
+        for expected,actual in zip(expected_contents.split('\n'),
+                                   open(report_html,'r').read().split('\n')):
+            self.assertEqual(expected,actual)
+
 # report_barcodes
 class TestReportBarcodesFunction(unittest.TestCase):
     def setUp(self):
