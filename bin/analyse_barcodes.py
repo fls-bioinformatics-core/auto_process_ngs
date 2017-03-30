@@ -163,6 +163,9 @@ if __name__ == '__main__':
     p.add_option('-x','--xls',
                  action='store',dest='xls_file',default=None,
                  help="write XLS version of report to XLS_FILE")
+    p.add_option('-f','--html',
+                 action='store',dest='html_file',default=None,
+                 help="write HTML version of report to HTML_FILE")
     p.add_option('-n','--no-report',
                  action='store_true',dest='no_report',default=None,
                  help="suppress reporting (overrides --report)")
@@ -224,6 +227,9 @@ if __name__ == '__main__':
         if opts.xls_file is not None:
             print "Writing XLS to %s" % opts.xls_file
             reporter.write_xls(opts.xls_file)
+        if opts.html_file is not None:
+            print "Writing HTML to %s" % opts.html_file
+            reporter.write_html(opts.html_file)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
