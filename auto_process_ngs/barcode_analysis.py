@@ -23,6 +23,7 @@ FASTQ read headers:
 # Imports
 #######################################################################
 
+import sys
 from itertools import izip
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
