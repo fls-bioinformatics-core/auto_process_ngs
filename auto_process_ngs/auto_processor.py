@@ -1694,14 +1694,16 @@ class AutoProcess:
         # Do reporting
         report_file = os.path.join(barcode_dir,'barcodes.report')
         xls_file = os.path.join(barcode_dir,'barcodes.xls')
-        for filen in (report_file,xls_file):
+        html_file = os.path.join(barcode_dir,'barcodes.html')
+        for filen in (report_file,xls_file,html_file):
             if os.path.exists(filen):
                 print "Removing existing file: %s" % filen
                 os.remove(filen)
         barcode_report_cmd = applications.Command(
             'analyse_barcodes.py',
             '--report',report_file,
-            '--xls',xls_file)
+            '--xls',xls_file,
+            '--html',html_file)
         # Sample sheet
         if sample_sheet is None:
             sample_sheet = self.params.sample_sheet
@@ -1752,6 +1754,11 @@ class AutoProcess:
         else:
             logging.error("Missing barcode analysis XLS report: %s" %
                           xls_file)
+        if os.path.exists(html_file):
+            print "HTML written to %s" % html_file
+        else:
+            logging.error("Missing barcode analysis HTML report: %s" %
+                          html_file)
 
     def report_barcodes(self,report_file=None):
         """Count and report barcode sequences in FASTQs for each lane
@@ -2617,13 +2624,16 @@ class AutoProcess:
             logging.error("No projects with QC results to publish")
             return False
         # Include barcode analysis
-        barcode_analysis_dir = os.path.join(self.analysis_dir,
-                                            'barcode_analysis')
-        if not (os.path.exists(os.path.join(barcode_analysis_dir,
-                                            'barcodes.report')) or
-                os.path.exists(os.path.join(barcode_analysis_dir,
-                                            'barcodes.xls'))):
-            barcode_analysis_dir = None
+        barcodes_files = ('barcodes.report','barcodes.xls','barcodes.html')
+        if self.params.barcode_analysis_dir is not None:
+            barcode_analysis_dir = self.params.barcode_analysis_dir
+        else:
+            barcode_analysis_dir = 'barcode_analysis'
+        for filen in barcodes_files:
+            if not os.path.exists(
+                    os.path.join(barcode_analysis_dir,filen)):
+                barcode_analysis_dir = None
+                break
         # Make a directory for the QC reports
         if not remote:
             # Local directory
@@ -2692,13 +2702,15 @@ class AutoProcess:
                            "<a href='barcodes/barcodes.report'>barcodes.report</a> "
                            "XLS: "
                            "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
+                           "HTML: "
+                           "<a href='barcodes/barcodes.html'>barcodes.html</a>"
                            "</p>")
             # Create subdir and copy files
             barcodes_dirn = os.path.join(dirn,'barcodes')
             if not remote:
                 # Local directory
                 bcf_utils.mkdir(barcodes_dirn)
-                for filen in ('barcodes.report','barcodes.xls'):
+                for filen in barcodes_files:
                     shutil.copy(os.path.join(barcode_analysis_dir,filen),
                                 barcodes_dirn)
             else:
@@ -2709,7 +2721,7 @@ class AutoProcess:
                                                                   barcodes_dirn))
                     print "Running %s" % mkdir_cmd
                     mkdir_cmd.run_subprocess()
-                    for filen in ('barcodes.report','barcodes.xls'):
+                    for filen in barcodes_files:
                         scp = applications.general.scp(user,server,
                                                        os.path.join(
                                                            barcode_analysis_dir,
@@ -2717,7 +2729,7 @@ class AutoProcess:
                                                        barcodes_dirn)
                     print "Running %s" % scp
                     scp.run_subprocess()
-                except Exception, ex:
+                except Exception as ex:
                     raise Exception("Exception copying barcode reports to "
                                     "remote server: %s" % ex)
         # Table of projects
