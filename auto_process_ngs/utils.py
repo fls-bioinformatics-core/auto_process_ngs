@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#     utils: utility classes & funcs for auto_process_mgs module
+#     utils: utility classes & funcs for auto_process_ngs module
 #     Copyright (C) University of Manchester 2013-2016 Peter Briggs
 #
 ########################################################################
