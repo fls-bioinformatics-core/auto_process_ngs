@@ -307,12 +307,19 @@ class List:
         self._ordered = bool(ordered)
         self._items = []
 
-    def add_item(self,content):
+    def add_item(self,*content):
         """
         Append an item to the list
 
+        The item can consist of one or more
+        objects (for example strings and other
+        docwriter objects such as Lists, Links
+        etc), which will be concatenated after
+        rendering.
+
         """
-        self._items.append(content)
+        item = [c for c in content]
+        self._items.append(item)
 
     def html(self):
         """
@@ -333,10 +340,11 @@ class List:
         # Add items
         for item in self._items:
             html.append("<li>")
-            try:
-                html.append(item.html())
-            except AttributeError:
-                html.append(str(item))
+            for i in item:
+                try:
+                    html.append(i.html())
+                except AttributeError:
+                    html.append(str(i))
             html.append("</li>")
         # Close the list
         html.append("</%s>" % tag)
