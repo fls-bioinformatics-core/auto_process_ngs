@@ -299,7 +299,7 @@ class List:
             attribute for the <img.../> tag
           ordered (boolean): if True then create
             an ordered (i.e. numbered) list;
-            otherwise make an unnumber list (the
+            otherwise make an unnumbered list (the
             default)
 
         """
@@ -320,7 +320,7 @@ class List:
 
         """
         # List type
-        if ordered:
+        if self._ordered:
             tag = "ol"
         else:
             tag = "ul"
@@ -329,6 +329,7 @@ class List:
         html.append("<%s" % tag)
         if self._name:
             html.append("id='%s'" % self._name)
+        html.append(">")
         # Add items
         for item in self._items:
             html.append("<li>")
