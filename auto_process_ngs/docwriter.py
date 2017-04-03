@@ -296,7 +296,7 @@ class List:
 
         Arguments:
           name (str): string to use as the 'id'
-            attribute for the <img.../> tag
+            attribute for the <ul>/<ol> tag
           ordered (boolean): if True then create
             an ordered (i.e. numbered) list;
             otherwise make an unnumbered list (the
