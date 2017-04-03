@@ -34,6 +34,12 @@ import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
 import settings
+import css_rules
+from .docwriter import Document
+from .docwriter import Table
+from .docwriter import List
+from .docwriter import Link
+from .qc.illumina_qc import pretty_print_reads
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
@@ -2626,8 +2632,7 @@ class AutoProcess:
             print "Project %s will be skipped" % project.name
             projects.remove(project)
         if not projects:
-            logging.error("No projects with QC results to publish")
-            return False
+            logging.warning("No projects with QC results to publish")
         # Include barcode analysis
         barcodes_files = ('barcodes.report','barcodes.xls','barcodes.html')
         if self.params.barcode_analysis_dir is not None:
@@ -2699,6 +2704,12 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
                        self.run_reference_id)
         index_page.add("</table>")
+        # Add link to processing statistics
+        processing_qc_html = "processing_qc.html"
+        self.processing_qc_report(processing_qc_html)
+        index_page.add("<h2>Processing Statistics</h2>")
+        index_page.add("<a href='%s'>Processing QC report</a>" %
+                       processing_qc_html)
         # Barcode analysis
         if barcode_analysis_dir:
             # Create section
@@ -2737,84 +2748,75 @@ class AutoProcess:
                 except Exception as ex:
                     raise Exception("Exception copying barcode reports to "
                                     "remote server: %s" % ex)
-        # Table of projects
-        index_page.add("<h2>QC Reports</h2>")
-        index_page.add("<table>")
-        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
-        # Set the string to represent "null" table entries
-        null_str = '&nbsp;'
-        # Deal with QC for each project
-        for project in projects:
-            # Get local versions of project information
-            info = project.info
-            project_user = null_str if info.user is None else info.user
-            library_type = null_str if info.library_type is None else info.library_type
-            organism = null_str if info.organism is None else info.organism
-            PI = null_str if info.PI is None else info.PI
-            # Generate line in the table of projects
-            index_page.add("<tr>")
-            index_page.add("<td>%s</td>" % project.name)
-            index_page.add("<td>%s</td>" % project_user)
-            index_page.add("<td>%s</td>" % library_type)
-            index_page.add("<td>%s</td>" % organism)
-            index_page.add("<td>%s</td>" % PI)
-            index_page.add("<td>%s</td>" % project.prettyPrintSamples())
-            index_page.add("<td>%d</td>" % len(project.samples))
-            # Locate and copy QC report
-            qc_zip = os.path.join(project.dirn,
-                                  "qc_report.%s.%s.zip" %
-                                  (project.name,
-                                   os.path.basename(self.analysis_dir)))
-            print qc_zip
-            assert(os.path.isfile(qc_zip))
-            report_copied = True
-            if not remote:
-                # Local directory
-                shutil.copy(qc_zip,dirn)
-                # Unpack
-                unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
-                print "Running %s" % unzip_cmd
-                unzip_cmd.run_subprocess()
-            else:
-                try:
-                    # Remote directory
-                    scp = applications.general.scp(user,server,qc_zip,dirn)
-                    print "Running %s" % scp
-                    scp.run_subprocess()
-                    # Unpack at the other end
-                    unzip_cmd = applications.general.ssh_command(
-                        user,server,
-                        ('unzip','-q','-o','-d',dirn,
-                         os.path.join(dirn,os.path.basename(qc_zip))))
+        if projects:
+            # Table of projects
+            index_page.add("<h2>QC Reports</h2>")
+            index_page.add("<table>")
+            index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
+            # Set the string to represent "null" table entries
+            null_str = '&nbsp;'
+            # Deal with QC for each project
+            for project in projects:
+                # Get local versions of project information
+                info = project.info
+                project_user = null_str if info.user is None else info.user
+                library_type = null_str if info.library_type is None else info.library_type
+                organism = null_str if info.organism is None else info.organism
+                PI = null_str if info.PI is None else info.PI
+                # Generate line in the table of projects
+                index_page.add("<tr>")
+                index_page.add("<td>%s</td>" % project.name)
+                index_page.add("<td>%s</td>" % project_user)
+                index_page.add("<td>%s</td>" % library_type)
+                index_page.add("<td>%s</td>" % organism)
+                index_page.add("<td>%s</td>" % PI)
+                index_page.add("<td>%s</td>" % project.prettyPrintSamples())
+                index_page.add("<td>%d</td>" % len(project.samples))
+                # Locate and copy QC report
+                qc_zip = os.path.join(project.dirn,
+                                      "qc_report.%s.%s.zip" %
+                                      (project.name,
+                                       os.path.basename(self.analysis_dir)))
+                print qc_zip
+                assert(os.path.isfile(qc_zip))
+                report_copied = True
+                if not remote:
+                    # Local directory
+                    shutil.copy(qc_zip,dirn)
+                    # Unpack
+                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
                     print "Running %s" % unzip_cmd
                     unzip_cmd.run_subprocess()
-                except Exception, ex:
-                    print "Failed to copy QC report: %s" % ex
-                    report_copied = False
-            # Append info to the index page
-            if report_copied:
-                index_page.add("<td><a href='qc_report.%s.%s/qc_report.html'>"
-                               "[Report]</a></td>"
-                               % (project.name,
-                                  os.path.basename(self.analysis_dir)))
-                index_page.add("<td><a href='%s'>[Zip]</a></td>"
-                               % os.path.basename(qc_zip))
-            else:
-                # QC not available
-                index_page.add("<td colspan='2'>QC reports not available</td>")
-            # Finish table row for this project
-            index_page.add("</tr>")
-        index_page.add("</table>")
-        # Add table of statistics
-        stats_table = self.stats_as_html_table()
-        if stats_table is not None:
-            index_page.add("<h2>Statistics for Fastq files</h2>")
-            index_page.add(stats_table)
-        # Add per-lane statistics
-        per_lane_stats_table = self.per_lane_stats_as_html_table()
-        if per_lane_stats_table is not None:
-            index_page.add("<h2>Per-lane statistics</h2>")
-            index_page.add(per_lane_stats_table)
+                else:
+                    try:
+                        # Remote directory
+                        scp = applications.general.scp(user,server,qc_zip,dirn)
+                        print "Running %s" % scp
+                        scp.run_subprocess()
+                        # Unpack at the other end
+                        unzip_cmd = applications.general.ssh_command(
+                            user,server,
+                            ('unzip','-q','-o','-d',dirn,
+                             os.path.join(dirn,os.path.basename(qc_zip))))
+                        print "Running %s" % unzip_cmd
+                        unzip_cmd.run_subprocess()
+                    except Exception, ex:
+                        print "Failed to copy QC report: %s" % ex
+                        report_copied = False
+                # Append info to the index page
+                if report_copied:
+                    index_page.add("<td><a href='qc_report.%s.%s/qc_report.html'>"
+                                   "[Report]</a></td>"
+                                   % (project.name,
+                                      os.path.basename(self.analysis_dir)))
+                    index_page.add("<td><a href='%s'>[Zip]</a></td>"
+                                   % os.path.basename(qc_zip))
+                else:
+                    # QC not available
+                    index_page.add("<td colspan='2'>QC reports not available</td>")
+                # Finish table row for this project
+                index_page.add("</tr>")
+            index_page.add("</table>")
         # Finish index page
         index_page.add("<p class='footer'>Generated by auto_process.py %s on %s</p>" % \
                        (get_version(),time.asctime()))
@@ -2824,14 +2826,120 @@ class AutoProcess:
         if not remote:
             # Local directory
             shutil.copy(index_html,dirn)
+            shutil.copy(processing_qc_html,dirn)
         else:
             # Remote directory
             scp = applications.general.scp(user,server,index_html,dirn)
             print "Running %s" % scp
             scp.run_subprocess()
+            scp = applications.general.scp(user,server,processing_qc_html,dirn)
+            print "Running %s" % scp
+            scp.run_subprocess()
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
+
+    def processing_qc_report(self,html_file):
+        """
+        Generate HTML report for processing statistics
+
+        Arguments:
+          html_file (str): destination path and file name for
+            HTML report
+        """
+        processing_qc = Document("Processing report for %s" %
+                                 os.path.basename(self.analysis_dir))
+        processing_qc.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
+        toc = processing_qc.add_section("Contents")
+        toc_list = List()
+        toc.add(toc_list)
+        # Per-lane statistics
+        per_lane_stats = processing_qc.add_section("Per-lane statistics",
+                                                   name="per_lane_stats")
+        stats = TabFile.TabFile(self.params.per_lane_stats_file,
+                                first_line_is_header=True)
+        tbl = Table(columns=stats.header())
+        for line in stats:
+            n = tbl.add_row()
+            for c in stats.header():
+                tbl.set_value(n,c,line[c])
+        per_lane_stats.add(tbl)
+        toc_list.add_item(Link("Per-lane statistics",per_lane_stats))
+        # Per lane by sample statistics
+        per_lane_sample_stats = processing_qc.add_section(
+            "Per-lane statistics by sample",
+            name="per_lane_sample_stats")
+        lane_toc_list = List()
+        per_lane_sample_stats.add(lane_toc_list)
+        with open("per_lane_sample_stats.info") as stats:
+            for line in stats:
+                if line.startswith("Lane "):
+                    lane = int(line.split(' ')[-1])
+                    s = per_lane_sample_stats.add_subsection(
+                        "Lane %d" % lane,
+                        name="per_lane_sample_stats_lane%d" % lane
+                    )
+                    preamble = s.add_subsection()
+                    lane_toc_list.add_item(Link("Lane %d" % lane,s))
+                    current_project = None
+                    tbl = Table(columns=('pname','sname','nreads','percreads'),
+                                pname='Project',
+                                sname='Sample',
+                                nreads='Nreads',
+                                percreads='%reads')
+                    s.add(tbl)
+                elif line.startswith("Total reads = "):
+                    preamble.add(line)
+                elif line.startswith("- "):
+                    pname = line.split()[1].split('/')[0]
+                    if pname == current_project:
+                        pname = "&nbsp;"
+                    else:
+                        current_project = pname
+                    sname = line.split()[1].split('/')[1]
+                    nreads = int(line.split()[2])
+                    percreads = line.split()[3]
+                    tbl.add_row(pname=pname,
+                                sname=sname,
+                                nreads=pretty_print_reads(nreads),
+                                percreads=percreads)
+        toc_list.add_item(Link("Per-lane statistics by sample",
+                               per_lane_sample_stats),
+                          lane_toc_list)
+        # Per fastq statistics
+        per_file_stats = processing_qc.add_section(
+            "Per-file statistics by project",
+            name="per_file_stats")
+        project_toc_list = List()
+        per_file_stats.add(project_toc_list)
+        stats = TabFile.TabFile(self.params.stats_file,
+                                first_line_is_header=True)
+        projects = sorted(list(set([d['Project'] for d in stats])))
+        sample = None
+        for project in projects:
+            s = per_file_stats.add_subsection(
+                        "%s" % project,
+                        name="per_file_stats_%s" % project
+                    )
+            project_toc_list.add_item(Link("%s" % project,s))
+            tbl = Table(columns=('Sample','Fastq','Size','Nreads'))
+            s.add(tbl)
+            subset = filter(lambda d: d['Project'] == project,stats)
+            for line in subset:
+                if sample == line['Sample']:
+                    sname = "&nbsp;"
+                else:
+                    sample = line['Sample']
+                    sname = sample
+                tbl.add_row(Sample=sname,
+                            Fastq=line['Fastq'],
+                            Size=line['Size'],
+                            Nreads=pretty_print_reads(line['Nreads']))
+        toc_list.add_item(Link("Per-file statistics by project",
+                               per_file_stats),
+                          project_toc_list)
+        # Write the processing QC summary file
+        processing_qc.write(html_file)
 
     def stats_as_html_table(self):
         # Return statistics as string containing HTML table, or None if no
