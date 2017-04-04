@@ -4,6 +4,8 @@
 
 from bcftbx.htmlpagewriter import HTMLPageWriter
 
+VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
 class Document:
     """
     Utility class for constructing documents
@@ -86,6 +88,17 @@ class Section:
         """
         if self._name is not None:
             return self._name
+        if self._title is not None:
+            return filter(lambda c: c in VALID_CSS_ID_CHARS,
+                          str(self._title).replace(' ','_').replace('\t','_'))
+        else:
+            return self._title
+
+    @property
+    def title(self):
+        """
+        Return the title for the section
+        """
         return self._title
 
     def add_css_classes(self,*classes):
@@ -246,7 +259,7 @@ class Table:
             table_tag.append(" id='%s'" % css_id)
         if self._css_classes:
             table_tag.append(" class='%s'" % ' '.join(self._css_classes))
-        table_tag.append(">\n")
+        table_tag.append(">")
         html.append(''.join(table_tag))
         # Header
         if self._output_header:
@@ -335,7 +348,7 @@ class List:
         html = []
         html.append("<%s" % tag)
         if self._name:
-            html.append("id='%s'" % self._name)
+            html.append(" id='%s'" % self._name)
         html.append(">")
         # Add items
         for item in self._items:
@@ -348,7 +361,7 @@ class List:
             html.append("</li>")
         # Close the list
         html.append("</%s>" % tag)
-        return " ".join(html)
+        return "".join(html)
 
 class Img:
     """
