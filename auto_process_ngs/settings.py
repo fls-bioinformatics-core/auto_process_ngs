@@ -142,7 +142,7 @@ class Settings:
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
         # Define runners for specific jobs
         self.add_section('runners')
-        for name in ('bcl2fastq','qc','stats',):
+        for name in ('bcl2fastq','qc','stats','rsync'):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
         # Information for archiving analyses
