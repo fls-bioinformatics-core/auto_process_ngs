@@ -16,15 +16,15 @@ h2    { background-color: #8CC63F;
         display: inline-block;
         padding: 5px 15px;
         margin: 0;
-        border-top-left-radius: 20;
-        border-bottom-right-radius: 20; }
+        border-top-left-radius: 20px;
+        border-bottom-right-radius: 20px; }
 h3, h4 { background-color: grey;
          color: white;
          display: block;
          padding: 5px 15px;
          margin: 0;
-         border-top-left-radius: 20;
-         border-bottom-right-radius: 20; }
+         border-top-left-radius: 20px;
+         border-bottom-right-radius: 20px; }
 table { margin: 10 10;
         border: solid 1px grey;
         background-color: white; }

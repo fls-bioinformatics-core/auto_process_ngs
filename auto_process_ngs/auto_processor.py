@@ -2851,7 +2851,11 @@ class AutoProcess:
         processing_qc = Document("Processing report for %s" %
                                  os.path.basename(self.analysis_dir))
         processing_qc.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
-        toc = processing_qc.add_section("Contents")
+        processing_qc.add_css_rule("table { font-size: 80%;\n"
+                                   "        font-family: sans-serif; }")
+        processing_qc.add_css_rule("td { text-align: right; }")
+        # Add table of contents
+        toc = processing_qc.add_section("Contents",name="toc")
         toc_list = List()
         toc.add(toc_list)
         # Per-lane statistics

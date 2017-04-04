@@ -941,10 +941,11 @@ class Reporter(object):
                               "     display: inline-block;\n"
                               "     padding: 5px 15px;\n"
                               "     margin: 0;\n"
-                              "     border-top-left-radius: 20;\n"
-                              "     border-bottom-right-radius: 20; }")
+                              "     border-top-left-radius: 20px;\n"
+                              "     border-bottom-right-radius: 20px; }")
             html.add_css_rule("table { border: solid 1px grey;\n"
-                              "        font-size: 80% }")
+                              "        font-size: 80%;\n"
+                              "        font-family: sans-serif; }")
             html.add_css_rule("table th { background-color: grey;\n"
                               "           color: white;\n"
                               "           padding: 2px 5px; }")
