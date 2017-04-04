@@ -2716,9 +2716,9 @@ class AutoProcess:
             index_page.add("<h2>Barcode analysis</h2>")
             index_page.add("<p>Plain text report: "
                            "<a href='barcodes/barcodes.report'>barcodes.report</a> "
-                           "XLS: "
+                           " | XLS: "
                            "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
-                           "HTML: "
+                           " | HTML: "
                            "<a href='barcodes/barcodes.html'>barcodes.html</a>"
                            "</p>")
             # Create subdir and copy files
