@@ -1204,7 +1204,7 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = self.settings.general.default_runner
+            runner = self.settings.runners.rsync
         runner.set_log_dir(self.log_dir)
         # Run rsync command
         rsync = applications.general.rsync(data_dir,
@@ -2435,7 +2435,7 @@ class AutoProcess:
         if runner is not None:
             runner = fetch_runner(runner)
         else:
-            runner = self.settings.general.default_runner
+            runner = self.settings.runners.rsync
         runner.set_log_dir(self.log_dir)
         # Setup a scheduler for multiple rsync jobs
         sched = simple_scheduler.SimpleScheduler(

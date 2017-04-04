@@ -34,6 +34,7 @@ nprocessors = 1
 bcl2fastq = SimpleJobRunner
 qc = SimpleJobRunner
 stats = SimpleJobRunner
+rsync = SimpleJobRunner
 
 # Settings for archiving analyses
 # dirn should be a directory in the form [[user@]host:]path
