@@ -2731,8 +2731,8 @@ class AutoProcess:
                                                            barcode_analysis_dir,
                                                            filen),
                                                        barcodes_dirn)
-                    print "Running %s" % scp
-                    scp.run_subprocess()
+                        print "Running %s" % scp
+                        scp.run_subprocess()
                 except Exception as ex:
                     raise Exception("Exception copying barcode reports to "
                                     "remote server: %s" % ex)
