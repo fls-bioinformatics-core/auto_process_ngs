@@ -118,21 +118,21 @@ class QCReporter:
                             "     display: inline-block;\n"
                             "     padding: 5px 15px;\n"
                             "     margin: 0;\n"
-                            "     border-top-left-radius: 20;\n"
-                            "     border-bottom-right-radius: 20; }")
+                            "     border-top-left-radius: 20px;\n"
+                            "     border-bottom-right-radius: 20px; }")
         report.add_css_rule("h3, h4 { background-color: grey;\n"
                             "     color: white;\n"
                             "     display: block;\n"
                             "     padding: 5px 15px;\n"
                             "     margin: 0;\n"
-                            "     border-top-left-radius: 20;\n"
-                            "     border-bottom-right-radius: 20; }")
+                            "     border-top-left-radius: 20px;\n"
+                            "     border-bottom-right-radius: 20px; }")
         report.add_css_rule(".sample { margin: 10 10;\n"
                             "          border: solid 2px #8CC63F;\n"
                             "          padding: 0;\n"
                             "          background-color: #ffe;\n"
-                            "          border-top-left-radius: 25;\n"
-                            "          border-bottom-right-radius: 25; }")
+                            "          border-top-left-radius: 25px;\n"
+                            "          border-bottom-right-radius: 25px; }")
         report.add_css_rule(".fastqs {\n"
                             " border: 1px solid grey;\n"
                             " padding: 5px;\n"
