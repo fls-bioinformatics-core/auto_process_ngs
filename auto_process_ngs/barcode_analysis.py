@@ -33,6 +33,8 @@ from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.simple_xls import XLSStyle
 from .docwriter import Document
 from .docwriter import Table
+from .docwriter import List
+from .docwriter import Link
 
 #######################################################################
 # Classes
@@ -893,6 +895,9 @@ class Reporter(object):
         if title is None:
             title = "Barcodes Report"
         html = Document(title)
+        toc = html.add_section(title="Contents",name="toc")
+        toc_list = List()
+        toc.add(toc_list)
         section = None
         table = None
         for item in self._content:
@@ -918,6 +923,7 @@ class Reporter(object):
                 if attrs.get('title',False):
                     # New section with title
                     section = html.add_section(title=content)
+                    toc_list.add_item(Link(section.title,section))
                     continue
                 if table is not None:
                     # New section after table (no title)

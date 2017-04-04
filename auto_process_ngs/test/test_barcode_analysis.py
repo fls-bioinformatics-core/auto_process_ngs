@@ -942,13 +942,16 @@ Lorem ipsum
 </head>
 <body>
 <h1>Test Document</h1>
-<div id='This is a Test'>
+<div id='toc'>
+<h2>Contents</h2>
+<ul><li><a href='#This_is_a_Test'>This is a Test</a></li></ul>
+</div>
+<div id='This_is_a_Test'>
 <h2>This is a Test</h2>
 <p>Lorem ipsum</p>
 </div>
 <div>
 <table>
-
 <tr><th>Column1</th><th>Column2</th></tr>
 <tr><td>1</td><td>2</td></tr>
 <tr><td>3</td><td>4</td></tr>
