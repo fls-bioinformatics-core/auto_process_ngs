@@ -39,7 +39,9 @@ from .docwriter import Document
 from .docwriter import Table
 from .docwriter import List
 from .docwriter import Link
+from .docwriter import Img
 from .qc.illumina_qc import pretty_print_reads
+from .qc.plots import ustackedbar
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
@@ -2869,6 +2871,7 @@ class AutoProcess:
             stats = TabFile.TabFile(per_lane_stats_file,
                                     first_line_is_header=True)
             tbl = Table(columns=stats.header())
+            tbl.append_columns("Assigned/unassigned")
             for line in stats:
                 n = tbl.add_row()
                 for c in stats.header():
@@ -2877,6 +2880,12 @@ class AutoProcess:
                     else:
                         value = line[c]
                     tbl.set_value(n,c,value)
+                tbl.set_value(n,"Assigned/unassigned",
+                              Img(ustackedbar((line["Assigned reads"],
+                                               line["Unassigned reads"]),
+                                              length=100,height=15,
+                                              colors=('red','white'),
+                                              inline=True)))
             per_lane_stats.add(tbl)
             toc_list.add_item(Link("Per-lane statistics",per_lane_stats))
         # Per lane by sample statistics
