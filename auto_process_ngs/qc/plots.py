@@ -361,7 +361,8 @@ def ustackedbar(data,outfile=None,inline=False,bbox=True,
     # Normalise the data
     total = float(sum(data))
     ndata = [int(float(d)/total*float(length)) for d in data]
-    ndata[-1] = float(length)
+    # Reset the last value
+    ndata[-1] = length - sum(ndata[:-1])
     # Create the plot
     p = 0
     for ii,d in enumerate(ndata):
