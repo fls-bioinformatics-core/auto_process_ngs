@@ -138,7 +138,9 @@ def report_processing_qc(analysis_dir,html_file):
         sample = None
         for project in projects:
             subset = filter(lambda d: d['Project'] == project,stats)
-            subset_lanes = filter(lambda l: sum([d[l] for d in subset]),
+            subset_lanes = filter(lambda l:
+                                  reduce(lambda x,y: x and bool(y),
+                                         [d[l] for d in subset]),
                                   lanes)
             s = per_file_stats.add_subsection(
                 "%s" % project,
