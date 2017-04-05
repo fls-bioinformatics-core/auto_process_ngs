@@ -73,49 +73,70 @@ def report_processing_qc(analysis_dir,html_file):
             name="per_lane_sample_stats")
         lane_toc_list = List()
         per_lane_sample_stats.add(lane_toc_list)
+        # Store the data for each lane
         with open("per_lane_sample_stats.info") as stats:
+            lane_data = []
             for line in stats:
                 if line.startswith("Lane "):
                     lane = int(line.split(' ')[-1])
-                    s = per_lane_sample_stats.add_subsection(
-                        "Lane %d" % lane,
-                        name="per_lane_sample_stats_lane%d" % lane
-                    )
-                    preamble = s.add_subsection()
-                    lane_toc_list.add_item(Link("Lane %d" % lane,s))
-                    current_project = None
-                    tbl = Table(columns=('pname','sname',
-                                         'nreads','percreads',
-                                         'barplot'),
-                                pname='Project',
-                                sname='Sample',
-                                nreads='Nreads',
-                                percreads='%reads',
-                                barplot='',
-                    )
-                    s.add(tbl)
+                    lane_data.append({ 'lane': lane,
+                                       'total_reads': None,
+                                       'samples': [] })
                 elif line.startswith("Total reads = "):
-                    preamble.add(line)
                     total_reads = int(line.split('=')[-1].strip())
+                    lane_data[-1]['total_reads'] = total_reads
                 elif line.startswith("- "):
                     pname = line.split()[1].split('/')[0]
-                    if pname == current_project:
-                        pname = "&nbsp;"
-                    else:
-                        current_project = pname
                     sname = line.split()[1].split('/')[1]
                     nreads = int(line.split()[2])
                     percreads = line.split()[3]
-                    barplot = ustackedbar((nreads,total_reads-nreads),
-                                          length=100,height=5,
-                                          colors=('black','lightgrey'),
-                                          bbox=False,
-                                          inline=True)
-                    tbl.add_row(pname=pname,
-                                sname=sname,
-                                nreads=pretty_print_reads(nreads),
-                                percreads=percreads,
-                                barplot=Img(barplot))
+                    lane_data[-1]['samples'].append(
+                        { 'pname': pname,
+                          'sname': sname,
+                          'nreads': nreads,
+                          'percreads': percreads })
+        # Create a section and table for each lane
+        for data in lane_data:
+            lane = data['lane']
+            max_reads = max([d['nreads'] for d in data['samples']])
+            total_reads = data['total_reads']
+            s = per_lane_sample_stats.add_subsection(
+                "Lane %d" % lane,
+                name="per_lane_sample_stats_lane%d" % lane
+            )
+            lane_toc_list.add_item(Link("Lane %d" % lane,s))
+            current_project = None
+            tbl = Table(columns=('pname','sname',
+                                 'nreads','percreads',
+                                 'barplot'),
+                        pname='Project',
+                        sname='Sample',
+                        nreads='Nreads',
+                        percreads='%reads',
+                        barplot='',
+                    )
+            s.add(tbl)
+            for sample in data['samples']:
+                pname = sample['pname']
+                sname = sample['sname']
+                nreads = sample['nreads']
+                percreads = sample['percreads']
+                if pname == current_project:
+                    pname = "&nbsp;"
+                else:
+                    current_project = pname
+                barplot = ustackedbar((nreads,max_reads-nreads),
+                                      length=100,height=5,
+                                      colors=('black','lightgrey'),
+                                      bbox=False,
+                                      inline=True)
+                tbl.add_row(pname=pname,
+                            sname=sname,
+                            nreads=pretty_print_reads(nreads),
+                            percreads=percreads,
+                            barplot=Img(barplot))
+            tbl.add_row(pname="Total reads for lane %d" % lane,
+                        nreads=pretty_print_reads(total_reads))
         toc_list.add_item(Link("Per-lane statistics by sample",
                                per_lane_sample_stats),
                           lane_toc_list)
