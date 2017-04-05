@@ -2417,6 +2417,7 @@ class AutoProcess:
         # Determine which directories to exclude
         excludes = ['--exclude=primary_data',
                     '--exclude=save.*',
+                    '--exclude=*.bak',
                     '--exclude=tmp.*']
         if not include_bcl2fastq:
             # Determine whether bcl2fastq dir should be included implicitly
