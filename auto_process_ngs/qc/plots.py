@@ -26,6 +26,7 @@ RGB_COLORS = {
     'orange': (255,165,0),
     'red': (255,0,0),
     'yellow': (255,255,0),
+    'white': (255,255,255),
 }
 
 HEX_COLORS = {
@@ -330,3 +331,67 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
     else:
         return outfile
 
+def ustackedbar(data,outfile=None,inline=False,bbox=True,
+                height=20,length=100,colors=None):
+    """
+    Make a 'micro' stacked bar chart
+
+    A 'stacked' bar consists of a bar divided into
+    sections, with each section of proportional length
+    to the corresponding value.
+
+    Arguments:
+      data (List): list or tuple of data values
+      outfile (str): path for the output PNG
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
+      bbox (boolean): if True then draw a bounding box
+        around the plot
+      height (int): height of the bar in pixels
+      length (int): length of the bar in pixels
+      colors (List): list or tuple of color values
+    """
+    # Initialise
+    bgcolor = "black"
+    if colors is None:
+        colors = sorted(list(RGB_COLORS.keys()))
+    # Create the image
+    img = Image.new('RGB',(length,height),bgcolor)
+    pixels = img.load()
+    # Normalise the data
+    total = float(sum(data))
+    ndata = [int(float(d)/total*float(length)) for d in data]
+    ndata[-1] = float(length)
+    # Create the plot
+    p = 0
+    for ii,d in enumerate(ndata):
+        color = colors[ii%len(colors)]
+        try:
+            color = RGB_COLORS[color]
+        except KeyError:
+            pass
+        for i in xrange(p,p+d):
+             for j in xrange(height):
+                pixels[i,j] = color
+        p += d
+    # Overlay a bounding box
+    if bbox:
+        for i in xrange(0,length):
+            pixels[i,0] = RGB_COLORS[bgcolor]
+            pixels[i,height-1] = RGB_COLORS[bgcolor]
+        for j in xrange(0,height):
+            pixels[0,j] = RGB_COLORS[bgcolor]
+            pixels[length-1,j] = RGB_COLORS[bgcolor]
+    # Output the plot to file
+    fp,tmp_plot = tempfile.mkstemp(".ubar.png")
+    img.save(tmp_plot)
+    os.fdopen(fp).close()
+    if inline:
+        encoded_plot = encode_png(tmp_plot)
+    if outfile is not None:
+        os.rename(tmp_plot,outfile)
+    os.remove(tmp_plot)
+    if inline:
+        return encoded_plot
+    else:
+        return outfile
