@@ -139,8 +139,9 @@ def report_processing_qc(analysis_dir,html_file):
         for project in projects:
             subset = filter(lambda d: d['Project'] == project,stats)
             subset_lanes = filter(lambda l:
-                                  reduce(lambda x,y: x and bool(y),
-                                         [d[l] for d in subset]),
+                                  reduce(lambda x,y: x or bool(y),
+                                         [d[l] for d in subset],
+                                         False),
                                   lanes)
             s = per_file_stats.add_subsection(
                 "%s" % project,
@@ -161,9 +162,12 @@ def report_processing_qc(analysis_dir,html_file):
                 data = { 'Sample': sname,
                          'Fastq': line['Fastq'],
                          'Size': line['Size'],
-                         'Nreads': pretty_print_reads(line['Nreads'])}
+                         'Nreads': (pretty_print_reads(line['Nreads'])
+                                    if line['Nreads'] != '' else '')
+                }
                 for l in subset_lanes:
-                    data[l] = pretty_print_reads(line[l])
+                    data[l] = (pretty_print_reads(line[l])
+                               if line[l] != '' else '')
                 tbl.add_row(**data)
         toc_list.add_item(Link("Per-file statistics by project",
                                per_file_stats),
