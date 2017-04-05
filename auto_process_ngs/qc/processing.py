@@ -151,7 +151,7 @@ def report_processing_qc(analysis_dir,html_file):
             tbl = Table(columns=('Sample','Fastq','Size'))
             if subset_lanes:
                 tbl.append_columns(*subset_lanes)
-            tbl.append_columns('Nreads')
+            tbl.append_columns('Barplot','Nreads')
             s.add(tbl)
             for line in subset:
                 if sample == line['Sample']:
@@ -168,6 +168,13 @@ def report_processing_qc(analysis_dir,html_file):
                 for l in subset_lanes:
                     data[l] = (pretty_print_reads(line[l])
                                if line[l] != '' else '')
+                barplot = ustackedbar(filter(lambda n: n != '',
+                                             [line[l] for l in subset_lanes]),
+                                      length=100,height=10,
+                                      colors=('grey','lightgrey'),
+                                      bbox=True,
+                                      inline=True)
+                data['Barplot'] = Img(barplot)
                 tbl.add_row(**data)
         toc_list.add_item(Link("Per-file statistics by project",
                                per_file_stats),
