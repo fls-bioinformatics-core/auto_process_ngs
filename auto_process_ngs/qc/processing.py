@@ -85,14 +85,18 @@ def report_processing_qc(analysis_dir,html_file):
                     lane_toc_list.add_item(Link("Lane %d" % lane,s))
                     current_project = None
                     tbl = Table(columns=('pname','sname',
-                                         'nreads','percreads'),
+                                         'nreads','percreads',
+                                         'barplot'),
                                 pname='Project',
                                 sname='Sample',
                                 nreads='Nreads',
-                                percreads='%reads')
+                                percreads='%reads',
+                                barplot='',
+                    )
                     s.add(tbl)
                 elif line.startswith("Total reads = "):
                     preamble.add(line)
+                    total_reads = int(line.split('=')[-1].strip())
                 elif line.startswith("- "):
                     pname = line.split()[1].split('/')[0]
                     if pname == current_project:
@@ -102,10 +106,16 @@ def report_processing_qc(analysis_dir,html_file):
                     sname = line.split()[1].split('/')[1]
                     nreads = int(line.split()[2])
                     percreads = line.split()[3]
+                    barplot = ustackedbar((nreads,total_reads-nreads),
+                                          length=100,height=5,
+                                          colors=('black','lightgrey'),
+                                          bbox=False,
+                                          inline=True)
                     tbl.add_row(pname=pname,
                                 sname=sname,
                                 nreads=pretty_print_reads(nreads),
-                                percreads=percreads)
+                                percreads=percreads,
+                                barplot=Img(barplot))
         toc_list.add_item(Link("Per-lane statistics by sample",
                                per_lane_sample_stats),
                           lane_toc_list)
