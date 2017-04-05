@@ -16,6 +16,7 @@ from .fastq_stats import FastqQualityStats
 RGB_COLORS = {
     'black': (0,0,0),
     'blue': (0,0,255),
+    'cornflowerblue': (100,149,237),
     'cyan': (0,255,255),
     'darkyellow1': (204,204,0),
     'green': (0,128,0),
