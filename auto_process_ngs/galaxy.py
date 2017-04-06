@@ -181,7 +181,7 @@ def create_data_library(galaxy_url,library_name,analysis_dir,dest,
         turn_off_urllib3_warnings()
     # Create data library structure in Galaxy
     print "Fetching Galaxy instance for %s" % galaxy_url
-    gi = get_galaxy_instance(galaxy_url,verify=(not no_verify))
+    gi = get_galaxy_instance(galaxy_url,verify_ssl=(not no_verify))
     if gi is None:
         logging.critical("%s: failed to connect to Galaxy instance" %
                          galaxy_url)
