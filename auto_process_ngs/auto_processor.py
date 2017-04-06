@@ -1070,7 +1070,7 @@ class AutoProcess:
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    create_empty_fastqs=False,runner=None):
+                    create_empty_fastqs=None,runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1242,7 +1242,7 @@ class AutoProcess:
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None,create_empty_fastqs=False):
+                     runner=None,create_empty_fastqs=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1306,6 +1306,14 @@ class AutoProcess:
                 pass
             if no_lane_splitting is None:
                 no_lane_splitting = self.settings.bcl2fastq.no_lane_splitting
+        # Whether to create empty fastq files
+        if create_empty_fastqs is None:
+            try:
+                create_empty_fastqs = self.settings.platform[self.metadata.platform].create_empty_fastqs
+            except (KeyError,AttributeError):
+                pass
+            if create_empty_fastqs is None:
+                create_empty_fastqs = self.settings.bcl2fastq.create_empty_fastqs
         # Determine which bcl2fastq software to use
         if require_bcl2fastq is None:
             try:
@@ -1403,6 +1411,7 @@ class AutoProcess:
         print "No lane splitting     : %s" % no_lane_splitting
         print "Min trimmed read len  : %s" % minimum_trimmed_read_length
         print "Mask short adptr reads: %s" % mask_short_adapter_reads
+        print "Create empty fastqs   : %s" % create_empty_fastqs
         print "Output dir            : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
