@@ -1564,6 +1564,10 @@ class AutoProcess:
         self.params['stats_file'] = stats_file
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
+        print "Generating processing QC report"
+        processing_qc_html = "processing_qc.html"
+        report_processing_qc(self,processing_qc_html)
+        print "Finished"
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
                          mismatches=None,cutoff=None,
@@ -2701,10 +2705,12 @@ class AutoProcess:
         index_page.add("</table>")
         # Add link to processing statistics
         processing_qc_html = "processing_qc.html"
-        report_processing_qc(self,processing_qc_html)
-        index_page.add("<h2>Processing Statistics</h2>")
-        index_page.add("<a href='%s'>Processing QC report</a>" %
-                       processing_qc_html)
+        if os.path.exists(processing_qc_html):
+            index_page.add("<h2>Processing Statistics</h2>")
+            index_page.add("<a href='%s'>Processing QC report</a>" %
+                           processing_qc_html)
+        else:
+            processing_qc_html = None
         # Barcode analysis
         if barcode_analysis_dir:
             # Create section
@@ -2821,15 +2827,17 @@ class AutoProcess:
         if not remote:
             # Local directory
             shutil.copy(index_html,dirn)
-            shutil.copy(processing_qc_html,dirn)
+            if processing_qc_html:
+                shutil.copy(processing_qc_html,dirn)
         else:
             # Remote directory
             scp = applications.general.scp(user,server,index_html,dirn)
             print "Running %s" % scp
             scp.run_subprocess()
-            scp = applications.general.scp(user,server,processing_qc_html,dirn)
-            print "Running %s" % scp
-            scp.run_subprocess()
+            if processing_qc_html:
+                scp = applications.general.scp(user,server,processing_qc_html,dirn)
+                print "Running %s" % scp
+                scp.run_subprocess()
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
