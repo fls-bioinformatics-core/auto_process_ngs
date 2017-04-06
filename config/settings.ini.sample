@@ -16,6 +16,7 @@ run_qc = None
 nprocessors = 1
 default_version = <=1.8.4
 no_lane_splitting = False
+create_empty_fastqs = True
 
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to

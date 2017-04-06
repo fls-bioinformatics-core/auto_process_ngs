@@ -172,6 +172,7 @@ class Settings:
         - bcl2fastq
         - nprocessors
         - no_lane_splitting
+        - create_empty_fastqs
 
         Arguments:
           section (str): name of the section to retrieve the
@@ -189,11 +190,19 @@ class Settings:
             values['nprocessors'] = config.getint(section,'nprocessors',1)
             values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
                                                             False)
+            values['create_empty_fastqs'] = config.getboolean(
+                section,
+                'create_empty_fastqs',
+                True)
         else:
             values['bcl2fastq'] = config.get(section,'bcl2fastq',None)
             values['nprocessors'] = config.getint(section,'nprocessors',None)
             values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
                                                             None)
+            values['create_empty_fastqs'] = config.getboolean(
+                section,
+                'create_empty_fastqs',
+                None)
         return values
 
     def set(self,param,value):
