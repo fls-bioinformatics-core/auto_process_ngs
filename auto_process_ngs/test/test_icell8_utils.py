@@ -227,12 +227,12 @@ class TestICell8Stats(unittest.TestCase):
         self.assertEqual(stats.nreads('GTTCCTGATTA'),1)
         self.assertEqual(stats.nreads('AGAAGAGTACC'),1)
         self.assertEqual(stats.nreads('GTCTGCAACGC'),1)
-        self.assertEqual(stats.unique_umis(),['AGTCAAGTGC',
-                                              'GGAGGCCGGA',
-                                              'TGGAAAATGT'])
-        self.assertEqual(stats.unique_umis('GTTCCTGATTA'),
+        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGC',
+                                                'GGAGGCCGGA',
+                                                'TGGAAAATGT'])
+        self.assertEqual(stats.distinct_umis('GTTCCTGATTA'),
                          ['AGTCAAGTGC'])
-        self.assertEqual(stats.unique_umis('AGAAGAGTACC'),
+        self.assertEqual(stats.distinct_umis('AGAAGAGTACC'),
                          ['TGGAAAATGT'])
-        self.assertEqual(stats.unique_umis('GTCTGCAACGC'),
+        self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
                          ['GGAGGCCGGA'])
