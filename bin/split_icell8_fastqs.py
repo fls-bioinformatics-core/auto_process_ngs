@@ -276,7 +276,6 @@ def main():
             # Write read pair
             fq_r1 = "%s_R1" % assign_to
             fq_r2 = "%s_R2" % assign_to
-            #if output_mode == OUTPUTFILES:
             if fq_r1 not in output_fqs:
                 try:
                     # Try to reopen file and append
