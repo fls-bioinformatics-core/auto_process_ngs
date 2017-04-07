@@ -64,7 +64,7 @@ if __name__ == "__main__":
         stats_file = os.path.abspath(args.stats_file)
         nreads_col = "Nreads%s" % ('' if args.suffix is None
                                    else args.suffix)
-        umis_col = "Unique_UMIs%s" % ('' if args.suffix
+        umis_col = "Distinct_UMIs%s" % ('' if args.suffix
                                       is None else args.suffix)
         if not (os.path.isfile(stats_file) and args.append):
             # Create new stats file
@@ -85,14 +85,14 @@ if __name__ == "__main__":
             barcode = data_line['Barcode']
             try:
                 data_line[nreads_col] = stats.nreads(barcode)
-                data_line[umis_col] = len(stats.unique_umis(barcode))
+                data_line[umis_col] = len(stats.distinct_umis(barcode))
             except KeyError:
                 pass
         # Write to file
         stats_data.write(filen=stats_file,include_header=True)
 
     # Report summary
-    print "#barcodes   : %s" % len(stats.barcodes())
-    print "#reads      : %s" % stats.nreads()
-    print "#unique umis: %s" % len(stats.unique_umis())
+    print "#barcodes     : %s" % len(stats.barcodes())
+    print "#reads        : %s" % stats.nreads()
+    print "#distinct umis: %s" % len(stats.distinct_umis())
     print "Finished: %s" % time.ctime()
