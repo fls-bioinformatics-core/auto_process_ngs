@@ -185,9 +185,9 @@ class ICell8Stats(object):
 
     Given a set of paths to FASTQ R1/R2 file
     pairs, collects statistics on the number of
-    reads, barcodes and unique UMIs.
+    reads, barcodes and distinct UMIs.
 
-    NB the list of "unique" UMIs are where each UMI
+    NB the list of distinct UMIs are where each UMI
     appears only once. Each UMI may appear multiple times
     across the FASTQ files.
 
@@ -254,27 +254,27 @@ class ICell8Stats(object):
                 nreads += self.nreads(b)
             return nreads
 
-    def unique_umis(self,barcode=None):
+    def distinct_umis(self,barcode=None):
         """
-        Return all unique UMIs, or by barcode
+        Return all distinct UMIs, or by barcode
 
         Invoked without arguments, returns a list
-        of unique UMIs found across the files. If a
+        of distinct UMIs found across the files. If a
         barcode is specified then returns a list of
         UMIs associated with that barcode.
 
         Arguments:
           barcode (str): optional, specify barcode
-            for which the list of unique UMIs will be
+            for which the list of distinct UMIs will be
             returned.
 
         Returns:
-          List: list of unique UMI sequences.
+          List: list of distinct UMI sequences.
         """
         if barcode is not None:
             return sorted(list(self._umis[barcode]))
         else:
             umis = set()
             for b in self.barcodes():
-                umis.update(self.unique_umis(b))
+                umis.update(self.distinct_umis(b))
             return sorted(list(umis))
