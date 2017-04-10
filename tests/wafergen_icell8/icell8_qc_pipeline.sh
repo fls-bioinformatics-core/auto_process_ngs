@@ -202,8 +202,8 @@ wd=$(mktemp -d --suffix=".verify" --tmpdir=$(pwd))
 for fq_base in $FASTQ_NAMES ; do
     R1=${fq_base}.r1.fastq
     R2=${fq_base}.r2.fastq
-    cp test-data/$R1 $wd/$R1
-    cp test-data/$R2 $wd/$R2
+    cp $(dirname $0)/test-data/$R1 $wd/$R1
+    cp $(dirname $0)/test-data/$R2 $wd/$R2
 done
 cd $wd
 
