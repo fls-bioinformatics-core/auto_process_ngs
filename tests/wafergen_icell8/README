@@ -7,6 +7,8 @@ following associated barcodes and numbers of read pairs:
 GGCTGGTAGGT	63 read pairs
 GGTTACTCGGC	 9 read pairs
 GTCGTCGCATC	49 read pairs
+CCAGTTCAGGA	665 read pairs
+GGTAATAATAA	869 read pairs
 
 The `icell8_qc_pipeline.sh` script implements the QC pipeline
 protocol as a shell script to allow independent verification of
