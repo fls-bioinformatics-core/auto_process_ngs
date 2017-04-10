@@ -1,0 +1,19 @@
+Test data for Wafergen ICell8 QC pipeline
+=========================================
+
+The test data consists of an R1/R2 pair of FASTQ files with the
+following associated barcodes and numbers of read pairs:
+
+GGCTGGTAGGT	63 read pairs
+GGTTACTCGGC	 9 read pairs
+GTCGTCGCATC	49 read pairs
+
+The `icell8_qc_pipeline.sh` script implements the QC pipeline
+protocol as a shell script to allow independent verification of
+the outputs from the pipeline.
+
+The pipeline requires the following external programs:
+
+- cutadapt
+- fastq_screen
+- bowtie/bowtie2
