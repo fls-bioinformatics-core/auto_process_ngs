@@ -17,3 +17,10 @@ The pipeline requires the following external programs:
 - cutadapt
 - fastq_screen
 - bowtie/bowtie2
+
+Also it needs the mammalian and contaminant Fastqscreen conf files
+plus the relevant genome indexes.
+
+To run on the test data do e.g.:
+
+    ./icell8_qc_pipeline.sh -m ~/data/mammalian_genomes.conf -c ~/data/contaminant_genomes.conf

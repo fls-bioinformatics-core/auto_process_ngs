@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # ICell8 QC pipeline implemented as a shell script for testing
 
@@ -6,6 +6,7 @@
 FASTQ_NAMES="icell8"
 FASTQ_SCREEN_MAMMALIAN_CONF=
 FASTQ_SCREEN_CONTAMINANTS_CONF=
+OUTDIR="test.out"
 
 function usage() {
     echo "Usage: $(basename $0) options"
@@ -14,9 +15,10 @@ function usage() {
     echo "  -n FASTQ_NAMES"
     echo "  -m FASTQ_SCREEN_MAMMALIAN_CONF"
     echo "  -c FASTQ_SCREEN_CONTAMINANTS_CONF"
+    echo "  -o OUTDIR"
 }
 
-while getopts ":n:m:c:h" opt ; do
+while getopts ":n:m:c:o:h" opt ; do
     case "$opt" in
 	n)
 	    FASTQ_NAMES="${OPTARG}"
@@ -26,6 +28,9 @@ while getopts ":n:m:c:h" opt ; do
 	    ;;
 	c)
 	    FASTQ_SCREEN_CONTAMINANTS_CONF="${OPTARG}"
+	    ;;
+	o)
+	    OUTDIR="{OPTARG}"
 	    ;;
 	h)
 	    usage
@@ -248,5 +253,17 @@ paste \
     stats.trimmed \
     stats.contaminants | \
     cut -f1-3,5-6,8-9,11-12 >>stats
+cd ..
+
+# Copy to final location
+if [ -d "$OUTDIR" ] ; then
+    echo Removing existing directory $OUTDIR
+    rm -f $OUTDIR/*
+    rmdir $OUTDIR
+fi
+echo Copy outputs to $OUTDIR
+mkdir $OUTDIR
+mv $wd/* $OUTDIR
+rmdir $wd
 ##
 #
