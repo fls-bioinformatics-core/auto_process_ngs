@@ -19,6 +19,7 @@ import sys
 import logging
 import argparse
 import glob
+import shutil
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
 from bcftbx.IlluminaData import IlluminaData
@@ -141,6 +142,9 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    p.add_argument('--force',action='store_true',
+                   dest='force',default=False,
+                   help="force overwrite of existing outputs")
     args = p.parse_args()
 
     # Deal with module files
@@ -234,9 +238,14 @@ if __name__ == "__main__":
     # Make top-level output dirs
     icell8_dir = os.path.abspath(args.outdir)
     if os.path.exists(icell8_dir):
-        logging.fatal("Output destination '%s': already exists" %
-                      icell8_dir)
-        sys.exit(1)
+        if not args.force:
+            logging.fatal("Output destination '%s': already exists "
+                          "(remove or use --force to overwrite)" %
+                          icell8_dir)
+            sys.exit(1)
+        logging.warning("Removing existing output destination '%s'" %
+                        icell8_dir)
+        shutil.rmtree(icell8_dir)
     log_dir = os.path.join(icell8_dir,"logs")
     stats_dir = os.path.join(icell8_dir,"stats")
     scripts_dir = os.path.join(icell8_dir,"scripts")
@@ -292,7 +301,8 @@ if __name__ == "__main__":
                              '-w',well_list,
                              '-b',batch_basename,
                              '-o',filter_dir,
-                             '-m','none')
+                             '-m','none',
+                             '--filter')
         filter_cmd.add_args(*pair)
         # Submit the job
         job = quality_filter.add(filter_cmd,
@@ -465,8 +475,7 @@ if __name__ == "__main__":
         split_cmd = Command('split_icell8_fastqs.py',
                             '-o',barcoded_fastqs_dir,
                             '-b',batch_basename,
-                            '-m','barcodes',
-                            '--no-filter')
+                            '-m','barcodes')
         split_cmd.add_args(*pair)
         # Submit the job
         job = split_barcodes.add(split_cmd,
@@ -512,8 +521,7 @@ if __name__ == "__main__":
         merge_cmd = Command('split_icell8_fastqs.py',
                             '-o',final_fastqs_dir,
                             '-b',basename,
-                            '-m','barcodes',
-                            '-n')
+                            '-m','barcodes')
         for barcode in barcode_group:
             print "-- %s" % barcode
             merge_cmd.add_args(*fastq_groups[barcode])
