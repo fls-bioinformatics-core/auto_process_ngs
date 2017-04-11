@@ -147,9 +147,8 @@ def pass_quality_filter(seq,cutoff):
 def main():
     # Handle the command line
     p = argparse.ArgumentParser()
-    p.add_argument("FQ_R1",help="R1 FASTQ file")
-    p.add_argument("FQ_R2",help="Matching R2 FASTQ file")
-    p.add_argument("FQ",nargs='*',help="Additional FASTQ file pairs")
+    p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
+                   help="FASTQ file pairs")
     p.add_argument("-w","--well-list",
                    dest="well_list_file",default=None,
                    help="iCell8 'well list' file")
@@ -207,10 +206,7 @@ def main():
     filtered_counts = {}
 
     # Input Fastqs
-    fastqs = [args.FQ_R1,args.FQ_R2]
-    for fq in args.FQ:
-        fastqs.append(fq)
-    fastqs = pair_fastqs(fastqs)[0]
+    fastqs = pair_fastqs([fq for fq in args.fastqs])[0]
 
     # Output Fastqs
     output_fqs = BufferedOutputFiles(base_dir=args.out_dir)
