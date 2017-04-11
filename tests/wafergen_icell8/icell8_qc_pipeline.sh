@@ -205,6 +205,8 @@ for fq_base in $FASTQ_NAMES ; do
     zcat $(dirname $0)/test-data/$R1.gz >$wd/$R1
     zcat $(dirname $0)/test-data/$R2.gz >$wd/$R2
 done
+grep -v "^Row" $(dirname $0)/test-data/well_list.txt | sort -k 6 | cut -f5 >$wd/samples
+grep -v "^Row" $(dirname $0)/test-data/well_list.txt | sort -k 6 | cut -f6 >$wd/barcodes
 cd $wd
 
 # Process supplied FASTQs
@@ -236,23 +238,22 @@ for fq_base in $FASTQ_NAMES ; do
 done
 
 # Collect counts for each stage
-echo "*** Initial statistics ***"
+echo "Counting reads from each stage for statistics"
 fastq_stats $FASTQS_IN >stats.initial
-echo "*** Post quality filter statistics ***"
 fastq_stats $FILTERED_FASTQS >stats.filtered
-echo "*** Post trimming statistics ***"
 fastq_stats $TRIMMED_FASTQS >stats.trimmed
-echo "*** Post contaminant filter statistics ***"
 fastq_stats $CONTAMINANT_FILTERED_FASTQS >stats.contaminants
 
 # Combine stats
-echo -e "#Barcodes\tNreads_initial\tUMIs_initial\tNreads_filtered\tUMIs_filtered\tNreads_trimmed\tUMIs_trimmed\tNreads_final\tUMIs_final" >stats
+echo -e "#Barcode\tSample\tNreads\tDistinct_UMIs\tNreads_quality_filtered\tDistinct_UMIs_quality_filtered\tNreads_trimmed\tDistinct_UMIs_trimmed\tNreads_contaminant_filtered\tDistinct_UMIs_contaminant_filtered" >stats
 paste \
+    barcodes \
+    samples \
     stats.initial \
     stats.filtered \
     stats.trimmed \
     stats.contaminants | \
-    cut -f1-3,5-6,8-9,11-12 >>stats
+    cut -f1-2,4-5,7-8,10-11,13-14 >>stats
 cd ..
 
 # Copy to final location
