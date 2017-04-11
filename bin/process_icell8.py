@@ -107,10 +107,10 @@ if __name__ == "__main__":
                    help="fastq_screen 'conf' file with the "
                    "'contaminant' genome indices")
     p.add_argument("-a","--aligner",
-                   dest="aligner",default="bowtie2",
+                   dest="aligner",default=None,
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
-                   "'bowtie2')")
+                   "don't specify the aligner)")
     p.add_argument("-n","--threads",type=int,
                    dest="threads",default=1,
                    help="number of threads to use with fastq_screen "
@@ -409,9 +409,10 @@ if __name__ == "__main__":
             '-p',os.path.abspath(args.preferred_conf),
             '-c',os.path.abspath(args.contaminants_conf),
             '-o',contaminant_filter_dir,
-            '-a',args.aligner,
-            '-n',args.threads,
-            fqr1_in,fqr2_in)
+            '-n',args.threads)
+        if args.aligner is not None:
+            contaminant_filter_cmd.add_args('-a',args.aligner)
+        contaminant_filter_cmd.add_args(fqr1_in,fqr2_in)
         # Submit the job
         job = contaminant_filter.add(
             contaminant_filter_cmd,
