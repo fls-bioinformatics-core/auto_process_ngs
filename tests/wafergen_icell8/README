@@ -1,5 +1,8 @@
-Test data for Wafergen ICell8 QC pipeline
-=========================================
+Test data and scripts for Wafergen ICell8 QC pipeline
+=====================================================
+
+Test data
+---------
 
 The test data consists of an R1/R2 pair of FASTQ files with the
 following associated barcodes and numbers of read pairs:
@@ -11,6 +14,9 @@ CCAGTTCAGGA	665 read pairs
 GGTAATAATAA	869 read pairs
 
 There is also a small "well list" file for these barcodes.
+
+Test scripts
+------------
 
 The `icell8_qc_pipeline.sh` script implements the QC pipeline
 protocol as a shell script to allow independent verification of
@@ -29,6 +35,10 @@ To run on the test data do e.g.:
 
     ./icell8_qc_pipeline.sh -m ~/data/mammalian_genomes.conf -c ~/data/contaminant_genomes.conf
 
-To run the actual pipeline on the test data do e.g.
+To run the actual pipeline on the test data for comparison do e.g.
 
    process_icell8.py -o testrun -p ~/data/mammalian_genomes.conf -c ~/data/contaminant_genomes.conf test-data/well_list.txt test-data/icell8.r1.fastq test-data/icell8.r2.fastq
+
+The `icell8_barcodes.sh` script implements the barcode and UMI
+counting as a shell script to allow verification of the outputs
+from the pipeline.
