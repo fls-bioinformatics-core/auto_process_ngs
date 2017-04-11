@@ -10,6 +10,8 @@ GTCGTCGCATC	49 read pairs
 CCAGTTCAGGA	665 read pairs
 GGTAATAATAA	869 read pairs
 
+There is also a small "well list" file for these barcodes.
+
 The `icell8_qc_pipeline.sh` script implements the QC pipeline
 protocol as a shell script to allow independent verification of
 the outputs from the pipeline.
@@ -26,3 +28,7 @@ plus the relevant genome indexes.
 To run on the test data do e.g.:
 
     ./icell8_qc_pipeline.sh -m ~/data/mammalian_genomes.conf -c ~/data/contaminant_genomes.conf
+
+To run the actual pipeline on the test data do e.g.
+
+   process_icell8.py -o testrun -p ~/data/mammalian_genomes.conf -c ~/data/contaminant_genomes.conf test-data/well_list.txt test-data/icell8.r1.fastq test-data/icell8.r2.fastq

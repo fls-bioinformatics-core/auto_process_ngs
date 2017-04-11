@@ -1,0 +1,6 @@
+Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
+42	9	True	True	ESC2	GGCTGGTAGGT	Good	1	0	577		23		13271		1		0.9555001	0.9555001	1	1	174	223	A1		Pos85_Hoechst_H02.tif	Pos85_TexasRed_H02.tif
+47	7	True	True	d2.2	GGTTACTCGGC	Good	1	0	414		47		19458		0.9880684		1	1	1	3	135	171	B1		Pos85_Hoechst_H02.tif	Pos85_TexasRed_H02.tif
+48	7	True	True	d2.2	GTCGTCGCATC	Good	1	0	268		24		6432		1		1	1	1	3	150	186	B1		Pos97_Hoechst_I02.tif	Pos97_TexasRed_I02.tif
+26	71	True	True	d2.3	CCAGTTCAGGA	Good	1	0	315		27		8505		1		1	1	1	6	106	133	C2		Pos59_Hoechst_E12.tif	Pos59_TexasRed_E12.tif
+44	57	True	True	ESC2	GGTAATAATAA	Good	1	0	326		41		13366		1		1	1	1	1	203	257	A1		Pos93_Hoechst_H10.tif	Pos93_TexasRed_H10.tif
