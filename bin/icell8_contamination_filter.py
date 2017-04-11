@@ -44,7 +44,7 @@ logging.basicConfig(format='%(levelname) 8s: %(message)s')
 ######################################################################
 
 def fastq_screen_tag(conf_file,fastq_in,out_dir,
-                     aligner="bowtie2",threads=1,
+                     aligner=None,threads=1,
                      tempdir=None):
     """
     Run 'fastq_screen' and output tagged fastq file
@@ -57,7 +57,7 @@ def fastq_screen_tag(conf_file,fastq_in,out_dir,
       out_dir (str): path to the output directory to put
         the tagged FASTQ in
       aligner (str): optional, name of the aligner to pass
-        to fastq_screen (default: 'bowtie2')
+        to fastq_screen (default: don't specify the aligner)
       threads (int): optional, the number of threads to
         use when running fastq_screen (default: 1)
       tempdir (str): optional, directory to create temporary
@@ -76,9 +76,10 @@ def fastq_screen_tag(conf_file,fastq_in,out_dir,
         '--threads',threads,
         '--conf',conf_file,
         '--tag',
-        '--outdir',work_dir,
-        '--aligner',args.aligner,
-        fastq_in)
+        '--outdir',work_dir)
+    if args.aligner is not None:
+        fastq_screen_cmd.add_args('--aligner',args.aligner)
+    fastq_screen_cmd.add_args(fastq_in)
     print "Running %s" % fastq_screen_cmd
     # Run the command
     exit_code = fastq_screen_cmd.run_subprocess(working_dir=work_dir)
@@ -162,10 +163,10 @@ if __name__ == "__main__":
                    help="fastq_screen 'conf' file with the "
                    "'contaminant' genome indices")
     p.add_argument("-a","--aligner",
-                   dest="aligner",default="barcodes",
+                   dest="aligner",default=None,
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
-                   "'bowtie2')")
+                   "don't specify an aligner)")
     p.add_argument("-n","--threads",
                    type=int,default=1,
                    help="number of threads to run fastq_screen with "
@@ -185,7 +186,12 @@ if __name__ == "__main__":
         contaminants_conf = os.path.abspath(contaminants_conf)
 
     # Check for underlying programs
-    for prog in ("fastq_screen",args.aligner):
+    required = ["fastq_screen"]
+    if args.aligner is not None:
+        required.append(args.aligner)
+    else:
+        logging.warning("Aligner not specified, cannot check")
+    for prog in required:
         if find_program(prog) is None:
             logging.critical("couldn't find '%s'" % prog)
             sys.exit(1)
