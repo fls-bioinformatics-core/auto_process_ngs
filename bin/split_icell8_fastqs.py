@@ -173,10 +173,10 @@ def main():
                    dest="out_dir",default=None,
                    help="directory to write output FASTQ files to "
                    "(default: current directory)")
-    p.add_argument("-n","--no-filter",
-                   dest='no_filter',action='store_true',
-                   help="don't filter reads by barcode and UMI "
-                   "quality (default: do filter reads)")
+    p.add_argument("-f","--filter",
+                   dest='do_filter',action='store_true',
+                   help="filter reads by barcode and UMI quality "
+                   "(default: don't filter reads)")
     args = p.parse_args()
 
     # Convert quality cutoffs to character encoding
@@ -192,7 +192,7 @@ def main():
     print "%d expected barcodes" % len(expected_barcodes)
 
     # Filtering mode
-    do_filter = not args.no_filter
+    do_filter = args.do_filter
 
     # Splitting mode
     splitting_mode = args.splitting_mode
