@@ -22,6 +22,7 @@ import glob
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
 from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
@@ -87,6 +88,8 @@ if __name__ == "__main__":
         "trim reads, perform contaminant filtering and split by "
         "barcode.")
     p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
+    p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
+                   help="FASTQ file pairs")
     p.add_argument("--unaligned",
                    dest="unaligned_dir",default="bcl2fastq",
                    help="'unaligned' dir with output from "
@@ -198,15 +201,21 @@ if __name__ == "__main__":
             print "-- %s" % modulefile
 
     # Get the input FASTQ file pairs
-    illumina_data = IlluminaData(os.getcwd(),
-                                 unaligned_dir=args.unaligned_dir)
     fastqs = []
-    for project in illumina_data.projects:
-        for sample in project.samples:
-            for fq in sample.fastq:
-                fastqs.append(os.path.join(sample.dirn,fq))
+    try:
+        illumina_data = IlluminaData(os.getcwd(),
+                                     unaligned_dir=args.unaligned_dir)
+        for project in illumina_data.projects:
+            for sample in project.samples:
+                for fq in sample.fastq:
+                    fastqs.append(os.path.join(sample.dirn,fq))
+    except IlluminaDataError:
+        logging.warning("Couldn't find FASTQS in directory '%s'" %
+                        args.unaligned_dir)
+    for fq in args.fastqs:
+        fastqs.append(os.path.abspath(fq))
     if not fastqs:
-        logging.fatal("No FASTQs found in %s" % args.unaligned_dir)
+        logging.fatal("No FASTQs found")
         sys.exit(1)
 
     # Basename for output fastqs and job names etc
