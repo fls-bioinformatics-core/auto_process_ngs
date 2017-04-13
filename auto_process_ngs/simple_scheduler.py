@@ -587,6 +587,28 @@ class SchedulerGroup:
                 return False
         return True
 
+    @property
+    def exit_code(self):
+        """Return exit code for the group
+
+        If all jobs have completed with status zero
+        then returns zero, otherwise returns a count
+        of jobs which have non-zero status.
+
+        If the group hasn't completed then returns
+        None.
+        """
+        exit_code = 0
+        if self.completed:
+            for job in self.__jobs:
+                if not job.completed:
+                    return None
+                if job.exit_code != 0:
+                    exit_code += 1
+            return exit_code
+        else:
+            return None
+
     def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[]):
         """Add a request to run a job
         
