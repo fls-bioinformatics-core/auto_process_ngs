@@ -19,7 +19,9 @@ import sys
 import logging
 import argparse
 import glob
+import time
 import shutil
+import uuid
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
 from bcftbx.IlluminaData import IlluminaData
@@ -28,6 +30,7 @@ from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
+from auto_process_ngs.simple_scheduler import SchedulerGroup
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import AnalysisFastq
 import auto_process_ngs.envmod as envmod
@@ -43,12 +46,390 @@ __settings = auto_process_ngs.settings.Settings()
 DEFAULT_BATCH_SIZE = 5000000
 
 ######################################################################
+# Generic pipeline base classes
+######################################################################
+
+class PipelineStage(object):
+    """
+    """
+    def __init__(self,name):
+        self._name = str(name)
+        self._commands = []
+    def name(self):
+        return self._name.lower().replace(' ','_')
+    def add(self,pipeline_job):
+        self._commands.append(pipeline_job)
+    def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
+            scripts_dir=None,wait_for=(),async=True,use_wrapper=False):
+        # Generate commands to run
+        cmds = []
+        for command in self._commands:
+            if use_wrapper:
+                script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
+                cmd = Command('/bin/bash',script_file)
+            else:
+                cmd = command.cmd()
+            cmds.append(cmd)
+        # Run the commands
+        if sched is not None:
+            # Use the scheduler
+            use_group = (len(cmds)!=1)
+            if use_group:
+                # Run as a group
+                group = sched.group(self.name())
+                for cmd in cmds:
+                    name = "%s.%s" % (self.name(),uuid.uuid4())
+                    group.add(cmd,
+                              wd=working_dir,
+                              name=name,
+                              runner=runner,
+                              log_dir=log_dir,
+                              wait_for=wait_for)
+                group.close()
+                callback_name = group.name
+                callback_function = check_status
+            else:
+                # Run a single job
+                cmd = cmds[0]
+                name = "%s.%s" % (self.name(),uuid.uuid4())
+                job = sched.submit(cmd,
+                                   wd=working_dir,
+                                   name=name,
+                                   runner=runner,
+                                   log_dir=log_dir,
+                                   wait_for=wait_for)
+                callback_name = job.name
+                callback_function = check_status
+            # If asynchronous then setup callback and
+            # return immediately
+            if async:
+                sched.callback("%s" % self._name,
+                               callback_function,
+                               wait_for=(callback_name,))
+            else:
+                # Wait for job or group to complete before returning
+                sched.wait_for((callback_name,))
+                if use_group:
+                    exit_code = max([j.exit_code for j in group.jobs])
+                else:
+                    exit_code = job.exit_code
+                if exit_code != 0:
+                    logging.warning("%s: failed (exit code %s)" %
+                                    (self._name,exit_code))
+            if use_group:
+                return group
+            else:
+                return job
+        else:
+            # Run each stage locally
+            for cmd in cmds:
+                cmd.run_subprocess(working_dir=working_dir)
+
+class PipelineCommand(object):
+    """
+    """
+    def __init__(self,name):
+        self._name = str(name)
+    def cmd(self):
+        # Build the command
+        # Must be implemented by the subclass and return a
+        # Command instance
+        raise NotImplementedError("Subclass must implement 'cmd' method")
+    def name(self):
+        return self._name.lower().replace(' ','_')
+    def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
+        # Wrap in a script
+        if scripts_dir is None:
+            scripts_dir = os.getcwd()
+        script_file = os.path.join(scripts_dir,"%s.%s.sh" % (self.name(),
+                                                             uuid.uuid4()))
+        self.cmd().make_wrapper_script(filen=script_file,
+                                       shell=shell)
+        return script_file
+
+######################################################################
+# ICell8 pipeline commands
+######################################################################
+
+class ICell8Statistics(PipelineCommand):
+    """
+    """
+    def __init__(self,name,fastqs,stats_file,well_list=None,
+                 suffix=None,append=False):
+        PipelineCommand.__init__(self,name)
+        self._fastqs = fastqs
+        self._stats_file = os.path.abspath(stats_file)
+        self._well_list = well_list
+        if self._well_list is not None:
+            self._well_list = os.path.abspath(self._well_list)
+        self._append = append
+        self._suffix = suffix
+    def cmd(self):
+        # Build command
+        cmd = Command('icell8_stats.py',
+                      '-f',self._stats_file)
+        if self._well_list:
+            cmd.add_args('-w',self._well_list)
+        if self._suffix:
+            cmd.add_args('--suffix',self._suffix)
+        if self._append:
+            cmd.add_args('--append',)
+        cmd.add_args(*self._fastqs)
+        return cmd
+
+class SplitAndFilterFastqPair(PipelineCommand):
+    """
+    """
+    def __init__(self,name,fastq_pair,filter_dir,well_list=None,
+                 basename=None,mode='none',filter=False):
+        PipelineCommand.__init__(self,name)
+        self._fastq_pair = fastq_pair
+        self._filter_dir = os.path.abspath(filter_dir)
+        self._well_list = well_list
+        if self._well_list is not None:
+            self._well_list = os.path.abspath(self._well_list)
+        self._basename = basename
+        self._mode = mode
+        self._filter = filter
+    def cmd(self):
+        # Build command
+        cmd = Command('split_icell8_fastqs.py',
+                      '-o',self._filter_dir,
+                      '-b',self._basename)
+        if self._well_list:
+            cmd.add_args('-w',self._well_list)
+        if self._mode:
+            cmd.add_args('-m',self._mode)
+        if self._filter:
+            cmd.add_args('--filter')
+        cmd.add_args(*self._fastq_pair)
+        return cmd
+
+class BatchFastqs(PipelineCommand):
+    """
+    """
+    def __init__(self,name,fastqs,batch_dir,basename,
+                 batch_size=None,merge=False):
+        PipelineCommand.__init__(self,name)
+        self._fastqs = fastqs
+        self._batch_dir = os.path.abspath(batch_dir)
+        self._basename = basename
+        self._batch_size = batch_size
+        self._merge = merge
+    def cmd(self):
+        # Build command
+        cmd = Command('batch_fastqs.py',
+                      '-o',self._batch_dir,
+                      '-b',self._basename)
+        if self._batch_size:
+            cmd.add_args('-s',self._batch_size)
+        if self._merge:
+            cmd.add_args('-m')
+        cmd.add_args(*self._fastqs)
+        return cmd
+
+class TrimFastqPair(PipelineCommand):
+    """
+    """
+    def __init__(self,name,fastq_pair,trim_dir):
+        PipelineCommand.__init__(self,name)
+        self._fastq_pair = fastq_pair
+        self._trim_dir = os.path.abspath(trim_dir)
+    def cmd(self):
+        # Generate output file pair names
+        fastq_pair_out = [os.path.join(self._trim_dir,
+                                       strip_ext(os.path.basename(fq),'.fastq')
+                                       + '.trimmed.fastq')
+                          for fq in self._fastq_pair]
+        # Build command
+        cmd = Command(
+            'cutadapt',
+            '-a','AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT',
+            '-a','AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT',
+            '-a','AAAAAAAA',
+            '-a','TTTTTTTT',
+            '-m',20,
+            '--trim-n',
+            '--max-n',0.7,
+            '-q',25)
+        # NB reverse R1 and R2 for input and output
+        cmd.add_args('-o',fastq_pair_out[1],
+                     '-p',fastq_pair_out[0])
+        cmd.add_args(self._fastq_pair[1],
+                     self._fastq_pair[0])
+        return cmd
+
+class ContaminantFilterFastqPair(PipelineCommand):
+    """
+    """
+    def __init__(self,name,fastq_pair,filter_dir,
+                 preferred_conf,contaminants_conf,
+                 aligner=None,threads=None):
+        PipelineCommand.__init__(self,name)
+        self._fastq_pair = fastq_pair
+        self._filter_dir = os.path.abspath(filter_dir)
+        self._preferred_conf = os.path.abspath(preferred_conf)
+        self._contaminants_conf = os.path.abspath(contaminants_conf)
+        self._aligner = aligner
+        self._threads = threads
+    def cmd(self):
+        # Build the command
+        cmd = Command(
+            'icell8_contamination_filter.py',
+            '-p',self._preferred_conf,
+            '-c',self._contaminants_conf,
+            '-o',self._filter_dir)
+        if self._threads:
+            cmd.add_args('-n',self._threads)
+        if self._aligner is not None:
+            cmd.add_args('-a',self._aligner)
+        cmd.add_args(*self._fastq_pair)
+        return cmd
+
+######################################################################
+# ICell8 pipeline stages
+######################################################################
+
+class GetICell8Stats(PipelineStage):
+    """
+    """
+    def __init__(self,name,*args,**kws):
+        PipelineStage.__init__(self,name)
+        self.add(ICell8Statistics(self._name,
+                                  *args,
+                                  **kws))
+
+class SplitFastqsIntoBatches(PipelineStage):
+    """
+    """
+    def __init__(self,name,*args,**kws):
+        PipelineStage.__init__(self,name)
+        self.add(BatchFastqs(self._name,
+                             *args,
+                             **kws))
+
+class FilterICell8Fastqs(PipelineStage):
+    """
+    """
+    def __init__(self,name,fastqs,filter_dir,well_list=None,
+                 mode='none',filter=False):
+        PipelineStage.__init__(self,name)
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        for fastq_pair in fastq_pairs:
+            basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
+            self.add(SplitAndFilterFastqPair(self._name,
+                                             fastq_pair,
+                                             filter_dir,
+                                             well_list=well_list,
+                                             basename=basename,
+                                             mode=mode,
+                                             filter=filter))
+
+class TrimReads(PipelineStage):
+    """
+    """
+    def __init__(self,name,fastqs,trim_dir):
+        PipelineStage.__init__(self,name)
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        for fastq_pair in fastq_pairs:
+            self.add(TrimFastqPair(self._name,
+                                   fastq_pair,
+                                   trim_dir))
+
+class FilterContaminatedReads(PipelineStage):
+    """
+    """
+    def __init__(self,name,fastqs,filter_dir,preferred_conf,
+                 contaminants_conf,aligner=None,threads=None):
+        PipelineStage.__init__(self,name)
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        for fastq_pair in fastq_pairs:
+            self.add(ContaminantFilterFastqPair(self._name,
+                                                fastq_pair,
+                                                filter_dir,
+                                                preferred_conf,
+                                                contaminants_conf,
+                                                aligner=aligner,
+                                                threads=threads))
+
+class SplitByBarcodes(PipelineStage):
+    """
+    """
+    def __init__(self,name,fastqs,barcodes_dir):
+        PipelineStage.__init__(self,name)
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        for fastq_pair in fastq_pairs:
+            basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
+            self.add(SplitAndFilterFastqPair(self._name,
+                                             fastq_pair,
+                                             barcodes_dir,
+                                             basename=basename,
+                                             mode="barcodes"))
+
+class MergeFastqs(PipelineStage):
+    """
+    """
+    def __init__(self,name,fastqs,unassigned_fastqs,
+                 failed_barcode_fastqs,failed_umi_fastqs,
+                 merge_dir,basename,batch_size=25):
+        PipelineStage.__init__(self,name)
+        # Extract the barcodes from the fastq names
+        barcodes = set()
+        for fq in barcoded_fastqs:
+            barcode = os.path.basename(fq).split('.')[-3]
+            barcodes.add(barcode)
+        barcodes = sorted(list(barcodes))
+        # Group files by barcode
+        fastq_groups = dict()
+        for barcode in barcodes:
+            fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
+                                     fq.endswith("%s.r2.fastq" % barcode)),
+                         fastqs)
+            fastq_groups[barcode] = fqs
+        # Group barcodes into batches
+        barcode_batches = [barcodes[i:i+batch_size]
+                           for i in xrange(0,len(barcodes),batch_size)]
+        # Concat fastqs
+        for i,barcode_batch in enumerate(barcode_batches):
+            batch_name = "barcodes%06d" % i
+            print "Barcode batch: %s" % batch_name
+            fastq_pairs = []
+            for barcode in barcode_batch:
+                print "-- %s" % barcode
+                fastq_pairs.extend(fastq_groups[barcode])
+            self.add(SplitAndFilterFastqPair(self._name,
+                                             fastq_pairs,
+                                             merge_dir,
+                                             basename=basename,
+                                             mode="barcodes"))
+        # Handle unassigned and failed quality reads
+        for fqs in (unassigned_fastqs,
+                    failed_barcode_fastqs,
+                    failed_umi_fastqs):
+            if not fqs:
+                continue
+            self.add(BatchFastqs(self._name,fqs,merge_dir,basename))
+
+######################################################################
 # Functions
 ######################################################################
 
+def collect_fastqs(dirn,pattern):
+    """
+    Return names of Fastqs in a directory which match a glob pattern
+
+    Arguments:
+      dirn (str): path to a directory containing the files
+      pattern (str): a glob pattern to match
+
+    Returns:
+      List: list of matching files
+    """
+    return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
+
 def check_status(name,jobs,sched):
     """
-    Check the exit status of a set of jobs
+    Check the exit status of a set of groups
 
     This function is not called directly, instead it should be
     passed as part of a callback to check the exit status of a
@@ -254,315 +635,152 @@ if __name__ == "__main__":
 
     # Initial stats
     stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
-    icell8_stats_cmd = Command('icell8_stats.py',
-                               '-f',stats_file,
-                               '-w',well_list)
-    icell8_stats_cmd.add_args(*fastqs)
-    initial_stats = sched.submit(icell8_stats_cmd,
-                                 wd=icell8_dir,
-                                 name="initial_stats.%s" % basename,
-                                 log_dir=log_dir)
-    sched.callback("Initial statistics",
-                   check_status,wait_for=(initial_stats.name,))
+    initial_stats = GetICell8Stats("Initial statistics",
+                                   fastqs,stats_file,well_list)
+    initial_stats = initial_stats.run(sched,
+                                      working_dir=icell8_dir,
+                                      log_dir=log_dir)
 
     # Split fastqs into batches
     batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
     mkdir(batch_dir)
-    batch_fastqs_cmd = Command('batch_fastqs.py',
-                               '-s',args.batch_size,
-                               '-o',batch_dir,
-                               '-b',basename)
-    batch_fastqs_cmd.add_args(*fastqs)
-    batch_fastqs = sched.submit(batch_fastqs_cmd,
-                                wd=icell8_dir,
-                                name="batch_fastqs.%s" % basename,
-                                log_dir=log_dir)
-    # Wait for the batching job to complete
-    sched.wait_for((batch_fastqs.name,))
-    if batch_fastqs.exit_code != 0:
-        logging.critical("Fastq batching stage failed (exit code %s)"
-                         % batch_fastqs.exit_code)
-        sys.exit(1)
+    batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
+                                          batch_dir,basename,
+                                          batch_size=args.batch_size)
+    batch_fastqs = batch_fastqs.run(sched,
+                                    working_dir=icell8_dir,
+                                    log_dir=log_dir,
+                                    async=False)
     print "*** Fastq batching stage completed ***"
 
     # Collect the batched files for processing
-    batched_fastqs = glob.glob(os.path.join(batch_dir,"*.B*.r*.fastq"))
+    batched_fastqs = collect_fastqs(batch_dir,"*.B*.r*.fastq")
 
     # Setup the quality filter jobs as a group
-    fastq_pairs = pair_fastqs(batched_fastqs)[0]
     filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
     mkdir(filter_dir)
-    quality_filter = sched.group("quality_filter.%s" % basename)
-    for pair in fastq_pairs:
-        print "-- %s\n   %s" % (pair[0],pair[1])
-        batch_basename = os.path.basename(pair[0])[:-len(".r1.fastq")]
-        print "   %s" % batch_basename
-        filter_cmd = Command('split_icell8_fastqs.py',
-                             '-w',well_list,
-                             '-b',batch_basename,
-                             '-o',filter_dir,
-                             '-m','none',
-                             '--filter')
-        filter_cmd.add_args(*pair)
-        # Submit the job
-        job = quality_filter.add(filter_cmd,
-                                 wd=filter_dir,
-                                 name="quality_filter.%s" %
-                                 batch_basename,
-                                 log_dir=log_dir)
-    quality_filter.close()
-    sched.wait_for((quality_filter.name,))
-    exit_code = max([j.exit_code for j in quality_filter.jobs])
-    if exit_code != 0:
-        logging.critical("Quality filtering stage failed (exit code %s)"
-                         % exit_code)
-        sys.exit(1)
+    quality_filter = FilterICell8Fastqs("Quality filter Fastqs",
+                                        batched_fastqs,
+                                        filter_dir,
+                                        well_list=well_list,
+                                        mode='none',
+                                        filter=True)
+    quality_filter = quality_filter.run(sched,
+                                        working_dir=filter_dir,
+                                        log_dir=log_dir,
+                                        async=False)
     print "*** Quality filtering stage completed ***"
 
     # Collect the post-filtering files for stats and read trimming
-    filtered_fastqs = glob.glob(os.path.join(filter_dir,
-                                             "*.B*.filtered.r*.fastq"))
-
-    # Post quality filter stats
-    icell8_stats_cmd = Command('icell8_stats.py',
-                               '-f',stats_file,
-                               '--suffix','_quality_filtered',
-                               '--append',)
-    icell8_stats_cmd.add_args(*filtered_fastqs)
-    icell8_stats_script = os.path.join(scripts_dir,
-                                       "icell8_stats_quality_filtered.sh")
-    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
-                                         shell="/bin/bash")
-    filter_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
-                                wd=icell8_dir,
-                                name="post_quality_filter_stats.%s" %
-                                basename,
-                                log_dir=log_dir,
-                                wait_for=(initial_stats.name,))
-    sched.callback("Post-quality filter statistics",
-                   check_status,wait_for=(filter_stats.name,))
+    filtered_fastqs = collect_fastqs(filter_dir,"*.B*.filtered.r*.fastq")
     
+    # Collect the files with unassigned and failed quality reads
+    unassigned_fastqs = collect_fastqs(filter_dir,"*.unassigned.r*.fastq")
+    failed_barcode_fastqs = collect_fastqs(filter_dir,"*.failed_barcode.r*.fastq")
+    failed_umi_fastqs = collect_fastqs(filter_dir,"*.failed_umi.r*.fastq")
+    
+    # Post quality filter stats
+    filter_stats = GetICell8Stats("Post-quality filter statistics",
+                                  filtered_fastqs,stats_file,
+                                  suffix="_quality_filtered",
+                                  append=True)
+    filter_stats = filter_stats.run(sched,
+                                    working_dir=icell8_dir,
+                                    log_dir=log_dir,
+                                    scripts_dir=scripts_dir,
+                                    use_wrapper=True,
+                                    wait_for=(initial_stats.name,))
+
     # Set up the cutadapt jobs as a group
-    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
     mkdir(trim_dir)
-    trim_reads = sched.group("trim_reads.%s" % basename)
-    for pair in fastq_pairs:
-        print "-- %s\n   %s" % (pair[0],pair[1])
-        fqr1_in,fqr2_in = pair
-        cutadapt_cmd = Command(
-            'cutadapt',
-            '-a','AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT',
-            '-a','AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT',
-            '-a','AAAAAAAA',
-            '-a','TTTTTTTT',
-            '-m',20,
-            '--trim-n',
-            '--max-n',0.7,
-            '-q',25)
-        # Output pair (nb R2 then R1)
-        fqr1_out = strip_ext(os.path.basename(fqr1_in),'.fastq') \
-                   + '.trimmed.fastq'
-        fqr2_out = strip_ext(os.path.basename(fqr2_in),'.fastq') \
-                   + '.trimmed.fastq'
-        cutadapt_cmd.add_args('-o',fqr2_out,
-                              '-p',fqr1_out)
-        # Input pair (nb R2 then R1)
-        cutadapt_cmd.add_args(fqr2_in,fqr1_in)
-        # Submit the job
-        job = trim_reads.add(cutadapt_cmd,
-                             wd=trim_dir,
-                             name="cutadapt.%s" % os.path.basename(fqr1_in),
-                             log_dir=log_dir)
-    trim_reads.close()
-    sched.wait_for((trim_reads.name,))
-    exit_code = max([j.exit_code for j in trim_reads.jobs])
-    if exit_code != 0:
-        logging.critical("Read trimming stage failed (exit code %s)"
-                         % exit_code)
-        sys.exit(1)
+    trim_reads = TrimReads("Read trimming",filtered_fastqs,trim_dir)
+    trim_reads = trim_reads.run(sched,
+                                working_dir=trim_dir,
+                                log_dir=log_dir,
+                                async=False)
     print "*** Read trimming stage completed ***"
 
     # Collect the files for stats and contamination filter step
-    trimmed_fastqs = glob.glob(os.path.join(trim_dir,"*.trimmed.fastq"))
+    trimmed_fastqs = collect_fastqs(trim_dir,"*.trimmed.fastq")
 
     # Post read trimming stats
-    icell8_stats_cmd = Command('icell8_stats.py',
-                               '-f',stats_file,
-                               '--suffix','_trimmed',
-                               '--append',)
-    icell8_stats_cmd.add_args(*trimmed_fastqs)
-    icell8_stats_script = os.path.join(scripts_dir,
-                                       "icell8_stats_trimmed.sh")
-    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
-                                         shell="/bin/bash")
-    trim_stats = sched.submit(Command('/bin/bash',icell8_stats_script),
-                              wd=icell8_dir,
-                              name="post_trimming_stats.%s" %
-                              basename,
-                              log_dir=log_dir,
-                              wait_for=(filter_stats.name,))
-    sched.callback("Post-trimming statistics",
-                   check_status,wait_for=(trim_stats.name,))
+    trim_stats = GetICell8Stats("Post-trimming statistics",
+                                trimmed_fastqs,stats_file,
+                                suffix="_trimmed",
+                                append=True)
+    trim_stats = trim_stats.run(sched,
+                                working_dir=icell8_dir,
+                                log_dir=log_dir,
+                                scripts_dir=scripts_dir,
+                                use_wrapper=True,
+                                wait_for=(filter_stats.name,))
 
     # Set up the contaminant filter jobs as a group
-    fastq_pairs = pair_fastqs(trimmed_fastqs)[0]
     contaminant_filter_dir = os.path.join(icell8_dir,
                                           "_fastqs.contaminant_filter")
     mkdir(contaminant_filter_dir)
-    contaminant_filter = sched.group("contaminant_filter.%s" % basename)
-    for pair in fastq_pairs:
-        print "-- %s\n   %s" % (pair[0],pair[1])
-        fqr1_in,fqr2_in = pair
-        contaminant_filter_cmd = Command(
-            'icell8_contamination_filter.py',
-            '-p',os.path.abspath(args.preferred_conf),
-            '-c',os.path.abspath(args.contaminants_conf),
-            '-o',contaminant_filter_dir,
-            '-n',args.threads)
-        if args.aligner is not None:
-            contaminant_filter_cmd.add_args('-a',args.aligner)
-        contaminant_filter_cmd.add_args(fqr1_in,fqr2_in)
-        # Submit the job
-        job = contaminant_filter.add(
-            contaminant_filter_cmd,
-            wd=contaminant_filter_dir,
-            name="contaminant_filter.%s" %
-            os.path.basename(fqr1_in),
-            log_dir=log_dir,
-            runner=runners['contaminant_filter'])
-    contaminant_filter.close()
-    sched.wait_for((contaminant_filter.name,))
-    exit_code = max([j.exit_code for j in contaminant_filter.jobs])
-    if exit_code != 0:
-        logging.critical("Contaminant filtering stage failed (exit code %s)"
-                         % exit_code)
-        sys.exit(exit_code)
+    contaminant_filter = FilterContaminatedReads("Contaminant filtering",
+                                                 trimmed_fastqs,
+                                                 contaminant_filter_dir,
+                                                 args.preferred_conf,
+                                                 args.contaminants_conf,
+                                                 aligner=args.aligner,
+                                                 threads=args.threads)
+    contaminant_filter = contaminant_filter.run(
+        sched,
+        working_dir=contaminant_filter_dir,
+        scripts_dir=scripts_dir,
+        log_dir=log_dir,
+        runner=runners['contaminant_filter'],
+        use_wrapper=True,
+        async=False)
     print "*** Contaminant filtering stage completed ***"
 
     # Post contaminant filter stats
-    filtered_fastqs = glob.glob(os.path.join(contaminant_filter_dir,
-                                             "*.trimmed.filtered.fastq"))
-    icell8_stats_cmd = Command('icell8_stats.py',
-                               '-f',stats_file,
-                               '--suffix','_contaminant_filtered',
-                               '--append',)
-    icell8_stats_cmd.add_args(*filtered_fastqs)
-    icell8_stats_script = os.path.join(scripts_dir,
-                                       "icell8_stats_contaminant_filtered.sh")
-    icell8_stats_cmd.make_wrapper_script(filen=icell8_stats_script,
-                                         shell="/bin/bash")
-    contaminant_filter_stats = sched.submit(
-        Command('/bin/bash',icell8_stats_script),
-        wd=icell8_dir,
-        name="post_contaminant_filter_stats.%s" %
-        basename,
-        log_dir=log_dir,
-        wait_for=(trim_stats.name,))
-    sched.callback("Post-contaminant filter statistics",
-                   check_status,wait_for=(contaminant_filter_stats.name,))
+    filtered_fastqs = collect_fastqs(contaminant_filter_dir,"*.trimmed.filtered.fastq")
+    final_stats = GetICell8Stats("Post-contaminant filter statistics",
+                                 filtered_fastqs,stats_file,
+                                 suffix="_contaminant_filtered",
+                                 append=True)
+    final_stats = final_stats.run(sched,
+                                  working_dir=icell8_dir,
+                                  log_dir=log_dir,
+                                  scripts_dir=scripts_dir,
+                                  use_wrapper=True,
+                                  wait_for=(trim_stats.name,))
 
     # Rebatch reads by barcode
     # First: split each batch by barcode
-    fastq_pairs = pair_fastqs(filtered_fastqs)[0]
     barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.barcodes")
     mkdir(barcoded_fastqs_dir)
-    split_barcodes = sched.group("split_barcodes.%s" % basename)
-    for pair in fastq_pairs:
-        print "-- %s\n   %s" % (pair[0],pair[1])
-        batch_basename = os.path.basename(pair[0])[:-len(".r1.fastq")+1]
-        print "   %s" % batch_basename
-        split_cmd = Command('split_icell8_fastqs.py',
-                            '-o',barcoded_fastqs_dir,
-                            '-b',batch_basename,
-                            '-m','barcodes')
-        split_cmd.add_args(*pair)
-        # Submit the job
-        job = split_barcodes.add(split_cmd,
-                                 wd=barcoded_fastqs_dir,
-                                 name="split_barcodes.%s" %
-                                 batch_basename,
-                                 log_dir=log_dir)
-    split_barcodes.close()
-    sched.wait_for((split_barcodes.name,))
-    exit_code = max([j.exit_code for j in split_barcodes.jobs])
-    if exit_code != 0:
-        logging.critical("Splitting by barcodes stage failed (exit code %s)"
-                         % exit_code)
-        sys.exit(1)
+    split_barcodes = SplitByBarcodes("Split by barcodes",
+                                     filtered_fastqs,
+                                     barcoded_fastqs_dir)
+    split_barcodes = split_barcodes.run(sched,
+                                        working_dir=barcoded_fastqs_dir,
+                                        log_dir=log_dir,
+                                        scripts_dir=scripts_dir,
+                                        use_wrapper=True,
+                                        async=False)
     print "*** Splitting by barcodes stage completed ***"
     # Second: merge across batches
-    barcoded_fastqs = glob.glob(os.path.join(barcoded_fastqs_dir,
-                                             "*.B*.*.fastq"))
-    # Get barcodes
-    barcodes = set()
-    for fq in barcoded_fastqs:
-        barcode = os.path.basename(fq).split('.')[-3]
-        barcodes.add(barcode)
-    barcodes = sorted(list(barcodes))
-    # Group files by barcode
-    fastq_groups = dict()
-    for barcode in barcodes:
-        fastqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
-                                    fq.endswith("%s.r2.fastq" % barcode)),
-                        barcoded_fastqs)
-        fastq_groups[barcode] = fastqs
-    # Group barcodes into subgroups
-    GROUP_LEN = 25
-    barcode_groups = [barcodes[i:i+GROUP_LEN]
-                      for i in xrange(0,len(barcodes),GROUP_LEN)]
+    barcoded_fastqs = collect_fastqs(barcoded_fastqs_dir,"*.B*.*.fastq")
     # Merge (concat) fastqs into single pairs per barcode
     final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
     mkdir(final_fastqs_dir)
-    merge_fastqs = sched.group("merge_fastqs.%s" % basename)
-    for i,barcode_group in enumerate(barcode_groups):
-        group_name = "barcodes%06d" % i
-        print "Barcode group: %s" % group_name
-        merge_cmd = Command('split_icell8_fastqs.py',
-                            '-o',final_fastqs_dir,
-                            '-b',basename,
-                            '-m','barcodes')
-        for barcode in barcode_group:
-            print "-- %s" % barcode
-            merge_cmd.add_args(*fastq_groups[barcode])
-        merge_fastqs_script = os.path.join(scripts_dir,
-                                           "merge_fastqs.%s.sh" %
-                                           group_name)
-        merge_cmd.make_wrapper_script(filen=merge_fastqs_script,
-                                      shell="/bin/bash")
-        job = merge_fastqs.add(Command('/bin/bash',merge_fastqs_script),
-                               wd=icell8_dir,
-                               name="merge_fastqs.%s.%s" % (basename,
-                                                            group_name),
-                               log_dir=log_dir)
-    # Deal with unassigned and failed quality reads
-    for name in ("unassigned","failed_barcode","failed_umi"):
-        fastqs = glob.glob(os.path.join(filter_dir,"*.%s.r*.fastq" % name))
-        if not fastqs:
-            continue
-        merge_cmd = Command('batch_fastqs.py',
-                            '-o',final_fastqs_dir,
-                            '-b','%s.%s' % (basename,name),
-                            '-m')
-        merge_cmd.add_args(*fastqs)
-        merge_fastqs_script = os.path.join(scripts_dir,
-                                           "merge_fastqs.%s.sh" %
-                                           name)
-        merge_cmd.make_wrapper_script(filen=merge_fastqs_script,
-                                      shell="/bin/bash")
-        job = merge_fastqs.add(Command('/bin/bash',merge_fastqs_script),
-                               wd=icell8_dir,
-                               name="merge_fastqs.%s.%s" % (basename,
-                                                            name),
-                               log_dir=log_dir)
-    # Close group and wait for merging barcodes to complete
-    merge_fastqs.close()
-    sched.wait_for((merge_fastqs.name,))
-    exit_code = max([j.exit_code for j in merge_fastqs.jobs])
-    if exit_code != 0:
-        logging.critical("Merging barcoded FASTQs failed (exit code %s)"
-                         % exit_code)
-        sys.exit(exit_code)
+    merge_fastqs = MergeFastqs("Merge Fastqs",
+                               barcoded_fastqs,
+                               unassigned_fastqs,
+                               failed_barcode_fastqs,
+                               failed_umi_fastqs,
+                               final_fastqs_dir,
+                               basename)
+    merge_fastqs = merge_fastqs.run(sched,
+                                    working_dir=icell8_dir,
+                                    log_dir=log_dir,
+                                    use_wrapper=True,
+                                    async=False)
     print "*** Merging barcoded FASTQs stage completed ***"
 
     # Finish
