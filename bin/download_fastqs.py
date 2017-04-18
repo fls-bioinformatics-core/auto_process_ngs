@@ -24,7 +24,17 @@ from urllib2 import urlopen
 import re
 import sys
 import os
-import subprocess
+try:
+    import hashlib
+except ImportError:
+    # hashlib not available, use deprecated md5 module
+    import md5
+
+#######################################################################
+# Constants
+#######################################################################
+
+BLOCKSIZE = 1024*1024
 
 #######################################################################
 # Functions
@@ -49,6 +59,18 @@ def download_file(url,dest):
         status = status + chr(8)*(len(status)+1)
         print status,
     f.close()
+
+def check_md5sum(filen,md5):
+    try:
+        c = hashlib.md5()
+    except NameError:
+        c = md5.new()
+    f = open(filen,'rb')
+    for block in iter(lambda: f.read(BLOCKSIZE),''):
+        c.update(block)
+    c = c.digest()
+    chksum = ("%02x"*len(c)) % tuple(map(ord,c))
+    return (chksum == md5)
 
 #######################################################################
 # Main program
@@ -100,17 +122,23 @@ if __name__ == "__main__":
             chksums[filen] = chksum
     file_list = chksums.keys()
     file_list.sort()
+    # Flag for checking MD5 sums
+    checksum_errors = False
     # Download the files
     print "Downloading %d files" % len(file_list)
     for f in file_list:
-        download_file(os.path.join(url,f),f)
-    print "Running checksums"
-    status = subprocess.call(['md5sum','-c',chksum_file],
-                             stdout=sys.stdout,
-                             stderr=sys.stderr)
-    if status != 0:
+        if os.path.exists(f):
+            print "%s: file exists, skipping download" % f
+        else:
+            download_file(os.path.join(url,f),f)
+        if check_md5sum(f,chksums[f]):
+            print "%s: checksum OK" % f
+        else:
+            print "%s: checksum FAILED" % f
+            checksum_errors = True
+    if checksum_errors:
         sys.stderr.write("ERROR one or more checksums failed, see above\n")
         sys.exit(1)
     else:
-        print "Checksums verified ok"
+        print "All checksums verified ok"
 
