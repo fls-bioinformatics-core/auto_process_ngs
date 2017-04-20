@@ -22,8 +22,10 @@ import glob
 import time
 import shutil
 import uuid
+from collections import Iterator
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
+from bcftbx.utils import AttributeDictionary
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.JobRunner import fetch_runner
@@ -49,24 +51,173 @@ DEFAULT_BATCH_SIZE = 5000000
 # Generic pipeline base classes
 ######################################################################
 
-class PipelineStage(object):
+class FileCollection(Iterator):
     """
     """
-    def __init__(self,name):
+    def __init__(self,dirn,pattern):
+        self._dirn = os.path.abspath(dirn)
+        self._pattern = pattern
+        self._files = None
+        self._idx = None
+    def next(self):
+        if self._files is None:
+            self._idx = 0
+            self._files = collect_fastqs(self._dirn,self._pattern)
+        else:
+            self._idx += 1
+        try:
+            return self._files[self._idx]
+        except IndexError:
+            self._files = None
+            self._idx = None
+            raise StopIteration
+
+class Pipeline(object):
+    """
+    Class to define and run a 'pipeline' of 'tasks'
+
+    A 'pipeline' in this case is a set of 'tasks', some of
+    which may depend on other tasks in the pipeline.
+
+    Example usage:
+
+    >> p = Pipeline()
+    >> t1 = p.add_task(Task1())
+    >> t2 = p.add_task(Task2(),dependencies=(t1,))
+    >> ...
+    >> p.run()
+
+    Tasks will only run when all dependenices have
+    completed (or will run immediately if they don't have
+    any dependencies).
+    """
+    def __init__(self,default_runner=None):
+        self._pending = []
+        self._running = []
+        self._finished = []
+        self._default_runner = default_runner
+    def add_task(self,task,dependencies=(),**kws):
+        self._pending.append((task,dependencies,kws))
+        print "Adding task '%s'" % task.name()
+        if dependencies:
+            for dep in dependencies:
+                if dep.name() not in [t[0].name() for t in self._pending]:
+                    print "-> Adding dependency '%s'" % dep.name()
+                    self.add_task(dep)
+    def run(self,sched=None,log_dir=None,scripts_dir=None):
+        # Execute the pipeline
+        print "PIPELINE: started"
+        # Run while there are still pending or running tasks
+        update = True
+        while self._pending or self._running:
+            # Report the current running and pending tasks
+            if update:
+                if self._running:
+                    print "PIPELINE: %d running tasks:" % len(self._running)
+                    for t in self._running: print "- %s" % t.name()
+                if self._pending:
+                    print "PIPELINE: %d pending tasks:" % len(self._pending)
+                    for t in self._pending: print "- %s" % t[0].name()
+                update = False
+            # Check for running tasks that have completed
+            running = []
+            for task in self._running:
+                if task.completed:
+                    print "PIPELINE: finished %s" % task.name()
+                    self._finished.append(task)
+                    update = True
+                else:
+                    running.append(task)
+            self._running = running
+            # Check for pending tasks that can start
+            pending = []
+            for task,dependencies,kws in self._pending:
+                run_task = False
+                if not dependencies:
+                    # No dependencies - start it
+                    run_task = True
+                else:
+                    # Check dependencies
+                    run_task = reduce(lambda x,y: x and y.completed,
+                                      dependencies,True)
+                if run_task:
+                    print "PIPELINE: started %s" % task.name()
+                    if 'runner' not in kws:
+                        kws['runner'] = self._default_runner
+                    task.run(sched=sched,
+                             log_dir=log_dir,
+                             scripts_dir=scripts_dir,
+                             **kws)
+                    self._running.append(task)
+                    update = True
+                else:
+                    pending.append((task,dependencies,kws))
+            self._pending = pending
+            # Pause before checking again
+            if not update:
+                time.sleep(5)
+        # Finished
+        print "PIPELINE: completed"
+
+class PipelineTask(object):
+    """
+    Base class defining a 'task' to run as part of a pipeline
+
+    A 'task' wraps one or more external programs which can
+    be run concurrently, and which produces a set of outputs.
+    Individual programs should be wrapped in instances of the
+    'PipelineCommand' class.
+
+    This class should be subclassed to implement the 'setup' and
+    'output' methods. The 'add_cmd' method can be used within
+    'setup' to add one or 'PipelineCommand' instances.
+
+    For example:
+
+    >>> class LsDir(PipelineTask):
+    ...    def setup(self,dirn):
+    ...      self.add_cmd(LsCommand(dirn))
+    ...    def outputs(self):
+    ...      return None
+
+    """
+    def __init__(self,name,*args,**kws):
         self._name = str(name)
+        self._args = args
+        self._kws = kws
         self._commands = []
+        self._use_wrapper = False
+        self._task_name = "%s.%s" % (self._name.lower().replace(' ','_'),
+                                     uuid.uuid4())
+        self._completed = False
+    @property
+    def completed(self):
+        return self._completed
     def name(self):
-        return self._name.lower().replace(' ','_')
-    def add(self,pipeline_job):
+        return self._task_name
+    def check_status(self,name,jobs,sched):
+        self._completed = True
+        print "TASK: %s completed" % name
+        ##return check_status(name,jobs,sched)
+    def add_cmd(self,pipeline_job):
         self._commands.append(pipeline_job)
+    def use_wrapper(self,use_wrapper):
+        self._use_wrapper = bool(use_wrapper)
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
-            scripts_dir=None,wait_for=(),async=True,use_wrapper=False):
+            scripts_dir=None,wait_for=(),async=True,use_wrapper=None):
+        # Do setup
+        self.setup(*self._args,**self._kws)
+        # Sort out defaults
+        if use_wrapper is None:
+            use_wrapper = self._use_wrapper
         # Generate commands to run
         cmds = []
         for command in self._commands:
+            print "TASK: %s" % command.cmd()
             if use_wrapper:
                 script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
                 cmd = Command('/bin/bash',script_file)
+                print "TASK: wrapper script %s" % script_file
             else:
                 cmd = command.cmd()
             cmds.append(cmd)
@@ -77,8 +228,8 @@ class PipelineStage(object):
             if use_group:
                 # Run as a group
                 group = sched.group(self.name())
-                for cmd in cmds:
-                    name = "%s.%s" % (self.name(),uuid.uuid4())
+                for j,cmd in enumerate(cmds):
+                    name = "%s#%s" % (self.name(),j)
                     group.add(cmd,
                               wd=working_dir,
                               name=name,
@@ -87,11 +238,11 @@ class PipelineStage(object):
                               wait_for=wait_for)
                 group.close()
                 callback_name = group.name
-                callback_function = check_status
+                callback_function = self.check_status
             else:
                 # Run a single job
                 cmd = cmds[0]
-                name = "%s.%s" % (self.name(),uuid.uuid4())
+                name = self.name()
                 job = sched.submit(cmd,
                                    wd=working_dir,
                                    name=name,
@@ -99,7 +250,7 @@ class PipelineStage(object):
                                    log_dir=log_dir,
                                    wait_for=wait_for)
                 callback_name = job.name
-                callback_function = check_status
+                callback_function = self.check_status
             # If asynchronous then setup callback and
             # return immediately
             if async:
@@ -109,6 +260,7 @@ class PipelineStage(object):
             else:
                 # Wait for job or group to complete before returning
                 sched.wait_for((callback_name,))
+                self._completed = True
                 if use_group:
                     exit_code = max([j.exit_code for j in group.jobs])
                 else:
@@ -116,25 +268,35 @@ class PipelineStage(object):
                 if exit_code != 0:
                     logging.warning("%s: failed (exit code %s)" %
                                     (self._name,exit_code))
-            if use_group:
-                return group
-            else:
-                return job
         else:
             # Run each stage locally
             for cmd in cmds:
                 cmd.run_subprocess(working_dir=working_dir)
+            self._completed = True
+        return self
+    def setup(self,*args,**kws):
+        raise NotImplementedError
+    def output(self):
+        raise NotImplementedError
 
 class PipelineCommand(object):
     """
+    Base class for constructing program command lines
+
+    This class should be subclassed to implement the 'cmd'
+    methods, which should return a 'Command' instance.
+    For example, to wrap the 'ls' command:
+
+    >>> class LsCommand(PipelineCommand):
+    ...    def __init__(self,dirn):
+    ...      PipelineCommand.__init__(self,name)
+    ...      self._dirn = dirn
+    ...    def cmd(self):
+    ...      return Command('ls',self._dirn)
+
     """
     def __init__(self,name):
         self._name = str(name)
-    def cmd(self):
-        # Build the command
-        # Must be implemented by the subclass and return a
-        # Command instance
-        raise NotImplementedError("Subclass must implement 'cmd' method")
     def name(self):
         return self._name.lower().replace(' ','_')
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
@@ -146,6 +308,11 @@ class PipelineCommand(object):
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell)
         return script_file
+    def cmd(self):
+        # Build the command
+        # Must be implemented by the subclass and return a
+        # Command instance
+        raise NotImplementedError("Subclass must implement 'cmd' method")
 
 ######################################################################
 # ICell8 pipeline commands
@@ -153,9 +320,23 @@ class PipelineCommand(object):
 
 class ICell8Statistics(PipelineCommand):
     """
+    Build command to run the 'icell8_stats.py' utility
     """
     def __init__(self,name,fastqs,stats_file,well_list=None,
                  suffix=None,append=False):
+        """
+        Create new ICell8Statistics instance
+
+        Arguments:
+          name (str): description of the command
+          fastqs (list): list of FASTQ file names
+          stats_file (str): path to output file
+          well_list (str): path to 'well list' file (optional)
+          suffix (str): suffix to append to columns with read and
+            UMI counts (optional)
+          append (bool): if True then append columns to existing
+            output file (by default creates new output file)
+        """
         PipelineCommand.__init__(self,name)
         self._fastqs = fastqs
         self._stats_file = os.path.abspath(stats_file)
@@ -179,9 +360,27 @@ class ICell8Statistics(PipelineCommand):
 
 class SplitAndFilterFastqPair(PipelineCommand):
     """
+    Build command to run the 'split_icell8_fastqs.py' utility
     """
     def __init__(self,name,fastq_pair,filter_dir,well_list=None,
                  basename=None,mode='none',filter=False):
+        """
+        Create a new SplitAndFilterFastqPair instance
+
+        Arguments:
+          name (str): description of the command
+          fastq_pair (list): R1/R2 FASTQ file pair
+          filter_dir (str): destination directory to
+            write output files to
+          well_list (str): 'well list' file to use
+            (optional)
+          basename (str): basename to use for output
+            FASTQ files (optional)
+          mode (str): mode to run the utility in
+          filter (bool): if True then also do barcode
+            and UMI quality filtering (no filtering is
+            performed by default)
+        """
         PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._filter_dir = os.path.abspath(filter_dir)
@@ -192,7 +391,6 @@ class SplitAndFilterFastqPair(PipelineCommand):
         self._mode = mode
         self._filter = filter
     def cmd(self):
-        # Build command
         cmd = Command('split_icell8_fastqs.py',
                       '-o',self._filter_dir,
                       '-b',self._basename)
@@ -207,9 +405,24 @@ class SplitAndFilterFastqPair(PipelineCommand):
 
 class BatchFastqs(PipelineCommand):
     """
+    Build command to run the 'batch_fastqs.py' utility
     """
     def __init__(self,name,fastqs,batch_dir,basename,
                  batch_size=None,merge=False):
+        """
+        Create a new BatchFastqs instance
+
+        Arguments:
+          name (str): description of the command
+          fastqs (list): list of input FASTQ files
+          batch_dir (str): destination directory to
+            write output files to
+          batch_size (int): number of reads per output
+            FASTQ (in batch mode) (optional)
+          merge (bool): if True then merge all reads
+            into a single FASTQ file (default is to
+            split into multiple FASTQs)
+        """
         PipelineCommand.__init__(self,name)
         self._fastqs = fastqs
         self._batch_dir = os.path.abspath(batch_dir)
@@ -217,7 +430,6 @@ class BatchFastqs(PipelineCommand):
         self._batch_size = batch_size
         self._merge = merge
     def cmd(self):
-        # Build command
         cmd = Command('batch_fastqs.py',
                       '-o',self._batch_dir,
                       '-b',self._basename)
@@ -230,8 +442,18 @@ class BatchFastqs(PipelineCommand):
 
 class TrimFastqPair(PipelineCommand):
     """
+    Build command to run 'cutadapt' with ICell8 settings
     """
     def __init__(self,name,fastq_pair,trim_dir):
+        """
+        Create a new TrimFastqPair instance
+
+        Arguments:
+          name (str): description of the command
+          fastq_pair (list): R1/R1 FASTQ file pair
+          trim_dir (str): destination directory to
+            write output files to
+        """
         PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._trim_dir = os.path.abspath(trim_dir)
@@ -261,14 +483,34 @@ class TrimFastqPair(PipelineCommand):
 
 class ContaminantFilterFastqPair(PipelineCommand):
     """
+    Build command to run 'icell8_contaminantion_filter.py' utility
     """
     def __init__(self,name,fastq_pair,filter_dir,
-                 preferred_conf,contaminants_conf,
+                 mammalian_conf,contaminants_conf,
                  aligner=None,threads=None):
+        """
+        Create a new TrimFastqPair instance
+
+        Arguments:
+          name (str): description of the command
+          fastq_pair (list): R1/R1 FASTQ file pair
+          filter_dir (str): destination directory to
+            write output files to
+          mammalian_conf (str): path to FastqScreen
+            .conf file with mammalian genome indexes
+          contaminants_conf (str): path FastqScreen
+            .conf file with contaminant genome indexes
+          aligner (str): explicitly specify name of
+            aligner to use with FastqScreen (e.g.
+            'bowtie2') (optional)
+          threads (int): explicitly specify number of
+            threads to run FastqScreen using
+            (optional)
+        """
         PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._filter_dir = os.path.abspath(filter_dir)
-        self._preferred_conf = os.path.abspath(preferred_conf)
+        self._mammalian_conf = os.path.abspath(mammalian_conf)
         self._contaminants_conf = os.path.abspath(contaminants_conf)
         self._aligner = aligner
         self._threads = threads
@@ -276,7 +518,7 @@ class ContaminantFilterFastqPair(PipelineCommand):
         # Build the command
         cmd = Command(
             'icell8_contamination_filter.py',
-            '-p',self._preferred_conf,
+            '-p',self._mammalian_conf,
             '-c',self._contaminants_conf,
             '-o',self._filter_dir)
         if self._threads:
@@ -287,95 +529,122 @@ class ContaminantFilterFastqPair(PipelineCommand):
         return cmd
 
 ######################################################################
-# ICell8 pipeline stages
+# ICell8 pipeline tasks
 ######################################################################
 
-class GetICell8Stats(PipelineStage):
+class GetICell8Stats(PipelineTask):
     """
     """
-    def __init__(self,name,*args,**kws):
-        PipelineStage.__init__(self,name)
-        self.add(ICell8Statistics(self._name,
-                                  *args,
-                                  **kws))
+    def setup(self,*args,**kws):
+        self.add_cmd(ICell8Statistics(self._name,
+                                      *args,
+                                      **kws))
+        self.use_wrapper(True)
+    def output(self):
+        stats_file = self._args[1]
+        return stats_file
 
-class SplitFastqsIntoBatches(PipelineStage):
+class SplitFastqsIntoBatches(PipelineTask):
     """
     """
-    def __init__(self,name,*args,**kws):
-        PipelineStage.__init__(self,name)
-        self.add(BatchFastqs(self._name,
-                             *args,
-                             **kws))
+    def setup(self,*args,**kws):
+        mkdir(self._args[1])
+        self.add_cmd(BatchFastqs(self._name,
+                                 *args,
+                                 **kws))
+    def output(self):
+        out_dir = self._args[1]
+        return FileCollection(out_dir,"*.B*.r*.fastq")
 
-class FilterICell8Fastqs(PipelineStage):
+class FilterICell8Fastqs(PipelineTask):
     """
     """
-    def __init__(self,name,fastqs,filter_dir,well_list=None,
-                 mode='none',filter=False):
-        PipelineStage.__init__(self,name)
+    def setup(self,fastqs,filter_dir,well_list=None,
+              mode='none',filter=False):
+        mkdir(filter_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
-            self.add(SplitAndFilterFastqPair(self._name,
-                                             fastq_pair,
-                                             filter_dir,
-                                             well_list=well_list,
-                                             basename=basename,
-                                             mode=mode,
-                                             filter=filter))
+            self.add_cmd(SplitAndFilterFastqPair(self._name,
+                                                 fastq_pair,
+                                                 filter_dir,
+                                                 well_list=well_list,
+                                                 basename=basename,
+                                                 mode=mode,
+                                                 filter=filter))
+        self.use_wrapper(True)
+    def output(self):
+        out_dir = self._args[1]
+        return AttributeDictionary(
+            assigned=FileCollection(out_dir,"*.B*.filtered.r*.fastq"),
+            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
+            failed_barcodes=FileCollection(out_dir,"*.failed_barcode.r*.fastq"),
+            failed_umis=FileCollection(out_dir,"*.failed_umi.r*.fastq")
+        )
 
-class TrimReads(PipelineStage):
+class TrimReads(PipelineTask):
     """
     """
-    def __init__(self,name,fastqs,trim_dir):
-        PipelineStage.__init__(self,name)
+    def setup(self,fastqs,trim_dir):
+        mkdir(trim_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add(TrimFastqPair(self._name,
-                                   fastq_pair,
-                                   trim_dir))
+            self.add_cmd(TrimFastqPair(self._name,
+                                       fastq_pair,
+                                       trim_dir))
+    def output(self):
+        out_dir = self._args[1]
+        return FileCollection(out_dir,"*.trimmed.fastq")
 
-class FilterContaminatedReads(PipelineStage):
+class FilterContaminatedReads(PipelineTask):
     """
     """
-    def __init__(self,name,fastqs,filter_dir,preferred_conf,
+    def setup(self,fastqs,filter_dir,mammalian_conf,
                  contaminants_conf,aligner=None,threads=None):
-        PipelineStage.__init__(self,name)
+        mkdir(filter_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add(ContaminantFilterFastqPair(self._name,
-                                                fastq_pair,
-                                                filter_dir,
-                                                preferred_conf,
-                                                contaminants_conf,
-                                                aligner=aligner,
-                                                threads=threads))
+            self.add_cmd(ContaminantFilterFastqPair(self._name,
+                                                    fastq_pair,
+                                                    filter_dir,
+                                                    mammalian_conf,
+                                                    contaminants_conf,
+                                                    aligner=aligner,
+                                                    threads=threads))
+        self.use_wrapper(True)
+    def output(self):
+        out_dir = self._args[1]
+        return FileCollection(out_dir,"*.trimmed.filtered.fastq")
 
-class SplitByBarcodes(PipelineStage):
+class SplitByBarcodes(PipelineTask):
     """
     """
-    def __init__(self,name,fastqs,barcodes_dir):
-        PipelineStage.__init__(self,name)
+    def setup(self,fastqs,barcodes_dir):
+        mkdir(barcodes_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
-            self.add(SplitAndFilterFastqPair(self._name,
-                                             fastq_pair,
-                                             barcodes_dir,
-                                             basename=basename,
-                                             mode="barcodes"))
+            self.add_cmd(SplitAndFilterFastqPair(self._name,
+                                                 fastq_pair,
+                                                 barcodes_dir,
+                                                 basename=basename,
+                                                 mode="barcodes"))
+        self.use_wrapper(True)
+    def output(self):
+        out_dir = self._args[1]
+        return FileCollection(out_dir,"*.r*.fastq")
 
-class MergeFastqs(PipelineStage):
+class MergeFastqs(PipelineTask):
     """
     """
-    def __init__(self,name,fastqs,unassigned_fastqs,
-                 failed_barcode_fastqs,failed_umi_fastqs,
-                 merge_dir,basename,batch_size=25):
-        PipelineStage.__init__(self,name)
+    def setup(self,fastqs,unassigned_fastqs,
+              failed_barcode_fastqs,failed_umi_fastqs,
+              merge_dir,basename,batch_size=25):
+        # Make the output directory
+        mkdir(merge_dir)
         # Extract the barcodes from the fastq names
         barcodes = set()
-        for fq in barcoded_fastqs:
+        for fq in fastqs:
             barcode = os.path.basename(fq).split('.')[-3]
             barcodes.add(barcode)
         barcodes = sorted(list(barcodes))
@@ -397,18 +666,31 @@ class MergeFastqs(PipelineStage):
             for barcode in barcode_batch:
                 print "-- %s" % barcode
                 fastq_pairs.extend(fastq_groups[barcode])
-            self.add(SplitAndFilterFastqPair(self._name,
-                                             fastq_pairs,
-                                             merge_dir,
-                                             basename=basename,
-                                             mode="barcodes"))
+            self.add_cmd(SplitAndFilterFastqPair(self._name,
+                                                 fastq_pairs,
+                                                 merge_dir,
+                                                 basename=basename,
+                                                 mode="barcodes"))
         # Handle unassigned and failed quality reads
-        for fqs in (unassigned_fastqs,
-                    failed_barcode_fastqs,
-                    failed_umi_fastqs):
+        for name,fqs in (('unassigned',unassigned_fastqs),
+                         ('failed_barcodes',failed_barcode_fastqs),
+                         ('failed_umis',failed_umi_fastqs)):
             if not fqs:
                 continue
-            self.add(BatchFastqs(self._name,fqs,merge_dir,basename))
+            self.add_cmd(BatchFastqs(self._name,fqs,
+                                     merge_dir,
+                                     "%s.%s" % (basename,name),
+                                     merge=True))
+        # Force jobs to use a wrapper script
+        self.use_wrapper(True)
+    def output(self):
+        out_dir = self._args[4]
+        return AttributeDictionary(
+            assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq"),
+            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
+            failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq"),
+            failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq"),
+        )
 
 ######################################################################
 # Functions
@@ -472,7 +754,7 @@ if __name__ == "__main__":
     p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
     p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
                    help="FASTQ file pairs")
-    p.add_argument("--unaligned",
+    p.add_argument("-u","--unaligned",
                    dest="unaligned_dir",default="bcl2fastq",
                    help="'unaligned' dir with output from "
                    "bcl2fastq")
@@ -608,9 +890,10 @@ if __name__ == "__main__":
 
     # Set up a scheduler for running jobs
     sched_reporter = SchedulerReporter(
-        job_start="Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
-        job_end=  "Finished #%(job_number)d: %(job_name)s"
+        job_start="SCHEDULER: Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
+        job_end=  "SCHEDULER: Finished #%(job_number)d: %(job_name)s"
     )
+    sched_reporter = SchedulerReporter()
     sched = SimpleScheduler(runner=runners['default'],
                             max_concurrent=max_jobs,
                             reporter=sched_reporter)
@@ -633,157 +916,107 @@ if __name__ == "__main__":
     for dirn in (icell8_dir,log_dir,stats_dir,scripts_dir):
         mkdir(dirn)
 
+    # Set up a pipeline
+    ppl = Pipeline()
+
     # Initial stats
-    stats_file = os.path.join(stats_dir,"icell8_stats.tsv")
     initial_stats = GetICell8Stats("Initial statistics",
-                                   fastqs,stats_file,well_list)
-    initial_stats = initial_stats.run(sched,
-                                      working_dir=icell8_dir,
-                                      log_dir=log_dir)
+                                   fastqs,
+                                   os.path.join(stats_dir,"icell8_stats.tsv"),
+                                   well_list)
+    ##ppl.add_task(initial_stats)
 
     # Split fastqs into batches
     batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
-    mkdir(batch_dir)
     batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
                                           batch_dir,basename,
                                           batch_size=args.batch_size)
-    batch_fastqs = batch_fastqs.run(sched,
-                                    working_dir=icell8_dir,
-                                    log_dir=log_dir,
-                                    async=False)
-    print "*** Fastq batching stage completed ***"
-
-    # Collect the batched files for processing
-    batched_fastqs = collect_fastqs(batch_dir,"*.B*.r*.fastq")
+    ##ppl.add_task(batch_fastqs)
 
     # Setup the quality filter jobs as a group
     filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
-    mkdir(filter_dir)
     quality_filter = FilterICell8Fastqs("Quality filter Fastqs",
-                                        batched_fastqs,
+                                        batch_fastqs.output(),
                                         filter_dir,
                                         well_list=well_list,
                                         mode='none',
                                         filter=True)
-    quality_filter = quality_filter.run(sched,
-                                        working_dir=filter_dir,
-                                        log_dir=log_dir,
-                                        async=False)
-    print "*** Quality filtering stage completed ***"
-
-    # Collect the post-filtering files for stats and read trimming
-    filtered_fastqs = collect_fastqs(filter_dir,"*.B*.filtered.r*.fastq")
-    
-    # Collect the files with unassigned and failed quality reads
-    unassigned_fastqs = collect_fastqs(filter_dir,"*.unassigned.r*.fastq")
-    failed_barcode_fastqs = collect_fastqs(filter_dir,"*.failed_barcode.r*.fastq")
-    failed_umi_fastqs = collect_fastqs(filter_dir,"*.failed_umi.r*.fastq")
+    ppl.add_task(quality_filter,dependencies=(batch_fastqs,))
     
     # Post quality filter stats
     filter_stats = GetICell8Stats("Post-quality filter statistics",
-                                  filtered_fastqs,stats_file,
+                                  quality_filter.output().assigned,
+                                  initial_stats.output(),
                                   suffix="_quality_filtered",
                                   append=True)
-    filter_stats = filter_stats.run(sched,
-                                    working_dir=icell8_dir,
-                                    log_dir=log_dir,
-                                    scripts_dir=scripts_dir,
-                                    use_wrapper=True,
-                                    wait_for=(initial_stats.name,))
+    ppl.add_task(filter_stats,dependencies=(initial_stats,quality_filter))
 
     # Set up the cutadapt jobs as a group
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
-    mkdir(trim_dir)
-    trim_reads = TrimReads("Read trimming",filtered_fastqs,trim_dir)
-    trim_reads = trim_reads.run(sched,
-                                working_dir=trim_dir,
-                                log_dir=log_dir,
-                                async=False)
-    print "*** Read trimming stage completed ***"
-
-    # Collect the files for stats and contamination filter step
-    trimmed_fastqs = collect_fastqs(trim_dir,"*.trimmed.fastq")
+    trim_reads = TrimReads("Read trimming",
+                           quality_filter.output().assigned,
+                           trim_dir)
+    ppl.add_task(trim_reads,dependencies=(quality_filter,))
 
     # Post read trimming stats
     trim_stats = GetICell8Stats("Post-trimming statistics",
-                                trimmed_fastqs,stats_file,
+                                trim_reads.output(),
+                                initial_stats.output(),
                                 suffix="_trimmed",
                                 append=True)
-    trim_stats = trim_stats.run(sched,
-                                working_dir=icell8_dir,
-                                log_dir=log_dir,
-                                scripts_dir=scripts_dir,
-                                use_wrapper=True,
-                                wait_for=(filter_stats.name,))
+    ppl.add_task(trim_stats,dependencies=(trim_reads,))
 
     # Set up the contaminant filter jobs as a group
     contaminant_filter_dir = os.path.join(icell8_dir,
                                           "_fastqs.contaminant_filter")
-    mkdir(contaminant_filter_dir)
     contaminant_filter = FilterContaminatedReads("Contaminant filtering",
-                                                 trimmed_fastqs,
+                                                 trim_reads.output(),
                                                  contaminant_filter_dir,
                                                  args.preferred_conf,
                                                  args.contaminants_conf,
                                                  aligner=args.aligner,
                                                  threads=args.threads)
-    contaminant_filter = contaminant_filter.run(
-        sched,
-        working_dir=contaminant_filter_dir,
-        scripts_dir=scripts_dir,
-        log_dir=log_dir,
-        runner=runners['contaminant_filter'],
-        use_wrapper=True,
-        async=False)
-    print "*** Contaminant filtering stage completed ***"
+    ppl.add_task(contaminant_filter,dependencies=(trim_reads,),
+                 runner=runners['contaminant_filter'])
 
     # Post contaminant filter stats
-    filtered_fastqs = collect_fastqs(contaminant_filter_dir,"*.trimmed.filtered.fastq")
     final_stats = GetICell8Stats("Post-contaminant filter statistics",
-                                 filtered_fastqs,stats_file,
+                                 contaminant_filter.output(),
+                                 initial_stats.output(),
                                  suffix="_contaminant_filtered",
                                  append=True)
-    final_stats = final_stats.run(sched,
-                                  working_dir=icell8_dir,
-                                  log_dir=log_dir,
-                                  scripts_dir=scripts_dir,
-                                  use_wrapper=True,
-                                  wait_for=(trim_stats.name,))
+    ppl.add_task(final_stats,dependencies=(contaminant_filter,trim_stats))
 
     # Rebatch reads by barcode
     # First: split each batch by barcode
     barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.barcodes")
-    mkdir(barcoded_fastqs_dir)
     split_barcodes = SplitByBarcodes("Split by barcodes",
-                                     filtered_fastqs,
+                                     contaminant_filter.output(),
                                      barcoded_fastqs_dir)
-    split_barcodes = split_barcodes.run(sched,
-                                        working_dir=barcoded_fastqs_dir,
-                                        log_dir=log_dir,
-                                        scripts_dir=scripts_dir,
-                                        use_wrapper=True,
-                                        async=False)
-    print "*** Splitting by barcodes stage completed ***"
-    # Second: merge across batches
-    barcoded_fastqs = collect_fastqs(barcoded_fastqs_dir,"*.B*.*.fastq")
+    ppl.add_task(split_barcodes,dependencies=(contaminant_filter,))
     # Merge (concat) fastqs into single pairs per barcode
     final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
-    mkdir(final_fastqs_dir)
     merge_fastqs = MergeFastqs("Merge Fastqs",
-                               barcoded_fastqs,
-                               unassigned_fastqs,
-                               failed_barcode_fastqs,
-                               failed_umi_fastqs,
+                               split_barcodes.output(),
+                               quality_filter.output().unassigned,
+                               quality_filter.output().failed_barcodes,
+                               quality_filter.output().failed_umis,
                                final_fastqs_dir,
                                basename)
-    merge_fastqs = merge_fastqs.run(sched,
-                                    working_dir=icell8_dir,
-                                    log_dir=log_dir,
-                                    use_wrapper=True,
-                                    async=False)
-    print "*** Merging barcoded FASTQs stage completed ***"
+    ppl.add_task(merge_fastqs,dependencies=(split_barcodes,))
+
+    # Final stats for verification
+    final_barcode_stats = GetICell8Stats(
+        "Post-barcode splitting and merging statistics",
+        merge_fastqs.output().assigned,
+        initial_stats.output(),
+        suffix="_final",
+        append=True)
+    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,))
+
+    # Execute the pipeline
+    ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
 
     # Finish
-    sched.wait()
     print "All jobs completed"
     sched.stop()
