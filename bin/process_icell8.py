@@ -104,6 +104,7 @@ class Pipeline(object):
                 if dep.name() not in [t[0].name() for t in self._pending]:
                     print "-> Adding dependency '%s'" % dep.name()
                     self.add_task(dep)
+        return task
     def run(self,sched=None,log_dir=None,scripts_dir=None):
         # Execute the pipeline
         print "PIPELINE: started"
@@ -275,9 +276,9 @@ class PipelineTask(object):
             self._completed = True
         return self
     def setup(self,*args,**kws):
-        raise NotImplementedError
+        raise NotImplementedError("Subclass must implement 'setup' method")
     def output(self):
-        raise NotImplementedError
+        raise NotImplementedError("Subclass must implement 'output' method")
 
 class PipelineCommand(object):
     """
