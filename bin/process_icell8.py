@@ -53,16 +53,23 @@ DEFAULT_BATCH_SIZE = 5000000
 
 class FileCollection(Iterator):
     """
+    Class to return set of files based on glob pattern
     """
     def __init__(self,dirn,pattern):
         self._dirn = os.path.abspath(dirn)
         self._pattern = pattern
         self._files = None
         self._idx = None
+    def __len__(self):
+        if self._files is None:
+            self._files = collect_fastqs(self._dirn,self._pattern)
+            self._idx = -1
+        return len(self._files)
     def next(self):
         if self._files is None:
-            self._idx = 0
             self._files = collect_fastqs(self._dirn,self._pattern)
+        if self._idx is None:
+            self._idx = 0
         else:
             self._idx += 1
         try:
