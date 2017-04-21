@@ -129,14 +129,25 @@ class Pipeline(object):
                 update = False
             # Check for running tasks that have completed
             running = []
+            failed = []
             for task in self._running:
                 if task.completed:
                     print "PIPELINE: finished %s" % task.name()
                     self._finished.append(task)
                     update = True
+                    # Check if task failed
+                    if task.exit_code != 0:
+                        failed.append(task)
                 else:
                     running.append(task)
             self._running = running
+            # Check for finished tasks that have failed
+            if failed:
+                print "PIPELINE: following tasks failed:"
+                for task in failed:
+                    print "- %s" % task.name()
+                print "PIPELINE: terminating prematurely"
+                return 1
             # Check for pending tasks that can start
             pending = []
             for task,dependencies,kws in self._pending:
@@ -166,6 +177,7 @@ class Pipeline(object):
                 time.sleep(5)
         # Finished
         print "PIPELINE: completed"
+        return 0
 
 class PipelineTask(object):
     """
@@ -198,15 +210,39 @@ class PipelineTask(object):
         self._task_name = "%s.%s" % (self._name.lower().replace(' ','_'),
                                      uuid.uuid4())
         self._completed = False
+        self._exit_code = 0
     @property
     def completed(self):
         return self._completed
+    @property
+    def exit_code(self):
+        if not self.completed:
+            return None
+        else:
+            return self._exit_code
     def name(self):
         return self._task_name
-    def check_status(self,name,jobs,sched):
+    def task_completed(self,name,jobs,sched):
+        # Callback method invoked when scheduled
+        # jobs in the task finish
+        # Arguments:
+        # name (str): name for the callback
+        # jobs (list): list of SchedulerJob instances
+        # sched (SimpleScheduler): scheduler instance
         self._completed = True
         print "TASK: %s completed" % name
-        ##return check_status(name,jobs,sched)
+        for job in jobs:
+            try:
+                if job.exit_code != 0:
+                    self._exit_code += 1
+            except AttributeError:
+                # Assume it's a group
+                for j in job.jobs:
+                    if j.exit_code != 0:
+                        self._exit_code += 1
+        if self.exit_code != 0:
+            logging.critical("TASK: %s failed: exit code %s"
+                             % (name,self.exit_code))
     def add_cmd(self,pipeline_job):
         self._commands.append(pipeline_job)
     def use_wrapper(self,use_wrapper):
@@ -246,7 +282,7 @@ class PipelineTask(object):
                               wait_for=wait_for)
                 group.close()
                 callback_name = group.name
-                callback_function = self.check_status
+                callback_function = self.task_completed
             else:
                 # Run a single job
                 cmd = cmds[0]
@@ -258,7 +294,7 @@ class PipelineTask(object):
                                    log_dir=log_dir,
                                    wait_for=wait_for)
                 callback_name = job.name
-                callback_function = self.check_status
+                callback_function = self.task_completed
             # If asynchronous then setup callback and
             # return immediately
             if async:
@@ -716,37 +752,6 @@ def collect_fastqs(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
-
-def check_status(name,jobs,sched):
-    """
-    Check the exit status of a set of groups
-
-    This function is not called directly, instead it should be
-    passed as part of a callback to check the exit status of a
-    job or group of jobs from the scheduler.
-
-    For example:
-
-    >>> sched.callback("My job",check_status,wait_for(('my_job',))
-
-    If any of the jobs have a non-zero exit status then
-    the program is terminated.
-
-    Arguments:
-      name (str): name for the callback
-      jobs (list): list of SchedulerJob instances
-      sched (SimpleScheduler): scheduler instance
-
-    """
-    print "*** %s completed ***" % name
-    for job in jobs:
-        exit_code = job.exit_code
-        if exit_code != 0:
-            logging.critical("Job '%s' failed: exit code %s"
-                             % (job.name,exit_code))
-            sched.stop()
-            sys.exit(1)
-    print "%s: ok" % name
 
 ######################################################################
 # Main
