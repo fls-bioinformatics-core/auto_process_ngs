@@ -794,8 +794,8 @@ if __name__ == "__main__":
                    "can be one of 'default','contaminant_filter'. "
                    "RUNNER must be a valid job runner specification "
                    "e.g. 'GEJobRunner(-j y)'. Multiple --runner "
-                   "arguments can be specified (default: "
-                   "SimpleJobRunner)")
+                   "arguments can be specified (default: '%s')" %
+                   __settings.general.default_runner)
     p.add_argument("-s","--size",type=int,
                    dest="batch_size",default=DEFAULT_BATCH_SIZE,
                    help="number of reads per batch when splitting "
@@ -840,7 +840,7 @@ if __name__ == "__main__":
     try:
         default_runner = runners['default']
     except KeyError:
-        default_runner = fetch_runner('SimpleJobRunner')
+        default_runner = __settings.general.default_runner
     for stage in stages:
         if stage not in runners:
             runners[stage] = default_runner
