@@ -10,7 +10,7 @@ Utility to process a set of FASTQ pairs from Wafergen iCell8 and
 filter out read pairs where the R1 sequence:
 
 - uniquely maps to one of a list of 'contaminant' genomes
-- doesn't map at all to one of a list of 'preferred' genomes
+- doesn't map at all to one of a list of 'mammalian' genomes
 
 This utility should be run after the trimming step.
 
@@ -154,14 +154,14 @@ if __name__ == "__main__":
                    dest="out_dir",default=None,
                    help="directory to write output FASTQ files to "
                    "(default: current directory)")
-    p.add_argument("-p","--preferred",
-                   dest="preferred_conf",
+    p.add_argument("-m","--mammalian",
+                   dest="mammalian_conf",
                    help="fastq_screen 'conf' file with the "
-                   "'preferred' genome indices")
-    p.add_argument("-c","--contaminants",
+                   "mammalian genome indices")
+    p.add_argument("-c","--contaminant",
                    dest="contaminants_conf",
                    help="fastq_screen 'conf' file with the "
-                   "'contaminant' genome indices")
+                   "contaminant genome indices")
     p.add_argument("-a","--aligner",
                    dest="aligner",default=None,
                    choices=["bowtie","bowtie2"],
@@ -178,9 +178,9 @@ if __name__ == "__main__":
     fqr2 = os.path.abspath(args.FQ_R2)
 
     # Screen files
-    preferred_conf = args.preferred_conf
-    if preferred_conf is not None:
-        preferred_conf = os.path.abspath(preferred_conf)
+    mammalian_conf = args.mammalian_conf
+    if mammalian_conf is not None:
+        mammalian_conf = os.path.abspath(mammalian_conf)
     contaminants_conf = args.contaminants_conf
     if contaminants_conf is not None:
         contaminants_conf = os.path.abspath(contaminants_conf)
@@ -203,17 +203,17 @@ if __name__ == "__main__":
     else:
         out_dir = os.getcwd()
 
-    # Screen against 'preferred' genomes
-    tagged_fastq = fastq_screen_tag(preferred_conf,fqr2,
+    # Screen against 'mammalian' genomes
+    tagged_fastq = fastq_screen_tag(mammalian_conf,fqr2,
                                     aligner=args.aligner,
                                     threads=args.threads,
                                     out_dir=out_dir,
                                     tempdir=out_dir)
-    preferred_tagged_fq = strip_ext(tagged_fastq,'.fastq') + '.' + \
+    mammalian_tagged_fq = strip_ext(tagged_fastq,'.fastq') + '.' + \
                           os.path.basename(
-                              strip_ext(preferred_conf,'.conf')) + \
+                              strip_ext(mammalian_conf,'.conf')) + \
                           '.fastq'
-    os.rename(tagged_fastq,preferred_tagged_fq)
+    os.rename(tagged_fastq,mammalian_tagged_fq)
 
     # Screen against 'contaminants' genomes
     tagged_fastq = fastq_screen_tag(contaminants_conf,fqr2,
@@ -228,11 +228,11 @@ if __name__ == "__main__":
     os.rename(tagged_fastq,contaminants_tagged_fq)
 
     # Construct fastq_screen tags to match against
-    nohits_preferred = nohits_tag_from_conf(preferred_conf)
+    nohits_mammalian = nohits_tag_from_conf(mammalian_conf)
     nohits_contaminants = nohits_tag_from_conf(contaminants_conf)
-    ndatabases_preferred = len(nohits_preferred)
+    ndatabases_mammalian = len(nohits_mammalian)
     ndatabases_contaminants = len(nohits_contaminants)
-    print "'nohits' tags: '%s' and '%s'" % (nohits_preferred,
+    print "'nohits' tags: '%s' and '%s'" % (nohits_mammalian,
                                             nohits_contaminants)
     # Output filtered FASTQ pair
     fqr1_out = os.path.basename(strip_ext(fqr1,'.fastq')) \
@@ -245,16 +245,16 @@ if __name__ == "__main__":
 
     # Filter the iCell8 read pairs against the tagged reads
     for pair,pref,contam in izip(ICell8FastqIterator(fqr1,fqr2),
-                                 FastqIterator(preferred_tagged_fq),
+                                 FastqIterator(mammalian_tagged_fq),
                                  FastqIterator(contaminants_tagged_fq)):
         # Get the tags
         pref_tag = extract_fastq_screen_tag(pref)
         contam_tag = extract_fastq_screen_tag(contam)
         # Check number of databases are consistent
-        if len(pref_tag) != ndatabases_preferred:
-            logging.critical("Mismatch in preferred tag: "
+        if len(pref_tag) != ndatabases_mammalian:
+            logging.critical("Mismatch in mammalian tag: "
                              "len('%s') != len('%s')" %
-                             (pref_tag,nohits_preferred))
+                             (pref_tag,nohits_mammalian))
             sys.exit(1)
         if len(contam_tag) != ndatabases_contaminants:
             logging.critical("Mismatch in contaminant tag: "
@@ -262,9 +262,9 @@ if __name__ == "__main__":
                              (contam_tag,nohits_contaminants))
             sys.exit(1)
         # Read passes if:
-        # -- there is at least one hit on the 'preferred' genomes, OR
+        # -- there is at least one hit on the 'mammalian' genomes, OR
         # -- there are no hits on the 'contaminants' genomes
-        read_ok = ((pref_tag != nohits_preferred) or
+        read_ok = ((pref_tag != nohits_mammalian) or
                    (contam_tag == nohits_contaminants))
         if read_ok:
             output_fqs.write('fqr1',pair.r1)
@@ -274,5 +274,5 @@ if __name__ == "__main__":
     output_fqs.close()
 
     # Remove the tagged fastqs
-    os.remove(preferred_tagged_fq)
+    os.remove(mammalian_tagged_fq)
     os.remove(contaminants_tagged_fq)

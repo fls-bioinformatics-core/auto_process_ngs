@@ -562,7 +562,7 @@ class ContaminantFilterFastqPair(PipelineCommand):
         # Build the command
         cmd = Command(
             'icell8_contamination_filter.py',
-            '-p',self._mammalian_conf,
+            '-m',self._mammalian_conf,
             '-c',self._contaminants_conf,
             '-o',self._filter_dir)
         if self._threads:
@@ -775,10 +775,10 @@ if __name__ == "__main__":
                    dest="outdir",default="icell8",
                    help="directory to write outputs to "
                    "(default: 'CWD/icell8')")
-    p.add_argument("-p","--preferred",
-                   dest="preferred_conf",
+    p.add_argument("-m","--mammalian",
+                   dest="mammalian_conf",
                    help="fastq_screen 'conf' file with the "
-                   "'preferred' genome indices")
+                   "'mammalian' genome indices")
     p.add_argument("-c","--contaminants",
                    dest="contaminants_conf",
                    help="fastq_screen 'conf' file with the "
@@ -806,7 +806,7 @@ if __name__ == "__main__":
                    help="number of reads per batch when splitting "
                    "FASTQ files for processing (default: %s)" %
                    DEFAULT_BATCH_SIZE)
-    p.add_argument("-m","--max-jobs",type=int,
+    p.add_argument("-j","--max-jobs",type=int,
                    dest="max_jobs",
                    default= __settings.general.max_concurrent_jobs,
                    help="maxiumum number of concurrent jobs to run "
@@ -859,12 +859,12 @@ if __name__ == "__main__":
     print "Well list file    : %s" % well_list
     print "Output dir        : %s" % args.outdir
     print "Batch size (reads): %s" % args.batch_size
-    print "Preferred genomes screen: %s" % args.preferred_conf
-    with open(args.preferred_conf) as fp:
+    print "Mammalian genome panel  : %s" % args.mammalian_conf
+    with open(args.mammalian_conf) as fp:
         for line in fp:
             if line.startswith("DATABASE"):
                 print "-- %s" % line.split('\t')[1]
-    print "Contaminants screen     : %s" % args.contaminants_conf
+    print "Contaminant genome panel: %s" % args.contaminants_conf
     with open(args.contaminants_conf) as fp:
         for line in fp:
             if line.startswith("DATABASE"):
@@ -985,7 +985,7 @@ if __name__ == "__main__":
     contaminant_filter = FilterContaminatedReads("Contaminant filtering",
                                                  trim_reads.output(),
                                                  contaminant_filter_dir,
-                                                 args.preferred_conf,
+                                                 args.mammalian_conf,
                                                  args.contaminants_conf,
                                                  aligner=args.aligner,
                                                  threads=args.threads)
