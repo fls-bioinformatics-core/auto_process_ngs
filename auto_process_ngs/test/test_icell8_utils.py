@@ -163,7 +163,7 @@ TTCCCTACACGACGCGGGGGTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 AAAAAEEEEEEEEEE///EA/EEEEEEEEEAEEEEEEEEEEEEE<EEE/EEEEEEAEEE/E<EEEEEAE6AA<AE//<///////////////////////////////////////////////////6
 """
 
-class TestICell8WellList(unittest.TestCase):
+class TestICell8FastqIterator(unittest.TestCase):
     """Tests for the ICell8FastqIterator class
     """
     def setUp(self):
@@ -180,7 +180,7 @@ class TestICell8WellList(unittest.TestCase):
         # Remove temporary working dir
         if os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
-    def test_icell8fastqiterator(self):
+    def test_icell8fastqiterator_over_pairs(self):
         """ICell8FastqIterator: iterate over read pairs
         """
         fqr1_data = ""
@@ -203,7 +203,7 @@ class TestICell8Stats(unittest.TestCase):
     """
     def setUp(self):
         # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='.ICell8FastqIterator')
+        self.wd = tempfile.mkdtemp(suffix='.ICell8Stats')
         # Test files
         self.r1 = os.path.join(self.wd,'icell8.r1.fq')
         with open(self.r1,'w') as fp:
