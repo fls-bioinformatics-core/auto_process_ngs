@@ -230,6 +230,8 @@ if __name__ == "__main__":
     # Construct fastq_screen tags to match against
     nohits_preferred = nohits_tag_from_conf(preferred_conf)
     nohits_contaminants = nohits_tag_from_conf(contaminants_conf)
+    ndatabases_preferred = len(nohits_preferred)
+    ndatabases_contaminants = len(nohits_contaminants)
     print "'nohits' tags: '%s' and '%s'" % (nohits_preferred,
                                             nohits_contaminants)
     # Output filtered FASTQ pair
@@ -248,6 +250,17 @@ if __name__ == "__main__":
         # Get the tags
         pref_tag = extract_fastq_screen_tag(pref)
         contam_tag = extract_fastq_screen_tag(contam)
+        # Check number of databases are consistent
+        if len(pref_tag) != ndatabases_preferred:
+            logging.critical("Mismatch in preferred tag: "
+                             "len('%s') != len('%s')" %
+                             (pref_tag,nohits_preferred))
+            sys.exit(1)
+        if len(contam_tag) != ndatabases_contaminants:
+            logging.critical("Mismatch in contaminant tag: "
+                             "len('%s') != len('%s')" %
+                             (contam_tag,nohits_contaminants))
+            sys.exit(1)
         # Read passes if:
         # -- there is at least one hit on the 'preferred' genomes, OR
         # -- there are no hits on the 'contaminants' genomes
