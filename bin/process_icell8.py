@@ -983,7 +983,7 @@ if __name__ == "__main__":
                                 initial_stats.output(),
                                 suffix="_trimmed",
                                 append=True)
-    ppl.add_task(trim_stats,dependencies=(trim_reads,))
+    ppl.add_task(trim_stats,dependencies=(trim_reads,filter_stats))
 
     # Set up the contaminant filter jobs as a group
     contaminant_filter_dir = os.path.join(icell8_dir,
