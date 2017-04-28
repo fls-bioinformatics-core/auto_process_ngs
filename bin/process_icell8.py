@@ -28,6 +28,7 @@ from bcftbx.utils import strip_ext
 from bcftbx.utils import AttributeDictionary
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.FASTQFile import FastqIterator
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
@@ -455,39 +456,93 @@ class SplitAndFilterFastqPair(PipelineCommand):
 
 class BatchFastqs(PipelineCommand):
     """
-    Build command to run the 'batch_fastqs.py' utility
+    Split reads from Fastqs into batches using (z)cat/split
+
+    Given a list of Fastq files, combines them and then
+    splits into batches of a specified number of reads by
+    running a combination of '(z)cat' and 'split' commands.
+
+    Fastqs can be gzipped, but must have the same read number
+    (i.e. R1 or R2).
     """
     def __init__(self,name,fastqs,batch_dir,basename,
-                 batch_size=None,merge=False):
+                 batch_size=DEFAULT_BATCH_SIZE):
+        """
+        Create a new BatchFastqs instance
+
+        Arguments:
+          name (str): description of the command
+          fastqs (list): list of input Fastq files
+          batch_dir (str): destination directory to
+            write output files to
+          basename (str): basename for output Fastqs
+          batch_size (int): number of reads per output
+            FASTQ (in batch mode) (optional)
+        """
+        PipelineCommand.__init__(self,name)
+        # Store inputs
+        self._fastqs = fastqs
+        self._batch_dir = os.path.abspath(batch_dir)
+        self._basename = basename
+        self._batch_size = batch_size
+        # Determine if fastqs are gzipped
+        first_fastq = self._fastqs[0]
+        self._gzipped = first_fastq.endswith('.gz')
+        # Determine read number
+        self._read_number = get_read_number(first_fastq)
+    def cmd(self):
+        # Constructs command line of the form:
+        # zcat FASTQ | split -l BATCH_SIZE*4 -d -a 3 \
+        #   --additional-suffix=.r1.fastq - BASENAME.B
+        if self._gzipped:
+            cmd = Command('zcat')
+        else:
+            cmd = Command('cat')
+        cmd.add_args(*self._fastqs)
+        cmd.add_args('|',
+                     'split',
+                     '-l',self._batch_size*4,
+                     '-d',
+                     '-a',3,
+                     '--additional-suffix=.r%d.fastq' %
+                     self._read_number,
+                     '-',
+                     os.path.join(self._batch_dir,
+                                  '%s.B' % self._basename))
+        return cmd
+
+class ConcatFastqs(PipelineCommand):
+    """
+    Concatenate reads from multiple Fastqs into a single file
+
+    Given a list of Fastq files, combines them into a single
+    Fastq using the 'cat' utility.
+
+    FASTQs cannot be gzipped, and must all be same read number
+    (i.e. R1 or R2).
+    """
+    def __init__(self,name,fastqs,concat_dir,fastq_out):
         """
         Create a new BatchFastqs instance
 
         Arguments:
           name (str): description of the command
           fastqs (list): list of input FASTQ files
-          batch_dir (str): destination directory to
-            write output files to
-          batch_size (int): number of reads per output
-            FASTQ (in batch mode) (optional)
-          merge (bool): if True then merge all reads
-            into a single FASTQ file (default is to
-            split into multiple FASTQs)
+          concat_dir (str): destination directory to
+            write output file to
+          fastq_out (str): name of output Fastq file
         """
         PipelineCommand.__init__(self,name)
+        # Store inputs
         self._fastqs = fastqs
-        self._batch_dir = os.path.abspath(batch_dir)
-        self._basename = basename
-        self._batch_size = batch_size
-        self._merge = merge
+        self._concat_dir = os.path.abspath(concat_dir)
+        self._fastq_out = fastq_out
     def cmd(self):
-        cmd = Command('batch_fastqs.py',
-                      '-o',self._batch_dir,
-                      '-b',self._basename)
-        if self._batch_size:
-            cmd.add_args('-s',self._batch_size)
-        if self._merge:
-            cmd.add_args('-m')
+        cmd = Command('cat')
         cmd.add_args(*self._fastqs)
+        cmd.add_args('>',
+                     os.path.join(self._concat_dir,
+                                  self._fastq_out))
         return cmd
 
 class TrimFastqPair(PipelineCommand):
@@ -597,11 +652,25 @@ class GetICell8Stats(PipelineTask):
 class SplitFastqsIntoBatches(PipelineTask):
     """
     """
-    def setup(self,*args,**kws):
-        mkdir(self._args[1])
+    def setup(self,fastqs,batch_dir,basename,
+              batch_size=DEFAULT_BATCH_SIZE):
+        # Make the output directory
+        mkdir(batch_dir)
+        # Set up the commands
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        fastqs_r1 = [p[0] for p in fastq_pairs]
         self.add_cmd(BatchFastqs(self._name,
-                                 *args,
-                                 **kws))
+                                 fastqs_r1,
+                                 batch_dir,
+                                 basename,
+                                 batch_size=batch_size))
+        fastqs_r2 = [p[1] for p in fastq_pairs]
+        self.add_cmd(BatchFastqs(self._name,
+                                 fastqs_r2,
+                                 batch_dir,
+                                 basename,
+                                 batch_size=batch_size))
+        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
         return FileCollection(out_dir,"*.B*.r*.fastq")
@@ -727,10 +796,15 @@ class MergeFastqs(PipelineTask):
                          ('failed_umis',failed_umi_fastqs)):
             if not fqs:
                 continue
-            self.add_cmd(BatchFastqs(self._name,fqs,
-                                     merge_dir,
-                                     "%s.%s" % (basename,name),
-                                     merge=True))
+            fastq_pairs = pair_fastqs(fqs)[0]
+            fqs_r1 = [p[0] for p in fastq_pairs]
+            self.add_cmd(ConcatFastqs(self._name,fqs_r1,
+                                      merge_dir,
+                                      "%s.%s.r1.fastq" % (basename,name)))
+            fqs_r2 = [p[1] for p in fastq_pairs]
+            self.add_cmd(ConcatFastqs(self._name,fqs_r2,
+                                      merge_dir,
+                                      "%s.%s.r2.fastq" % (basename,name)))
         # Force jobs to use a wrapper script
         self.use_wrapper(True)
     def output(self):
@@ -758,6 +832,21 @@ def collect_fastqs(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
+
+def get_read_number(fastq):
+    """
+    Get the read number (1 or 2) from a Fastq file
+
+    Arguments:
+      fastq (str): path to a Fastq file
+
+    Returns:
+      Integer: read number (1 or 2) extracted from the first read.
+    """
+    for r in FastqIterator(fastq):
+        seq_id = r.seqid
+        break
+    return int(seq_id.pair_id)
 
 ######################################################################
 # Main
