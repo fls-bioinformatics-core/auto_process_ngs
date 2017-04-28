@@ -163,10 +163,16 @@ class Pipeline(object):
                     print "PIPELINE: started %s" % task.name()
                     if 'runner' not in kws:
                         kws['runner'] = self._default_runner
-                    task.run(sched=sched,
-                             log_dir=log_dir,
-                             scripts_dir=scripts_dir,
-                             **kws)
+                    try:
+                        task.run(sched=sched,
+                                 log_dir=log_dir,
+                                 scripts_dir=scripts_dir,
+                                 **kws)
+                    except Exception as ex:
+                        logging.critical("PIPELINE: failed to start "
+                                         "task '%s': %s" %
+                                         (task.name(),ex))
+                        return 1
                     self._running.append(task)
                     update = True
                 else:
