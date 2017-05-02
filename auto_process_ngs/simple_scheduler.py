@@ -418,10 +418,21 @@ class SimpleScheduler(threading.Thread):
             updated_running_list = []
             for job in self.__running:
                 if job.is_running:
-                    logging.debug("Job #%s (id %s) still running \"%s\"" % (job.job_number,
-                                                                            job.job_id,
-                                                                            job))
-                    updated_running_list.append(job)
+                    if not job.in_error_state:
+                        logging.debug("Job #%s (id %s) still running \"%s\""
+                                      % (job.job_number,
+                                         job.job_id,
+                                         job))
+                        updated_running_list.append(job)
+                    else:
+                        logging.debug("Job #%s (id %s) in error state \"%s\""
+                                      % (job.job_number,
+                                         job.job_id,
+                                         job))
+                        logging.warning("Job #%s (id %s) in error state, "
+                                        "terminating" % (job.job_number,
+                                                         job.job_id))
+                        job.terminate()
                 else:
                     self.__reporter.job_end(job)
                     logging.debug("Job #%s (id %s) completed \"%s\"" % (job.job_number,
@@ -726,6 +737,15 @@ class SchedulerJob(Job):
         """
         # Check if job is running
         return self.isRunning()
+
+    @property
+    def in_error_state(self):
+        """Test if a job is in an error state
+
+        Returns True if the job appears to be in an error state,
+        and False if not.
+        """
+        return self.errorState()
 
     @property
     def completed(self):
