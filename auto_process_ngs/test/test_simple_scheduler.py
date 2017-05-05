@@ -21,11 +21,12 @@ class MockJobRunner(BaseJobRunner):
         self.__jobcount = 0
         self.__jobs = dict()
         self.__log_dirs = dict()
+        self.__error_states = dict()
         BaseJobRunner.__init__(self)
 
     def run(self,name,working_dir,script,args):
         self.__jobcount += 1
-        job_id = self.__jobcount
+        job_id = str(self.__jobcount)
         self.__jobs[job_id] = { 'name': name,
                                 'working_dir': working_dir,
                                 'script': script,
@@ -43,8 +44,18 @@ class MockJobRunner(BaseJobRunner):
         if job_id in self.__jobs:
             del(self.__jobs[job_id])
 
+    def errorState(self,job_id):
+        try:
+            return self.__error_states[job_id]
+        except KeyError:
+            return False
+
     def list(self):
         return self.__jobs.keys()
+
+    def set_error_state(self,job_id,state):
+        # Allow error state on jobs to be set manually for testing
+        self.__error_states[job_id] = state
 
 class CallbackTester:
     """Utility class for testing callbacks from scheduler
@@ -248,6 +259,110 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertEqual(sched.n_waiting,0)
         self.assertEqual(sched.n_running,0)
         self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_restart_job_in_error_state(self):
+        """SimpleScheduler: restart job in error state
+
+        """
+        runner = MockJobRunner()
+        sched = SimpleScheduler(runner=runner,
+                                poll_interval=0.01,
+                                max_restarts=1)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Put job in error state, wait for scheduler to catch up
+        runner.set_error_state(job_1.job_id,True)
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Finish jobs, wait for scheduler to catch up
+        job_1.terminate()
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_dont_restart_job_in_error_state(self):
+        """SimpleScheduler: don't restart job in error state
+
+        """
+        runner = MockJobRunner()
+        sched = SimpleScheduler(runner=runner,
+                                poll_interval=0.01,
+                                max_restarts=0)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Put job in error state, wait for scheduler to catch up
+        runner.set_error_state(job_1.job_id,True)
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertFalse(sched.is_empty())
+        # Finish jobs, wait for scheduler to catch up
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_exceed_restarts_for_job_in_error_state(self):
+        """SimpleScheduler: handle exceeded restarts for job in error state
+
+        """
+        runner = MockJobRunner()
+        sched = SimpleScheduler(runner=runner,
+                                poll_interval=0.01,
+                                max_restarts=1)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Put job in error state, wait for scheduler to catch up
+        runner.set_error_state(job_1.job_id,True)
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,3)
+        self.assertFalse(sched.is_empty())
+        # Put job in error state again, wait for scheduler to catch up
+        runner.set_error_state(job_1.job_id,True)
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertFalse(sched.is_empty())
+        # Finish jobs, wait for scheduler to catch up
+        job_1.terminate()
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
         self.assertTrue(sched.is_empty())
         sched.stop()
 
@@ -695,6 +810,75 @@ class TestSchedulerJob(unittest.TestCase):
                           job.wait,
                           poll_interval=0.01,
                           timeout=5)
+
+    def test_restart_scheduler_job(self):
+        """Restart running SchedulerJob
+        """
+        job = SchedulerJob(MockJobRunner(),['sleep','50'])
+        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        self.assertEqual(job.command,"sleep 50")
+        self.assertFalse(job.is_running)
+        self.assertFalse(job.completed)
+        initial_job_id = job.start()
+        self.assertTrue(job.is_running)
+        self.assertFalse(job.completed)
+        restarted_job_id = job.restart()
+        self.assertTrue(job.is_running)
+        self.assertFalse(job.completed)
+        self.assertNotEqual(initial_job_id,
+                            restarted_job_id)
+        job.terminate()
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
+
+    def test_cant_restart_completed_scheduler_job(self):
+        """Can't restart a completed SchedulerJob
+        """
+        job = SchedulerJob(MockJobRunner(),['sleep','50'])
+        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        self.assertEqual(job.command,"sleep 50")
+        job.start()
+        job.terminate()
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
+        restarted_job_id = job.restart()
+        self.assertFalse(restarted_job_id)
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
+
+    def test_restart_scheduler_job_exceed_max_tries(self):
+        """Restart running SchedulerJob fails if max attempts exceeded
+        """
+        job = SchedulerJob(MockJobRunner(),['sleep','50'])
+        self.assertEqual(job.job_name,None)
+        self.assertEqual(job.job_number,None)
+        self.assertEqual(job.log_dir,None)
+        self.assertEqual(job.command,"sleep 50")
+        self.assertFalse(job.is_running)
+        self.assertFalse(job.completed)
+        job_id = job.start()
+        self.assertTrue(job.is_running)
+        self.assertFalse(job.completed)
+        max_tries = 3
+        for i in xrange(max_tries+1):
+            restarted_job_id = job.restart(max_tries)
+            if i < max_tries:
+                self.assertTrue(job.is_running)
+                self.assertFalse(job.completed)
+                self.assertNotEqual(job_id,
+                                    restarted_job_id)
+                job_id = restarted_job_id
+            else:
+                self.assertFalse(restarted_job_id)
+                self.assertFalse(job.is_running)
+                self.assertTrue(job.completed)
+        job.terminate()
+        self.assertFalse(job.is_running)
+        self.assertTrue(job.completed)
 
 class TestSchedulerReporter(unittest.TestCase):
     """Unit tests for SchedulerReporter class
