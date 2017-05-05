@@ -67,7 +67,8 @@ class SimpleScheduler(threading.Thread):
                  runner=JobRunner.SimpleJobRunner(),
                  reporter=None,
                  max_concurrent=None,
-                 poll_interval=5):
+                 poll_interval=5,
+                 job_interval=0.1):
         """Create a new SimpleScheduler instance
 
         Arguments:
@@ -79,6 +80,8 @@ class SimpleScheduler(threading.Thread):
           poll_interval: optional, number of seconds to wait in
             between checking for completed jobs etc in the scheduler
             loop (default: 5 seconds)
+          job_interval: optional, number of seconds to wait before
+            submitting a job (default: 0.1 seconds)
 
         """
 
@@ -90,6 +93,8 @@ class SimpleScheduler(threading.Thread):
         self.__max_concurrent = max_concurrent
         # Length of time to wait between checking jobs
         self.__poll_interval = poll_interval
+        # Length of time to wait before submitting job
+        self.__job_interval = job_interval
         # Internal job id counter
         self.__job_count = 0
         # Queue to add jobs
@@ -303,6 +308,8 @@ class SimpleScheduler(threading.Thread):
         # Use default runner if none explicitly specified
         if runner is None:
             runner = self.default_runner
+        # Pause before submitting
+        time.sleep(self.__job_interval)
         # Schedule the job
         job = SchedulerJob(runner,args,job_number=job_number,
                            name=name,working_dir=wd,log_dir=log_dir,
