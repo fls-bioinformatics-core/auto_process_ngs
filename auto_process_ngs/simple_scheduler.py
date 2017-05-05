@@ -68,7 +68,8 @@ class SimpleScheduler(threading.Thread):
                  reporter=None,
                  max_concurrent=None,
                  poll_interval=5,
-                 job_interval=0.1):
+                 job_interval=0.1,
+                 max_restarts=1):
         """Create a new SimpleScheduler instance
 
         Arguments:
@@ -82,6 +83,10 @@ class SimpleScheduler(threading.Thread):
             loop (default: 5 seconds)
           job_interval: optional, number of seconds to wait before
             submitting a job (default: 0.1 seconds)
+          max_restarts: optional, if non-zero then attempt to restart
+            jobs that are in an error state up to this many times. Set to
+            zero to turn off restarting jobs in error states (they will
+            be terminated instead). (default: 1)
 
         """
 
@@ -95,6 +100,8 @@ class SimpleScheduler(threading.Thread):
         self.__poll_interval = poll_interval
         # Length of time to wait before submitting job
         self.__job_interval = job_interval
+        # Number of attempts to restart errored jobs
+        self.__max_restarts = max_restarts
         # Internal job id counter
         self.__job_count = 0
         # Queue to add jobs
@@ -429,10 +436,27 @@ class SimpleScheduler(threading.Thread):
                                       % (job.job_number,
                                          job.job_id,
                                          job))
-                        logging.warning("Job #%s (id %s) in error state, "
-                                        "terminating" % (job.job_number,
+                        logging.warning("Job #%s (id %s) in error state"
+                                        % (job.job_number,
+                                           job.job_id))
+                        if not self.__max_restarts:
+                            job.terminate()
+                            logging.warning("Job #%s (id %s) terminated"
+                                            % (job.job_number,
+                                               job.job_id))
+                        elif job.restart(max_tries=self.__max_restarts):
+                            logging.warning("Job #%s (id %s) restarted"
+                                            % (job.job_number,
+                                               job.job_id))
+                            self.__reporter.job_start(job)
+                            updated_running_list.append(job)
+                        else:
+                            logging.warning("Job #%s (id %s) failed to "
+                                            "restart" % (job.job_number,
                                                          job.job_id))
-                        job.terminate()
+                            self.__reporter.job_end(job)
+                            self.__finished_names.append(job.job_name)
+                        report_status = True
                 else:
                     self.__reporter.job_end(job)
                     logging.debug("Job #%s (id %s) completed \"%s\"" % (job.job_number,
@@ -722,6 +746,7 @@ class SchedulerJob(Job):
         else:
             working_dir = os.path.abspath(working_dir)
         Job.__init__(self,runner,name,working_dir,args[0],args[1:])
+        self._restarts = 0
 
     @property 
     def name(self):
@@ -819,6 +844,50 @@ class SchedulerJob(Job):
             time.sleep(poll_interval)
             wait_time += poll_interval
         logging.debug("Job #%s finished" % self.job_number)
+
+    def restart(self,max_tries=3):
+        """Restart running the job
+
+        Attempts to restart a job, by terminating the current
+        instance and reinvoking the 'start' method.
+
+        The number of times that a restart should be attempted
+        is limited by the 'max_tries' parameter.
+
+        If the restart is successful then the new job id is
+        returned; otherwise None is returned to indicate
+        failure.
+
+        Arguments:
+          max_tries (int): maximum number of restarts
+            that should be attempted on this job before
+            giving up (default: 3)
+
+        Returns:
+          Id for job
+
+        """
+        # Check if job can be restarted
+        if self.completed:
+            logging.debug("Job #%s: already completed, cannot "
+                          "restart" % self.job_number)
+            return False
+        # Terminate the job
+        logging.debug("Job #%s: terminating before resubmission"
+                      % self.job_number)
+        self.terminate()
+        # Check if we can restart
+        self._restarts += 1
+        if self._restarts > max_tries:
+            logging.debug("Job #%s: maximum number of restart "
+                          "attempts exceeded (%d)" %
+                          (self.job_number,max_tries))
+            return False
+        else:
+            logging.debug("Job #%s: restarted (attempt #%d)" %
+                          (self.job_number,self._restarts))
+            #return self.start()
+            return Job.restart(self)
 
     def __repr__(self):
         """Return string representation of the job command line
