@@ -413,44 +413,56 @@ class SplitAndFilterFastqPair(PipelineCommand):
     """
     Build command to run the 'split_icell8_fastqs.py' utility
     """
-    def __init__(self,name,fastq_pair,filter_dir,well_list=None,
-                 basename=None,mode='none',filter=False):
+    def __init__(self,name,fastq_pair,out_dir,well_list=None,
+                 basename=None,mode='none',
+                 discard_unknown_barcodes=False,
+                 quality_filter=False):
         """
         Create a new SplitAndFilterFastqPair instance
 
         Arguments:
           name (str): description of the command
           fastq_pair (list): R1/R2 FASTQ file pair
-          filter_dir (str): destination directory to
+          out_dir (str): destination directory to
             write output files to
           well_list (str): 'well list' file to use
             (optional)
           basename (str): basename to use for output
             FASTQ files (optional)
           mode (str): mode to run the utility in
-          filter (bool): if True then also do barcode
-            and UMI quality filtering (no filtering is
-            performed by default)
+          discard_unknown_barcodes (bool): if True
+            then discard read pairs where the barcode
+            doesn't match one of those in the well
+            list file (nb well list file must also
+            be supplied in this case) (all reads are
+            kept by default)
+          quality_filter (bool): if True then also
+            do filtering based on barcode- and
+            UMI-quality (no filtering is performed
+            by default)
         """
         PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
-        self._filter_dir = os.path.abspath(filter_dir)
+        self._out_dir = os.path.abspath(out_dir)
         self._well_list = well_list
-        if self._well_list is not None:
-            self._well_list = os.path.abspath(self._well_list)
         self._basename = basename
         self._mode = mode
-        self._filter = filter
+        self._discard_unknown_barcodes = discard_unknown_barcodes
+        self._quality_filter = quality_filter
+        if self._well_list is not None:
+            self._well_list = os.path.abspath(self._well_list)
     def cmd(self):
         cmd = Command('split_icell8_fastqs.py',
-                      '-o',self._filter_dir,
+                      '-o',self._out_dir,
                       '-b',self._basename)
         if self._well_list:
             cmd.add_args('-w',self._well_list)
         if self._mode:
             cmd.add_args('-m',self._mode)
-        if self._filter:
-            cmd.add_args('--filter')
+        if self._discard_unknown_barcodes:
+            cmd.add_args('--discard-unknown-barcodes')
+        if self._quality_filter:
+            cmd.add_args('--quality-filter')
         cmd.add_args(*self._fastq_pair)
         return cmd
 
@@ -679,18 +691,21 @@ class FilterICell8Fastqs(PipelineTask):
     """
     """
     def setup(self,fastqs,filter_dir,well_list=None,
-              mode='none',filter=False):
+              mode='none',discard_unknown_barcodes=False,
+              quality_filter=False):
         mkdir(filter_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
-            self.add_cmd(SplitAndFilterFastqPair(self._name,
-                                                 fastq_pair,
-                                                 filter_dir,
-                                                 well_list=well_list,
-                                                 basename=basename,
-                                                 mode=mode,
-                                                 filter=filter))
+            self.add_cmd(SplitAndFilterFastqPair(
+                self._name,
+                fastq_pair,
+                filter_dir,
+                well_list=well_list,
+                basename=basename,
+                mode=mode,
+                discard_unknown_barcodes=discard_unknown_barcodes,
+                quality_filter=quality_filter))
         self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
@@ -883,6 +898,10 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "don't specify the aligner)")
+    p.add_argument("--no-quality-filter",action='store_true',
+                   dest="no_quality_filter",
+                   help="turn off the barcode/UMI quality checks "
+                   "(recommended for NextSeq data)")
     p.add_argument("-n","--threads",type=int,
                    dest="threads",default=1,
                    help="number of threads to use with fastq_screen "
@@ -948,12 +967,15 @@ if __name__ == "__main__":
     # Other settings
     well_list = os.path.abspath(args.well_list)
     max_jobs = args.max_jobs
+    do_quality_filter = (not args.no_quality_filter)
 
     # Report settings
     print "Unaligned dir     : %s" % args.unaligned_dir
     print "Well list file    : %s" % well_list
     print "Output dir        : %s" % args.outdir
     print "Batch size (reads): %s" % args.batch_size
+    print "Quality filter barcodes/UMIs: %s" % \
+        ('yes' if do_quality_filter else 'no')
     print "Mammalian genome panel  : %s" % args.mammalian_conf
     with open(args.mammalian_conf) as fp:
         for line in fp:
@@ -1041,30 +1063,31 @@ if __name__ == "__main__":
                                           batch_size=args.batch_size)
     ppl.add_task(batch_fastqs)
 
-    # Setup the quality filter jobs as a group
+    # Setup the filtering jobs as a group
     filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
-    quality_filter = FilterICell8Fastqs("Quality filter Fastqs",
-                                        batch_fastqs.output(),
-                                        filter_dir,
-                                        well_list=well_list,
-                                        mode='none',
-                                        filter=True)
-    ppl.add_task(quality_filter,dependencies=(batch_fastqs,))
+    filter_fastqs = FilterICell8Fastqs("Filter Fastqs",
+                                       batch_fastqs.output(),
+                                       filter_dir,
+                                       well_list=well_list,
+                                       mode='none',
+                                       discard_unknown_barcodes=True,
+                                       quality_filter=do_quality_filter)
+    ppl.add_task(filter_fastqs,dependencies=(batch_fastqs,))
     
-    # Post quality filter stats
-    filter_stats = GetICell8Stats("Post-quality filter statistics",
-                                  quality_filter.output().assigned,
+    # Post filtering stats
+    filter_stats = GetICell8Stats("Post-filtering statistics",
+                                  filter_fastqs.output().assigned,
                                   initial_stats.output(),
-                                  suffix="_quality_filtered",
+                                  suffix="_filtered",
                                   append=True)
-    ppl.add_task(filter_stats,dependencies=(initial_stats,quality_filter))
+    ppl.add_task(filter_stats,dependencies=(initial_stats,filter_fastqs))
 
     # Set up the cutadapt jobs as a group
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
     trim_reads = TrimReads("Read trimming",
-                           quality_filter.output().assigned,
+                           filter_fastqs.output().assigned,
                            trim_dir)
-    ppl.add_task(trim_reads,dependencies=(quality_filter,))
+    ppl.add_task(trim_reads,dependencies=(filter_fastqs,))
 
     # Post read trimming stats
     trim_stats = GetICell8Stats("Post-trimming statistics",
@@ -1106,9 +1129,9 @@ if __name__ == "__main__":
     final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
     merge_fastqs = MergeFastqs("Merge Fastqs",
                                split_barcodes.output(),
-                               quality_filter.output().unassigned,
-                               quality_filter.output().failed_barcodes,
-                               quality_filter.output().failed_umis,
+                               filter_fastqs.output().unassigned,
+                               filter_fastqs.output().failed_barcodes,
+                               filter_fastqs.output().failed_umis,
                                final_fastqs_dir,
                                basename)
     ppl.add_task(merge_fastqs,dependencies=(split_barcodes,))
