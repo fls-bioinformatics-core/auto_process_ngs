@@ -598,6 +598,41 @@ class TrimFastqPair(PipelineCommand):
                      self._fastq_pair[0])
         return cmd
 
+class FilterPolyGReads(PipelineCommand):
+    """
+    'cutadapt' to fetch reads with poly-G regions
+    """
+    def __init__(self,name,fastq_pair,out_dir):
+        """
+        Create a new GetPolyGReads instance
+
+        Arguments:
+          name (str): description of the command
+          fastq_pair (list): R1/R1 FASTQ file pair
+          out_dir (str): destination directory to
+            write output files to
+        """
+        PipelineCommand.__init__(self,name)
+        self._fastq_pair = fastq_pair
+        self._out_dir = os.path.abspath(out_dir)
+    def cmd(self):
+        # Generate output file pair names
+        fastq_pair_out = [os.path.join(self._out_dir,
+                                       strip_ext(os.path.basename(fq),'.fastq')
+                                       + '.poly_g.fastq')
+                          for fq in self._fastq_pair]
+        # Build command
+        cmd = Command(
+            'cutadapt',
+            '-a','GGGGGGG',
+            '--discard-untrimmed')
+        # NB reverse R1 and R2 for input and output
+        cmd.add_args('-o',fastq_pair_out[1],
+                     '-p',fastq_pair_out[0])
+        cmd.add_args(self._fastq_pair[1],
+                     self._fastq_pair[0])
+        return cmd
+
 class ContaminantFilterFastqPair(PipelineCommand):
     """
     Build command to run 'icell8_contaminantion_filter.py' utility
@@ -729,6 +764,20 @@ class TrimReads(PipelineTask):
     def output(self):
         out_dir = self._args[1]
         return FileCollection(out_dir,"*.trimmed.fastq")
+
+class GetReadsWithPolyGRegions(PipelineTask):
+    """
+    """
+    def setup(self,fastqs,poly_g_regions_dir):
+        mkdir(poly_g_regions_dir)
+        fastq_pairs = pair_fastqs(fastqs)[0]
+        for fastq_pair in fastq_pairs:
+            self.add_cmd(FilterPolyGReads(self._name,
+                                          fastq_pair,
+                                          poly_g_regions_dir))
+    def output(self):
+        out_dir = self._args[1]
+        return FileCollection(out_dir,"*.poly_g.fastq")
 
 class FilterContaminatedReads(PipelineTask):
     """
@@ -1082,6 +1131,20 @@ if __name__ == "__main__":
                                   append=True)
     ppl.add_task(filter_stats,dependencies=(initial_stats,filter_fastqs))
 
+    # Use cutadapt to find reads with poly-G regions
+    poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
+    get_poly_g_reads = GetReadsWithPolyGRegions(
+        "Find reads with poly-G regions",
+        filter_fastqs.output().assigned,
+        poly_g_dir)
+    ppl.add_task(get_poly_g_reads,dependencies=(filter_fastqs,filter_stats))
+    poly_g_stats = GetICell8Stats("Poly-G region statistics",
+                                get_poly_g_reads.output(),
+                                initial_stats.output(),
+                                suffix="_poly_g",
+                                append=True)
+    ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats))
+
     # Set up the cutadapt jobs as a group
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
     trim_reads = TrimReads("Read trimming",
@@ -1095,7 +1158,7 @@ if __name__ == "__main__":
                                 initial_stats.output(),
                                 suffix="_trimmed",
                                 append=True)
-    ppl.add_task(trim_stats,dependencies=(trim_reads,filter_stats))
+    ppl.add_task(trim_stats,dependencies=(trim_reads,poly_g_stats))
 
     # Set up the contaminant filter jobs as a group
     contaminant_filter_dir = os.path.join(icell8_dir,
