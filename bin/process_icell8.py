@@ -1032,14 +1032,14 @@ if __name__ == "__main__":
                                    fastqs,
                                    os.path.join(stats_dir,"icell8_stats.tsv"),
                                    well_list)
-    ##ppl.add_task(initial_stats)
+    ppl.add_task(initial_stats)
 
     # Split fastqs into batches
     batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
     batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
                                           batch_dir,basename,
                                           batch_size=args.batch_size)
-    ##ppl.add_task(batch_fastqs)
+    ppl.add_task(batch_fastqs)
 
     # Setup the quality filter jobs as a group
     filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
@@ -1123,8 +1123,11 @@ if __name__ == "__main__":
     ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,))
 
     # Execute the pipeline
-    ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
+    exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
 
     # Finish
     print "All jobs completed"
     sched.stop()
+    if exit_status != 0:
+        logging.critical("Pipeline failed: exit status %s" % exit_status)
+    sys.exit(exit_status)
