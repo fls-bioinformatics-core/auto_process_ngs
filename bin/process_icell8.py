@@ -1137,12 +1137,12 @@ if __name__ == "__main__":
         "Find reads with poly-G regions",
         filter_fastqs.output().assigned,
         poly_g_dir)
-    ppl.add_task(get_poly_g_reads,dependencies=(filter_fastqs,filter_stats))
+    ppl.add_task(get_poly_g_reads,dependencies=(filter_fastqs,))
     poly_g_stats = GetICell8Stats("Poly-G region statistics",
-                                get_poly_g_reads.output(),
-                                initial_stats.output(),
-                                suffix="_poly_g",
-                                append=True)
+                                  get_poly_g_reads.output(),
+                                  initial_stats.output(),
+                                  suffix="_poly_g",
+                                  append=True)
     ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats))
 
     # Set up the cutadapt jobs as a group
