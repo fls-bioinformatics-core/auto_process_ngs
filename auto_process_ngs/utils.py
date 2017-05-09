@@ -272,7 +272,8 @@ class AnalysisFastq(BaseFastqAttrs):
             if field.startswith('R'):
                 self.read_number = int(field[1])
                 fields = fields[:-1]
-            elif field == 'I1':
+            elif field.startswith('I'):
+                self.read_number = int(field[1])
                 self.is_index_read = True
                 fields = fields[:-1]
         # Deal with trailing lane number e.g. L001
@@ -324,10 +325,10 @@ class AnalysisFastq(BaseFastqAttrs):
         if self.read_number is not None:
             if self.delimiter == '.':
                 fq.append("r%d" % self.read_number)
+            elif self.is_index_read:
+                fq.append("I%d" % self.read_number)
             else:
                 fq.append("R%d" % self.read_number)
-        elif self.is_index_read:
-            fq.append("I1")
         if self.set_number is not None:
             fq.append("%03d" % self.set_number)
         return self.delimiter.join(fq)

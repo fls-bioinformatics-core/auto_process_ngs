@@ -72,7 +72,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,3)
-        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.read_number,1)
         self.assertEqual(fq.set_number,1)
         self.assertTrue(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
