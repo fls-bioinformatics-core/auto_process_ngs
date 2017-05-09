@@ -871,6 +871,21 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq,[fq_r1,fq_r2])
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
+
+    def test_paired_end_analysis_sample_index_read_fastq(self):
+        """Check AnalysisSample class with index read fastqs
+        """
+        sample = AnalysisSample('PJB1-B')
+        fq_l1_r1 = '/run/sample1/PJB1-B_S1_L001_R1.fastq.gz'
+        fq_l1_r2 = '/run/sample1/PJB1-B_S1_L001_R2.fastq.gz'
+        fq_l1_i1 = '/run/sample1/PJB1-B_S1_L001_I1.fastq.gz'
+        sample.add_fastq(fq_l1_r1)
+        sample.add_fastq(fq_l1_r2)
+        sample.add_fastq(fq_l1_i1)
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,[fq_l1_i1,fq_l1_r1,fq_l1_r2])
+        self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1_r1,])
+        self.assertEqual(sample.fastq_subset(read_number=2),[fq_l1_r2,])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 

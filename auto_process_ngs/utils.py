@@ -1150,6 +1150,9 @@ class AnalysisSample:
     fastq     : list of fastq files associated with the sample
     paired_end: True if sample is paired end, False if not
 
+    Note that the 'fastq' list will include any index read fastqs
+    (i.e. I1/I2) as well as R1/R2 fastqs.
+
     """
 
     def __init__(self,name,fastq_attrs=None):
@@ -1192,6 +1195,9 @@ class AnalysisSample:
     def fastq_subset(self,read_number=None):
         """Return a subset of fastq files from the sample
 
+        Note that only R1/R2 files will be returned; index read
+        fastqs (i.e. I1/I2) are excluded regardless of read number.
+
         Arguments:
           read_number: select subset based on read_number (1 or 2)
 
@@ -1203,8 +1209,12 @@ class AnalysisSample:
         fastqs = []
         for fastq in self.fastq:
             fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                logger.debug("Rejecting index read %s" % fastq)
+                continue
             if fq.read_number is None:
-                logger.debug("Unable to determine read number for %s, assume R1" % fastq)
+                logger.debug("Unable to determine read number for %s,"
+                             "assume R1" % fastq)
                 fq_read_number = 1
             else:
                 fq_read_number = fq.read_number
