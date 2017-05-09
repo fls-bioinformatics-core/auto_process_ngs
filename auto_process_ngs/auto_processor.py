@@ -2421,6 +2421,11 @@ class AutoProcess:
                 group = None
                 print "Examining files in sample %s" % sample.name
                 for fq in sample.fastq:
+                    if utils.AnalysisFastq(fq).is_index_read:
+                        # Reject index read Fastqs
+                        logging.warning("Ignoring index read: %s" %
+                                        os.path.basename(fq))
+                        continue
                     if sample.verify_qc(project_qc_dir,fq):
                         logging.debug("\t%s: QC verified" % fq)
                     else:
