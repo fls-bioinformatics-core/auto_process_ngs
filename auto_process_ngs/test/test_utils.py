@@ -29,6 +29,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
     def test_full_name_dual_index(self):
@@ -44,6 +45,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
 
     def test_full_name_blc2fastq2(self):
@@ -59,7 +61,21 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+
+    def test_index_read_blc2fastq2(self):
+        """Handle Illumina index read fastq name from bcl2fastq2
+        """
+        fq = AnalysisFastq('NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,1)
+        self.assertTrue(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
 
     def test_name_no_lane_blc2fastq2(self):
         """Handle Illumina fastq name from bcl2fastq2 (without lane)
@@ -74,6 +90,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_R2_001')
 
     def test_name_only(self):
@@ -88,6 +105,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1')
 
     def test_name_only_paired_end(self):
@@ -102,6 +120,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_R2')
 
     def test_name_and_lane(self):
@@ -116,6 +135,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001')
 
     def test_name_and_lane_paired_end(self):
@@ -130,6 +150,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001_R2')
 
     def test_name_and_tag(self):
@@ -144,6 +165,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG')
 
     def test_name_and_tag_paired_end(self):
@@ -158,6 +180,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_R2')
 
     def test_name_tag_and_lane(self):
@@ -172,6 +195,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001')
 
     def test_name_tag_and_lane_paired_end(self):
@@ -186,6 +210,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
 
     def test_AGTC_sample_names(self):
@@ -199,6 +224,7 @@ class TestAnalysisFastq(unittest.TestCase):
             self.assertEqual(fq.lane_number,None)
             self.assertEqual(fq.read_number,1)
             self.assertEqual(fq.set_number,None)
+            self.assertFalse(fq.is_index_read)
             self.assertEqual(str(fq),'%s_R1' % name)
 
     def test_non_standard_sample_name(self):
@@ -213,6 +239,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq.r2')
 
     def test_non_standard_sample_name_with_dots(self):
@@ -241,6 +268,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq.ACAGTG.r2')
 
     def test_input_is_full_path(self):
@@ -255,6 +283,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
 class TestAnalysisDir(unittest.TestCase):

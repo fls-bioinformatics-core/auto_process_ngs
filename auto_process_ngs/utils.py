@@ -91,6 +91,7 @@ class BaseFastqAttrs(object):
     lane_number:      integer (or None if no lane number)
     read_number:      integer (or None if no read number)
     set_number:       integer (or None if no set number)
+    is_index_read:    boolean (True if index read, False if not)
 
     Subclasses should process the supplied Fastq name and set
     these attributes appropriately.
@@ -110,6 +111,7 @@ class BaseFastqAttrs(object):
         self.lane_number = None
         self.read_number = None
         self.set_number = None
+        self.is_index_read = False
     def __repr__(self):
         return self.basename
 
@@ -148,6 +150,11 @@ class AnalysisFastq(BaseFastqAttrs):
     lane_number = 3
     read_number = 2
     set_number = 1
+
+    bcl2fastq can also produce 'index read' Fastq files where the
+    R1/R2 is replaced by I1, e.g.:
+
+    ES_exp1_S4_L003_I1_001.fastq.gz
 
     Alternatively it can be a 'reduced' version where one or more
     of the components has been omitted (typically because they are
@@ -189,6 +196,7 @@ class AnalysisFastq(BaseFastqAttrs):
     lane_number:      integer (or None if no lane number)
     read_number:      integer (or None if no read number)
     set_number:       integer (or None if no set number)
+    is_index_read:    boolean (True if index read, False if not)
 
     """
 
@@ -260,9 +268,13 @@ class AnalysisFastq(BaseFastqAttrs):
         # Deal with trailing read number e.g. R1
         field = fields[-1]
         ##logger.debug("Test for read number %s" % field)
-        if len(field) == 2 and field.startswith('R'):
-            self.read_number = int(field[1])
-            fields = fields[:-1]
+        if len(field) == 2:
+            if field.startswith('R'):
+                self.read_number = int(field[1])
+                fields = fields[:-1]
+            elif field == 'I1':
+                self.is_index_read = True
+                fields = fields[:-1]
         # Deal with trailing lane number e.g. L001
         field = fields[-1]
         ##logger.debug("Test for lane number %s" % field)
@@ -314,6 +326,8 @@ class AnalysisFastq(BaseFastqAttrs):
                 fq.append("r%d" % self.read_number)
             else:
                 fq.append("R%d" % self.read_number)
+        elif self.is_index_read:
+            fq.append("I1")
         if self.set_number is not None:
             fq.append("%03d" % self.set_number)
         return self.delimiter.join(fq)
