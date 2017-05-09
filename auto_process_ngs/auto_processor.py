@@ -1230,6 +1230,8 @@ class AutoProcess:
                                                           '--include=Data/**',
                                                           '--include=RunInfo.xml',
                                                           '--include=SampleSheet.csv',
+                                                          '--include=RTAComplete.txt',
+                                                          '--include=runParameters.xml',
                                                           '--exclude=*'))
         print "Running %s" % rsync
         rsync_job = simple_scheduler.SchedulerJob(runner,
