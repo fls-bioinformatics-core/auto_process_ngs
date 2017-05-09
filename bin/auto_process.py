@@ -424,6 +424,14 @@ def add_setup_analysis_dirs_command(cmdparser):
                  dest='ignore_missing_metadata',default=False,
                  help="force creation of project directories even if metadata is not "
                  "set (default is to fail if metadata is missing)")
+    p.add_option('--unaligned-dir',action='store',
+                 dest='unaligned_dir',default=None,
+                 help="explicitly specify the subdirectory with bcl-to-fastq "
+                 "outputs")
+    p.add_option('--undetermined',action='store',
+                 dest='undetermined',default=None,
+                 help="explicitly specify name for project directory with "
+                 "'undetermined' fastqs")
     p.add_option('--short-fastq-names',action='store_true',
                  dest='short_fastq_names',default=False,
                  help="shorten fastq file names when copying or linking from project "
@@ -918,8 +926,10 @@ if __name__ == "__main__":
                                runner=options.runner,
                                force=options.force)
         elif cmd == 'setup_analysis_dirs':
-            d.setup_analysis_dirs(ignore_missing_metadata=
+            d.setup_analysis_dirs(unaligned_dir=options.unaligned_dir,
+                                  ignore_missing_metadata=
                                   options.ignore_missing_metadata,
+                                  undetermined_project=options.undetermined,
                                   short_fastq_names=options.short_fastq_names,
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
