@@ -1206,7 +1206,7 @@ if __name__ == "__main__":
         initial_stats.output(),
         suffix="_final",
         append=True)
-    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,))
+    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats))
 
     # Execute the pipeline
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
