@@ -1589,8 +1589,7 @@ class AutoProcess:
                                                 os.path.join(self.params.analysis_dir,
                                                              per_lane_stats_file),
                                                 self.params.analysis_dir,
-                                                '--nprocessors',nprocessors,
-                                                '--force')
+                                                '--nprocessors',nprocessors)
         print "Generating statistics: running %s" % fastq_statistics
         fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
                                                              fastq_statistics.command_line,
