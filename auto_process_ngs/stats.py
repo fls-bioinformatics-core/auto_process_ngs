@@ -331,7 +331,8 @@ class FastqStatistics:
             assigned[lane] = 0
             unassigned[lane] = 0
         # Count assigned and unassigned (= undetermined) reads
-        for line in filter(lambda x: x['Read_number'] == 1,
+        for line in filter(lambda x: x['Read_number'] == 1 and
+                           not IlluminaFastq(x['Fastq']).is_index_read,
                            self._stats):
             if line['Project'] != 'Undetermined_indices':
                 counts = assigned
