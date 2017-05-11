@@ -712,6 +712,8 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_option('--per-lane-stats-file',action='store',
                  dest='per_lane_stats_file',default=None,
                  help="specify output file for per-lane statistics")
+    p.add_option('-a','--add',action="store_true",dest="add_data",
+                 help="add new data from UNALIGNED_DIR to existing statistics")
     add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
@@ -910,6 +912,7 @@ if __name__ == "__main__":
             d.generate_stats(unaligned_dir=options.unaligned_dir,
                              stats_file=options.stats_file,
                              per_lane_stats_file=options.per_lane_stats_file,
+                             add_data=options.add_data,
                              nprocessors=options.nprocessors,
                              runner=options.runner)
         elif cmd == 'analyse_barcodes':

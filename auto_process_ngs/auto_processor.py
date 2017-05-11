@@ -1527,7 +1527,7 @@ class AutoProcess:
             return
 
     def generate_stats(self,stats_file=None,per_lane_stats_file=None,
-                       unaligned_dir=None,nprocessors=None,
+                       unaligned_dir=None,add_data=False,nprocessors=None,
                        runner=None):
         """Generate statistics for FASTQ files
 
@@ -1546,6 +1546,9 @@ class AutoProcess:
             local settings)
           unaligned_dir: (optional) where to look for Fastq files
             from bcl2fastq
+          add_data: (optional) if True then add stats to the existing
+            stats files (default is to overwrite existing stats
+            files)
           nprocessors: (optional) number of cores to use when
             running 'fastq_statistics.py'
           runner: (optional) specify a non-default job runner to
@@ -1590,6 +1593,8 @@ class AutoProcess:
                                                              per_lane_stats_file),
                                                 self.params.analysis_dir,
                                                 '--nprocessors',nprocessors)
+        if add_data:
+            fastq_statistics.add_args('--update')
         print "Generating statistics: running %s" % fastq_statistics
         fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
                                                              fastq_statistics.command_line,
