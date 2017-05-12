@@ -374,7 +374,7 @@ class ICell8Statistics(PipelineCommand):
     Build command to run the 'icell8_stats.py' utility
     """
     def __init__(self,name,fastqs,stats_file,well_list=None,
-                 suffix=None,append=False):
+                 suffix=None,append=False,nprocs=1):
         """
         Create new ICell8Statistics instance
 
@@ -387,6 +387,8 @@ class ICell8Statistics(PipelineCommand):
             UMI counts (optional)
           append (bool): if True then append columns to existing
             output file (by default creates new output file)
+          nprocs (int): number of cores available for stats
+            (default: 1)
         """
         PipelineCommand.__init__(self,name)
         self._fastqs = fastqs
@@ -396,10 +398,12 @@ class ICell8Statistics(PipelineCommand):
             self._well_list = os.path.abspath(self._well_list)
         self._append = append
         self._suffix = suffix
+        self._nprocs = nprocs
     def cmd(self):
         # Build command
-        cmd = Command('icell8_stats.py',
-                      '-f',self._stats_file)
+        cmd = Command('icell8_stats2.py',
+                      '-f',self._stats_file,
+                      '-n',self._nprocs)
         if self._well_list:
             cmd.add_args('-w',self._well_list)
         if self._suffix:
@@ -1102,8 +1106,10 @@ if __name__ == "__main__":
     initial_stats = GetICell8Stats("Initial statistics",
                                    fastqs,
                                    os.path.join(stats_dir,"icell8_stats.tsv"),
-                                   well_list)
-    ppl.add_task(initial_stats)
+                                   well_list,
+                                   nprocs=args.threads)
+    ppl.add_task(initial_stats,
+                 runner=runners['contaminant_filter'])
 
     # Split fastqs into batches
     batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
@@ -1128,8 +1134,10 @@ if __name__ == "__main__":
                                   filter_fastqs.output().assigned,
                                   initial_stats.output(),
                                   suffix="_filtered",
-                                  append=True)
-    ppl.add_task(filter_stats,dependencies=(initial_stats,filter_fastqs))
+                                  append=True,
+                                  nprocs=args.threads)
+    ppl.add_task(filter_stats,dependencies=(initial_stats,filter_fastqs),
+                 runner=runners['contaminant_filter'])
 
     # Use cutadapt to find reads with poly-G regions
     poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
@@ -1142,8 +1150,10 @@ if __name__ == "__main__":
                                   get_poly_g_reads.output(),
                                   initial_stats.output(),
                                   suffix="_poly_g",
-                                  append=True)
-    ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats))
+                                  append=True,
+                                  nprocs=args.threads)
+    ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats),
+                 runner=runners['contaminant_filter'])
 
     # Set up the cutadapt jobs as a group
     trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
@@ -1157,8 +1167,10 @@ if __name__ == "__main__":
                                 trim_reads.output(),
                                 initial_stats.output(),
                                 suffix="_trimmed",
-                                append=True)
-    ppl.add_task(trim_stats,dependencies=(trim_reads,poly_g_stats))
+                                append=True,
+                                nprocs=args.threads)
+    ppl.add_task(trim_stats,dependencies=(trim_reads,poly_g_stats),
+                 runner=runners['contaminant_filter'])
 
     # Set up the contaminant filter jobs as a group
     contaminant_filter_dir = os.path.join(icell8_dir,
@@ -1178,8 +1190,10 @@ if __name__ == "__main__":
                                  contaminant_filter.output(),
                                  initial_stats.output(),
                                  suffix="_contaminant_filtered",
-                                 append=True)
-    ppl.add_task(final_stats,dependencies=(contaminant_filter,trim_stats))
+                                 append=True,
+                                 nprocs=args.threads)
+    ppl.add_task(final_stats,dependencies=(contaminant_filter,trim_stats),
+                 runner=runners['contaminant_filter'])
 
     # Rebatch reads by barcode
     # First: split each batch by barcode
@@ -1205,8 +1219,10 @@ if __name__ == "__main__":
         merge_fastqs.output().assigned,
         initial_stats.output(),
         suffix="_final",
-        append=True)
-    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats))
+        append=True,
+        nprocs=args.threads)
+    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats),
+                 runner=runners['contaminant_filter'])
 
     # Execute the pipeline
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
