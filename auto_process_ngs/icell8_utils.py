@@ -23,6 +23,7 @@ iCell8 platform:
 import time
 from itertools import izip
 from collections import Iterator
+from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from .fastq_utils import pair_fastqs
@@ -33,6 +34,44 @@ from .fastq_utils import pair_fastqs
 
 INLINE_BARCODE_LENGTH = 11
 UMI_LENGTH = 10
+
+######################################################################
+# Functions
+######################################################################
+
+def collect_fastq_stats(fastq):
+    """
+    Get barcode and distince UMI counts for Fastq file
+
+    Used by Icell8Stats to collect counts for each file
+    supplied.
+
+    Arguments:
+      fastq (str): path to Fastq file
+
+    Returns:
+      Tuple: tuple consisting of (fastq,counts,umis)
+        where 'fastq' is the path to the input Fastq
+        file, 'counts' is a dictionary with barcodes
+        as keys and read counts as values, and 'umis'
+        is a dictionary with barcodes as keys and
+        sets of UMIs as values.
+    """
+    counts = {}
+    umis = {}
+    for r in FastqIterator(fastq):
+        r = ICell8Read1(r)
+        barcode = r.barcode
+        try:
+            counts[barcode] += 1
+        except KeyError:
+            counts[barcode] = 1
+        umi = r.umi
+        try:
+            umis[barcode].add(umi)
+        except KeyError:
+            umis[barcode] = set((umi,))
+    return (fastq,counts,umis)
 
 ######################################################################
 # Classes
@@ -75,7 +114,70 @@ class ICell8WellList(object):
         except IndexError:
             raise KeyError("Failed to locate sample for '%s'" % barcode)
 
-class ICell8ReadPair(object):
+class ICell8Read1(object):
+    """
+    Class representing an iCell8 R1 read
+    """
+    def __init__(self,fastq_read):
+        """
+        Create a new ICell8Read1 instance.
+
+        Arguments:
+          fastq_read (FastqRead): the R1 read in the pair
+        """
+        self._barcode_length = 11
+        self._umi_length = 10
+        self._read = fastq_read
+    @property
+    def read(self):
+        """
+        R1 read
+        """
+        return self._read
+    @property
+    def barcode(self):
+        """
+        Inline barcode sequence extracted from the R1 read
+        """
+        return self._read.sequence[0:INLINE_BARCODE_LENGTH]
+    @property
+    def umi(self):
+        """
+        UMI sequence extracted from the R1 read
+        """
+        return self._read.sequence[INLINE_BARCODE_LENGTH:
+                                   INLINE_BARCODE_LENGTH+UMI_LENGTH]
+    @property
+    def barcode_quality(self):
+        """
+        Inline barcode sequence quality extracted from the R1 read
+        """
+        return self._read.quality[0:INLINE_BARCODE_LENGTH]
+    @property
+    def umi_quality(self):
+        """
+        UMI sequence quality extracted from the R1 read
+        """
+        return self._read.quality[INLINE_BARCODE_LENGTH:
+                                  INLINE_BARCODE_LENGTH+UMI_LENGTH]
+    @property
+    def min_barcode_quality(self):
+        """
+        Minimum inline barcode quality score
+
+        The score is encoded as a character e.g. '/' or 'A'.
+        """
+        return min(self.barcode_quality)
+    @property
+    def min_umi_quality(self):
+        """
+        Minimum UMI sequence quality score
+
+        The score is encoded as a character e.g. '/' or 'A'.
+        """
+        return min(self.umi_quality)
+
+class ICell8ReadPair(ICell8Read1):
     """
     Class representing an iCell8 R1/R2 read-pair
     """
@@ -85,74 +187,26 @@ class ICell8ReadPair(object):
 
         Arguments:
           r1 (FastqRead): the R1 read in the pair
-          r2 (FasrqRead): the R2 read
+          r2 (FasrqRead): the matching R2 read
         """
         if not r1.seqid.is_pair_of(r2.seqid):
             raise Exception("Reads are not paired")
-        self._r1 = r1
-        self._r2 = r2
+        ICell8Read1.__init__(self,r1)
+        self._read2 = r2
 
     @property
     def r1(self):
         """
         R1 read from the pair
         """
-        return self._r1
+        return self.read
 
     @property
     def r2(self):
         """
         R2 read from the pair
         """
-        return self._r2
-
-    @property
-    def barcode(self):
-        """
-        Inline barcode sequence extracted from the R1 read
-        """
-        return self._r1.sequence[0:INLINE_BARCODE_LENGTH]
-
-    @property
-    def barcode_quality(self):
-        """
-        Inline barcode sequence quality extracted from the R1 read
-        """
-        return self._r1.quality[0:INLINE_BARCODE_LENGTH]
-
-    @property
-    def umi(self):
-        """
-        UMI sequence extracted from the R1 read
-        """
-        return self._r1.sequence[INLINE_BARCODE_LENGTH:
-                                 INLINE_BARCODE_LENGTH+UMI_LENGTH]
-
-    @property
-    def umi_quality(self):
-        """
-        UMI sequence quality extracted from the R1 read
-        """
-        return self._r1.quality[INLINE_BARCODE_LENGTH:
-                                INLINE_BARCODE_LENGTH+UMI_LENGTH]
-
-    @property
-    def min_barcode_quality(self):
-        """
-        Minimum inline barcode quality score
-
-        The score is encoded as a character e.g. '/' or 'A'.
-        """
-        return min(self.barcode_quality)
-
-    @property
-    def min_umi_quality(self):
-        """
-        Minimum UMI sequence quality score
-
-        The score is encoded as a character e.g. '/' or 'A'.
-        """
-        return min(self.umi_quality)
+        return self._read2
 
 class ICell8FastqIterator(Iterator):
     """
@@ -181,10 +235,10 @@ class ICell8FastqIterator(Iterator):
 
 class ICell8Stats(object):
     """
-    Class for gathering statistics on iCell8 FASTQ pairs
+    Class for gathering statistics on iCell8 FASTQ R1 files
 
-    Given a set of paths to FASTQ R1/R2 file
-    pairs, collects statistics on the number of
+    Given a set of paths to FASTQ R1 files (from Icell8
+    Fastq file pairs), collects statistics on the number of
     reads, barcodes and distinct UMIs.
 
     NB the list of distinct UMIs are where each UMI
@@ -192,37 +246,55 @@ class ICell8Stats(object):
     across the FASTQ files.
 
     """
-    def __init__(self,*fastqs):
+    def __init__(self,*fastqs,**kws):
         """
         Create a new ICell8Stats instance
 
         Arguments:
           fastqs: set of paths to ICell8 R1/R2 FASTQ
             file pairs to be processed
+          nprocs (int): number of cores to use for
+            statistics generation (default: 1)
         """
+        # Handle keywords
+        nprocs = 1
+        for kw in kws:
+            if kw not in ('nprocs',):
+                raise TypeError("%s got an unexpected keyword "
+                                "argument '%s'" %
+                                (self.__class__.__name__,kw))
+            if kw == 'nprocs':
+                nprocs = int(kws['nprocs'])
+        print "#procs = %s" % nprocs
+        # Collect statistics for each file
+        print "Collecting stats..."
+        if nprocs > 1:
+            # Multiple cores
+            pool = Pool(nprocs)
+            results = pool.map(collect_fastq_stats,fastqs)
+            pool.close()
+            pool.join()
+        else:
+            # Single core
+            results = map(collect_fastq_stats,fastqs)
+        # Combine results
+        print "Merging stats from each Fastq:"
         self._counts = {}
         self._umis = {}
-        for fqr1,fqr2 in pair_fastqs(fastqs)[0]:
-            print "-- %s" % fqr1
-            print "   %s" % fqr2
-            print "   Starting at %s" % time.ctime()
-            for i,pair in enumerate(ICell8FastqIterator(fqr1,fqr2),start=1):
-                if (i % 100000) == 0:
-                    print "   Examining read pair #%d (%s)" % \
-                        (i,time.ctime())
-                inline_barcode = pair.barcode
-                umi = pair.umi
+        for fq,fq_counts,fq_umis in results:
+            print "%s" % fq
+            for barcode in fq_counts:
                 try:
-                    self._counts[inline_barcode] += 1
+                    self._counts[barcode] += fq_counts[barcode]
                 except KeyError:
-                    self._counts[inline_barcode] = 1
+                    self._counts[barcode] = fq_counts[barcode]
                 try:
-                    self._umis[inline_barcode].add(umi)
+                    self._umis[barcode].update(fq_umis[barcode])
                 except KeyError:
-                    self._umis[inline_barcode] = set((umi,))
-            print "   Finished at %s" % time.ctime()
+                    self._umis[barcode] = set(fq_umis[barcode])
+        # Create unique sorted UMI lists
         for barcode in self._umis:
-            self._umis[barcode] = sorted(self._umis[barcode])
+            self._umis[barcode] = sorted(list(self._umis[barcode]))
 
     def barcodes(self):
         """
