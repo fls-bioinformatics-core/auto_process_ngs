@@ -14,13 +14,98 @@ Wafergen iCell8.
 # Imports
 ######################################################################
 
-import os
 import sys
+import os
 import argparse
-import time
+import logging
+import tempfile
+import shutil
+from bcftbx import FASTQFile
 from bcftbx.TabFile import TabFile
+from auto_process_ngs.fastq_utils import pair_fastqs
+from auto_process_ngs.fastq_utils import get_read_number
+from auto_process_ngs.applications import Command
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8Stats
+
+######################################################################
+# Functions
+######################################################################
+
+def batch_fastqs(fastqs,nbatches,basename="batched",
+                 out_dir=None):
+    """
+    Splits reads from one or more Fastqs into batches
+
+    Concatenates input Fastq files and then splits
+    reads into smaller Fastqs using the external 'batch'
+    utility.
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      nbatches (int): number of batches to output reads
+        into
+      basename (str): optional basename to use for the
+        output Fastq files (default: 'batched')
+      out_dir (str): optional path to a directory where
+        the batched Fastqs will be written
+    """
+    # Count the total number of reads
+    print "Fetching read counts:"
+    nreads = 0
+    for fq in fastqs:
+        n = FASTQFile.nreads(fq)
+        print "%s:\t%d" % (os.path.basename(fq),n)
+        nreads += n
+    print "Total reads: %d" % nreads
+
+    # Determine batch size
+    batch_size = nreads/nbatches
+    if nreads%batch_size:
+        # Round up batch size
+        batch_size += 1
+    assert(batch_size*nbatches >= nreads)
+    print "Creating batches of %d reads" % batch_size
+
+    # Check if fastqs are compressed
+    gzipped = fastqs[0].endswith('.gz')
+    if gzipped:
+        batch_cmd = Command('zcat')
+    else:
+        batch_cmd = Command('cat')
+
+    # Get the read number
+    read_number = get_read_number(fastqs[0])
+    suffix = ".r%s.fastq" % read_number
+
+    # Build and run the batching command
+    batch_cmd.add_args(*fastqs)
+    batch_cmd.add_args('|',
+                       'split',
+                       '-l',batch_size*4,
+                       '-d',
+                       '-a',3,
+                       '--additional-suffix=%s' % suffix,
+                       '-',
+                       os.path.join(out_dir,"%s.B" % basename))
+    batch_script = os.path.join(out_dir,"batch.sh")
+    batch_cmd.make_wrapper_script("/bin/bash",
+                                  batch_script)
+
+    # Check for successful exit code
+    retcode = Command("/bin/bash",
+                      batch_script).run_subprocess(
+                          working_dir=out_dir)
+    if retcode != 0:
+        raise Exception("Batching failed: exit code %s" % retcode)
+
+    # Collect and return the batched Fastq names
+    batched_fastqs = [os.path.join(out_dir,
+                                   "%s.B%03d%s"
+                                   % (basename,i,suffix))
+                      for i in xrange(0,nbatches)]
+    return batched_fastqs
 
 ######################################################################
 # Main
@@ -29,9 +114,8 @@ from auto_process_ngs.icell8_utils import ICell8Stats
 if __name__ == "__main__":
     # Handle the command line
     p = argparse.ArgumentParser()
-    p.add_argument("FQ_R1",help="R1 FASTQ file")
-    p.add_argument("FQ_R2",help="Matching R2 FASTQ file")
-    p.add_argument("FQ",nargs='*',help="Additional FASTQ file pairs")
+    p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
+                   help="FASTQ file pairs")
     p.add_argument("-w","--well-list",
                    dest="well_list_file",default=None,
                    help="iCell8 'well list' file")
@@ -43,12 +127,14 @@ if __name__ == "__main__":
     p.add_argument("-s","--suffix",
                    dest="suffix",
                    help="suffix to attach to column names")
+    p.add_argument("-n","--nprocessors",
+                   type=int,default=1,
+                   help="number of processors/cores available for "
+                   "statistics generation (default: 1)")
     args = p.parse_args()
 
     # Input Fastqs
-    unpaired_fastqs = [args.FQ_R1,args.FQ_R2]
-    for fq in args.FQ:
-        unpaired_fastqs.append(fq)
+    fastqs = args.fastqs
 
     # Well list file
     if args.well_list_file is not None:
@@ -56,25 +142,68 @@ if __name__ == "__main__":
     else:
         well_list = None
 
-    # Gather and report stats
-    stats = ICell8Stats(*unpaired_fastqs)
+    # Number of cores
+    nprocs = args.nprocessors
+    print "%d processors will be used" % nprocs
 
-    # Write or append to a file
+    # Pair up Fastq files
+    fastqs,unpaired = pair_fastqs(fastqs)
+    if unpaired:
+        print "Unpaired Fastqs specified:"
+        for fq in unpaired:
+            print "- %s" % fq
+        logging.fatal("Unpaired Fastqs specified")
+        sys.exit(1)
+
+    # Only need R1 Fastqs
+    fastqs = [pair[0] for pair in fastqs]
+
+    # Set up a working directory
+    working_dir = tempfile.mkdtemp(suffix="icell8_stats")
+    print "Using working dir %s" % working_dir
+
+    # Split into batches
+    try:
+        batched_fastqs = batch_fastqs(fastqs,nprocs,
+                                      basename="icell8_stats",
+                                      out_dir=working_dir)
+    except Exception as ex:
+        logging.critical("Failed to split Fastqs into batches: "
+                         "%s" % ex)
+        sys.exit(1)
+
+    # Collect statistics
+    stats = ICell8Stats(*batched_fastqs,nprocs=nprocs)
+
+    # Remove the working directory
+    shutil.rmtree(working_dir)
+
+    # Report the stats
     if args.stats_file is not None:
+        # Output column names
         stats_file = os.path.abspath(args.stats_file)
-        nreads_col = "Nreads%s" % ('' if args.suffix is None
+        nreads_col = "Nreads%s" % (''
+                                   if args.suffix is None
                                    else args.suffix)
-        umis_col = "Distinct_UMIs%s" % ('' if args.suffix
-                                      is None else args.suffix)
+        umis_col = "Distinct_UMIs%s" % (''
+                                        if args.suffix
+                                        is None else args.suffix)
         if not (os.path.isfile(stats_file) and args.append):
             # Create new stats file
-            stats_data = TabFile(column_names=('Barcode',
-                                               'Sample'))
-            for barcode in well_list.barcodes():
-                stats_data.append(data=(barcode,
-                                        well_list.sample(barcode)))
+            if well_list is not None:
+                # Initialise barcode and sample names from well list
+                stats_data = TabFile(column_names=('Barcode',
+                                                   'Sample'))
+                for barcode in well_list.barcodes():
+                    stats_data.append(data=(barcode,
+                                            well_list.sample(barcode)))
+            else:
+                # Barcodes from collected data
+                stats_data = TabFile(column_names=('Barcode',))
+                for barcode in stats.barcodes():
+                    stats_data.append(data=(barcode,))
         else:
-            # Append to existing file
+            # Append to an existing file
             stats_data = TabFile(filen=stats_file,
                                  first_line_is_header=True)
         # Add new columns of data
@@ -94,5 +223,3 @@ if __name__ == "__main__":
     # Report summary
     print "#barcodes     : %s" % len(stats.barcodes())
     print "#reads        : %s" % stats.nreads()
-    print "#distinct umis: %s" % len(stats.distinct_umis())
-    print "Finished: %s" % time.ctime()
