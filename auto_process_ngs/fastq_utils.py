@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_utils.py: utility functions for operating on fastq files
-#     Copyright (C) University of Manchester 2016 Peter Briggs
+#     Copyright (C) University of Manchester 2016-17 Peter Briggs
 #
 ########################################################################
 #
@@ -15,6 +15,7 @@ fastq_utils.py
 Utility functions for operating on Fastq files:
 
 - assign_barcodes_single_end: extract and assign inline barcodes
+- get_read_number: get the read number (1 or 2) from a Fastq file
 - pair_fastqs: automagically pair up FASTQ files
 
 """
@@ -74,6 +75,21 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         nread += 1
     print "Finished (%d reads processed)" % nread
     return nread
+
+def get_read_number(fastq):
+    """
+    Get the read number (1 or 2) from a Fastq file
+
+    Arguments:
+      fastq (str): path to a Fastq file
+
+    Returns:
+      Integer: read number (1 or 2) extracted from the first read.
+    """
+    for r in FastqIterator(fastq):
+        seq_id = r.seqid
+        break
+    return int(seq_id.pair_id)
 
 def pair_fastqs(fastqs):
     """

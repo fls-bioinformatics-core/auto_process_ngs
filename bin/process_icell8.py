@@ -35,6 +35,7 @@ from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.simple_scheduler import SchedulerGroup
 from auto_process_ngs.fastq_utils import pair_fastqs
+from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.utils import AnalysisFastq
 import auto_process_ngs.envmod as envmod
 
@@ -900,21 +901,6 @@ def collect_fastqs(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
-
-def get_read_number(fastq):
-    """
-    Get the read number (1 or 2) from a Fastq file
-
-    Arguments:
-      fastq (str): path to a Fastq file
-
-    Returns:
-      Integer: read number (1 or 2) extracted from the first read.
-    """
-    for r in FastqIterator(fastq):
-        seq_id = r.seqid
-        break
-    return int(seq_id.pair_id)
 
 ######################################################################
 # Main
