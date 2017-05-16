@@ -20,63 +20,12 @@ import argparse
 import logging
 import tempfile
 import shutil
-from multiprocessing import Pool
 from bcftbx import FASTQFile
 from bcftbx.TabFile import TabFile
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.applications import Command
 from auto_process_ngs.icell8_utils import ICell8WellList
-
-######################################################################
-# Classes
-######################################################################
-
-class ICell8Read1(object):
-    """
-    Class representing an iCell8 R1 read
-    """
-    def __init__(self,fastq_read):
-        """
-        Create a new ICell8Read1 instance.
-        """
-        self._barcode_length = 11
-        self._umi_length = 10
-        self._read = fastq_read
-    @property
-    def barcode(self):
-        """
-        Inline barcode sequence extracted from the R1 read
-        """
-        return self._read.sequence[0:self._barcode_length]
-    @property
-    def umi(self):
-        """
-        UMI sequence extracted from the R1 read
-        """
-        return self._read.sequence[self._barcode_length:
-                                   self._barcode_length+self._umi_length]
-
-######################################################################
-# Functions
-######################################################################
-
-def collect_stats(fastq):
-    # Initialise
-    counts = {}
-    umis = {}
-    for r in FASTQFile.FastqIterator(fastq):
-        r = ICell8Read1(r)
-        barcode = r.barcode
-        try:
-            counts[barcode] += 1
-        except KeyError:
-            counts[barcode] = 1
-        umi = r.umi
-        try:
-            umis[barcode].add(umi)
-        except KeyError:
-            umis[barcode] = set((umi,))
-    return (fastq,counts,umis)
+from auto_process_ngs.icell8_utils import ICell8Stats
 
 ######################################################################
 # Main
@@ -168,9 +117,9 @@ if __name__ == "__main__":
                        os.path.join(working_dir,
                                     'icell8_stats.B'))
     batch_script = os.path.join(working_dir,"batch.sh")
-    batch_cmd.make_wrapper_script("/usr/bin/bash",
+    batch_cmd.make_wrapper_script("/bin/bash",
                                   batch_script)
-    retcode = Command("/usr/bin/bash",
+    retcode = Command("/bin/bash",
                       batch_script).run_subprocess(
                           working_dir=working_dir)
     if retcode != 0:
@@ -186,32 +135,8 @@ if __name__ == "__main__":
                                    "icell8_stats.B%03d.r1.fastq" % i)
                       for i in xrange(0,n_batches)]
 
-    # Collect statistics for each batch
-    if nprocs > 1:
-        # Multiple cores
-        pool = Pool(nprocs)
-        results = pool.map(collect_stats,batched_fastqs)
-        pool.close()
-        pool.join()
-    else:
-        # Single core
-        results = map(collect_stats,batched_fastqs)
-    
-    # Combine results
-    print "Merging stats from each batch:"
-    counts = {}
-    umis = {}
-    for fq,batch_counts,batch_umis in results:
-        print "%s" % fq
-        for barcode in batch_counts:
-            try:
-                counts[barcode] += batch_counts[barcode]
-            except KeyError:
-                counts[barcode] = batch_counts[barcode]
-            try:
-                umis[barcode].update(batch_umis[barcode])
-            except KeyError:
-               umis[barcode] = set(batch_umis[barcode])
+    # Collect statistics
+    stats = ICell8Stats(*batched_fastqs,nprocs=nprocs)
 
     # Remove the working directory
     shutil.rmtree(working_dir)
@@ -238,8 +163,7 @@ if __name__ == "__main__":
             else:
                 # Barcodes from collected data
                 stats_data = TabFile(column_names=('Barcode',))
-                barcodes = sorted(counts.keys())
-                for barcode in barcodes:
+                for barcode in stats.barcodes():
                     stats_data.append(data=(barcode,))
         else:
             # Append to an existing file
@@ -252,16 +176,14 @@ if __name__ == "__main__":
         for data_line in stats_data:
             barcode = data_line['Barcode']
             try:
-                data_line[nreads_col] = counts[barcode]
-                data_line[umis_col] = len(umis[barcode])
+                data_line[nreads_col] = stats.nreads(barcode)
+                data_line[umis_col] = len(stats.distinct_umis(barcode))
             except KeyError:
                 pass
         # Write to file
         stats_data.write(filen=stats_file,include_header=True)
 
     # Report summary
-    print "#barcodes     : %s" % len(counts)
-    print "#reads        : %s" % nreads
-                    
-                    
+    print "#barcodes     : %s" % len(stats.barcodes())
+    print "#reads        : %s" % stats.nreads()
                 

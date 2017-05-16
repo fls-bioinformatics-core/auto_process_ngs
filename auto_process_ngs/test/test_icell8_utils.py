@@ -8,6 +8,7 @@ import tempfile
 import shutil
 from bcftbx.FASTQFile import FastqRead
 from auto_process_ngs.icell8_utils import ICell8WellList
+from auto_process_ngs.icell8_utils import ICell8Read1
 from auto_process_ngs.icell8_utils import ICell8ReadPair
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.icell8_utils import ICell8Stats
@@ -79,6 +80,42 @@ class TestICell8WellList(unittest.TestCase):
         self.assertEqual(well_list.sample('AACCTTGCAAG'),'ESC2')
         self.assertEqual(well_list.sample('AACCAACCGCA'),'d1.2')
         self.assertRaises(KeyError,well_list.sample,'NNNNNNNNNNN')
+
+# ICell8Read1
+class TestICell8Read1(unittest.TestCase):
+    """Tests for the ICell8Read1 class
+    """
+    def _fastqread(self,s):
+        # Return populated FastqRead object given a multiline
+        # string
+        return FastqRead(*s.rstrip('\n').split('\n'))
+    def test_icell_read1_init(self):
+        """ICell8Read1: create R1 read
+        """
+        r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(r1.read,self._fastqread(icell8_read_pair['r1']))
+    def test_icell8_read1_barcode(self):
+        """ICell8Read1: get barcode
+        """
+        r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(r1.barcode,"GTTCCTGATTA")
+        self.assertEqual(r1.barcode_quality,"AAAAAEEEEEE")
+    def test_icell8_read1_umi(self):
+        """ICell8Read1: get UMI
+        """
+        r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(r1.umi,"AGTCAAGTGC")
+        self.assertEqual(r1.umi_quality,"EEEEEEEEEE")
+    def test_icell8_read1_min_barcode_quality(self):
+        """ICell8Read1: get minimum quality score for barcode
+        """
+        r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(r1.min_barcode_quality,'A')
+    def test_icell8_read1_min_umi_quality(self):
+        """ICell8Read1: get minimum quality score for UMI
+        """
+        r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
+        self.assertEqual(r1.min_umi_quality,'E')
 
 # ICell8ReadPair
 class TestICell8ReadPair(unittest.TestCase):
@@ -208,17 +245,14 @@ class TestICell8Stats(unittest.TestCase):
         self.r1 = os.path.join(self.wd,'icell8.r1.fq')
         with open(self.r1,'w') as fp:
             fp.write(icell8_fastq_r1)
-        self.r2 = os.path.join(self.wd,'icell8.r2.fq')
-        with open(self.r2,'w') as fp:
-            fp.write(icell8_fastq_r2)
     def tearDown(self):
         # Remove temporary working dir
         if os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
     def test_icell8stats(self):
-        """ICell8Stats: collect stats from FASTQ R1/R2 pair
+        """ICell8Stats: collect stats from Icell8 R1 FASTQ
         """
-        fastqs = (self.r1,self.r2)
+        fastqs = (self.r1,)
         stats = ICell8Stats(*fastqs)
         self.assertEqual(stats.nreads(),3)
         self.assertEqual(stats.barcodes(),['AGAAGAGTACC',
@@ -227,6 +261,27 @@ class TestICell8Stats(unittest.TestCase):
         self.assertEqual(stats.nreads('GTTCCTGATTA'),1)
         self.assertEqual(stats.nreads('AGAAGAGTACC'),1)
         self.assertEqual(stats.nreads('GTCTGCAACGC'),1)
+        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGC',
+                                                'GGAGGCCGGA',
+                                                'TGGAAAATGT'])
+        self.assertEqual(stats.distinct_umis('GTTCCTGATTA'),
+                         ['AGTCAAGTGC'])
+        self.assertEqual(stats.distinct_umis('AGAAGAGTACC'),
+                         ['TGGAAAATGT'])
+        self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
+                         ['GGAGGCCGGA'])
+    def test_icell8stats_multicore(self):
+        """ICell8Stats: collect stats from Icell8 R1 FASTQ (multicore)
+        """
+        fastqs = (self.r1,self.r1,)
+        stats = ICell8Stats(*fastqs,nprocs=2)
+        self.assertEqual(stats.nreads(),6)
+        self.assertEqual(stats.barcodes(),['AGAAGAGTACC',
+                                           'GTCTGCAACGC',
+                                           'GTTCCTGATTA',])
+        self.assertEqual(stats.nreads('GTTCCTGATTA'),2)
+        self.assertEqual(stats.nreads('AGAAGAGTACC'),2)
+        self.assertEqual(stats.nreads('GTCTGCAACGC'),2)
         self.assertEqual(stats.distinct_umis(),['AGTCAAGTGC',
                                                 'GGAGGCCGGA',
                                                 'TGGAAAATGT'])
