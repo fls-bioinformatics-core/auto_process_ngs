@@ -402,7 +402,7 @@ class ICell8Statistics(PipelineCommand):
         self._nprocs = nprocs
     def cmd(self):
         # Build command
-        cmd = Command('icell8_stats2.py',
+        cmd = Command('icell8_stats.py',
                       '-f',self._stats_file,
                       '-n',self._nprocs)
         if self._well_list:
