@@ -31,6 +31,7 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.TabFile import TabFile
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
@@ -748,6 +749,29 @@ class GetICell8Stats(PipelineTask):
         stats_file = self._args[1]
         return stats_file
 
+class GetICell8PolyGStats(GetICell8Stats):
+    """
+    """
+    def finish(self,*args,**kws):
+        # Method invoked once commands have run
+        # Adds another column to the stats file
+        # with the percentage of 'unfiltered' reads
+        # with poly-G regions
+        print "Add number of reads with poly-G regions as percentage"
+        stats_file = self._args[1]
+        stats = TabFile(stats_file,first_line_is_header=True)
+        # Add and populate the new column
+        stats.appendColumn("%reads_poly_g")
+        for line in stats:
+            try:
+                perc_poly_g = (float(line['Nreads_poly_g'])/
+                               float(line['Nreads_filtered'])*100.0)
+            except ValueError:
+                perc_poly_g = 0.0
+            line["%reads_poly_g"] = ("%.2f" % perc_poly_g)
+        # Write out the updated stats file
+        stats.write(stats_file,include_header=True)
+
 class SplitFastqsIntoBatches(PipelineTask):
     """
     """
@@ -1179,12 +1203,12 @@ if __name__ == "__main__":
         filter_fastqs.output().assigned,
         poly_g_dir)
     ppl.add_task(get_poly_g_reads,dependencies=(filter_fastqs,))
-    poly_g_stats = GetICell8Stats("Poly-G region statistics",
-                                  get_poly_g_reads.output(),
-                                  initial_stats.output(),
-                                  suffix="_poly_g",
-                                  append=True,
-                                  nprocs=args.threads)
+    poly_g_stats = GetICell8PolyGStats("Poly-G region statistics",
+                                       get_poly_g_reads.output(),
+                                       initial_stats.output(),
+                                       suffix="_poly_g",
+                                       append=True,
+                                       nprocs=args.threads)
     ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats),
                  runner=runners['contaminant_filter'])
 
