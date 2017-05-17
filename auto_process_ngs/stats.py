@@ -176,19 +176,47 @@ class FastqStatistics:
         # Write the data into the tabfile
         paired_end = ('Y' if self._illumina_data.paired_end else 'N')
         for fastq in results:
-            data = [fastq.project,
-                    fastq.sample,
-                    fastq.name,
-                    bcf_utils.format_file_size(fastq.fsize),
-                    fastq.nreads,
-                    paired_end,
-                    fastq.read_number]
-            for lane in lanes:
-                try:
-                    data.append(fastq.reads_by_lane[lane])
-                except:
-                    data.append('')
-            self._stats.append(data=data)
+            # Check for existing entry
+            existing_entry = False
+            for line in self._stats:
+                if (line['Project'] == fastq.project and
+                    line['Sample'] == fastq.sample and
+                    line['Fastq'] == fastq.name):
+                    # Overwrite the existing entry
+                    existing_entry = True
+                    break
+            # Write the data
+            if not existing_entry:
+                # Append new entry
+                data = [fastq.project,
+                        fastq.sample,
+                        fastq.name,
+                        bcf_utils.format_file_size(fastq.fsize),
+                        fastq.nreads,
+                        paired_end,
+                        fastq.read_number]
+                for lane in lanes:
+                    try:
+                        data.append(fastq.reads_by_lane[lane])
+                    except:
+                        data.append('')
+                self._stats.append(data=data)
+            else:
+                # Overwrite existing entry
+                logging.warning("Overwriting exisiting entry for "
+                                "%s/%s/%s" % (fastq.project,
+                                              fastq.sample,
+                                              fastq.name))
+                line['Size'] = bcf_utils.format_file_size(fastq.fsize)
+                line['Nreads'] = fastq.nreads
+                line['Paired_end'] = paired_end
+                line['Read_number'] = fastq.read_number
+                for lane in lanes:
+                    lane_name = "L%d" % lane
+                    try:
+                        line[lane_name] = fastq.reads_by_lane[lane]
+                    except:
+                        line[lane_name] = ''
 
     @property
     def lane_names(self):
