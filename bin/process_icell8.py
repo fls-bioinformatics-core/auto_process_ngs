@@ -100,41 +100,50 @@ class Pipeline(object):
     completed (or will run immediately if they don't have
     any dependencies).
     """
-    def __init__(self,default_runner=None):
+    def __init__(self,name="PIPELINE",default_runner=None):
+        self._name = str(name)
         self._pending = []
         self._running = []
         self._finished = []
         self._default_runner = default_runner
     def add_task(self,task,dependencies=(),**kws):
         self._pending.append((task,dependencies,kws))
-        print "Adding task '%s'" % task.name()
+        self.report("Adding task '%s'" % task.name())
         if dependencies:
             for dep in dependencies:
                 if dep.name() not in [t[0].name() for t in self._pending]:
-                    print "-> Adding dependency '%s'" % dep.name()
+                    self.report("-> Adding dependency '%s'" % dep.name())
                     self.add_task(dep)
         return task
+    def report(self,s):
+        print "%s [%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                              self._name,s)
     def run(self,sched=None,log_dir=None,scripts_dir=None):
         # Execute the pipeline
-        print "PIPELINE: started"
+        self.report("Started")
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
             # Report the current running and pending tasks
             if update:
                 if self._running:
-                    print "PIPELINE: %d running tasks:" % len(self._running)
-                    for t in self._running: print "- %s" % t.name()
+                    self.report("%d running tasks:"
+                                % len(self._running))
+                    for t in self._running:
+                        self.report("- %s" % t.name())
                 if self._pending:
-                    print "PIPELINE: %d pending tasks:" % len(self._pending)
-                    for t in self._pending: print "- %s" % t[0].name()
+                    self.report("%d pending tasks:"
+                                % len(self._pending))
+                    for t in self._pending:
+                        self.report("- %s" % t[0].name())
                 update = False
             # Check for running tasks that have completed
             running = []
             failed = []
             for task in self._running:
                 if task.completed:
-                    print "PIPELINE: finished %s" % task.name()
+                    self.report("finished %s"
+                                % task.name())
                     self._finished.append(task)
                     update = True
                     # Check if task failed
@@ -145,10 +154,10 @@ class Pipeline(object):
             self._running = running
             # Check for finished tasks that have failed
             if failed:
-                print "PIPELINE: following tasks failed:"
+                self.report("Following tasks failed:")
                 for task in failed:
-                    print "- %s" % task.name()
-                print "PIPELINE: terminating prematurely"
+                    self.report("- %s" % task.name())
+                self.report("Terminating prematurely")
                 return 1
             # Check for pending tasks that can start
             pending = []
@@ -162,7 +171,7 @@ class Pipeline(object):
                     run_task = reduce(lambda x,y: x and y.completed,
                                       dependencies,True)
                 if run_task:
-                    print "PIPELINE: started %s" % task.name()
+                    self.report("started %s" % task.name())
                     if 'runner' not in kws:
                         kws['runner'] = self._default_runner
                     try:
@@ -171,8 +180,9 @@ class Pipeline(object):
                                  scripts_dir=scripts_dir,
                                  **kws)
                     except Exception as ex:
-                        logging.critical("PIPELINE: failed to start "
-                                         "task '%s': %s" %
+                        self.report("Failed to start task '%s': %s" %
+                                    (task.name(),ex))
+                        logging.critical("Failed to start task '%s': %s" %
                                          (task.name(),ex))
                         return 1
                     self._running.append(task)
@@ -184,7 +194,7 @@ class Pipeline(object):
             if not update:
                 time.sleep(5)
         # Finished
-        print "PIPELINE: completed"
+        self.report("Completed")
         return 0
 
 class PipelineTask(object):
@@ -230,6 +240,9 @@ class PipelineTask(object):
             return self._exit_code
     def name(self):
         return self._task_name
+    def report(self,s):
+        print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
+                                    self._name,s)
     def task_completed(self,name,jobs,sched):
         # Callback method invoked when scheduled
         # jobs in the task finish
@@ -238,7 +251,7 @@ class PipelineTask(object):
         # jobs (list): list of SchedulerJob instances
         # sched (SimpleScheduler): scheduler instance
         self._completed = True
-        print "TASK: %s completed" % name
+        self.report("%s completed" % name)
         for job in jobs:
             try:
                 if job.exit_code != 0:
@@ -265,11 +278,11 @@ class PipelineTask(object):
         # Generate commands to run
         cmds = []
         for command in self._commands:
-            print "TASK: %s" % command.cmd()
+            self.report("%s" % command.cmd())
             if use_wrapper:
                 script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
                 cmd = Command('/bin/bash',script_file)
-                print "TASK: wrapper script %s" % script_file
+                self.report("wrapper script %s" % script_file)
             else:
                 cmd = command.cmd()
             cmds.append(cmd)
@@ -1086,7 +1099,7 @@ if __name__ == "__main__":
         mkdir(dirn)
 
     # Set up a pipeline
-    ppl = Pipeline()
+    ppl = Pipeline(name="Process ICell8")
 
     # Initial stats
     initial_stats = GetICell8Stats("Initial statistics",
@@ -1214,8 +1227,9 @@ if __name__ == "__main__":
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
 
     # Finish
-    print "All jobs completed"
     sched.stop()
     if exit_status != 0:
         logging.critical("Pipeline failed: exit status %s" % exit_status)
+    else:
+        print "Pipeline completed ok"
     sys.exit(exit_status)
