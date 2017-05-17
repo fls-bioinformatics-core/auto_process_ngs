@@ -21,12 +21,17 @@ iCell8 platform:
 #######################################################################
 
 import time
+import logging
 from itertools import izip
 from collections import Iterator
 from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from .fastq_utils import pair_fastqs
+
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
 
 ######################################################################
 # Magic numbers
@@ -227,11 +232,22 @@ class ICell8FastqIterator(Iterator):
           fqr1 (str): path to the R1 FASTQ file
           fqr2 (str): path to the R2 FASTQ
         """
+        self._read_count = 0
         self._fqr1 = FastqIterator(fqr1)
         self._fqr2 = FastqIterator(fqr2)
     def next(self):
-        return ICell8ReadPair(self._fqr1.next(),
-                              self._fqr2.next())
+        self._read_count += 1
+        r1 = self._fqr1.next()
+        r2 = self._fqr2.next()
+        try:
+            return ICell8ReadPair(r1,r2)
+        except Exception as ex:
+            print "Failed to create read pair:"
+            print "-- Read pair number: %d" % self._read_count
+            print "-- Read 1:\n%s" % r1
+            print "-- Read 2:\n%s" % r2
+            logging.critical("Failed to create read pair: %s" % ex)
+            raise ex
 
 class ICell8Stats(object):
     """
