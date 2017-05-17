@@ -23,6 +23,7 @@ import time
 import shutil
 import uuid
 from collections import Iterator
+from cStringIO import StringIO
 from bcftbx.utils import mkdir
 from bcftbx.utils import strip_ext
 from bcftbx.utils import AttributeDictionary
@@ -80,6 +81,18 @@ class FileCollection(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
+
+# Capture stdout from a function call - see
+# http://stackoverflow.com/a/16571630/579925
+class Capturing(list):
+    def __enter__(self):
+        self._stdout = sys.stdout
+        sys.stdout = self._stringio = StringIO()
+        return self
+    def __exit__(self,*args):
+        self.extend(self._stringio.getvalue().splitlines())
+        del self._stringio    # free up some memory
+        sys.stdout = self._stdout
 
 class Pipeline(object):
     """
@@ -206,9 +219,11 @@ class PipelineTask(object):
     Individual programs should be wrapped in instances of the
     'PipelineCommand' class.
 
-    This class should be subclassed to implement the 'setup' and
-    'output' methods. The 'add_cmd' method can be used within
-    'setup' to add one or 'PipelineCommand' instances.
+    This class should be subclassed to implement the 'setup',
+    'finish' and 'output' methods.
+
+    The 'add_cmd' method can be used within 'setup' to add one
+    or 'PipelineCommand' instances.
 
     For example:
 
@@ -243,6 +258,19 @@ class PipelineTask(object):
     def report(self,s):
         print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                     self._name,s)
+    def invoke(self,f):
+        try:
+            with Capturing() as output:
+                f(*self._args,**self._kws)
+            self.report("invoked %s" % f.__name__)
+            for line in output:
+                self.report("%s STDOUT: %s" % (f.__name__,line))
+        except NotImplementedError:
+            pass
+        except Exception as ex:
+            self.report("exception invoking '%s': %s" %
+                        (f.__name__,ex))
+            self._exit_code += 1
     def task_completed(self,name,jobs,sched):
         # Callback method invoked when scheduled
         # jobs in the task finish
@@ -250,8 +278,6 @@ class PipelineTask(object):
         # name (str): name for the callback
         # jobs (list): list of SchedulerJob instances
         # sched (SimpleScheduler): scheduler instance
-        self._completed = True
-        self.report("%s completed" % name)
         for job in jobs:
             try:
                 if job.exit_code != 0:
@@ -261,9 +287,15 @@ class PipelineTask(object):
                 for j in job.jobs:
                     if j.exit_code != 0:
                         self._exit_code += 1
-        if self.exit_code != 0:
-            logging.critical("TASK: %s failed: exit code %s"
-                             % (name,self.exit_code))
+        if self._exit_code != 0:
+            logging.critical("%s failed: exit code %s"
+                             % (self._name,self._exit_code))
+        else:
+            # Execute 'finish', if implemented
+            self.invoke(self.finish)
+        # Flag job as completed
+        self._completed = True
+        self.report("%s completed" % name)
     def add_cmd(self,pipeline_job):
         self._commands.append(pipeline_job)
     def use_wrapper(self,use_wrapper):
@@ -271,7 +303,7 @@ class PipelineTask(object):
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,wait_for=(),async=True,use_wrapper=None):
         # Do setup
-        self.setup(*self._args,**self._kws)
+        self.invoke(self.setup)
         # Sort out defaults
         if use_wrapper is None:
             use_wrapper = self._use_wrapper
@@ -325,7 +357,6 @@ class PipelineTask(object):
             else:
                 # Wait for job or group to complete before returning
                 sched.wait_for((callback_name,))
-                self._completed = True
                 if use_group:
                     exit_code = max([j.exit_code for j in group.jobs])
                 else:
@@ -337,10 +368,13 @@ class PipelineTask(object):
             # Run each stage locally
             for cmd in cmds:
                 cmd.run_subprocess(working_dir=working_dir)
+            self.invoke(self.finish)
             self._completed = True
         return self
     def setup(self,*args,**kws):
         raise NotImplementedError("Subclass must implement 'setup' method")
+    def finish(self,*args,**kws):
+        raise NotImplementedError("Subclass must implement 'finish' method")
     def output(self):
         raise NotImplementedError("Subclass must implement 'output' method")
 
