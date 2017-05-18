@@ -340,7 +340,17 @@ class FastqStatistics:
             samples = filter(lambda x:
                              x['Read_number'] == 1 and bool(x[lane]),
                              self._stats)
-            total_reads = sum([s[lane] for s in samples])
+            try:
+                total_reads = sum([int(s[lane]) for s in samples])
+            except Exception as ex:
+                for s in samples:
+                    try:
+                        int(s[lane])
+                    except ValueError:
+                        logging.critical("Bad value for read count in "
+                                         "lane %s sample %s: '%s'" %
+                                         (lane,s['Sample'],s[lane]))
+                raise ex
             fpp.write("\nLane %d\n" % lane_number)
             fpp.write("Total reads = %d\n" % total_reads)
             for sample in samples:
