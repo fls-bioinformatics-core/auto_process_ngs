@@ -20,6 +20,7 @@ import argparse
 import logging
 from bcftbx.utils import mkdir
 from bcftbx.utils import find_program
+from bcftbx.utils import list_dirs
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.JobRunner import SimpleJobRunner
@@ -201,7 +202,7 @@ def get_log_subdir(log_dir,name):
     """
     # NB based on 'get_log_subdir' from auto_processor.py
     i = 0
-    for d in bcf_utils.list_dirs(log_dir):
+    for d in list_dirs(log_dir):
         try:
             i = max(i,int(d.split('_')[0]))
         except ValueError:
