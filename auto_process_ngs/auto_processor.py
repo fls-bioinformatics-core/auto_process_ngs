@@ -2189,7 +2189,7 @@ class AutoProcess:
                             short_fastq_names=False,
                             link_to_fastqs=False,
                             projects=None,
-                            undetermined_project='undetermined'):
+                            undetermined_project=None):
         """
         Construct and populate project analysis directories
 
@@ -2214,7 +2214,7 @@ class AutoProcess:
             directories for all projects in the metadata file).
           undetermined_project (str): optional, specify name for
             project directory to create with 'undetermined' Fastqs
-            (default is 'undetermined')
+            (defaults to 'undetermined')
         """
         # Source location for fastq files
         if unaligned_dir is None:
@@ -2298,6 +2298,8 @@ class AutoProcess:
         # Tell us how many were made
         print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
         # Also set up analysis directory for undetermined reads
+        if undetermined_project is None:
+            undetermined_project = 'undetermined'
         undetermined = illumina_data.undetermined
         if illumina_data.undetermined is not None:
             undetermined = utils.AnalysisProject(undetermined_project,
