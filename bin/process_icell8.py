@@ -740,6 +740,25 @@ class ContaminantFilterFastqPair(PipelineCommand):
         cmd.add_args(*self._fastq_pair)
         return cmd
 
+class RemoveDirectory(PipelineCommand):
+    """
+    Command to remove a directory and its contents
+    """
+    def init(self,dirn):
+        """
+        Set up parameters
+        """
+        self.dirn = os.path.abspath(dirn)
+    def cmd(self):
+        """
+        Build the command
+        """
+        # Does "rm -f DIRN/* && rmdir DIRN"
+        return Command(
+            "rm","-f","%s" % os.path.join(self.dirn,'*'),
+            "&&",
+            "rmdir","%s" % self.dirn)
+
 ######################################################################
 # ICell8 pipeline tasks
 ######################################################################
@@ -972,6 +991,17 @@ class MergeFastqs(PipelineTask):
             failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq"),
         )
 
+class CleanupDirectory(PipelineTask):
+    """
+    """
+    def init(self,dirn):
+        pass
+    def setup(self):
+        if not os.path.isdir(self.args.dirn):
+            self.report("No directory '%s'" % self.args.dirn)
+        else:
+            self.add_cmd(RemoveDirectory(self.args.dirn))
+
 ######################################################################
 # Functions
 ######################################################################
@@ -1028,6 +1058,11 @@ if __name__ == "__main__":
                    dest="no_quality_filter",
                    help="turn off the barcode/UMI quality checks "
                    "(recommended for NextSeq data)")
+    p.add_argument("--no-cleanup",action='store_true',
+                   dest="no_cleanup",
+                   help="don't remove intermediate Fastq files "
+                   "(default is to delete intermediate Fastqs once "
+                   "no longer needed)")
     p.add_argument("-n","--threads",type=int,
                    dest="threads",default=1,
                    help="number of threads to use with fastq_screen "
@@ -1094,6 +1129,7 @@ if __name__ == "__main__":
     well_list = os.path.abspath(args.well_list)
     max_jobs = args.max_jobs
     do_quality_filter = (not args.no_quality_filter)
+    do_clean_up = (not args.no_cleanup)
 
     # Report settings
     print "Unaligned dir     : %s" % args.unaligned_dir
@@ -1122,6 +1158,8 @@ if __name__ == "__main__":
         print "Environment modules:"
         for modulefile in modulefiles:
             print "-- %s" % modulefile
+    print "Clean-up intermediate Fastqs: %s" % \
+        ('yes' if do_clean_up else 'no')
 
     # Get the input FASTQ file pairs
     fastqs = []
@@ -1296,6 +1334,33 @@ if __name__ == "__main__":
         nprocs=args.threads)
     ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats),
                  runner=runners['contaminant_filter'])
+
+    # Cleanup outputs
+    cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
+                                            batch_dir)
+    cleanup_quality_filter = CleanupDirectory("Remove filtered Fastqs",
+                                              filter_dir)
+    cleanup_poly_g = CleanupDirectory("Remove poly-G region stats data",
+                                      poly_g_dir)
+    cleanup_trim_reads = CleanupDirectory("Remove trimmed Fastqs",
+                                          trim_dir)
+    cleanup_contaminant_filtered = CleanupDirectory("Remove contaminant "
+                                                    "filtered Fastqs",
+                                                    contaminant_filter_dir)
+    cleanup_split_barcodes = CleanupDirectory("remove barcode split Fastqs",
+                                              barcoded_fastqs_dir)
+    if do_clean_up:
+        ppl.add_task(cleanup_batch_fastqs,dependencies=(filter_fastqs,))
+        ppl.add_task(cleanup_quality_filter,dependencies=(trim_reads,
+                                                          get_poly_g_reads,
+                                                          merge_fastqs,
+                                                          filter_stats))
+        ppl.add_task(cleanup_poly_g,dependencies=(poly_g_stats,))
+        ppl.add_task(cleanup_trim_reads,dependencies=(contaminant_filter,
+                                                      trim_stats))
+        ppl.add_task(cleanup_contaminant_filtered,dependencies=(final_stats,
+                                                                split_barcodes))
+        ppl.add_task(cleanup_split_barcodes,dependencies=(merge_fastqs,))
 
     # Execute the pipeline
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
