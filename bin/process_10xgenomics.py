@@ -74,6 +74,7 @@ def cellranger_mkfastq(samplesheet,
         if log_dir is None:
             log_dir = os.getcwd()
         log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
+        mkdir(log_dir)
         # Submit the job
         cellranger_mkfastq_job = SchedulerJob(
             SimpleJobRunner(),
