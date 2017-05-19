@@ -240,7 +240,6 @@ class PipelineTask(object):
         self._args = args
         self._kws = kws
         self._commands = []
-        self._use_wrapper = False
         self._task_name = "%s.%s" % (self._name.lower().replace(' ','_'),
                                      uuid.uuid4())
         self._completed = False
@@ -299,25 +298,17 @@ class PipelineTask(object):
         self.report("%s completed" % name)
     def add_cmd(self,pipeline_job):
         self._commands.append(pipeline_job)
-    def use_wrapper(self,use_wrapper):
-        self._use_wrapper = bool(use_wrapper)
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
-            scripts_dir=None,wait_for=(),async=True,use_wrapper=None):
+            scripts_dir=None,wait_for=(),async=True):
         # Do setup
         self.invoke(self.setup)
-        # Sort out defaults
-        if use_wrapper is None:
-            use_wrapper = self._use_wrapper
         # Generate commands to run
         cmds = []
         for command in self._commands:
             self.report("%s" % command.cmd())
-            if use_wrapper:
-                script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
-                cmd = Command('/bin/bash',script_file)
-                self.report("wrapper script %s" % script_file)
-            else:
-                cmd = command.cmd()
+            script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
+            cmd = Command('/bin/bash',script_file)
+            self.report("wrapper script %s" % script_file)
             cmds.append(cmd)
         # Run the commands
         if sched is not None:
@@ -744,7 +735,6 @@ class GetICell8Stats(PipelineTask):
         self.add_cmd(ICell8Statistics(self._name,
                                       *args,
                                       **kws))
-        self.use_wrapper(True)
     def output(self):
         stats_file = self._args[1]
         return stats_file
@@ -793,7 +783,6 @@ class SplitFastqsIntoBatches(PipelineTask):
                                  batch_dir,
                                  basename,
                                  batch_size=batch_size))
-        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
         return FileCollection(out_dir,"*.B*.r*.fastq")
@@ -817,7 +806,6 @@ class FilterICell8Fastqs(PipelineTask):
                 mode=mode,
                 discard_unknown_barcodes=discard_unknown_barcodes,
                 quality_filter=quality_filter))
-        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
         return AttributeDictionary(
@@ -870,7 +858,6 @@ class FilterContaminatedReads(PipelineTask):
                                                     contaminants_conf,
                                                     aligner=aligner,
                                                     threads=threads))
-        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
         return FileCollection(out_dir,"*.trimmed.filtered.fastq")
@@ -888,7 +875,6 @@ class SplitByBarcodes(PipelineTask):
                                                  barcodes_dir,
                                                  basename=basename,
                                                  mode="barcodes"))
-        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[1]
         return FileCollection(out_dir,"*.r*.fastq")
@@ -945,8 +931,6 @@ class MergeFastqs(PipelineTask):
             self.add_cmd(ConcatFastqs(self._name,fqs_r2,
                                       merge_dir,
                                       "%s.%s.r2.fastq" % (basename,name)))
-        # Force jobs to use a wrapper script
-        self.use_wrapper(True)
     def output(self):
         out_dir = self._args[4]
         return AttributeDictionary(
