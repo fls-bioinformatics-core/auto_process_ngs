@@ -329,4 +329,5 @@ if __name__ == "__main__":
                          cellranger_mempercore=args.mem_per_core,
                          cellranger_jobinterval=args.job_interval,
                          max_jobs=4,
-                         dry_run=args.dry_run)
+                         dry_run=args.dry_run,
+                         log_dir='logs')
