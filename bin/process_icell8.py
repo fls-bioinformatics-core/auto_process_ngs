@@ -22,6 +22,7 @@ import glob
 import time
 import shutil
 import uuid
+import inspect
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -229,8 +230,10 @@ class PipelineTask(object):
     For example:
 
     >>> class LsDir(PipelineTask):
-    ...    def setup(self,dirn):
-    ...      self.add_cmd(LsCommand(dirn))
+    ...    def init(self,dirn):
+    ...      pass
+    ...    def setup(self):
+    ...      self.add_cmd(LsCommand(self.args.dirn))
     ...    def outputs(self):
     ...      return None
 
@@ -244,6 +247,15 @@ class PipelineTask(object):
                                      uuid.uuid4())
         self._completed = False
         self._exit_code = 0
+        # Deal with subclass arguments
+        self._callargs = inspect.getcallargs(self.init,*args,**kws)
+        try:
+            del(self._callargs['self'])
+        except KeyError:
+            pass
+    @property
+    def args(self):
+        return AttributeDictionary(**self._callargs)
     @property
     def completed(self):
         return self._completed
@@ -258,11 +270,14 @@ class PipelineTask(object):
     def report(self,s):
         print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                     self._name,s)
-    def invoke(self,f):
+    def invoke(self,f,args=None,kws=None):
         try:
             with Capturing() as output:
-                f(*self._args,**self._kws)
-            self.report("invoked %s" % f.__name__)
+                if args is None:
+                    f()
+                else:
+                    f(*args,**kws)
+            self.report("done '%s'" % f.__name__)
             for line in output:
                 self.report("%s STDOUT: %s" % (f.__name__,line))
         except NotImplementedError:
@@ -300,7 +315,8 @@ class PipelineTask(object):
         self._commands.append(pipeline_job)
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,wait_for=(),async=True):
-        # Do setup
+        # Do init and setup
+        self.invoke(self.init,self._args,self._kws)
         self.invoke(self.setup)
         # Generate commands to run
         cmds = []
@@ -363,9 +379,11 @@ class PipelineTask(object):
             self.invoke(self.finish)
             self._completed = True
         return self
-    def setup(self,*args,**kws):
+    def init(self,*args,**kws):
+        pass
+    def setup(self):
         raise NotImplementedError("Subclass must implement 'setup' method")
-    def finish(self,*args,**kws):
+    def finish(self):
         raise NotImplementedError("Subclass must implement 'finish' method")
     def output(self):
         raise NotImplementedError("Subclass must implement 'output' method")
@@ -729,23 +747,29 @@ class ContaminantFilterFastqPair(PipelineCommand):
 class GetICell8Stats(PipelineTask):
     """
     """
-    def setup(self,*args,**kws):
-        self.add_cmd(ICell8Statistics(*args,
-                                      **kws))
+    def init(self,fastqs,stats_file,well_list=None,
+             suffix=None,append=False,nprocs=1):
+        pass
+    def setup(self):
+        self.add_cmd(ICell8Statistics(self.args.fastqs,
+                                      self.args.stats_file,
+                                      well_list=self.args.well_list,
+                                      suffix=self.args.suffix,
+                                      append=self.args.append,
+                                      nprocs=self.args.nprocs))
     def output(self):
-        stats_file = self._args[1]
-        return stats_file
+        return self.args.stats_file
 
 class GetICell8PolyGStats(GetICell8Stats):
     """
     """
-    def finish(self,*args,**kws):
+    def finish(self):
         # Method invoked once commands have run
         # Adds another column to the stats file
         # with the percentage of 'unfiltered' reads
         # with poly-G regions
         print "Add number of reads with poly-G regions as percentage"
-        stats_file = self._args[1]
+        stats_file = self.args.stats_file
         stats = TabFile(stats_file,first_line_is_header=True)
         # Add and populate the new column
         stats.appendColumn("%reads_poly_g")
@@ -762,46 +786,50 @@ class GetICell8PolyGStats(GetICell8Stats):
 class SplitFastqsIntoBatches(PipelineTask):
     """
     """
-    def setup(self,fastqs,batch_dir,basename,
-              batch_size=DEFAULT_BATCH_SIZE):
+    def init(self,fastqs,batch_dir,basename,
+             batch_size=DEFAULT_BATCH_SIZE):
+        pass
+    def setup(self):
         # Make the output directory
-        mkdir(batch_dir)
+        mkdir(self.args.batch_dir)
         # Set up the commands
-        fastq_pairs = pair_fastqs(fastqs)[0]
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         fastqs_r1 = [p[0] for p in fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r1,
-                                 batch_dir,
-                                 basename,
-                                 batch_size=batch_size))
+                                 self.args.batch_dir,
+                                 self.args.basename,
+                                 batch_size=self.args.batch_size))
         fastqs_r2 = [p[1] for p in fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r2,
-                                 batch_dir,
-                                 basename,
-                                 batch_size=batch_size))
+                                 self.args.batch_dir,
+                                 self.args.basename,
+                                 batch_size=self.args.batch_size))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.batch_dir
         return FileCollection(out_dir,"*.B*.r*.fastq")
 
 class FilterICell8Fastqs(PipelineTask):
     """
     """
-    def setup(self,fastqs,filter_dir,well_list=None,
+    def init(self,fastqs,filter_dir,well_list=None,
               mode='none',discard_unknown_barcodes=False,
               quality_filter=False):
-        mkdir(filter_dir)
-        fastq_pairs = pair_fastqs(fastqs)[0]
+        pass
+    def setup(self):
+        mkdir(self.args.filter_dir)
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
             self.add_cmd(SplitAndFilterFastqPair(
                 fastq_pair,
-                filter_dir,
-                well_list=well_list,
+                self.args.filter_dir,
+                well_list=self.args.well_list,
                 basename=basename,
-                mode=mode,
-                discard_unknown_barcodes=discard_unknown_barcodes,
-                quality_filter=quality_filter))
+                mode=self.args.mode,
+                discard_unknown_barcodes=self.args.discard_unknown_barcodes,
+                quality_filter=self.args.quality_filter))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.filter_dir
         return AttributeDictionary(
             assigned=FileCollection(out_dir,"*.B*.filtered.r*.fastq"),
             unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
@@ -812,74 +840,86 @@ class FilterICell8Fastqs(PipelineTask):
 class TrimReads(PipelineTask):
     """
     """
-    def setup(self,fastqs,trim_dir):
-        mkdir(trim_dir)
-        fastq_pairs = pair_fastqs(fastqs)[0]
+    def init(self,fastqs,trim_dir):
+        pass
+    def setup(self):
+        mkdir(self.args.trim_dir)
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             self.add_cmd(TrimFastqPair(fastq_pair,
-                                       trim_dir))
+                                       self.args.trim_dir))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.trim_dir
         return FileCollection(out_dir,"*.trimmed.fastq")
 
 class GetReadsWithPolyGRegions(PipelineTask):
     """
     """
-    def setup(self,fastqs,poly_g_regions_dir):
-        mkdir(poly_g_regions_dir)
-        fastq_pairs = pair_fastqs(fastqs)[0]
+    def init(self,fastqs,poly_g_regions_dir):
+        pass
+    def setup(self):
+        mkdir(self.args.poly_g_regions_dir)
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             self.add_cmd(FilterPolyGReads(fastq_pair,
-                                          poly_g_regions_dir))
+                                          self.args.poly_g_regions_dir))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.poly_g_regions_dir
         return FileCollection(out_dir,"*.poly_g.fastq")
 
 class FilterContaminatedReads(PipelineTask):
     """
     """
-    def setup(self,fastqs,filter_dir,mammalian_conf,
-                 contaminants_conf,aligner=None,threads=None):
-        mkdir(filter_dir)
-        fastq_pairs = pair_fastqs(fastqs)[0]
+    def init(self,fastqs,filter_dir,mammalian_conf,
+             contaminants_conf,aligner=None,threads=None):
+        pass
+    def setup(self):
+        mkdir(self.args.filter_dir)
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add_cmd(ContaminantFilterFastqPair(fastq_pair,
-                                                    filter_dir,
-                                                    mammalian_conf,
-                                                    contaminants_conf,
-                                                    aligner=aligner,
-                                                    threads=threads))
+            self.add_cmd(ContaminantFilterFastqPair(
+                fastq_pair,
+                self.args.filter_dir,
+                self.args.mammalian_conf,
+                self.args.contaminants_conf,
+                aligner=self.args.aligner,
+                threads=self.args.threads))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.filter_dir
         return FileCollection(out_dir,"*.trimmed.filtered.fastq")
 
 class SplitByBarcodes(PipelineTask):
     """
     """
-    def setup(self,fastqs,barcodes_dir):
-        mkdir(barcodes_dir)
-        fastq_pairs = pair_fastqs(fastqs)[0]
+    def init(self,fastqs,barcodes_dir):
+        pass
+    def setup(self):
+        mkdir(self.args.barcodes_dir)
+        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
-            self.add_cmd(SplitAndFilterFastqPair(fastq_pair,
-                                                 barcodes_dir,
-                                                 basename=basename,
-                                                 mode="barcodes"))
+            self.add_cmd(SplitAndFilterFastqPair(
+                fastq_pair,
+                self.args.barcodes_dir,
+                basename=basename,
+                mode="barcodes"))
     def output(self):
-        out_dir = self._args[1]
+        out_dir = self.args.barcodes_dir
         return FileCollection(out_dir,"*.r*.fastq")
 
 class MergeFastqs(PipelineTask):
     """
     """
-    def setup(self,fastqs,unassigned_fastqs,
-              failed_barcode_fastqs,failed_umi_fastqs,
-              merge_dir,basename,batch_size=25):
+    def init(self,fastqs,unassigned_fastqs,
+             failed_barcode_fastqs,failed_umi_fastqs,
+             merge_dir,basename,batch_size=25):
+        pass
+    def setup(self):
         # Make the output directory
-        mkdir(merge_dir)
+        mkdir(self.args.merge_dir)
         # Extract the barcodes from the fastq names
         barcodes = set()
-        for fq in fastqs:
+        for fq in self.args.fastqs:
             barcode = os.path.basename(fq).split('.')[-3]
             barcodes.add(barcode)
         barcodes = sorted(list(barcodes))
@@ -888,11 +928,12 @@ class MergeFastqs(PipelineTask):
         for barcode in barcodes:
             fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
                                      fq.endswith("%s.r2.fastq" % barcode)),
-                         fastqs)
+                         self.args.fastqs)
             fastq_groups[barcode] = fqs
         # Group barcodes into batches
-        barcode_batches = [barcodes[i:i+batch_size]
-                           for i in xrange(0,len(barcodes),batch_size)]
+        barcode_batches = [barcodes[i:i+self.args.batch_size]
+                           for i in xrange(0,len(barcodes),
+                                           self.args.batch_size)]
         # Concat fastqs
         for i,barcode_batch in enumerate(barcode_batches):
             batch_name = "barcodes%06d" % i
@@ -902,26 +943,28 @@ class MergeFastqs(PipelineTask):
                 print "-- %s" % barcode
                 fastq_pairs.extend(fastq_groups[barcode])
             self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
-                                                 merge_dir,
-                                                 basename=basename,
+                                                 self.args.merge_dir,
+                                                 basename=self.args.basename,
                                                  mode="barcodes"))
         # Handle unassigned and failed quality reads
-        for name,fqs in (('unassigned',unassigned_fastqs),
-                         ('failed_barcodes',failed_barcode_fastqs),
-                         ('failed_umis',failed_umi_fastqs)):
+        for name,fqs in (('unassigned',self.args.unassigned_fastqs),
+                         ('failed_barcodes',self.args.failed_barcode_fastqs),
+                         ('failed_umis',self.args.failed_umi_fastqs)):
             if not fqs:
                 continue
             fastq_pairs = pair_fastqs(fqs)[0]
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
-                                      merge_dir,
-                                      "%s.%s.r1.fastq" % (basename,name)))
+                                      self.args.merge_dir,
+                                      "%s.%s.r1.fastq" %
+                                      (self.args.basename,name)))
             fqs_r2 = [p[1] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r2,
-                                      merge_dir,
-                                      "%s.%s.r2.fastq" % (basename,name)))
+                                      self.args.merge_dir,
+                                      "%s.%s.r2.fastq" %
+                                      (self.args.basename,name)))
     def output(self):
-        out_dir = self._args[4]
+        out_dir = self.args.merge_dir
         return AttributeDictionary(
             assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq"),
             unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
