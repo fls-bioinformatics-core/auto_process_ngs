@@ -2286,10 +2286,15 @@ class AutoProcess:
                                 project.name)
                 continue
             print "Creating project: '%s'" % project_name
-            project.create_directory(illumina_data.get_project(project_name),
-                                     short_fastq_names=short_fastq_names,
-                                     link_to_fastqs=link_to_fastqs)
-            n_projects += 1
+            try:
+                project.create_directory(
+                    illumina_data.get_project(project_name),
+                    short_fastq_names=short_fastq_names,
+                    link_to_fastqs=link_to_fastqs)
+                n_projects += 1
+            except IlluminaData.IlluminaDataError as ex:
+                logging.warning("Failed to create project '%s': %s" %
+                                (project_name,ex))
         # Tell us how many were made
         print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
         # Also set up analysis directory for undetermined reads
