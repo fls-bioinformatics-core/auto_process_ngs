@@ -267,7 +267,12 @@ if __name__ == "__main__":
             envmod.load(modulefile)
 
     # Check for underlying programs
-    required = ["cellranger"]
+    if args.command == "mkfastq":
+        required = ["cellranger","bcl2fastq"]
+    elif args.command == "count":
+        required = ["cellranger"]
+    else:
+        required = []
     for prog in required:
         if find_program(prog) is None:
             logging.critical("couldn't find '%s'" % prog)
