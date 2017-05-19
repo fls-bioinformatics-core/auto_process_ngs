@@ -117,6 +117,7 @@ def cellranger_count(unaligned_dir,
                      cellranger_mempercore=None,
                      cellranger_jobinterval=None,
                      max_jobs=4,
+                     log_dir=None,
                      dry_run=False):
     """
     """
@@ -146,13 +147,18 @@ def cellranger_count(unaligned_dir,
     )
     sched.start()
 
+    # Make a log directory
+    if not dry_run:
+        if log_dir is None:
+            log_dir = os.getcwd()
+        log_dir = get_log_subdir(log_dir,"cellranger_count")
+        mkdir(log_dir)
+
     # Submit the cellranger count jobs
     for project in sample_names:
         print "Project: %s" % project
         project_dir = os.path.abspath(project)
         mkdir(project_dir)
-        log_dir = os.path.join(project_dir,"logs")
-        mkdir(log_dir)
         for sample in sample_names[project]:
             print "Sample: %s" % sample
             name = "count_%s" % sample
