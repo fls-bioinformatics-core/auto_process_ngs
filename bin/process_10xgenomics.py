@@ -56,7 +56,7 @@ def cellranger_mkfastq(samplesheet,
     """
     """
     # Construct the command
-    cmd = Command("cellranger","mkfastq"
+    cmd = Command("cellranger","mkfastq",
                   "--samplesheet",samplesheet,
                   "--run",primary_data_dir,
                   "--output-dir",output_dir)
