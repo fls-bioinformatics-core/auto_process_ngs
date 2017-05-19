@@ -54,10 +54,6 @@ def cellranger_mkfastq(samplesheet,
                        dry_run=False):
     """
     """
-    # Make a log directory
-    if log_dir is None:
-        log_dir = os.getcwd()
-    log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
     # Construct the command
     cmd = Command("cellranger","mkfastq"
                   "--samplesheet",samplesheet,
@@ -73,6 +69,11 @@ def cellranger_mkfastq(samplesheet,
     # Run the command
     print "Running: %s" % cmd
     if not dry_run:
+        # Make a log directory
+        if log_dir is None:
+            log_dir = os.getcwd()
+        log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
+        # Submit the job
         cellranger_mkfastq_job = SchedulerJob(
             SimpleJobRunner(),
             cmd.command_line,
@@ -195,7 +196,7 @@ def flow_cell_id(run_name):
     flow_cell_id = os.path.basename(run_name).split("_")[-1]
     return flow_cell_id[1:]
 
-def make_log_subdir(log_dir,name):
+def get_log_subdir(log_dir,name):
     """
     """
     # NB based on 'get_log_subdir' from auto_processor.py
