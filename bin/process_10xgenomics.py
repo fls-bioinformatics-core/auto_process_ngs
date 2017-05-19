@@ -158,7 +158,7 @@ def cellranger_count(unaligned_dir,
             name = "count_%s" % sample
             cmd = Command("cellranger","count",
                           "--id",name,
-                          "--fastqs",fastqs_dir,
+                          "--fastqs",unaligned_dir,
                           "--sample",sample,
                           "--transcriptome",transcriptome)
             add_cellranger_args(cmd,
