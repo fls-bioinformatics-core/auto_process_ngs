@@ -50,9 +50,15 @@ def cellranger_mkfastq(samplesheet,
                        cellranger_maxjobs=None,
                        cellranger_mempercore=None,
                        cellranger_jobinterval=None,
+                       log_dir=None,
                        dry_run=False):
     """
     """
+    # Make a log directory
+    if log_dir is None:
+        log_dir = os.getcwd()
+    log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
+    # Construct the command
     cmd = Command("cellranger","mkfastq"
                   "--samplesheet",samplesheet,
                   "--run",primary_data_dir,
@@ -64,13 +70,15 @@ def cellranger_mkfastq(samplesheet,
                         mempercore=cellranger_mempercore,
                         maxjobs=cellranger_maxjobs,
                         jobinterval=cellranger_jobinterval)
+    # Run the command
     print "Running: %s" % cmd
     if not dry_run:
         cellranger_mkfastq_job = SchedulerJob(
             SimpleJobRunner(),
             cmd.command_line,
             name='cellranger_mkfastq',
-            working_dir=os.getcwd())
+            working_dir=os.getcwd(),
+            log_dir=log_dir)
         cellranger_mkfastq_job.start()
         try:
             cellranger_mkfastq_job.wait()
@@ -186,6 +194,19 @@ def flow_cell_id(run_name):
     """
     flow_cell_id = os.path.basename(run_name).split("_")[-1]
     return flow_cell_id[1:]
+
+def make_log_subdir(log_dir,name):
+    """
+    """
+    # NB based on 'get_log_subdir' from auto_processor.py
+    i = 0
+    for d in bcf_utils.list_dirs(log_dir):
+        try:
+            i = max(i,int(d.split('_')[0]))
+        except ValueError:
+            pass
+    # Return the full name
+    return os.path.join(log_dir,"%03d_%s" % (i+1,str(name)))
 
 ######################################################################
 # Main
