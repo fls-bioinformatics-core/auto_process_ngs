@@ -312,7 +312,8 @@ if __name__ == "__main__":
                            cellranger_maxjobs=args.max_jobs,
                            cellranger_mempercore=args.mem_per_core,
                            cellranger_jobinterval=args.job_interval,
-                           dry_run=args.dry_run)
+                           dry_run=args.dry_run,
+                           log_dir='logs')
     elif args.command == "count":
         # Run cellranger count over the samples
         cellranger_count(args.unaligned_dir,
