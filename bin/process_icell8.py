@@ -374,20 +374,28 @@ class PipelineCommand(object):
     """
     Base class for constructing program command lines
 
-    This class should be subclassed to implement the 'cmd'
-    methods, which should return a 'Command' instance.
+    This class should be subclassed to implement the 'init'
+    and 'cmd' methods.
+
+    The 'init' method should do any preprocessing and
+    caching of arguments to be used in the 'cmd' method;
+    the 'cmd' method should use these to construct and
+    return a 'Command' instance.
+
     For example, to wrap the 'ls' command:
 
     >>> class LsCommand(PipelineCommand):
-    ...    def __init__(self,dirn):
-    ...      PipelineCommand.__init__(self,name)
+    ...    def init(self,dirn):
     ...      self._dirn = dirn
     ...    def cmd(self):
     ...      return Command('ls',self._dirn)
 
     """
-    def __init__(self,name):
-        self._name = str(name)
+    def __init__(self,*args,**kws):
+        # Set internal name
+        self._name = self.__class__.__name__
+        # Invoke the 'init' method
+        self.init(*args,**kws)
     def name(self):
         return self._name.lower().replace(' ','_')
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
@@ -399,6 +407,10 @@ class PipelineCommand(object):
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell)
         return script_file
+    def init(self):
+        # Initialise and store parameters
+        # Must be implemented by the subclass
+        raise NotImplementedError("Subclass must implement 'init' method")
     def cmd(self):
         # Build the command
         # Must be implemented by the subclass and return a
@@ -413,13 +425,12 @@ class ICell8Statistics(PipelineCommand):
     """
     Build command to run the 'icell8_stats.py' utility
     """
-    def __init__(self,name,fastqs,stats_file,well_list=None,
-                 suffix=None,append=False,nprocs=1):
+    def init(self,fastqs,stats_file,well_list=None,
+             suffix=None,append=False,nprocs=1):
         """
         Create new ICell8Statistics instance
 
         Arguments:
-          name (str): description of the command
           fastqs (list): list of FASTQ file names
           stats_file (str): path to output file
           well_list (str): path to 'well list' file (optional)
@@ -430,7 +441,6 @@ class ICell8Statistics(PipelineCommand):
           nprocs (int): number of cores available for stats
             (default: 1)
         """
-        PipelineCommand.__init__(self,name)
         self._fastqs = fastqs
         self._stats_file = os.path.abspath(stats_file)
         self._well_list = well_list
@@ -457,15 +467,14 @@ class SplitAndFilterFastqPair(PipelineCommand):
     """
     Build command to run the 'split_icell8_fastqs.py' utility
     """
-    def __init__(self,name,fastq_pair,out_dir,well_list=None,
-                 basename=None,mode='none',
-                 discard_unknown_barcodes=False,
-                 quality_filter=False):
+    def init(self,fastq_pair,out_dir,well_list=None,
+             basename=None,mode='none',
+             discard_unknown_barcodes=False,
+             quality_filter=False):
         """
         Create a new SplitAndFilterFastqPair instance
 
         Arguments:
-          name (str): description of the command
           fastq_pair (list): R1/R2 FASTQ file pair
           out_dir (str): destination directory to
             write output files to
@@ -485,7 +494,6 @@ class SplitAndFilterFastqPair(PipelineCommand):
             UMI-quality (no filtering is performed
             by default)
         """
-        PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._out_dir = os.path.abspath(out_dir)
         self._well_list = well_list
@@ -521,13 +529,12 @@ class BatchFastqs(PipelineCommand):
     Fastqs can be gzipped, but must have the same read number
     (i.e. R1 or R2).
     """
-    def __init__(self,name,fastqs,batch_dir,basename,
-                 batch_size=DEFAULT_BATCH_SIZE):
+    def init(self,fastqs,batch_dir,basename,
+             batch_size=DEFAULT_BATCH_SIZE):
         """
         Create a new BatchFastqs instance
 
         Arguments:
-          name (str): description of the command
           fastqs (list): list of input Fastq files
           batch_dir (str): destination directory to
             write output files to
@@ -535,7 +542,6 @@ class BatchFastqs(PipelineCommand):
           batch_size (int): number of reads per output
             FASTQ (in batch mode) (optional)
         """
-        PipelineCommand.__init__(self,name)
         # Store inputs
         self._fastqs = fastqs
         self._batch_dir = os.path.abspath(batch_dir)
@@ -577,18 +583,16 @@ class ConcatFastqs(PipelineCommand):
     FASTQs cannot be gzipped, and must all be same read number
     (i.e. R1 or R2).
     """
-    def __init__(self,name,fastqs,concat_dir,fastq_out):
+    def init(self,fastqs,concat_dir,fastq_out):
         """
-        Create a new BatchFastqs instance
+        Create a new ConcatFastqs instance
 
         Arguments:
-          name (str): description of the command
           fastqs (list): list of input FASTQ files
           concat_dir (str): destination directory to
             write output file to
           fastq_out (str): name of output Fastq file
         """
-        PipelineCommand.__init__(self,name)
         # Store inputs
         self._fastqs = fastqs
         self._concat_dir = os.path.abspath(concat_dir)
@@ -605,17 +609,15 @@ class TrimFastqPair(PipelineCommand):
     """
     Build command to run 'cutadapt' with ICell8 settings
     """
-    def __init__(self,name,fastq_pair,trim_dir):
+    def init(self,fastq_pair,trim_dir):
         """
         Create a new TrimFastqPair instance
 
         Arguments:
-          name (str): description of the command
           fastq_pair (list): R1/R1 FASTQ file pair
           trim_dir (str): destination directory to
             write output files to
         """
-        PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._trim_dir = os.path.abspath(trim_dir)
     def cmd(self):
@@ -646,17 +648,15 @@ class FilterPolyGReads(PipelineCommand):
     """
     'cutadapt' to fetch reads with poly-G regions
     """
-    def __init__(self,name,fastq_pair,out_dir):
+    def init(self,fastq_pair,out_dir):
         """
         Create a new GetPolyGReads instance
 
         Arguments:
-          name (str): description of the command
           fastq_pair (list): R1/R1 FASTQ file pair
           out_dir (str): destination directory to
             write output files to
         """
-        PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._out_dir = os.path.abspath(out_dir)
     def cmd(self):
@@ -681,14 +681,13 @@ class ContaminantFilterFastqPair(PipelineCommand):
     """
     Build command to run 'icell8_contaminantion_filter.py' utility
     """
-    def __init__(self,name,fastq_pair,filter_dir,
-                 mammalian_conf,contaminants_conf,
-                 aligner=None,threads=None):
+    def init(self,fastq_pair,filter_dir,
+             mammalian_conf,contaminants_conf,
+             aligner=None,threads=None):
         """
         Create a new TrimFastqPair instance
 
         Arguments:
-          name (str): description of the command
           fastq_pair (list): R1/R1 FASTQ file pair
           filter_dir (str): destination directory to
             write output files to
@@ -703,7 +702,6 @@ class ContaminantFilterFastqPair(PipelineCommand):
             threads to run FastqScreen using
             (optional)
         """
-        PipelineCommand.__init__(self,name)
         self._fastq_pair = fastq_pair
         self._filter_dir = os.path.abspath(filter_dir)
         self._mammalian_conf = os.path.abspath(mammalian_conf)
@@ -732,8 +730,7 @@ class GetICell8Stats(PipelineTask):
     """
     """
     def setup(self,*args,**kws):
-        self.add_cmd(ICell8Statistics(self._name,
-                                      *args,
+        self.add_cmd(ICell8Statistics(*args,
                                       **kws))
     def output(self):
         stats_file = self._args[1]
@@ -772,14 +769,12 @@ class SplitFastqsIntoBatches(PipelineTask):
         # Set up the commands
         fastq_pairs = pair_fastqs(fastqs)[0]
         fastqs_r1 = [p[0] for p in fastq_pairs]
-        self.add_cmd(BatchFastqs(self._name,
-                                 fastqs_r1,
+        self.add_cmd(BatchFastqs(fastqs_r1,
                                  batch_dir,
                                  basename,
                                  batch_size=batch_size))
         fastqs_r2 = [p[1] for p in fastq_pairs]
-        self.add_cmd(BatchFastqs(self._name,
-                                 fastqs_r2,
+        self.add_cmd(BatchFastqs(fastqs_r2,
                                  batch_dir,
                                  basename,
                                  batch_size=batch_size))
@@ -798,7 +793,6 @@ class FilterICell8Fastqs(PipelineTask):
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
             self.add_cmd(SplitAndFilterFastqPair(
-                self._name,
                 fastq_pair,
                 filter_dir,
                 well_list=well_list,
@@ -822,8 +816,7 @@ class TrimReads(PipelineTask):
         mkdir(trim_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add_cmd(TrimFastqPair(self._name,
-                                       fastq_pair,
+            self.add_cmd(TrimFastqPair(fastq_pair,
                                        trim_dir))
     def output(self):
         out_dir = self._args[1]
@@ -836,8 +829,7 @@ class GetReadsWithPolyGRegions(PipelineTask):
         mkdir(poly_g_regions_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add_cmd(FilterPolyGReads(self._name,
-                                          fastq_pair,
+            self.add_cmd(FilterPolyGReads(fastq_pair,
                                           poly_g_regions_dir))
     def output(self):
         out_dir = self._args[1]
@@ -851,8 +843,7 @@ class FilterContaminatedReads(PipelineTask):
         mkdir(filter_dir)
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
-            self.add_cmd(ContaminantFilterFastqPair(self._name,
-                                                    fastq_pair,
+            self.add_cmd(ContaminantFilterFastqPair(fastq_pair,
                                                     filter_dir,
                                                     mammalian_conf,
                                                     contaminants_conf,
@@ -870,8 +861,7 @@ class SplitByBarcodes(PipelineTask):
         fastq_pairs = pair_fastqs(fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
-            self.add_cmd(SplitAndFilterFastqPair(self._name,
-                                                 fastq_pair,
+            self.add_cmd(SplitAndFilterFastqPair(fastq_pair,
                                                  barcodes_dir,
                                                  basename=basename,
                                                  mode="barcodes"))
@@ -911,8 +901,7 @@ class MergeFastqs(PipelineTask):
             for barcode in barcode_batch:
                 print "-- %s" % barcode
                 fastq_pairs.extend(fastq_groups[barcode])
-            self.add_cmd(SplitAndFilterFastqPair(self._name,
-                                                 fastq_pairs,
+            self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
                                                  merge_dir,
                                                  basename=basename,
                                                  mode="barcodes"))
@@ -924,11 +913,11 @@ class MergeFastqs(PipelineTask):
                 continue
             fastq_pairs = pair_fastqs(fqs)[0]
             fqs_r1 = [p[0] for p in fastq_pairs]
-            self.add_cmd(ConcatFastqs(self._name,fqs_r1,
+            self.add_cmd(ConcatFastqs(fqs_r1,
                                       merge_dir,
                                       "%s.%s.r1.fastq" % (basename,name)))
             fqs_r2 = [p[1] for p in fastq_pairs]
-            self.add_cmd(ConcatFastqs(self._name,fqs_r2,
+            self.add_cmd(ConcatFastqs(fqs_r2,
                                       merge_dir,
                                       "%s.%s.r2.fastq" % (basename,name)))
     def output(self):
