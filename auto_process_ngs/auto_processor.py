@@ -2240,7 +2240,7 @@ class AutoProcess:
 
         """
         # Check QC script version
-        compatible_versions = ('1.3.0',)
+        compatible_versions = ('1.3.0','1.3.1')
         print "Getting QC script information"
         status,qc_script_info = applications.Command('illumina_qc.sh',
                                                      '--version').subprocess_check_output()
