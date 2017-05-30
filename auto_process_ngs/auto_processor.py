@@ -2889,6 +2889,17 @@ class AutoProcess:
                            processing_qc_html)
         else:
             processing_qc_html = None
+        # Add to link to 10xGenomics cellranger QC summaries
+        cellranger_qc_html = filter(lambda f: os.path.isfile(f)
+                                    and f.startswith("cellranger_qc_summary")
+                                    and f.endswith(".html"),
+                                    os.listdir(self.analysis_dir))
+        if cellranger_qc_html:
+            index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
+            for qc_html in cellranger_qc_html:
+                lanes = ','.join(qc_html.split('.')[0].split('_')[-1])
+                index_page.add("<a href='%s'>Lanes %s</a>" %
+                               (qc_html,lanes))
         # Barcode analysis
         if barcode_analysis_dir:
             # Create section
@@ -3044,6 +3055,8 @@ class AutoProcess:
         fileops.copy(index_html,dirn)
         if processing_qc_html:
             fileops.copy(processing_qc_html,dirn)
+        for qc_html in cellranger_qc_html:
+            fileops.copy(qc_html,dirn)
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url

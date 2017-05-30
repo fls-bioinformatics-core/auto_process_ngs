@@ -107,7 +107,7 @@ def cellranger_mkfastq(samplesheet,
         json_file = os.path.join(flow_cell_dir,
                                  "outs",
                                  "qc_summary.json")
-        html_file = "qc_summary%s.html" % lanes_suffix
+        html_file = "cellranger_qc_summary%s.html" % lanes_suffix
         make_qc_summary_html(json_file,html_file)
 
 def cellranger_count(unaligned_dir,
