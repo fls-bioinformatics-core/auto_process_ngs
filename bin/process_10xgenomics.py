@@ -28,6 +28,11 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerJob
 from auto_process_ngs.simple_scheduler import SchedulerReporter
+from auto_process_ngs.docwriter import Document
+from auto_process_ngs.docwriter import List
+from auto_process_ngs.docwriter import Link
+import auto_process_ngs.css_rules as css_rules
+from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
 import auto_process_ngs.envmod as envmod
 
@@ -135,6 +140,7 @@ def cellranger_count(unaligned_dir,
                          unaligned_dir)
         sys.exit(1)
     print "Samples: %s" % sample_names
+    projects = sample_names.keys()
 
     # Set up a scheduler
     sched_reporter = SchedulerReporter(
@@ -143,8 +149,7 @@ def cellranger_count(unaligned_dir,
     )
     sched_reporter = SchedulerReporter()
     sched = SimpleScheduler(max_concurrent=max_jobs,
-                            reporter=sched_reporter
-    )
+                            reporter=sched_reporter)
     sched.start()
 
     # Make a log directory
@@ -155,15 +160,25 @@ def cellranger_count(unaligned_dir,
         mkdir(log_dir)
 
     # Submit the cellranger count jobs
-    for project in sample_names:
+    for project in projects:
         print "Project: %s" % project
-        project_dir = os.path.abspath(project)
-        mkdir(project_dir)
         for sample in sample_names[project]:
             print "Sample: %s" % sample
-            name = "count_%s" % sample
+            # Check if outputs already exist
+            count_dir = os.path.join(project,
+                                     "cellranger_count",
+                                     sample,
+                                     "outs")
+            if os.path.isdir(count_dir):
+                print "-- %s: outputs exist, nothing to do" % sample
+                continue
+            else:
+                print "-- %s: setting up cellranger count"
+            # Set up job for this sample
+            work_dir = "cellranger_count.%s.%s.tmp" % (project,sample)
+            mkdir(work_dir)
             cmd = Command("cellranger","count",
-                          "--id",name,
+                          "--id",sample,
                           "--fastqs",unaligned_dir,
                           "--sample",sample,
                           "--transcriptome",transcriptome)
@@ -178,8 +193,66 @@ def cellranger_count(unaligned_dir,
                              name="cellranger_count.%s.%s" %
                              (project,
                               sample),
-                             log_dir=log_dir)
+                             log_dir=log_dir,
+                             wd=work_dir)
     sched.wait()
+
+    # Finished, handle the outputs
+    for project in projects:
+        print "Project: %s" % project
+        for sample in sample_names[project]:
+            print "Sample: %s" % sample
+            count_dir = os.path.join(project,
+                                     "cellranger_count",
+                                     sample,
+                                     "outs")
+            if not os.path.isdir(count_dir):
+                outs_dir = os.path.join("cellranger_count.%s.%s.tmp"
+                                        % (project,sample),
+                                        sample,
+                                        "outs")
+                print "Moving %s to %s" % (outs_dir,count_dir)
+                os.rename(outs_dir,count_dir)
+
+    # Create a report and zip archive for each project
+    pwd = os.getcwd()
+    analysis_dir = os.path.basename(pwd)
+    for project in projects:
+        # Descend into project dir
+        os.chdir(project)
+        # Set up zip file
+        report_zip = os.path.join("cellranger_count_report.%s.%s.zip" %
+                                  (project,analysis_dir))
+        zip_file = ZipArchive(report_zip,
+                              prefix="cellranger_count_report.%s.%s" %
+                              (project,analysis_dir))
+        # Construct index page
+        print "Making report for project %s" % project
+        count_report = Document("%s: cellranger count" % project)
+        count_report.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
+        summaries = count_report.add_section()
+        summaries.add("Reports from cellranger count for each sample:")
+        summary_links = List()
+        for sample in sample_names[project]:
+            # Link to summary for sample
+            web_summary = os.path.join("cellranger_count",
+                                       sample,
+                                       "outs",
+                                       "web_summary.html")
+            print "Adding web summary (%s) for %s" % (web_summary,
+                                                      sample)
+            summary_links.add_item(Link("%s" % sample,
+                                        web_summary))
+            # Add to the zip file
+            zip_file.add_file(web_summary)
+        summaries.add(summary_links)
+        # Write the report and add to the zip file
+        html_file = "cellranger_count_report.html"
+        count_report.write(html_file)
+        zip_file.add_file(html_file)
+        # Finish
+        zip_file.close()
+        os.chdir(pwd)
 
 def add_cellranger_args(cmd,
                         jobmode='sge',
