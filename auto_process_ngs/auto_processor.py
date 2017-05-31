@@ -2898,7 +2898,7 @@ class AutoProcess:
             index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
             for qc_html in cellranger_qc_html:
                 lanes = ','.join(qc_html.split('.')[0].split('_')[-1])
-                index_page.add("<a href='%s'>Lanes %s</a>" %
+                index_page.add("<a href='%s'>QC summary for lanes %s</a>" %
                                (qc_html,lanes))
         # Barcode analysis
         if barcode_analysis_dir:
@@ -2953,7 +2953,7 @@ class AutoProcess:
                                            os.path.basename(self.analysis_dir)))
                     print qc_zip
                     assert(os.path.isfile(qc_zip))
-                    report_copied = True
+                    qc_report_copied = True
                     try:
                         fileops.copy(qc_zip,dirn)
                         fileops.unzip(os.path.join(
@@ -2962,9 +2962,9 @@ class AutoProcess:
                                       fileops.Location(dirn).path)
                     except Exception, ex:
                         print "Failed to copy QC report: %s" % ex
-                        report_copied = False
+                        qc_report_copied = False
                     # Append info to the index page
-                    if report_copied:
+                    if qc_report_copied:
                         qc_base = "%s_report" % qc_dir
                         fastq_dir = project.qc_info(qc_dir).fastq_dir
                         if fastq_dir != project.info.primary_fastq_dir:
@@ -3041,6 +3041,36 @@ class AutoProcess:
                          os.path.basename(self.analysis_dir)))
                     report_html.append("<a href='%s'>[Zip]</a>" % \
                                        os.path.basename(icell8_processing_zip))
+                # Locate and copy cellranger count reports
+                cellranger_zip = os.path.join(project.dirn,
+                                      "cellranger_count_report.%s.%s.zip" %
+                                      (project.name,
+                                       os.path.basename(self.analysis_dir)))
+                print cellranger_zip
+                if os.path.isfile(cellranger_zip):
+                    cellranger_report_copied = True
+                    try:
+                        fileops.copy(cellranger_zip,dirn)
+                        fileops.unzip(os.path.join(
+                            dirn,
+                            os.path.basename(cellranger_zip)),
+                                      fileops.Location(dirn).path)
+                    except Exception as ex:
+                        print "Failed to copy cellranger report: %s" % ex
+                        cellranger_report_copied = False
+                else:
+                    # No cellranger count data to copy
+                    cellranger_report_copied = False
+                # Append info to the index page
+                if cellranger_report_copied:
+                    report_html.append(
+                        "<a href='cellranger_count_report.%s.%s/" \
+                        "cellranger_count_report.html'>" \
+                        "Cellranger count report</a>" % \
+                        (project.name,
+                         os.path.basename(self.analysis_dir)))
+                    report_html.append("<a href='%s'>[zip]</a>" % \
+                                       os.path.basename(cellranger_zip))
                 # Add to the index
                 index_page.add("<td>%s</td>"
                                % null_str.join(report_html))
