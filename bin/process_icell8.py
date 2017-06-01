@@ -40,6 +40,8 @@ from auto_process_ngs.simple_scheduler import SchedulerGroup
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.utils import AnalysisFastq
+from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.qc.illumina_qc import check_qc_outputs
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
@@ -115,12 +117,16 @@ class Pipeline(object):
     completed (or will run immediately if they don't have
     any dependencies).
     """
-    def __init__(self,name="PIPELINE",default_runner=None):
+    def __init__(self,name="PIPELINE",default_runner=None,
+                 working_dir=None):
         self._name = str(name)
         self._pending = []
         self._running = []
         self._finished = []
         self._default_runner = default_runner
+        if working_dir is None:
+            working_dir = os.getcwd()
+        self._working_dir = os.path.abspath(working_dir)
     def add_task(self,task,dependencies=(),**kws):
         self._pending.append((task,dependencies,kws))
         self.report("Adding task '%s'" % task.name())
@@ -189,6 +195,8 @@ class Pipeline(object):
                     self.report("started %s" % task.name())
                     if 'runner' not in kws:
                         kws['runner'] = self._default_runner
+                    if 'working_dir' not in kws:
+                        kws['working_dir'] = self._working_dir
                     try:
                         task.run(sched=sched,
                                  log_dir=log_dir,
@@ -740,6 +748,29 @@ class ContaminantFilterFastqPair(PipelineCommand):
         cmd.add_args(*self._fastq_pair)
         return cmd
 
+class IlluminaQC(PipelineCommand):
+    """
+    Run the 'illumina_qc.sh' script
+    """
+    def init(self,fastq,nthreads=1,working_dir=None):
+        """
+        Set up parameters
+        """
+        self.fastq = fastq
+        self.nthreads = nthreads
+        if working_dir is None:
+            working_dir = os.getcwd()
+        self.working_dir = os.path.abspath(working_dir)
+    def cmd(self):
+        """
+        Build the command
+        """
+        cmd = Command('cd',self.working_dir,'&&',
+                      'illumina_qc.sh',self.fastq)
+        if self.nthreads > 1:
+            cmd.add_args('--threads',self.nthreads)
+        return cmd
+
 class RemoveDirectory(PipelineCommand):
     """
     Command to remove a directory and its contents
@@ -990,6 +1021,37 @@ class MergeFastqs(PipelineTask):
             failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq"),
             failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq"),
         )
+
+class RunQC(PipelineTask):
+    """
+    """
+    def init(self,project_dir,fastqs,nthreads=1):
+        pass
+    def setup(self):
+        # Make the output qc directory
+        mkdir(os.path.join(self.args.project_dir,'qc'))
+        # Set up QC run for each fastq
+        for fq in self.args.fastqs:
+            self.add_cmd(IlluminaQC(fq,
+                                    nthreads=self.args.nthreads,
+                                    working_dir=self.args.project_dir))
+    def finish(self):
+        # Verify the QC outputs for each fastq
+        project = AnalysisProject(
+            os.path.basename(self.args.project_dir),
+            self.args.project_dir)
+        if not project.verify_qc():
+            print "Failed to verify QC"
+            self._exit_code = 1
+        else:
+            # Generate QC report
+            print "Generating QC report"
+            qc = project.qc_report(force=True)
+            if qc is None:
+                print "Failed to generate QC report"
+                self._exit_code = 1
+            else:
+                print "QC report: %s" % zip_file
 
 class CleanupDirectory(PipelineTask):
     """
@@ -1333,6 +1395,14 @@ if __name__ == "__main__":
         append=True,
         nprocs=args.threads)
     ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats),
+                 runner=runners['contaminant_filter'])
+
+    # Run the QC
+    run_qc = RunQC("Run QC",
+                   args.outdir,
+                   merge_fastqs.output().assigned,
+                   nthreads=args.threads)
+    ppl.add_task(run_qc,dependencies=(merge_fastqs,),
                  runner=runners['contaminant_filter'])
 
     # Cleanup outputs
