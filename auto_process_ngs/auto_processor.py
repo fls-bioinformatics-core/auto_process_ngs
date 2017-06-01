@@ -3046,8 +3046,8 @@ class AutoProcess:
                                       "cellranger_count_report.%s.%s.zip" %
                                       (project.name,
                                        os.path.basename(self.analysis_dir)))
-                print cellranger_zip
                 if os.path.isfile(cellranger_zip):
+                    print cellranger_zip
                     cellranger_report_copied = True
                     try:
                         fileops.copy(cellranger_zip,dirn)
