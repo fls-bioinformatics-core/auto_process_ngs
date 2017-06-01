@@ -1961,22 +1961,25 @@ class AutoProcess:
                                   project.name)
                     return
             # Deal with undetermined reads
-            print "Examining undetermined samples:"
-            if no_lane_splitting:
-                # No lane info: should merge undetermined fastqs
-                for sample in illumina_data.undetermined.samples:
-                    print "- %s: reads will be concatenated" % sample.name
-                    undetermined.append(sample)
-            else:
-                for sample in illumina_data.undetermined.samples:
-                    if not filter(lambda s: s.name == sample.name,
-                                  undetermined):
-                        print "- %s: will be merged in" % sample.name
+            if illumina_data.undetermined is not None:
+                print "Examining undetermined samples:"
+                if no_lane_splitting:
+                    # No lane info: should merge undetermined fastqs
+                    for sample in illumina_data.undetermined.samples:
+                        print "- %s: reads will be concatenated" % sample.name
                         undetermined.append(sample)
-                    else:
-                        logging.error("collision: %s already exists" %
-                                      sample.name)
-                        return
+                else:
+                    for sample in illumina_data.undetermined.samples:
+                        if not filter(lambda s: s.name == sample.name,
+                                      undetermined):
+                            print "- %s: will be merged in" % sample.name
+                            undetermined.append(sample)
+                        else:
+                            logging.error("collision: %s already exists" %
+                                          sample.name)
+                            return
+            else:
+                print "No undetermined samples"
         # Collect any remaining projects from the primary
         # unaligned directory
         print "Examining projects in primary dir %s:" \
