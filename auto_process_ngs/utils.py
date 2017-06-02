@@ -461,7 +461,8 @@ class AnalysisProject:
 
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
-                 organism=None,run=None,comments=None,platform=None):
+                 organism=None,run=None,comments=None,platform=None,
+                 fastq_attrs=None):
         """Create a new AnalysisProject instance
 
         Arguments:
@@ -477,7 +478,10 @@ class AnalysisProject:
           run: optional, name of the run
           comments: optional, free text comments associated with the
             run
-
+          fastq_attrs: optional, specify a class to use to get
+            attributes from a Fastq file name (e.g. sample name, read
+            number etc). The supplied class should be a subclass of
+            BaseFastqAttrs; defaults to 'AnalysisFastq'.
         """
         self.name = name
         self.dirn = os.path.abspath(dirn)
@@ -486,6 +490,12 @@ class AnalysisProject:
         self.samples = []
         self.info = AnalysisProjectInfo()
         self.info_file = os.path.join(self.dirn,"README.info")
+        # Function to use for getting Fastq information
+        if fastq_attrs is None:
+            self.fastq_attrs = AnalysisFastq
+        else:
+            self.fastq_attrs = fastq_attrs
+        # Populate from the directory contents
         self.populate()
         # (Re)set metadata
         if run is not None:
@@ -532,11 +542,12 @@ class AnalysisProject:
         for fastq in fastqs:
             # GetFastqGzFile returns a list of tuples
             for fq in fastq:
-                name = AnalysisFastq(fq).sample_name
+                name = self.fastq_attrs(fq).sample_name
                 try:
                     sample = self.get_sample(name)
                 except KeyError:
-                    sample = AnalysisSample(name)
+                    sample = AnalysisSample(name,
+                                            fastq_attrs=self.fastq_attrs)
                     self.samples.append(sample)
                 sample.add_fastq(os.path.join(self.fastq_dir,fq))
         logging.debug("Listing samples and files:")
@@ -818,16 +829,25 @@ class AnalysisSample:
 
     """
 
-    def __init__(self,name):
+    def __init__(self,name,fastq_attrs=None):
         """Create a new AnalysisSample instance
 
         Arguments:
           name: sample name
+          fastq_attrs: optional, specify a class to use to get
+            attributes from a Fastq file name (e.g. sample name, read
+            number etc). The supplied class should be a subclass of
+            BaseFastqAttrs; defaults to 'AnalysisFastq'.
 
         """
         self.name = name
         self.fastq = []
         self.paired_end = False
+        # Function to use for getting Fastq information
+        if fastq_attrs is None:
+            self.fastq_attrs = AnalysisFastq
+        else:
+            self.fastq_attrs = fastq_attrs
 
     def add_fastq(self,fastq):
         """Add a reference to a fastq file in the sample
@@ -842,7 +862,7 @@ class AnalysisSample:
         self.fastq.sort()
         # Check paired-end status
         if not self.paired_end:
-            fq = AnalysisFastq(fastq)
+            fq = self.fastq_attrs(fastq)
             if fq.read_number == 2:
                 self.paired_end = True
 
@@ -859,7 +879,7 @@ class AnalysisSample:
         # Build list of fastqs that match the selection criteria
         fastqs = []
         for fastq in self.fastq:
-            fq = AnalysisFastq(fastq)
+            fq = self.fastq_attrs(fastq)
             if fq.read_number is None:
                 logging.debug("Unable to determine read number for %s, assume R1" % fastq)
                 fq_read_number = 1
