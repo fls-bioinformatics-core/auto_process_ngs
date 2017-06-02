@@ -562,19 +562,11 @@ def get_fastq_pairs(sample):
     for fqr1 in fastqs_r1:
         # Split up R1 name
         logger.debug("fqr1 %s" % os.path.basename(fqr1))
-        fastq_base = os.path.basename(fqr1)
         dir_path = os.path.dirname(fqr1)
-        try:
-            i = fastq_base.index('.')
-            ext = fastq_base[i:]
-        except ValueError:
-            ext = ''
         # Generate equivalent R2 file
-        fqr2 = IlluminaFastq(fqr1)
+        fqr2 = sample.fastq_attrs(fqr1)
         fqr2.read_number = 2
-        fqr2 = os.path.join(dir_path,"%s" % fqr2)
-        if ext:
-            fqr2 += ext
+        fqr2 = os.path.join(dir_path,"%s%s" % (fqr2,fqr2.extension))
         logger.debug("fqr2 %s" % os.path.basename(fqr2))
         if fqr2 in fastqs_r2:
             pairs.append(FastqSet(fqr1,fqr2))
