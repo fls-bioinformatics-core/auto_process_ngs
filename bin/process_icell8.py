@@ -39,6 +39,7 @@ from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.simple_scheduler import SchedulerGroup
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
+from auto_process_ngs.utils import BaseFastqAttrs
 from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import check_qc_outputs
@@ -750,13 +751,13 @@ class ContaminantFilterFastqPair(PipelineCommand):
 
 class IlluminaQC(PipelineCommand):
     """
-    Run the 'illumina_qc.sh' script
+    Run the 'illumina_qc.sh' script on one or more Fastqs
     """
-    def init(self,fastq,nthreads=1,working_dir=None):
+    def init(self,fastqs,nthreads=1,working_dir=None):
         """
         Set up parameters
         """
-        self.fastq = fastq
+        self.fastqs = fastqs
         self.nthreads = nthreads
         if working_dir is None:
             working_dir = os.getcwd()
@@ -765,10 +766,11 @@ class IlluminaQC(PipelineCommand):
         """
         Build the command
         """
-        cmd = Command('cd',self.working_dir,'&&',
-                      'illumina_qc.sh',self.fastq)
-        if self.nthreads > 1:
-            cmd.add_args('--threads',self.nthreads)
+        cmd = Command('cd',self.working_dir)
+        for fastq in self.fastqs:
+            cmd.add_args('&&','illumina_qc.sh',fastq)
+            if self.nthreads > 1:
+                cmd.add_args('--threads',self.nthreads)
         return cmd
 
 class RemoveDirectory(PipelineCommand):
@@ -1025,33 +1027,45 @@ class MergeFastqs(PipelineTask):
 class RunQC(PipelineTask):
     """
     """
-    def init(self,project_dir,fastqs,nthreads=1):
-        pass
+    def init(self,project_dir,nthreads=1):
+        self.qc_dir = os.path.join(self.args.project_dir,'qc')
+        self.qc_report = None
     def setup(self):
+        # Gather Fastqs
+        project = AnalysisProject(
+            os.path.basename(self.args.project_dir),
+            self.args.project_dir,
+            fastq_attrs=ICell8FastqAttrs)
         # Make the output qc directory
-        mkdir(os.path.join(self.args.project_dir,'qc'))
+        mkdir(self.qc_dir)
         # Set up QC run for each fastq
-        for fq in self.args.fastqs:
-            self.add_cmd(IlluminaQC(fq,
+        for sample in project.samples:
+            self.add_cmd(IlluminaQC(sample.fastq,
                                     nthreads=self.args.nthreads,
                                     working_dir=self.args.project_dir))
     def finish(self):
         # Verify the QC outputs for each fastq
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
-            self.args.project_dir)
+            self.args.project_dir,
+            fastq_attrs=ICell8FastqAttrs)
         if not project.verify_qc():
             print "Failed to verify QC"
             self._exit_code = 1
         else:
             # Generate QC report
             print "Generating QC report"
-            qc = project.qc_report(force=True)
-            if qc is None:
+            self.qc_report = project.qc_report(force=True)
+            if self.qc_report is None:
                 print "Failed to generate QC report"
                 self._exit_code = 1
             else:
-                print "QC report: %s" % zip_file
+                print "QC report: %s" % self.qc_report
+    def output(self):
+        return AttributeDictionary(
+            qc_dir=self.qc_dir,
+            report_zip=self.qc_report,
+        )
 
 class CleanupDirectory(PipelineTask):
     """
@@ -1063,6 +1077,31 @@ class CleanupDirectory(PipelineTask):
             self.report("No directory '%s'" % self.args.dirn)
         else:
             self.add_cmd(RemoveDirectory(self.args.dirn))
+
+######################################################################
+# Classes
+######################################################################
+
+class ICell8FastqAttrs(BaseFastqAttrs):
+    """
+    Extract attributes from Icell8 pipeline Fastq names
+
+    Used as a custom Fastq name attribute parser for output
+    Fastqs from the ICell8 pipeline.
+
+    Fastq names for the final results look like e.g.:
+
+    icell8.CCAGTTCAGGA.r1.fastq
+    """
+    def __init__(self,fastq):
+        BaseFastqAttrs.__init__(self,fastq)
+        name = self.basename.split('.')
+        self.sample_name = '.'.join(name[0:2])
+        self.barcode_sequence = name[1]
+        self.read_number = int(name[2][1:])
+    def __repr__(self):
+        return "%s.r%s" % (self.sample_name,
+                           self.read_number)
 
 ######################################################################
 # Functions
@@ -1400,7 +1439,6 @@ if __name__ == "__main__":
     # Run the QC
     run_qc = RunQC("Run QC",
                    args.outdir,
-                   merge_fastqs.output().assigned,
                    nthreads=args.threads)
     ppl.add_task(run_qc,dependencies=(merge_fastqs,),
                  runner=runners['contaminant_filter'])
