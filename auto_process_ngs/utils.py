@@ -20,6 +20,7 @@ tree at some point.
 
 Classes:
 
+- BaseFastqAttrs
 - AnalysisFastq:
 - AnalysisDir:
 - AnalysisProject:
@@ -82,6 +83,7 @@ class BaseFastqAttrs(object):
 
     fastq:            the original fastq file name
     basename:         basename with NGS extensions stripped
+    extension:        full extension e.g. '.fastq.gz'
     sample_name:      name of the sample
     sample_number:    integer (or None if no sample number)
     barcode_sequence: barcode sequence (string or None)
@@ -95,9 +97,10 @@ class BaseFastqAttrs(object):
     def __init__(self,fastq):
         # Store name
         self.fastq = fastq
-        # Basename
-        self.basename = os.path.basename(
-            strip_ngs_extensions(self.fastq))
+        # Basename and extension
+        self.basename = strip_ngs_extensions(self.fastq)
+        self.extension = self.fastq[len(self.basename):]
+        self.basename = os.path.basename(self.basename)
         # Values that should be derived from the name
         # (should be set by subclass)
         self.sample_name = None

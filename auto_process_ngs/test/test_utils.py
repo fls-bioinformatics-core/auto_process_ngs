@@ -21,6 +21,9 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,3)
@@ -33,6 +36,9 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG-GTTCAC')
         self.assertEqual(fq.lane_number,3)
@@ -45,6 +51,9 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_S4_L003_R2_001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,3)
@@ -57,6 +66,9 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_S4_R2_001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_S4_R2_001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,4)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -69,6 +81,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -81,6 +95,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_R2')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_R2')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,None)
@@ -93,6 +109,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_L001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,1)
@@ -105,6 +123,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_L001_R2')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001_R2')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,None)
         self.assertEqual(fq.lane_number,1)
@@ -117,6 +137,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,None)
@@ -129,6 +151,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG_R2')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_R2')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,None)
@@ -141,6 +165,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG_L001')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,1)
@@ -153,6 +179,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+        self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,1)
@@ -178,6 +206,8 @@ class TestAnalysisFastq(unittest.TestCase):
         """
         fq = AnalysisFastq('/data/Project_NH/Sample_NH1/NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001.fastq.gz')
         self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.extension,'.fastq.gz')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
         self.assertEqual(fq.lane_number,3)
