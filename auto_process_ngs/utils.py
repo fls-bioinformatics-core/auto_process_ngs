@@ -67,6 +67,9 @@ from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
 from .exceptions import MissingParameterFileException
 
+# Module specific logger
+logger = logging.getLogger(__name__)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -211,25 +214,25 @@ class AnalysisFastq(BaseFastqAttrs):
         fields = fastq_base.split('_')
         # Deal with set number first e.g. 001
         field = fields[-1]
-        ##logging.debug("Test for set number %s" % field)
+        ##logger.debug("Test for set number %s" % field)
         if len(field) == 3 and field.isdigit():
             self.set_number = int(field)
             fields = fields[:-1]
         # Deal with trailing read number e.g. R1
         field = fields[-1]
-        ##logging.debug("Test for read number %s" % field)
+        ##logger.debug("Test for read number %s" % field)
         if len(field) == 2 and field.startswith('R'):
             self.read_number = int(field[1])
             fields = fields[:-1]
         # Deal with trailing lane number e.g. L001
         field = fields[-1]
-        ##logging.debug("Test for lane number %s" % field)
+        ##logger.debug("Test for lane number %s" % field)
         if len(field) == 4 and field.startswith('L') and field[1:].isdigit():
             self.lane_number = int(field[1:])
             fields = fields[:-1]
         # Deal with trailing index tag e.g. ATTGCT or ATTGCT-CCTAAG
         field = fields[-1]
-        ##logging.debug("Test for barcode sequence %s" % field)
+        ##logger.debug("Test for barcode sequence %s" % field)
         if len(fields) > 1:
             # This mustn't be the last field: if it is then it's
             # not the tag - it's the name
@@ -240,7 +243,7 @@ class AnalysisFastq(BaseFastqAttrs):
             if is_tag:
                 self.barcode_sequence = field
                 fields = fields[:-1]
-                ##logging.debug("Identified barcode sequence as %s" % self.barcode_sequence)
+                ##logger.debug("Identified barcode sequence as %s" % self.barcode_sequence)
             else:
                 # Alternatively might be the sample number
                 if field.startswith('S'):
@@ -251,7 +254,7 @@ class AnalysisFastq(BaseFastqAttrs):
                     except IndexError:
                         pass
         # What's left is the name
-        ##logging.debug("Remaining fields: %s" % fields)
+        ##logger.debug("Remaining fields: %s" % fields)
         self.sample_name = '_'.join(fields)
         assert(self.sample_name != '')
 
@@ -307,9 +310,9 @@ class AnalysisDir:
                                          "metadata.info")
             self.metadata.load(metadata_file)
         except Exception as ex:
-            logging.warning("Failed to load metadata file %s: %s" %
-                            (metadata_file,ex))
-            logging.warning("Attempting to load parameter file")
+            logger.warning("Failed to load metadata file %s: %s" %
+                           (metadata_file,ex))
+            logger.warning("Attempting to load parameter file")
             try:
                 params = AnalysisDirParameters()
                 parameter_file = os.path.join(self._analysis_dir,
@@ -325,15 +328,15 @@ class AnalysisDir:
                     self.metadata[param] = params[param]
             except Exception as ex:
                 # No parameter file either
-                logging.warning("Failed to load parameters: %s" % ex)
-                logging.warning("Perhaps this is not an auto_process project?")
+                logger.warning("Failed to load parameters: %s" % ex)
+                logger.warning("Perhaps this is not an auto_process project?")
                 raise ex
         # Projects metadata
         try:
             self.projects_metadata = ProjectMetadataFile(
                 os.path.join(self._analysis_dir,"projects.info"))
         except Exception as ex:
-            logging.warning("Failed to load projects metadata: %s" % ex)
+            logger.warning("Failed to load projects metadata: %s" % ex)
             self.projects_metadata = None
         # Run name
         try:
@@ -346,13 +349,13 @@ class AnalysisDir:
             self.instrument_run_number = IlluminaData.split_run_name(
                 self.run_name)
         # Look for outputs from bclToFastq and analysis projects
-        logging.debug("Examining subdirectories of %s" % self._analysis_dir)
+        logger.debug("Examining subdirectories of %s" % self._analysis_dir)
         for dirn in bcf_utils.list_dirs(self._analysis_dir):
             # Look for sequencing data
             try:
                 data = IlluminaData.IlluminaData(self._analysis_dir,
                                                  unaligned_dir=dirn)
-                logging.debug("- %s: sequencing data" % dirn)
+                logger.debug("- %s: sequencing data" % dirn)
                 self._bcl2fastq_dirs.append(dirn)
                 self.sequencing_data.append(data)
                 continue
@@ -362,25 +365,25 @@ class AnalysisDir:
             data = AnalysisProject(dirn,os.path.join(self._analysis_dir,dirn))
             if data.is_analysis_dir:
                 if dirn == 'undetermined':
-                    logging.debug("- %s: undetermined indexes" % dirn)
+                    logger.debug("- %s: undetermined indexes" % dirn)
                     self.undetermined = data
                 else:
                     # Check against projects.info, if possible
                     try:
                         if not self.projects_metadata.lookup('Project',dirn):
-                            logging.debug("- %s: not in projects.info" % dirn)
+                            logger.debug("- %s: not in projects.info" % dirn)
                             self._extra_dirs.append(dirn)
                             continue
                     except AttributeError:
                         pass
-                    logging.debug("- %s: project directory" % dirn)
+                    logger.debug("- %s: project directory" % dirn)
                     self._project_dirs.append(dirn)
                     self.projects.append(data)
                 continue
             else:
                 # Unidentified contents
                 self._extra_dirs.append(dirn)
-                logging.debug("- %s: unknown" % dirn)
+                logger.debug("- %s: unknown" % dirn)
 
     @property
     def n_projects(self):
@@ -527,18 +530,18 @@ class AnalysisProject:
             # look in top level of project
             self.fastq_dir = self.dirn
         # Populate from fastq file names
-        logging.debug("Acquiring fastqs...")
+        logger.debug("Acquiring fastqs...")
         fastqs = Pipeline.GetFastqGzFiles(self.fastq_dir)
         if not fastqs:
-            logging.debug("No fastq.gz files found")
+            logger.debug("No fastq.gz files found")
             fastqs = Pipeline.GetFastqFiles(self.fastq_dir)
             if not fastqs:
-                logging.debug("No fastq files found")
+                logger.debug("No fastq files found")
             else:
                 self.fastq_format = 'fastq'
         else:
             self.fastq_format = 'fastqgz'
-        logging.debug("Assigning fastqs to samples...")
+        logger.debug("Assigning fastqs to samples...")
         for fastq in fastqs:
             # GetFastqGzFile returns a list of tuples
             for fq in fastq:
@@ -550,9 +553,9 @@ class AnalysisProject:
                                             fastq_attrs=self.fastq_attrs)
                     self.samples.append(sample)
                 sample.add_fastq(os.path.join(self.fastq_dir,fq))
-        logging.debug("Listing samples and files:")
+        logger.debug("Listing samples and files:")
         for sample in self.samples:
-            logging.debug("* %s: %s" % (sample.name,sample.fastq))
+            logger.debug("* %s: %s" % (sample.name,sample.fastq))
         # Get data from info file, if present
         if os.path.isfile(self.info_file):
             self.info.load(self.info_file)
@@ -591,12 +594,12 @@ class AnalysisProject:
             to the fastq files; if False (default) then make hard links
     
         """
-        logging.debug("Creating analysis directory for project '%s'" % self.name)
+        logger.debug("Creating analysis directory for project '%s'" % self.name)
         # Check for & create directory
         if os.path.exists(self.dirn):
-            logging.warning("Directory %s already exists" % self.dirn)
+            logger.warning("Directory %s already exists" % self.dirn)
         else:
-            logging.debug("Making analysis directory %s" % self.dirn)
+            logger.debug("Making analysis directory %s" % self.dirn)
             bcf_utils.mkdir(self.dirn,mode=0775)
         # Make a 'ScriptCode' directory
         scriptcode_dir = os.path.join(self.dirn,"ScriptCode")
@@ -629,13 +632,13 @@ class AnalysisProject:
         for fastq in fastqs:
             target_fq = os.path.join(fastqs_dir,fastq_names[fastq])
             if os.path.exists(target_fq):
-                logging.warning("Target '%s' already exists" % target_fq)
+                logger.warning("Target '%s' already exists" % target_fq)
             else:
                 if link_to_fastqs:
-                    logging.debug("Making symlink to %s" % fastq)
+                    logger.debug("Making symlink to %s" % fastq)
                     bcf_utils.mklink(fastq,target_fq,relative=True)
                 else:
-                    logging.debug("Making hard link to %s" % fastq)
+                    logger.debug("Making hard link to %s" % fastq)
                     os.link(fastq,target_fq)
         # Populate
         self.populate()
@@ -692,12 +695,12 @@ class AnalysisProject:
         # Return name of zip file, or None if there is a problem
         # Set force=True to force reports to be generated
         if not (force or self.verify_qc()):
-            logging.debug("Failed to generate QC report for %s: QC "
+            logger.debug("Failed to generate QC report for %s: QC "
                           "not verified and force not specified"
                           % self.name)
             return None
         # Create HTML report
-        logging.debug("Creating HTML QC report for %s" % self.name)
+        logger.debug("Creating HTML QC report for %s" % self.name)
         try:
             report_html = os.path.join(self.dirn,"qc_report.html")
             self.qc.report(title="%s/%s: QC report" % (self.info.run,
@@ -705,11 +708,11 @@ class AnalysisProject:
                            filename=report_html,
                            relative_links=True)
         except Exception as ex:
-            logging.error("Exception trying to generate QC report "
-                          "for %s: %s" % (self.name,ex))
+            logger.error("Exception trying to generate QC report "
+                         "for %s: %s" % (self.name,ex))
             return None
         # Create zip file
-        logging.debug("Creating zip archive of QC report for %s" %
+        logger.debug("Creating zip archive of QC report for %s" %
                       self.name)
         try:
             analysis_dir = os.path.basename(os.path.dirname(self.dirn))
@@ -725,7 +728,7 @@ class AnalysisProject:
             for sample in self.qc.samples:
                 for fastqs in sample.fastq_pairs:
                     for fq in fastqs:
-                        logging.debug("Adding QC outputs for %s" % fq)
+                        logger.debug("Adding QC outputs for %s" % fq)
                         for f in expected_qc_outputs(fq,self.qc_dir):
                             if f.endswith('.zip'):
                                 # Exclude .zip file
@@ -735,8 +738,8 @@ class AnalysisProject:
             # Finished
             return report_zip
         except Exception as ex:
-            logging.error("Exception trying to generate zip archive "
-                          "of QC report for %s: %s" % (self.name,ex))
+            logger.error("Exception trying to generate zip archive "
+                         "of QC report for %s: %s" % (self.name,ex))
             return None
 
     @property
@@ -881,7 +884,7 @@ class AnalysisSample:
         for fastq in self.fastq:
             fq = self.fastq_attrs(fastq)
             if fq.read_number is None:
-                logging.debug("Unable to determine read number for %s, assume R1" % fastq)
+                logger.debug("Unable to determine read number for %s, assume R1" % fastq)
                 fq_read_number = 1
             else:
                 fq_read_number = fq.read_number
@@ -1076,16 +1079,16 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         break
                 if not found_key:
                     if strict:
-                        logging.debug("Unrecognised key in %s: %s"
-                                      % (filen,attr))
+                        logger.debug("Unrecognised key in %s: %s"
+                                     % (filen,attr))
                     else:
-                        logging.debug("Adding key from %s: %s"
-                                      % (filen,attr))
+                        logger.debug("Adding key from %s: %s"
+                                     % (filen,attr))
                         self.__attributes[attr] = attr
                         self.__key_order.append(attr)
                         self[attr] = value
             except IndexError:
-                logging.warning("Bad line in %s: %s" % (filen,line))
+                logger.warning("Bad line in %s: %s" % (filen,line))
 
     def save(self,filen=None):
         """Save metadata to tab-delimited file
@@ -1511,7 +1514,7 @@ def split_user_host_dir(location):
         location = location.strip()
     except AttributeError:
         # Not a string?
-        logging.error("Bad input to split_user_host_dir: '%s'" % location)
+        logger.error("Bad input to split_user_host_dir: '%s'" % location)
         return (None,None,None)
     if not location:
         return (None,None,None)
@@ -1623,7 +1626,7 @@ def edit_file(filen,editor="vi",append=None):
     except KeyError:
         pass
     if editor is None:
-        logging.critical("No editor specified!")
+        logger.critical("No editor specified!")
         return
     # Make a temporary copy for editing
     f,tmpfile = tempfile.mkstemp()
@@ -1647,7 +1650,7 @@ def edit_file(filen,editor="vi",append=None):
             fp.write(open(tmpfile,'r').read())
             os.remove(tmpfile)
     else:
-        logging.warning("no changes to write")
+        logger.warning("no changes to write")
 
 def paginate(text):
     """
