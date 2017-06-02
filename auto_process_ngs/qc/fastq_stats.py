@@ -138,9 +138,18 @@ class FastqQualityStats:
             if line.startswith('#'):
                 continue
             i,mean,median,q25,q75,p10,p90 = line.strip().split('\t')
-            self.mean.append(int(float(mean)))
-            self.median.append(int(float(median)))
-            self.q25.append(int(float(q25)))
-            self.q75.append(int(float(q75)))
-            self.p10.append(int(float(p10)))
-            self.p90.append(int(float(p90)))
+            self.mean.append(self._convert_value(mean))
+            self.median.append(self._convert_value(median))
+            self.q25.append(self._convert_value(q25))
+            self.q75.append(self._convert_value(q75))
+            self.p10.append(self._convert_value(p10))
+            self.p90.append(self._convert_value(p90))
+
+    def _convert_value(self,value):
+        """
+        Internal: convert data values to int, or None
+        """
+        try:
+            return int(float(value))
+        except ValueError:
+            return None
