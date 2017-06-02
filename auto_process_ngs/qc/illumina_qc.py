@@ -29,6 +29,9 @@ FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
                  'rRNA',)
 
+# Module specific logger
+logger = logging.getLogger(__name__)
+
 #######################################################################
 # Classes
 #######################################################################
@@ -54,7 +57,7 @@ class QCReporter:
             self._samples.append(QCSample(sample))
         self._samples = sorted(self._samples,
                                cmp=lambda x,y: cmp_sample_names(x.name,y.name))
-        logging.debug("Found %d samples" % len(self._samples))
+        logger.debug("Found %d samples" % len(self._samples))
 
     @property
     def name(self):
@@ -233,7 +236,7 @@ class QCReporter:
         # Write entries for samples, fastqs etc
         current_sample = None
         for i,sample in enumerate(self._samples):
-            logging.debug("Reporting sample #%3d: %s " % (i+1,sample.name))
+            logger.debug("Reporting sample #%3d: %s " % (i+1,sample.name))
             sample_name = sample.name
             sample_report = report.add_section("Sample: %s" % sample_name,
                                                name="sample_%s" % sample_name)
@@ -325,8 +328,8 @@ class QCReporter:
                                   Img(uboxplot(fastqc.data.path,inline=True),
                                       href=boxplot))
             except Exception,ex:
-                logging.error("Failed to generate boxplot for %s: %s"
-                              % (fq,ex))
+                logger.error("Failed to generate boxplot for %s: %s"
+                             % (fq,ex))
             # FastQC summary table
             fastqc_report.add("FastQC summary:")
             fastqc_tbl = Target("fastqc_%s" % fq)
@@ -349,12 +352,12 @@ class QCReporter:
                                       fastqc.summary.path,inline=True),
                                       href=fastqc_tbl))
             except Exception,ex:
-                logging.error("Failed to generate Fastqc microplot for %s: %s"
-                              % (fq,ex))
+                logger.error("Failed to generate Fastqc microplot for %s: %s"
+                             % (fq,ex))
         except Exception,ex:
             # Unable to get the FastQC data
-            logging.warning("Unable to load FastQC data for %s: %s" %
-                            (fq,ex))
+            logger.warning("Unable to load FastQC data for %s: %s" %
+                           (fq,ex))
             # Add placeholders for missing data
             if read_id == 'r1':
                 summary.set_value(idx,'reads','-')
@@ -382,14 +385,14 @@ class QCReporter:
                                        height=250,
                                        href=png_href))
             else:
-                logging.warning("Unable to find screen PNG: %s" % png)
+                logger.warning("Unable to find screen PNG: %s" % png)
                 screens_report.add("!!!No FastqScreen plot available!!!")
             if os.path.exists(txt):
                 screen_files.append(txt)
                 fastq_screen_txt.append(
                     Link(description,txt_href).html())
             else:
-                logging.warning("Unable to find raw screen data: %s" % txt)
+                logger.warning("Unable to find raw screen data: %s" % txt)
                 screens_report.add("!!!No FastqScreen data available!!!")
         screens_report.add("Raw screen data: " +
                            " | ".join(fastq_screen_txt))
@@ -398,8 +401,8 @@ class QCReporter:
                               Img(uscreenplot(screen_files,inline=True),
                                   href=fastq_screens))
         except Exception,ex:
-            logging.error("Failed to generate microscreen plots for %s: %s"
-                          % (fq,ex))
+            logger.error("Failed to generate microscreen plots for %s: %s"
+                         % (fq,ex))
         # Program versions
         versions = report.add_subsection("Program versions")
         versions.add(self._program_versions(fq))
@@ -416,8 +419,8 @@ class QCReporter:
                 os.path.join(self._qc_dir,
                              fastqc_output(fastq)[0])).version
         except Exception,ex:
-            logging.error("Unable to get Fastqc version for %s: %s"
-                          % (fastq,ex))
+            logger.error("Unable to get Fastqc version for %s: %s"
+                         % (fastq,ex))
             fastqc_version = "?"
         try:
             fastq_screen_version = Fastqscreen(
@@ -425,8 +428,8 @@ class QCReporter:
                              fastq_screen_output(fastq,
                                                  FASTQ_SCREENS[0])[1])).version
         except Exception,ex:
-            logging.error("Unable to get Fastq_screen version for %s: %s"
-                          % (fastq,ex))
+            logger.error("Unable to get Fastq_screen version for %s: %s"
+                         % (fastq,ex))
             fastq_screen_version = "?"
         # Add to table
         tbl.add_row(Program='fastqc',Version=fastqc_version)
@@ -558,7 +561,7 @@ def get_fastq_pairs(sample):
     fastqs_r2 = sample.fastq_subset(read_number=2)
     for fqr1 in fastqs_r1:
         # Split up R1 name
-        logging.debug("fqr1 %s" % os.path.basename(fqr1))
+        logger.debug("fqr1 %s" % os.path.basename(fqr1))
         fastq_base = os.path.basename(fqr1)
         dir_path = os.path.dirname(fqr1)
         try:
@@ -572,7 +575,7 @@ def get_fastq_pairs(sample):
         fqr2 = os.path.join(dir_path,"%s" % fqr2)
         if ext:
             fqr2 += ext
-        logging.debug("fqr2 %s" % os.path.basename(fqr2))
+        logger.debug("fqr2 %s" % os.path.basename(fqr2))
         if fqr2 in fastqs_r2:
             pairs.append(FastqSet(fqr1,fqr2))
         else:
