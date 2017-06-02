@@ -3,6 +3,7 @@
 # QC plot generation
 import os
 import tempfile
+import logging
 from math import ceil
 from matplotlib import pyplot as plt
 from PIL import Image
@@ -11,6 +12,9 @@ from .fastqc import FastqcData
 from .fastqc import FastqcSummary
 from .fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 # Colours taken from http://www.rapidtables.com/web/color/RGB_Color.htm
 RGB_COLORS = {
@@ -206,7 +210,11 @@ def uboxplot(fastqc_data=None,fastq=None,
     height = max_qual + 1
     fastq_stats = FastqQualityStats()
     if fastqc_data is not None:
-        fastq_stats.from_fastqc_data(fastqc_data)
+        try:
+            fastq_stats.from_fastqc_data(fastqc_data)
+        except Exception as ex:
+            logger.warning("Failed to load Fastqc data: %s" % ex)
+            raise ex
     elif fastq is not None:
         fastq_stats.from_fastq(fastq)
     else:
@@ -236,14 +244,24 @@ def uboxplot(fastqc_data=None,fastq=None,
     # For each base position determine stats
     for i in xrange(fastq_stats.nbases):
         #print "Position: %d" % i
-        for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
-            # 10th-90th percentile coloured cyan
-            pixels[i,max_qual-j] = RGB_COLORS['grey']
-        for j in xrange(fastq_stats.q25[i],fastq_stats.q75[i]):
-            # Interquartile range coloured yellow
-            pixels[i,max_qual-j] = RGB_COLORS['darkyellow1']
+        try:
+            for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
+                # 10th-90th percentile coloured cyan
+                pixels[i,max_qual-j] = RGB_COLORS['grey']
+        except TypeError:
+            pass
+        try:
+            for j in xrange(fastq_stats.q25[i],fastq_stats.q75[i]):
+                # Interquartile range coloured yellow
+                pixels[i,max_qual-j] = RGB_COLORS['darkyellow1']
+        except TypeError:
+            pass
         # Median coloured red
-        pixels[i,max_qual-int(fastq_stats.median[i])] = RGB_COLORS['red']
+        try:
+            median = int(fastq_stats.median[i])
+            pixels[i,max_qual-median] = RGB_COLORS['red']
+        except TypeError:
+            pass
         # Mean coloured black
         pixels[i,max_qual-int(fastq_stats.mean[i])] = RGB_COLORS['blue']
     # Output the plot to file
