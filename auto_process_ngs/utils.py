@@ -59,6 +59,7 @@ import bcftbx.TabFile as TabFile
 import bcftbx.JobRunner as JobRunner
 import bcftbx.Pipeline as Pipeline
 import bcftbx.utils as bcf_utils
+from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.Md5sum import md5sum
 from qc.illumina_qc import QCReporter
 from qc.illumina_qc import QCSample
@@ -70,7 +71,42 @@ from .exceptions import MissingParameterFileException
 # Classes
 #######################################################################
 
-class AnalysisFastq:
+class BaseFastqAttrs(object):
+    """
+    Base class for extracting information about a Fastq file
+
+    Instances of this class provide the follow attributes:
+
+    fastq:            the original fastq file name
+    basename:         basename with NGS extensions stripped
+    sample_name:      name of the sample
+    sample_number:    integer (or None if no sample number)
+    barcode_sequence: barcode sequence (string or None)
+    lane_number:      integer (or None if no lane number)
+    read_number:      integer (or None if no read number)
+    set_number:       integer (or None if no set number)
+
+    Subclasses should process the supplied Fastq name and set
+    these attributes appropriately.
+    """
+    def __init__(self,fastq):
+        # Store name
+        self.fastq = fastq
+        # Basename
+        self.basename = os.path.basename(
+            strip_ngs_extensions(self.fastq))
+        # Values that should be derived from the name
+        # (should be set by subclass)
+        self.sample_name = None
+        self.sample_number = None
+        self.barcode_sequence = None
+        self.lane_number = None
+        self.read_number = None
+        self.set_number = None
+    def __repr__(self):
+        return self.basename
+
+class AnalysisFastq(BaseFastqAttrs):
     """Class for extracting information about Fastq files
 
     Given the name of a Fastq file, extract data about the sample name,
@@ -146,17 +182,9 @@ class AnalysisFastq:
           fastq: name of the fastq.gz (optionally can include leading path)
 
         """
-        # Store name
-        self.fastq = fastq
-        # Values derived from the name
-        self.sample_name = None
-        self.sample_number = None
-        self.barcode_sequence = None
-        self.lane_number = None
-        self.read_number = None
-        self.set_number = None
+        BaseFastqAttrs.__init__(self,fastq)
         # Base name for sample (no leading path or extension)
-        fastq_base = os.path.basename(fastq)
+        fastq_base = self.basename
         try:
             i = fastq_base.index('.')
             fastq_base = fastq_base[:i]
