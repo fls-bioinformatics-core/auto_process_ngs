@@ -386,6 +386,27 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
 
+    def test_load_analysis_project_non_with_alternative_fastq_naming(self):
+        """Check AnalysisProject loading for directory with alternative fastq naming
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PB02.trimmed.filtered.r1.fastq.gz',
+             'PB02.trimmed.filtered.r2.fastq.gz',))
+        # Create a class to handle the non-canonical Fastq names
+        class NonCanonicalFastq(BaseFastqAttrs):
+            def __init__(self,fastq):
+                BaseFastqAttrs.__init__(self,fastq)
+                self.sample_name = self.basename.split('.')[0]
+                self.read_number = int(self.basename.split('.')[-1][1:])
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn,fastq_attrs=NonCanonicalFastq)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PB02')
+
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
 
@@ -460,6 +481,27 @@ class TestAnalysisSample(unittest.TestCase):
                                        fq_l2_r1,fq_l2_r2])
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1_r1,fq_l2_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_l1_r2,fq_l2_r2])
+        self.assertTrue(sample.paired_end)
+        self.assertEqual(str(sample),'PJB1-B')
+
+    def test_analysis_sample_non_canonical_fastq_naming(self):
+        """Check AnalysisSample class with non-canonical fastq naming
+        """
+        # Create a class to handle the non-canonical Fastq names
+        class NonCanonicalFastq(BaseFastqAttrs):
+            def __init__(self,fastq):
+                BaseFastqAttrs.__init__(self,fastq)
+                self.sample_name = self.basename.split('.')[0]
+                self.read_number = int(self.basename.split('.')[-1][1:])
+        sample = AnalysisSample('PJB1-B',fastq_attrs=NonCanonicalFastq)
+        fq_r1 = '/run/sample1/PJB1-B.ACAGTG.L001.R1.fastq.gz'
+        fq_r2 = '/run/sample1/PJB1-B.ACAGTG.L001.R2.fastq.gz'
+        sample.add_fastq(fq_r1)
+        sample.add_fastq(fq_r2)
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,[fq_r1,fq_r2])
+        self.assertEqual(sample.fastq_subset(read_number=1),[fq_r1])
+        self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 
