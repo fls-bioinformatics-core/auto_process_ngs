@@ -140,7 +140,10 @@ if __name__ == '__main__':
         else:
             p.error("Needs at least one FASTQ file, or a bcl2fastq directory")
     # Determine subset of lanes to examine
-    lanes = parse_lanes(opts.lanes)
+    if opts.lanes is not None:
+        lanes = parse_lanes(opts.lanes)
+    else:
+        lanes = None
     # Determine mode
     if opts.use_counts:
         # Read counts from counts file(s)
