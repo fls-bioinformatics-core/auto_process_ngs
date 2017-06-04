@@ -19,6 +19,7 @@ import os
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.utils import parse_lanes
 from auto_process_ngs.barcode_analysis import BarcodeCounter
 from auto_process_ngs.barcode_analysis import Reporter
 from auto_process_ngs.barcode_analysis import report_barcodes
@@ -68,47 +69,6 @@ def count_barcodes(fastqs):
             lane = int(r.seqid.flowcell_lane)
             counts.count_barcode(seq,lane)
     return counts
-
-def parse_lanes_expression(lanes):
-    """
-    Parse a string and return list of lane numbers
-
-    Process a string specifying one or more lane numbers
-    expressed as a single digit and returns a sorted
-    list of unique lane numbers.
-
-    For example:
-
-    >>> parse_lanes_expression('1')
-    [1]
-
-    or as a list of digits:
-
-    >>> parse_lanes_expression('1,3')
-    [1, 3]
-
-    or as a range of digits:
-
-    >>> parse_lanes_expression('5-7')
-    [5, 6, 7]
-
-    or as a mixture of both:
-
-    >>> parse_lanes_expression('1,3,5-7')
-    [1, 3, 5, 6, 7]
-    
-    """
-    if lanes is None:
-        return None
-    lane_numbers = []
-    for l in lanes.split(','):
-        l1 = l.split('-')
-        if len(l1) == 1:
-            lane_numbers.append(int(l))
-        else:
-            lane_numbers.extend(xrange(int(l1[0]),int(l1[1])+1))
-    lane_numbers = sorted(set(lane_numbers))
-    return lane_numbers
 
 # Main program
 if __name__ == '__main__':
@@ -180,7 +140,7 @@ if __name__ == '__main__':
         else:
             p.error("Needs at least one FASTQ file, or a bcl2fastq directory")
     # Determine subset of lanes to examine
-    lanes = parse_lanes_expression(opts.lanes)
+    lanes = parse_lanes(opts.lanes)
     # Determine mode
     if opts.use_counts:
         # Read counts from counts file(s)
