@@ -1736,7 +1736,8 @@ class AutoProcess:
             except KeyError:
                 pass
         if lanes:
-            barcode_report_cmd.add_args('--lanes',','.join(lanes))
+            barcode_report_cmd.add_args('--lanes',
+                                        ','.join([str(l) for l in lanes]))
         # Cutoff
         if cutoff is not None:
             barcode_report_cmd.add_args('--cutoff',cutoff)
