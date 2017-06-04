@@ -876,7 +876,7 @@ if __name__ == "__main__":
                              runner=options.runner)
         elif cmd == 'analyse_barcodes':
             if options.lanes is not None:
-                lanes = options.lanes.split(',')
+                lanes = bcf_utils.parse_lanes(options.lanes)
             else:
                 lanes = None
             d.analyse_barcodes(unaligned_dir=options.unaligned_dir,
