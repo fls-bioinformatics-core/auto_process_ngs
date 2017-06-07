@@ -1027,7 +1027,7 @@ class MergeFastqs(PipelineTask):
 class RunQC(PipelineTask):
     """
     """
-    def init(self,project_dir,nthreads=1):
+    def init(self,project_dir,nthreads=1,batch_size=25):
         self.qc_dir = os.path.join(self.args.project_dir,'qc')
         self.qc_report = None
     def setup(self):
@@ -1036,13 +1036,18 @@ class RunQC(PipelineTask):
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
             fastq_attrs=ICell8FastqAttrs)
+        batch_size = self.args.batch_size
+        fastqs = []
+        for sample in project.samples:
+            fastqs.extend(sample.fastq)
         # Make the output qc directory
         mkdir(self.qc_dir)
-        # Set up QC run for each fastq
-        for sample in project.samples:
-            self.add_cmd(IlluminaQC(sample.fastq,
+        # Set up QC run for batches of fastqs
+        while fastqs:
+            self.add_cmd(IlluminaQC(fastqs[:batch_size],
                                     nthreads=self.args.nthreads,
                                     working_dir=self.args.project_dir))
+            fastqs = fastqs[batch_size:]
     def finish(self):
         # Verify the QC outputs for each fastq
         project = AnalysisProject(
