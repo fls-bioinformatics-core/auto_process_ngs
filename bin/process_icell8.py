@@ -1147,13 +1147,19 @@ if __name__ == "__main__":
     p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
                    help="FASTQ file pairs")
     p.add_argument("-u","--unaligned",
-                   dest="unaligned_dir",default="bcl2fastq",
-                   help="'unaligned' dir with output from "
-                   "bcl2fastq")
+                   dest="unaligned_dir",default=None,
+                   help="process FASTQs from 'unaligned' dir with output "
+                   "from bcl2fastq (NB cannot be used with -p option)")
+    p.add_argument("-p","--project",metavar="NAME",
+                   dest="project",default=None,
+                   help="process FASTQS from project directory NAME (NB "
+                   "if -o not specified then this will also be used as "
+                   "the output directory; cannot be used with -u option)")
     p.add_argument("-o","--outdir",
-                   dest="outdir",default="icell8",
+                   dest="outdir",default=None,
                    help="directory to write outputs to "
-                   "(default: 'CWD/icell8')")
+                   "(default: 'CWD/icell8', or project dir if -p "
+                   "is specified)")
     p.add_argument("-m","--mammalian",
                    dest="mammalian_conf",
                    help="fastq_screen 'conf' file with the "
@@ -1238,6 +1244,20 @@ if __name__ == "__main__":
         if stage not in runners:
             runners[stage] = default_runner
 
+    # Check for clashing -u/-p
+    if args.project and args.unaligned_dir:
+        logging.fatal("Cannot specify -u and -p together")
+        sys.exit(1)
+
+    # Output dir
+    if args.outdir is None:
+        if args.project:
+            outdir = args.project
+        else:
+            outdir = "icell8"
+    else:
+        outdir = args.outdir
+
     # Other settings
     well_list = os.path.abspath(args.well_list)
     max_jobs = args.max_jobs
@@ -1246,8 +1266,9 @@ if __name__ == "__main__":
 
     # Report settings
     print "Unaligned dir     : %s" % args.unaligned_dir
+    print "Project           : %s" % args.project
     print "Well list file    : %s" % well_list
-    print "Output dir        : %s" % args.outdir
+    print "Output dir        : %s" % outdir
     print "Batch size (reads): %s" % args.batch_size
     print "Quality filter barcodes/UMIs: %s" % \
         ('yes' if do_quality_filter else 'no')
@@ -1276,18 +1297,36 @@ if __name__ == "__main__":
 
     # Get the input FASTQ file pairs
     fastqs = []
-    try:
-        illumina_data = IlluminaData(os.getcwd(),
-                                     unaligned_dir=args.unaligned_dir)
-        for project in illumina_data.projects:
-            for sample in project.samples:
-                for fq in sample.fastq:
-                    fastqs.append(os.path.join(sample.dirn,fq))
-    except IlluminaDataError:
-        logging.warning("Couldn't find FASTQS in directory '%s'" %
-                        args.unaligned_dir)
+    # Collect files from command line
     for fq in args.fastqs:
         fastqs.append(os.path.abspath(fq))
+    # Collect files from unaligned dir
+    if fastqs and args.unaligned_dir is not None:
+        logging.warning("Ignoring unaligned dir '%s'" %
+                        args.unaligned_dir)
+    elif args.unaligned_dir:
+        try:
+            illumina_data = IlluminaData(
+                os.getcwd(),
+                unaligned_dir=args.unaligned_dir)
+            for project in illumina_data.projects:
+                for sample in project.samples:
+                    for fq in sample.fastq:
+                        fastqs.append(os.path.join(sample.dirn,fq))
+        except IlluminaDataError:
+            logging.fatal("Couldn't find FASTQS in directory '%s'" %
+                          args.unaligned_dir)
+    # Collect files from project
+    if fastqs and args.project is not None:
+        logging.warning("Ignoring project '%s'" % args.project)
+    elif args.project:
+        analysis_project = AnalysisProject(args.project,
+                                           args.project)
+        for sample in analysis_project.samples:
+            for fq in sample.fastq:
+                fastqs.append(os.path.join(
+                    analysis_project.fastq_dir,
+                    fq))
     if not fastqs:
         logging.fatal("No FASTQs found")
         sys.exit(1)
@@ -1307,8 +1346,8 @@ if __name__ == "__main__":
     sched.start()
 
     # Make top-level output dirs
-    icell8_dir = os.path.abspath(args.outdir)
-    if os.path.exists(icell8_dir):
+    icell8_dir = os.path.abspath(outdir)
+    if os.path.exists(icell8_dir) and args.project is None:
         if not args.force:
             logging.fatal("Output destination '%s': already exists "
                           "(remove or use --force to overwrite)" %
@@ -1450,7 +1489,7 @@ if __name__ == "__main__":
 
     # Run the QC
     run_qc = RunQC("Run QC",
-                   args.outdir,
+                   outdir,
                    nthreads=args.threads)
     ppl.add_task(run_qc,dependencies=(merge_fastqs,),
                  runner=runners['contaminant_filter'])
