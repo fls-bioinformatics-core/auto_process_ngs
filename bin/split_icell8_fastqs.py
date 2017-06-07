@@ -20,6 +20,7 @@ import sys
 import logging
 import argparse
 import time
+import gzip
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
@@ -66,6 +67,10 @@ class BufferedOutputFiles(OutputFiles):
         be associated with a previously closed file (which
         will be reopened).
 
+        If the filename ends with '.gz' then the
+        associated file will automatically be written as
+        a gzip-compressed file.
+
         If 'append' is True then append to an existing
         file rather than overwriting (i.e. use mode 'a'
         instead of 'w').
@@ -94,7 +99,11 @@ class BufferedOutputFiles(OutputFiles):
             # (to avoid IOError [Errno 24])
             if len(self._fp) == MAX_OPEN_FILES:
                 self.close(self._fp.keys()[0])
-            fp = open(self._file[name],self._mode[name])
+            if self._file[name].endswith('.gz'):
+                open_func = gzip.open
+            else:
+                open_func = open
+            fp = open_func(self._file[name],self._mode[name])
             self._fp[name] = fp
             return fp
 
@@ -182,6 +191,9 @@ def main():
                    dest='quality_filter',action='store_true',
                    help="filter reads by barcode and UMI quality "
                    "(default: don't filter reads on quality)")
+    p.add_argument("-c","--compress",
+                   action='store_true',
+                   help="output compressed .gz FASTQ files")
     args = p.parse_args()
 
     # Convert quality cutoffs to character encoding
@@ -228,6 +240,12 @@ def main():
     else:
         out_dir = os.getcwd()
     basename = args.basename
+
+    # Compress outputs?
+    if args.compress:
+        fastq_ext = "fastq.gz"
+    else:
+        fastq_ext = "fastq"
 
     # Iterate over pairs of Fastqs
     for fastq_pair in fastqs:
@@ -290,8 +308,8 @@ def main():
                 except KeyError:
                     # Open new file
                     output_fqs.open(fq_r1,
-                                    "%s.%s.r1.fastq" %
-                                    (basename,assign_to))
+                                    "%s.%s.r1.%s" %
+                                    (basename,assign_to,fastq_ext))
             output_fqs.write(fq_r1,"%s" % read_pair.r1)
             if fq_r2 not in output_fqs:
                 try:
@@ -300,8 +318,8 @@ def main():
                 except KeyError:
                     # Open new file
                     output_fqs.open(fq_r2,
-                                    "%s.%s.r2.fastq" %
-                                    (basename,assign_to))
+                                    "%s.%s.r2.%s" %
+                                    (basename,assign_to,fastq_ext))
             output_fqs.write(fq_r2,"%s" % read_pair.r2)
         print "   Finished at %s" % time.ctime()
         print "   (Took %.0fs)" % (time.time()-start_time)
