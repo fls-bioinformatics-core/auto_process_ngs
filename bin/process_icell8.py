@@ -499,7 +499,8 @@ class SplitAndFilterFastqPair(PipelineCommand):
     def init(self,fastq_pair,out_dir,well_list=None,
              basename=None,mode='none',
              discard_unknown_barcodes=False,
-             quality_filter=False):
+             quality_filter=False,
+             compress=False):
         """
         Create a new SplitAndFilterFastqPair instance
 
@@ -522,6 +523,9 @@ class SplitAndFilterFastqPair(PipelineCommand):
             do filtering based on barcode- and
             UMI-quality (no filtering is performed
             by default)
+          compress (bool): if True then gzip the
+            output files (FASTQs are uncompressed
+            by default)
         """
         self._fastq_pair = fastq_pair
         self._out_dir = os.path.abspath(out_dir)
@@ -530,6 +534,7 @@ class SplitAndFilterFastqPair(PipelineCommand):
         self._mode = mode
         self._discard_unknown_barcodes = discard_unknown_barcodes
         self._quality_filter = quality_filter
+        self._compress = compress
         if self._well_list is not None:
             self._well_list = os.path.abspath(self._well_list)
     def cmd(self):
@@ -544,6 +549,8 @@ class SplitAndFilterFastqPair(PipelineCommand):
             cmd.add_args('--discard-unknown-barcodes')
         if self._quality_filter:
             cmd.add_args('--quality-filter')
+        if self._compress:
+            cmd.add_args('--compress')
         cmd.add_args(*self._fastq_pair)
         return cmd
 
@@ -609,6 +616,9 @@ class ConcatFastqs(PipelineCommand):
     Given a list of Fastq files, combines them into a single
     Fastq using the 'cat' utility.
 
+    If the output FASTQ names end with .gz then they will be
+    automatically compressed with gzip after concatenation.
+
     FASTQs cannot be gzipped, and must all be same read number
     (i.e. R1 or R2).
     """
@@ -627,11 +637,17 @@ class ConcatFastqs(PipelineCommand):
         self._concat_dir = os.path.abspath(concat_dir)
         self._fastq_out = fastq_out
     def cmd(self):
+        compress = self._fastq_out.endswith('.gz')
+        if compress:
+            fastq_out = '.'.join(self._fastq_out.split('.')[:-1])
+        else:
+            fastq_out = self._fastq_out
+        fastq_out = os.path.join(self._concat_dir,fastq_out)
         cmd = Command('cat')
         cmd.add_args(*self._fastqs)
-        cmd.add_args('>',
-                     os.path.join(self._concat_dir,
-                                  self._fastq_out))
+        cmd.add_args('>',fastq_out)
+        if compress:
+            cmd.add_args('&&','gzip',fastq_out)
         return cmd
 
 class TrimFastqPair(PipelineCommand):
@@ -1004,7 +1020,8 @@ class MergeFastqs(PipelineTask):
             self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
                                                  self.args.merge_dir,
                                                  basename=self.args.basename,
-                                                 mode="barcodes"))
+                                                 mode="barcodes",
+                                                 compress=True))
         # Handle unassigned and failed quality reads
         for name,fqs in (('unassigned',self.args.unassigned_fastqs),
                          ('failed_barcodes',self.args.failed_barcode_fastqs),
@@ -1015,20 +1032,20 @@ class MergeFastqs(PipelineTask):
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
                                       self.args.merge_dir,
-                                      "%s.%s.r1.fastq" %
+                                      "%s.%s.r1.fastq.gz" %
                                       (self.args.basename,name)))
             fqs_r2 = [p[1] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r2,
                                       self.args.merge_dir,
-                                      "%s.%s.r2.fastq" %
+                                      "%s.%s.r2.fastq.gz" %
                                       (self.args.basename,name)))
     def output(self):
         out_dir = self.args.merge_dir
         return AttributeDictionary(
-            assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq"),
-            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
-            failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq"),
-            failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq"),
+            assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq.gz"),
+            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq.gz"),
+            failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq.gz"),
+            failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq.gz"),
         )
 
 class RunQC(PipelineTask):
