@@ -23,6 +23,7 @@ import time
 import shutil
 import uuid
 import inspect
+import traceback
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -294,6 +295,7 @@ class PipelineTask(object):
         except Exception as ex:
             self.report("exception invoking '%s': %s" %
                         (f.__name__,ex))
+            traceback.print_exc(ex)
             self._exit_code += 1
     def task_completed(self,name,jobs,sched):
         # Callback method invoked when scheduled
