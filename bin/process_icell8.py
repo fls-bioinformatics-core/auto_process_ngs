@@ -989,7 +989,7 @@ class MergeFastqs(PipelineTask):
         if os.path.exists(self.args.merge_dir):
             print "Moving existing dir '%s'" % self.args.merge_dir
             os.rename(self.args.merge_dir,
-                      "%s.save" % self.args.merge_dir)
+                      "%s.unprocessed" % self.args.merge_dir)
         # Make the output directory
         mkdir(self.args.merge_dir)
         # Extract the barcodes from the fastq names
