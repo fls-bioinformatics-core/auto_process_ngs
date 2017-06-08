@@ -1360,10 +1360,6 @@ if __name__ == "__main__":
         logger.fatal("No FASTQs found")
         sys.exit(1)
 
-    # Copy well list file into output directory
-    shutil.copy(well_list,outdir)
-    well_list = os.path.join(outdir,os.path.basename(well_list))
-
     # Basename for output fastqs and job names etc
     basename = AnalysisFastq(fastqs[0]).sample_name
 
@@ -1394,6 +1390,10 @@ if __name__ == "__main__":
     scripts_dir = os.path.join(icell8_dir,"scripts")
     for dirn in (icell8_dir,log_dir,stats_dir,scripts_dir):
         mkdir(dirn)
+
+    # Copy well list file into output directory
+    shutil.copy(well_list,outdir)
+    well_list = os.path.join(outdir,os.path.basename(well_list))
 
     # Set up a pipeline
     ppl = Pipeline(name="Process ICell8")
