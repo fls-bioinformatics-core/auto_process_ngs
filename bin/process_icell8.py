@@ -50,6 +50,9 @@ import auto_process_ngs.envmod as envmod
 import auto_process_ngs.settings
 __settings = auto_process_ngs.settings.Settings()
 
+# Module specific logger
+logger = logging.getLogger(__name__)
+
 ######################################################################
 # Magic numbers
 ######################################################################
@@ -207,8 +210,8 @@ class Pipeline(object):
                     except Exception as ex:
                         self.report("Failed to start task '%s': %s" %
                                     (task.name(),ex))
-                        logging.critical("Failed to start task '%s': %s" %
-                                         (task.name(),ex))
+                        logger.critical("Failed to start task '%s': %s" %
+                                        (task.name(),ex))
                         return 1
                     self._running.append(task)
                     update = True
@@ -314,8 +317,8 @@ class PipelineTask(object):
                     if j.exit_code != 0:
                         self._exit_code += 1
         if self._exit_code != 0:
-            logging.critical("%s failed: exit code %s"
-                             % (self._name,self._exit_code))
+            logger.critical("%s failed: exit code %s"
+                            % (self._name,self._exit_code))
         else:
             # Execute 'finish', if implemented
             self.invoke(self.finish)
@@ -381,8 +384,8 @@ class PipelineTask(object):
                 else:
                     exit_code = job.exit_code
                 if exit_code != 0:
-                    logging.warning("%s: failed (exit code %s)" %
-                                    (self._name,exit_code))
+                    logger.warning("%s: failed (exit code %s)" %
+                                   (self._name,exit_code))
         else:
             # Run each stage locally
             for cmd in cmds:
@@ -1250,7 +1253,7 @@ if __name__ == "__main__":
             stage = 'default'
             runner_spec = runner
         if stage not in stages:
-            logging.fatal("Bad stage for --runner option: %s" % stage)
+            logger.fatal("Bad stage for --runner option: %s" % stage)
             sys.exit(1)
         runners[stage] = fetch_runner(runner_spec)
     try:
@@ -1263,7 +1266,7 @@ if __name__ == "__main__":
 
     # Check for clashing -u/-p
     if args.project and args.unaligned_dir:
-        logging.fatal("Cannot specify -u and -p together")
+        logger.fatal("Cannot specify -u and -p together")
         sys.exit(1)
 
     # Output dir
@@ -1319,8 +1322,8 @@ if __name__ == "__main__":
         fastqs.append(os.path.abspath(fq))
     # Collect files from unaligned dir
     if fastqs and args.unaligned_dir is not None:
-        logging.warning("Ignoring unaligned dir '%s'" %
-                        args.unaligned_dir)
+        logger.warning("Ignoring unaligned dir '%s'" %
+                       args.unaligned_dir)
     elif args.unaligned_dir:
         try:
             illumina_data = IlluminaData(
@@ -1331,11 +1334,11 @@ if __name__ == "__main__":
                     for fq in sample.fastq:
                         fastqs.append(os.path.join(sample.dirn,fq))
         except IlluminaDataError:
-            logging.fatal("Couldn't find FASTQS in directory '%s'" %
+            logger.fatal("Couldn't find FASTQS in directory '%s'" %
                           args.unaligned_dir)
     # Collect files from project
     if fastqs and args.project is not None:
-        logging.warning("Ignoring project '%s'" % args.project)
+        logger.warning("Ignoring project '%s'" % args.project)
     elif args.project:
         analysis_project = AnalysisProject(args.project,
                                            args.project)
@@ -1345,7 +1348,7 @@ if __name__ == "__main__":
                     analysis_project.fastq_dir,
                     fq))
     if not fastqs:
-        logging.fatal("No FASTQs found")
+        logger.fatal("No FASTQs found")
         sys.exit(1)
 
     # Basename for output fastqs and job names etc
@@ -1366,12 +1369,12 @@ if __name__ == "__main__":
     icell8_dir = os.path.abspath(outdir)
     if os.path.exists(icell8_dir) and args.project is None:
         if not args.force:
-            logging.fatal("Output destination '%s': already exists "
-                          "(remove or use --force to overwrite)" %
-                          icell8_dir)
+            logger.fatal("Output destination '%s': already exists "
+                         "(remove or use --force to overwrite)" %
+                         icell8_dir)
             sys.exit(1)
-        logging.warning("Removing existing output destination '%s'" %
-                        icell8_dir)
+        logger.warning("Removing existing output destination '%s'" %
+                       icell8_dir)
         shutil.rmtree(icell8_dir)
     log_dir = os.path.join(icell8_dir,"logs")
     stats_dir = os.path.join(icell8_dir,"stats")
@@ -1544,7 +1547,7 @@ if __name__ == "__main__":
     # Finish
     sched.stop()
     if exit_status != 0:
-        logging.critical("Pipeline failed: exit status %s" % exit_status)
+        logger.critical("Pipeline failed: exit status %s" % exit_status)
     else:
         print "Pipeline completed ok"
     sys.exit(exit_status)
