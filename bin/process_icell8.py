@@ -43,6 +43,7 @@ from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.utils import BaseFastqAttrs
 from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.qc.illumina_qc import check_qc_outputs
 import auto_process_ngs.envmod as envmod
 
@@ -1315,6 +1316,14 @@ if __name__ == "__main__":
     print "Clean-up intermediate Fastqs: %s" % \
         ('yes' if do_clean_up else 'no')
 
+    # Check well list file
+    try:
+        ICell8WellList(well_list).barcodes()
+    except Exception as ex:
+        logger.fatal("Couldn't load data from well list file '%s'"
+                     % well_list)
+        sys.exit(1)
+
     # Get the input FASTQ file pairs
     fastqs = []
     # Collect files from command line
@@ -1350,6 +1359,10 @@ if __name__ == "__main__":
     if not fastqs:
         logger.fatal("No FASTQs found")
         sys.exit(1)
+
+    # Copy well list file into output directory
+    shutil.copy(well_list,outdir)
+    well_list = os.path.join(outdir,os.path.basename(well_list))
 
     # Basename for output fastqs and job names etc
     basename = AnalysisFastq(fastqs[0]).sample_name
