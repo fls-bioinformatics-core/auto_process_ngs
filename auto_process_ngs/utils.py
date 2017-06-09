@@ -1437,7 +1437,8 @@ class ZipArchive(object):
             relpath argument has been applied
 
         """
-        self._zipfile = zipfile.ZipFile(zip_file,'w')
+        self._zipfile = zipfile.ZipFile(zip_file,'w',
+                                        allowZip64=True)
         self._relpath = relpath
         self._prefix = prefix
         if contents is not None:
