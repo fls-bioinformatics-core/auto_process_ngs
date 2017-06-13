@@ -177,7 +177,7 @@ class Command:
         """
         # Deal with output destinations
         if log is None:
-            fpout = sys.stdout
+            fpout = None
         else:
             logging.debug("Writing stdout to %s" % log)
             fpout = open(log,'w')
@@ -185,7 +185,7 @@ class Command:
             if log is not None:
                 fperr = subprocess.STDOUT
             else:
-                fperr = sys.stderr
+                fperr = None
         else:
             fperr = open(err,'w')
             logging.debug("Writing stderr to %s" % err)
