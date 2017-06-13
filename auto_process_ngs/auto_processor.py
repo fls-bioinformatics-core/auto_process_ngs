@@ -2536,23 +2536,10 @@ class AutoProcess:
                           "(non-zero exit code returned)")
         # Set returncode
         retval = exit_code if exit_code != 0 else rsync_job.exit_code
-        # Set the group (local copies only)
+        # Set the group
         if group is not None:
-            user,server,dirn = utils.split_user_host_dir(archive_dir)
-            if user is None and server is None:
-                # Local archive
-                print "Setting group of archived files to '%s'" % group
-                gid = bcf_utils.get_gid_from_group(group)
-                if gid is None:
-                    logging.error("Failed to get gid for group '%s'" % group)
-                    retval = 1
-                else:
-                    for f in bcf_utils.walk(
-                            os.path.join(dirn,os.path.basename(self.analysis_dir)),
-                            include_dirs=True):
-                        logging.debug("Updating group for %s" % f)
-                        if not dry_run:
-                            os.lchown(f,-1,gid)
+            print "Setting group of archived files to '%s'" % group
+            fileops.set_group(group,archive_dir)
         # Finish
         return retval
 
@@ -2590,26 +2577,22 @@ class AutoProcess:
             project_pattern = projects
         # Get location to publish qc reports to
         if location is None:
-            user,server,dirn = utils.split_user_host_dir(
-                self.settings.qc_web_server.dirn)
+            location = fileops.Location(self.settings.qc_web_server.dirn))
         else:
-            user,server,dirn = utils.split_user_host_dir(location)
-        if server is not None:
-            remote = True
-        else:
-            remote = False
+            location = fileops.Location(location)
         # Check the settings
-        if remote:
+        if location.is_remote:
             print "Copying QC to remote directory"
-            print "user:\t%s" % user
-            print "host:\t%s" % server
-            print "dirn:\t%s" % dirn
+            print "user:\t%s" % location.user
+            print "host:\t%s" % location.server
+            print "dirn:\t%s" % location.path
         else:
             print "Copying QC to local directory"
-            print "dirn:\t%s" % dirn
+            print "dirn:\t%s" % location.path
         if dirn is None:
             raise Exception, "No target directory specified"
-        dirn = os.path.join(dirn,os.path.basename(self.analysis_dir))
+        dirn = os.path.join(location.path,
+                            os.path.basename(self.analysis_dir))
         # Get general data
         analysis_dir = utils.AnalysisDir(self.analysis_dir)
         # Get project data
@@ -2685,17 +2668,7 @@ class AutoProcess:
                 barcode_analysis_dir = None
                 break
         # Make a directory for the QC reports
-        if not remote:
-            # Local directory
-            bcf_utils.mkdir(dirn)
-        else:
-            # Remote directory
-            try:
-                mkdir_cmd = applications.general.ssh_command(user,server,('mkdir',dirn))
-                print "Running %s" % mkdir_cmd
-                mkdir_cmd.run_subprocess()
-            except Exception, ex:
-                raise Exception, "Exception making remote directory for QC reports: %s" % ex
+        fileops.mkdir(dirn)
         # Start building an index page
         title = "QC reports for %s" % os.path.basename(self.analysis_dir)
         index_page = htmlpagewriter.HTMLPageWriter(title)
@@ -2765,31 +2738,10 @@ class AutoProcess:
                            "</p>")
             # Create subdir and copy files
             barcodes_dirn = os.path.join(dirn,'barcodes')
-            if not remote:
-                # Local directory
-                bcf_utils.mkdir(barcodes_dirn)
-                for filen in barcodes_files:
-                    shutil.copy(os.path.join(barcode_analysis_dir,filen),
-                                barcodes_dirn)
-            else:
-                # Remote directory
-                try:
-                    mkdir_cmd = applications.general.ssh_command(user,server,
-                                                                 ('mkdir',
-                                                                  barcodes_dirn))
-                    print "Running %s" % mkdir_cmd
-                    mkdir_cmd.run_subprocess()
-                    for filen in barcodes_files:
-                        scp = applications.general.scp(user,server,
-                                                       os.path.join(
-                                                           barcode_analysis_dir,
-                                                           filen),
-                                                       barcodes_dirn)
-                        print "Running %s" % scp
-                        scp.run_subprocess()
-                except Exception as ex:
-                    raise Exception("Exception copying barcode reports to "
-                                    "remote server: %s" % ex)
+            fileops.mkdir(barcodes_dirn)
+            for filen in barcodes_files:
+                fileops.copy(os.path.join(barcode_analysis_dir,filen),
+                             barcodes_dirn))
         if projects:
             # Table of projects
             index_page.add("<h2>QC Reports</h2>")
@@ -2822,53 +2774,28 @@ class AutoProcess:
                 print qc_zip
                 assert(os.path.isfile(qc_zip))
                 report_copied = True
-                if not remote:
-                    # Local directory
-                    shutil.copy(qc_zip,dirn)
-                    # Unpack
-                    unzip_cmd = applications.Command('unzip','-q','-o','-d',dirn,qc_zip)
-                    print "Running %s" % unzip_cmd
-                    unzip_cmd.run_subprocess()
-                else:
-                    try:
-                        # Remote directory
-                        scp = applications.general.scp(user,server,qc_zip,dirn)
-                        print "Running %s" % scp
-                        scp.run_subprocess()
-                        # Unpack at the other end
-                        unzip_cmd = applications.general.ssh_command(
-                            user,server,
-                            ('unzip','-q','-o','-d',dirn,
-                             os.path.join(dirn,os.path.basename(qc_zip))))
-                        print "Running %s" % unzip_cmd
-                        unzip_cmd.run_subprocess()
-                    except Exception, ex:
-                        print "Failed to copy QC report: %s" % ex
-                        report_copied = False
+                try:
+                    fileops.copy(qc_zip,dirn)
+                    fileops.unzip(os.path.join(dirn,
+                                               os.path.basename(qc_zip)),
+                                  dirn)
+                except Exception, ex:
+                    print "Failed to copy QC report: %s" % ex
+                    report_copied = False
                 # MultiQC
                 multiqc_report = os.path.join(project.dirn,
                                               "multiqc_report.html")
                 if os.path.exists(multiqc_report):
                     print "Found MultiQC report: %s" % multiqc_report
                     final_multiqc = "multiqc_report.%s.html" % project.name
-                    if not remote:
-                        # Local directory
-                        shutil.copy(multiqc_report,
-                                    os.path.join(dirn,final_multiqc))
-                    else:
-                        try:
-                            # Remote directory
-                            scp = applications.general.scp(
-                                user,
-                                server,
-                                multiqc_report,
-                                os.path.join(dirn,final_multiqc))
-                            print "Running %s" % scp
-                            scp.run_subprocess()
-                        except Exception, ex:
-                            print "Failed to copy MultiQC report: %s" % ex
-                            multiqc_report = None
+                    try:
+                        fileops.copy(multiqc_report,
+                                     os.path.join(dirn,final_multiqc))
+                    except Exception, ex:
+                        print "Failed to copy MultiQC report: %s" % ex
+                        multiqc_report = None
                 else:
+                    print "No MultiQC report found"
                     multiqc_report = None
                 # Append info to the index page
                 reports = []
@@ -2895,20 +2822,9 @@ class AutoProcess:
         # Copy to server
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
-        if not remote:
-            # Local directory
-            shutil.copy(index_html,dirn)
-            if processing_qc_html:
-                shutil.copy(processing_qc_html,dirn)
-        else:
-            # Remote directory
-            scp = applications.general.scp(user,server,index_html,dirn)
-            print "Running %s" % scp
-            scp.run_subprocess()
-            if processing_qc_html:
-                scp = applications.general.scp(user,server,processing_qc_html,dirn)
-                print "Running %s" % scp
-                scp.run_subprocess()
+        fileops.copy(index_html,dirn)
+        if processing_qc_html:
+            fileops.copy(processing_qc_html,dirn)
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
