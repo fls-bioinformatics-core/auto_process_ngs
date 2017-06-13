@@ -67,6 +67,11 @@ class TestICell8WellList(unittest.TestCase):
                           'AACCTTGCAAG',
                           'AACCAACCGCA'])
     def test_icell8welllist_samples(self):
+        """ICell8WellList: list samples from data file
+        """
+        self.assertEqual(ICell8WellList(self.well_list).samples(),
+                         ['ESC2','d1.2'])
+    def test_icell8welllist_sample(self):
         """ICell8WellList: get sample (=cell type) for barcode
         """
         well_list = ICell8WellList(self.well_list)
