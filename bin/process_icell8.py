@@ -115,13 +115,13 @@ class Pipeline(object):
 
     >> p = Pipeline()
     >> t1 = p.add_task(Task1())
-    >> t2 = p.add_task(Task2(),dependencies=(t1,))
+    >> t2 = p.add_task(Task2(),requires=(t1,))
     >> ...
     >> p.run()
 
-    Tasks will only run when all dependenices have
+    Tasks will only run when all requirements have
     completed (or will run immediately if they don't have
-    any dependencies).
+    any requirements).
     """
     def __init__(self,name="PIPELINE",default_runner=None,
                  working_dir=None):
@@ -133,14 +133,14 @@ class Pipeline(object):
         if working_dir is None:
             working_dir = os.getcwd()
         self._working_dir = os.path.abspath(working_dir)
-    def add_task(self,task,dependencies=(),**kws):
-        self._pending.append((task,dependencies,kws))
+    def add_task(self,task,requires=(),**kws):
+        self._pending.append((task,requires,kws))
         self.report("Adding task '%s'" % task.name())
-        if dependencies:
-            for dep in dependencies:
-                if dep.name() not in [t[0].name() for t in self._pending]:
-                    self.report("-> Adding dependency '%s'" % dep.name())
-                    self.add_task(dep)
+        if requires:
+            for req in requires:
+                if req.name() not in [t[0].name() for t in self._pending]:
+                    self.report("-> Adding requirement '%s'" % req.name())
+                    self.add_task(req)
         return task
     def report(self,s):
         print "%s [%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -188,15 +188,15 @@ class Pipeline(object):
                 return 1
             # Check for pending tasks that can start
             pending = []
-            for task,dependencies,kws in self._pending:
+            for task,requirements,kws in self._pending:
                 run_task = False
-                if not dependencies:
-                    # No dependencies - start it
+                if not requirements:
+                    # No requirements - start it
                     run_task = True
                 else:
-                    # Check dependencies
+                    # Check requirements
                     run_task = reduce(lambda x,y: x and y.completed,
-                                      dependencies,True)
+                                      requirements,True)
                 if run_task:
                     self.report("started %s" % task.name())
                     if 'runner' not in kws:
@@ -217,7 +217,7 @@ class Pipeline(object):
                     self._running.append(task)
                     update = True
                 else:
-                    pending.append((task,dependencies,kws))
+                    pending.append((task,requirements,kws))
             self._pending = pending
             # Pause before checking again
             if not update:
@@ -1423,7 +1423,7 @@ if __name__ == "__main__":
                                        mode='none',
                                        discard_unknown_barcodes=True,
                                        quality_filter=do_quality_filter)
-    ppl.add_task(filter_fastqs,dependencies=(batch_fastqs,))
+    ppl.add_task(filter_fastqs,requires=(batch_fastqs,))
     
     # Post filtering stats
     filter_stats = GetICell8Stats("Post-filtering statistics",
@@ -1432,7 +1432,7 @@ if __name__ == "__main__":
                                   suffix="_filtered",
                                   append=True,
                                   nprocs=args.threads)
-    ppl.add_task(filter_stats,dependencies=(initial_stats,filter_fastqs),
+    ppl.add_task(filter_stats,requires=(initial_stats,filter_fastqs),
                  runner=runners['contaminant_filter'])
 
     # Use cutadapt to find reads with poly-G regions
@@ -1441,14 +1441,14 @@ if __name__ == "__main__":
         "Find reads with poly-G regions",
         filter_fastqs.output().assigned,
         poly_g_dir)
-    ppl.add_task(get_poly_g_reads,dependencies=(filter_fastqs,))
+    ppl.add_task(get_poly_g_reads,requires=(filter_fastqs,))
     poly_g_stats = GetICell8PolyGStats("Poly-G region statistics",
                                        get_poly_g_reads.output(),
                                        initial_stats.output(),
                                        suffix="_poly_g",
                                        append=True,
                                        nprocs=args.threads)
-    ppl.add_task(poly_g_stats,dependencies=(get_poly_g_reads,filter_stats),
+    ppl.add_task(poly_g_stats,requires=(get_poly_g_reads,filter_stats),
                  runner=runners['contaminant_filter'])
 
     # Set up the cutadapt jobs as a group
@@ -1456,7 +1456,7 @@ if __name__ == "__main__":
     trim_reads = TrimReads("Read trimming",
                            filter_fastqs.output().assigned,
                            trim_dir)
-    ppl.add_task(trim_reads,dependencies=(filter_fastqs,))
+    ppl.add_task(trim_reads,requires=(filter_fastqs,))
 
     # Post read trimming stats
     trim_stats = GetICell8Stats("Post-trimming statistics",
@@ -1465,7 +1465,7 @@ if __name__ == "__main__":
                                 suffix="_trimmed",
                                 append=True,
                                 nprocs=args.threads)
-    ppl.add_task(trim_stats,dependencies=(trim_reads,poly_g_stats),
+    ppl.add_task(trim_stats,requires=(trim_reads,poly_g_stats),
                  runner=runners['contaminant_filter'])
 
     # Set up the contaminant filter jobs as a group
@@ -1478,7 +1478,7 @@ if __name__ == "__main__":
                                                  args.contaminants_conf,
                                                  aligner=args.aligner,
                                                  threads=args.threads)
-    ppl.add_task(contaminant_filter,dependencies=(trim_reads,),
+    ppl.add_task(contaminant_filter,requires=(trim_reads,),
                  runner=runners['contaminant_filter'])
 
     # Post contaminant filter stats
@@ -1488,7 +1488,7 @@ if __name__ == "__main__":
                                  suffix="_contaminant_filtered",
                                  append=True,
                                  nprocs=args.threads)
-    ppl.add_task(final_stats,dependencies=(contaminant_filter,trim_stats),
+    ppl.add_task(final_stats,requires=(contaminant_filter,trim_stats),
                  runner=runners['contaminant_filter'])
 
     # Rebatch reads by barcode
@@ -1497,7 +1497,7 @@ if __name__ == "__main__":
     split_barcodes = SplitByBarcodes("Split by barcodes",
                                      contaminant_filter.output(),
                                      barcoded_fastqs_dir)
-    ppl.add_task(split_barcodes,dependencies=(contaminant_filter,))
+    ppl.add_task(split_barcodes,requires=(contaminant_filter,))
     # Merge (concat) fastqs into single pairs per barcode
     final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
     merge_fastqs = MergeFastqs("Merge Fastqs",
@@ -1507,7 +1507,7 @@ if __name__ == "__main__":
                                filter_fastqs.output().failed_umis,
                                final_fastqs_dir,
                                basename)
-    ppl.add_task(merge_fastqs,dependencies=(split_barcodes,))
+    ppl.add_task(merge_fastqs,requires=(split_barcodes,))
 
     # Final stats for verification
     final_barcode_stats = GetICell8Stats(
@@ -1517,14 +1517,14 @@ if __name__ == "__main__":
         suffix="_final",
         append=True,
         nprocs=args.threads)
-    ppl.add_task(final_barcode_stats,dependencies=(merge_fastqs,final_stats),
+    ppl.add_task(final_barcode_stats,requires=(merge_fastqs,final_stats),
                  runner=runners['contaminant_filter'])
 
     # Run the QC
     run_qc = RunQC("Run QC",
                    outdir,
                    nthreads=args.threads)
-    ppl.add_task(run_qc,dependencies=(merge_fastqs,),
+    ppl.add_task(run_qc,requires=(merge_fastqs,),
                  runner=runners['contaminant_filter'])
 
     # Cleanup outputs
@@ -1542,17 +1542,17 @@ if __name__ == "__main__":
     cleanup_split_barcodes = CleanupDirectory("remove barcode split Fastqs",
                                               barcoded_fastqs_dir)
     if do_clean_up:
-        ppl.add_task(cleanup_batch_fastqs,dependencies=(filter_fastqs,))
-        ppl.add_task(cleanup_quality_filter,dependencies=(trim_reads,
-                                                          get_poly_g_reads,
-                                                          merge_fastqs,
-                                                          filter_stats))
-        ppl.add_task(cleanup_poly_g,dependencies=(poly_g_stats,))
-        ppl.add_task(cleanup_trim_reads,dependencies=(contaminant_filter,
-                                                      trim_stats))
-        ppl.add_task(cleanup_contaminant_filtered,dependencies=(final_stats,
-                                                                split_barcodes))
-        ppl.add_task(cleanup_split_barcodes,dependencies=(merge_fastqs,))
+        ppl.add_task(cleanup_batch_fastqs,requires=(filter_fastqs,))
+        ppl.add_task(cleanup_quality_filter,requires=(trim_reads,
+                                                      get_poly_g_reads,
+                                                      merge_fastqs,
+                                                      filter_stats))
+        ppl.add_task(cleanup_poly_g,requires=(poly_g_stats,))
+        ppl.add_task(cleanup_trim_reads,requires=(contaminant_filter,
+                                                  trim_stats))
+        ppl.add_task(cleanup_contaminant_filtered,requires=(final_stats,
+                                                            split_barcodes))
+        ppl.add_task(cleanup_split_barcodes,requires=(merge_fastqs,))
 
     # Execute the pipeline
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
