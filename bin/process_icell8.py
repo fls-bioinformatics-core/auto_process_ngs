@@ -262,7 +262,12 @@ class PipelineTask(object):
         self._completed = False
         self._exit_code = 0
         # Deal with subclass arguments
-        self._callargs = inspect.getcallargs(self.init,*args,**kws)
+        try:
+            self._callargs = inspect.getcallargs(self.init,*args,**kws)
+        except Exception as ex:
+            logger.error("Exception setting up args for task '%s' (%s): %s"
+                         % (self._name,self.__class__,ex))
+            raise ex
         try:
             del(self._callargs['self'])
         except KeyError:
