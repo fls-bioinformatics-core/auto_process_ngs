@@ -111,6 +111,13 @@ class ICell8WellList(object):
         """
         return [x['Barcode'] for x in self._data]
 
+    def samples(self):
+        """
+        Return a list of samples
+        """
+        samples = set([x['Sample'] for x in self._data])
+        return sorted(list(samples))
+
     def sample(self,barcode):
         """
         Return sample (=cell type) corresponding to barcode
