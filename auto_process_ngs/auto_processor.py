@@ -29,6 +29,7 @@ import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
 import config
 import applications
+import fileops
 import utils
 import simple_scheduler
 import bcl2fastq_utils
@@ -737,7 +738,7 @@ class AutoProcess:
                                                     target.path)
                 print "Trying '%s'" % sample_sheet
                 tmp_sample_sheet = os.path.join(self.tmp_dir,
-                                                os.path.basename(target))
+                                                os.path.basename(target.path))
                 rsync = applications.general.rsync(sample_sheet,
                                                    self.tmp_dir)
                 print "%s" % rsync
@@ -2577,7 +2578,7 @@ class AutoProcess:
             project_pattern = projects
         # Get location to publish qc reports to
         if location is None:
-            location = fileops.Location(self.settings.qc_web_server.dirn))
+            location = fileops.Location(self.settings.qc_web_server.dirn)
         else:
             location = fileops.Location(location)
         # Check the settings
@@ -2741,7 +2742,7 @@ class AutoProcess:
             fileops.mkdir(barcodes_dirn)
             for filen in barcodes_files:
                 fileops.copy(os.path.join(barcode_analysis_dir,filen),
-                             barcodes_dirn))
+                             barcodes_dirn)
         if projects:
             # Table of projects
             index_page.add("<h2>QC Reports</h2>")
