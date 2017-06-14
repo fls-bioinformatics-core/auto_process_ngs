@@ -298,9 +298,10 @@ class TestAnalysisProject(unittest.TestCase):
             open(fastq,'w').close()
             self.fastqs.append(fastq)
 
-    def make_mock_project_dir(self,name,fastq_list):
+    def make_mock_project_dir(self,name,fastq_list,fastq_dir='fastqs'):
         # Make a mock project directory
-        MockAnalysisProject(name,fastq_list).create(top_dir=self.dirn)
+        MockAnalysisProject(name,fastq_list,fastq_dir=fastq_dir).create(
+            top_dir=self.dirn)
 
     def tearDown(self):
         # Remove the temporary test directory
@@ -335,6 +336,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
 
     def test_create_single_end_analysis_project_multi_fastqs(self):
         """Check creation of new single-end AnalysisProject directory (multi-fastq/sample)
@@ -352,6 +355,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
 
     def test_create_paired_end_analysis_project(self):
         """Check creation of new paired-end AnalysisProject directory
@@ -361,7 +366,7 @@ class TestAnalysisProject(unittest.TestCase):
                             'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
                             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
         dirn = os.path.join(self.dirn,'PJB')
-        project = AnalysisProject('PJB',dirn)
+        project = AnalysisProject('PJB',dirn,fastq_dir='fastqs.test')
         project.create_directory(fastqs=self.fastqs)
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
@@ -369,6 +374,9 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
 
     def test_create_paired_end_analysis_project_multi_fastqs(self):
         """Check creation of new paired-end AnalysisProject directory (multi-fastq/sample)
@@ -385,6 +393,26 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+
+    def test_create_analysis_project_not_standard_fastq_dir(self):
+        """Check creation of AnalysisProject directory with non-standard fastq dir
+        """
+        self.make_data_dir(('PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L001_R2_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        project.create_directory(fastqs=self.fastqs,fastq_dir='fastqs.test')
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertEqual(project.samples[0].name,'PJB1-B')
+        self.assertTrue(project.multiple_fastqs)
+        self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs.test'))
 
     def test_load_single_end_analysis_project(self):
         """Check loading of an existing single-end AnalysisProject directory
@@ -401,6 +429,27 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+
+    def test_load_analysis_project_non_canonical_fastq_dir(self):
+        """Check AnalysisProject loading for directory with non-canonical fastq directory
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',),
+            fastq_dir='fastqs.test')
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn,fastq_dir='fastqs.test')
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs.test'))
 
     def test_load_analysis_project_non_canonical_fastqs(self):
         """Check AnalysisProject loading fails for directory with non-canonical fastqs
@@ -415,6 +464,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
 
     def test_load_analysis_project_non_with_alternative_fastq_naming(self):
         """Check AnalysisProject loading for directory with alternative fastq naming
@@ -436,6 +487,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.samples[0].name,'PB02')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
@@ -896,6 +949,116 @@ class TestZipArchive(unittest.TestCase):
                                       'sub1/sub2/test5')),
                             "'%s' in zip file but shouldn't be"
                             % name)
+
+class TestOutputFiles(unittest.TestCase):
+    """
+    Tests for the OutputFiles class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_outputfile')
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_outputfiles(self):
+        out = OutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt'))
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_outputfiles_with_basedir(self):
+        out = OutputFiles(self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+    def test_outputfiles_contains(self):
+        out = OutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt'))
+        self.assertTrue('test1' in out)
+        self.assertFalse('test2' in out)
+        out.close()
+        self.assertFalse('test1' in out)
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertFalse('test2' in out)
+        self.assertRaises(KeyError,out.file_name,'test2')
+    def test_outputfiles_append(self):
+        out = OutputFiles()
+        with open(os.path.join(self.wd,'test1.txt'),'w') as fp:
+            fp.write("test1 already exists\n")
+        with open(os.path.join(self.wd,'test2.txt'),'w') as fp:
+            fp.write("test2 already exists\n")
+        out.open('test1',os.path.join(self.wd,'test1.txt'),append=True)
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "test1 already exists\nSome test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_outputfiles_reopen(self):
+        out = OutputFiles(base_dir=self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+        # Reopen files
+        out.open('test1',append=True)
+        out.open('test2')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some extra test text')
+        out.write('test2','Some different\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\nSome extra test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some different\ntest text\n")
+    def test_outputfiles_len(self):
+        out = OutputFiles(base_dir=self.wd)
+        self.assertEqual(len(out),0)
+        out.open('test1','test1.txt')
+        self.assertEqual(len(out),1)
+        out.close('test1')
+        self.assertEqual(len(out),0)
+        out.open('test2','test2.txt')
+        out.open('test3','test3.txt')
+        self.assertEqual(len(out),2)
+        out.open('test1',append=True)
+        self.assertEqual(len(out),3)
+        out.close()
+        self.assertEqual(len(out),0)
+        out.open('test2',append=True)
+        self.assertEqual(len(out),1)
 
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function

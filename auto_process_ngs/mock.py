@@ -210,7 +210,7 @@ class MockAnalysisProject(object):
     >>> m.create()
 
     """
-    def __init__(self,name,fastq_names=None):
+    def __init__(self,name,fastq_names=None,fastq_dir=None):
         """
         Create a new MockAnalysisProject instance
         """
@@ -218,6 +218,10 @@ class MockAnalysisProject(object):
         if fastq_names is None:
             fastq_names = []
         self.fastq_names = [fq for fq in fastq_names]
+        if fastq_dir is None:
+            self.fastq_dir = 'fastqs'
+        else:
+            self.fastq_dir = fastq_dir
 
     def add_fastq(self,fq):
         """
@@ -243,7 +247,7 @@ class MockAnalysisProject(object):
         project_dir = os.path.join(top_dir,self.name)
         os.mkdir(project_dir)
         # Create fastqs subdirectory
-        fqs_dir = os.path.join(project_dir,'fastqs')
+        fqs_dir = os.path.join(project_dir,self.fastq_dir)
         os.mkdir(fqs_dir)
         # Add Fastq files
         for fq in self.fastq_names:
