@@ -446,10 +446,11 @@ class AnalysisProject:
 
     name        : name of the project
     dirn        : associated directory (full path)
-    samples     : list of AnalysisSample objects
-    fastq_dir   : subdirectory holding fastq files
-    fastqs      : list of fastq files
-    
+    fastq_dirs  : list of all subdirectories with fastq files (relative
+                  to dirn)
+    fastq_dir   : directory with 'primary' fastq file set (full path)
+    fastqs      : list of fastq files in fastq_dir
+    samples     : list of AnalysisSample objects generated from fastq_dir
     multiple_fastqs: True if at least one sample has more than one fastq
                      file per read associated with it
     fastq_format: either 'fastqgz' or 'fastq'
@@ -466,6 +467,16 @@ class AnalysisProject:
     comments    : additional comments, either None or else string of text
     paired_end  : True if data is paired end, False if not
 
+    It is possible for a project to have multiple sets of associated
+    fastq files, held within separate subdirectories of the project
+    directory. A list of subdirectory names with fastq sets can be
+    accessed via the 'fastq_dirs' property.
+
+    By default the 'primary' set will be in the 'fastqs' subdirectory.
+    This can be changed using the 'fastq_dir' argument when
+    instantiating the AnalysisProject object. A different directory
+    can also be specified using the 'fastq_dir' argument when creating
+    the project directory.
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
                  organism=None,run=None,comments=None,platform=None,
@@ -497,6 +508,7 @@ class AnalysisProject:
         self.name = name
         self.dirn = os.path.abspath(dirn)
         self.fastq_dir = None
+        self.fastq_dirs = []
         self.fastq_format = None
         self.samples = []
         self.info = AnalysisProjectInfo()
@@ -531,48 +543,49 @@ class AnalysisProject:
         if not os.path.exists(self.dirn):
             # Nothing to do, yet
             return
-        # Locate fastq files
-        if fastq_dir is None:
-            try_dirs = ('fastqs','')
-        else:
-            try_dirs = (fastq_dir,)
-        # Look for fastq dirs
-        for d in try_dirs:
-            logger.debug("Looking for %s" % d)
+        # Identify possible fastq subdirectories
+        fastq_dirs = []
+        for d in bcf_utils.list_dirs(self.dirn):
             fq_dir = os.path.join(self.dirn,d)
-            if not os.path.exists(fq_dir):
-                continue
-            # Look for fastq files
-            logger.debug("Looking for fastqs...")
-            fastqs = Pipeline.GetFastqGzFiles(fq_dir)
+            fastqs = self.find_fastqs(fq_dir)
             if fastqs:
-                self.fastq_format = 'fastqgz'
+                fastq_dirs.append(d)
+        # Also check top-level dir
+        if self.find_fastqs(self.dirn):
+            fastq_dirs.append(self.dirn)
+        self.fastq_dirs = fastq_dirs
+        logger.debug("Possible fastq dirs: %s" %
+                     ','.join(self.fastq_dirs))
+        # Set primary fastq file directory
+        if not self.fastq_dirs:
+            logger.warning("No fastq dirs located for %s" % self.dirn)
+            return
+        if fastq_dir is None:
+            if 'fastqs' in self.fastq_dirs:
+                fastq_dir = 'fastqs'
             else:
-                logger.debug("No fastq.gz files found")
-                fastqs = Pipeline.GetFastqFiles(fq_dir)
-                if not fastqs:
-                    logger.debug("No fastq files found")
-                else:
-                    self.fastq_format = 'fastq'
-            if fastqs:
-                self.fastq_dir = fq_dir
-                break
-        # Check if anything was found
-        if self.fastq_dir is None:
-            logger.debug("Failed to find Fastq files for %s"
-                         % self.dirn)
+                fastq_dir = self.fastq_dirs[0]
+        else:
+            if fastq_dir not in self.fastq_dirs:
+                logger.warning("Requested fastqs dir '%s' not in list "
+                               "of possible dirs %s" %
+                               (fastq_dir,
+                                ', '.join(self.fastq_dirs)))
+        self.fastq_dir = os.path.join(self.dirn,fastq_dir)
+        # Collect fastq files
+        fastqs = self.find_fastqs(self.fastq_dir)
+        if fastqs:
+            self.fastq_format = self.determine_fastq_format(fastqs[0])
         logger.debug("Assigning fastqs to samples...")
-        for fastq in fastqs:
-            # GetFastqGzFile returns a list of tuples
-            for fq in fastq:
-                name = self.fastq_attrs(fq).sample_name
-                try:
-                    sample = self.get_sample(name)
-                except KeyError:
-                    sample = AnalysisSample(name,
-                                            fastq_attrs=self.fastq_attrs)
-                    self.samples.append(sample)
-                sample.add_fastq(os.path.join(self.fastq_dir,fq))
+        for fq in fastqs:
+            name = self.fastq_attrs(fq).sample_name
+            try:
+                sample = self.get_sample(name)
+            except KeyError:
+                sample = AnalysisSample(name,
+                                        fastq_attrs=self.fastq_attrs)
+                self.samples.append(sample)
+            sample.add_fastq(os.path.join(self.fastq_dir,fq))
         logger.debug("Listing samples and files:")
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
@@ -584,6 +597,31 @@ class AnalysisProject:
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
         self.info['paired_end'] = paired_end
+
+    def find_fastqs(self,dirn):
+        """
+        Return list of Fastq files found in directory
+        """
+        logger.debug("Searching '%s' for fastqs" % dirn)
+        fastq_tuples = Pipeline.GetFastqGzFiles(dirn)
+        if not fastq_tuples:
+            logger.debug("No fastq.gz files found")
+            fastq_tuples = Pipeline.GetFastqFiles(dirn)
+            if not fastq_tuples:
+                logger.debug("No fastq files found")
+        # Unpack tuples
+        # see https://stackoverflow.com/a/952952/579925
+        fastqs = [item for sublist in fastq_tuples for item in sublist]
+        return fastqs
+
+    def determine_fastq_format(self,fastq):
+        """
+        Return type for Fastq file ('fastq' or 'fastqgz')
+        """
+        if fastq.endswith('.gz'):
+            return 'fastqgz'
+        else:
+            return 'fastq'
 
     def create_directory(self,illumina_project=None,fastqs=None,
                          fastq_dir=None,
