@@ -477,6 +477,9 @@ class AnalysisProject:
     instantiating the AnalysisProject object. A different directory
     can also be specified using the 'fastq_dir' argument when creating
     the project directory.
+
+    The fastq set can also be switched using the 'use_fastq_dir'
+    method.
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
                  organism=None,run=None,comments=None,platform=None,
@@ -577,6 +580,7 @@ class AnalysisProject:
         if fastqs:
             self.fastq_format = self.determine_fastq_format(fastqs[0])
         logger.debug("Assigning fastqs to samples...")
+        self.samples = []
         for fq in fastqs:
             name = self.fastq_attrs(fq).sample_name
             try:
@@ -622,6 +626,16 @@ class AnalysisProject:
             return 'fastqgz'
         else:
             return 'fastq'
+
+    def use_fastqs_dir(self,fastq_dir):
+        """
+        Switch fastqs directory and repopulate
+        """
+        if fastq_dir not in self.fastq_dirs:
+            raise Exception("Fastq dir '%s' not found in "
+                            "project '%s' (%s)" %
+                            (fastq_dir,self.name,self.dirn))
+        self.populate(fastq_dir=fastq_dir)
 
     def create_directory(self,illumina_project=None,fastqs=None,
                          fastq_dir=None,

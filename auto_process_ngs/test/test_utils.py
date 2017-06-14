@@ -546,6 +546,62 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
 
+    def test_analysis_project_switch_fastq_dir(self):
+        """Check AnalysisProject can switch between multiple fastqs directories
+        """
+        # Construct test project with two fastq subdirectories
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        self.make_mock_project_dir(
+            'PJB.untrimmed',
+            ('PJB1-A-untrimmed_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B-untrimmed_ACAGTG_L002_R1_001.fastq.gz',),
+            fastq_dir='fastqs.untrimmed')
+        shutil.move(os.path.join(self.dirn,
+                                 'PJB.untrimmed',
+                                 'fastqs.untrimmed'),
+                    os.path.join(self.dirn,'PJB'))
+        shutil.rmtree(os.path.join(self.dirn,'PJB.untrimmed'))
+        # Load and check AnalysisProject: default fastqs dir
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,
+                         ['fastqs','fastqs.untrimmed'])
+        # Switch to alternative fastqs dir
+        project.use_fastqs_dir('fastqs.untrimmed')
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
+        self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.fastq_dirs,
+                         ['fastqs','fastqs.untrimmed'])
+
+    def test_analysis_project_switch_to_non_existant_fastq_dir(self):
+        """Check AnalysisProject fails when switching to non-existant fastqs dir
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertRaises(Exception,
+                          project.use_fastqs_dir,'fastqs.non_existant')
+
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
 
