@@ -31,6 +31,7 @@ Classes:
 - AnalysisProjectInfo:
 - ProjectMetadataFile:
 - ZipArchive:
+- OutputFiles:
 
 Functions:
 
@@ -468,7 +469,7 @@ class AnalysisProject:
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
                  organism=None,run=None,comments=None,platform=None,
-                 fastq_attrs=None):
+                 fastq_attrs=None,fastq_dir=None):
         """Create a new AnalysisProject instance
 
         Arguments:
@@ -488,6 +489,10 @@ class AnalysisProject:
             attributes from a Fastq file name (e.g. sample name, read
             number etc). The supplied class should be a subclass of
             BaseFastqAttrs; defaults to 'AnalysisFastq'.
+          fastq_dir: optional, explicitly specify the subdirectory
+            holding the set of Fastq files to load; defaults to
+            'fastq' (if present) or to the top-level of the project
+            directory (if absent).
         """
         self.name = name
         self.dirn = os.path.abspath(dirn)
@@ -502,7 +507,7 @@ class AnalysisProject:
         else:
             self.fastq_attrs = fastq_attrs
         # Populate from the directory contents
-        self.populate()
+        self.populate(fastq_dir=fastq_dir)
         # (Re)set metadata
         if run is not None:
             self.info['run'] = run
@@ -519,7 +524,7 @@ class AnalysisProject:
         if comments is not None:
             self.info['comments'] = comments
 
-    def populate(self):
+    def populate(self,fastq_dir=None):
         """Populate data structure from directory contents
 
         """
@@ -527,23 +532,35 @@ class AnalysisProject:
             # Nothing to do, yet
             return
         # Locate fastq files
-        self.fastq_dir = os.path.join(self.dirn,'fastqs')
-        if not os.path.exists(self.fastq_dir):
-            # If special 'fastqs' doesn't exist then
-            # look in top level of project
-            self.fastq_dir = self.dirn
-        # Populate from fastq file names
-        logger.debug("Acquiring fastqs...")
-        fastqs = Pipeline.GetFastqGzFiles(self.fastq_dir)
-        if not fastqs:
-            logger.debug("No fastq.gz files found")
-            fastqs = Pipeline.GetFastqFiles(self.fastq_dir)
-            if not fastqs:
-                logger.debug("No fastq files found")
-            else:
-                self.fastq_format = 'fastq'
+        if fastq_dir is None:
+            try_dirs = ('fastqs','')
         else:
-            self.fastq_format = 'fastqgz'
+            try_dirs = (fastq_dir,)
+        # Look for fastq dirs
+        for d in try_dirs:
+            logger.debug("Looking for %s" % d)
+            fq_dir = os.path.join(self.dirn,d)
+            if not os.path.exists(fq_dir):
+                continue
+            # Look for fastq files
+            logger.debug("Looking for fastqs...")
+            fastqs = Pipeline.GetFastqGzFiles(fq_dir)
+            if fastqs:
+                self.fastq_format = 'fastqgz'
+            else:
+                logger.debug("No fastq.gz files found")
+                fastqs = Pipeline.GetFastqFiles(fq_dir)
+                if not fastqs:
+                    logger.debug("No fastq files found")
+                else:
+                    self.fastq_format = 'fastq'
+            if fastqs:
+                self.fastq_dir = fq_dir
+                break
+        # Check if anything was found
+        if self.fastq_dir is None:
+            logger.debug("Failed to find Fastq files for %s"
+                         % self.dirn)
         logger.debug("Assigning fastqs to samples...")
         for fastq in fastqs:
             # GetFastqGzFile returns a list of tuples
@@ -569,6 +586,7 @@ class AnalysisProject:
         self.info['paired_end'] = paired_end
 
     def create_directory(self,illumina_project=None,fastqs=None,
+                         fastq_dir=None,
                          short_fastq_names=False,
                          link_to_fastqs=False):
         """Create and populate analysis directory for an IlluminaProject
@@ -590,6 +608,8 @@ class AnalysisProject:
           illumina_project: (optional) populated IlluminaProject object
             from which the analysis directory will be populated
           fastqs: (optional) list of fastq files to import
+          fastq_dir: (optional) name of subdirectory to put fastq files
+            into; defaults to 'fastqs'
           short_fastq_names: (optional) if True then transform fastq file
             names to be the shortest possible unique names; if False
             (default) then use the original fastq names
@@ -613,8 +633,10 @@ class AnalysisProject:
         fp.write("The ScriptCode directory is a place to put custom scripts and programs")
         fp.close()
         # Make a 'fastqs' directory
-        fastqs_dir = os.path.join(self.dirn,"fastqs")
-        bcf_utils.mkdir(fastqs_dir,mode=0775)
+        if fastq_dir is None:
+            fastq_dir = "fastqs"
+        fastq_dir = os.path.join(self.dirn,fastq_dir)
+        bcf_utils.mkdir(fastq_dir,mode=0775)
         # Check for & create links to fastq files
         if fastqs is None:
             # Make a list of fastqs to import from the supplied
@@ -633,7 +655,7 @@ class AnalysisProject:
             for fq in fastqs:
                 fastq_names[fq] = os.path.basename(fq)
         for fastq in fastqs:
-            target_fq = os.path.join(fastqs_dir,fastq_names[fastq])
+            target_fq = os.path.join(fastq_dir,fastq_names[fastq])
             if os.path.exists(target_fq):
                 logger.warning("Target '%s' already exists" % target_fq)
             else:
@@ -644,7 +666,7 @@ class AnalysisProject:
                     logger.debug("Making hard link to %s" % fastq)
                     os.link(fastq,target_fq)
         # Populate
-        self.populate()
+        self.populate(fastq_dir=os.path.basename(fastq_dir))
         # Update metadata information summarising the samples
         n_samples = len(self.samples)
         if n_samples == 0:
@@ -1410,6 +1432,128 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+class OutputFiles:
+    """Class for managing multiple output files
+
+    Usage:
+
+    Create a new OutputFiles instance:
+    >>> fp = OutputFiles()
+
+    Set up files against keys:
+    >>> fp.open('file1','first_file.txt')
+    >>> fp.open('file2','second_file.txt')
+
+    Write content to files:
+    >>> fp.write('file1','some content for first file')
+    >>> fp.write('file2','content for\nsecond file')
+
+    Append content to an existing file:
+    >>> fp.open('file3','third_file.txt',append=True)
+    >>> fp.write('file2','appended content')
+
+    Check if key exists and associated file handle is
+    available for writing:
+    >>> 'file1' in fp
+    True
+    >>> 'file3' in fp
+    False
+
+    Finish and close all open files
+    >>> fp.close()
+
+    Reopen and append to a previously opened and closed
+    file:
+    >>> fp.open('file4','fourth_file.txt')
+    >>> fp.write('file4','some content')
+    >>> fp.close('file4')
+    >>> fp.open('file4',append=True)
+    >>> fp.write('file4','more content')
+
+    """
+    def __init__(self,base_dir=None):
+        """Create a new OutputFiles instance
+
+        Arguments:
+          base_dir (str): optional 'base' directory
+            which files will be created relative to
+
+        """
+        self._fp = dict()
+        self._file = dict()
+        self._base_dir = base_dir
+
+    def open(self,name,filen=None,append=False):
+        """Open a new output file
+
+        'name' is the handle used to reference the
+        file when using the 'write' and 'close' methods.
+
+        'filen' is the name of the file, and is unrelated
+        to the handle. If not supplied then 'name' must
+        be associated with a previously closed file (which
+        will be reopened).
+
+        If 'append' is True then append to an existing
+        file rather than overwriting (i.e. use mode 'a'
+        instead of 'w').
+
+        """
+        if append:
+            mode = 'a'
+        else:
+            mode = 'w'
+        if filen is None:
+            filen = self.file_name(name)
+        elif self._base_dir is not None:
+            filen = os.path.join(self._base_dir,filen)
+        else:
+            filen = os.path.abspath(filen)
+        self._file[name] = filen
+        self._fp[name] = open(filen,mode)
+
+    def write(self,name,s):
+        """Write content to file (newline-terminated)
+
+        Writes 's' as a newline-terminated string to the
+        file that is referenced with the handle 'name'.
+
+        """
+        self._fp[name].write("%s\n" % s)
+
+    def file_name(self,name):
+        """Get the file name associated with a handle
+
+        NB the file name will be available even if the
+        file has been closed.
+
+        Raises KeyError if the key doesn't exist.
+
+        """
+        return self._file[name]
+
+    def close(self,name=None):
+        """Close one or all open files
+
+        If a 'name' is specified then only the file matching
+        that handle will be closed; with no arguments all
+        open files will be closed.
+
+        """
+        if name is not None:
+            self._fp[name].close()
+            del(self._fp[name])
+        else:
+            names = self._fp.keys()
+            for name in names:
+                self.close(name)
+
+    def __contains__(self,name):
+        return name in self._fp
+
+    def __len__(self):
+        return len(self._fp.keys())
 
 class ZipArchive(object):
     """
