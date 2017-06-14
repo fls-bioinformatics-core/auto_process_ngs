@@ -321,6 +321,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.info.organism,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)
+        self.assertEqual(project.fastq_dirs,[])
 
     def test_create_single_end_analysis_project(self):
         """Check creation of new single-end AnalysisProject directory
@@ -338,6 +339,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_create_single_end_analysis_project_multi_fastqs(self):
         """Check creation of new single-end AnalysisProject directory (multi-fastq/sample)
@@ -357,6 +359,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_create_paired_end_analysis_project(self):
         """Check creation of new paired-end AnalysisProject directory
@@ -377,6 +380,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_create_paired_end_analysis_project_multi_fastqs(self):
         """Check creation of new paired-end AnalysisProject directory (multi-fastq/sample)
@@ -395,6 +399,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_create_analysis_project_not_standard_fastq_dir(self):
         """Check creation of AnalysisProject directory with non-standard fastq dir
@@ -413,6 +418,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.test'))
+        self.assertEqual(project.fastq_dirs,['fastqs.test',])
 
     def test_load_single_end_analysis_project(self):
         """Check loading of an existing single-end AnalysisProject directory
@@ -431,6 +437,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_load_analysis_project_non_canonical_fastq_dir(self):
         """Check AnalysisProject loading for directory with non-canonical fastq directory
@@ -450,6 +457,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.test'))
+        self.assertEqual(project.fastq_dirs,['fastqs.test',])
 
     def test_load_analysis_project_non_canonical_fastqs(self):
         """Check AnalysisProject loading fails for directory with non-canonical fastqs
@@ -466,6 +474,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_load_analysis_project_non_with_alternative_fastq_naming(self):
         """Check AnalysisProject loading for directory with alternative fastq naming
@@ -489,6 +498,53 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PB02')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
+
+    def test_load_analysis_project_detect_multiple_fastq_dirs(self):
+        """Check AnalysisProject detects multiple fastqs directories
+        """
+        # Construct test project with two fastq subdirectories
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        self.make_mock_project_dir(
+            'PJB.untrimmed',
+            ('PJB1-A-untrimmed_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B-untrimmed_ACAGTG_L002_R1_001.fastq.gz',),
+            fastq_dir='fastqs.untrimmed')
+        shutil.move(os.path.join(self.dirn,
+                                 'PJB.untrimmed',
+                                 'fastqs.untrimmed'),
+                    os.path.join(self.dirn,'PJB'))
+        shutil.rmtree(os.path.join(self.dirn,'PJB.untrimmed'))
+        # Load and check AnalysisProject: default fastqs dir
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,
+                         ['fastqs','fastqs.untrimmed'])
+        # Load and check AnalysisProject: default fastqs dir
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn,
+                                  fastq_dir='fastqs.untrimmed')
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
+        self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.fastq_dirs,
+                         ['fastqs','fastqs.untrimmed'])
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
