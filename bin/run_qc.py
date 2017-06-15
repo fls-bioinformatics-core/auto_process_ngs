@@ -20,20 +20,23 @@ Runs the QC pipeline on an arbitrary set of Fastq files
 import sys
 import os
 import argparse
+import logging
 from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.qc.illumina_qc import check_qc_outputs
-from auto_process_ngs import envmod
-
-import logging
-logging.basicConfig(format='%(levelname) 8s: %(message)s')
-
+import auto_process_ngs
 import auto_process_ngs.settings
-__settings = auto_process_ngs.settings.Settings()
+import auto_process_ngs.envmod as envmod
 
+# Module-specific logger
+logger = logging.getLogger(__name__)
+
+# Versions and settings
+__version__ = auto_process_ngs.get_version()
+__settings = auto_process_ngs.settings.Settings()
 try:
     __modulefiles = __settings.modulefiles['run_qc']
 except KeyError:
@@ -50,6 +53,20 @@ except KeyError:
 
 def announce(title):
     """
+    Print arbitrary string as a title
+
+    Prints the supplied string as a title, e.g.
+
+    >>> announce("Hello!")
+    ... ======
+    ... Hello!
+    .... ======
+
+    Arguments:
+      title (str): string to print
+
+    Returns:
+      None
     """
     title = str(title)
     len_title = len(title)
@@ -63,7 +80,11 @@ def announce(title):
 
 if __name__ == "__main__":
     # Make a command line parser
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(
+        description="Run the QC pipeline standalone on an arbitrary "
+        "set of Fastq files.")
+    p.add_argument('--version', action='version',
+                   version=("%%(prog)s %s" % __version__))
     p.add_argument("project_dir",metavar="DIR",
                    help="directory with Fastq files to run the "
                    "QC on")
@@ -120,7 +141,7 @@ if __name__ == "__main__":
     else:
         samples = project.samples
     if not samples:
-        logging.warning("No samples specified for QC, quitting")
+        logger.warning("No samples specified for QC, quitting")
         sys.exit()
     print "%d samples matched" % len(samples)
     for sample in samples:
@@ -164,13 +185,13 @@ if __name__ == "__main__":
         for fq in sample.fastq:
             if not sample.verify_qc(qc_dir,fq):
                 qc_ok = False
-                logging.warning("-- %s: QC failed" %
-                                os.path.basename(fq))
+                logger.warning("-- %s: QC failed" %
+                               os.path.basename(fq))
                 present,missing = check_qc_outputs(fq,qc_dir)
                 for output in missing:
-                    logging.warning("   %s: missing" % output)
+                    logger.warning("   %s: missing" % output)
     if not qc_ok:
-        logging.error("QC failed (see warnings above)")
+        logger.error("QC failed (see warnings above)")
     else:
         print "QC ok: generating report"
         project.qc_report(force=True)
