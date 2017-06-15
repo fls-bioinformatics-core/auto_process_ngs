@@ -555,7 +555,7 @@ class AnalysisProject:
                 fastq_dirs.append(d)
         # Also check top-level dir
         if self.find_fastqs(self.dirn):
-            fastq_dirs.append(self.dirn)
+            fastq_dirs.append('.')
         self.fastq_dirs = fastq_dirs
         logger.debug("Possible fastq dirs: %s" %
                      ','.join(self.fastq_dirs))
@@ -574,7 +574,8 @@ class AnalysisProject:
                                "of possible dirs %s" %
                                (fastq_dir,
                                 ', '.join(self.fastq_dirs)))
-        self.fastq_dir = os.path.join(self.dirn,fastq_dir)
+        self.fastq_dir = os.path.normpath(
+            os.path.join(self.dirn,fastq_dir))
         # Collect fastq files
         fastqs = self.find_fastqs(self.fastq_dir)
         if fastqs:
@@ -589,7 +590,8 @@ class AnalysisProject:
                 sample = AnalysisSample(name,
                                         fastq_attrs=self.fastq_attrs)
                 self.samples.append(sample)
-            sample.add_fastq(os.path.join(self.fastq_dir,fq))
+            sample.add_fastq(os.path.normpath(
+                os.path.join(self.fastq_dir,fq)))
         logger.debug("Listing samples and files:")
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
