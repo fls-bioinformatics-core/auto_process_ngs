@@ -94,9 +94,13 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     # Set up environment
-    if __modulefiles is not None:
+    if args.modulefiles is None:
+        modulefiles = __modulefiles
+    else:
+        modulefiles = args.modulefiles
+    if modulefiles is not None:
         announce("Setting up environment")
-        for modulefile in __modulefiles.split(','):
+        for modulefile in modulefiles.split(','):
             envmod.load(modulefile)
 
     # Job runner
