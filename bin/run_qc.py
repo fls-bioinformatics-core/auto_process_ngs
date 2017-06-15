@@ -110,6 +110,11 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    p.add_argument('--qc_dir',metavar='QC_DIR',
+                   action='store',dest='qc_dir',default=None,
+                   help="explicitly specify QC output directory. "
+                   "NB if a relative path is supplied then it's assumed "
+                   "to be a subdirectory of DIR (default: DIR/qc)")
     p.add_argument('--fastq_dir',metavar='SUBDIR',
                    action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
@@ -156,7 +161,13 @@ if __name__ == "__main__":
         print "-- %s" % sample.name
 
     # Sort out QC dir
-    qc_dir = os.path.join(project.dirn,'qc')
+    if args.qc_dir is None:
+        qc_dir = 'qc'
+    else:
+        qc_dir = args.qc_dir
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(project.dirn,qc_dir)
+    print "QC output dir: %s" % qc_dir
     log_dir = os.path.join(qc_dir,'logs')
     mkdir(qc_dir)
     mkdir(log_dir)
@@ -177,6 +188,7 @@ if __name__ == "__main__":
                 qc_cmd = Command('illumina_qc.sh',fq)
                 if args.nthreads > 1:
                     qc_cmd.add_args('--threads',args.nthreads)
+                qc_cmd.add_args('--qc_dir',qc_dir)
                 job = sched.submit(qc_cmd,
                                    wd=project.dirn,
                                    name="qc.%s" % os.path.basename(fq),
