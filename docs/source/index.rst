@@ -17,6 +17,7 @@ Contents
    barcode_analysis
    analysis_dirs
    metadata
+   utilities
    managing_data
    problems
 
