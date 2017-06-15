@@ -99,7 +99,7 @@ if __name__ == "__main__":
                    help="number of threads to use for QC script "
                    "(default: 1)")
     p.add_argument('-r','--runner',metavar='RUNNER',action='store',
-                   dest="runner",default=__settings.runners.qc,
+                   dest="runner",default=str(__settings.runners.qc),
                    help="explicitly specify runner definition for "
                    "running QC script. RUNNER must be a valid job "
                    "runner specification e.g. 'GEJobRunner(-j y)' "
