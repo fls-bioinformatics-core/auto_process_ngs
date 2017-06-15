@@ -110,6 +110,10 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    p.add_argument('--fastq_dir',metavar='SUBDIR',
+                   action='store',dest='fastq_dir',default=None,
+                   help="explicitly specify subdirectory of DIR with "
+                   "Fastq files to run the QC on.")
 
     # Parse the command line
     args = p.parse_args()
@@ -134,8 +138,12 @@ if __name__ == "__main__":
     project = AnalysisProject(project_name,project_dir)
 
     # Get list of samples
-    announce("Acquiring samples")
-    project = AnalysisProject(project_name,project_dir)
+    project = AnalysisProject(project_name,project_dir,
+                              fastq_dir=args.fastq_dir)
+    print "Subdirectories with Fastqs:"
+    for fastq_dir in project.fastq_dirs:
+        print "- %s" % fastq_dir
+    print "Gathering Fastqs from %s" % project.fastq_dir
     if args.sample_pattern is not None:
         samples = project.get_samples(args.sample_pattern)
     else:
