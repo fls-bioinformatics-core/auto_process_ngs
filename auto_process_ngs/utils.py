@@ -561,7 +561,7 @@ class AnalysisProject:
                      ','.join(self.fastq_dirs))
         # Set primary fastq file directory
         if not self.fastq_dirs:
-            logger.warning("No fastq dirs located for %s" % self.dirn)
+            logger.debug("No fastq dirs located for %s" % self.dirn)
             return
         if fastq_dir is None:
             if 'fastqs' in self.fastq_dirs:
