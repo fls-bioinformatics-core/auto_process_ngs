@@ -2210,7 +2210,8 @@ class AutoProcess:
                 logging.warning("'undetermined' directory already exists, skipping")
 
     def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,
-               fastq_screen_subset=1000000,runner=None):
+               fastq_screen_subset=1000000,run_multiqc=True,
+               runner=None):
         """Run QC pipeline script for projects
 
         Run the illumina_qc.sh script to perform QC on projects.
@@ -2236,6 +2237,8 @@ class AutoProcess:
           fastq_screen_subset: subset of reads to use in fastq_screen
                     (default is 1000000, set to zero or None to use
                     all reads)
+          run_multiqc: if True then run MultiQC at the end of the
+                    QC run (default)
           runner:   (optional) specify a non-default job runner to
                     use for the QC.
         Returns:
@@ -2299,6 +2302,7 @@ class AutoProcess:
             if len(samples) == 0:
                 logging.warning("No samples found for QC analysis in project '%s'" %
                                 project.name)
+            groups = []
             for sample in samples:
                 group = None
                 print "Examining files in sample %s" % sample.name
@@ -2324,7 +2328,22 @@ class AutoProcess:
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
-                if group: group.close()
+                if group:
+                    group.close()
+                    groups.append(group.name)
+            # Add MultiQC job (if requested)
+            if run_multiqc:
+                multiqc_cmd = applications.Command(
+                    'multiqc',
+                    '--title','%s/%s' % (self.run_name,project.name),
+                    '--force',
+                    qc_dir)
+                label = "multiqc.%s" % project.name
+                job = sched.submit(multiqc_cmd,
+                                   name=label,
+                                   wd=project.dirn,
+                                   log_dir=log_dir,
+                                   wait_for=groups)
         # Wait for the scheduler to run all jobs
         sched.wait()
         sched.stop()
@@ -2336,6 +2355,13 @@ class AutoProcess:
             else:
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report()
+            if run_multiqc:
+                multiqc_report = os.path.join(project.dirn,
+                                              "multiqc_report.html")
+                if not os.path.exists(multiqc_report):
+                    logging.warning("Missing MultiQC report for %s" %
+                                    project.name)
+                    failed_projects.append(project)
         # Report failed projects
         if failed_projects:
             logging.error("QC failed for one or more samples in following projects:")
@@ -2766,7 +2792,7 @@ class AutoProcess:
             # Table of projects
             index_page.add("<h2>QC Reports</h2>")
             index_page.add("<table>")
-            index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th colspan='2'>Reports</th></tr>")
+            index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th>Reports</th></tr>")
             # Set the string to represent "null" table entries
             null_str = '&nbsp;'
             # Deal with QC for each project
@@ -2817,17 +2843,47 @@ class AutoProcess:
                     except Exception, ex:
                         print "Failed to copy QC report: %s" % ex
                         report_copied = False
+                # MultiQC
+                multiqc_report = os.path.join(project.dirn,
+                                              "multiqc_report.html")
+                if os.path.exists(multiqc_report):
+                    print "Found MultiQC report: %s" % multiqc_report
+                    final_multiqc = "multiqc_report.%s.html" % project.name
+                    if not remote:
+                        # Local directory
+                        shutil.copy(multiqc_report,
+                                    os.path.join(dirn,final_multiqc))
+                    else:
+                        try:
+                            # Remote directory
+                            scp = applications.general.scp(
+                                user,
+                                server,
+                                multiqc_report,
+                                os.path.join(dirn,final_multiqc))
+                            print "Running %s" % scp
+                            scp.run_subprocess()
+                        except Exception, ex:
+                            print "Failed to copy MultiQC report: %s" % ex
+                            multiqc_report = None
+                else:
+                    multiqc_report = None
                 # Append info to the index page
+                reports = []
                 if report_copied:
-                    index_page.add("<td><a href='qc_report.%s.%s/qc_report.html'>"
-                                   "[Report]</a></td>"
+                    reports.append("<a href='qc_report.%s.%s/qc_report.html'>"
+                                   "[Report]</a>"
                                    % (project.name,
                                       os.path.basename(self.analysis_dir)))
-                    index_page.add("<td><a href='%s'>[Zip]</a></td>"
+                    reports.append("<a href='%s'>[Zip]</a>"
                                    % os.path.basename(qc_zip))
-                else:
+                if multiqc_report:
+                    reports.append("<a href='%s'>[MultiQC]</a>"
+                                   % final_multiqc)
+                if not reports:
                     # QC not available
-                    index_page.add("<td colspan='2'>QC reports not available</td>")
+                    reports.append("QC reports not available")
+                index_page.add("<td>%s</td>" % '&nbsp;'.join(reports))
                 # Finish table row for this project
                 index_page.add("</tr>")
             index_page.add("</table>")
