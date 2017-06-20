@@ -104,21 +104,25 @@ if __name__ == "__main__":
                    "running QC script. RUNNER must be a valid job "
                    "runner specification e.g. 'GEJobRunner(-j y)' "
                    "(default: '%s')" % __settings.runners.qc)
+    p.add_argument('--qc_dir',metavar='QC_DIR',
+                   action='store',dest='qc_dir',default=None,
+                   help="explicitly specify QC output directory. "
+                   "NB if a relative path is supplied then it's assumed "
+                   "to be a subdirectory of DIR (default: <DIR>/qc)")
+    p.add_argument('-f','--filename',metavar='NAME',action='store',
+                   dest='filename',default=None,
+                   help="file name for output QC report (default: "
+                   "<DIR>/<QC_DIR>_report.html)")
+    p.add_argument('--fastq_dir',metavar='SUBDIR',
+                   action='store',dest='fastq_dir',default=None,
+                   help="explicitly specify subdirectory of DIR with "
+                   "Fastq files to run the QC on.")
     p.add_argument('--modulefiles',action='store',
                    dest='modulefiles',default=None,
                    help="comma-separated list of environment "
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
-    p.add_argument('--qc_dir',metavar='QC_DIR',
-                   action='store',dest='qc_dir',default=None,
-                   help="explicitly specify QC output directory. "
-                   "NB if a relative path is supplied then it's assumed "
-                   "to be a subdirectory of DIR (default: DIR/qc)")
-    p.add_argument('--fastq_dir',metavar='SUBDIR',
-                   action='store',dest='fastq_dir',default=None,
-                   help="explicitly specify subdirectory of DIR with "
-                   "Fastq files to run the QC on.")
 
     # Parse the command line
     args = p.parse_args()
@@ -165,12 +169,22 @@ if __name__ == "__main__":
         qc_dir = 'qc'
     else:
         qc_dir = args.qc_dir
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(project.dirn,qc_dir)
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
     print "QC output dir: %s" % qc_dir
     log_dir = os.path.join(qc_dir,'logs')
     mkdir(qc_dir)
     mkdir(log_dir)
+    qc_base = os.path.basename(qc_dir)
+
+    # Output file name
+    if args.filename is None:
+        out_file = '%s_report.html' % qc_base
+    else:
+        out_file = args.filename
+    if not os.path.isabs(out_file):
+        out_file = os.path.join(project.dirn,out_file)
+    print "QC report: %s" % out_file
 
     # Run the QC
     announce("Running QC")
@@ -191,7 +205,8 @@ if __name__ == "__main__":
                 qc_cmd.add_args('--qc_dir',qc_dir)
                 job = sched.submit(qc_cmd,
                                    wd=project.dirn,
-                                   name="qc.%s" % os.path.basename(fq),
+                                   name="%s.%s" % (qc_base,
+                                                   os.path.basename(fq)),
                                    log_dir=log_dir)
                 print "Job: %s" % job
     # Wait for the scheduler to run all jobs
@@ -214,5 +229,7 @@ if __name__ == "__main__":
         logger.error("QC failed (see warnings above)")
     else:
         print "QC ok: generating report"
-        project.qc_report(force=True)
+        project.qc_report(report_html=out_file,
+                          qc_dir=qc_dir,
+                          force=True)
 
