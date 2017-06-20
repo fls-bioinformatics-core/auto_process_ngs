@@ -2213,8 +2213,9 @@ class AutoProcess:
                 logging.warning("'undetermined' directory already exists, skipping")
 
     def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,
-               fastq_screen_subset=1000000,run_multiqc=True,
-               runner=None):
+               fastq_screen_subset=1000000,runner=None,
+               fastq_dir=None,qc_dir=None,report_html=None,
+               run_multiqc=True):
         """Run QC pipeline script for projects
 
         Run the illumina_qc.sh script to perform QC on projects.
@@ -2240,10 +2241,19 @@ class AutoProcess:
           fastq_screen_subset: subset of reads to use in fastq_screen
                     (default is 1000000, set to zero or None to use
                     all reads)
-          run_multiqc: if True then run MultiQC at the end of the
-                    QC run (default)
           runner:   (optional) specify a non-default job runner to
                     use for the QC.
+          fastq_dir: (optional) specify the subdirectory to take the
+                    Fastq files from; will be used for all projects
+                    that are processed (default is 'fastqs')
+          qc_dir:   (optional) specify a non-standard directory to
+                    write the QC outputs to; will be used for all
+                    projects that are processed (default is 'qc')
+          report_html: (optional) specify the name for the output
+                    HTML QC report (default is '<QC_DIR>_report.html')
+          run_multiqc: if True then run MultiQC at the end of the
+                    QC run (default)
+
         Returns:
           UNIX-style integer returncode: 0 = successful termination,
           non-zero indicates an error occurred.
@@ -2289,6 +2299,14 @@ class AutoProcess:
         # pipeline with the associated fastq.gz files
         for project in projects:
             print "*** Setting up QC for %s ***" % project.name
+            # Sort out fastq source
+            if fastq_dir is not None:
+                project.use_fastq_dir(fastq_dir)
+                print "Set fastq_dir to %s" % project.fastq_dir
+            # Sort out qc directory
+            if qc_dir is not None:
+                project.use_qc_dir(qc_dir)
+                print "Set QC directory to %s" % project.qc_dir
             # Make the qc directory if it doesn't exist
             qc_dir = project.qc_dir
             if not os.path.exists(qc_dir):
@@ -2357,8 +2375,16 @@ class AutoProcess:
             if not project.verify_qc(qc_dir=qc_dir):
                 failed_projects.append(project)
             else:
+                qc_base = os.path.basename(qc_dir)
+                if report_html is None:
+                    out_file = '%s_report.html' % qc_base
+                else:
+                    out_file = report_html
+                if not os.path.isabs(out_file):
+                    out_file = os.path.join(project.dirn,out_file)
                 print "QC okay, generating report for %s" % project.name
-                project.qc_report(qc_dir=qc_dir)
+                project.qc_report(qc_dir=qc_dir,
+                                  report_html=out_file)
             if run_multiqc:
                 multiqc_report = os.path.join(project.dirn,
                                               "multiqc_report.html")
