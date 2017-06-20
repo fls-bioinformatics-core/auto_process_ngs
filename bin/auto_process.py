@@ -452,8 +452,20 @@ def add_run_qc_command(cmdparser):
                  help="create decompressed copies of fastq.gz files")
     p.add_option('--max-jobs',action='store',
                  dest='max_jobs',default=max_concurrent_jobs,type='int',
-                 help="explicitly specify maximum number of concurrent QC jobs to run "
-                 "(default %s, change in settings file)" % max_concurrent_jobs)
+                 help="explicitly specify maximum number of concurrent QC "
+                 "jobs to run (default %s, change in settings file)"
+                 % max_concurrent_jobs)
+    p.add_option('--qc_dir',action='store',dest='qc_dir',default='qc',
+                 help="explicitly specify QC output directory (nb if "
+                 "supplied then the same QC_DIR will be used for each "
+                 "project. Non-absolute paths are assumed to be relative to "
+                 "the project directory). Default: 'qc'")
+    p.add_option('--fastq_dir',action='store',dest='fastq_dir',default=None,
+                 help="explicitly specify subdirectory of DIR with "
+                 "Fastq files to run the QC on.")
+    p.add_option('--report',action='store',dest='html_file',default=None,
+                 help="file name for output HTML QC report (default: "
+                 "<QC_DIR>_report.html)")
     add_runner_option(p)
     add_modulefiles_option(p)
     add_debug_option(p)
@@ -898,6 +910,9 @@ if __name__ == "__main__":
                                max_jobs=options.max_jobs,
                                ungzip_fastqs=options.ungzip_fastqs,
                                fastq_screen_subset=options.subset,
+                               fastq_dir=options.fastq_dir,
+                               qc_dir=options.qc_dir,
+                               report_html=options.html_file,
                                runner=options.runner)
             sys.exit(retcode)
         elif cmd == 'samplesheet':
