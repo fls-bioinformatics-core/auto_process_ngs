@@ -629,9 +629,9 @@ class AnalysisProject:
         else:
             return 'fastq'
 
-    def use_fastqs_dir(self,fastq_dir):
+    def use_fastq_dir(self,fastq_dir):
         """
-        Switch fastqs directory and repopulate
+        Switch fastq directory and repopulate
         """
         if fastq_dir not in self.fastq_dirs:
             raise Exception("Fastq dir '%s' not found in "

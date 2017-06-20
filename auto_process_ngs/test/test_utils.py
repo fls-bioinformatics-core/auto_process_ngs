@@ -578,7 +578,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         # Switch to alternative fastqs dir
-        project.use_fastqs_dir('fastqs.untrimmed')
+        project.use_fastq_dir('fastqs.untrimmed')
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
@@ -600,7 +600,7 @@ class TestAnalysisProject(unittest.TestCase):
         dirn = os.path.join(self.dirn,'PJB')
         project = AnalysisProject('PJB',dirn)
         self.assertRaises(Exception,
-                          project.use_fastqs_dir,'fastqs.non_existant')
+                          project.use_fastq_dir,'fastqs.non_existant')
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
