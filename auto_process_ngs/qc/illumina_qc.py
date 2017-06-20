@@ -52,7 +52,6 @@ class QCReporter:
         self._project = project
         self._samples = []
         self._parent_dir = os.path.dirname(self._project.dirn)
-        self._qc_dir = self._project.qc_dir
         for sample in self._project.samples:
             self._samples.append(QCSample(sample))
         self._samples = sorted(self._samples,
@@ -71,21 +70,27 @@ class QCReporter:
     def samples(self):
         return self._samples
 
-    def verify(self):
+    def verify(self,qc_dir=None):
         """
         Check that the QC outputs are correct
 
         Returns True if the QC appears to have run successfully,
         False if not.
 
+        Arguments:
+          qc_dir (str): path to the QC output dir
+
         """
+        if qc_dir is None:
+            qc_dir = self._project.qc_dir
         verified = True
         for sample in self._samples:
-            if not sample.verify(self._qc_dir):
+            if not sample.verify(qc_dir):
                 verified = False
         return verified
 
-    def report(self,title=None,filename=None,relative_links=False):
+    def report(self,title=None,filename=None,qc_dir=None,
+               relative_links=False):
         """
         Report the QC for the project
 
@@ -95,6 +100,7 @@ class QCReporter:
           filename (str): optional, specify path and name for
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
+          qc_dir (str): path to the QC output dir
           relative_links (boolean): optional, if set to True
             then use relative paths for links in the report
             (default is to use absolute paths)
@@ -283,10 +289,12 @@ class QCReporter:
                     summary_tbl.set_value(idx,'fastq',Link(fq_r1,
                                                            fqr1_report))
                 self._report_fastq(fq_r1,'r1',summary_tbl,idx,
-                                   fqr1_report,relpath=relpath)
+                                   fqr1_report,qc_dir=qc_dir,
+                                   relpath=relpath)
                 if self.paired_end:
                     self._report_fastq(fq_r2,'r2',summary_tbl,idx,
-                                       fqr2_report,relpath=relpath)
+                                       fqr2_report,qc_dir=qc_dir,
+                                       relpath=relpath)
                 # Reset sample name for remaining pairs
                 sample_name = None
                 # Add an empty section to clear HTML floats
@@ -296,7 +304,7 @@ class QCReporter:
         report.write(filename)
 
     def _report_fastq(self,fq,read_id,summary,idx,report,
-                      relpath=None):
+                      qc_dir=None,relpath=None):
         """
         Generate report section for a Fastq file
 
@@ -306,13 +314,16 @@ class QCReporter:
           summary (Table): summary table object
           idx (integer): row index for summary table
           report (Section): container for the report
+          qc_dir (str): path to the QC output dir
 
         """
         # Report FastQC results
         fastqc_report = report.add_subsection("FastQC")
+        if qc_dir is None:
+            qc_dir = self._project.qc_dir
         try:
             # Locate FastQC outputs
-            fastqc = Fastqc(os.path.join(self._qc_dir,fastqc_output(fq)[0]))
+            fastqc = Fastqc(os.path.join(qc_dir,fastqc_output(fq)[0]))
             # FastQC quality boxplot
             fastqc_report.add("Per base sequence quality boxplot:")
             boxplot = Img(fastqc.quality_boxplot(inline=True),
@@ -371,8 +382,8 @@ class QCReporter:
         for name in FASTQ_SCREENS:
             description = name.replace('_',' ').title()
             png,txt = fastq_screen_output(fq,name)
-            png = os.path.join(self._qc_dir,png)
-            txt = os.path.join(self._qc_dir,txt)
+            png = os.path.join(qc_dir,png)
+            txt = os.path.join(qc_dir,txt)
             if relpath:
                 png_href = os.path.relpath(png,relpath)
                 txt_href = os.path.relpath(txt,relpath)
@@ -405,18 +416,20 @@ class QCReporter:
                          % (fq,ex))
         # Program versions
         versions = report.add_subsection("Program versions")
-        versions.add(self._program_versions(fq))
+        versions.add(self._program_versions(fq,qc_dir=qc_dir))
 
-    def _program_versions(self,fastq):
+    def _program_versions(self,fastq,qc_dir=None):
         """
         """
         # Program versions table
         tbl = Table(("Program","Version"))
         tbl.add_css_classes("programs","summary")
+        if qc_dir is None:
+            qc_dir = self._project.qc_dir
         # Fetch the version info
         try:
             fastqc_version = Fastqc(
-                os.path.join(self._qc_dir,
+                os.path.join(qc_dir,
                              fastqc_output(fastq)[0])).version
         except Exception,ex:
             logger.error("Unable to get Fastqc version for %s: %s"
@@ -424,7 +437,7 @@ class QCReporter:
             fastqc_version = "?"
         try:
             fastq_screen_version = Fastqscreen(
-                os.path.join(self._qc_dir,
+                os.path.join(qc_dir,
                              fastq_screen_output(fastq,
                                                  FASTQ_SCREENS[0])[1])).version
         except Exception,ex:
