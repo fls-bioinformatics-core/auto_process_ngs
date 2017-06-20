@@ -783,13 +783,15 @@ class AnalysisProject:
         """
         return QCReporter(self)
 
-    def qc_report(self,report_html=None,qc_dir=None,force=False):
+    def qc_report(self,title=None,report_html=None,qc_dir=None,
+                  force=False):
         """
         Report QC outputs for project
 
         Generates HTML and zipped QC reports.
 
         Arguments:
+          title (str): title text for the report
           report_html (str): path for output HTML report file
           qc_dir (str): path for QC output dir (if None then
             use default QC directory)
@@ -811,10 +813,11 @@ class AnalysisProject:
         # Create HTML report
         logger.debug("Creating HTML QC report for %s" % self.name)
         try:
-            if self.info.run is not None:
-                title = "%s/%s: QC report" % (self.info.run,self.name)
-            else:
-                title = "%s: QC report" % self.name
+            if not title:
+                if self.info.run is not None:
+                    title = "%s/%s: QC report" % (self.info.run,self.name)
+                else:
+                    title = "%s: QC report" % self.name
             if report_html is None:
                 report_html = os.path.join(self.dirn,"qc_report.html")
             self.qc.report(title=title,

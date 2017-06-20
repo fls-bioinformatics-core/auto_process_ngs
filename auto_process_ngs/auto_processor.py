@@ -2382,8 +2382,14 @@ class AutoProcess:
                     out_file = report_html
                 if not os.path.isabs(out_file):
                     out_file = os.path.join(project.dirn,out_file)
+                title = "%s/%s" % (self.run_name,
+                                   project.name)
+                if fastq_dir is not None:
+                    title = "%s (%s)" % (title,fastq_dir)
+                title = "%s: QC report" % title
                 print "QC okay, generating report for %s" % project.name
                 project.qc_report(qc_dir=qc_dir,
+                                  title=title,
                                   report_html=out_file)
             if run_multiqc:
                 multiqc_report = os.path.join(project.dirn,
