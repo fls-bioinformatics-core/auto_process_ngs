@@ -2290,14 +2290,14 @@ class AutoProcess:
         for project in projects:
             print "*** Setting up QC for %s ***" % project.name
             # Make the qc directory if it doesn't exist
-            qc_dir = os.path.join(project.dirn,'qc')
+            qc_dir = project.qc_dir
             if not os.path.exists(qc_dir):
-                print "Making 'qc' subdirectory"
+                print "Making QC directory: %s" % qc_dir
                 bcf_utils.mkdir(qc_dir,mode=0775)
             # Set up the logs directory
             log_dir = os.path.join(qc_dir,'logs')
             if not os.path.exists(log_dir):
-                print "Making 'qc/logs' subdirectory"
+                print "Making QC logs directory: %s" % log_dir
                 bcf_utils.mkdir(log_dir,mode=0775)
             # Loop over samples and queue up those where the QC
             # isn't validated
@@ -2327,7 +2327,8 @@ class AutoProcess:
                             qc_cmd.add_args('--ungzip-fastqs')
                         if fastq_screen_subset is None:
                             fastq_screen_subset = 0
-                        qc_cmd.add_args('--subset',fastq_screen_subset)
+                        qc_cmd.add_args('--subset',fastq_screen_subset,
+                                        '--qc_dir',qc_dir)
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
@@ -2353,11 +2354,11 @@ class AutoProcess:
         # Verify the outputs and generate QC reports
         failed_projects = []
         for project in projects:
-            if not project.verify_qc():
+            if not project.verify_qc(qc_dir=qc_dir):
                 failed_projects.append(project)
             else:
                 print "QC okay, generating report for %s" % project.name
-                project.qc_report()
+                project.qc_report(qc_dir=qc_dir)
             if run_multiqc:
                 multiqc_report = os.path.join(project.dirn,
                                               "multiqc_report.html")
