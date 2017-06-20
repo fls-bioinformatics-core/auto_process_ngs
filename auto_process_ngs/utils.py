@@ -603,6 +603,8 @@ class AnalysisProject:
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
         self.info['paired_end'] = paired_end
+        # Set the QC output dir
+        self.use_qc_dir('qc')
 
     def find_fastqs(self,dirn):
         """
@@ -638,6 +640,21 @@ class AnalysisProject:
                             "project '%s' (%s)" %
                             (fastq_dir,self.name,self.dirn))
         self.populate(fastq_dir=fastq_dir)
+
+    def use_qc_dir(self,qc_dir):
+        """
+        Switch the default QC outputs directory
+
+        Arguments:
+          qc_dir (str): path to new default QC outputs
+            directory. If a relative path is supplied then
+            is assumed to be relative to the analysis
+            project directory.
+        """
+        self._qc_dir = qc_dir
+        if not os.path.isabs(self._qc_dir):
+            self._qc_dir = os.path.join(self.dirn,
+                                        self._qc_dir)
 
     def create_directory(self,illumina_project=None,fastqs=None,
                          fastq_dir=None,
@@ -754,26 +771,39 @@ class AnalysisProject:
 
     @property
     def qc_dir(self):
-        # Return path to qc dir, if present
-        qc_dir = os.path.join(self.dirn,'qc')
-        if os.path.exists(qc_dir):
-            return qc_dir
-        else:
-            return None
+        """
+        Return path to default QC outputs directory
+        """
+        return self._qc_dir
 
     @property
     def qc(self):
-        # Return IlluminaQCReporter object for this project
-        if self.qc_dir is None:
-            return None
-        else:
-            return QCReporter(self)
+        """
+        Return QCReporter instance for QC outputs
+        """
+        return QCReporter(self)
 
-    def qc_report(self,force=False):
-        # Generate HTML and zipped QC reports
-        # Return name of zip file, or None if there is a problem
-        # Set force=True to force reports to be generated
-        if not (force or self.verify_qc()):
+    def qc_report(self,report_html=None,qc_dir=None,force=False):
+        """
+        Report QC outputs for project
+
+        Generates HTML and zipped QC reports.
+
+        Arguments:
+          report_html (str): path for output HTML report file
+          qc_dir (str): path for QC output dir (if None then
+            use default QC directory)
+          force (bool): if True then force reports to be
+            regenerated (by default reports will not be
+            regenerated if they already exist)
+
+        Returns:
+          String: name of zip file, or None if there was a
+            problem.
+        """
+        if qc_dir is None:
+            qc_dir = self._qc_dir
+        if not (force or self.verify_qc(qc_dir=qc_dir)):
             logger.debug("Failed to generate QC report for %s: QC "
                           "not verified and force not specified"
                           % self.name)
@@ -785,25 +815,34 @@ class AnalysisProject:
                 title = "%s/%s: QC report" % (self.info.run,self.name)
             else:
                 title = "%s: QC report" % self.name
-            report_html = os.path.join(self.dirn,"qc_report.html")
+            if report_html is None:
+                report_html = os.path.join(self.dirn,"qc_report.html")
             self.qc.report(title=title,
                            filename=report_html,
+                           qc_dir=qc_dir,
                            relative_links=True)
         except Exception as ex:
             logger.error("Exception trying to generate QC report "
                          "for %s: %s" % (self.name,ex))
             return None
+        # Get a name for the zip file derived from the HTML
+        # report filename
+        zip_name = os.path.splitext(os.path.basename(report_html))[0]
         # Create zip file
         logger.debug("Creating zip archive of QC report for %s" %
                       self.name)
         try:
             analysis_dir = os.path.basename(os.path.dirname(self.dirn))
             report_zip = os.path.join(self.dirn,
-                                      "qc_report.%s.%s.zip" %
-                                      (self.name,analysis_dir))
+                                      "%s.%s.%s.zip" %
+                                      (zip_name,
+                                       self.name,
+                                       analysis_dir))
             zip_file = ZipArchive(report_zip,relpath=self.dirn,
-                                  prefix="qc_report.%s.%s" %
-                                  (self.name,analysis_dir))
+                                  prefix="%s.%s.%s" %
+                                  (zip_name,
+                                   self.name,
+                                   analysis_dir))
             # Add the HTML report
             zip_file.add_file(report_html)
             # Add the FastQC and screen files
@@ -811,7 +850,7 @@ class AnalysisProject:
                 for fastqs in sample.fastq_pairs:
                     for fq in fastqs:
                         logger.debug("Adding QC outputs for %s" % fq)
-                        for f in expected_qc_outputs(fq,self.qc_dir):
+                        for f in expected_qc_outputs(fq,qc_dir):
                             if f.endswith('.zip'):
                                 # Exclude .zip file
                                 continue
@@ -853,10 +892,20 @@ class AnalysisProject:
                 return True
         return False
 
-    def verify_qc(self):
-        # Verify if the QC was successful
+    def verify_qc(self,qc_dir=None):
+        """
+        Check if QC run has completed successfully
+
+        Arguments:
+          qc_dir (str): path for QC output dir (if None then
+            use default QC directory)
+
+        Returns:
+          Boolean: True if QC run is completed, False
+            if QC couldn't be verified.
+        """
         try:
-            return self.qc.verify()
+            return self.qc.verify(qc_dir=qc_dir)
         except AttributeError:
             return False
 
