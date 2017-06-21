@@ -2350,9 +2350,11 @@ class AutoProcess:
                     groups.append(group.name)
             # Add MultiQC job (if requested)
             if run_multiqc:
+                multiqc_out = "multi%s_report.html" % os.path.basename(qc_dir)
                 multiqc_cmd = applications.Command(
                     'multiqc',
                     '--title','%s/%s' % (self.run_name,project.name),
+                    '--filename',multiqc_out,
                     '--force',
                     qc_dir)
                 label = "multiqc.%s" % project.name
@@ -2387,8 +2389,7 @@ class AutoProcess:
                                   title=title,
                                   report_html=out_file)
             if run_multiqc:
-                multiqc_report = os.path.join(project.dirn,
-                                              "multiqc_report.html")
+                multiqc_report = os.path.join(project.dirn,multiqc_out)
                 if not os.path.exists(multiqc_report):
                     logging.warning("Missing MultiQC report for %s" %
                                     project.name)
@@ -2846,24 +2847,27 @@ class AutoProcess:
                             % (os.path.basename(qc_zip),
                                (" (%s)" % fastq_dir
                                 if fastq_dir != 'fastqs' else "")))
-                # MultiQC
-                multiqc_report = os.path.join(project.dirn,
-                                              "multiqc_report.html")
-                if os.path.exists(multiqc_report):
-                    print "Found MultiQC report: %s" % multiqc_report
-                    final_multiqc = "multiqc_report.%s.html" % project.name
-                    try:
-                        fileops.copy(multiqc_report,
-                                     os.path.join(dirn,final_multiqc))
-                    except Exception, ex:
-                        print "Failed to copy MultiQC report: %s" % ex
+                    # MultiQC
+                    multiqc_report = os.path.join(project.dirn,
+                                                  "multi%s.html" % qc_base)
+                    if os.path.exists(multiqc_report):
+                        print "Found MultiQC report: %s" % multiqc_report
+                        final_multiqc = "multi%s.%s.html" % (qc_base,project.name)
+                        try:
+                            fileops.copy(multiqc_report,
+                                         os.path.join(dirn,final_multiqc))
+                        except Exception, ex:
+                            print "Failed to copy MultiQC report: %s" % ex
+                            multiqc_report = None
+                    else:
+                        print "No MultiQC report found for %s" % \
+                            os.path.basename(qc_dir)
                         multiqc_report = None
-                else:
-                    print "No MultiQC report found"
-                    multiqc_report = None
                 if multiqc_report:
-                    report_html.append("<a href='%s'>[MultiQC]</a>"
-                                       % final_multiqc)
+                    report_html.append("<a href='%s'>[MultiQC%s]</a>"
+                                       % (final_multiqc,
+                                          (" (%s)" % fastq_dir
+                                           if fastq_dir != 'fastqs' else "")))
                 # Check there is something to add
                 if not report_html:
                     report_html.append("QC reports not available")
