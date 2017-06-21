@@ -859,6 +859,17 @@ class AnalysisProject:
         return self._qc_dir
 
     @property
+    def qc_dirs(self):
+        """
+        List QC output directories
+        """
+        qc_dirs = []
+        for d in bcf_utils.list_dirs(self.dirn):
+            if d.startswith("qc"):
+                qc_dirs.append(d)
+        return qc_dirs
+
+    @property
     def qc(self):
         """
         Return QCReporter instance for QC outputs

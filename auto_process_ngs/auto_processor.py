@@ -2628,50 +2628,60 @@ class AutoProcess:
         projects = analysis_dir.get_projects(project_pattern)
         # Check QC situation for each project
         print "Checking QC status for each project:"
-        no_qc_projects = []
+        project_qc = {}
         for project in projects:
-            if project.qc is None:
-                # No QC available, can't even report
-                logging.warning("No QC available for %s" % project.name)
-                no_qc_projects.append(project)
-            else:
-                # QC is available, check status of reports
+            print "* Project '%s':" % project.name
+            print "  Verifying QC directories:"
+            # Get putative qc dirs and verify
+            project_qc[project.name] = []
+            for qc_dir in project.qc_dirs:
+                # Set the source Fastqs dir
+                fastq_dir = project.qc_info(qc_dir).fastq_dir
+                project.use_fastq_dir(fastq_dir)
+                if project.verify_qc(
+                        qc_dir=os.path.join(project.dirn,qc_dir)):
+                    status = "ok"
+                    project_qc[project.name].append(qc_dir)
+                else:
+                    status = "failed"
+                    if force:
+                        project_qc[project.name].append(qc_dir)
+                print "-- %s...%s" % (qc_dir,status)
+            # Check status of reports for verified dirs
+            print "  Checking QC reports:"
+            for qc_dir in project_qc[project.name]:
+                fastq_dir = project.qc_info(qc_dir).fastq_dir
+                project.use_fastq_dir(fastq_dir)
                 generate_report = regenerate_reports
                 qc_zip = os.path.join(project.dirn,
-                                      "qc_report.%s.%s.zip" %
-                                      (project.name,
+                                      "%s_report.%s.%s.zip" %
+                                      (qc_dir,project.name,
                                        os.path.basename(self.analysis_dir)))
                 if os.path.isfile(qc_zip):
-                    print "Existing QC report found for %s" % project.name
+                    status = "existing report"
                 else:
-                    # No QC report available
-                    print "No QC report found for %s" % project.name
+                    status = "no QC report"
                     generate_report = True
+                print "-- %s/%s...%s" % (project.name,
+                                         qc_dir,
+                                         status)
                 # (Re)create report
                 if generate_report:
-                    if not project.qc.verify():
-                        logging.error("Unable to verify QC for %s" %
-                                      project.name)
-                        if not force:
-                            qc_zip = None
-                        else:
-                            print "Forcing QC report generation"
-                    if qc_zip:
-                        print "Generating report and zip file"
-                        try:
-                            project.qc_report(force=force)
-                        except Exception as ex:
-                            logging.error("publish_qc: failed to generate "
-                                          "QC report for %s: %s" %
-                                          (project.name,ex))
-                            qc_zip = None
-                if qc_zip is None:
-                    logging.error("Failed to make QC report for %s" % project.name)
-                    no_qc_projects.append(project)
+                    try:
+                        project.qc_report(qc_dir=qc_dir,
+                                          force=force)
+                    except Exception as ex:
+                        logging.error("publish_qc: failed to generate "
+                                      "QC report for %s (%s): %s" %
+                                      (project.name,qc_dir,ex))
+                        project_qc[project.name].remove(qc_dir)
+        # Projects with no QC
+        no_qc_projects = filter(lambda p: not project_qc[p.name],
+                                projects)
         # Final results
         if no_qc_projects:
             # Failed to generate results for some projects
-            err_msg = "QC reports missing for projects: %s" % \
+            err_msg = "No QC reports for projects: %s" % \
                       ', '.join([x.name for x in no_qc_projects])
             if not ignore_missing_qc:
                 # Fatal error
@@ -2780,6 +2790,8 @@ class AutoProcess:
             null_str = '&nbsp;'
             # Deal with QC for each project
             for project in projects:
+                # Reset source Fastqs dir
+                project.use_fastq_dir()
                 # Get local versions of project information
                 info = project.info
                 project_user = null_str if info.user is None else info.user
@@ -2795,22 +2807,45 @@ class AutoProcess:
                 index_page.add("<td>%s</td>" % PI)
                 index_page.add("<td>%s</td>" % project.prettyPrintSamples())
                 index_page.add("<td>%d</td>" % len(project.samples))
-                # Locate and copy QC report
-                qc_zip = os.path.join(project.dirn,
-                                      "qc_report.%s.%s.zip" %
-                                      (project.name,
-                                       os.path.basename(self.analysis_dir)))
-                print qc_zip
-                assert(os.path.isfile(qc_zip))
-                report_copied = True
-                try:
-                    fileops.copy(qc_zip,dirn)
-                    fileops.unzip(os.path.join(dirn,
-                                               os.path.basename(qc_zip)),
-                                  fileops.Location(dirn).path)
-                except Exception, ex:
-                    print "Failed to copy QC report: %s" % ex
-                    report_copied = False
+                # Locate and copy QC reports
+                report_html = []
+                for qc_dir in project_qc[project.name]:
+                    qc_zip = os.path.join(project.dirn,
+                                          "%s_report.%s.%s.zip" %
+                                          (qc_dir,
+                                           project.name,
+                                           os.path.basename(self.analysis_dir)))
+                    print qc_zip
+                    assert(os.path.isfile(qc_zip))
+                    report_copied = True
+                    try:
+                        fileops.copy(qc_zip,dirn)
+                        fileops.unzip(os.path.join(
+                            dirn,
+                            os.path.basename(qc_zip)),
+                                      fileops.Location(dirn).path)
+                    except Exception, ex:
+                        print "Failed to copy QC report: %s" % ex
+                        report_copied = False
+                    # Append info to the index page
+                    if report_copied:
+                        qc_base = "%s_report" % qc_dir
+                        fastq_dir = project.qc_info(qc_dir).fastq_dir
+                        # Index
+                        report_html.append(
+                            "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
+                            % (qc_base,
+                               project.name,
+                               os.path.basename(self.analysis_dir),
+                               qc_base,
+                               (" (%s)" % fastq_dir
+                                if fastq_dir != 'fastqs' else "")))
+                        # Zip file
+                        report_html.append(
+                            "<a href='%s'>[Zip%s]</a>"
+                            % (os.path.basename(qc_zip),
+                               (" (%s)" % fastq_dir
+                                if fastq_dir != 'fastqs' else "")))
                 # MultiQC
                 multiqc_report = os.path.join(project.dirn,
                                               "multiqc_report.html")
@@ -2826,23 +2861,15 @@ class AutoProcess:
                 else:
                     print "No MultiQC report found"
                     multiqc_report = None
-                # Append info to the index page
-                reports = []
-                if report_copied:
-                    reports.append("<a href='qc_report.%s.%s/qc_report.html'>"
-                                   "[Report]</a>"
-                                   % (project.name,
-                                      os.path.basename(self.analysis_dir)))
-                    reports.append("<a href='%s'>[Zip]</a>"
-                                   % os.path.basename(qc_zip))
                 if multiqc_report:
-                    reports.append("<a href='%s'>[MultiQC]</a>"
-                                   % final_multiqc)
-                if not reports:
-                    # QC not available
-                    reports.append("QC reports not available")
-                index_page.add("<td>%s</td>" % '&nbsp;'.join(reports))
-                # Finish table row for this project
+                    report_html.append("<a href='%s'>[MultiQC]</a>"
+                                       % final_multiqc)
+                # Check there is something to add
+                if not report_html:
+                    report_html.append("QC reports not available")
+                # Add to the index
+                index_page.add("<td>%s</td>"
+                               % null_str.join(report_html))
                 index_page.add("</tr>")
             index_page.add("</table>")
         # Finish index page
