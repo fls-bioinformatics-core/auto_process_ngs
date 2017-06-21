@@ -164,16 +164,10 @@ if __name__ == "__main__":
     for sample in samples:
         print "-- %s" % sample.name
 
-    # Sort out QC dir
-    if args.qc_dir is None:
-        qc_dir = 'qc'
-    else:
-        qc_dir = args.qc_dir
-    if not os.path.isabs(qc_dir):
-        qc_dir = os.path.join(project.dirn,qc_dir)
+    # Set up QC dir
+    qc_dir = project.setup_qc_dir(qc_dir=args.qc_dir)
     print "QC output dir: %s" % qc_dir
     log_dir = os.path.join(qc_dir,'logs')
-    mkdir(qc_dir)
     mkdir(log_dir)
     qc_base = os.path.basename(qc_dir)
 
