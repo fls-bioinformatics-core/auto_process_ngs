@@ -641,6 +641,69 @@ class AnalysisProject:
                             (fastq_dir,self.name,self.dirn))
         self.populate(fastq_dir=fastq_dir)
 
+    def setup_qc_dir(self,qc_dir=None,fastq_dir=None):
+        """
+        Set up a QC outputs directory
+
+        Creates a QC outputs directory with a metadata
+        file 'qc.info'.
+
+        Arguments:
+          qc_dir (str): path to QC outputs directory
+            to set up. If a relative path is supplied then
+            is assumed to be relative to the analysis
+            project directory. If 'None' then defaults to
+            the current 'qc_dir' for the project.
+          fastq_dir (str): set the associated source Fastq
+            directory (optional). If 'None' then defaults
+            to the previously associated fastq_dir for the
+            QC dir (or the current 'fastq_dir' for the
+            project if that isn't set).
+
+        Returns:
+          String: full path to the QC directory.
+
+        Raises:
+          Exception: if previously stored Fastq source dir
+            doesn't match the one supplied via 'fastq_dir'.
+        """
+        print "Setting up QC directory"
+        if qc_dir is None:
+            qc_dir = os.path.relpath(self.qc_dir,self.dirn)
+            print "Assuming default QC dir: %s" % qc_dir
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(self.dirn,qc_dir)
+        if not os.path.exists(qc_dir):
+            print "Creating QC dir: %s" % qc_dir
+            bcf_utils.mkdir(qc_dir)
+        else:
+            print "QC dir already exists: %s" % qc_dir
+        # Set up metadata
+        qc_info = self.qc_info(qc_dir)
+        print "qc_dir            : %s" % qc_dir
+        print "Supplied fastq_dir: %s" % fastq_dir
+        print "Stored fastq_dir  : %s" % qc_info.fastq_dir
+        if fastq_dir is None:
+            if qc_info.fastq_dir is not None:
+                fastq_dir = qc_info.fastq_dir
+                print "Using stored Fastq dir for this QC dir"
+            else:
+                fastq_dir = os.path.relpath(self.fastq_dir,self.dirn)
+                print "Assuming default Fastq dir: %s" % fastq_dir
+        if qc_info.fastq_dir is not None:
+            if qc_info.fastq_dir != fastq_dir:
+                raise Exception("Project '%s': supplied Fastq dir ('%s') "
+                                "differs from stored dir ('%s') for QC "
+                                "dir '%s'" % (self.name,
+                                              fastq_dir,
+                                              qc_info.fastq_dir,
+                                              qc_dir))
+        print "Setting associated Fastq dir: %s" % fastq_dir
+        qc_info['fastq_dir'] = fastq_dir
+        qc_info.save()
+        # Return the path to the QC directory
+        return qc_dir
+
     def use_qc_dir(self,qc_dir):
         """
         Switch the default QC outputs directory
@@ -655,6 +718,15 @@ class AnalysisProject:
         if not os.path.isabs(self._qc_dir):
             self._qc_dir = os.path.join(self.dirn,
                                         self._qc_dir)
+
+    def qc_info(self,qc_dir):
+        """
+        Fetch the metadata object for with QC dir
+        """
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(self.dirn,qc_dir)
+        qc_info = os.path.join(qc_dir,"qc.info")
+        return AnalysisProjectQCDirInfo(filen=qc_info)
 
     def create_directory(self,illumina_project=None,fastqs=None,
                          fastq_dir=None,
@@ -1539,6 +1611,32 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+class AnalysisProjectQCDirInfo(MetadataDict):
+    """Class for storing metadata for a QC output directory
+
+    Provides a set of metadata items which are loaded from
+    and saved to an external file.
+
+    The data items are:
+
+    fastq_dir: the name of the associated Fastq subdirectory
+    """
+    def __init__(self,filen=None):
+        """Create a new AnalysisProjectQCDirInfo instance
+
+        Arguments:
+          filen: (optional) name of the tab-delimited file
+            with key-value pairs to load in.
+        """
+        MetadataDict.__init__(self,
+                              attributes = {
+                                  'fastq_dir':'Fastq dir',
+                              },
+                              order = (
+                                  'fastq_dir',
+                              ),
+                              filen=filen)
 
 class OutputFiles:
     """Class for managing multiple output files
