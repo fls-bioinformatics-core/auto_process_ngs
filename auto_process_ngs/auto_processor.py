@@ -2590,9 +2590,9 @@ class AutoProcess:
         else:
             print "Copying QC to local directory"
             print "dirn:\t%s" % location.path
-        if dirn is None:
+        if location.path is None:
             raise Exception, "No target directory specified"
-        dirn = os.path.join(location.path,
+        dirn = os.path.join(str(location),
                             os.path.basename(self.analysis_dir))
         # Get general data
         analysis_dir = utils.AnalysisDir(self.analysis_dir)
