@@ -631,11 +631,21 @@ class AnalysisProject:
         else:
             return 'fastq'
 
-    def use_fastq_dir(self,fastq_dir):
+    def use_fastq_dir(self,fastq_dir=None):
         """
         Switch fastq directory and repopulate
+
+        Switch to a specified source fastq dir, or to the
+        'default' if none is supplied
         """
-        if fastq_dir not in self.fastq_dirs:
+        if fastq_dir is None:
+            if 'fastqs' in self.fastq_dirs:
+                fastq_dir = 'fastqs'
+            elif '.' in self.fastq_dirs:
+                fastq_dir = '.'
+            else:
+                fastq_dir = self.fastq_dirs[0]
+        elif fastq_dir not in self.fastq_dirs:
             raise Exception("Fastq dir '%s' not found in "
                             "project '%s' (%s)" %
                             (fastq_dir,self.name,self.dirn))
@@ -675,7 +685,7 @@ class AnalysisProject:
             qc_dir = os.path.join(self.dirn,qc_dir)
         if not os.path.exists(qc_dir):
             print "Creating QC dir: %s" % qc_dir
-            bcf_utils.mkdir(qc_dir)
+            bcf_utils.mkdir(qc_dir,mode=0775)
         else:
             print "QC dir already exists: %s" % qc_dir
         # Set up metadata

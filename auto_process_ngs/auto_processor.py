@@ -2299,19 +2299,14 @@ class AutoProcess:
         # pipeline with the associated fastq.gz files
         for project in projects:
             print "*** Setting up QC for %s ***" % project.name
+            # Set up qc directory
+            qc_dir = project.setup_qc_dir(qc_dir,fastq_dir=fastq_dir)
+            project.use_qc_dir(qc_dir)
+            print "Using QC directory %s" % project.qc_dir
             # Sort out fastq source
-            if fastq_dir is not None:
-                project.use_fastq_dir(fastq_dir)
-                print "Set fastq_dir to %s" % project.fastq_dir
-            # Sort out qc directory
-            if qc_dir is not None:
-                project.use_qc_dir(qc_dir)
-                print "Set QC directory to %s" % project.qc_dir
-            # Make the qc directory if it doesn't exist
-            qc_dir = project.qc_dir
-            if not os.path.exists(qc_dir):
-                print "Making QC directory: %s" % qc_dir
-                bcf_utils.mkdir(qc_dir,mode=0775)
+            fastq_dir = project.qc_info(qc_dir).fastq_dir
+            project.use_fastq_dir(fastq_dir)
+            print "Set fastq_dir to %s" % project.fastq_dir
             # Set up the logs directory
             log_dir = os.path.join(qc_dir,'logs')
             if not os.path.exists(log_dir):
