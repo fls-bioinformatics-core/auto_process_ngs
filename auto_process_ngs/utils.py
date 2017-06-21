@@ -1142,7 +1142,8 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             self[key] = None
         if self.__filen:
             # Load data from external file
-            load(self,self.__filen)
+            if os.path.exists(self.__filen):
+                self.load(self.__filen)
         # Set up order of keys for output
         if order is None:
             self.__key_order = self.__attributes.keys()
