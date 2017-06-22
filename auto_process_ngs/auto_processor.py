@@ -2357,7 +2357,8 @@ class AutoProcess:
                     '--title','%s/%s' % (self.run_name,project.name),
                     '--filename',multiqc_out,
                     '--force',
-                    qc_dir)
+                    project_qc_dir)
+                print "Running %s" % multiqc_cmd
                 label = "multiqc.%s" % project.name
                 job = sched.submit(multiqc_cmd,
                                    name=label,
