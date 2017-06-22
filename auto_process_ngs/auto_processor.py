@@ -2355,7 +2355,7 @@ class AutoProcess:
                 multiqc_cmd = applications.Command(
                     'multiqc',
                     '--title','%s/%s' % (self.run_name,project.name),
-                    '--filename',multiqc_out,
+                    '--filename','./%s' % multiqc_out,
                     '--force',
                     project_qc_dir)
                 print "Running %s" % multiqc_cmd
