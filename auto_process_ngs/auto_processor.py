@@ -2300,15 +2300,15 @@ class AutoProcess:
         for project in projects:
             print "*** Setting up QC for %s ***" % project.name
             # Set up qc directory
-            qc_dir = project.setup_qc_dir(qc_dir,fastq_dir=fastq_dir)
-            project.use_qc_dir(qc_dir)
+            project_qc_dir = project.setup_qc_dir(qc_dir,fastq_dir=fastq_dir)
+            project.use_qc_dir(project_qc_dir)
             print "Using QC directory %s" % project.qc_dir
             # Sort out fastq source
-            fastq_dir = project.qc_info(qc_dir).fastq_dir
+            fastq_dir = project.qc_info(project_qc_dir).fastq_dir
             project.use_fastq_dir(fastq_dir)
             print "Set fastq_dir to %s" % project.fastq_dir
             # Set up the logs directory
-            log_dir = os.path.join(qc_dir,'logs')
+            log_dir = os.path.join(project_qc_dir,'logs')
             if not os.path.exists(log_dir):
                 print "Making QC logs directory: %s" % log_dir
                 bcf_utils.mkdir(log_dir,mode=0775)
@@ -2323,7 +2323,7 @@ class AutoProcess:
                 group = None
                 print "Examining files in sample %s" % sample.name
                 for fq in sample.fastq:
-                    if sample.verify_qc(qc_dir,fq):
+                    if sample.verify_qc(project_qc_dir,fq):
                         logging.debug("\t%s: QC verified" % fq)
                     else:
                         print "\t%s: setting up QC run" % os.path.basename(fq)
@@ -2341,7 +2341,7 @@ class AutoProcess:
                         if fastq_screen_subset is None:
                             fastq_screen_subset = 0
                         qc_cmd.add_args('--subset',fastq_screen_subset,
-                                        '--qc_dir',qc_dir)
+                                        '--qc_dir',project_qc_dir)
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
@@ -2350,7 +2350,8 @@ class AutoProcess:
                     groups.append(group.name)
             # Add MultiQC job (if requested)
             if run_multiqc:
-                multiqc_out = "multi%s_report.html" % os.path.basename(qc_dir)
+                multiqc_out = "multi%s_report.html" % \
+                              os.path.basename(project_qc_dir)
                 multiqc_cmd = applications.Command(
                     'multiqc',
                     '--title','%s/%s' % (self.run_name,project.name),
