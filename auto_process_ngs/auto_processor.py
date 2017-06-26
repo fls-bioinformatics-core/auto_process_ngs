@@ -2779,7 +2779,7 @@ class AutoProcess:
                     fileops.copy(qc_zip,dirn)
                     fileops.unzip(os.path.join(dirn,
                                                os.path.basename(qc_zip)),
-                                  dirn)
+                                  fileops.Location(dirn).path)
                 except Exception, ex:
                     print "Failed to copy QC report: %s" % ex
                     report_copied = False
