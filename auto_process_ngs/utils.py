@@ -898,6 +898,8 @@ class AnalysisProject:
         """
         if qc_dir is None:
             qc_dir = self._qc_dir
+        elif not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(self.dirn,qc_dir)
         if not (force or self.verify_qc(qc_dir=qc_dir)):
             logger.debug("Failed to generate QC report for %s: QC "
                           "not verified and force not specified"
@@ -1000,6 +1002,10 @@ class AnalysisProject:
           Boolean: True if QC run is completed, False
             if QC couldn't be verified.
         """
+        if qc_dir is None:
+            qc_dir = self._qc_dir
+        elif not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(self.dirn,qc_dir)
         try:
             return self.qc.verify(qc_dir=qc_dir)
         except AttributeError:
