@@ -1220,12 +1220,15 @@ class RunQC(PipelineTask):
             fastq_dir=self.args.fastq_dir,
             fastq_attrs=self.fastq_attrs)
         batch_size = self.args.batch_size
-        fastqs = []
-        for sample in project.samples:
-            fastqs.extend(sample.fastq)
         # Make the output qc directory
         self.qc_dir = project.setup_qc_dir(self.args.qc_dir)
         print "QC dir: %s" % self.qc_dir
+        # Gather fastqs to run QC on
+        fastqs = []
+        for sample in project.samples:
+            for fq in sample.fastq:
+                if not sample.verify_qc(self.qc_dir,fq):
+                    fastqs.append(fq)
         # Set up QC run for batches of fastqs
         while fastqs:
             self.add_cmd(IlluminaQC(fastqs[:batch_size],
