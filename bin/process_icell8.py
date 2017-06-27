@@ -260,6 +260,7 @@ class PipelineTask(object):
         self._task_name = "%s.%s" % (self._name.lower().replace(' ','_'),
                                      uuid.uuid4())
         self._completed = False
+        self._stdout_files = []
         self._exit_code = 0
         # Deal with subclass arguments
         try:
@@ -284,6 +285,13 @@ class PipelineTask(object):
             return None
         else:
             return self._exit_code
+    @property
+    def stdout(self):
+        stdout = []
+        for f in self._stdout_files:
+            with open(f,'r') as fp:
+                stdout.append(fp.read())
+        return '\n'.join(stdout)
     def name(self):
         return self._task_name
     def report(self,s):
@@ -317,11 +325,13 @@ class PipelineTask(object):
             try:
                 if job.exit_code != 0:
                     self._exit_code += 1
+                self._stdout_files.append(job.log)
             except AttributeError:
                 # Assume it's a group
                 for j in job.jobs:
                     if j.exit_code != 0:
                         self._exit_code += 1
+                    self._stdout_files.append(j.log)
         if self._exit_code != 0:
             logger.critical("%s failed: exit code %s"
                             % (self._name,self._exit_code))
@@ -931,6 +941,8 @@ class FilterICell8Fastqs(PipelineTask):
                 mode=self.args.mode,
                 discard_unknown_barcodes=self.args.discard_unknown_barcodes,
                 quality_filter=self.args.quality_filter))
+    def finish(self):
+        print self.stdout
     def output(self):
         out_dir = self.args.filter_dir
         return AttributeDictionary(
