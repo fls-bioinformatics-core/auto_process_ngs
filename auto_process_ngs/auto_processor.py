@@ -2571,7 +2571,10 @@ class AutoProcess:
         # Set the group
         if group is not None:
             print "Setting group of archived files to '%s'" % group
-            fileops.set_group(group,archive_dir)
+            fileops.set_group(
+                group,
+                os.path.join(archive_dir,
+                             os.path.basename(self.analysis_dir)))
         # Finish
         return retval
 
