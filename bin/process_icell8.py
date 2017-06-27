@@ -803,6 +803,27 @@ class IlluminaQC(PipelineCommand):
                 cmd.add_args('--qc_dir',self.qc_dir)
         return cmd
 
+class MultiQC(PipelineCommand):
+    """
+    Run the MultiQC program on a set of QC outputs
+    """
+    def init(self,qc_dir,out_file,title):
+        """
+        Set up parameters
+        """
+        self.qc_dir = qc_dir
+        self.out_file = out_file
+        self.title = title
+    def cmd(self):
+        """
+        Build the command
+        """
+        return Command('multiqc',
+                       '--title',self.title,
+                       '--filename',self.out_file,
+                       '--force',
+                       self.qc_dir)
+
 class RemoveDirectory(PipelineCommand):
     """
     Command to remove a directory and its contents
@@ -1277,6 +1298,36 @@ class RunQC(PipelineTask):
             report_zip=self.qc_report,
         )
 
+class RunMultiQC(PipelineTask):
+    """
+    """
+    def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
+        self.multiqc_out = None
+        self.fastq_attrs = ICell8FastqAttrs
+    def setup(self):
+        project = AnalysisProject(
+            os.path.basename(self.args.project_dir),
+            self.args.project_dir,
+            fastq_dir=self.args.fastq_dir,
+            fastq_attrs=self.fastq_attrs)
+        project.use_qc_dir(self.args.qc_dir)
+        multiqc_out = os.path.join(project.dirn,
+                                   "multi%s_report.html" % \
+                                   os.path.basename(project.qc_dir))
+        if project.info.run is not None:
+            title = "%s/%s" % (project.info.run,
+                               project.name)
+        else:
+            title = "%s" % project.name
+        self.add_cmd(MultiQC(project.qc_dir,
+                             multiqc_out,
+                             title))
+        self.multiqc_out = multiqc_out
+    def output(self):
+        return AttributeDictionary(
+            multiqc_out=self.multiqc_out,
+        )
+
 class CleanupDirectory(PipelineTask):
     """
     """
@@ -1734,20 +1785,30 @@ if __name__ == "__main__":
                  runner=runners['contaminant_filter'])
 
     # Run the QC
-    run_qc_barcodes = RunQC("Run QC per barcode",
+    run_qc_barcodes = RunQC("Run QC for barcodes",
                             outdir,
                             nthreads=args.threads,
                             fastq_dir="fastqs.barcodes",
                             qc_dir="qc.barcodes")
+    multiqc_barcodes = RunMultiQC("Run MultiQC for barcodes",
+                                  outdir,
+                                  fastq_dir="fastqs.barcodes",
+                                  qc_dir="qc.barcodes")
     ppl.add_task(run_qc_barcodes,requires=(merge_fastqs,),
                  runner=runners['contaminant_filter'])
-    run_qc_samples = RunQC("Run QC per sample",
+    ppl.add_task(multiqc_barcodes,requires=(run_qc_barcodes,))
+    run_qc_samples = RunQC("Run QC for samples",
                            outdir,
                            nthreads=args.threads,
                            fastq_dir="fastqs.samples",
                            qc_dir="qc.samples")
+    multiqc_samples = RunMultiQC("Run MultiQC for samples",
+                                 outdir,
+                                 fastq_dir="fastqs.samples",
+                                 qc_dir="qc.samples")
     ppl.add_task(run_qc_samples,requires=(sample_fastqs,),
                  runner=runners['contaminant_filter'])
+    ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
 
     # Cleanup outputs
     cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
