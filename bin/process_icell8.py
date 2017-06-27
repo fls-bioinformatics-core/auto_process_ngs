@@ -1334,13 +1334,10 @@ class ICell8FastqAttrs(BaseFastqAttrs):
            (len(name[-1]) > 0) and \
            (not filter(lambda c: c not in "AGCT",name[-1])):
             self.barcode_sequence = name[-1]
-            name = name[:-1]
         # Assume sample name is whatever's left over
         self.sample_name = '.'.join(name)
     def __repr__(self):
         name = [self.sample_name]
-        if self.barcode_sequence:
-            name.append(self.barcode_sequence)
         if self.read_number:
             name.append("r%s" % self.read_number)
         return '.'.join(name)
