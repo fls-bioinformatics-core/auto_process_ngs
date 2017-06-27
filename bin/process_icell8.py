@@ -780,7 +780,7 @@ class IlluminaQC(PipelineCommand):
     """
     Run the 'illumina_qc.sh' script on one or more Fastqs
     """
-    def init(self,fastqs,nthreads=1,working_dir=None):
+    def init(self,fastqs,nthreads=1,working_dir=None,qc_dir=None):
         """
         Set up parameters
         """
@@ -789,6 +789,7 @@ class IlluminaQC(PipelineCommand):
         if working_dir is None:
             working_dir = os.getcwd()
         self.working_dir = os.path.abspath(working_dir)
+        self.qc_dir = qc_dir
     def cmd(self):
         """
         Build the command
@@ -798,6 +799,8 @@ class IlluminaQC(PipelineCommand):
             cmd.add_args('&&','illumina_qc.sh',fastq)
             if self.nthreads > 1:
                 cmd.add_args('--threads',self.nthreads)
+            if self.qc_dir is not None:
+                cmd.add_args('--qc_dir',self.qc_dir)
         return cmd
 
 class RemoveDirectory(PipelineCommand):
@@ -1204,40 +1207,62 @@ class MergeSampleFastqs(PipelineTask):
 class RunQC(PipelineTask):
     """
     """
-    def init(self,project_dir,nthreads=1,batch_size=25):
-        self.qc_dir = os.path.join(self.args.project_dir,'qc')
+    def init(self,project_dir,nthreads=1,batch_size=25,
+             fastq_dir='fastqs',qc_dir='qc'):
+        self.qc_dir = None
         self.qc_report = None
+        self.fastq_attrs = ICell8FastqAttrs
     def setup(self):
         # Gather Fastqs
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
-            fastq_attrs=ICell8FastqAttrs)
+            fastq_dir=self.args.fastq_dir,
+            fastq_attrs=self.fastq_attrs)
         batch_size = self.args.batch_size
         fastqs = []
         for sample in project.samples:
             fastqs.extend(sample.fastq)
         # Make the output qc directory
-        mkdir(self.qc_dir)
+        self.qc_dir = project.setup_qc_dir(self.args.qc_dir)
+        print "QC dir: %s" % self.qc_dir
         # Set up QC run for batches of fastqs
         while fastqs:
             self.add_cmd(IlluminaQC(fastqs[:batch_size],
                                     nthreads=self.args.nthreads,
-                                    working_dir=self.args.project_dir))
+                                    working_dir=self.args.project_dir,
+                                    qc_dir=self.qc_dir))
             fastqs = fastqs[batch_size:]
     def finish(self):
         # Verify the QC outputs for each fastq
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
-            fastq_attrs=ICell8FastqAttrs)
-        if not project.verify_qc():
+            fastq_dir=self.args.fastq_dir,
+            fastq_attrs=self.fastq_attrs)
+        if not project.verify_qc(qc_dir=self.qc_dir):
             print "Failed to verify QC"
             self._exit_code = 1
         else:
             # Generate QC report
             print "Generating QC report"
-            self.qc_report = project.qc_report(force=True)
+            qc_base = os.path.basename(self.qc_dir)
+            out_file = os.path.join(project.dirn,
+                                    '%s_report.html' % qc_base)
+            if project.info.run is not None:
+                title = "%s/%s" % (project.info.run,
+                                   project.name)
+            else:
+                title = "%s" % project.name
+            if self.args.fastq_dir is not None:
+                title = "%s (%s)" % (title,self.args.fastq_dir)
+            title = "%s: QC report" % title
+            print "Title : '%s'" % title
+            print "Report: %s" % out_file
+            self.qc_report = project.qc_report(qc_dir=self.qc_dir,
+                                               title=title,
+                                               report_html=out_file,
+                                               force=True)
             if self.qc_report is None:
                 print "Failed to generate QC report"
                 self._exit_code = 1
@@ -1271,19 +1296,51 @@ class ICell8FastqAttrs(BaseFastqAttrs):
     Used as a custom Fastq name attribute parser for output
     Fastqs from the ICell8 pipeline.
 
-    Fastq names for the final results look like e.g.:
+    Fastq names for the final barcoded files look like e.g.:
 
     icell8.CCAGTTCAGGA.r1.fastq
+
+    For the samples e.g.:
+
+    d1.2.r1.fastq.gz
     """
     def __init__(self,fastq):
         BaseFastqAttrs.__init__(self,fastq)
         name = self.basename.split('.')
-        self.sample_name = '.'.join(name[0:2])
-        self.barcode_sequence = name[1]
-        self.read_number = int(name[2][1:])
+        # Handle the file extension
+        extension = []
+        if name[-1] == "gz":
+            extension.append("gz")
+            name = name[:-1]
+        if name[-1] in ("fastq","fq"):
+            extension.insert(0,name[-1])
+            name = name[:-1]
+        if extension:
+            self.extension = '.'.join(extension)
+        # Get the read number
+        if name[-1].startswith('r'):
+            try:
+                self.read_number = int(name[-1][1:])
+                name = name[:-1]
+            except ValueError:
+                # Can't get a read number
+                self.sample_name = '.'.join(name)
+                return
+        # Get the barcode sequence
+        if (len(name) > 1) and \
+           (len(name[-1]) > 0) and \
+           (not filter(lambda c: c not in "AGCT",name[-1])):
+            self.barcode_sequence = name[-1]
+            name = name[:-1]
+        # Assume sample name is whatever's left over
+        self.sample_name = '.'.join(name)
     def __repr__(self):
-        return "%s.r%s" % (self.sample_name,
-                           self.read_number)
+        name = [self.sample_name]
+        if self.barcode_sequence:
+            name.append(self.barcode_sequence)
+        if self.read_number:
+            name.append("r%s" % self.read_number)
+        return '.'.join(name)
 
 ######################################################################
 # Functions
@@ -1642,13 +1699,13 @@ if __name__ == "__main__":
 
     # Rebatch reads by barcode and sample
     # First: split each batch by barcode
-    barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.barcodes")
+    barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.split_barcodes")
     split_barcodes = SplitByBarcodes("Split batches by barcode",
                                      contaminant_filter.output(),
                                      barcoded_fastqs_dir)
     ppl.add_task(split_barcodes,requires=(contaminant_filter,))
     # Merge (concat) fastqs into single pairs per barcode
-    final_fastqs_dir = os.path.join(icell8_dir,"fastqs")
+    final_fastqs_dir = os.path.join(icell8_dir,"fastqs.barcodes")
     merge_fastqs = MergeBarcodeFastqs("Assemble reads by barcode",
                                       split_barcodes.output(),
                                       filter_fastqs.output().unassigned,
@@ -1677,10 +1734,19 @@ if __name__ == "__main__":
                  runner=runners['contaminant_filter'])
 
     # Run the QC
-    run_qc = RunQC("Run QC",
-                   outdir,
-                   nthreads=args.threads)
-    ppl.add_task(run_qc,requires=(merge_fastqs,),
+    run_qc_barcodes = RunQC("Run QC per barcode",
+                            outdir,
+                            nthreads=args.threads,
+                            fastq_dir="fastqs.barcodes",
+                            qc_dir="qc.barcodes")
+    ppl.add_task(run_qc_barcodes,requires=(merge_fastqs,),
+                 runner=runners['contaminant_filter'])
+    run_qc_samples = RunQC("Run QC per sample",
+                           outdir,
+                           nthreads=args.threads,
+                           fastq_dir="fastqs.samples",
+                           qc_dir="qc.samples")
+    ppl.add_task(run_qc_samples,requires=(sample_fastqs,),
                  runner=runners['contaminant_filter'])
 
     # Cleanup outputs
