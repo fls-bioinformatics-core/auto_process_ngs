@@ -1113,25 +1113,6 @@ class SplitByBarcodes(PipelineTask):
         out_dir = self.args.barcodes_dir
         return FileCollection(out_dir,"*.r*.fastq")
 
-class SplitByBarcodes(PipelineTask):
-    """
-    """
-    def init(self,fastqs,barcodes_dir):
-        pass
-    def setup(self):
-        mkdir(self.args.barcodes_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
-            basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
-            self.add_cmd(SplitAndFilterFastqPair(
-                fastq_pair,
-                self.args.barcodes_dir,
-                basename=basename,
-                mode="barcodes"))
-    def output(self):
-        out_dir = self.args.barcodes_dir
-        return FileCollection(out_dir,"*.r*.fastq")
-
 class MergeBarcodeFastqs(PipelineTask):
     """
     """
