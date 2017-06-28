@@ -2868,11 +2868,11 @@ class AutoProcess:
                         print "No MultiQC report found for %s" % \
                             os.path.basename(qc_dir)
                         multiqc_report = None
-                if multiqc_report:
-                    report_html.append("<a href='%s'>[MultiQC%s]</a>"
-                                       % (final_multiqc,
-                                          (" (%s)" % fastq_dir
-                                           if fastq_dir != 'fastqs' else "")))
+                    if multiqc_report:
+                        report_html.append("<a href='%s'>[MultiQC%s]</a>"
+                                           % (final_multiqc,
+                                              (" (%s)" % fastq_dir
+                                               if fastq_dir != 'fastqs' else "")))
                 # Check there is something to add
                 if not report_html:
                     report_html.append("QC reports not available")
