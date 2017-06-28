@@ -216,7 +216,8 @@ if __name__ == "__main__":
                 data_line[nreads_col] = stats.nreads(barcode)
                 data_line[umis_col] = len(stats.distinct_umis(barcode))
             except KeyError:
-                pass
+                data_line[nreads_col] = 0
+                data_line[umis_col] = 0
         # Write to file
         stats_data.write(filen=stats_file,include_header=True)
 
