@@ -34,6 +34,7 @@ from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.TabFile import TabFile
+from bcftbx.simple_xls import XLSWorkBook
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
@@ -1340,6 +1341,22 @@ class RunMultiQC(PipelineTask):
             multiqc_out=self.multiqc_out,
         )
 
+class ConvertStatsToXLSX(PipelineTask):
+    """
+    Convert the stats file to XLSX format
+    """
+    def init(self,stats_file,xlsx_file):
+        pass
+    def setup(self):
+        convert_to_xlsx(self.args.stats_file,
+                        self.args.xlsx_file,
+                        title="ICell8 stats",
+                        freeze_header=True)
+    def output(self):
+        return AttributeDictionary(
+            xlsx_file=self.args.xlsx_file
+        )
+
 class CleanupDirectory(PipelineTask):
     """
     """
@@ -1421,6 +1438,31 @@ def collect_fastqs(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
+
+def convert_to_xlsx(tsv_file,xlsx_file,title=None,freeze_header=False):
+    """
+    Convert a tab-delimited file to an XLSX file
+
+    Arguments:
+      tsv_file (str): path to the input TSV file
+      xlsx_file (str): path to the output XLSX file
+      title (str): optional, name to give the worksheet in
+        the output XLSX file (defaults to the input file name)
+      freeze_header (bool): optional, if True then 'freezes'
+        the first line of the XLSX file (default is not to
+        freeze the first line)
+    """
+    if title is None:
+        title = os.path.basename(tsv_file)
+    wb = XLSWorkBook(title)
+    ws = wb.add_work_sheet(title)
+    with open(tsv_file,'r') as stats:
+        for line in stats:
+            ws.append_row(data=line.rstrip('\n').split('\t'))
+    # Freeze the top row
+    if freeze_header:
+        ws.freeze_panes = 'A2'
+    wb.save_as_xlsx(xlsx_file)
 
 ######################################################################
 # Main
@@ -1795,6 +1837,13 @@ if __name__ == "__main__":
         nprocs=args.threads)
     ppl.add_task(final_barcode_stats,requires=(merge_fastqs,final_stats),
                  runner=runners['contaminant_filter'])
+
+    # Generate XLSX version of stats
+    xlsx_stats = ConvertStatsToXLSX(
+        "Convert statistics to XLSX",
+        final_barcode_stats.output(),
+        os.path.join(stats_dir,"icell8_stats.xlsx"))
+    ppl.add_task(xlsx_stats,requires=(final_barcode_stats,))
 
     # Run the QC
     run_qc_barcodes = RunQC("Run QC for barcodes",
