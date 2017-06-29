@@ -2352,19 +2352,22 @@ class AutoProcess:
             if run_multiqc:
                 multiqc_out = "multi%s_report.html" % \
                               os.path.basename(project_qc_dir)
-                multiqc_cmd = applications.Command(
-                    'multiqc',
-                    '--title','%s/%s' % (self.run_name,project.name),
-                    '--filename','./%s' % multiqc_out,
-                    '--force',
-                    project_qc_dir)
-                print "Running %s" % multiqc_cmd
-                label = "multiqc.%s" % project.name
-                job = sched.submit(multiqc_cmd,
-                                   name=label,
-                                   wd=project.dirn,
-                                   log_dir=log_dir,
-                                   wait_for=groups)
+                if (not os.path.exists(multiqc_out)) or groups:
+                    multiqc_cmd = applications.Command(
+                        'multiqc',
+                        '--title','%s/%s' % (self.run_name,project.name),
+                        '--filename','./%s' % multiqc_out,
+                        '--force',
+                        project_qc_dir)
+                    print "Running %s" % multiqc_cmd
+                    label = "multiqc.%s" % project.name
+                    job = sched.submit(multiqc_cmd,
+                                       name=label,
+                                       wd=project.dirn,
+                                       log_dir=log_dir,
+                                       wait_for=groups)
+                else:
+                    print "MultiQC report '%s': already exists" % multiqc_out
         # Wait for the scheduler to run all jobs
         sched.wait()
         sched.stop()
