@@ -471,6 +471,9 @@ class PipelineCommand(object):
     ...    def cmd(self):
     ...      return Command('ls',self._dirn)
 
+    To make an instance using this wrapper class:
+
+    >>> ls_command = LsCommand(path)
     """
     def __init__(self,*args,**kws):
         # Set internal name
@@ -497,6 +500,44 @@ class PipelineCommand(object):
         # Must be implemented by the subclass and return a
         # Command instance
         raise NotImplementedError("Subclass must implement 'cmd' method")
+
+class PipelineCommandWrapper(PipelineCommand):
+    """
+    Class for constructing program command lines
+
+    This class is based on the PipelineCommand class but
+    can be used directly (rather than needing to be
+    subclassed).
+
+    For example, to wrap the 'ls' command directly:
+
+    >>> ls_command = PipelineCommandWrapper('ls',dirn)
+
+    It is also possible to extend the command line
+    using the 'add_args' method, for example:
+
+    >>> ls_command = PipelineCommandWrapper('ls')
+    >>> ls.command.add_args(dirn)
+    """
+    def __init__(self,*args):
+        PipelineCommand.__init__(self,*args)
+        self._name = self.__class__.__name__
+        self._cmd = None
+        if args:
+            self._cmd = Command(*args)
+    def add_args(self,*args):
+        # Add additional arguments to extend
+        # the command being built
+        if self._cmd is None:
+            self._cmd = Command(*args)
+        else:
+            self._cmd.add_args(*args)
+    def init(self,*args):
+        # Dummy init which does nothing
+        pass
+    def cmd(self):
+        # Implement the 'cmd' method
+        return self._cmd
 
 ######################################################################
 # ICell8 pipeline commands
@@ -1354,6 +1395,67 @@ class RunMultiQC(PipelineTask):
             multiqc_out=self.multiqc_out,
         )
 
+class CheckICell8Barcodes(PipelineTask):
+    """
+    Check the barcodes are consistent
+
+    This is a sanity check: ensure that the inline barcodes
+    for all reads in the R1 Fastq for the barcode Fastq pairs
+    matches the assigned barcode.
+    """
+    def init(self,fastqs):
+        self.bad_barcodes = None
+    def setup(self):
+        fastq_attrs =ICell8FastqAttrs
+        batch_size = 25
+        # Reduce fastq list to just R1 files
+        fastqs = filter(lambda fq:
+                        fastq_attrs(fq).read_number == 1,
+                        self.args.fastqs)
+        # Set up verification on batches of fastqs
+        while fastqs:
+            cmd = PipelineCommandWrapper()
+            for fq in fastqs[:batch_size]:
+                if fastq_attrs(fq).extension.endswith('.gz'):
+                    cat = 'zcat'
+                else:
+                    cat = 'cat'
+                barcode = fastq_attrs(fq).barcode_sequence
+                if cmd.cmd() is not None:
+                    cmd.add_args("&&")
+                cmd.add_args(
+                    "echo","-n","%s:" % barcode,"&&",
+                    "%s" % cat,fq,"|",
+                    "sed","-n","'2~4p'","|",
+                    "grep","-v","^%s" % barcode,"|",
+                    "wc","-l"
+                )
+            self.add_cmd(cmd)
+            fastqs = fastqs[batch_size:]
+    def finish(self):
+        # Read the stdout looking for barcodes
+        # with non-zero counts
+        print self.stdout
+        self.bad_barcodes = []
+        for line in self.stdout.split('\n'):
+            try:
+                barcode,count = line.split(':')
+                count = int(count)
+                if count > 0:
+                    self.bad_barcodes.append((barcode,count))
+            except ValueError:
+                pass
+        # If there are bad barcodes then fail
+        if self.bad_barcodes:
+            for barcode in self.bad_barcodes:
+                print "ERROR %s: %d non-matching reads" % (barcode[0],
+                                                           barcode[1])
+            self.fail()
+    def output(self):
+        return AttributeDictionary(
+            bad_barcodes=self.bad_barcodes
+        )
+
 class ConvertStatsToXLSX(PipelineTask):
     """
     Convert the stats file to XLSX format
@@ -1850,6 +1952,12 @@ if __name__ == "__main__":
         nprocs=args.threads)
     ppl.add_task(final_barcode_stats,requires=(merge_fastqs,final_stats),
                  runner=runners['contaminant_filter'])
+
+    # Verify that barcodes are okay
+    check_barcodes = CheckICell8Barcodes(
+        "Verify barcodes are consistent",
+        merge_fastqs.output().assigned)
+    ppl.add_task(check_barcodes,requires=(merge_fastqs,))
 
     # Generate XLSX version of stats
     xlsx_stats = ConvertStatsToXLSX(
