@@ -908,25 +908,6 @@ class MultiQC(PipelineCommand):
                        '--force',
                        self.qc_dir)
 
-class RemoveDirectory(PipelineCommand):
-    """
-    Command to remove a directory and its contents
-    """
-    def init(self,dirn):
-        """
-        Set up parameters
-        """
-        self.dirn = os.path.abspath(dirn)
-    def cmd(self):
-        """
-        Build the command
-        """
-        # Does "rm -f DIRN/* && rmdir DIRN"
-        return Command(
-            "rm","-f","%s" % os.path.join(self.dirn,'*'),
-            "&&",
-            "rmdir","%s" % self.dirn)
-
 ######################################################################
 # ICell8 pipeline tasks
 ######################################################################
@@ -1478,10 +1459,15 @@ class CleanupDirectory(PipelineTask):
     def init(self,dirn):
         pass
     def setup(self):
-        if not os.path.isdir(self.args.dirn):
+        dirn = os.path.abspath(self.args.dirn)
+        if not os.path.isdir(dirn):
             self.report("No directory '%s'" % self.args.dirn)
         else:
-            self.add_cmd(RemoveDirectory(self.args.dirn))
+            self.add_cmd(
+                PipelineCommandWrapper(
+                    "rm","-f","%s" % os.path.join(dirn,'*'),
+                    "&&",
+                    "rmdir","%s" % dirn))
 
 ######################################################################
 # Classes
