@@ -729,7 +729,7 @@ class AutoProcess:
             for target in targets:
                 target = fileops.Location(target)
                 if target.is_remote:
-                    sample_sheet = target.location
+                    sample_sheet = str(target)
                 else:
                     if os.path.isabs(target.path):
                         sample_sheet = target.path
