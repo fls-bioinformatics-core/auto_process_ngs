@@ -891,7 +891,7 @@ class GetICell8PolyGStats(GetICell8Stats):
             try:
                 perc_poly_g = (float(line['Nreads_poly_g'])/
                                float(line['Nreads_filtered'])*100.0)
-            except ValueError:
+            except ZeroDivisionError:
                 perc_poly_g = 0.0
             line["%reads_poly_g"] = ("%.2f" % perc_poly_g)
         # Write out the updated stats file
