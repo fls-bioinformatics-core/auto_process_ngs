@@ -146,6 +146,18 @@ class Pipeline(object):
     def report(self,s):
         print "%s [%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                               self._name,s)
+    def terminate(self):
+        # Terminates the pipeline
+        self.report("Terminating pipeline")
+        # Dump all pending tasks
+        self._pending = []
+        # Stop all running tasks
+        if self._running:
+            self.report("Stopping running tasks:")
+            for task in self._running:
+                self.report("- %s" % task.name())
+                task.terminate()
+        return 1
     def run(self,sched=None,log_dir=None,scripts_dir=None):
         # Execute the pipeline
         self.report("Started")
@@ -180,13 +192,6 @@ class Pipeline(object):
                 else:
                     running.append(task)
             self._running = running
-            # Check for finished tasks that have failed
-            if failed:
-                self.report("Following tasks failed:")
-                for task in failed:
-                    self.report("- %s" % task.name())
-                self.report("Terminating prematurely")
-                return 1
             # Check for pending tasks that can start
             pending = []
             for task,requirements,kws in self._pending:
@@ -214,12 +219,18 @@ class Pipeline(object):
                                     (task.name(),ex))
                         logger.critical("Failed to start task '%s': %s" %
                                         (task.name(),ex))
-                        return 1
+                        failed.append(task)
                     self._running.append(task)
                     update = True
                 else:
                     pending.append((task,requirements,kws))
             self._pending = pending
+            # Check for tasks that have failed
+            if failed:
+                self.report("Following tasks failed:")
+                for task in failed:
+                    self.report("- %s" % task.name())
+                return self.terminate()
             # Pause before checking again
             if not update:
                 time.sleep(5)
@@ -263,6 +274,9 @@ class PipelineTask(object):
         self._completed = False
         self._stdout_files = []
         self._exit_code = 0
+        # Running jobs
+        self._jobs = []
+        self._groups = []
         # Deal with subclass arguments
         try:
             self._callargs = inspect.getcallargs(self.init,*args,**kws)
@@ -295,6 +309,13 @@ class PipelineTask(object):
         return '\n'.join(stdout)
     def name(self):
         return self._task_name
+    def fail(self,exit_code=1,message=None):
+        # Register the task as failing
+        if message:
+            self.report("failed: %s" % message)
+        self.report("failed: exit code set to %s" % exit_code)
+        self._completed = True
+        self._exit_code = exit_code
     def report(self,s):
         print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                     self._name,s)
@@ -375,6 +396,7 @@ class PipelineTask(object):
                 group.close()
                 callback_name = group.name
                 callback_function = self.task_completed
+                self._groups.append(group)
             else:
                 # Run a single job
                 cmd = cmds[0]
@@ -387,6 +409,7 @@ class PipelineTask(object):
                                    wait_for=wait_for)
                 callback_name = job.name
                 callback_function = self.task_completed
+                self._jobs.append(job)
             # If asynchronous then setup callback and
             # return immediately
             if async:
@@ -410,6 +433,15 @@ class PipelineTask(object):
             self.invoke(self.finish)
             self._completed = True
         return self
+    def terminate(self):
+        # Terminate the job
+        if self.completed:
+            return
+        for group in self._groups:
+            for job in group.jobs:
+                job.terminate()
+        for job in self._jobs:
+            job.terminate()
     def init(self,*args,**kws):
         pass
     def setup(self):
@@ -1260,7 +1292,7 @@ class RunQC(PipelineTask):
             fastq_attrs=self.fastq_attrs)
         if not project.verify_qc(qc_dir=self.qc_dir):
             print "Failed to verify QC"
-            self._exit_code = 1
+            self.fail(exit_code=1)
         else:
             # Generate QC report
             print "Generating QC report"
@@ -1283,7 +1315,7 @@ class RunQC(PipelineTask):
                                                force=True)
             if self.qc_report is None:
                 print "Failed to generate QC report"
-                self._exit_code = 1
+                self.fail(exit_code=1)
             else:
                 print "QC report: %s" % self.qc_report
     def output(self):
