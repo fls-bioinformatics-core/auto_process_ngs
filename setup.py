@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-16 Peter Briggs
+Copyright (C) University of Manchester 2013-17 Peter Briggs
 
 """
 
@@ -34,6 +34,7 @@ setup(name = "auto_process_ngs",
       # do pip install -r requirements.txt first
       install_requires = ['pillow',
                           'matplotlib',
+                          'pandas',
                           'genomics-bcftbx',
                           'nebulizer',],
       dependency_links=['git+https://github.com/fls-bioinformatics-core/genomics.git#egg=genomics-bcftbx'],
