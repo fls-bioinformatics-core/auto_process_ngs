@@ -1453,6 +1453,21 @@ class ConvertStatsToXLSX(PipelineTask):
             xlsx_file=self.args.xlsx_file
         )
 
+class ReportProcessing(PipelineTask):
+    """
+    Generate an HTML report on the processing
+    """
+    def init(self,stats_file):
+        pass
+    def setup(self):
+        self.add_cmd = PipelineCommandWrapper(
+            'icell8_report.py',
+            self.args.stats_file)
+    def output(self):
+        return AttributeDictionary(
+            report_html="icell8_processing.html"
+        )
+
 class CleanupDirectory(PipelineTask):
     """
     """
@@ -1977,6 +1992,11 @@ if __name__ == "__main__":
     ppl.add_task(run_qc_samples,requires=(sample_fastqs,),
                  runner=runners['contaminant_filter'])
     ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
+
+    # Final report
+    final_report = ReportProcessing("Generate processing report",
+                                    final_barcode_stats.output()))
+    ppl.add_task(final_report,requires=(final_barcode_stats,))
 
     # Cleanup outputs
     cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
