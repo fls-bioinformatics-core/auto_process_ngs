@@ -1893,7 +1893,6 @@ class AutoProcess:
             while i < len(sample_sheet_data):
                 line = sample_sheet_data[i]
                 if line['Lane'] in lanes:
-                    print "Keeping %s" % line
                     i += 1
                 else:
                     del(sample_sheet_data[i])
