@@ -165,21 +165,23 @@ def cellranger_count(unaligned_dir,
         for sample in sample_names[project]:
             print "Sample: %s" % sample
             # Check if outputs already exist
-            count_dir = os.path.join(project,
-                                     "cellranger_count",
-                                     sample,
-                                     "outs")
+            count_dir = os.path.abspath(
+                os.path.join(project,
+                             "cellranger_count",
+                             sample,
+                             "outs"))
             if os.path.isdir(count_dir):
                 print "-- %s: outputs exist, nothing to do" % sample
                 continue
             else:
                 print "-- %s: setting up cellranger count" % sample
             # Set up job for this sample
-            work_dir = "cellranger_count.%s.%s.tmp" % (project,sample)
+            work_dir = os.path.abspath("cellranger_count.%s.%s.tmp" %
+                                       (project,sample))
             mkdir(work_dir)
             cmd = Command("cellranger","count",
                           "--id",sample,
-                          "--fastqs",unaligned_dir,
+                          "--fastqs",os.path.abspath(unaligned_dir),
                           "--sample",sample,
                           "--transcriptome",transcriptome)
             add_cellranger_args(cmd,
