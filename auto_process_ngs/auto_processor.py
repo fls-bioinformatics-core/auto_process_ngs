@@ -1882,7 +1882,7 @@ class AutoProcess:
         timestamp = time.strftime("%Y%m%d%H%M%S")
         tmp_sample_sheet = os.path.join(self.tmp_dir,
                                         "SampleSheet.verify.%s.csv" %
-                                        timestamp))
+                                        timestamp)
         sample_sheet_data = IlluminaData.SampleSheet(self.params.sample_sheet)
         if lanes is not None:
             # Remove lanes
