@@ -229,6 +229,13 @@ def add_make_fastqs_command(cmdparser):
                             dest="sample_sheet",default=None,
                             help="use an alternative sample sheet to the default "
                             "'custom_SampleSheet.csv' created on setup.")
+    bcl_to_fastq.add_option('--lanes',action='store',
+                            dest='lanes',default=None,
+                            help="list of lanes to include in the processing. "
+                            "LANES should be single integer (e.g. 1), a list "
+                            "of integers (e.g. 1,3,...), a range (e.g. 1-3), "
+                            "or a combination (e.g. 1,3-5,7). Default is to "
+                            "include all lanes")
     bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
                             dest='ignore_missing_bcl',default=False,
                             help="use the --ignore-missing-bcl option for bcl2fastq (treat "
@@ -853,6 +860,11 @@ if __name__ == "__main__":
                 create_empty_fastqs = False
             else:
                 create_empty_fastqs = None
+            # Deal with --lanes
+            if options.lanes is not None:
+                lanes = bcf_utils.parse_lanes(options.lanes)
+            else:
+                lanes = None
             # Do the make_fastqs step
             d.make_fastqs(skip_rsync=options.skip_rsync,
                           nprocessors=options.nprocessors,
@@ -865,6 +877,7 @@ if __name__ == "__main__":
                           unaligned_dir=options.unaligned_dir,
                           sample_sheet=options.sample_sheet,
                           bases_mask=options.bases_mask,
+                          lanes=lanes,
                           no_lane_splitting=no_lane_splitting,
                           minimum_trimmed_read_length=options.minimum_trimmed_read_length,
                           mask_short_adapter_reads=options.mask_short_adapter_reads,
