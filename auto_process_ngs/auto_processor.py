@@ -1433,7 +1433,7 @@ class AutoProcess:
         print "Bases mask            : %s" % bases_mask
         print "Lanes                 : %s" % ('all' if lanes is None
                                               else
-                                              ','.join([str(l) for l in lanes])
+                                              ','.join([str(l) for l in lanes]))
         print "Nmismatches           : %d" % nmismatches
         print "Nprocessors           : %s" % nprocessors
         print "Ignore missing bcl    : %s" % ignore_missing_bcl
