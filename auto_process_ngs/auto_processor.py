@@ -1495,11 +1495,11 @@ class AutoProcess:
             logging.error("Unable to find outputs from bclToFastq (%s)" % ex)
             return
         if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
-                                                            sample_sheet):
+                                                            tmp_sample_sheet):
             logging.error("Failed to verify bcl to fastq outputs against sample sheet")
             # Get a list of missing FASTQs
             missing_fastqs = IlluminaData.list_missing_fastqs(illumina_data,
-                                                              sample_sheet)
+                                                              tmp_sample_sheet)
             if not missing_fastqs:
                 raise Exception("Verify failed but no missing FASTQs?")
             missing_fastqs_file = os.path.join(self.log_dir,"missing_fastqs.log")
