@@ -1073,7 +1073,7 @@ class AutoProcess:
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
                     skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    create_empty_fastqs=None,runner=None):
+                    lanes=None,create_empty_fastqs=None,runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1125,6 +1125,10 @@ class AutoProcess:
                                 barcode sequences analysis
           skip_bcl2fastq      : if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
+          lanes               : (optional) specify a list of lane numbers to
+                                use in the processing; lanes not in the list
+                                will be excluded (default is to include all
+                                lanes)
           create_empty_fastqs : if True then create empty 'placeholder' fastq
                                 files for any missing fastqs after bcl2fastq
                                 (must have completed with zero exit status)
@@ -1134,7 +1138,8 @@ class AutoProcess:
         """
         #
         # Check for pre-existing bcl2fastq outputs
-        if self.verify_bcl_to_fastq(unaligned_dir=unaligned_dir):
+        if self.verify_bcl_to_fastq(unaligned_dir=unaligned_dir,
+                                    lanes=lanes):
             print "Bcl to fastq outputs already present"
             # Check for project metadata file
             self.make_project_metadata_file()
@@ -1168,11 +1173,12 @@ class AutoProcess:
                                   minimum_trimmed_read_length=minimum_trimmed_read_length,
                                   mask_short_adapter_reads=mask_short_adapter_reads,
                                   nprocessors=nprocessors,
+                                  lanes=lanes,
                                   create_empty_fastqs=create_empty_fastqs,
                                   runner=runner)
             except Exception,ex:
                 raise Exception("Bcl2fastq stage failed: '%s'" % ex)
-            if not self.verify_bcl_to_fastq():
+            if not self.verify_bcl_to_fastq(lanes=lanes):
                 raise Exception("Bcl2fastq failed to produce expected outputs")
         # Generate statistics
         if generate_stats:
@@ -1245,7 +1251,7 @@ class AutoProcess:
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None,create_empty_fastqs=None):
+                     runner=None,lanes=None,create_empty_fastqs=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1275,6 +1281,10 @@ class AutoProcess:
           create_empty_fastqs: if True then create empty 'placeholder' fastq
             files for any missing fastqs after bcl2fastq (must have completed
             with zero exit status)
+          lanes: (optional) specify a list of lane numbers (integers) to
+            include from the samplesheet; lanes not in the list will be
+            excluded (and will not be included in the processing). Default is
+            to include all lanes from the sample sheet.
         
         """
         # Directories
@@ -1361,7 +1371,21 @@ class AutoProcess:
         tmp_sample_sheet = os.path.join(self.tmp_dir,
                                         "SampleSheet.%s.csv" % timestamp)
         print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
-        IlluminaData.SampleSheet(sample_sheet).write(tmp_sample_sheet,fmt=fmt)
+        sample_sheet_data = IlluminaData.SampleSheet(sample_sheet)
+        # Select subset of lanes if requested
+        if lanes is not None:
+            print "Updating to include only specified lanes: %s" % \
+                ','.join([str(l) for l in lanes])
+            i = 0
+            while i < len(sample_sheet_data):
+                line = sample_sheet_data[i]
+                if line['Lane'] in lanes:
+                    print "Keeping %s" % line
+                    i += 1
+                else:
+                    del(sample_sheet_data[i])
+        # Write out the sample sheet
+        sample_sheet_data.write(tmp_sample_sheet,fmt=fmt)
         # Put a copy in the log directory
         shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
@@ -1828,11 +1852,14 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
-    def verify_bcl_to_fastq(self,unaligned_dir=None):
+    def verify_bcl_to_fastq(self,unaligned_dir=None,lanes=None):
         """Check that bcl to fastq outputs match sample sheet predictions
 
         Arguments:
-          unaligned_dir
+          unaligned_dir (str): explicitly specify the bcl2fastq output
+            directory to check
+          lanes (list): specify a list of lane numbers (integers) to
+            check (others will be ignored)
 
         Returns:
           True if outputs match sample sheet, False otherwise.
@@ -1851,17 +1878,37 @@ class AutoProcess:
         if not os.path.isdir(bcl_to_fastq_dir):
             # Directory doesn't exist
             return False
+        # Make a temporary sample sheet to verify against
+        timestamp = time.strftime("%Y%m%d%H%M%S")
+        tmp_sample_sheet = os.path.join(self.tmp_dir,
+                                        "SampleSheet.verify.%s.csv" %
+                                        timestamp))
+        sample_sheet_data = IlluminaData.SampleSheet(self.params.sample_sheet)
+        if lanes is not None:
+            # Remove lanes
+            i = 0
+            while i < len(sample_sheet_data):
+                line = sample_sheet_data[i]
+                if line['Lane'] in lanes:
+                    print "Keeping %s" % line
+                    i += 1
+                else:
+                    del(sample_sheet_data[i])
+        sample_sheet_data.write(tmp_sample_sheet)
         # Try to create an IlluminaData object
         try:
-            illumina_data = IlluminaData.IlluminaData(self.analysis_dir,
-                                                      unaligned_dir=unaligned_dir)
+            illumina_data = IlluminaData.IlluminaData(
+                self.analysis_dir,
+                unaligned_dir=unaligned_dir)
         except IlluminaData.IlluminaDataError, ex:
             # Failed to initialise
-            logging.debug("Failed to get information from %s: %s" % (bcl_to_fastq_dir,ex))
+            logging.debug("Failed to get information from %s: %s" %
+                          (bcl_to_fastq_dir,ex))
             return False
         # Do check
-        return IlluminaData.verify_run_against_sample_sheet(illumina_data,
-                                                            self.params.sample_sheet)
+        return IlluminaData.verify_run_against_sample_sheet(
+            illumina_data,
+            tmp_sample_sheet)
 
     def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
                          dry_run=False):
