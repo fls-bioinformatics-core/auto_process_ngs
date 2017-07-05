@@ -173,7 +173,7 @@ def cellranger_count(unaligned_dir,
                 print "-- %s: outputs exist, nothing to do" % sample
                 continue
             else:
-                print "-- %s: setting up cellranger count"
+                print "-- %s: setting up cellranger count" % sample
             # Set up job for this sample
             work_dir = "cellranger_count.%s.%s.tmp" % (project,sample)
             mkdir(work_dir)
@@ -196,6 +196,10 @@ def cellranger_count(unaligned_dir,
                              log_dir=log_dir,
                              wd=work_dir)
     sched.wait()
+
+    # If dry run then stop here
+    if dry_run:
+        return
 
     # Finished, handle the outputs
     for project in projects:
