@@ -122,7 +122,7 @@ if __name__ == "__main__":
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')
     general_info.add(Img(os.path.relpath(plot_filen,
                                          os.path.dirname(out_file))))
-    general_info.add(reads_per_stage.to_frame().to_html())
+    general_info.add(reads_per_stage.to_frame().to_html(header=False))
     toc_list.add_item(Link(general_info.title,general_info))
     
     # Low read counts
@@ -134,20 +134,20 @@ if __name__ == "__main__":
                     (n_low_reads,
                      low_read_threshold))
     if n_low_reads:
-        read_counts.add(low_read_count.to_html())
+        read_counts.add(low_read_count.to_html(index=False))
     print "#barcodes < %d reads: %d" % (low_read_threshold,
                                         len(low_read_count))
     toc_list.add_item(Link(read_counts.title,read_counts))
 
     # Histogram of initial and final read counts
     plot_filen = os.path.join(out_dir,"read_dist.png")
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12,4))
     ax = fig.add_subplot(1,2,1)
     df.query('Nreads > 0')[['Nreads']].plot.hist(ax=ax,
                                                  by='Nreads_final',
                                                  bins=100,
                                                  legend=False)
-    ax.set_title("Initial")
+    ax.set_title("Initial distribution")
     ax.set_xlabel("No of reads/barcode")
     ax.set_ylabel("No of barcodes")
     ax = fig.add_subplot(1,2,2)
@@ -155,9 +155,9 @@ if __name__ == "__main__":
                                                        by='Nreads_final',
                                                        bins=100,
                                                        legend=False,)
-    ax.set_title("Final")
+    ax.set_title("Final distribution")
     ax.set_xlabel("No of reads/barcode")
-    ax.set_ylabel(None)
+    ax.yaxis.label.set_visible(False)
     ax.get_figure().savefig(plot_filen)
     read_counts.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
@@ -170,7 +170,7 @@ if __name__ == "__main__":
                   'Nreads_filtered',
                   'Nreads_trimmed',
                   'Nreads_contaminant_filtered']].groupby('Sample').sum()
-    sample_info.add(samples.to_html())
+    sample_info.add(samples.to_html(na_rep='-'))
     toc_list.add_item(Link(sample_info.title,sample_info))
 
     # Group by sample
@@ -204,7 +204,7 @@ if __name__ == "__main__":
                     % (len(high_poly_g['Nreads_poly_g']),
                        poly_g_threshold))
     if len(high_poly_g['Nreads_poly_g']):
-        poly_g_info.add(high_poly_g.to_html())
+        poly_g_info.add(high_poly_g.to_html(index=False))
     print "#reads with > %f%% poly-G: %d" % (poly_g_threshold,
                                              high_poly_g['Nreads_poly_g'].sum())
     print "Mean   poly-G percentage: %f%%" % mean_poly_g
