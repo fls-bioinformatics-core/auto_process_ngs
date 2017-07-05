@@ -1431,7 +1431,7 @@ class AutoProcess:
         print "Bcl format            : %s" % illumina_run.bcl_extension
         print "Source sample sheet   : %s" % sample_sheet
         print "Bases mask            : %s" % bases_mask
-        print "Lanes                 : %s" % ('all' if lanes is None,
+        print "Lanes                 : %s" % ('all' if lanes is None
                                               else
                                               ','.join([str(l) for l in lanes])
         print "Nmismatches           : %d" % nmismatches
