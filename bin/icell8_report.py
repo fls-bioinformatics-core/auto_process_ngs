@@ -213,9 +213,13 @@ if __name__ == "__main__":
     # Histogram of poly-g reads
     plot_filen = os.path.join(out_dir,"poly_g_dist.png")
     fig=plt.figure()
-    plot = df[['percent_poly_g']].plot.hist(by='percent_poly_g',
-                                            bins=100,
-                                            legend=False)
+    plot = df[['percent_poly_g']].query("percent_poly_g > 0").plot.hist(
+        by='percent_poly_g',
+        bins=100,
+        legend=False)
+    plot.set_title("Poly-G distribution")
+    plot.set_xlabel("%reads with poly-G regions")
+    plot.set_ylabel("No of barcodes")
     plot.get_figure().savefig(plot_filen)
     poly_g_info.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
