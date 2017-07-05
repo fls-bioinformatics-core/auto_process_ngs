@@ -13,6 +13,7 @@ Utility to report summary of ICell8 processing pipeline.
 # Imports
 ######################################################################
 
+import os
 import argparse
 import matplotlib
 import matplotlib.pyplot as plt
@@ -23,7 +24,6 @@ from auto_process_ngs.docwriter import Table
 from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Img
-#from auto_process_ngs.docwriter import Target
 import auto_process_ngs.css_rules as css_rules
 
 ######################################################################
@@ -37,11 +37,23 @@ if __name__ == "__main__":
     # Command line
     p = argparse.ArgumentParser()
     p.add_argument("stats_file",help="ICell8 stats file")
+    p.add_argument("out_file",
+                   nargs="?",default="icell8_processing.html",
+                   help="Output HTML file (default: "
+                   "'icell8_processing.html')")
     args = p.parse_args()
 
     # Initialise some parameters
     low_read_threshold = 10000
     poly_g_threshold = 5.0
+
+    # Output file name
+    out_file = os.path.abspath(args.out_file)
+
+    # Directory for output data (images etc)
+    out_dir = os.path.splitext(out_file)[0]+"_data"
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
 
     # Load data from input file
     df = pd.read_csv(args.stats_file,sep='\t')
@@ -97,6 +109,7 @@ if __name__ == "__main__":
     general_info.add(tbl)
 
     # Reads at each stage
+    plot_filen = os.path.join(out_dir,"reads_per_stage.png")
     reads_per_stage = df[['Nreads',
                           'Nreads_filtered',
                           'Nreads_trimmed',
@@ -106,16 +119,15 @@ if __name__ == "__main__":
     plot.set_xticklabels(['Assigned','Quality filtered','Trimmed','Uncontaminated'],
                          rotation=45)
     plot.set_ylabel("#read pairs")
-    plot.get_figure().savefig("reads_per_stage.png",
-                              bbox_inches='tight')
-    general_info.add(Img("reads_per_stage.png"))
+    plot.get_figure().savefig(plot_filen,bbox_inches='tight')
+    general_info.add(Img(os.path.relpath(plot_filen,
+                                         os.path.dirname(out_file))))
     general_info.add(reads_per_stage.to_frame().to_html())
     toc_list.add_item(Link(general_info.title,general_info))
     
     # Low read counts
     read_counts = report.add_section("Read counts",
                                      name="read_counts")
-    #low_read_count = df.query("Nreads < %d" % low_read_threshold)
     low_read_count = df[['#Barcode','Nreads']].query("Nreads < %d" % low_read_threshold)
     n_low_reads = len(low_read_count)
     read_counts.add("%d barcodes with less than %d reads" %
@@ -128,6 +140,7 @@ if __name__ == "__main__":
     toc_list.add_item(Link(read_counts.title,read_counts))
 
     # Histogram of initial and final read counts
+    plot_filen = os.path.join(out_dir,"read_dist.png")
     fig = plt.figure()
     ax = fig.add_subplot(1,2,1)
     df.query('Nreads > 0')[['Nreads']].plot.hist(ax=ax,
@@ -145,8 +158,9 @@ if __name__ == "__main__":
     ax.set_title("Final")
     ax.set_xlabel("No of reads/barcode")
     ax.set_ylabel(None)
-    ax.get_figure().savefig("read_dist.png")
-    read_counts.add(Img("read_dist.png"))
+    ax.get_figure().savefig(plot_filen)
+    read_counts.add(Img(os.path.relpath(plot_filen,
+                                        os.path.dirname(out_file))))
 
     # Sample info
     sample_info = report.add_section("Samples",
@@ -160,6 +174,7 @@ if __name__ == "__main__":
     toc_list.add_item(Link(sample_info.title,sample_info))
 
     # Group by sample
+    plot_filen = os.path.join(out_dir,"samples.png")
     fig=plt.figure()
     plot = samples.transpose().plot.bar(stacked=True)
     plot.set_xticklabels(['Assigned',
@@ -168,8 +183,9 @@ if __name__ == "__main__":
                           'Uncontaminated'],
                          rotation=45)
     plot.set_ylabel("#read pairs")
-    plot.get_figure().savefig("samples.png",bbox_inches='tight')
-    sample_info.add(Img("samples.png"))
+    plot.get_figure().savefig(plot_filen,bbox_inches='tight')
+    sample_info.add(Img(os.path.relpath(plot_filen,
+                                        os.path.dirname(out_file))))
     
     # Poly-G regions
     high_poly_g = df[['#Barcode',
@@ -195,20 +211,15 @@ if __name__ == "__main__":
     print "Median poly-G percentage: %f%%" % median_poly_g
 
     # Histogram of poly-g reads
+    plot_filen = os.path.join(out_dir,"poly_g_dist.png")
     fig=plt.figure()
     plot = df[['percent_poly_g']].plot.hist(by='percent_poly_g',
                                             bins=100,
                                             legend=False)
-    plot.get_figure().savefig("poly_g_dist.png")
-    poly_g_info.add(Img("poly_g_dist.png"))
+    plot.get_figure().savefig(plot_filen)
+    poly_g_info.add(Img(os.path.relpath(plot_filen,
+                                        os.path.dirname(out_file))))
     toc_list.add_item(Link(poly_g_info.title,poly_g_info))
 
-    # Histogram of low read counts
-    ##fig=plt.figure()
-    ##plot = low_read_count[['Nreads']].plot.hist(by='Nreads',
-    ##                                            bins=20,
-    ##                                          legend=False)
-    ##plot.get_figure().savefig("hist_low_counts.png")
-
     # Generate the HTML report
-    report.write("icell8_processing.html")
+    report.write(out_file)
