@@ -24,6 +24,7 @@ from auto_process_ngs.docwriter import Table
 from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Img
+from auto_process_ngs.utils import ZipArchive
 import auto_process_ngs.css_rules as css_rules
 
 ######################################################################
@@ -272,3 +273,17 @@ if __name__ == "__main__":
 
     # Generate the HTML report
     report.write(out_file)
+
+    # Collect everything into a zip archive
+    parent_dir = os.path.dirname(out_file)
+    zip_name = os.path.splitext(os.path.basename(out_file))[0]
+    report_zip = os.path.join(parent_dir,"%s.zip" % zip_name)
+    zip_file = ZipArchive(report_zip,
+                          relpath=parent_dir,
+                          prefix="%s" % zip_name)
+    # Add the HTML report
+    zip_file.add_file(out_file)
+    # Add the data directory
+    zip_file.add_dir(out_dir)
+    zip_file.close()
+    print "Wrote zip archive: %s" % report_zip
