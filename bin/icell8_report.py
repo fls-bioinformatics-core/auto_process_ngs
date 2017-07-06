@@ -43,10 +43,6 @@ if __name__ == "__main__":
                    "'icell8_processing.html')")
     args = p.parse_args()
 
-    # Initialise some parameters
-    low_read_threshold = 10000
-    poly_g_threshold = 5.0
-
     # Output file name
     out_file = os.path.abspath(args.out_file)
 
@@ -58,26 +54,35 @@ if __name__ == "__main__":
     # Load data from input file
     df = pd.read_csv(args.stats_file,sep='\t')
 
-    # Rename the '%reads_poly_g' column
-    df.rename(columns={'%reads_poly_g':'percent_poly_g'},
+    # Rename the '#Barcodes' and '%reads_poly_g' columns
+    df.rename(columns={'#Barcode':'Barcode',
+                       '%reads_poly_g':'percent_poly_g'},
               inplace=True)
+    print df.head()
 
     # Gather the data
     data = AttributeDictionary()
+
+    # Total reads
+    data['total_reads'] = df['Nreads'].sum()
     
     # Total assigned reads
+    df = df.drop(df[df['Barcode'] == 'Unassigned'].index)
     data['total_assigned_reads'] = df['Nreads'].sum()
     # Mean and median reads per barcode
     data['median_read_count'] = df['Nreads'].median()
     data['mean_read_count'] = df['Nreads'].mean()
+    data['std_read_count'] = df['Nreads'].std()
     # Number of barcodes (total and assigned)
     data['total_barcodes'] = len(df)
     data['assigned_barcodes'] = len(df[df['Nreads'] > 0])
 
     # Report data
+    print "Total #reads         : %d" % data.total_reads
     print "Total assigned #reads: %d" % data.total_assigned_reads
     print "Median read count    : %d" % data.median_read_count
     print "Mean   read count    : %d" % data.mean_read_count
+    print "Std    read count    : %d" % data.std_read_count
     print "Total #barcodes      : %d" % data.total_barcodes
     print "Assigned #barcodes   : %d" % data.assigned_barcodes
 
@@ -98,11 +103,10 @@ if __name__ == "__main__":
                                       name="general_info")
     tbl = Table(columns=('name','value'))
     tbl.no_header()
-    data_items = (('Total assigned #reads','total_assigned_reads'),
+    data_items = (('Total #reads','total_reads'),
+                  ('Total assigned #reads','total_assigned_reads'),
                   ('Total #barcodes','total_barcodes'),
-                  ('Assigned #barcodes','assigned_barcodes'),
-                  ('Mean read count per barcode','mean_read_count'),
-                  ('Median read count per barcode','median_read_count'))
+                  ('Assigned #barcodes','assigned_barcodes'))
     for item in data_items:
         name,key = item
         tbl.add_row(name=name,value=data[key])
@@ -110,13 +114,21 @@ if __name__ == "__main__":
 
     # Reads at each stage
     plot_filen = os.path.join(out_dir,"reads_per_stage.png")
-    reads_per_stage = df[['Nreads',
+    reads_per_stage = \
+        pd.Series([data.total_reads,],
+                  ['Nreads_initial',]).append(
+                      df[['Nreads',
                           'Nreads_filtered',
                           'Nreads_trimmed',
-                          'Nreads_contaminant_filtered']].sum()
+                          'Nreads_contaminant_filtered']].sum())
+    print reads_per_stage
     fig=plt.figure()
     plot = reads_per_stage.plot.bar()
-    plot.set_xticklabels(['Assigned','Quality filtered','Trimmed','Uncontaminated'],
+    plot.set_xticklabels(['Initial',
+                          'Assigned',
+                          'Quality filtered',
+                          'Trimmed',
+                          'Uncontaminated'],
                          rotation=45)
     plot.set_ylabel("#read pairs")
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')
@@ -126,18 +138,31 @@ if __name__ == "__main__":
     toc_list.add_item(Link(general_info.title,general_info))
     
     # Low read counts
+    low_read_threshold = data.total_assigned_reads/data.total_barcodes/10
     read_counts = report.add_section("Read counts",
                                      name="read_counts")
-    low_read_count = df[['#Barcode','Nreads']].query("Nreads < %d" % low_read_threshold)
-    n_low_reads = len(low_read_count)
-    read_counts.add("%d barcodes with less than %d reads" %
-                    (n_low_reads,
-                     low_read_threshold))
-    if n_low_reads:
-        read_counts.add(low_read_count.to_html(index=False))
-    print "#barcodes < %d reads: %d" % (low_read_threshold,
-                                        len(low_read_count))
-    toc_list.add_item(Link(read_counts.title,read_counts))
+    low_read_count = df[['Barcode','Nreads']].query(
+        "Nreads < %d" % low_read_threshold).query(
+            "Nreads > 0")
+    low_reads = len(low_read_count)
+    no_reads = len(df.query("Nreads == 0"))
+    tbl = Table(columns=('name','value'))
+    tbl.no_header()
+    data_items = (('Mean read count per barcode','mean_read_count'),
+                  ('Median read count per barcode','median_read_count'))
+    for item in data_items:
+        name,key = item
+        tbl.add_row(name=name,value=data[key])
+    tbl.add_row(name="# barcodes with no reads",
+                value="%d (%0.2f%%)" %
+                (no_reads,
+                 float(no_reads)/float(data.total_barcodes)*100.0))
+    tbl.add_row(name="# barcodes with less than %d reads" %
+                low_read_threshold,
+                value="%d (%0.2f%%)" %
+                (low_reads,
+                 float(low_reads)/float(data.total_barcodes)*100.0))
+    read_counts.add(tbl)
 
     # Histogram of initial and final read counts
     plot_filen = os.path.join(out_dir,"read_dist.png")
@@ -146,7 +171,8 @@ if __name__ == "__main__":
     df.query('Nreads > 0')[['Nreads']].plot.hist(ax=ax,
                                                  by='Nreads_final',
                                                  bins=100,
-                                                 legend=False)
+                                                 legend=False,
+                                                 edgecolor='black')
     ax.set_title("Initial distribution")
     ax.set_xlabel("No of reads/barcode")
     ax.set_ylabel("No of barcodes")
@@ -154,13 +180,21 @@ if __name__ == "__main__":
     df.query('Nreads > 0')[['Nreads_final']].plot.hist(ax=ax,
                                                        by='Nreads_final',
                                                        bins=100,
-                                                       legend=False,)
+                                                       legend=False,
+                                                       edgecolor='black')
     ax.set_title("Final distribution")
     ax.set_xlabel("No of reads/barcode")
     ax.yaxis.label.set_visible(False)
-    ax.get_figure().savefig(plot_filen)
+    ax.get_figure().savefig(plot_filen,bbox_inches='tight')
     read_counts.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
+
+    # List barcodes with low read counts
+    if low_reads:
+        read_counts.add(low_read_count.to_html(index=False))
+    print "#barcodes < %d reads: %d" % (low_read_threshold,
+                                        len(low_read_count))
+    toc_list.add_item(Link(read_counts.title,read_counts))
 
     # Sample info
     sample_info = report.add_section("Samples",
@@ -183,30 +217,37 @@ if __name__ == "__main__":
                           'Uncontaminated'],
                          rotation=45)
     plot.set_ylabel("#read pairs")
+    plot.legend(loc='best')
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')
     sample_info.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
     
     # Poly-G regions
-    high_poly_g = df[['#Barcode',
+    poly_g_threshold = 20.0
+    high_poly_g = df[['Barcode',
                       'Nreads_poly_g',
                       'percent_poly_g']].query("percent_poly_g > %f" %
                                                poly_g_threshold)
     median_poly_g = df['percent_poly_g'].median()
     mean_poly_g = df['percent_poly_g'].mean()
+    total_poly_g = df['Nreads_poly_g'].sum()
     poly_g_info = report.add_section("Poly-G regions",
                                      name="poly_g_info")
-    poly_g_info.add("Mean %%reads with poly-G regions per barcode: %.2f%%"
-                    % mean_poly_g)
-    poly_g_info.add("Median %%reads with poly-G regions per barcode: %.2f%%"
-                    % median_poly_g)
-    poly_g_info.add("%d barcodes with > %.2f%% reads with poly-G regions"
-                    % (len(high_poly_g['Nreads_poly_g']),
-                       poly_g_threshold))
-    if len(high_poly_g['Nreads_poly_g']):
-        poly_g_info.add(high_poly_g.to_html(index=False))
-    print "#reads with > %f%% poly-G: %d" % (poly_g_threshold,
-                                             high_poly_g['Nreads_poly_g'].sum())
+    tbl = Table(columns=('name','value'))
+    tbl.no_header()
+    tbl.add_row(name="# assigned reads with poly-G regions",
+                value="%d (%.2f%%)" %
+                (total_poly_g,
+                 float(total_poly_g)/float(data.total_assigned_reads)*100.0))
+    tbl.add_row(name="Mean %reads with poly-G regions per barcode",
+                value="%.2f%%" % mean_poly_g)
+    tbl.add_row(name="Median %reads with poly-G regions per barcode",
+                value="%.2f%%" % median_poly_g)
+    tbl.add_row(name="# barcodes with > %.2f%% reads with poly-G regions" %
+                poly_g_threshold,
+                value="%d" % len(high_poly_g['Nreads_poly_g']))
+    poly_g_info.add(tbl)
+    print "#reads with poly-G regions: %d" % high_poly_g['Nreads_poly_g'].sum()
     print "Mean   poly-G percentage: %f%%" % mean_poly_g
     print "Median poly-G percentage: %f%%" % median_poly_g
 
@@ -216,13 +257,17 @@ if __name__ == "__main__":
     plot = df[['percent_poly_g']].query("percent_poly_g > 0").plot.hist(
         by='percent_poly_g',
         bins=100,
-        legend=False)
+        legend=False,
+        edgecolor='black')
     plot.set_title("Poly-G distribution")
     plot.set_xlabel("%reads with poly-G regions")
     plot.set_ylabel("No of barcodes")
-    plot.get_figure().savefig(plot_filen)
+    plot.get_figure().savefig(plot_filen,bbox_inches='tight')
     poly_g_info.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
+    # List of barcodes with high percentage of reads poly-G content
+    if len(high_poly_g['Nreads_poly_g']):
+        poly_g_info.add(high_poly_g.to_html(index=False))
     toc_list.add_item(Link(poly_g_info.title,poly_g_info))
 
     # Generate the HTML report
