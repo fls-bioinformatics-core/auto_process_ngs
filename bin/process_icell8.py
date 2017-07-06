@@ -1467,15 +1467,21 @@ class ReportProcessing(PipelineTask):
     """
     Generate an HTML report on the processing
     """
-    def init(self,stats_file):
-        pass
+    def init(self,stats_file,out_file=None):
+        self.out_file = None
     def setup(self):
-        self.add_cmd = PipelineCommandWrapper(
+        if self.args.out_file is None:
+            self.out_file = "icell8_processing.html"
+        else:
+            self.out_file = self.args.out_file
+        self.out_file = os.path.abspath(self.out_file)
+        self.add_cmd(PipelineCommandWrapper(
             'icell8_report.py',
-            self.args.stats_file)
+            self.args.stats_file,
+            self.out_file))
     def output(self):
         return AttributeDictionary(
-            report_html="icell8_processing.html"
+            report_html=self.out_file
         )
 
 class CleanupDirectory(PipelineTask):
@@ -2006,7 +2012,9 @@ if __name__ == "__main__":
 
     # Final report
     final_report = ReportProcessing("Generate processing report",
-                                    final_barcode_stats.output()))
+                                    final_barcode_stats.output(),
+                                    os.path.join(outdir,
+                                                 "icell8_processing.html"))
     ppl.add_task(final_report,requires=(final_barcode_stats,))
 
     # Cleanup outputs
