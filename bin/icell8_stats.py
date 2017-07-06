@@ -119,6 +119,8 @@ if __name__ == "__main__":
     p.add_argument("-w","--well-list",
                    dest="well_list_file",default=None,
                    help="iCell8 'well list' file")
+    p.add_argument("-u","--unassigned",action='store_true',
+                   help="include 'unassigned' reads")
     p.add_argument("-f","--stats-file",
                    dest="stats_file",
                    help="output statistics file")
@@ -218,6 +220,30 @@ if __name__ == "__main__":
             except KeyError:
                 data_line[nreads_col] = 0
                 data_line[umis_col] = 0
+        # Deal with 'unassigned' reads
+        if args.unassigned:
+            # Count reads for barcodes not in list
+            unassigned_reads = 0
+            unassigned_umis = set()
+            if well_list is not None:
+                expected_barcodes = well_list.barcodes()
+            else:
+                expected_barcodes = [l['Barcode'] for l in stats_data]
+            for barcode in stats.barcodes():
+                if barcode not in expected_barcodes:
+                    unassigned_reads += stats.nreads(barcode=barcode)
+                    unassigned_umis.update(
+                        stats.distinct_umis(barcode=barcode))
+            # Check if 'unassigned' is already in stats file
+            unassigned = stats_data.lookup('Barcode','Unassigned')
+            try:
+                data_line = unassigned[0]
+            except IndexError:
+                # Append the line
+                data_line = stats_data.append()
+                data_line['Barcode'] = 'Unassigned'
+            data_line[nreads_col] = unassigned_reads
+            data_line[umis_col] = len(unassigned_umis)
         # Write to file
         stats_data.write(filen=stats_file,include_header=True)
 
