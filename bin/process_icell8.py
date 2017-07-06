@@ -548,7 +548,8 @@ class ICell8Statistics(PipelineCommand):
     Build command to run the 'icell8_stats.py' utility
     """
     def init(self,fastqs,stats_file,well_list=None,
-             suffix=None,append=False,nprocs=1):
+             suffix=None,unassigned=False,append=False,
+             nprocs=1):
         """
         Create new ICell8Statistics instance
 
@@ -558,6 +559,10 @@ class ICell8Statistics(PipelineCommand):
           well_list (str): path to 'well list' file (optional)
           suffix (str): suffix to append to columns with read and
             UMI counts (optional)
+          unassigned (bool): if True then also collect stats for
+            read pairs that don't match any of the expected
+            barcodes from the well list or existing stats file
+            (by default unassigned stats are not collected)
           append (bool): if True then append columns to existing
             output file (by default creates new output file)
           nprocs (int): number of cores available for stats
@@ -569,6 +574,7 @@ class ICell8Statistics(PipelineCommand):
         if self._well_list is not None:
             self._well_list = os.path.abspath(self._well_list)
         self._append = append
+        self._unassigned = unassigned
         self._suffix = suffix
         self._nprocs = nprocs
     def cmd(self):
@@ -581,7 +587,9 @@ class ICell8Statistics(PipelineCommand):
         if self._suffix:
             cmd.add_args('--suffix',self._suffix)
         if self._append:
-            cmd.add_args('--append',)
+            cmd.add_args('--append')
+        if self._unassigned:
+            cmd.add_args('--unassigned')
         cmd.add_args(*self._fastqs)
         return cmd
 
@@ -916,7 +924,8 @@ class GetICell8Stats(PipelineTask):
     """
     """
     def init(self,fastqs,stats_file,well_list=None,
-             suffix=None,append=False,nprocs=1):
+             suffix=None,unassigned=False,append=False,
+             nprocs=1):
         pass
     def setup(self):
         self.add_cmd(ICell8Statistics(self.args.fastqs,
@@ -924,6 +933,7 @@ class GetICell8Stats(PipelineTask):
                                       well_list=self.args.well_list,
                                       suffix=self.args.suffix,
                                       append=self.args.append,
+                                      unassigned=self.args.unassigned,
                                       nprocs=self.args.nprocs))
     def output(self):
         return self.args.stats_file
@@ -1830,6 +1840,7 @@ if __name__ == "__main__":
                                    fastqs,
                                    os.path.join(stats_dir,"icell8_stats.tsv"),
                                    well_list,
+                                   unassigned=True,
                                    nprocs=args.threads)
     ppl.add_task(initial_stats,
                  runner=runners['contaminant_filter'])
