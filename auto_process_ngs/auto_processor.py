@@ -21,6 +21,7 @@ import shutil
 import time
 import ast
 import gzip
+import string
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
@@ -2897,9 +2898,18 @@ class AutoProcess:
         if cellranger_qc_html:
             index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
             for qc_html in cellranger_qc_html:
-                lanes = ','.join(qc_html.split('.')[0].split('_')[-1])
-                index_page.add("<a href='%s'>QC summary for lanes %s</a>" %
-                               (qc_html,lanes))
+                # Check for lane list at tail of QC summary
+                # e.g. cellranger_qc_summary_45.html
+                # This might not be present
+                lanes = qc_html.split('.')[0].split('_')[-1]
+                if all(c in string.digits for c in lanes):
+                    lanes = ','.join(lanes)
+                else:
+                    lanes = None
+                index_page.add("<a href='%s'>QC summary for %s</a>" %
+                               (qc_html,
+                                ("all lanes" if lanes is None
+                                 else "lanes %s" % lanes)))
         # Barcode analysis
         if barcode_analysis_dir:
             # Create section
