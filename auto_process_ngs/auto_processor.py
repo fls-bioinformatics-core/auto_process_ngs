@@ -3076,10 +3076,10 @@ class AutoProcess:
                     report_html.append(
                         "<a href='cellranger_count_report.%s.%s/" \
                         "cellranger_count_report.html'>" \
-                        "Cellranger count report</a>" % \
+                        "[Cellranger count]</a>" % \
                         (project.name,
                          os.path.basename(self.analysis_dir)))
-                    report_html.append("<a href='%s'>[zip]</a>" % \
+                    report_html.append("<a href='%s'>[Zip]</a>" % \
                                        os.path.basename(cellranger_zip))
                 # Add to the index
                 index_page.add("<td>%s</td>"
