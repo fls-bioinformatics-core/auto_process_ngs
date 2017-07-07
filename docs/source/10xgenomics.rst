@@ -79,7 +79,8 @@ The suggested protocol is:
            -t .../refdata-cellranger-mm10-1.2.0
 
    This generates the 'count' output in a temporary directory and copies
-   the relevant files into the project directories on completion.
+   the ``web_summary.html`` files into the project directories on
+   completion.
 
    It also creates an index file and a ZIP archive with the HTML summary
    reports from ``cellranger count``. These reports are copied by the
@@ -128,9 +129,11 @@ Outputs
    Chromium data.
 
    This contains one subdirectory for each sample, within which there is
-   the ``outs`` directory produced by ``cellranger_count``. These ``outs``
-   directories contain the ``.cloupe``, ``BAM`` and gene matrix files
-   required for subsequent analyses.
+   the ``outs`` directory produced by ``cellranger_count``. By default
+   these ``outs`` only contain the ``web_summary.html`` files; to
+   collect all the outputs from ``cellranger`` (i.e. the ``.cloupe``,
+   ``BAM``, and gene matrix files required for subsequent analyses),
+   use the ``--all-outputs`` option.
 
    There is also a ``cellranger_count_report.html`` file which links to
    the ``web_summary.html`` file for each sample, and a ZIP archive file
