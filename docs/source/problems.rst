@@ -50,31 +50,21 @@ dual indexes, but samples in lanes 5 and 6 need to be demultiplexed using
 only the first part of the dual index (i.e. first 8 bases only, for 16 base
 dual indexes).
 
-1. **Split the sample sheet**
+1. **Edit the sample sheet**
 
-   Use ``prep_sample_sheet.py`` to make two new sample sheets: one for
-   lanes 5 and 6, and another for the remaining lanes::
-
-       prep_sample_sheet.py -o custom_SampleSheet.lanes1-4,7-8.csv \
-            --include-lanes=1-4,7-8 custom_SampleSheet.csv
-       prep_sample_sheet.py -o custom_SampleSheet.lanes5-6.csv \
-            --include-lanes=5-6 custom_SampleSheet.csv
+   First edit the sample sheet to make any necessary changes to
+   to the lanes needing special treatment (e.g. updating barcodes).
+   It might be preferrable to do this in a copy of the original sample
+   sheet.
 
 2. **Process the lanes which use default parameters first**
 
-   Run::
+   Use the ``--lanes`` option of the ``make_fastqs`` command to process
+   the first set of lanes, for example::
 
-       auto_process.py make_fastqs --sample-sheet \
-            custom_SampleSheet.lanes1-4,7-8.csv
+       auto_process.py make_fastqs --lanes=1-4,7-8
 
-3. **Update the sample sheet for the lanes needing special treatment**
-
-   This means, make any necessary adjustments to
-   ``custom_SampleSheet.lanes5-6.csv`` so that the barcodes are correct
-   (for example in this case by truncating the barcode sequences to
-   8 bases).
-
-4. **Process the remaining lanes**
+3. **Process the remaining 'problem' lanes**
 
    In this case we would need to use an updated bases mask to tell the
    demultiplexer to ignore the trailing 8 bases of the barcodes. We
@@ -83,8 +73,8 @@ dual indexes).
 
    For example::
 
-       auto_process.py make_fastqs --sample-sheet \
-            custom_SampleSheet.lanes5-6.csv \
+       auto_process.py make_fastqs \
+            --lanes=5-6 \
             --output-dir=bcl2fastq.lanes56 \
             --use-bases-mask=y101,I8,n8,y101 \
             --stats-file=statistics.lanes56.info \
@@ -93,7 +83,7 @@ dual indexes).
    Using ``--skip-rsync`` means that the processing doesn't try to fetch
    the raw data again.
 
-5. **Merge fastq output directories and regenerate statistics**
+4. **Merge fastq output directories and regenerate statistics**
 
    Assuming that the processing has completed okay there will be an
    initial ``bcl2fastq`` directory with the first set of Fastqs and
@@ -113,7 +103,15 @@ The remaining processing should then be performed as normal.
 .. note::
 
    This process can be adapted to work with multiple subsets of
-   lanes, not just two.
+   lanes, not just two, by repeating step 3 above for each subset.
+
+.. note::
+
+   In older versions of the autoprocess software, it would be necessary
+   to first split the sample sheet into two copies each containing with
+   just one set of lanes (e.g. using
+   ``prep_sample_sheet.py --include-lanes=...``), and making appropriate
+   changes (e.g. to correct the barcodes).
 
 .. _problem-incomplete-run:
 
