@@ -18,6 +18,7 @@ import sys
 import os
 import argparse
 import logging
+import shutil
 from bcftbx.utils import mkdir
 from bcftbx.utils import find_program
 from bcftbx.utils import list_dirs
@@ -47,6 +48,17 @@ __settings = auto_process_ngs.settings.Settings()
 ######################################################################
 # Functions
 ######################################################################
+
+def mkdir(path):
+    """
+    """
+    if os.path.exists(path):
+	return
+    parent = os.path.dirname(path)
+    if not os.path.exists(parent):
+        mkdir(parent)
+    print "Making dir: %s" % path
+    os.mkdir(path)
 
 def cellranger_mkfastq(samplesheet,
                        primary_data_dir,
@@ -123,7 +135,8 @@ def cellranger_count(unaligned_dir,
                      cellranger_jobinterval=None,
                      max_jobs=4,
                      log_dir=None,
-                     dry_run=False):
+                     dry_run=False,
+                     summary_only=True):
     """
     """
     # Input data
@@ -208,17 +221,27 @@ def cellranger_count(unaligned_dir,
         print "Project: %s" % project
         for sample in sample_names[project]:
             print "Sample: %s" % sample
-            count_dir = os.path.join(project,
-                                     "cellranger_count",
-                                     sample,
-                                     "outs")
-            if not os.path.isdir(count_dir):
-                outs_dir = os.path.join("cellranger_count.%s.%s.tmp"
-                                        % (project,sample),
-                                        sample,
-                                        "outs")
-                print "Moving %s to %s" % (outs_dir,count_dir)
-                os.rename(outs_dir,count_dir)
+            # Destination for count output
+            count_dir = os.path.abspath(
+                os.path.join(project,
+                             "cellranger_count",
+                             sample))
+            mkdir(count_dir)
+            # Copy the cellranger count outputs
+            outs_dir = os.path.join("cellranger_count.%s.%s.tmp"
+                                    % (project,sample),
+                                    sample,
+                                    "outs")
+            if not summary_only:
+                # Collect all outputs
+                print "Copying contents of %s to %s" % (outs_dir,count_dir)
+                shutil.copytree(outs_dir,count_dir)
+            else:
+                # Only collect the web summary
+                count_dir = os.path.join(count_dir,"outs")
+                mkdir(count_dir)
+                print "Copying web_summary.html from %s to %s" % (outs_dir,count_dir)
+                shutil.copy(os.path.join(outs_dir,"web_summary.html"),count_dir)
 
     # Create a report and zip archive for each project
     pwd = os.getcwd()
@@ -336,6 +359,11 @@ if __name__ == "__main__":
                               dest="transcriptome",default=None,
                               help="directory with reference data for "
                               "transcriptome of interest")
+    count_parser.add_argument("-a","--all-outputs",
+                              action="store_true",
+                              help="collect all outputs from 'cellranger "
+                              "count' (default: only collect the "
+                              "'web_summary.html' files)")
     # Add generic options
     for p in (mkfastq_parser,count_parser):
         p.add_argument("--jobmode",
