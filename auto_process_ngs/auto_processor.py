@@ -2933,6 +2933,37 @@ class AutoProcess:
                 # Check there is something to add
                 if not report_html:
                     report_html.append("QC reports not available")
+                # Locate and copy ICell8 processing reports
+                icell8_processing_zip = os.path.join(
+                    project.dirn,
+                    "icell8_processing.%s.%s.zip" %
+                    (project.name,
+                     os.path.basename(self.analysis_dir)))
+                if os.path.isfile(icell8_processing_zip):
+                    print icell8_processing_zip
+                    icell8_report_copied = True
+                    try:
+                        fileops.copy(icell8_processing_zip,dirn)
+                        fileops.unzip(os.path.join(
+                            dirn,
+                            os.path.basename(icell8_processing_zip)),
+                                      fileops.Location(dirn).path)
+                    except Exception as ex:
+                        print "Failed to copy ICell8 report: %s" % ex
+                        icell8_report_copied = False
+                else:
+                    # No ICell8 processing report to copy
+                    icell8_report_copied = False
+                # Append info to the index page
+                if icell8_report_copied:
+                    report_html.append(
+                        "<a href='icell8_processing.%s.%s/" \
+                        "icell8_processing.html'>" \
+                        "[Icell8 processing]</a>" % \
+                        (project.name,
+                         os.path.basename(self.analysis_dir)))
+                    report_html.append("<a href='%s'>[Zip]</a>" % \
+                                       os.path.basename(icell8_processing_zip))
                 # Add to the index
                 index_page.add("<td>%s</td>"
                                % null_str.join(report_html))
