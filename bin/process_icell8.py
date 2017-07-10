@@ -1467,7 +1467,7 @@ class ReportProcessing(PipelineTask):
     """
     Generate an HTML report on the processing
     """
-    def init(self,stats_file,out_file=None):
+    def init(self,stats_file,out_file=None,name=None):
         self.out_file = None
     def setup(self):
         if self.args.out_file is None:
@@ -1475,10 +1475,13 @@ class ReportProcessing(PipelineTask):
         else:
             self.out_file = self.args.out_file
         self.out_file = os.path.abspath(self.out_file)
-        self.add_cmd(PipelineCommandWrapper(
-            'icell8_report.py',
-            self.args.stats_file,
-            self.out_file))
+        cmd = PipelineCommandWrapper(
+            'icell8_report.py')
+        if self.args.name is not None:
+            cmd.add_args('--name',self.args.name)
+        cmd.add_args(self.args.stats_file,
+                     self.out_file)
+        self.add_cmd(cmd)
     def output(self):
         return AttributeDictionary(
             report_html=self.out_file
@@ -1789,6 +1792,7 @@ if __name__ == "__main__":
             logger.fatal("Couldn't find FASTQS in directory '%s'" %
                           args.unaligned_dir)
     # Collect files from project
+    analysis_project = None
     if fastqs and args.project is not None:
         logger.warning("Ignoring project '%s'" % args.project)
     elif args.project:
@@ -2011,10 +2015,17 @@ if __name__ == "__main__":
     ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
 
     # Final report
+    if analysis_project is not None:
+        report_suffix = ".%s" % analysis_project.name
+        if analysis_project.info.run is not None:
+            report_suffix += ".%s" % analysis_project.info.run
+    else:
+        report_suffix = None
     final_report = ReportProcessing("Generate processing report",
                                     final_barcode_stats.output(),
                                     os.path.join(outdir,
-                                                 "icell8_processing.html"))
+                                                 "icell8_processing.html"),
+                                    name=report_suffix)
     ppl.add_task(final_report,requires=(final_barcode_stats,))
 
     # Cleanup outputs
