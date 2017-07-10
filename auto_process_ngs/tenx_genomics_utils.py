@@ -17,6 +17,7 @@ Chromium SC 3'v2 system:
 # Imports
 #######################################################################
 
+import os
 import json
 from .docwriter import Document
 from .docwriter import List
