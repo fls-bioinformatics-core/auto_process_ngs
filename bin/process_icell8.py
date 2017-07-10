@@ -520,9 +520,9 @@ class PipelineCommandWrapper(PipelineCommand):
     >>> ls_command = PipelineCommandWrapper('ls')
     >>> ls.command.add_args(dirn)
     """
-    def __init__(self,*args):
+    def __init__(self,name,*args):
         PipelineCommand.__init__(self,*args)
-        self._name = self.__class__.__name__
+        self._name = str(name)
         self._cmd = None
         if args:
             self._cmd = Command(*args)
@@ -1430,7 +1430,7 @@ class CheckICell8Barcodes(PipelineTask):
                         self.args.fastqs)
         # Set up verification on batches of fastqs
         while fastqs:
-            cmd = PipelineCommandWrapper()
+            cmd = PipelineCommandWrapper("Check ICell8 barcodes")
             for fq in fastqs[:batch_size]:
                 if fastq_attrs(fq).extension.endswith('.gz'):
                     cat = 'zcat'
@@ -1524,6 +1524,7 @@ class CleanupDirectory(PipelineTask):
         else:
             self.add_cmd(
                 PipelineCommandWrapper(
+                    "Clean up directory '%s'" % dirn,
                     "rm","-f","%s" % os.path.join(dirn,'*'),
                     "&&",
                     "rmdir","%s" % dirn))
