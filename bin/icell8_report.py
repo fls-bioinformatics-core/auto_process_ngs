@@ -42,6 +42,9 @@ if __name__ == "__main__":
                    nargs="?",default="icell8_processing.html",
                    help="Output HTML file (default: "
                    "'icell8_processing.html')")
+    p.add_argument("-n","--name",action="store",default=None,
+                   help="specify a string to append to the zip "
+                   "archive name and prefix")
     args = p.parse_args()
 
     # Output file name
@@ -277,6 +280,8 @@ if __name__ == "__main__":
     # Collect everything into a zip archive
     parent_dir = os.path.dirname(out_file)
     zip_name = os.path.splitext(os.path.basename(out_file))[0]
+    if args.name is not None:
+        zip_name = "%s%s" % (zip_name,args.name)
     report_zip = os.path.join(parent_dir,"%s.zip" % zip_name)
     zip_file = ZipArchive(report_zip,
                           relpath=parent_dir,
