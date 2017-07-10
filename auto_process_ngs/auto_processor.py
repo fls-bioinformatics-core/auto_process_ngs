@@ -35,6 +35,7 @@ import utils
 import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
+import tenxgenomics_utils
 import settings
 from .qc.processing import report_processing_qc
 from .exceptions import MissingParameterFileException
@@ -2628,6 +2629,10 @@ class AutoProcess:
         if not include_bcl2fastq:
             print "Excluding '%s' directory from archive" % self.params.unaligned_dir
             excludes.append('--exclude=%s' % self.params.unaligned_dir)
+        # 10xgenomics products to exclude
+        exclude.append('--exclude=*.mro')
+        exclude.append('--exclude="%s*"' %
+                       tenxgenomics_utils.flow_cell_id(self.run_name))
         # Log dir
         self.set_log_dir(self.get_log_subdir('archive'))
         # Set up runner
