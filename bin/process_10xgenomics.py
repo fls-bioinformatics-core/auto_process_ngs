@@ -34,6 +34,7 @@ from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Link
 import auto_process_ngs.css_rules as css_rules
 from auto_process_ngs.utils import ZipArchive
+from auto_process_ngs.tenx_genomics_utils import flow_cell_id
 from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
 import auto_process_ngs.envmod as envmod
 
@@ -189,7 +190,7 @@ def cellranger_count(unaligned_dir,
             else:
                 print "-- %s: setting up cellranger count" % sample
             # Set up job for this sample
-            work_dir = os.path.abspath("cellranger_count.%s.%s.tmp" %
+            work_dir = os.path.abspath("tmp.cellranger_count.%s.%s" %
                                        (project,sample))
             mkdir(work_dir)
             cmd = Command("cellranger","count",
@@ -228,7 +229,7 @@ def cellranger_count(unaligned_dir,
                              sample))
             mkdir(count_dir)
             # Copy the cellranger count outputs
-            outs_dir = os.path.join("cellranger_count.%s.%s.tmp"
+            outs_dir = os.path.join("tmp.cellranger_count.%s.%s"
                                     % (project,sample),
                                     sample,
                                     "outs")
@@ -299,12 +300,6 @@ def add_cellranger_args(cmd,
     if jobinterval is not None:
         cmd.add_args("--jobinterval=%s" % jobinterval)
     return cmd
-
-def flow_cell_id(run_name):
-    """
-    """
-    flow_cell_id = os.path.basename(run_name).split("_")[-1]
-    return flow_cell_id[1:]
 
 def get_log_subdir(log_dir,name):
     """

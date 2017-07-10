@@ -28,6 +28,13 @@ import css_rules
 # Functions
 #######################################################################
 
+def flow_cell_id(run_name):
+    """
+    Extract the flow cell ID from the run name
+    """
+    flow_cell_id = os.path.basename(run_name).split("_")[-1]
+    return flow_cell_id[1:]
+
 def make_qc_summary_html(json_file,html_file):
     """
     Generate HTML report of processing stats from cellranger mkfastqs
