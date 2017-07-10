@@ -22,6 +22,7 @@ import glob
 import time
 import shutil
 import uuid
+import string
 import inspect
 import traceback
 from collections import Iterator
@@ -56,10 +57,10 @@ __settings = auto_process_ngs.settings.Settings()
 logger = logging.getLogger(__name__)
 
 ######################################################################
-# Magic numbers
+# Pipeline infrastructure constants
 ######################################################################
 
-DEFAULT_BATCH_SIZE = 5000000
+ALLOWED_CHARS = string.lowercase + string.digits + "._-"
 
 ######################################################################
 # Generic pipeline base classes
@@ -269,7 +270,7 @@ class PipelineTask(object):
         self._args = args
         self._kws = kws
         self._commands = []
-        self._task_name = "%s.%s" % (self._name.lower().replace(' ','_'),
+        self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
         self._stdout_files = []
@@ -481,7 +482,7 @@ class PipelineCommand(object):
         # Invoke the 'init' method
         self.init(*args,**kws)
     def name(self):
-        return self._name.lower().replace(' ','_')
+        return sanitize_name(self._name)
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
         # Wrap in a script
         if scripts_dir is None:
@@ -538,6 +539,30 @@ class PipelineCommandWrapper(PipelineCommand):
     def cmd(self):
         # Implement the 'cmd' method
         return self._cmd
+
+######################################################################
+# Generic pipeline functions
+######################################################################
+
+def sanitize_name(s):
+    """
+    Convert string to lowercase and replace special characters
+    """
+    name = []
+    # Convert to lower case and replace special characters
+    for c in str(s).lower():
+        if c not in ALLOWED_CHARS:
+            if len(name) < 2 or name[-2:] != '__':
+                name.append('_')
+        else:
+            name.append(c)
+    return ''.join(name)
+
+######################################################################
+# Magic numbers
+######################################################################
+
+DEFAULT_BATCH_SIZE = 5000000
 
 ######################################################################
 # ICell8 pipeline commands
