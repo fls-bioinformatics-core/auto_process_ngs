@@ -2630,9 +2630,9 @@ class AutoProcess:
             print "Excluding '%s' directory from archive" % self.params.unaligned_dir
             excludes.append('--exclude=%s' % self.params.unaligned_dir)
         # 10xgenomics products to exclude
-        exclude.append('--exclude=*.mro')
-        exclude.append('--exclude="%s*"' %
-                       tenxgenomics_utils.flow_cell_id(self.run_name))
+        excludes.append('--exclude=*.mro')
+        excludes.append('--exclude="%s*"' %
+                        tenx_genomics_utils.flow_cell_id(self.run_name))
         # Log dir
         self.set_log_dir(self.get_log_subdir('archive'))
         # Set up runner
