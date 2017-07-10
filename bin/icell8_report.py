@@ -19,6 +19,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 from bcftbx.utils import AttributeDictionary
+from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.docwriter import Document
 from auto_process_ngs.docwriter import Table
 from auto_process_ngs.docwriter import List
@@ -37,9 +38,14 @@ if __name__ == "__main__":
 
     # Command line
     p = argparse.ArgumentParser()
-    p.add_argument("stats_file",help="ICell8 stats file")
-    p.add_argument("out_file",
-                   nargs="?",default="icell8_processing.html",
+    p.add_argument("project_dir",metavar="DIR",
+                   nargs="?",default=None,
+                   help="directory with ICell8 processing outputs")
+    p.add_argument("-s","--stats_file",default=None,
+                   help="ICell8 stats file (default: "
+                   "DIR/stats/icell8_stats.tsv)")
+    p.add_argument("-o","--out_file",action='store',
+                   default="icell8_processing.html",
                    help="Output HTML file (default: "
                    "'icell8_processing.html')")
     p.add_argument("-n","--name",action="store",default=None,
@@ -47,16 +53,53 @@ if __name__ == "__main__":
                    "archive name and prefix")
     args = p.parse_args()
 
-    # Output file name
-    out_file = os.path.abspath(args.out_file)
+    # Project directory
+    project_dir = args.project_dir
+    if project_dir is None:
+        project_dir = os.get_cwd()
+    else:
+        project_dir = os.path.abspath(project_dir)
+    print "Project dir: %s" % project_dir
 
-    # Directory for output data (images etc)
+    # Stats file
+    if args.stats_file is None:
+        stats_file = os.path.join(project_dir,
+                                  "stats",
+                                  "icell8_stats.tsv")
+    else:
+        stats_file = os.path.abspath(args.stats_file)
+    print "Stats file: %s" % stats_file
+
+    # Check for XLSX version of stats
+    xlsx_file = os.path.splitext(stats_file)[0]+".xlsx"
+    if not os.path.exists(xlsx_file):
+        xlsx_file = None
+    print "XLSX file: %s" % xlsx_file
+
+    # Output file and directory for output data (images etc)
+    out_file = args.out_file
+    if not os.path.isabs(out_file):
+        out_file = os.path.join(project_dir,out_file)
     out_dir = os.path.splitext(out_file)[0]+"_data"
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
+    print "Output file: %s" % out_file
+    print "Data dir   : %s" % out_dir
+
+    # Sort out title/name
+    report_name = args.name
+    report_title = ""
+    if report_name is None:
+        # Assume this is an analysis project
+        project = AnalysisProject(os.path.basename(project_dir),
+                                  project_dir)
+        if project.is_analysis_dir:
+            report_name = ".%s" % project.name
+            if project.info.run is not None:
+                report_name += ".%s" % project.info.run
 
     # Load data from input file
-    df = pd.read_csv(args.stats_file,sep='\t')
+    df = pd.read_csv(stats_file,sep='\t')
 
     # Rename the '#Barcodes' and '%reads_poly_g' columns
     df.rename(columns={'#Barcode':'Barcode',
@@ -101,6 +144,20 @@ if __name__ == "__main__":
     toc = report.add_section("Contents",name="toc")
     toc_list = List()
     toc.add(toc_list)
+
+    # Files
+    files_info = report.add_section("Stats files")
+    stats_files = "Statistics: %s" % Link("[TSV]",
+                                          os.path.relpath(
+                                              stats_file,
+                                              os.path.dirname(out_file)))
+    if xlsx_file is not None:
+        stats_files += " | %s" % Link("[XLSX]",
+                                      os.path.relpath(
+                                          xlsx_file,
+                                      os.path.dirname(out_file)))
+    files_info.add(stats_files)
+    toc_list.add_item(Link(files_info.title,files_info))
 
     # General info
     general_info = report.add_section("General info",
@@ -280,8 +337,8 @@ if __name__ == "__main__":
     # Collect everything into a zip archive
     parent_dir = os.path.dirname(out_file)
     zip_name = os.path.splitext(os.path.basename(out_file))[0]
-    if args.name is not None:
-        zip_name = "%s%s" % (zip_name,args.name)
+    if report_name is not None:
+        zip_name = "%s%s" % (zip_name,report_name)
     report_zip = os.path.join(parent_dir,"%s.zip" % zip_name)
     zip_file = ZipArchive(report_zip,
                           relpath=parent_dir,
@@ -290,5 +347,9 @@ if __name__ == "__main__":
     zip_file.add_file(out_file)
     # Add the data directory
     zip_file.add_dir(out_dir)
+    # Add the stats file
+    zip_file.add_file(stats_file)
+    if xlsx_file is not None:
+        zip_file.add_file(xlsx_file)
     zip_file.close()
     print "Wrote zip archive: %s" % report_zip
