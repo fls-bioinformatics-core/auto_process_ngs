@@ -35,7 +35,7 @@ import utils
 import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
-import tenxgenomics_utils
+import tenx_genomics_utils
 import settings
 from .qc.processing import report_processing_qc
 from .exceptions import MissingParameterFileException
