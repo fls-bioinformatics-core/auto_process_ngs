@@ -264,8 +264,8 @@ class PipelineTask(object):
     ...      return None
 
     """
-    def __init__(self,name,*args,**kws):
-        self._name = str(name)
+    def __init__(self,_name,*args,**kws):
+        self._name = str(_name)
         self._args = args
         self._kws = kws
         self._commands = []
