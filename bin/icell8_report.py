@@ -56,7 +56,7 @@ if __name__ == "__main__":
     # Project directory
     project_dir = args.project_dir
     if project_dir is None:
-        project_dir = os.get_cwd()
+        project_dir = os.getcwd()
     else:
         project_dir = os.path.abspath(project_dir)
     print "Project dir: %s" % project_dir
