@@ -184,7 +184,7 @@ if __name__ == "__main__":
                           'Nreads_contaminant_filtered']].sum())
     print reads_per_stage
     fig=plt.figure()
-    plot = reads_per_stage.plot.bar()
+    plot = reads_per_stage.plot.bar(figsize=(6,4))
     plot.set_xticklabels(['Initial',
                           'Assigned',
                           'Quality filtered',
@@ -271,7 +271,8 @@ if __name__ == "__main__":
     # Group by sample
     plot_filen = os.path.join(out_dir,"samples.png")
     fig=plt.figure()
-    plot = samples.transpose().plot.bar(stacked=True)
+    plot = samples.transpose().plot.bar(stacked=True,
+                                        figsize=(6,4))
     plot.set_xticklabels(['Assigned',
                           'Quality filtered',
                           'Trimmed',
@@ -319,7 +320,8 @@ if __name__ == "__main__":
         by='percent_poly_g',
         bins=100,
         legend=False,
-        edgecolor='black')
+        edgecolor='black',
+        figsize=(6,4))
     plot.set_title("Poly-G distribution")
     plot.set_xlabel("%reads with poly-G regions")
     plot.set_ylabel("No of barcodes")
