@@ -94,9 +94,10 @@ if __name__ == "__main__":
         project = AnalysisProject(os.path.basename(project_dir),
                                   project_dir)
         if project.is_analysis_dir:
-            report_name = ".%s" % project.name
-            if project.info.run is not None:
-                report_name += ".%s" % project.info.run
+            report_name = ".%s.%s" % (project.name,
+                                      os.path.basename(
+                                          os.path.dirname(
+                                              project_dir)))
 
     # Load data from input file
     df = pd.read_csv(stats_file,sep='\t')
