@@ -26,7 +26,12 @@ This is recommended to stop unintentional trimming of UMI sequences
 part of an adapter sequence.
 
 Subsequently the read pairs can be processed using the utility script
-``process_icell8.py`` to perform initial filtering and QC.
+``process_icell8.py`` to perform initial filtering and QC as described
+below. The utility also splits the read pairs into FASTQs by both
+barcode and by sample.
+
+QC and filtering protocol
+-------------------------
 
 The following steps are performed:
 
@@ -40,9 +45,11 @@ The following steps are performed:
    ``--no-quality-filter`` option. This is recommended for NextSeq
    data 
 
+
  * **Barcode filtering:** barcodes are checked against the list of
-   expected barcodes; read pairs that don't have an exact match are
-   rejected.
+   expected barcodes in the input "well list" file; read pairs that
+   don't have an exact match are rejected.
+
 
  * **Read trimming:** ``cutadapt`` is used to perform the following
    trimming and filtering operations on the R2 read:
@@ -55,19 +62,49 @@ The following steps are performed:
    NB if an R2 read fails any of the filters then the read pair is
    rejected.
 
+
  * **Poly-G region estimation:** ``cutadapt`` is used to look for
    R2 reads which contain poly-G regions. These reads are counted but
    no other action is taken; the step simply estimates the size of
    the effect in the data.
 
+   NB this step is performed after the barcode filtering.
+
+
  * **Contamination screen:** ``fastq_screen`` is run to check the
-   read pairs against a set of mammalian and contaminant organisms, and
-   exclude any reads that match exclusively to the contaminants.
+   R2 reads against a set of mammalian and contaminant organisms, and
+   exclude any read pairs where there is an exclusive match to the
+   contaminants.
 
    The screen files must be explicitly supplied to the utility using
    the ``-m``/``--mammalian`` and ``-c``/``--contaminants`` options.
+
+Reorganisation by barcode and sample
+------------------------------------
+
+At the end of the QC and filter pipeline the read pairs are
+reorganised in two different ways:
 
  * **Reorganisation by barcode:** the read pairs are sorted into
    individual FASTQs according to their inline barcodes. This set of
    FASTQs forms the final outputs of the pipeline. Note that the
    number of files is equal to the number of barcodes (~1000).
+
+ * **Reorganisation by sample:** the read pairs are sorted into FASTQs
+   according to the sample name associated with the barcodes in the
+   "well list" file.
+
+This results in two fastq directories: ``fastqs.barcodes`` and
+``fastqs.samples``. Note that the read pairs themselves are the same
+in each set.
+
+Reports
+-------
+
+The standard QC procedure is run on each set of FASTQS (barcodes and
+samples) and reports are generated for each.
+
+In addition the ``stats`` directory contains a summary of the read
+and UMI counts after each stage (in TSV and XLSX format).
+
+There is also a final summary report ``icell8_processing.html``.
