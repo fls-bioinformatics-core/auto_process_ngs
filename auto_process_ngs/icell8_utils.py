@@ -16,6 +16,7 @@ iCell8 platform:
 - ICell8FastqIterator: class for iterating over iCell8 R1/R2 FASTQ-pair
 - ICell8Stats: class for gathering stats from iCell8 FASTQ pairs
 - collect_fastq_stats: get barcode and distince UMI counts for Fastq
+- normalize_sample_name: replace special characters in well list sample names
 """
 
 #######################################################################
@@ -41,6 +42,12 @@ logger = logging.getLogger(__name__)
 
 INLINE_BARCODE_LENGTH = 11
 UMI_LENGTH = 10
+
+######################################################################
+# Other constants
+######################################################################
+
+SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
 
 ######################################################################
 # Functions
@@ -79,6 +86,29 @@ def collect_fastq_stats(fastq):
         except KeyError:
             umis[barcode] = set((umi,))
     return (fastq,counts,umis)
+
+def normalize_sample_name(s):
+    """
+    Clean up sample name from well list file
+
+    Replaces 'illegal' characters in the supplied name
+    with underscore characters and returns the
+    normalized name.
+
+    Arguments:
+      s (str): sample name from well list file
+
+    Returns:
+      String: normalized sample name
+    """
+    name = []
+    # Replace special characters with underscores
+    for c in str(s):
+        if c in SAMPLENAME_ILLEGAL_CHARS:
+            name.append('_')
+        else:
+            name.append(c)
+    return ''.join(name)
 
 ######################################################################
 # Classes
