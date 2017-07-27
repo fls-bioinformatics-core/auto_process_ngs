@@ -210,7 +210,7 @@ class MockAnalysisProject(object):
     >>> m.create()
 
     """
-    def __init__(self,name,fastq_names=None,fastq_dir=None):
+    def __init__(self,name,fastq_names=None,fastq_dir=None,metadata=dict()):
         """
         Create a new MockAnalysisProject instance
         """
@@ -222,6 +222,7 @@ class MockAnalysisProject(object):
             self.fastq_dir = 'fastqs'
         else:
             self.fastq_dir = fastq_dir
+        self.metadata = metadata
 
     def add_fastq(self,fq):
         """
@@ -254,10 +255,11 @@ class MockAnalysisProject(object):
             fq = os.path.basename(fq)
             with open(os.path.join(fqs_dir,fq),'w') as fp:
                 fp.write('')
-        # Add (empty) README.info
+        # Add README.info
         if readme:
-            open(os.path.join(project_dir,'README.info'),
-                 'w').write('')
+            with open(os.path.join(project_dir,'README.info'),'w') as info:
+                for key in self.metadata:
+                    info.write("%s\t%s" % (key,self.metadata[key]))
         # Add ScriptCode directory
         if scriptcode:
             os.mkdir(os.path.join(project_dir,'ScriptCode'))

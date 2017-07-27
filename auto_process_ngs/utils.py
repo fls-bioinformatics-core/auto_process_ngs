@@ -448,7 +448,7 @@ class AnalysisProject:
     dirn        : associated directory (full path)
     fastq_dirs  : list of all subdirectories with fastq files (relative
                   to dirn)
-    fastq_dir   : directory with 'primary' fastq file set (full path)
+    fastq_dir   : directory with 'active' fastq file set (full path)
     fastqs      : list of fastq files in fastq_dir
     samples     : list of AnalysisSample objects generated from fastq_dir
     multiple_fastqs: True if at least one sample has more than one fastq
@@ -466,20 +466,24 @@ class AnalysisProject:
     platform    : sequencing platform, either None or e.g. 'miseq' etc
     comments    : additional comments, either None or else string of text
     paired_end  : True if data is paired end, False if not
+    primary_fastq_dir: subdirectory holding the 'primary' fastq set
 
     It is possible for a project to have multiple sets of associated
     fastq files, held within separate subdirectories of the project
     directory. A list of subdirectory names with fastq sets can be
     accessed via the 'fastq_dirs' property.
 
-    By default the 'primary' set will be in the 'fastqs' subdirectory.
-    This can be changed using the 'fastq_dir' argument when
-    instantiating the AnalysisProject object. A different directory
-    can also be specified using the 'fastq_dir' argument when creating
-    the project directory.
+    The 'active' fastq set defaults to the 'primary' set (taken from the
+    'primary_fastq_dir' info property). An alternative active set can be
+    specified using the 'fastq_dir' argument when instantiating the
+    AnalysisProject; the active fastq set can also be switched for an
+    existing AnalysisProject using the 'use_fastq_dir' method.
 
-    The fastq set can also be switched using the 'use_fastq_dir'
-    method.
+    The directory holding the primary fastq set is taken from the
+    'fastq_dir' argument of the 'create_project' method when creating
+    the project directory (by default this is the 'fastqs' subdirectory
+    of the project directory). It can be changed using the
+    'set_primary_fastq_dir' method.
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
                  organism=None,run=None,comments=None,platform=None,
@@ -546,6 +550,9 @@ class AnalysisProject:
         if not os.path.exists(self.dirn):
             # Nothing to do, yet
             return
+        # Get data from info file, if present
+        if os.path.isfile(self.info_file):
+            self.info.load(self.info_file)
         # Identify possible fastq subdirectories
         fastq_dirs = []
         for d in bcf_utils.list_dirs(self.dirn):
@@ -563,11 +570,13 @@ class AnalysisProject:
         if not self.fastq_dirs:
             logger.debug("No fastq dirs located for %s" % self.dirn)
             return
-        if fastq_dir is None:
+        if self.info.primary_fastq_dir is None:
             if 'fastqs' in self.fastq_dirs:
-                fastq_dir = 'fastqs'
+                self.info['primary_fastq_dir'] = 'fastqs'
             else:
-                fastq_dir = self.fastq_dirs[0]
+                self.info['primary_fastq_dir'] = self.fastq_dirs[0]
+        if fastq_dir is None:
+            fastq_dir = self.info.primary_fastq_dir
         else:
             if fastq_dir not in self.fastq_dirs:
                 logger.warning("Requested fastqs dir '%s' not in list "
@@ -595,9 +604,6 @@ class AnalysisProject:
         logger.debug("Listing samples and files:")
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
-        # Get data from info file, if present
-        if os.path.isfile(self.info_file):
-            self.info.load(self.info_file)
         # Set paired_end flag for project
         paired_end = True
         for sample in self.samples:
@@ -631,13 +637,34 @@ class AnalysisProject:
         else:
             return 'fastq'
 
+    def set_primary_fastq_dir(self,new_primary_fastq_dir):
+        """
+        Update the primary fastq directory for the project
+
+        This sets the primary fastq directory (aka primary
+        fastq set) to the specified name, which must be a
+        subdirectory of the project directory.
+
+        Note that it doesn't change the active fastq set;
+        use the 'use_fastq_dir' method to do this.
+        """
+        if new_primary_fastq_dir in self.fastq_dirs:
+            self.info['primary_fastq_dir'] = new_primary_fastq_dir
+            self.info.save(self.info_file)
+        else:
+            raise Exception("Can't update primary fastq dir to '%s' "
+                            "for project '%s': directory doesn't exist"
+                            % (new_primary_fastq_dir,self.name))
+
     def use_fastq_dir(self,fastq_dir=None):
         """
         Switch fastq directory and repopulate
 
         Switch to a specified source fastq dir, or to the
-        'default' if none is supplied
+        primary fastq dir if none is supplied
         """
+        if fastq_dir is None:
+            fastq_dir = self.info.primary_fastq_dir
         if fastq_dir is None:
             if 'fastqs' in self.fastq_dirs:
                 fastq_dir = 'fastqs'
@@ -820,7 +847,10 @@ class AnalysisProject:
                     os.link(fastq,target_fq)
         # Populate
         self.populate(fastq_dir=os.path.basename(fastq_dir))
-        # Update metadata information summarising the samples
+        # Update metadata: primary fastq dir
+        self.info['primary_fastq_dir'] = os.path.relpath(fastq_dir,
+                                                         self.dirn)
+        # Update metadata: sample summary
         n_samples = len(self.samples)
         if n_samples == 0:
             sample_description = "No samples"
@@ -1473,6 +1503,7 @@ class AnalysisProjectInfo(MetadataDict):
     library_type: the library type e.g. 'RNA-seq'
     platform: the platform name e.g. 'miseq'
     paired_end: True if the data is paired end, False if not
+    primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
     comments: free-text comments
 
@@ -1494,6 +1525,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'organism':'Organism',
                                   'library_type':'Library type',
                                   'paired_end':'Paired_end',
+                                  'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
                                   'comments':'Comments',
                               },
@@ -1505,6 +1537,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'organism',
                                   'library_type',
                                   'paired_end',
+                                  'primary_fastq_dir',
                                   'samples',
                                   'comments',
                               ),
