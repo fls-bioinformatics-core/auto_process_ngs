@@ -12,6 +12,8 @@ from auto_process_ngs.icell8_utils import ICell8Read1
 from auto_process_ngs.icell8_utils import ICell8ReadPair
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.icell8_utils import ICell8Stats
+from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8_utils import normalize_sample_name
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -296,3 +298,20 @@ class TestICell8Stats(unittest.TestCase):
                          ['TGGAAAATGT'])
         self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
                          ['GGAGGCCGGA'])
+
+class TestNormalizeSampleNameFunction(unittest.TestCase):
+    """
+    Tests for the normalize_sample_name function
+    """
+    def test_normalize_permissible_names(self):
+        """
+        normalize_sample_name: works for permissible names
+        """
+        self.assertEqual(normalize_sample_name("ESC1"),"ESC1")
+        self.assertEqual(normalize_sample_name("d1.2"),"d1.2")
+    def test_normalize_names_with_illegal_chars(self):
+        """
+        normalize_sample_name: works for names with illegal characters
+        """
+        self.assertEqual(normalize_sample_name("Neg Ctrl"),"Neg_Ctrl")
+        self.assertEqual(normalize_sample_name("S1/S2"),"S1_S2")

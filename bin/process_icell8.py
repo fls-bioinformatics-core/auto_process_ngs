@@ -46,6 +46,7 @@ from auto_process_ngs.utils import BaseFastqAttrs
 from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.icell8_utils import ICell8WellList
+from auto_process_ngs.icell8_utils import normalize_sample_name
 from auto_process_ngs.qc.illumina_qc import check_qc_outputs
 import auto_process_ngs.envmod as envmod
 
@@ -1286,7 +1287,7 @@ class MergeSampleFastqs(PipelineTask):
         fastq_groups = dict()
         for fq in self.args.fastqs:
             barcode = os.path.basename(fq).split('.')[-3]
-            sample = well_list.sample(barcode)
+            sample = normalize_sample_name(well_list.sample(barcode))
             try:
                 fastq_groups[sample].append(fq)
             except KeyError:
