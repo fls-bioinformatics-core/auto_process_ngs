@@ -1522,6 +1522,17 @@ class ReportProcessing(PipelineTask):
             report_html=self.out_file
         )
 
+class SetPrimaryFastqDir(PipelineTask):
+    """
+    """
+    def init(self,project_dir,primary_fastq_dir):
+        pass
+    def setup(self):
+        project_dir = os.path.abspath(self.args.project_dir)
+        AnalysisProject(project_dir,
+                        os.path.basename(project_dir)
+                    ).set_primary_fastq_dir(self.args.primary_fastq_dir)
+
 class CleanupDirectory(PipelineTask):
     """
     """
@@ -1999,6 +2010,13 @@ if __name__ == "__main__":
                                       well_list,
                                       sample_fastqs_dir)
     ppl.add_task(sample_fastqs,requires=(split_barcodes,))
+    # Reset primary fastq dir (if working in a project)
+    if analysis_project is not None:
+        set_primary_fastqs = SetPrimaryFastqDir(
+            "Set the primary Fastq directory",
+            icell8_dir,"fastqs.samples")
+        ppl.add_task(set_primary_fastqs,requires=(merge_fastqs,
+                                                  sample_fastqs))
 
     # Final stats for verification
     final_barcode_stats = GetICell8Stats(
