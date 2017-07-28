@@ -559,6 +559,19 @@ def sanitize_name(s):
             name.append(c)
     return ''.join(name)
 
+def tmp_dir(d):
+    """
+    Create a temp dir for directory 'd'
+    """
+    # Make temp directory for outputs
+    tmp = "%s.tmp" % d
+    if os.path.exists(tmp):
+        print "Removing existing tmp dir '%s'" % tmp
+        shutil.rmtree(tmp)
+    print "Creating tmp dir '%s'" % tmp
+    mkdir(tmp)
+    return tmp
+
 ######################################################################
 # Magic numbers
 ######################################################################
@@ -994,20 +1007,29 @@ class SplitFastqsIntoBatches(PipelineTask):
              batch_size=DEFAULT_BATCH_SIZE):
         pass
     def setup(self):
-        # Make the output directory
-        mkdir(self.args.batch_dir)
+        # If output directory already exists then nothing to do
+        if os.path.exists(self.args.batch_dir):
+            print "%s already exists" % self.args.batch_dir
+            return
+        # Make temp directory for outputs
+        self.tmp_batch_dir = tmp_dir(self.args.batch_dir)
         # Set up the commands
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         fastqs_r1 = [p[0] for p in fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r1,
-                                 self.args.batch_dir,
+                                 self.tmp_batch_dir,
                                  self.args.basename,
                                  batch_size=self.args.batch_size))
         fastqs_r2 = [p[1] for p in fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r2,
-                                 self.args.batch_dir,
+                                 self.tmp_batch_dir,
                                  self.args.basename,
                                  batch_size=self.args.batch_size))
+    def finish(self):
+        # On success move the temp dir to the final location
+        if not os.path.exists(self.args.batch_dir):
+            print "Moving tmp dir to final location"
+            os.rename(self.tmp_batch_dir,self.args.batch_dir)
     def output(self):
         out_dir = self.args.batch_dir
         return FileCollection(out_dir,"*.B*.r*.fastq")
@@ -1020,13 +1042,16 @@ class FilterICell8Fastqs(PipelineTask):
               quality_filter=False):
         pass
     def setup(self):
-        mkdir(self.args.filter_dir)
+        if os.path.exists(self.args.filter_dir):
+            print "%s already exists" % self.args.filter_dir
+            return
+        self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
             self.add_cmd(SplitAndFilterFastqPair(
                 fastq_pair,
-                self.args.filter_dir,
+                self.tmp_filter_dir,
                 well_list=self.args.well_list,
                 basename=basename,
                 mode=self.args.mode,
@@ -1034,6 +1059,9 @@ class FilterICell8Fastqs(PipelineTask):
                 quality_filter=self.args.quality_filter))
     def finish(self):
         print self.stdout
+        if not os.path.exists(self.args.filter_dir):
+            print "Moving tmp dir to final location"
+            os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
         out_dir = self.args.filter_dir
         return AttributeDictionary(
@@ -1049,11 +1077,17 @@ class TrimReads(PipelineTask):
     def init(self,fastqs,trim_dir):
         pass
     def setup(self):
-        mkdir(self.args.trim_dir)
+        if os.path.exists(self.args.trim_dir):
+            print "%s already exists" % self.args.trim_dir
+            return
+        self.tmp_trim_dir = tmp_dir(self.args.trim_dir)
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             self.add_cmd(TrimFastqPair(fastq_pair,
-                                       self.args.trim_dir))
+                                       self.tmp_trim_dir))
+    def finish(self):
+        if not os.path.exists(self.args.trim_dir):
+            os.rename(self.tmp_trim_dir,self.args.trim_dir)
     def output(self):
         out_dir = self.args.trim_dir
         return FileCollection(out_dir,"*.trimmed.fastq")
@@ -1064,11 +1098,17 @@ class GetReadsWithPolyGRegions(PipelineTask):
     def init(self,fastqs,poly_g_regions_dir):
         pass
     def setup(self):
-        mkdir(self.args.poly_g_regions_dir)
+        if os.path.exists(self.args.poly_g_regions_dir):
+            print "%s already exists" % self.args.poly_g_regions_dir
+            return
+        self.tmp_poly_g_regions_dir = tmp_dir(self.args.poly_g_regions_dir)
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             self.add_cmd(FilterPolyGReads(fastq_pair,
-                                          self.args.poly_g_regions_dir))
+                                          self.tmp_poly_g_regions_dir))
+    def finish(self):
+        if not os.path.exists(self.args.poly_g_regions_dir):
+            os.rename(self.tmp_poly_g_regions_dir,self.args.poly_g_regions_dir)
     def output(self):
         out_dir = self.args.poly_g_regions_dir
         return FileCollection(out_dir,"*.poly_g.fastq")
@@ -1080,16 +1120,22 @@ class FilterContaminatedReads(PipelineTask):
              contaminants_conf,aligner=None,threads=None):
         pass
     def setup(self):
-        mkdir(self.args.filter_dir)
+        if os.path.exists(self.args.filter_dir):
+            print "%s already exists" % self.args.filter_dir
+            return
+        self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             self.add_cmd(ContaminantFilterFastqPair(
                 fastq_pair,
-                self.args.filter_dir,
+                self.tmp_filter_dir,
                 self.args.mammalian_conf,
                 self.args.contaminants_conf,
                 aligner=self.args.aligner,
                 threads=self.args.threads))
+    def finish(self):
+        if not os.path.exists(self.args.filter_dir):
+            os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
         out_dir = self.args.filter_dir
         return FileCollection(out_dir,"*.trimmed.filtered.fastq")
@@ -1100,15 +1146,21 @@ class SplitByBarcodes(PipelineTask):
     def init(self,fastqs,barcodes_dir):
         pass
     def setup(self):
-        mkdir(self.args.barcodes_dir)
+        if os.path.exists(self.args.barcodes_dir):
+            print "%s already exists" % self.args.barcodes_dir
+            return
+        self.tmp_barcodes_dir = tmp_dir(self.args.barcodes_dir)
         fastq_pairs = pair_fastqs(self.args.fastqs)[0]
         for fastq_pair in fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
             self.add_cmd(SplitAndFilterFastqPair(
                 fastq_pair,
-                self.args.barcodes_dir,
+                self.tmp_barcodes_dir,
                 basename=basename,
                 mode="barcodes"))
+    def finish(self):
+        if not os.path.exists(self.args.barcodes_dir):
+            os.rename(self.tmp_barcodes_dir,self.args.barcodes_dir)
     def output(self):
         out_dir = self.args.barcodes_dir
         return FileCollection(out_dir,"*.r*.fastq")
@@ -1121,13 +1173,16 @@ class MergeBarcodeFastqs(PipelineTask):
              merge_dir,basename,batch_size=25):
         pass
     def setup(self):
-        # Move existing output directory
+        # If output directory already exists then nothing to do
         if os.path.exists(self.args.merge_dir):
-            print "Moving existing dir '%s'" % self.args.merge_dir
-            os.rename(self.args.merge_dir,
-                      "%s.unprocessed" % self.args.merge_dir)
-        # Make the output directory
-        mkdir(self.args.merge_dir)
+            print "%s already exists" % self.args.merge_dir
+            return
+        # Make temp directory for outputs
+        self.tmp_merge_dir = "%s.tmp" % self.args.merge_dir
+        if os.path.exists(self.tmp_merge_dir):
+            print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
+            shutil.rmtree(self.tmp_merge_dir)
+        mkdir(self.tmp_merge_dir)
         # Extract the barcodes from the fastq names
         barcodes = set()
         for fq in self.args.fastqs:
@@ -1154,7 +1209,7 @@ class MergeBarcodeFastqs(PipelineTask):
                 print "-- %s" % barcode
                 fastq_pairs.extend(fastq_groups[barcode])
             self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
-                                                 self.args.merge_dir,
+                                                 self.tmp_merge_dir,
                                                  basename=self.args.basename,
                                                  mode="barcodes",
                                                  compress=True))
@@ -1167,104 +1222,19 @@ class MergeBarcodeFastqs(PipelineTask):
             fastq_pairs = pair_fastqs(fqs)[0]
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
-                                      self.args.merge_dir,
+                                      self.tmp_merge_dir,
                                       "%s.%s.r1.fastq.gz" %
                                       (self.args.basename,name)))
             fqs_r2 = [p[1] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r2,
-                                      self.args.merge_dir,
+                                      self.tmp_merge_dir,
                                       "%s.%s.r2.fastq.gz" %
                                       (self.args.basename,name)))
-    def output(self):
-        out_dir = self.args.merge_dir
-        return AttributeDictionary(
-            assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq.gz"),
-            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq.gz"),
-            failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq.gz"),
-            failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq.gz"),
-        )
-
-class SplitByBarcodes(PipelineTask):
-    """
-    """
-    def init(self,fastqs,barcodes_dir):
-        pass
-    def setup(self):
-        mkdir(self.args.barcodes_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
-            basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
-            self.add_cmd(SplitAndFilterFastqPair(
-                fastq_pair,
-                self.args.barcodes_dir,
-                basename=basename,
-                mode="barcodes"))
-    def output(self):
-        out_dir = self.args.barcodes_dir
-        return FileCollection(out_dir,"*.r*.fastq")
-
-class MergeBarcodeFastqs(PipelineTask):
-    """
-    """
-    def init(self,fastqs,unassigned_fastqs,
-             failed_barcode_fastqs,failed_umi_fastqs,
-             merge_dir,basename,batch_size=25):
-        pass
-    def setup(self):
-        # Move existing output directory
-        if os.path.exists(self.args.merge_dir):
-            print "Moving existing dir '%s'" % self.args.merge_dir
-            os.rename(self.args.merge_dir,
-                      "%s.unprocessed" % self.args.merge_dir)
-        # Make the output directory
-        mkdir(self.args.merge_dir)
-        # Extract the barcodes from the fastq names
-        barcodes = set()
-        for fq in self.args.fastqs:
-            barcode = os.path.basename(fq).split('.')[-3]
-            barcodes.add(barcode)
-        barcodes = sorted(list(barcodes))
-        # Group files by barcode
-        fastq_groups = dict()
-        for barcode in barcodes:
-            fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
-                                     fq.endswith("%s.r2.fastq" % barcode)),
-                         self.args.fastqs)
-            fastq_groups[barcode] = fqs
-        # Group barcodes into batches
-        barcode_batches = [barcodes[i:i+self.args.batch_size]
-                           for i in xrange(0,len(barcodes),
-                                           self.args.batch_size)]
-        # Concat fastqs
-        for i,barcode_batch in enumerate(barcode_batches):
-            batch_name = "barcodes%06d" % i
-            print "Barcode batch: %s" % batch_name
-            fastq_pairs = []
-            for barcode in barcode_batch:
-                print "-- %s" % barcode
-                fastq_pairs.extend(fastq_groups[barcode])
-            self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
-                                                 self.args.merge_dir,
-                                                 basename=self.args.basename,
-                                                 mode="barcodes",
-                                                 compress=True))
-        # Handle unassigned and failed quality reads
-        for name,fqs in (('unassigned',self.args.unassigned_fastqs),
-                         ('failed_barcodes',self.args.failed_barcode_fastqs),
-                         ('failed_umis',self.args.failed_umi_fastqs)):
-            if not fqs:
-                continue
-            fastq_pairs = pair_fastqs(fqs)[0]
-            fqs_r1 = [p[0] for p in fastq_pairs]
-            self.add_cmd(ConcatFastqs(fqs_r1,
-                                      self.args.merge_dir,
-                                      "%s.%s.r1.fastq.gz" %
-                                      (self.args.basename,name)))
-            fqs_r2 = [p[1] for p in fastq_pairs]
-            self.add_cmd(ConcatFastqs(fqs_r2,
-                                      self.args.merge_dir,
-                                      "%s.%s.r2.fastq.gz" %
-                                      (self.args.basename,name)))
+    def finish(self):
+        # On success move the temp dir to the final location
+        if not os.path.exists(self.args.merge_dir):
+            print "Moving tmp dir to final location"
+            os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
         out_dir = self.args.merge_dir
         return AttributeDictionary(
@@ -1280,8 +1250,16 @@ class MergeSampleFastqs(PipelineTask):
     def init(self,fastqs,well_list,merge_dir):
         pass
     def setup(self):
-        # Make the output directory
-        mkdir(self.args.merge_dir)
+        # If output directory already exists then nothing to do
+        if os.path.exists(self.args.merge_dir):
+            print "%s already exists" % self.args.merge_dir
+            return
+        # Make temp directory for outputs
+        self.tmp_merge_dir = "%s.tmp" % self.args.merge_dir
+        if os.path.exists(self.tmp_merge_dir):
+            print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
+            shutil.rmtree(self.tmp_merge_dir)
+        mkdir(self.tmp_merge_dir)
         # Group fastqs by sample
         well_list = ICell8WellList(self.args.well_list)
         fastq_groups = dict()
@@ -1297,12 +1275,17 @@ class MergeSampleFastqs(PipelineTask):
             fastq_pairs = pair_fastqs(fastq_groups[sample])[0]
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
-                                      self.args.merge_dir,
+                                      self.tmp_merge_dir,
                                       "%s.r1.fastq.gz" % sample))
             fqs_r2 = [p[1] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r2,
-                                      self.args.merge_dir,
+                                      self.tmp_merge_dir,
                                       "%s.r2.fastq.gz" % sample))
+    def finish(self):
+        # On success move the temp dir to the final location
+        if not os.path.exists(self.args.merge_dir):
+            print "Moving tmp dir to final location"
+            os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
         out_dir = self.args.merge_dir
         return AttributeDictionary(
