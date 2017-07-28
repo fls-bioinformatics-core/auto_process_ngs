@@ -1895,6 +1895,10 @@ if __name__ == "__main__":
     shutil.copy(well_list,outdir)
     well_list = os.path.join(outdir,os.path.basename(well_list))
 
+    # Final Fastq directories
+    barcode_fastqs_dir = os.path.join(icell8_dir,"fastqs.barcodes")
+    sample_fastqs_dir = os.path.join(icell8_dir,"fastqs.samples")
+
     # Set up a pipeline
     ppl = Pipeline(name="Process ICell8")
 
@@ -1908,138 +1912,167 @@ if __name__ == "__main__":
     ppl.add_task(initial_stats,
                  runner=runners['contaminant_filter'])
 
-    # Split fastqs into batches
-    batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
-    batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
-                                          batch_dir,basename,
-                                          batch_size=args.batch_size)
-    ppl.add_task(batch_fastqs)
+    # ICell8-specific QC and filtering tasks
+    # Only run these stages if the final fastqs don't exist
+    if not (os.path.exists(barcode_fastqs_dir) and os.path.exists(sample_fastqs_dir)):
+        # Split fastqs into batches
+        batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
+        batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
+                                              batch_dir,basename,
+                                              batch_size=args.batch_size)
+        ppl.add_task(batch_fastqs)
 
-    # Setup the filtering jobs as a group
-    filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
-    filter_fastqs = FilterICell8Fastqs("Filter Fastqs",
-                                       batch_fastqs.output(),
-                                       filter_dir,
-                                       well_list=well_list,
-                                       mode='none',
-                                       discard_unknown_barcodes=True,
-                                       quality_filter=do_quality_filter)
-    ppl.add_task(filter_fastqs,requires=(batch_fastqs,))
+        # Setup the filtering jobs as a group
+        filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
+        filter_fastqs = FilterICell8Fastqs("Filter Fastqs",
+                                           batch_fastqs.output(),
+                                           filter_dir,
+                                           well_list=well_list,
+                                           mode='none',
+                                           discard_unknown_barcodes=True,
+                                           quality_filter=do_quality_filter)
+        ppl.add_task(filter_fastqs,requires=(batch_fastqs,))
     
-    # Post filtering stats
-    filter_stats = GetICell8Stats("Post-filtering statistics",
-                                  filter_fastqs.output().assigned,
-                                  initial_stats.output(),
-                                  suffix="_filtered",
-                                  append=True,
-                                  nprocs=args.threads)
-    ppl.add_task(filter_stats,requires=(initial_stats,filter_fastqs),
-                 runner=runners['contaminant_filter'])
+        # Post filtering stats
+        filter_stats = GetICell8Stats("Post-filtering statistics",
+                                      filter_fastqs.output().assigned,
+                                      initial_stats.output(),
+                                      suffix="_filtered",
+                                      append=True,
+                                      nprocs=args.threads)
+        ppl.add_task(filter_stats,requires=(initial_stats,filter_fastqs),
+                     runner=runners['contaminant_filter'])
 
-    # Use cutadapt to find reads with poly-G regions
-    poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
-    get_poly_g_reads = GetReadsWithPolyGRegions(
-        "Find reads with poly-G regions",
-        filter_fastqs.output().assigned,
-        poly_g_dir)
-    ppl.add_task(get_poly_g_reads,requires=(filter_fastqs,))
-    poly_g_stats = GetICell8PolyGStats("Poly-G region statistics",
-                                       get_poly_g_reads.output(),
-                                       initial_stats.output(),
-                                       suffix="_poly_g",
-                                       append=True,
-                                       nprocs=args.threads)
-    ppl.add_task(poly_g_stats,requires=(get_poly_g_reads,filter_stats),
-                 runner=runners['contaminant_filter'])
+        # Use cutadapt to find reads with poly-G regions
+        poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
+        get_poly_g_reads = GetReadsWithPolyGRegions(
+            "Find reads with poly-G regions",
+            filter_fastqs.output().assigned,
+            poly_g_dir)
+        ppl.add_task(get_poly_g_reads,requires=(filter_fastqs,))
+        poly_g_stats = GetICell8PolyGStats("Poly-G region statistics",
+                                           get_poly_g_reads.output(),
+                                           initial_stats.output(),
+                                           suffix="_poly_g",
+                                           append=True,
+                                           nprocs=args.threads)
+        ppl.add_task(poly_g_stats,requires=(get_poly_g_reads,filter_stats),
+                     runner=runners['contaminant_filter'])
 
-    # Set up the cutadapt jobs as a group
-    trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
-    trim_reads = TrimReads("Read trimming",
-                           filter_fastqs.output().assigned,
-                           trim_dir)
-    ppl.add_task(trim_reads,requires=(filter_fastqs,))
+        # Set up the cutadapt jobs as a group
+        trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
+        trim_reads = TrimReads("Read trimming",
+                               filter_fastqs.output().assigned,
+                               trim_dir)
+        ppl.add_task(trim_reads,requires=(filter_fastqs,))
 
-    # Post read trimming stats
-    trim_stats = GetICell8Stats("Post-trimming statistics",
-                                trim_reads.output(),
-                                initial_stats.output(),
-                                suffix="_trimmed",
-                                append=True,
-                                nprocs=args.threads)
-    ppl.add_task(trim_stats,requires=(trim_reads,poly_g_stats),
-                 runner=runners['contaminant_filter'])
+        # Post read trimming stats
+        trim_stats = GetICell8Stats("Post-trimming statistics",
+                                    trim_reads.output(),
+                                    initial_stats.output(),
+                                    suffix="_trimmed",
+                                    append=True,
+                                    nprocs=args.threads)
+        ppl.add_task(trim_stats,requires=(trim_reads,poly_g_stats),
+                     runner=runners['contaminant_filter'])
 
-    # Set up the contaminant filter jobs as a group
-    contaminant_filter_dir = os.path.join(icell8_dir,
-                                          "_fastqs.contaminant_filter")
-    contaminant_filter = FilterContaminatedReads("Contaminant filtering",
-                                                 trim_reads.output(),
-                                                 contaminant_filter_dir,
-                                                 args.mammalian_conf,
-                                                 args.contaminants_conf,
-                                                 aligner=args.aligner,
-                                                 threads=args.threads)
-    ppl.add_task(contaminant_filter,requires=(trim_reads,),
-                 runner=runners['contaminant_filter'])
+        # Set up the contaminant filter jobs as a group
+        contaminant_filter_dir = os.path.join(icell8_dir,
+                                              "_fastqs.contaminant_filter")
+        contaminant_filter = FilterContaminatedReads("Contaminant filtering",
+                                                     trim_reads.output(),
+                                                     contaminant_filter_dir,
+                                                     args.mammalian_conf,
+                                                     args.contaminants_conf,
+                                                     aligner=args.aligner,
+                                                     threads=args.threads)
+        ppl.add_task(contaminant_filter,requires=(trim_reads,),
+                     runner=runners['contaminant_filter'])
 
-    # Post contaminant filter stats
-    final_stats = GetICell8Stats("Post-contaminant filter statistics",
-                                 contaminant_filter.output(),
-                                 initial_stats.output(),
-                                 suffix="_contaminant_filtered",
-                                 append=True,
-                                 nprocs=args.threads)
-    ppl.add_task(final_stats,requires=(contaminant_filter,trim_stats),
-                 runner=runners['contaminant_filter'])
-
-    # Rebatch reads by barcode and sample
-    # First: split each batch by barcode
-    barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.split_barcodes")
-    split_barcodes = SplitByBarcodes("Split batches by barcode",
+        # Post contaminant filter stats
+        final_stats = GetICell8Stats("Post-contaminant filter statistics",
                                      contaminant_filter.output(),
-                                     barcoded_fastqs_dir)
-    ppl.add_task(split_barcodes,requires=(contaminant_filter,))
-    # Merge (concat) fastqs into single pairs per barcode
-    final_fastqs_dir = os.path.join(icell8_dir,"fastqs.barcodes")
-    merge_fastqs = MergeBarcodeFastqs("Assemble reads by barcode",
-                                      split_barcodes.output(),
-                                      filter_fastqs.output().unassigned,
-                                      filter_fastqs.output().failed_barcodes,
-                                      filter_fastqs.output().failed_umis,
-                                      final_fastqs_dir,
-                                      basename)
-    ppl.add_task(merge_fastqs,requires=(split_barcodes,))
-    # Merge (concat) fastqs into single pairs per barcode
-    sample_fastqs_dir = os.path.join(icell8_dir,"fastqs.samples")
-    sample_fastqs = MergeSampleFastqs("Assemble reads by sample",
-                                      split_barcodes.output(),
-                                      well_list,
-                                      sample_fastqs_dir)
-    ppl.add_task(sample_fastqs,requires=(split_barcodes,))
-    # Reset primary fastq dir (if working in a project)
-    if analysis_project is not None:
-        set_primary_fastqs = SetPrimaryFastqDir(
-            "Set the primary Fastq directory",
-            icell8_dir,"fastqs.samples")
-        ppl.add_task(set_primary_fastqs,requires=(merge_fastqs,
-                                                  sample_fastqs))
+                                     initial_stats.output(),
+                                     suffix="_contaminant_filtered",
+                                     append=True,
+                                     nprocs=args.threads)
+        ppl.add_task(final_stats,requires=(contaminant_filter,trim_stats),
+                     runner=runners['contaminant_filter'])
 
-    # Final stats for verification
-    final_barcode_stats = GetICell8Stats(
-        "Post-barcode splitting and merging statistics",
-        merge_fastqs.output().assigned,
-        initial_stats.output(),
-        suffix="_final",
-        append=True,
-        nprocs=args.threads)
-    ppl.add_task(final_barcode_stats,requires=(merge_fastqs,final_stats),
-                 runner=runners['contaminant_filter'])
+        # Prepare for rebatching reads by barcode and sample by splitting
+        # each batch by barcode
+        split_barcoded_fastqs_dir = os.path.join(icell8_dir,"_fastqs.split_barcodes")
+        split_barcodes = SplitByBarcodes("Split batches by barcode",
+                                         contaminant_filter.output(),
+                                         split_barcoded_fastqs_dir)
+        ppl.add_task(split_barcodes,requires=(contaminant_filter,))
+        # Merge (concat) fastqs into single pairs per barcode
+        barcode_fastqs = MergeBarcodeFastqs("Assemble reads by barcode",
+                                            split_barcodes.output(),
+                                            filter_fastqs.output().unassigned,
+                                            filter_fastqs.output().failed_barcodes,
+                                            filter_fastqs.output().failed_umis,
+                                            barcode_fastqs_dir,
+                                            basename)
+        ppl.add_task(barcode_fastqs,requires=(split_barcodes,))
+        # Merge (concat) fastqs into single pairs per barcode
+        sample_fastqs_dir = os.path.join(icell8_dir,"fastqs.samples")
+        sample_fastqs = MergeSampleFastqs("Assemble reads by sample",
+                                          split_barcodes.output(),
+                                          well_list,
+                                          sample_fastqs_dir)
+        ppl.add_task(sample_fastqs,requires=(split_barcodes,))
 
-    # Verify that barcodes are okay
-    check_barcodes = CheckICell8Barcodes(
-        "Verify barcodes are consistent",
-        merge_fastqs.output().assigned)
-    ppl.add_task(check_barcodes,requires=(merge_fastqs,))
+        # Final stats for verification
+        final_barcode_stats = GetICell8Stats(
+            "Post-barcode splitting and merging statistics",
+            barcode_fastqs.output().assigned,
+            initial_stats.output(),
+            suffix="_final",
+            append=True,
+            nprocs=args.threads)
+        ppl.add_task(final_barcode_stats,requires=(barcode_fastqs,final_stats),
+                     runner=runners['contaminant_filter'])
+
+        # Verify that barcodes are okay
+        check_barcodes = CheckICell8Barcodes(
+            "Verify barcodes are consistent",
+            barcode_fastqs.output().assigned)
+        ppl.add_task(check_barcodes,requires=(barcode_fastqs,))
+
+        # Cleanup outputs
+        cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
+                                                batch_dir)
+        cleanup_quality_filter = CleanupDirectory("Remove filtered Fastqs",
+                                                  filter_dir)
+        cleanup_poly_g = CleanupDirectory("Remove poly-G region stats data",
+                                          poly_g_dir)
+        cleanup_trim_reads = CleanupDirectory("Remove trimmed Fastqs",
+                                              trim_dir)
+        cleanup_contaminant_filtered = CleanupDirectory("Remove contaminant "
+                                                        "filtered Fastqs",
+                                                        contaminant_filter_dir)
+        cleanup_split_barcodes = CleanupDirectory("remove barcode split Fastqs",
+                                                  split_barcoded_fastqs_dir)
+        if do_clean_up:
+            # Wait until all stages are finished before doing clean up
+            clean_up_requirements = (barcode_fastqs,
+                                     sample_fastqs,
+                                     final_stats)
+            ppl.add_task(cleanup_batch_fastqs,requires=clean_up_requirements)
+            ppl.add_task(cleanup_quality_filter,requires=clean_up_requirements)
+            ppl.add_task(cleanup_poly_g,requires=clean_up_requirements)
+            ppl.add_task(cleanup_trim_reads,requires=clean_up_requirements)
+            ppl.add_task(cleanup_contaminant_filtered,requires=clean_up_requirements)
+            ppl.add_task(cleanup_split_barcodes,requires=clean_up_requirements)
+
+        # Requirements for QC
+        barcode_qc_requirements = (barcode_fastqs,)
+        sample_qc_requirements = (sample_fastqs,)
+    else:
+        # Requirements for QC if full pipeline not run
+        barcode_qc_requirements = None
+        sample_qc_requirements = None
 
     # Generate XLSX version of stats
     xlsx_stats = ConvertStatsToXLSX(
@@ -2058,7 +2091,7 @@ if __name__ == "__main__":
                                   outdir,
                                   fastq_dir="fastqs.barcodes",
                                   qc_dir="qc.barcodes")
-    ppl.add_task(run_qc_barcodes,requires=(merge_fastqs,),
+    ppl.add_task(run_qc_barcodes,requires=barcode_qc_requirements,
                  runner=runners['contaminant_filter'])
     ppl.add_task(multiqc_barcodes,requires=(run_qc_barcodes,))
     run_qc_samples = RunQC("Run QC for samples",
@@ -2070,42 +2103,22 @@ if __name__ == "__main__":
                                  outdir,
                                  fastq_dir="fastqs.samples",
                                  qc_dir="qc.samples")
-    ppl.add_task(run_qc_samples,requires=(sample_fastqs,),
+    ppl.add_task(run_qc_samples,requires=sample_qc_requirements,
                  runner=runners['contaminant_filter'])
     ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
+
+    # Reset primary fastq dir (if working in a project)
+    if analysis_project is not None:
+        set_primary_fastqs = SetPrimaryFastqDir(
+            "Set the primary Fastq directory",
+            icell8_dir,"fastqs.samples")
+        ppl.add_task(set_primary_fastqs,
+                     requires=sample_qc_requirements)
 
     # Final report
     final_report = ReportProcessing("Generate processing report",
                                     outdir)
     ppl.add_task(final_report,requires=(final_barcode_stats,))
-
-    # Cleanup outputs
-    cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
-                                            batch_dir)
-    cleanup_quality_filter = CleanupDirectory("Remove filtered Fastqs",
-                                              filter_dir)
-    cleanup_poly_g = CleanupDirectory("Remove poly-G region stats data",
-                                      poly_g_dir)
-    cleanup_trim_reads = CleanupDirectory("Remove trimmed Fastqs",
-                                          trim_dir)
-    cleanup_contaminant_filtered = CleanupDirectory("Remove contaminant "
-                                                    "filtered Fastqs",
-                                                    contaminant_filter_dir)
-    cleanup_split_barcodes = CleanupDirectory("remove barcode split Fastqs",
-                                              barcoded_fastqs_dir)
-    if do_clean_up:
-        ppl.add_task(cleanup_batch_fastqs,requires=(filter_fastqs,))
-        ppl.add_task(cleanup_quality_filter,requires=(trim_reads,
-                                                      get_poly_g_reads,
-                                                      merge_fastqs,
-                                                      filter_stats))
-        ppl.add_task(cleanup_poly_g,requires=(poly_g_stats,))
-        ppl.add_task(cleanup_trim_reads,requires=(contaminant_filter,
-                                                  trim_stats))
-        ppl.add_task(cleanup_contaminant_filtered,requires=(final_stats,
-                                                            split_barcodes))
-        ppl.add_task(cleanup_split_barcodes,requires=(merge_fastqs,
-                                                      sample_fastqs))
 
     # Execute the pipeline
     exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
