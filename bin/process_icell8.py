@@ -1899,22 +1899,26 @@ if __name__ == "__main__":
     barcode_fastqs_dir = os.path.join(icell8_dir,"fastqs.barcodes")
     sample_fastqs_dir = os.path.join(icell8_dir,"fastqs.samples")
 
-    # Set up a pipeline
-    ppl = Pipeline(name="Process ICell8")
-
-    # Initial stats
-    initial_stats = GetICell8Stats("Initial statistics",
-                                   fastqs,
-                                   os.path.join(stats_dir,"icell8_stats.tsv"),
-                                   well_list,
-                                   unassigned=True,
-                                   nprocs=args.threads)
-    ppl.add_task(initial_stats,
-                 runner=runners['contaminant_filter'])
+    # Set up pipelines
+    pipelines = []
 
     # ICell8-specific QC and filtering tasks
     # Only run these stages if the final fastqs don't exist
     if not (os.path.exists(barcode_fastqs_dir) and os.path.exists(sample_fastqs_dir)):
+
+        # Dedicated pipeline for these tasks
+        print "Setting pipeline for ICell8 QC filter"
+        ppl = Pipeline(name="ICell8: QC filter")
+
+        # Initial stats
+        initial_stats = GetICell8Stats("Initial statistics",
+                                       fastqs,
+                                       os.path.join(stats_dir,"icell8_stats.tsv"),
+                                       well_list,
+                                       unassigned=True,
+                                       nprocs=args.threads)
+        ppl.add_task(initial_stats,runner=runners['contaminant_filter'])
+
         # Split fastqs into batches
         batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
         batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
@@ -2040,6 +2044,13 @@ if __name__ == "__main__":
             barcode_fastqs.output().assigned)
         ppl.add_task(check_barcodes,requires=(barcode_fastqs,))
 
+        # Generate XLSX version of stats
+        xlsx_stats = ConvertStatsToXLSX(
+            "Convert statistics to XLSX",
+            final_barcode_stats.output(),
+            os.path.join(stats_dir,"icell8_stats.xlsx"))
+        ppl.add_task(xlsx_stats,requires=(final_barcode_stats,))
+
         # Cleanup outputs
         cleanup_batch_fastqs = CleanupDirectory("Remove batched Fastqs",
                                                 batch_dir)
@@ -2066,22 +2077,12 @@ if __name__ == "__main__":
             ppl.add_task(cleanup_contaminant_filtered,requires=clean_up_requirements)
             ppl.add_task(cleanup_split_barcodes,requires=clean_up_requirements)
 
-        # Requirements for QC
-        barcode_qc_requirements = (barcode_fastqs,)
-        sample_qc_requirements = (sample_fastqs,)
-    else:
-        # Requirements for QC if full pipeline not run
-        barcode_qc_requirements = None
-        sample_qc_requirements = None
+        # Add to list of pipelines
+        pipelines.append(ppl)
 
-    # Generate XLSX version of stats
-    xlsx_stats = ConvertStatsToXLSX(
-        "Convert statistics to XLSX",
-        final_barcode_stats.output(),
-        os.path.join(stats_dir,"icell8_stats.xlsx"))
-    ppl.add_task(xlsx_stats,requires=(final_barcode_stats,))
-
-    # Run the QC
+    # Pipeline for running the QC
+    print "Setting up pipeline for running Illumina QC"
+    ppl = Pipeline(name="ICell8: run Illumina QC")
     run_qc_barcodes = RunQC("Run QC for barcodes",
                             outdir,
                             nthreads=args.threads,
@@ -2091,8 +2092,7 @@ if __name__ == "__main__":
                                   outdir,
                                   fastq_dir="fastqs.barcodes",
                                   qc_dir="qc.barcodes")
-    ppl.add_task(run_qc_barcodes,requires=barcode_qc_requirements,
-                 runner=runners['contaminant_filter'])
+    ppl.add_task(run_qc_barcodes,runner=runners['contaminant_filter'])
     ppl.add_task(multiqc_barcodes,requires=(run_qc_barcodes,))
     run_qc_samples = RunQC("Run QC for samples",
                            outdir,
@@ -2103,8 +2103,7 @@ if __name__ == "__main__":
                                  outdir,
                                  fastq_dir="fastqs.samples",
                                  qc_dir="qc.samples")
-    ppl.add_task(run_qc_samples,requires=sample_qc_requirements,
-                 runner=runners['contaminant_filter'])
+    ppl.add_task(run_qc_samples,runner=runners['contaminant_filter'])
     ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
 
     # Reset primary fastq dir (if working in a project)
@@ -2112,21 +2111,30 @@ if __name__ == "__main__":
         set_primary_fastqs = SetPrimaryFastqDir(
             "Set the primary Fastq directory",
             icell8_dir,"fastqs.samples")
-        ppl.add_task(set_primary_fastqs,
-                     requires=sample_qc_requirements)
+        ppl.add_task(set_primary_fastqs)
 
-    # Final report
+    # Add to list of pipelines
+    pipelines.append(ppl)
+
+    # Final reporting
+    print "Setting up a pipeline for final reporting"
+    ppl = Pipeline(name="ICell8: final reporting")
     final_report = ReportProcessing("Generate processing report",
                                     outdir)
-    ppl.add_task(final_report,requires=(final_barcode_stats,))
+    ppl.add_task(final_report)
+    pipelines.append(ppl)
 
-    # Execute the pipeline
-    exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
+    # Execute the pipelines
+    print "Running the pipelines"
+    for ppl in pipelines:
+        exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
+        if exit_status != 0:
+            # Finished with error
+            logger.critical("Pipeline failed: exit status %s" % exit_status)
+            sched.stop()
+            sys.exit(exit_status)
 
     # Finish
     sched.stop()
-    if exit_status != 0:
-        logger.critical("Pipeline failed: exit status %s" % exit_status)
-    else:
-        print "Pipeline completed ok"
-    sys.exit(exit_status)
+    print "All pipelines completed ok"
+    sys.exit(0)
