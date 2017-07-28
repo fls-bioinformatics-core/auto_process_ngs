@@ -1849,7 +1849,8 @@ if __name__ == "__main__":
         logger.warning("Ignoring project '%s'" % args.project)
     elif args.project:
         analysis_project = AnalysisProject(args.project,
-                                           args.project)
+                                           args.project,
+                                           fastq_dir='fastqs')
         for sample in analysis_project.samples:
             for fq in sample.fastq:
                 fastqs.append(os.path.join(
