@@ -967,6 +967,24 @@ class GetICell8Stats(PipelineTask):
              nprocs=1):
         pass
     def setup(self):
+        # Check if requested columns already exist
+        if os.path.exists(self.args.stats_file):
+            got_cols = True
+            stats = TabFile(self.args.stats_file,first_line_is_header=True)
+            for col in ('Nreads','Distinct_UMIs'):
+                if self.args.suffix is not None:
+                    col = '%s%s' % (col,self.args.suffix)
+                if col not in stats.header():
+                    print "Missing column: %s" % col
+                    got_cols = False
+                    break
+                else:
+                    print "Found column: %s" % col
+            if got_cols:
+                # Skip statistics collection
+                print "Stats file already contains data"
+                return
+        # Set up the statistics collection
         self.add_cmd(ICell8Statistics(self.args.fastqs,
                                       self.args.stats_file,
                                       well_list=self.args.well_list,
@@ -988,6 +1006,10 @@ class GetICell8PolyGStats(GetICell8Stats):
         print "Add number of reads with poly-G regions as percentage"
         stats_file = self.args.stats_file
         stats = TabFile(stats_file,first_line_is_header=True)
+        # Check if data is already present
+        if "%reads_poly_g" in stats.header():
+            print "Poly-G stats already collected"
+            return
         # Add and populate the new column
         stats.appendColumn("%reads_poly_g")
         for line in stats:
