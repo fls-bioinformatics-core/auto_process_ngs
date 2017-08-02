@@ -363,8 +363,12 @@ class AnalysisDir:
                 self._bcl2fastq_dirs.append(dirn)
                 self.sequencing_data.append(data)
                 continue
-            except IlluminaData.IlluminaDataError, ex:
+            except IlluminaData.IlluminaDataError:
                 pass
+            except Exception as ex:
+                logging.warning("Exception when attempting to load "
+                                "subdir '%s' as CASAVA/bcl2fastq output "
+                                "(ignored): %s" % (dirn,ex))
             # Look for analysis data
             data = AnalysisProject(dirn,os.path.join(self._analysis_dir,dirn))
             if data.is_analysis_dir:
