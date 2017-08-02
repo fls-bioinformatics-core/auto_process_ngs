@@ -201,6 +201,48 @@ class TestAnalysisFastq(unittest.TestCase):
             self.assertEqual(fq.set_number,None)
             self.assertEqual(str(fq),'%s_R1' % name)
 
+    def test_non_standard_sample_name(self):
+        """Handle non-standard Fastq names with sample name only
+        """
+        fq = AnalysisFastq('NH1_ChIP-seq.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertEqual(str(fq),'NH1_ChIP-seq.r2')
+
+    def test_non_standard_sample_name_with_dots(self):
+        """Handle non-standard Fastq names with sample name containing dots
+        """
+        fq = AnalysisFastq('NH1.2.r2')
+        self.assertEqual(fq.sample_name,'NH1.2')
+        self.assertEqual(fq.basename,'NH1.2.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertEqual(str(fq),'NH1.2.r2')
+
+    def test_non_standard_sample_name_and_barcode(self):
+        """Handle non-standard Fastq names with sample name and barcode
+        """
+        fq = AnalysisFastq('NH1_ChIP-seq.ACAGTG.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertEqual(str(fq),'NH1_ChIP-seq.ACAGTG.r2')
+
     def test_input_is_full_path(self):
         """Handle input as full path to Fastq file
         """
