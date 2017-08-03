@@ -2288,7 +2288,7 @@ class AutoProcess:
                     copies of any fastq.gz inputs (default is False,
                     don't decompress the input files)
           fastq_screen_subset: subset of reads to use in fastq_screen
-                    (default is 1000000, set to zero or None to use
+                    (default is 100000, set to zero or None to use
                     all reads)
           nthreads: (optional) specify number of threads to run the
                     QC pipeline with (default is 1)
