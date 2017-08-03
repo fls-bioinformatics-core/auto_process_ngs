@@ -18,6 +18,10 @@ default_version = <=1.8.4
 no_lane_splitting = False
 create_empty_fastqs = True
 
+# QC settings
+[qc]
+nprocessors = 1
+
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
 # override the default bcl2fastq settings (i.e. number of
