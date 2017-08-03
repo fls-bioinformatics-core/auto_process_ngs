@@ -21,6 +21,7 @@ create_empty_fastqs = True
 # QC settings
 [qc]
 nprocessors = 1
+fastq_screen_subset = 100000
 
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to

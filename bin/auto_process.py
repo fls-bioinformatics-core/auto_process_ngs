@@ -442,8 +442,8 @@ def add_run_qc_command(cmdparser):
                               description="Run QC procedures for sequencing projects in "
                               "ANALYSIS_DIR.")
     default_nthreads = __settings.qc.nprocessors
+    fastq_screen_subset = __settings.qc.fastq_screen_subset
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
-    fastq_screen_subset = 1000000
     p.add_option('--projects',action='store',
                  dest='project_pattern',default=None,
                  help="simple wildcard-based pattern specifying a subset of projects "

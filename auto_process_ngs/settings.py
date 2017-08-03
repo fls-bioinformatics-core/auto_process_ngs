@@ -118,6 +118,9 @@ class Settings:
         # qc
         self.add_section('qc')
         self.qc['nprocessors'] = config.getint('qc','nprocessors',1)
+        self.qc['fastq_screen_subset'] = config.getint('qc',
+                                                       'fastq_screen_subset',
+                                                       100000)
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
