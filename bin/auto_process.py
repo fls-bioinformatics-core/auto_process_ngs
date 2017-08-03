@@ -455,6 +455,10 @@ def add_run_qc_command(cmdparser):
                  help="specify size of subset of total reads to use for "
                  "fastq_screen (i.e. --subset option); (default %d, set to "
                  "0 to use all reads)" % fastq_screen_subset)
+    p.add_option('-t','--threads',action='store',dest="nthreads",
+                 type='int',default=1,
+                 help="number of threads to use for QC script "
+                 "(default: 1)")
     p.add_option('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
                  help="create decompressed copies of fastq.gz files")
     p.add_option('--max-jobs',action='store',
@@ -923,6 +927,7 @@ if __name__ == "__main__":
                                max_jobs=options.max_jobs,
                                ungzip_fastqs=options.ungzip_fastqs,
                                fastq_screen_subset=options.subset,
+                               nthreads=options.nthreads,
                                fastq_dir=options.fastq_dir,
                                qc_dir=options.qc_dir,
                                report_html=options.html_file,

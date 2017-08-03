@@ -2262,9 +2262,9 @@ class AutoProcess:
                 logging.warning("'undetermined' directory already exists, skipping")
 
     def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,
-               fastq_screen_subset=1000000,runner=None,
-               fastq_dir=None,qc_dir=None,report_html=None,
-               run_multiqc=True):
+               fastq_screen_subset=100000,nthreads=1,
+               runner=None,fastq_dir=None,qc_dir=None,
+               report_html=None,run_multiqc=True):
         """Run QC pipeline script for projects
 
         Run the illumina_qc.sh script to perform QC on projects.
@@ -2290,6 +2290,8 @@ class AutoProcess:
           fastq_screen_subset: subset of reads to use in fastq_screen
                     (default is 1000000, set to zero or None to use
                     all reads)
+          nthreads: (optional) specify number of threads to run the
+                    QC pipeline with (default is 1)
           runner:   (optional) specify a non-default job runner to
                     use for the QC.
           fastq_dir: (optional) specify the subdirectory to take the
@@ -2389,8 +2391,10 @@ class AutoProcess:
                             qc_cmd.add_args('--ungzip-fastqs')
                         if fastq_screen_subset is None:
                             fastq_screen_subset = 0
-                        qc_cmd.add_args('--subset',fastq_screen_subset,
-                                        '--qc_dir',project_qc_dir)
+                        qc_cmd.add_args(
+                            '--threads',nthreads,
+                            '--subset',fastq_screen_subset,
+                            '--qc_dir',project_qc_dir)
                         job = group.add(qc_cmd,name=label,wd=project.dirn)
                         print "Job: %s" %  job
                 # Indicate no more jobs to add
