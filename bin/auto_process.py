@@ -441,6 +441,7 @@ def add_run_qc_command(cmdparser):
                               usage="%prog run_qc [OPTIONS] [ANALYSIS_DIR]",
                               description="Run QC procedures for sequencing projects in "
                               "ANALYSIS_DIR.")
+    default_nthreads = __settings.qc.nprocessors
     max_concurrent_jobs = __settings.general.max_concurrent_jobs
     fastq_screen_subset = 1000000
     p.add_option('--projects',action='store',
@@ -456,9 +457,9 @@ def add_run_qc_command(cmdparser):
                  "fastq_screen (i.e. --subset option); (default %d, set to "
                  "0 to use all reads)" % fastq_screen_subset)
     p.add_option('-t','--threads',action='store',dest="nthreads",
-                 type='int',default=1,
+                 type='int',default=default_nthreads,
                  help="number of threads to use for QC script "
-                 "(default: 1)")
+                 "(default: %d)" % default_nthreads)
     p.add_option('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
                  help="create decompressed copies of fastq.gz files")
     p.add_option('--max-jobs',action='store',

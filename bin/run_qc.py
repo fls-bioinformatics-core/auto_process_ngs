@@ -94,10 +94,10 @@ if __name__ == "__main__":
                    "subset of samples to run the QC on. If specified "
                    "then only FASTQs with sample names matching "
                    "PATTERN will be examined.")
-    p.add_argument('-t','--threads',
-                   action='store',dest="nthreads",default=1,
+    p.add_argument('-t','--threads',action='store',dest="nthreads",
+                   type=int,default=__settings.qc.nprocessors,
                    help="number of threads to use for QC script "
-                   "(default: 1)")
+                   "(default: %d)" % __settings.qc.nprocessors)
     p.add_argument('-r','--runner',metavar='RUNNER',action='store',
                    dest="runner",default=str(__settings.runners.qc),
                    help="explicitly specify runner definition for "

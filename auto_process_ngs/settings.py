@@ -115,6 +115,9 @@ class Settings:
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
+        # qc
+        self.add_section('qc')
+        self.qc['nprocessors'] = config.getint('qc','nprocessors',1)
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
