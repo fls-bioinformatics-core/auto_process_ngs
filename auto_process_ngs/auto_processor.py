@@ -2894,6 +2894,10 @@ class AutoProcess:
                     if report_copied:
                         qc_base = "%s_report" % qc_dir
                         fastq_dir = project.qc_info(qc_dir).fastq_dir
+                        if fastq_dir != project.info.primary_fastq_dir:
+                            fastq_set = fastq_dir
+                        else:
+                            fastq_set = None
                         # Index
                         report_html.append(
                             "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
@@ -2901,14 +2905,14 @@ class AutoProcess:
                                project.name,
                                os.path.basename(self.analysis_dir),
                                qc_base,
-                               (" (%s)" % fastq_dir
-                                if fastq_dir != 'fastqs' else "")))
+                               (" (%s)" % fastq_set
+                                if fastq_set is not None else "")))
                         # Zip file
                         report_html.append(
                             "<a href='%s'>[Zip%s]</a>"
                             % (os.path.basename(qc_zip),
                                (" (%s)" % fastq_dir
-                                if fastq_dir != 'fastqs' else "")))
+                                if fastq_set is not None else "")))
                     # MultiQC
                     multiqc_report = os.path.join(project.dirn,
                                                   "multi%s.html" % qc_base)
