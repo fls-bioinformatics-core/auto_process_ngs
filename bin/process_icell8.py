@@ -42,7 +42,6 @@ from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.simple_scheduler import SchedulerGroup
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
-from auto_process_ngs.utils import BaseFastqAttrs
 from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.icell8_utils import ICell8WellList
@@ -1321,14 +1320,12 @@ class RunQC(PipelineTask):
              fastq_dir='fastqs',qc_dir='qc'):
         self.qc_dir = None
         self.qc_report = None
-        self.fastq_attrs = ICell8FastqAttrs
     def setup(self):
         # Gather Fastqs
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
-            fastq_dir=self.args.fastq_dir,
-            fastq_attrs=self.fastq_attrs)
+            fastq_dir=self.args.fastq_dir)
         batch_size = self.args.batch_size
         # Make the output qc directory
         self.qc_dir = project.setup_qc_dir(self.args.qc_dir)
@@ -1351,8 +1348,7 @@ class RunQC(PipelineTask):
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
-            fastq_dir=self.args.fastq_dir,
-            fastq_attrs=self.fastq_attrs)
+            fastq_dir=self.args.fastq_dir)
         if not project.verify_qc(qc_dir=self.qc_dir):
             print "Failed to verify QC"
             self.fail(exit_code=1)
@@ -1392,13 +1388,11 @@ class RunMultiQC(PipelineTask):
     """
     def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
         self.multiqc_out = None
-        self.fastq_attrs = ICell8FastqAttrs
     def setup(self):
         project = AnalysisProject(
             os.path.basename(self.args.project_dir),
             self.args.project_dir,
-            fastq_dir=self.args.fastq_dir,
-            fastq_attrs=self.fastq_attrs)
+            fastq_dir=self.args.fastq_dir)
         project.use_qc_dir(self.args.qc_dir)
         multiqc_out = os.path.join(project.dirn,
                                    "multi%s_report.html" % \
@@ -1428,21 +1422,20 @@ class CheckICell8Barcodes(PipelineTask):
     def init(self,fastqs):
         self.bad_barcodes = None
     def setup(self):
-        fastq_attrs =ICell8FastqAttrs
         batch_size = 25
         # Reduce fastq list to just R1 files
         fastqs = filter(lambda fq:
-                        fastq_attrs(fq).read_number == 1,
+                        AnalysisFastq(fq).read_number == 1,
                         self.args.fastqs)
         # Set up verification on batches of fastqs
         while fastqs:
             cmd = PipelineCommandWrapper("Check ICell8 barcodes")
             for fq in fastqs[:batch_size]:
-                if fastq_attrs(fq).extension.endswith('.gz'):
+                if AnalysisFastq(fq).extension.endswith('.gz'):
                     cat = 'zcat'
                 else:
                     cat = 'cat'
-                barcode = fastq_attrs(fq).barcode_sequence
+                barcode = AnalysisFastq(fq).barcode_sequence
                 if cmd.cmd() is not None:
                     cmd.add_args("&&")
                 cmd.add_args(
@@ -1559,55 +1552,7 @@ class CleanupDirectory(PipelineTask):
 # Classes
 ######################################################################
 
-class ICell8FastqAttrs(BaseFastqAttrs):
-    """
-    Extract attributes from Icell8 pipeline Fastq names
-
-    Used as a custom Fastq name attribute parser for output
-    Fastqs from the ICell8 pipeline.
-
-    Fastq names for the final barcoded files look like e.g.:
-
-    icell8.CCAGTTCAGGA.r1.fastq
-
-    For the samples e.g.:
-
-    d1.2.r1.fastq.gz
-    """
-    def __init__(self,fastq):
-        BaseFastqAttrs.__init__(self,fastq)
-        name = self.basename.split('.')
-        # Handle the file extension
-        extension = []
-        if name[-1] == "gz":
-            extension.append("gz")
-            name = name[:-1]
-        if name[-1] in ("fastq","fq"):
-            extension.insert(0,name[-1])
-            name = name[:-1]
-        if extension:
-            self.extension = '.'.join(extension)
-        # Get the read number
-        if name[-1].startswith('r'):
-            try:
-                self.read_number = int(name[-1][1:])
-                name = name[:-1]
-            except ValueError:
-                # Can't get a read number
-                self.sample_name = '.'.join(name)
-                return
-        # Get the barcode sequence
-        if (len(name) > 1) and \
-           (len(name[-1]) > 0) and \
-           (not filter(lambda c: c not in "AGCT",name[-1])):
-            self.barcode_sequence = name[-1]
-        # Assume sample name is whatever's left over
-        self.sample_name = '.'.join(name)
-    def __repr__(self):
-        name = [self.sample_name]
-        if self.read_number:
-            name.append("r%s" % self.read_number)
-        return '.'.join(name)
+# No classes defined
 
 ######################################################################
 # Functions
