@@ -94,6 +94,13 @@ if __name__ == "__main__":
                    "subset of samples to run the QC on. If specified "
                    "then only FASTQs with sample names matching "
                    "PATTERN will be examined.")
+    p.add_argument('--fastq_screen_subset',metavar='SUBSET',
+                   action='store',dest='fastq_screen_subset',
+                   default=__settings.qc.fastq_screen_subset,type=int,
+                   help="specify size of subset of total reads to use "
+                   "for fastq_screen (i.e. --subset option); (default "
+                   "%d, set to 0 to use all reads)" %
+                   __settings.qc.fastq_screen_subset)
     p.add_argument('-t','--threads',action='store',dest="nthreads",
                    type=int,default=__settings.qc.nprocessors,
                    help="number of threads to use for QC script "
@@ -196,7 +203,8 @@ if __name__ == "__main__":
                 qc_cmd = Command('illumina_qc.sh',fq)
                 if args.nthreads > 1:
                     qc_cmd.add_args('--threads',args.nthreads)
-                qc_cmd.add_args('--qc_dir',qc_dir)
+                qc_cmd.add_args('--subset',args.fastq_screen_subset,
+                                '--qc_dir',qc_dir)
                 job = sched.submit(qc_cmd,
                                    wd=project.dirn,
                                    name="%s.%s" % (qc_base,
