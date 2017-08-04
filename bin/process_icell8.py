@@ -1637,10 +1637,11 @@ if __name__ == "__main__":
                    choices=["bowtie","bowtie2"],
                    help="aligner to use with fastq_screen (default: "
                    "don't specify the aligner)")
-    p.add_argument("--no-quality-filter",action='store_true',
-                   dest="no_quality_filter",
-                   help="turn off the barcode/UMI quality checks "
-                   "(recommended for NextSeq data)")
+    p.add_argument("-q","--quality-filter",action='store_true',
+                   dest="quality_filter",
+                   help="filter out read pairs with low quality "
+                   "barcode and UMI sequences (not recommended for "
+                   "NextSeq data)")
     p.add_argument("--no-cleanup",action='store_true',
                    dest="no_cleanup",
                    help="don't remove intermediate Fastq files "
@@ -1679,6 +1680,11 @@ if __name__ == "__main__":
     p.add_argument('--force',action='store_true',
                    dest='force',default=False,
                    help="force overwrite of existing outputs")
+    p.add_argument("--no-quality-filter",action='store_true',
+                   dest="no_quality_filter",
+                   help="deprecated: kept for backwards compatibility "
+                   "only as barcode/UMI quality checks are now "
+                   "disabled by default")
     args = p.parse_args()
 
     # Deal with module files
@@ -1725,7 +1731,7 @@ if __name__ == "__main__":
     # Other settings
     well_list = os.path.abspath(args.well_list)
     max_jobs = args.max_jobs
-    do_quality_filter = (not args.no_quality_filter)
+    do_quality_filter = args.quality_filter
     do_clean_up = (not args.no_cleanup)
 
     # Report settings

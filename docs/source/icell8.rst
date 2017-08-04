@@ -35,15 +35,16 @@ QC and filtering protocol
 
 The following steps are performed:
 
- * **Initial quality screen:** apply quality filters to the barcode and
-   UMI sequences and reject read pairs that fail to meet the criteria.
+ * **Optional initial quality screen:** this applies quality filtering
+   to the barcode and UMI sequences, and rejects read pairs that fail to
+   meet the following criteria:
 
    - Barcode bases must have Q >= 10
    - UMI bases must have Q >= 30
 
-   NB this filtering can be skipped data by specifying the
-   ``--no-quality-filter`` option. This is recommended for NextSeq
-   data 
+   By default this filtering is not used (this is recommended for
+   NextSeq data). The quality filtering can be turned on by specifying
+   the ``--quality-filter`` option.
 
 
  * **Barcode filtering:** barcodes are checked against the list of
