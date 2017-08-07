@@ -418,6 +418,10 @@ class AutoProcess:
                 continue
             except IlluminaData.IlluminaDataError:
                 pass
+            except Exception as ex:
+                logging.warning("Exception when attempting to load "
+                                "subdir '%s' as CASAVA/bcl2fastq output "
+                                "(ignored): %s" % (dirn,ex))
             # Try loading as a project
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
