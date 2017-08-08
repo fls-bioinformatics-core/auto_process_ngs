@@ -284,6 +284,8 @@ class PipelineTask(object):
             del(self._callargs['self'])
         except KeyError:
             pass
+        # Execute the init method
+        self.invoke(self.init,self._args,self._kws)
     @property
     def args(self):
         return AttributeDictionary(**self._callargs)
@@ -363,8 +365,7 @@ class PipelineTask(object):
         self._commands.append(pipeline_job)
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,wait_for=(),async=True):
-        # Do init and setup
-        self.invoke(self.init,self._args,self._kws)
+        # Do setup
         self.invoke(self.setup)
         # Generate commands to run
         cmds = []
