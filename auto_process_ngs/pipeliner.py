@@ -113,7 +113,7 @@ The key features are:
    method, as in the ``finish`` method above. Raising an exception
    will also implicitly indicate a failure.
 
-6. The ``output`` method returns the ``out_files`` list object.
+7. The ``output`` method returns the ``out_files`` list object.
 
 Another example is a task which does a simple-minded read count on
 a set of Fastq files::
