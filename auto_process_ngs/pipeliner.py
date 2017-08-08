@@ -5,6 +5,7 @@
 #
 """
 pipeliner.py
+============
 
 Module providing utility classes and functions for building simple
 'pipelines' of tasks.
@@ -14,6 +15,8 @@ The core classes are:
 - Pipeline: class for building and executing pipelines
 - PipelineTask: class for defining pipeline tasks
 - PipelineCommand: class for defining commands that can be used in tasks
+  (nb the ``PipelineCommandWrapper`` class is recommended over subclassing
+  ``PipelineCommand``)
 
 Additional supporting classes:
 
@@ -26,6 +29,240 @@ internal use:
 - Capturing: capture stdout from a Python function
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
+
+Overview
+--------
+
+For the purposes of the ``pipeliner`` module, a 'pipeline' consists
+of a set of 'tasks': a task can be independent of any other task, or
+it may depend on one or more tasks being completed before it can
+start.
+
+Defining tasks: examples
+------------------------
+
+Tasks must be defined by subclassing the ``PipelineTask`` class and
+implementing the following methods:
+
+- init: used to declare any input parameters for the task
+- setup: perform any set up (e.g. creating output directories) or
+  other arbitary actions; typically it also defines any commands that
+  will be sent to the scheduler, however this is optional.
+- finish: perform final actions after setup and any defined commands
+  have completed (nb ``finish`` is optional)
+- output: return any outputs from the task once it has completed.
+
+For example: let's define a task which runs the ``fastqc`` program
+on a collection of Fastq files one at a time::
+
+    class RunFastqc(PipelineTask):
+        def init(self,fastqs,out_dir):
+            self.out_files = list()
+        def setup(self):
+            if not os.path.exists(self.args.out_dir):
+                os.mkdir(self.args.out_dir)
+            for fq in self.args.fastqs:
+                self.add_cmd(
+                    PipelineCommandWrapper("Run FastQC",
+                                           "fastqc",
+                                           "-o",self.args.out_dir,
+                                           fq))
+        def finish(self):
+            for fq in self.args.fastqs:
+                out_file = os.path.join(
+                    self.args.out_dir,
+                    os.path.splitext(
+                        os.path.basename(fq))[0]+"_fastqc.html"))
+                if not os.path.exists(out_file):
+                    self.fail(message="Missing output file: %s" % out_file)
+                else:
+                    self.out_files.append(out_file)
+        def output(self):
+            return self.out_files
+
+The key features are:
+
+1. The argument list of the ``init`` method defines an arbitrary
+   set of parameters which are made available to the other methods
+   via the ``self.args`` object.
+
+   The ``init`` method also creates an attribute that is used to
+   store the outputs of the task.
+
+2. The ``setup`` method creates the output directory if it doesn't
+   already exist, and then calls the ``add_cmd`` method to add a
+   command for each Fastq file supplied via the ``fastqs`` argument
+   (accessed as ``self.args.fastqs``), which will run ``fastqc`` on
+   that Fastq.
+
+3. The command to run ``fastqc`` is created by creating a
+   ``PipelineCommandWrapper`` instance, which names the command
+   and specifies the command and arguments to execute.
+
+4. The commands defined via the ``add_cmd`` method are not guaranteed
+   to run sequentially. If there are additional commands that rely on
+   the first set of commands finishing, then either append these to the
+   commands using the shell ``&&`` notation, or put them into a
+   separate task which should be executed afterwards.
+
+5. The ``finish`` method constructs the names of the expected output
+   Fastqc HTML files, and adds them to the ``out_files`` list which
+   was originally initialised within the ``init`` method.
+
+6. The task can explicitly indicate a failure by calling the ``fail``
+   method, as in the ``finish`` method above. Raising an exception
+   will also implicitly indicate a failure.
+
+6. The ``output`` method returns the ``out_files`` list object.
+
+Another example is a task which does a simple-minded read count on
+a set of Fastq files::
+
+    class CountReads(PipelineTask):
+        def init(self,fastqs):
+            self.counts = dict()
+        def setup(self):
+            for fq in self.args.fastqs:
+                if os.path.splitext(fq)[1] == ".gz":
+                   cat = "zcat"
+                else:
+                   cat = "cat"
+                self.add_cmd(
+                    PipelineCommandWrapper("Count reads",
+                                           "echo","-n",fq,"' '","&&",
+                                            cat,fq,"|",
+                                            "wc","-l"))
+        def finish(self):
+            for line in self.stdout.split('\n'):
+                if not line:
+                    continue
+                fq = line.split()[0]
+                read_count = int(line.split()[1])/4
+                self.counts[fq] = read_count
+        def output(self):
+            return self.counts
+
+The key features are:
+
+1. The ``init`` method initialises an internal task-specific variable
+   which is used in other methods.
+
+2. The standard output from the task is available via the ``stdout``
+   property of the instance.
+
+3. The ``finish`` method is implemented to extract the line count data
+   from standard output and convert this to a read count which is
+   stored against the Fastq name.
+
+A final example is a task which filters out the Fastq files which have
+non-zero read counts::
+
+    class FilterEmptyFastqs(PipelineTask):
+        def init(self,read_counts):
+            self.filtered_fastqs = list()
+        def setup(self):
+            for fq in self.args.read_counts:
+                if self.args.read_counts[fq] > 0:
+                     self.filtered_fastqs.append(fq)
+        def output(self):
+            return self.filtered_fastqs
+
+In this case all the processing is performed by the ``setup`` method;
+no commands are defined.
+
+Task outputs
+------------
+
+Each task subclass needs to implement its own ``output`` method, which
+is used to pass the outputs of the task to other tasks in the pipeline.
+
+In principle the ``output`` method can return anything.
+
+It is important to note that when building a pipeline, the objects
+returned by ``output`` are likely to be passed to other tasks before
+the task has completed.
+
+Building and running a pipeline
+-------------------------------
+
+An empty pipeline is created by making a ``Pipeline`` instance::
+
+    ppl = Pipeline()
+
+Specific task instances are then created from PipelineTask subclasses,
+for example using the tasks defined previously::
+
+    read_counts = CountReads("Count the reads",fastqs)
+    filter_empty_fastqs = FilterEmptyFastqs("Filter empty Fastqs",
+                                            read_counts.output())
+    run_fastqc = RunFastqc("Run Fastqc",
+                           filter_empty_fastqs.output())
+
+Note that when instantiating a task, it must be given a name; this
+can be any arbitrary text and is intended to help the end user
+distinguish between different task instances in the pipeline.
+
+The tasks are then added to the pipeline using the ``add_task``
+method::
+
+    ppl.add_task(read_counts)
+    ppl.add_task(filter_empty_fastqs,
+                 requires=(read_counts,))
+    ppl.add_task(run_fastqc,
+                 requires=(filter_empty_fastqs,))
+
+The pipeline is then run using the ``run`` method::
+
+    ppl.run(...)
+
+Notes:
+
+1. Tasks will only be executed once any tasks they depend on have
+   completed successfully; these are specified via the ``requires``
+   argument (which must be a list or tuple of task instances).
+
+2. Tasks that fail (i.e. complete with non-zero exit status) will
+   cause the pipeline to halt at that point.
+
+3. The ``run`` method blocks and returns the exit status of the
+   pipeline execution.
+
+PipelineCommand versus PipelineCommandWrapper
+---------------------------------------------
+
+In the first version of the pipeliner code, commands within the
+``setup`` method of ``PipelineTasks`` had to be generated using
+subclasses of the ``PipelineCommand`` class.
+
+A simple example to run Fastqc::
+
+    class Fastqc(PipelineCommand):
+        def init(self,fastq,out_dir):
+            self._fastq = fastq
+            self._out_dir = out_dir
+        def cmd(self):
+            return Command("fastqc",
+                           "-o",self._out_dir,
+                           self._fastq)
+
+which can then be used within a task, for example::
+
+    class RunFastqc(PipelineTask):
+        ...
+        def setup(self):
+            ...
+            for fq in self.args.fastqs:
+                self.add_cmd(Fastqc(fq,self.args.out_dir))
+
+as an alternative to the example ``RunFastqc`` example task given
+previously, which used the ``PipelineCommandWrapper`` class to
+explicitly generate the Fastqc command.
+
+Both approaches are valid. However: using ``PipelineCommand`` is
+probably better suited to situations where the same command was used
+in more than one distinct tasks. In cases where the command is only
+used in one task, using ``PipelineCommandWrapper`` is recommended.
+
 """
 
 ######################################################################
@@ -243,21 +480,11 @@ class PipelineTask(object):
     Individual programs should be wrapped in instances of the
     'PipelineCommand' class.
 
-    This class should be subclassed to implement the 'setup',
-    'finish' and 'output' methods.
+    This class should be subclassed to implement the 'init',
+    'setup', 'finish' and 'output' methods.
 
     The 'add_cmd' method can be used within 'setup' to add one
     or 'PipelineCommand' instances.
-
-    For example:
-
-    >>> class LsDir(PipelineTask):
-    ...    def init(self,dirn):
-    ...      pass
-    ...    def setup(self):
-    ...      self.add_cmd(LsCommand(self.args.dirn))
-    ...    def outputs(self):
-    ...      return None
 
     """
     def __init__(self,_name,*args,**kws):
