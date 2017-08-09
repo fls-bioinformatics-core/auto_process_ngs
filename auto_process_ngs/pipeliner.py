@@ -69,10 +69,12 @@ on a collection of Fastq files one at a time::
                                            fq))
         def finish(self):
             for fq in self.args.fastqs:
+                if fq.endswith(".gz"):
+                    fq = os.path.splitext(fq)[0]
                 out_file = os.path.join(
                     self.args.out_dir,
                     os.path.splitext(
-                        os.path.basename(fq))[0]+"_fastqc.html"))
+                        os.path.basename(fq))[0]+"_fastqc.html")
                 if not os.path.exists(out_file):
                     self.fail(message="Missing output file: %s" % out_file)
                 else:
@@ -180,7 +182,57 @@ In principle the ``output`` method can return anything.
 
 It is important to note that when building a pipeline, the objects
 returned by ``output`` are likely to be passed to other tasks before
-the task has completed.
+the task has completed. There are a number of implications:
+
+1. Tasks that receive output from a preceeding task cannot assume that
+   those outputs are ready or complete at the point of initialisation.
+   It's therefore recommended that tasks don't attempt to use those
+   outputs in their 'init' method - all processing should be deferred
+   until the 'setup' method (when preceeding tasks will have completed).
+
+2. Outputs from tasks should be passed by object references (e.g.
+   via a list or dictionary, which can be updated by the task after
+   being passed, or via specialised classes such as ``FileCollector``).
+
+As an example, consider the following task which reverses the order of
+a list of items::
+
+    class ReverseList(PipelineTask):
+        def init(self,items):
+            # Create a list to use as output
+            self.reversed = list()
+        def setup(self):
+            # Generate the reversed list
+            for item in self.args.items[::-1]:
+                self.reversed.append(item)
+        def output(self):
+            # Return the list
+            return self.reversed
+
+This might be used as follows::
+
+    reverse_list = ReverseList("Reverse order of list",[1,2,3])
+
+Subsequently ``reverse_list.output()`` will return the reference to
+the output list, which can then be passed to another task. The list
+will be populated when the reverse task runs, at which point the
+output will be available to the following tasks.
+
+The ``FileCollector`` class is a specialised class which enables
+the collection of files matching a glob-type pattern, and which can
+be used as an alternative where appropriate. For example::
+
+    class MakeFiles(PipelineTask):
+        def init(self,d,filenames):
+            pass
+        def setup(self):
+            # Create a directory and "touch" the files
+            os.mkdir(self.args.d)
+            for f in self.args.filenames:
+                with open(os.path.join(self.args.d,f) as fp:
+                    fp.write()
+        def output():
+            return FileCollector(self.args.d,"*")
 
 Building and running a pipeline
 -------------------------------
@@ -342,8 +394,11 @@ class Pipeline(object):
     """
     Class to define and run a 'pipeline' of 'tasks'
 
-    A 'pipeline' in this case is a set of 'tasks', some of
-    which may depend on other tasks in the pipeline.
+    A pipeline consists of a set of tasks (defined by
+    instantiating subclasses of PipelineTask) with
+    simple dependency relationships (i.e. a task will
+    depend on none, one or more other tasks in the
+    pipeline to complete before it can be executed).
 
     Example usage:
 
@@ -354,11 +409,21 @@ class Pipeline(object):
     >> p.run()
 
     Tasks will only run when all requirements have
-    completed (or will run immediately if they don't have
-    any requirements).
+    completed (or will run immediately if they don't
+    have any requirements).
     """
     def __init__(self,name="PIPELINE",default_runner=None,
                  working_dir=None):
+        """
+        Create a new Pipeline instance
+
+        Arguments:
+          name (str): optional name for the pipeline
+          default_runner (JobRunner): optional default
+            job runner to use
+          working_dir (str): optional path to a working
+            directory (defaults to the current directory)
+        """
         self._name = str(name)
         self._pending = []
         self._running = []
@@ -367,20 +432,18 @@ class Pipeline(object):
         if working_dir is None:
             working_dir = os.getcwd()
         self._working_dir = os.path.abspath(working_dir)
-    def add_task(self,task,requires=(),**kws):
-        self._pending.append((task,requires,kws))
-        self.report("Adding task '%s'" % task.name())
-        if requires:
-            for req in requires:
-                if req.name() not in [t[0].name() for t in self._pending]:
-                    self.report("-> Adding requirement '%s'" % req.name())
-                    self.add_task(req)
-        return task
+
     def report(self,s):
+        """
+        Internal: report messages from the pipeline
+        """
         print "%s [%s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                               self._name,s)
+
     def terminate(self):
-        # Terminates the pipeline
+        """
+        Internal: terminate a running pipeline
+        """
         self.report("Terminating pipeline")
         # Dump all pending tasks
         self._pending = []
@@ -391,7 +454,43 @@ class Pipeline(object):
                 self.report("- %s" % task.name())
                 task.terminate()
         return 1
+
+    def add_task(self,task,requires=(),**kws):
+        """
+        Add a task to the pipeline
+
+        Arguments:
+          task (PipelineTask): task instance to add to
+            the pipeline
+          requires (List): list or tuple of task instances
+            which need to complete before this task will
+            start
+          kws (Dictionary): a dictionary of keyword-value
+            pairs which will be passed to the task at
+            run time (see the ``run`` method of
+            PipelineTask for valid options)
+        """
+        self._pending.append((task,requires,kws))
+        self.report("Adding task '%s'" % task.name())
+        if requires:
+            for req in requires:
+                if req.name() not in [t[0].name() for t in self._pending]:
+                    self.report("-> Adding requirement '%s'" % req.name())
+                    self.add_task(req)
+        return task
+
     def run(self,sched=None,log_dir=None,scripts_dir=None):
+        """
+        Run the tasks in the pipeline
+
+        Arguments:
+          sched (SimpleScheduler): a scheduler to use for
+            running commands generated by each task
+          log_dir (str): path of directory where log files
+            will be written to
+          scripts_dir (str): path of directory where script
+            files will be written to
+        """
         # Execute the pipeline
         self.report("Started")
         # Run while there are still pending or running tasks
@@ -481,13 +580,26 @@ class PipelineTask(object):
     'PipelineCommand' class.
 
     This class should be subclassed to implement the 'init',
-    'setup', 'finish' and 'output' methods.
+    'setup', 'finish' (optionally) and 'output' methods.
 
     The 'add_cmd' method can be used within 'setup' to add one
     or 'PipelineCommand' instances.
 
     """
     def __init__(self,_name,*args,**kws):
+        """
+        Create a new PipelineTask instance
+
+        Arguments:
+          name (str): an arbitrary user-friendly name for the
+            task instance
+          args (List): list of arguments to be supplied to
+            the subclass (must match those defined in the
+            'init' method)
+          kws (Dictionary): dictionary of keyword-value pairs
+            to be supplied to the subclass (must match those
+            defined in the 'init' method)
+        """
         self._name = str(_name)
         self._args = args
         self._kws = kws
@@ -513,38 +625,95 @@ class PipelineTask(object):
             pass
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
+
     @property
     def args(self):
+        """
+        Fetch parameters supplied to the instance
+        """
         return AttributeDictionary(**self._callargs)
+
     @property
     def completed(self):
+        """
+        Check if the task has completed
+        """
         return self._completed
+
     @property
     def exit_code(self):
+        """
+        Get the exit code for completed task
+
+        Returns:
+          Integer: exit code, or 'None' if task hasn't completed
+        """
         if not self.completed:
             return None
         else:
             return self._exit_code
+
     @property
     def stdout(self):
+        """
+        Get the standard output from the task
+
+        Returns:
+          String: standard output from the task.
+        """
         stdout = []
         for f in self._stdout_files:
             with open(f,'r') as fp:
                 stdout.append(fp.read())
         return '\n'.join(stdout)
+
     def name(self):
+        """
+        Get the name of the task within the pipeline
+
+        Returns:
+          String: a name consisting of a 'sanitized' version
+            of the supplied name appended with a unique id
+            code
+        """
         return self._task_name
+
     def fail(self,exit_code=1,message=None):
-        # Register the task as failing
+        """
+        Register the task as failing
+
+        Intended to be invoked from the subclassed 'setup'
+        or 'finish' methods, to terminate the task and
+        indicate that it has failed.
+
+        Arguments:
+          exit_code (int): optional, specifies the exit code
+            to return (defaults to 1)
+          message (str): optional, error message to report to
+            the pipeline user
+        """
         if message:
             self.report("failed: %s" % message)
         self.report("failed: exit code set to %s" % exit_code)
         self._completed = True
         self._exit_code = exit_code
+
     def report(self,s):
+        """
+        Internal: report messages from the task
+        """
         print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                     self._name,s)
     def invoke(self,f,args=None,kws=None):
+        """
+        Internal: invoke arbitrary method on the task
+
+        Arguments:
+          f (function): method to invoke (e.g. 'self.init')
+          args (list): arguments to invoke function with
+          kws (dictionary): keyworded parameters to invoke
+            function with
+        """
         try:
             with Capturing() as output:
                 if args is None:
@@ -561,13 +730,19 @@ class PipelineTask(object):
                         (f.__name__,ex))
             traceback.print_exc(ex)
             self._exit_code += 1
+
     def task_completed(self,name,jobs,sched):
-        # Callback method invoked when scheduled
-        # jobs in the task finish
-        # Arguments:
-        # name (str): name for the callback
-        # jobs (list): list of SchedulerJob instances
-        # sched (SimpleScheduler): scheduler instance
+        """
+        Internal: callback method
+
+        This is a callback method which is invoked when
+        scheduled jobs in the task finish
+
+        Arguments:
+          name (str): name for the callback
+          jobs (list): list of SchedulerJob instances
+          sched (SimpleScheduler): scheduler instance
+        """
         for job in jobs:
             try:
                 if job.exit_code != 0:
@@ -588,10 +763,40 @@ class PipelineTask(object):
         # Flag job as completed
         self._completed = True
         self.report("%s completed" % name)
+
     def add_cmd(self,pipeline_job):
+        """
+        Add a PipelineCommand to the task
+
+        Arguments:
+           pipeline_job (PipelineCommand): a PipelineCommand
+             instance to be executed by the task when it
+             runs
+        """
         self._commands.append(pipeline_job)
+
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,wait_for=(),async=True):
+        """
+        Run the task
+
+        This method is not normally invoked directly; instead
+        it's called by the pipeline that the task has been
+        added to.
+
+        Arguments:
+          sched (SimpleScheduler): scheduler to submit jobs to
+          runner (JobRunner): job runner to use when running
+            jobs via the scheduler
+          working_dir (str): path to the working directory to use
+          log_dir (str): path to the directory to write logs to
+          scripts_dir (str): path to the directory to write
+            scripts to
+          wait_for (list): deprecated: list of scheduler jobs to
+            wait for before running jobs from this task
+          async (bool): deprecated: if False then block until the
+            task has completed
+        """
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
@@ -657,8 +862,11 @@ class PipelineTask(object):
             self.invoke(self.finish)
             self._completed = True
         return self
+
     def terminate(self):
-        # Terminate the job
+        """
+        Internal: terminate the task
+        """
         if self.completed:
             return
         for group in self._groups:
@@ -666,6 +874,7 @@ class PipelineTask(object):
                 job.terminate()
         for job in self._jobs:
             job.terminate()
+
     def init(self,*args,**kws):
         pass
     def setup(self):
@@ -686,27 +895,42 @@ class PipelineCommand(object):
     caching of arguments to be used in the 'cmd' method;
     the 'cmd' method should use these to construct and
     return a 'Command' instance.
-
-    For example, to wrap the 'ls' command:
-
-    >>> class LsCommand(PipelineCommand):
-    ...    def init(self,dirn):
-    ...      self._dirn = dirn
-    ...    def cmd(self):
-    ...      return Command('ls',self._dirn)
-
-    To make an instance using this wrapper class:
-
-    >>> ls_command = LsCommand(path)
     """
     def __init__(self,*args,**kws):
+        """
+        Create a new PipelineCommand instance
+
+        Arguments:
+          args (List): list of arguments to be supplied to
+            the subclass (must match those defined in the
+            'init' method)
+          kws (Dictionary): dictionary of keyword-value pairs
+            to be supplied to the subclass (must match those
+            defined in the 'init' method)
+        """
         # Set internal name
         self._name = self.__class__.__name__
         # Invoke the 'init' method
         self.init(*args,**kws)
+
     def name(self):
+        """
+        Return a "sanitized" version of the class name
+        """
         return sanitize_name(self._name)
+
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
+        """
+        Generate a uniquely-named wrapper script to run the command
+
+        Arguments:
+          scripts_dir (str): path of directory to write
+            the wrapper scripts to
+          shell (str): shell to use (defaults to '/bin/bash')
+
+        Returns:
+          String: name of the wrapper script.
+        """
         # Wrap in a script
         if scripts_dir is None:
             scripts_dir = os.getcwd()
@@ -715,14 +939,22 @@ class PipelineCommand(object):
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell)
         return script_file
+
     def init(self):
-        # Initialise and store parameters
-        # Must be implemented by the subclass
+        """
+        Initialise and store parameters
+
+        Must be implemented by the subclass
+        """
         raise NotImplementedError("Subclass must implement 'init' method")
+
     def cmd(self):
-        # Build the command
-        # Must be implemented by the subclass and return a
-        # Command instance
+        """
+        Build the command
+
+        Must be implemented by the subclass and return a
+        Command instance
+        """
         raise NotImplementedError("Subclass must implement 'cmd' method")
 
 class PipelineCommandWrapper(PipelineCommand):
@@ -735,32 +967,52 @@ class PipelineCommandWrapper(PipelineCommand):
 
     For example, to wrap the 'ls' command directly:
 
-    >>> ls_command = PipelineCommandWrapper('ls',dirn)
+    >>> ls_command = PipelineCommandWrapper("List directory",'ls',dirn)
 
     It is also possible to extend the command line
     using the 'add_args' method, for example:
 
-    >>> ls_command = PipelineCommandWrapper('ls')
+    >>> ls_command = PipelineCommandWrapper("List directory",'ls')
     >>> ls.command.add_args(dirn)
     """
     def __init__(self,name,*args):
+        """
+        Create a new PipelineCommandWrapper instance
+
+        Arguments:
+          name (str): arbitrary name for the command
+          args  (List): initial list of arguments making
+            up the command
+        """
         PipelineCommand.__init__(self,*args)
         self._name = str(name)
         self._cmd = None
         if args:
             self._cmd = Command(*args)
+
     def add_args(self,*args):
-        # Add additional arguments to extend
-        # the command being built
+        """
+        Add additional arguments to extend the command being built
+
+        Arguments:
+          args  (List): one or more arguments to append to
+            the command
+        """
         if self._cmd is None:
             self._cmd = Command(*args)
         else:
             self._cmd.add_args(*args)
+
     def init(self,*args):
-        # Dummy init which does nothing
+        """
+        Internal: dummy init which does nothing
+        """
         pass
+
     def cmd(self):
-        # Implement the 'cmd' method
+        """
+        Internal: implement the 'cmd' method
+        """
         return self._cmd
 
 ######################################################################
@@ -770,6 +1022,12 @@ class PipelineCommandWrapper(PipelineCommand):
 def sanitize_name(s):
     """
     Convert string to lowercase and replace special characters
+
+    Arguments:
+      s (str): string to sanitize
+
+    Returns:
+      String: sanitized string.
     """
     name = []
     # Convert to lower case and replace special characters
