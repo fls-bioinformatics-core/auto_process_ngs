@@ -35,7 +35,7 @@ from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import PipelineTask
-from auto_process_ngs.pipeliner import FileCollection
+from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.utils import AnalysisFastq
@@ -534,7 +534,7 @@ class SplitFastqsIntoBatches(PipelineTask):
             os.rename(self.tmp_batch_dir,self.args.batch_dir)
     def output(self):
         out_dir = self.args.batch_dir
-        return FileCollection(out_dir,"*.B*.r*.fastq")
+        return FileCollector(out_dir,"*.B*.r*.fastq")
 
 class FilterICell8Fastqs(PipelineTask):
     """
@@ -567,10 +567,10 @@ class FilterICell8Fastqs(PipelineTask):
     def output(self):
         out_dir = self.args.filter_dir
         return AttributeDictionary(
-            assigned=FileCollection(out_dir,"*.B*.filtered.r*.fastq"),
-            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq"),
-            failed_barcodes=FileCollection(out_dir,"*.failed_barcode.r*.fastq"),
-            failed_umis=FileCollection(out_dir,"*.failed_umi.r*.fastq")
+            assigned=FileCollector(out_dir,"*.B*.filtered.r*.fastq"),
+            unassigned=FileCollector(out_dir,"*.unassigned.r*.fastq"),
+            failed_barcodes=FileCollector(out_dir,"*.failed_barcode.r*.fastq"),
+            failed_umis=FileCollector(out_dir,"*.failed_umi.r*.fastq")
         )
 
 class TrimReads(PipelineTask):
@@ -592,7 +592,7 @@ class TrimReads(PipelineTask):
             os.rename(self.tmp_trim_dir,self.args.trim_dir)
     def output(self):
         out_dir = self.args.trim_dir
-        return FileCollection(out_dir,"*.trimmed.fastq")
+        return FileCollector(out_dir,"*.trimmed.fastq")
 
 class GetReadsWithPolyGRegions(PipelineTask):
     """
@@ -613,7 +613,7 @@ class GetReadsWithPolyGRegions(PipelineTask):
             os.rename(self.tmp_poly_g_regions_dir,self.args.poly_g_regions_dir)
     def output(self):
         out_dir = self.args.poly_g_regions_dir
-        return FileCollection(out_dir,"*.poly_g.fastq")
+        return FileCollector(out_dir,"*.poly_g.fastq")
 
 class FilterContaminatedReads(PipelineTask):
     """
@@ -640,7 +640,7 @@ class FilterContaminatedReads(PipelineTask):
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
         out_dir = self.args.filter_dir
-        return FileCollection(out_dir,"*.trimmed.filtered.fastq")
+        return FileCollector(out_dir,"*.trimmed.filtered.fastq")
 
 class SplitByBarcodes(PipelineTask):
     """
@@ -665,7 +665,7 @@ class SplitByBarcodes(PipelineTask):
             os.rename(self.tmp_barcodes_dir,self.args.barcodes_dir)
     def output(self):
         out_dir = self.args.barcodes_dir
-        return FileCollection(out_dir,"*.r*.fastq")
+        return FileCollector(out_dir,"*.r*.fastq")
 
 class MergeBarcodeFastqs(PipelineTask):
     """
@@ -740,10 +740,10 @@ class MergeBarcodeFastqs(PipelineTask):
     def output(self):
         out_dir = self.args.merge_dir
         return AttributeDictionary(
-            assigned=FileCollection(out_dir,"*.[ACGT]*.r*.fastq.gz"),
-            unassigned=FileCollection(out_dir,"*.unassigned.r*.fastq.gz"),
-            failed_barcodes=FileCollection(out_dir,"*.failed_barcodes.r*.fastq.gz"),
-            failed_umis=FileCollection(out_dir,"*.failed_umis.r*.fastq.gz"),
+            assigned=FileCollector(out_dir,"*.[ACGT]*.r*.fastq.gz"),
+            unassigned=FileCollector(out_dir,"*.unassigned.r*.fastq.gz"),
+            failed_barcodes=FileCollector(out_dir,"*.failed_barcodes.r*.fastq.gz"),
+            failed_umis=FileCollector(out_dir,"*.failed_umis.r*.fastq.gz"),
         )
 
 class MergeSampleFastqs(PipelineTask):
@@ -791,7 +791,7 @@ class MergeSampleFastqs(PipelineTask):
     def output(self):
         out_dir = self.args.merge_dir
         return AttributeDictionary(
-            fastqs=FileCollection(out_dir,"*.r*.fastq.gz"),
+            fastqs=FileCollector(out_dir,"*.r*.fastq.gz"),
         )
 
 class RunQC(PipelineTask):

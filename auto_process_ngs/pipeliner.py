@@ -21,7 +21,7 @@ The core classes are:
 Additional supporting classes:
 
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
-- FileCollection: returning collections of files based on glob patterns
+- FileCollector: returning collections of files based on glob patterns
 
 There are some underlying classes and functions that are intended for
 internal use:
@@ -298,7 +298,7 @@ ALLOWED_CHARS = string.lowercase + string.digits + "._-"
 # Generic pipeline base classes
 ######################################################################
 
-class FileCollection(Iterator):
+class FileCollector(Iterator):
     """
     Class to return set of files based on glob pattern
     """
