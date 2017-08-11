@@ -11,6 +11,7 @@ from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import FileCollector
 
 # Unit tests
 
@@ -130,4 +131,39 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task1.output(),["item1"])
         self.assertEqual(task2.exit_code,1)
         self.assertEqual(task3.output(),[])
+
+class TestFileCollector(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestFileCollector')
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_filecollector(self):
+        """
+        FileCollector: collects files matching pattern
+        """
+        # Set up collectors
+        all_files = FileCollector(self.working_dir,"*")
+        txt_files = FileCollector(self.working_dir,"*.txt")
+        # Put some files in
+        file_list = [os.path.join(self.working_dir,f)
+                     for f in ["test1.txt","test.fq",
+                               "test.r1.fastq","test.r2.fastq"]]
+        file_list.sort()
+        for f in file_list:
+            with open(os.path.join(self.working_dir,f),'w') as fp:
+                fp.write("")
+        # Check each collection
+        self.assertEqual(len(all_files),4)
+        for f1,f2 in zip(all_files,file_list):
+            self.assertEqual(f1,f2)
+        self.assertEqual(len(txt_files),1)
+        self.assertEqual(list(txt_files),
+                         [os.path.join(self.working_dir,"test1.txt")])
 
