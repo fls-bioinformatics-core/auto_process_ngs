@@ -815,8 +815,8 @@ class PipelineTask(object):
             scripts to
           wait_for (list): deprecated: list of scheduler jobs to
             wait for before running jobs from this task
-          async (bool): deprecated: if False then block until the
-            task has completed
+          async (bool): if False then block until the task has
+            completed
         """
         # Do setup
         self.invoke(self.setup)
@@ -860,22 +860,15 @@ class PipelineTask(object):
                 callback_name = job.name
                 callback_function = self.task_completed
                 self._jobs.append(job)
-            # If asynchronous then setup callback and
-            # return immediately
-            if async:
-                sched.callback("%s" % self._name,
-                               callback_function,
-                               wait_for=(callback_name,))
-            else:
+            # Set up a callback which the scheduler will invoke
+            # in background when the jobs complete
+            sched.callback("%s" % self._name,
+                           callback_function,
+                           wait_for=(callback_name,))
+            if not async:
                 # Wait for job or group to complete before returning
-                sched.wait_for((callback_name,))
-                if use_group:
-                    exit_code = max([j.exit_code for j in group.jobs])
-                else:
-                    exit_code = job.exit_code
-                if exit_code != 0:
-                    logger.warning("%s: failed (exit code %s)" %
-                                   (self._name,exit_code))
+                while not self.completed:
+                    time.sleep(5)
         else:
             # Run each stage locally
             for cmd in cmds:

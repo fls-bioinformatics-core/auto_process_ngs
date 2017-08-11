@@ -132,6 +132,148 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task2.exit_code,1)
         self.assertEqual(task3.output(),[])
 
+class TestPipelineTask(unittest.TestCase):
+
+    def setUp(self):
+        # Set up a scheduler
+        self.sched = SimpleScheduler()
+        self.sched.start()
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipeline')
+
+    def tearDown(self):
+        # Stop the scheduler
+        if self.sched is not None:
+            self.sched.stop()
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_pipelinetask_invocations(self):
+        """
+        PipelineTask: check task methods are invoked
+        """
+        # Define a simplistic task which does nothing
+        class CheckInvocations(PipelineTask):
+            def init(self):
+                self.invocations = list()
+                self.invocations.append("init")
+            def setup(self):
+                self.invocations.append("setup")
+            def finish(self):
+                self.invocations.append("finish")
+            def output(self):
+                return self.invocations
+        # Make a task instance
+        task = CheckInvocations("Check method invocations")
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),["init"])
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.output(),["init","setup","finish"])
+
+    def test_pipelinetask_no_commands(self):
+        """
+        PipelineTask: run task with no commands
+        """
+        # Define a task with no commands
+        class Add(PipelineTask):
+            def init(self,x,y):
+                self.result = list()
+            def setup(self):
+                self.result.append(self.args.x+self.args.y)
+            def output(self):
+                return self.result
+        # Make a task instance
+        task = Add("Add two numbers",1,2)
+        # Check initial state
+        self.assertEqual(task.args.x,1)
+        self.assertEqual(task.args.y,2)
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),[])
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.output(),[3])
+        self.assertEqual(task.stdout,"")
+
+    def test_pipelinetask_with_commands(self):
+        """
+        PipelineTask: run task with shell command
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class Echo(PipelineTask):
+            def init(self,s):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text","echo",self.args.s))
+            def output(self):
+                return None
+        # Make a task instance
+        task = Echo("Echo string","Hello!")
+        # Check initial state
+        self.assertEqual(task.args.s,"Hello!")
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.output(),None)
+        self.assertEqual(task.stdout,"Hello!\n")
+
+    def test_pipelinetask_stdout(self):
+        """
+        PipelineTask: check stdout recovered from task
+        """
+        # Define a task with a command
+        # Echoes text multiple times via shell command
+        class MultipleEcho(PipelineTask):
+            def init(self,s,n=1):
+                pass
+            def setup(self):
+                for i in xrange(self.args.n):
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",self.args.s))
+            def output(self):
+                return None
+        # Make a task instance
+        task = MultipleEcho("Echo string 3 times","Hello!",3)
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.output(),None)
+        self.assertEqual(task.stdout,"Hello!\n\nHello!\n\nHello!\n")
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):
