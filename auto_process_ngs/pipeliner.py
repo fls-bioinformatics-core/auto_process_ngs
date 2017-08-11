@@ -499,14 +499,16 @@ class Pipeline(object):
         # Deal with log directory
         if log_dir is None:
             log_dir = "%s.logs" % self._id
-        log_dir = os.path.abspath(log_dir)
+        if not os.path.isabs(log_dir):
+            log_dir = os.path.join(working_dir,log_dir)
         if not os.path.exists(log_dir):
             os.mkdir(log_dir)
         self.report("Log directory: %s" % log_dir)
         # Deal with scripts directory
         if scripts_dir is None:
             scripts_dir = "%s.scripts" % self._id
-        scripts_dir = os.path.abspath(scripts_dir)
+        if not os.path.isabs(scripts_dir):
+            scripts_dir = os.path.join(working_dir,scripts_dir)
         if not os.path.exists(scripts_dir):
             os.mkdir(scripts_dir)
         self.report("Scripts directory: %s" % scripts_dir)
