@@ -533,7 +533,9 @@ class Pipeline(object):
                     run_task = True
                 else:
                     # Check requirements
-                    run_task = reduce(lambda x,y: x and y.completed,
+                    run_task = reduce(lambda x,y:
+                                      x and y.completed
+                                      and y.exit_code == 0,
                                       requirements,True)
                 if run_task:
                     self.report("started %s" % task.name())
