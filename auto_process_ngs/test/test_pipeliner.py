@@ -20,10 +20,17 @@ class TestPipeline(unittest.TestCase):
         # Set up a scheduler
         self.sched = SimpleScheduler()
         self.sched.start()
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipeline')
 
     def tearDown(self):
+        # Stop the scheduler
         if self.sched is not None:
             self.sched.stop()
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
 
     def test_simple_pipeline(self):
         """
@@ -46,7 +53,8 @@ class TestPipeline(unittest.TestCase):
         task2 = Append("Append 2",task1.output(),"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(sched=self.sched)
+        exit_status = ppl.run(sched=self.sched,
+                              working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertEqual(task1.output(),["item1"])
@@ -83,7 +91,8 @@ class TestPipeline(unittest.TestCase):
         ppl.add_task(task2,requires=(task1,))
         ppl.add_task(task3,requires=(task2,))
         # Run the pipeline
-        exit_status = ppl.run(sched=self.sched)
+        exit_status = ppl.run(sched=self.sched,
+                              working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,1)
         self.assertEqual(task1.output(),["item1"])
