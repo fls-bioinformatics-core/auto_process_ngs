@@ -810,14 +810,24 @@ class PipelineTask(object):
           runner (JobRunner): job runner to use when running
             jobs via the scheduler
           working_dir (str): path to the working directory to use
+            (defaults to the current working directory)
           log_dir (str): path to the directory to write logs to
+            (defaults to the working directory)
           scripts_dir (str): path to the directory to write
-            scripts to
+            scripts to (defaults to the working directory)
           wait_for (list): deprecated: list of scheduler jobs to
             wait for before running jobs from this task
           async (bool): if False then block until the task has
             completed
         """
+        # Initialise
+        if working_dir is None:
+            working_dir = os.getcwd()
+        working_dir = os.path.abspath(working_dir)
+        if scripts_dir is None:
+            scripts_dir = working_dir
+        if log_dir is None:
+            log_dir = working_dir
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
