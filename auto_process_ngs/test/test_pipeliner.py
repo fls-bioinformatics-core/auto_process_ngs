@@ -5,6 +5,7 @@
 import unittest
 import tempfile
 import shutil
+import time
 import os
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.pipeliner import Pipeline
@@ -65,7 +66,7 @@ class TestPipeline(unittest.TestCase):
         """
         Pipeline: define and run pipeline with commands
         """
-        # Define a reusable task
+        # Define a task
         # Echoes/appends text to a file
         class Echo(PipelineTask):
             def init(self,f,s):
@@ -82,6 +83,47 @@ class TestPipeline(unittest.TestCase):
         ppl = Pipeline()
         task1 = Echo("Write item1","out.txt","item1")
         task2 = Echo("Write item2",task1.output(),"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        exit_status = ppl.run(sched=self.sched,
+                              working_dir=self.working_dir)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_file = os.path.join(self.working_dir,"out.txt")
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),
+                         "item1\nitem2\n")
+
+    def test_pipeline_working_dir_is_respected(self):
+        """
+        Pipeline: check pipeline respects the working directory
+        """
+        # Define tasks
+        # Echoes/appends text to a file via shell command
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+            def output(self):
+                return self.args.f
+        # Writes text to a file via Python
+        class Print(PipelineTask):
+            def init(self,f,s):
+                pass
+            def setup(self):
+                with open(self.args.f,'a') as fp:
+                    fp.write("%s\n" % self.args.s)
+            def output(self):
+                return self.args.f
+        # Build the pipeline
+        ppl = Pipeline()
+        task1 = Echo("Echo item1","out.txt","item1")
+        task2 = Print("Print item2",task1.output(),"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
         exit_status = ppl.run(sched=self.sched,

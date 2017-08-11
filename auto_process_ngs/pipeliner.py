@@ -630,6 +630,8 @@ class PipelineTask(object):
         self._completed = False
         self._stdout_files = []
         self._exit_code = 0
+        # Working directory
+        self._working_dir = None
         # Running jobs
         self._jobs = []
         self._groups = []
@@ -735,6 +737,11 @@ class PipelineTask(object):
           kws (dictionary): keyworded parameters to invoke
             function with
         """
+        # Switch to working directory, if defined
+        if self._working_dir is not None:
+            current_dir = os.getcwd()
+            os.chdir(self._working_dir)
+        # Invoke the requested method
         try:
             with Capturing() as output:
                 if args is None:
@@ -751,6 +758,9 @@ class PipelineTask(object):
                         (f.__name__,ex))
             traceback.print_exc(ex)
             self._exit_code += 1
+        # Switch back to original directory
+        if self._working_dir is not None:
+            os.chdir(current_dir)
 
     def task_completed(self,name,jobs,sched):
         """
@@ -823,11 +833,11 @@ class PipelineTask(object):
         # Initialise
         if working_dir is None:
             working_dir = os.getcwd()
-        working_dir = os.path.abspath(working_dir)
+        self._working_dir = os.path.abspath(working_dir)
         if scripts_dir is None:
-            scripts_dir = working_dir
+            scripts_dir = self._working_dir
         if log_dir is None:
-            log_dir = working_dir
+            log_dir = self._working_dir
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
@@ -848,7 +858,7 @@ class PipelineTask(object):
                 for j,cmd in enumerate(cmds):
                     name = "%s#%s" % (self.name(),j)
                     group.add(cmd,
-                              wd=working_dir,
+                              wd=self._working_dir,
                               name=name,
                               runner=runner,
                               log_dir=log_dir,
@@ -862,7 +872,7 @@ class PipelineTask(object):
                 cmd = cmds[0]
                 name = self.name()
                 job = sched.submit(cmd,
-                                   wd=working_dir,
+                                   wd=self._working_dir,
                                    name=name,
                                    runner=runner,
                                    log_dir=log_dir,
@@ -882,7 +892,7 @@ class PipelineTask(object):
         else:
             # Run each stage locally
             for cmd in cmds:
-                cmd.run_subprocess(working_dir=working_dir)
+                cmd.run_subprocess(working_dir=self._working_dir)
             self.invoke(self.finish)
             self._completed = True
         return self
