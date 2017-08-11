@@ -785,6 +785,12 @@ class PipelineTask(object):
                     if j.exit_code != 0:
                         self._exit_code += 1
                     self._stdout_files.append(j.log)
+        self.finish_task()
+
+    def finish_task(self):
+        """
+        Internal: perform actions to finish the task
+        """
         if self._exit_code != 0:
             logger.critical("%s failed: exit code %s"
                             % (self._name,self._exit_code))
@@ -793,7 +799,7 @@ class PipelineTask(object):
             self.invoke(self.finish)
         # Flag job as completed
         self._completed = True
-        self.report("%s completed" % name)
+        self.report("%s completed" % self._name)
 
     def add_cmd(self,pipeline_job):
         """
@@ -849,8 +855,7 @@ class PipelineTask(object):
             self.report("wrapper script %s" % script_file)
             cmds.append(cmd)
         # Run the commands
-        if sched is not None:
-            # Use the scheduler
+        if cmds:
             use_group = (len(cmds)!=1)
             if use_group:
                 # Run as a group
@@ -890,11 +895,8 @@ class PipelineTask(object):
                 while not self.completed:
                     time.sleep(5)
         else:
-            # Run each stage locally
-            for cmd in cmds:
-                cmd.run_subprocess(working_dir=self._working_dir)
-            self.invoke(self.finish)
-            self._completed = True
+            # No commands to execute
+            self.finish_task()
         return self
 
     def terminate(self):
