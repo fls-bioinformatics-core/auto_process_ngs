@@ -8,6 +8,7 @@ import shutil
 import time
 import os
 from auto_process_ngs.simple_scheduler import SimpleScheduler
+from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineCommand
@@ -315,6 +316,54 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.exit_code,0)
         self.assertEqual(task.output(),None)
         self.assertEqual(task.stdout,"Hello!\n\nHello!\n\nHello!\n")
+
+class TestPipelineCommand(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipelineCommand')
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_pipelinecommand(self):
+        # Subclass PipelineCommand
+        class EchoCmd(PipelineCommand):
+            def init(self,txt):
+                self._txt = txt
+            def cmd(self):
+                return Command(
+                    "echo",
+                    self._txt)
+        # Make an instance
+        cmd = EchoCmd("hello there")
+        # Check name
+        self.assertEqual(cmd.name(),"echocmd")
+        # Check command
+        self.assertEqual(str(cmd.cmd()),"echo hello there")
+        # Check wrapper script file
+        script_file = cmd.make_wrapper_script(
+            scripts_dir=self.working_dir)
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        self.assertEqual(open(script_file,'r').read(),
+                         "#!/bin/bash\necho hello there")
+
+class TestPipelineCommandWrapper(unittest.TestCase):
+
+    def test_piplinecommandwrapper(self):
+        # Make a pipeline command wrapper
+        cmd = PipelineCommandWrapper("Echo text","echo","hello")
+        # Check name and generated command
+        self.assertEqual(cmd.name(),"echo_text")
+        self.assertEqual(str(cmd.cmd()),"echo hello")
+        # Add argument and check updated command
+        cmd.add_args("there")
+        self.assertEqual(str(cmd.cmd()),"echo hello there")
 
 class TestFileCollector(unittest.TestCase):
 
