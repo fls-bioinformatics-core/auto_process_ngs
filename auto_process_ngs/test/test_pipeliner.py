@@ -317,6 +317,38 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.output(),None)
         self.assertEqual(task.stdout,"Hello!\n\nHello!\n\nHello!\n")
 
+    def test_pipelinetask_invoke_fail(self):
+        """
+        PipelineTask: check task invoking 'fail' method
+        """
+        # Define a task which invokes 'fail'
+        class FailingTask(PipelineTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.fail(message="Invoked fail method",
+                          exit_code=123)
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo message","echo","should not execute"))
+            def output(self):
+                return None
+        # Make a task instance
+        task = FailingTask("This will fail")
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,123)
+        self.assertEqual(task.output(),None)
+        self.assertEqual(task.stdout,"")
+
 class TestPipelineCommand(unittest.TestCase):
 
     def setUp(self):
