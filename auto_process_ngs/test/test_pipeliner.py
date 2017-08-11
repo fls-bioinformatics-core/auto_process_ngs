@@ -60,6 +60,38 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task1.output(),["item1"])
         self.assertEqual(task2.output(),["item1","item2"])
 
+    def test_pipeline_with_commands(self):
+        """
+        Pipeline: define and run pipeline with commands
+        """
+        # Define a reusable task
+        # Echoes/appends text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+            def output(self):
+                return self.args.f
+        # Build the pipeline
+        ppl = Pipeline()
+        task1 = Echo("Write item1","out.txt","item1")
+        task2 = Echo("Write item2",task1.output(),"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        exit_status = ppl.run(sched=self.sched,
+                              working_dir=self.working_dir)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_file = os.path.join(self.working_dir,"out.txt")
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),
+                         "item1\nitem2\n")
+
     def test_pipeline_stops_on_task_failure(self):
         """
         Pipeline: check pipeline stops on task failure
