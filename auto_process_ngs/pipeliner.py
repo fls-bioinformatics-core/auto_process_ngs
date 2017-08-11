@@ -420,6 +420,8 @@ class Pipeline(object):
           name (str): optional name for the pipeline
         """
         self._name = str(name)
+        self._id = "%s.%s" % (sanitize_name(self._name),
+                              time.strftime("%Y%m%d.%H%M%S"))
         self._pending = []
         self._running = []
         self._finished = []
@@ -494,6 +496,20 @@ class Pipeline(object):
             working_dir = os.getcwd()
         working_dir = os.path.abspath(working_dir)
         self.report("Working directory: %s" % working_dir)
+        # Deal with log directory
+        if log_dir is None:
+            log_dir = "%s.logs" % self._id
+        log_dir = os.path.abspath(log_dir)
+        if not os.path.exists(log_dir):
+            os.mkdir(log_dir)
+        self.report("Log directory: %s" % log_dir)
+        # Deal with scripts directory
+        if scripts_dir is None:
+            scripts_dir = "%s.scripts" % self._id
+        scripts_dir = os.path.abspath(scripts_dir)
+        if not os.path.exists(scripts_dir):
+            os.mkdir(scripts_dir)
+        self.report("Scripts directory: %s" % scripts_dir)
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
