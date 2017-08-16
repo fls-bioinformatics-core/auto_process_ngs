@@ -20,12 +20,17 @@ from auto_process_ngs.pipeliner import FileCollector
 class TestPipeline(unittest.TestCase):
 
     def setUp(self):
-        # Set up a scheduler
-        self.sched = SimpleScheduler()
-        self.sched.start()
+        # Placeholder for scheduler instance
+        self.sched = None
         # Make a temporary working dir
         self.working_dir = tempfile.mkdtemp(
             suffix='TestPipeline')
+
+    def _get_scheduler(self):
+        # Set up a scheduler
+        self.sched = SimpleScheduler()
+        self.sched.start()
+        return self.sched
 
     def tearDown(self):
         # Stop the scheduler
@@ -56,8 +61,7 @@ class TestPipeline(unittest.TestCase):
         task2 = Append("Append 2",task1.output(),"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(sched=self.sched,
-                              working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertEqual(task1.output(),["item1"])
@@ -85,6 +89,39 @@ class TestPipeline(unittest.TestCase):
         task1 = Echo("Write item1","out.txt","item1")
         task2 = Echo("Write item2",task1.output(),"item2")
         ppl.add_task(task2,requires=(task1,))
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_file = os.path.join(self.working_dir,"out.txt")
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),
+                         "item1\nitem2\n")
+
+    def test_pipeline_with_external_scheduler(self):
+        """
+        Pipeline: run pipeline using user-defined scheduler
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+            def output(self):
+                return self.args.f
+        # Build the pipeline
+        ppl = Pipeline()
+        task1 = Echo("Write item1","out.txt","item1")
+        task2 = Echo("Write item2",task1.output(),"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Get a scheduler
+        self._get_scheduler()
         # Run the pipeline
         exit_status = ppl.run(sched=self.sched,
                               working_dir=self.working_dir)
@@ -127,8 +164,7 @@ class TestPipeline(unittest.TestCase):
         task2 = Print("Print item2",task1.output(),"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(sched=self.sched,
-                              working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
@@ -167,8 +203,7 @@ class TestPipeline(unittest.TestCase):
         ppl.add_task(task2,requires=(task1,))
         ppl.add_task(task3,requires=(task2,))
         # Run the pipeline
-        exit_status = ppl.run(sched=self.sched,
-                              working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,1)
         self.assertEqual(task1.output(),["item1"])
