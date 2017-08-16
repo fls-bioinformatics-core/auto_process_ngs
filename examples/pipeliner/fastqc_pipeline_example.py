@@ -5,8 +5,6 @@
 
 import os
 import argparse
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import Pipeline
@@ -90,15 +88,6 @@ if __name__ == "__main__":
     p.add_argument("fastqs",nargs='+',metavar="FASTQ")
     args = p.parse_args()
 
-    # Set up a scheduler for running jobs
-    sched_reporter = SchedulerReporter(
-        job_start="SCHEDULER: Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
-        job_end=  "SCHEDULER: Finished #%(job_number)d: %(job_name)s"
-    )
-    sched_reporter = SchedulerReporter()
-    sched = SimpleScheduler(reporter=sched_reporter)
-    sched.start()
-
     # Make and run a pipeline
     ppl = Pipeline()
     read_counts = CountReads("Count the reads",args.fastqs)
@@ -111,6 +100,6 @@ if __name__ == "__main__":
     ppl.add_task(read_counts)
     ppl.add_task(filter_empty_fastqs,requires=(read_counts,))
     ppl.add_task(run_fastqc,requires=(filter_empty_fastqs,))
-    ppl.run(sched=sched)
+    ppl.run()
     sched.stop()
     print run_fastqc.output()
