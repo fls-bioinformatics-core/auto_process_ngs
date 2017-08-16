@@ -29,8 +29,6 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.TabFile import TabFile
 from bcftbx.simple_xls import XLSWorkBook
 from auto_process_ngs.applications import Command
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.simple_scheduler import SchedulerReporter
 from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
@@ -1295,17 +1293,6 @@ if __name__ == "__main__":
     # Basename for output fastqs and job names etc
     basename = AnalysisFastq(fastqs[0]).sample_name
 
-    # Set up a scheduler for running jobs
-    sched_reporter = SchedulerReporter(
-        job_start="SCHEDULER: Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
-        job_end=  "SCHEDULER: Finished #%(job_number)d: %(job_name)s"
-    )
-    sched_reporter = SchedulerReporter()
-    sched = SimpleScheduler(runner=runners['default'],
-                            max_concurrent=max_jobs,
-                            reporter=sched_reporter)
-    sched.start()
-
     # Make top-level output dirs
     icell8_dir = os.path.abspath(outdir)
     if os.path.exists(icell8_dir) and args.project is None:
@@ -1559,14 +1546,13 @@ if __name__ == "__main__":
     # Execute the pipelines
     print "Running the pipelines"
     for ppl in pipelines:
-        exit_status = ppl.run(sched=sched,log_dir=log_dir,scripts_dir=scripts_dir)
+        exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
+                              default_runner=runners['default'],
+                              max_jobs=max_jobs)
         if exit_status != 0:
             # Finished with error
             logger.critical("Pipeline failed: exit status %s" % exit_status)
-            sched.stop()
             sys.exit(exit_status)
-
     # Finish
-    sched.stop()
     print "All pipelines completed ok"
     sys.exit(0)
