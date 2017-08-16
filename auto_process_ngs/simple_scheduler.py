@@ -64,7 +64,7 @@ class SimpleScheduler(threading.Thread):
     """
 
     def __init__(self,
-                 runner=JobRunner.SimpleJobRunner(),
+                 runner=None,
                  reporter=None,
                  max_concurrent=None,
                  poll_interval=5,
@@ -93,6 +93,8 @@ class SimpleScheduler(threading.Thread):
         threading.Thread.__init__(self)
         self.setDaemon(1)
         # Default job runner
+        if runner is None:
+            runner = JobRunner.SimpleJobRunner()
         self.__runner = runner
         # Maximum number of concurrent jobs
         self.__max_concurrent = max_concurrent
