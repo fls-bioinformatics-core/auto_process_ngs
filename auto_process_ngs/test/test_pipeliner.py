@@ -7,6 +7,8 @@ import tempfile
 import shutil
 import time
 import os
+import platform
+import getpass
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
@@ -28,7 +30,7 @@ class TestPipeline(unittest.TestCase):
 
     def _get_scheduler(self):
         # Set up a scheduler
-        self.sched = SimpleScheduler()
+        self.sched = SimpleScheduler(poll_interval=0.5)
         self.sched.start()
         return self.sched
 
@@ -214,7 +216,7 @@ class TestPipelineTask(unittest.TestCase):
 
     def setUp(self):
         # Set up a scheduler
-        self.sched = SimpleScheduler()
+        self.sched = SimpleScheduler(poll_interval=0.5)
         self.sched.start()
         # Make a temporary working dir
         self.working_dir = tempfile.mkdtemp(
@@ -318,7 +320,70 @@ class TestPipelineTask(unittest.TestCase):
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
         self.assertEqual(task.output(),None)
-        self.assertEqual(task.stdout,"Hello!\n")
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),8) # 8 = 7 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Echo text")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % platform.node())
+        self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"Hello!")
+        self.assertTrue(stdout[5].startswith("#### END "))
+        self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_with_failing_command(self):
+        """
+        PipelineTask: run task with failing shell command
+        """
+        # Define a task with a command
+        # Attempts to run a non-existant shell command
+        class Nonexistant(PipelineTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Nonexistant","./non_existant --help"))
+            def output(self):
+                return None
+        # Make a task instance
+        task = Nonexistant("Will fail")
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertNotEqual(task.exit_code,0)
+        self.assertEqual(task.output(),None)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Nonexistant
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 127
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),7) # 7 = 6 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Nonexistant")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % platform.node())
+        self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertTrue(stdout[4].startswith("#### END "))
+        self.assertEqual(stdout[5],"#### EXIT_CODE 127")
 
     def test_pipelinetask_stdout(self):
         """
@@ -350,7 +415,27 @@ class TestPipelineTask(unittest.TestCase):
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
         self.assertEqual(task.output(),None)
-        self.assertEqual(task.stdout,"Hello!\n\nHello!\n\nHello!\n")
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        # ...x three times
+        print task.stdout
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
+        for i in xrange(3):
+            self.assertEqual(stdout[0+i*7],"#### COMMAND Echo text")
+            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % platform.node())
+            self.assertEqual(stdout[2+i*7],"#### USER %s" % getpass.getuser())
+            self.assertTrue(stdout[3+i*7].startswith("#### START "))
+            self.assertEqual(stdout[4+i*7],"Hello!")
+            self.assertTrue(stdout[5+i*7].startswith("#### END "))
+            self.assertEqual(stdout[6+i*7],"#### EXIT_CODE 0")
 
     def test_pipelinetask_invoke_fail(self):
         """
@@ -418,7 +503,16 @@ class TestPipelineCommand(unittest.TestCase):
         self.assertEqual(os.path.dirname(script_file),
                          self.working_dir)
         self.assertEqual(open(script_file,'r').read(),
-                         "#!/bin/bash\necho hello there")
+                         "#!/bin/bash\n"
+                         "echo \"#### COMMAND EchoCmd\"\n"
+                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                         "echo \"#### USER $USER\"\n"
+                         "echo \"#### START $(date)\"\n"
+                         "echo hello there\n"
+                         "exit_code=$?\n"
+                         "echo \"#### END $(date)\"\n"
+                         "echo \"#### EXIT_CODE $exit_code\"\n"
+                         "exit $exit_code")
 
 class TestPipelineCommandWrapper(unittest.TestCase):
 

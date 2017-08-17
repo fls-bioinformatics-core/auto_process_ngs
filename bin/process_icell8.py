@@ -933,6 +933,10 @@ class CheckICell8Barcodes(PipelineTask):
         self.bad_barcodes = []
         for line in self.stdout.split('\n'):
             try:
+                if line.startswith("#### "):
+                    # Ignore lines from pipeline wrapper scripts
+                    # which start with "#### ..."
+                    pass
                 barcode,count = line.split(':')
                 count = int(count)
                 if count > 0:

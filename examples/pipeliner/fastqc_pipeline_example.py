@@ -59,7 +59,9 @@ class CountReads(PipelineTask):
                                        "wc","-l"))
     def finish(self):
         for line in self.stdout.split('\n'):
-            if not line:
+            if not line or line.startswith("#### "):
+                # Reject blank lines or lines
+                # starting with pipeline comment
                 continue
             fq = line.split()[0]
             read_count = int(line.split()[1])/4

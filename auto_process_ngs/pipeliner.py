@@ -302,6 +302,33 @@ The ``run`` method also accepts a ``runner`` method which sets
 the default job runner that the pipeline will use. By default
 jobs are run using a ``SimpleJobRunner`` instance.
 
+Dealing with stdout from tasks
+------------------------------
+
+The stdout from tasks which run external commands can be
+accessed via the ``stdout`` property of the task instance once
+it has completed.
+
+Where multiple jobs were run by the task, the stdout from all
+jobs are concatenated and returned via this property.
+
+The stdout for each job is topped and tailed with a standard
+set of comment lines output from the wrapper scripts, of the
+form::
+
+    #### COMMAND Echo text
+    #### HOSTNAME popov
+    #### USER pjb
+    #### START Thu Aug 17 08:38:14 BST 2017
+    ...
+    ...Job-specific output...
+    ...
+    #### END Thu Aug 17 08:38:14 BST 2017
+    #### EXIT_CODE 0
+
+When parsing the stdout it is recommended to check for these lines
+using e.g. ``line.startswith("#### ")``.
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -751,7 +778,7 @@ class PipelineTask(object):
         for f in self._stdout_files:
             with open(f,'r') as fp:
                 stdout.append(fp.read())
-        return '\n'.join(stdout)
+        return ''.join(stdout)
 
     def name(self):
         """
@@ -1035,8 +1062,18 @@ class PipelineCommand(object):
             scripts_dir = os.getcwd()
         script_file = os.path.join(scripts_dir,"%s.%s.sh" % (self.name(),
                                                              uuid.uuid4()))
+        prologue = ["echo \"#### COMMAND %s\"" % self._name,
+                    "echo \"#### HOSTNAME $HOSTNAME\"",
+                    "echo \"#### USER $USER\"",
+                    "echo \"#### START $(date)\""]
+        epilogue = ["exit_code=$?",
+                    "echo \"#### END $(date)\"",
+                    "echo \"#### EXIT_CODE $exit_code\"",
+                    "exit $exit_code"]
         self.cmd().make_wrapper_script(filen=script_file,
-                                       shell=shell)
+                                       shell=shell,
+                                       prologue='\n'.join(prologue),
+                                       epilogue='\n'.join(epilogue))
         return script_file
 
     def init(self):
