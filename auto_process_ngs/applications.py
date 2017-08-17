@@ -236,7 +236,8 @@ class Command:
         output = ftmp.read()
         return (status,output)
 
-    def make_wrapper_script(self,shell=None,filen=None,fp=None):
+    def make_wrapper_script(self,shell=None,filen=None,fp=None,
+                            prologue=None,epilogue=None):
         """Wrap the command in a script
 
         Returns a string which can be injected into a file and
@@ -250,6 +251,10 @@ class Command:
           fp (File): optional, if set then must be a File-like
             object opened for writing, to which the wrapper script
             will be written
+          prologue (str): optional, if set then will be written
+            into the script before the command
+          epilogue (str): optional, if set then will be written
+            into the script after the command
 
         Returns:
           String: the wrapper script contents.
@@ -257,7 +262,11 @@ class Command:
         script = []
         if shell is not None:
             script.append("#!%s" % shell)
+        if prologue is not None:
+            script.append("%s" % prologue)
         script.append(str(self))
+        if epilogue is not None:
+            script.append("%s" % epilogue)
         script = '\n'.join(script)
         if fp is not None:
             fp.write(script)
