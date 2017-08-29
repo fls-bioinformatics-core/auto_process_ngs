@@ -77,7 +77,8 @@ The following steps are performed:
    exclude any read pairs where there is an exclusive match to the
    contaminants.
 
-   The screen files must be explicitly supplied to the utility using
+   If the screen files aren't defined in the ``settings.ini`` file
+   then they must be explicitly supplied to the utility using
    the ``-m``/``--mammalian`` and ``-c``/``--contaminants`` options.
 
 Reorganisation by barcode and sample
@@ -109,3 +110,63 @@ In addition the ``stats`` directory contains a summary of the read
 and UMI counts after each stage (in TSV and XLSX format).
 
 There is also a final summary report ``icell8_processing.html``.
+
+Configuring the ICell8 processing pipeline
+------------------------------------------
+
+The running of the pipeline can be configured via the command line,
+or by setting the appropriate options in the ``settings.ini``
+configuration file.
+
+ =========== =============================== ================== ==================================
+ Name        Description                     Option             Section and parameter in settings
+ ----------- ------------------------------- ------------------ ----------------------------------
+ Batch size  Number of reads per batch to    ``-s``             ``[icell8] batch_size``
+             split input FASTQs into
+
+ Environment List of modules to load         ``--modulefiles``  ``[modulefiles] process_icell8``
+ modules     before running the pipeline
+
+ Aligner     Explicitly specify the aligner  ``-a``             ``[icell8] aligner``
+             (``bowtie`` or ``bowtie2``) to
+             use for contamination
+             filtering
+
+ Mammalian   ``fastq_screen`` conf file      ``-m``             ``[icell8] mammalian_conf_file``
+ genome      with "mammalian" indices
+ panel
+
+ Contaminant ``fastq_screen`` conf file      ``-c``             ``[icell8] contaminant_conf_file``
+ genome      with "contaminant" indices
+ panel
+ =========== =============================== ================== ==================================
+
+Also, appropriate runners and numbers of cores can be defined
+for different "stages" of the pipeline (nb a stage is effectively
+a "class" of tasks). The stages are:
+
+ ================== ========================================
+ Name               Description
+ ------------------ ----------------------------------------
+ contaminant_filter Tasks for filtering "contaminated" reads
+
+ qc                 Tasks for performing QC on the FASTQs
+
+ statistics         Tasks for generating statistics
+ ================== ========================================
+
+Use the ``-n``/``--nprocessors`` and ``-r``/``--runners`` options
+to specify the number of cores that can be used, and an appropriate
+runner (if necessary) for each of these stages.
+
+Via the command line e.g.::
+
+    process_icell.py ... -r statistics='GEJobRunner(-pe smp.pe 4)' -n 4
+
+Via the configuration file::
+
+    [icell8]
+    nprocessors_statistics = 4
+
+    [runners]
+    icell8_statistics = GEJobRunner(-pe smp.pe 4)
