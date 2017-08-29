@@ -112,6 +112,7 @@ class Settings:
         self.add_section('modulefiles')
         self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
+        self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
@@ -143,12 +144,27 @@ class Settings:
                 if platform not in self.platform:
                     self.platform[platform] = AttributeDictionary()
                 self.platform[platform]['bcl2fastq'] = bcl2fastq
+        # icell8
+        self.add_section('icell8')
+        self.icell8['aligner'] = config.get('icell8','aligner')
+        self.icell8['batch_size'] = config.getint('icell8','batch_size',5000000)
+        self.icell8['mammalian_conf_file'] = config.get('icell8',
+                                                        'mammalian_conf_file')
+        self.icell8['contaminants_conf_file'] = config.get('icell8',
+                                                           'contaminants_conf_file')
+        self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter',1)
+        self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics',1)
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
         # Define runners for specific jobs
         self.add_section('runners')
-        for name in ('bcl2fastq','qc','stats','rsync'):
+        for name in ('bcl2fastq',
+                     'qc',
+                     'stats',
+                     'rsync',
+                     'icell8_contaminant_filter',
+                     'icell8_statistics',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
         # Information for archiving analyses

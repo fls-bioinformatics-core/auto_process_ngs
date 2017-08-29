@@ -10,6 +10,7 @@ max_concurrent_jobs = 12
 [modulefiles]
 make_fastqs = None
 run_qc = None
+process_icell8 = None
 
 # bcl2fastq settings
 [bcl2fastq]
@@ -22,6 +23,15 @@ create_empty_fastqs = True
 [qc]
 nprocessors = 1
 fastq_screen_subset = 100000
+
+# icell8 settings
+[icell8]
+aligner = None
+batch_size = 5000000
+mammalian_conf_file = None
+contaminants_conf_file = None
+nprocessors_contaminant_filter = 1
+nprocessors_statistics = 1
 
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
@@ -41,6 +51,8 @@ bcl2fastq = SimpleJobRunner
 qc = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner
+icell8_contaminant_filter = SimpleJobRunner
+icell8_statistics = SimpleJobRunner
 
 # Settings for archiving analyses
 # dirn should be a directory in the form [[user@]host:]path
