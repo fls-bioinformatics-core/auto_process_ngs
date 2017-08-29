@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 # Magic numbers
 ######################################################################
 
-DEFAULT_BATCH_SIZE = 5000000
+DEFAULT_BATCH_SIZE = __settings.icell8.batch_size
 
 ######################################################################
 # ICell8 pipeline commands
@@ -1084,6 +1084,14 @@ def convert_to_xlsx(tsv_file,xlsx_file,title=None,freeze_header=False):
 ######################################################################
 
 if __name__ == "__main__":
+    # Pipeline stages
+    stages = ('default','contaminant_filter','qc','statistics')
+    # Fetch defaults
+    default_batch_size = __settings.icell8.batch_size
+    default_aligner = __settings.icell8.aligner
+    default_mammalian_conf = __settings.icell8.mammalian_conf_file
+    default_contaminants_conf = __settings.icell8.contaminants_conf_file
+    default_nprocessors = 1
     # Handle the command line
     p = argparse.ArgumentParser(
         description="Perform initial QC on FASTQs from Wafergen "
@@ -1109,45 +1117,51 @@ if __name__ == "__main__":
                    "is specified)")
     p.add_argument("-m","--mammalian",
                    dest="mammalian_conf",
+                   default=default_mammalian_conf,
                    help="fastq_screen 'conf' file with the "
-                   "'mammalian' genome indices")
+                   "'mammalian' genome indices (default: %s)"
+                   % default_mammalian_conf)
     p.add_argument("-c","--contaminants",
                    dest="contaminants_conf",
+                   default=default_contaminants_conf,
                    help="fastq_screen 'conf' file with the "
-                   "'contaminant' genome indices")
-    p.add_argument("-a","--aligner",
-                   dest="aligner",default=None,
-                   choices=["bowtie","bowtie2"],
-                   help="aligner to use with fastq_screen (default: "
-                   "don't specify the aligner)")
+                   "'contaminant' genome indices (default: "
+                   "%s)" % default_contaminants_conf)
     p.add_argument("-q","--quality-filter",action='store_true',
                    dest="quality_filter",
                    help="filter out read pairs with low quality "
                    "barcode and UMI sequences (not recommended for "
                    "NextSeq data)")
-    p.add_argument("--no-cleanup",action='store_true',
-                   dest="no_cleanup",
-                   help="don't remove intermediate Fastq files "
-                   "(default is to delete intermediate Fastqs once "
-                   "no longer needed)")
-    p.add_argument("-n","--threads",type=int,
-                   dest="threads",default=1,
-                   help="number of threads to use with fastq_screen "
-                   "(default: 1)")
+    p.add_argument("-a","--aligner",
+                   dest="aligner",default=None,
+                   choices=["bowtie","bowtie2"],
+                   help="aligner to use with fastq_screen (default: "
+                   "don't specify the aligner)")
     p.add_argument("-r","--runner",metavar="STAGE=RUNNER",
                    action="append",dest="runners",default=list(),
                    help="explicitly specify runner definitions for "
                    "running pipeline jobs at each stage. STAGE "
-                   "can be one of 'default','contaminant_filter'. "
-                   "RUNNER must be a valid job runner specification "
-                   "e.g. 'GEJobRunner(-j y)'. Multiple --runner "
-                   "arguments can be specified (default: '%s')" %
-                   __settings.general.default_runner)
+                   "can be one of %s. If STAGE is not specified "
+                   "then it is assumed to be 'default'. RUNNER "
+                   "must be a valid job runner specification e.g. "
+                   "'GEJobRunner(-j y)'. Multiple --runner arguments "
+                   "can be specified (default: '%s')" %
+                   (','.join(["'%s'" % s for s in stages]),
+                    __settings.general.default_runner))
+    p.add_argument("-n","--nprocessors",metavar='STAGE=N',
+                   action="append",dest="nprocessors",default=list(),
+                   help="specify number of processors to use at each "
+                   "stage. STAGE can be one of %s. If STAGE is not "
+                   "specified then it is assumed to be 'default'. "
+                   "Multiple --nprocessors arguments can be "
+                   "specified (default: %d)" %
+                   (','.join(["'%s'" % s for s in stages]),
+                    default_nprocessors))
     p.add_argument("-s","--size",type=int,
-                   dest="batch_size",default=DEFAULT_BATCH_SIZE,
+                   dest="batch_size",default=default_batch_size,
                    help="number of reads per batch when splitting "
                    "FASTQ files for processing (default: %s)" %
-                   DEFAULT_BATCH_SIZE)
+                   default_batch_size)
     p.add_argument("-j","--max-jobs",type=int,
                    dest="max_jobs",
                    default= __settings.general.max_concurrent_jobs,
@@ -1160,6 +1174,11 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    p.add_argument("--no-cleanup",action='store_true',
+                   dest="no_cleanup",
+                   help="don't remove intermediate Fastq files "
+                   "(default is to delete intermediate Fastqs once "
+                   "no longer needed)")
     p.add_argument('--force',action='store_true',
                    dest='force',default=False,
                    help="force overwrite of existing outputs")
@@ -1168,16 +1187,26 @@ if __name__ == "__main__":
                    help="deprecated: kept for backwards compatibility "
                    "only as barcode/UMI quality checks are now "
                    "disabled by default")
+    p.add_argument("--threads",type=int,
+                   dest="threads",default=None,
+                   help="deprecated (use -n/--nprocessors option "
+                   "instead): number of threads to use with multicore "
+                   "tasks (e.g. 'contaminant_filter')")
     args = p.parse_args()
 
-    # Deal with module files
-    if args.modulefiles is not None:
-        modulefiles = args.modulefiles.split(',')
-        for modulefile in modulefiles:
+    # Deal with environment modules
+    modulefiles = args.modulefiles
+    if modulefiles is None:
+        try:
+            modulefiles = __settings.modulefiles['process_icell8']
+        except KeyError:
+            # No environment modules specified
+            pass
+    if modulefiles is not None:
+        for modulefile in modulefiles.split(','):
             envmod.load(modulefile)
 
     # Deal with job runners
-    stages = ('default','contaminant_filter')
     runners = dict()
     for runner in args.runners:
         try:
@@ -1195,11 +1224,72 @@ if __name__ == "__main__":
         default_runner = __settings.general.default_runner
     for stage in stages:
         if stage not in runners:
-            runners[stage] = default_runner
+            if stage == 'qc':
+                # Use the general QC settings
+                stage_runner = __settings.runners['qc']
+            else:
+                # Look for Icell8-specific runner
+                try:
+                    stage_runner = __settings.runners['icell8_%s' % stage]
+                except KeyError:
+                    stage_runner = default_runner
+            runners[stage] = stage_runner
+
+    # Deal with number of processors
+    nprocessors = dict()
+    for nprocs in args.nprocessors:
+        try:
+            stage,n = nprocs.split('=')
+        except ValueError: # too few values to unpack
+            stage = 'default'
+            n = nprocs
+        if stage not in stages:
+            logger.fatal("Bad stage for --nprocessors option: %s" % stage)
+            sys.exit(1)
+        nprocessors[stage] = int(n)
+    if args.threads is not None:
+        for stage in ('contaminant_filter','statistics'):
+            if stage not in nprocessors:
+                logging.warning("Setting nprocessors for stage '%s' "
+                                "from --threads option" % stage)
+                nprocessors[stage] = args.threads
+    try:
+        default_nprocessors = nprocessors['default']
+    except KeyError:
+        default_nprocessors = 1
+    for stage in stages:
+        stage_nprocessors = default_nprocessors
+        if stage not in nprocessors:
+            if stage == 'qc':
+                # Use the general QC settings
+                try:
+                    stage_nprocessors = __settings.qc.nprocessors
+                except (KeyError,AttributeError):
+                    pass
+            else:
+                # Look for Icell8-specific nprocessors
+                try:
+                    stage_nprocessors = __settings.icell8['nprocessors_%s'
+                                                          % stage]
+                except KeyError:
+                    pass
+            nprocessors[stage] = stage_nprocessors
 
     # Check for clashing -u/-p
     if args.project and args.unaligned_dir:
         logger.fatal("Cannot specify -u and -p together")
+        sys.exit(1)
+
+    # Check for contaminant filtering inputs
+    if args.mammalian_conf is None or \
+       not os.path.isfile(args.mammalian_conf):
+        logging.fatal("Mammalian genome panel not specified "
+                      "or doesn't exist (-m)")
+        sys.exit(1)
+    if args.contaminants_conf is None or \
+       not os.path.isfile(args.contaminants_conf):
+        logging.fatal("Contaminant genome panel not specified "
+                      "or doesn't exist (-c)")
         sys.exit(1)
 
     # Output dir
@@ -1236,14 +1326,15 @@ if __name__ == "__main__":
             if line.startswith("DATABASE"):
                 print "-- %s" % line.split('\t')[1]
     print "Fastq_screen aligner    : %s" % args.aligner
-    print "Fastq_screen threads    : %s" % args.threads
     print "Maximum concurrent jobs : %s" % max_jobs
-    print "Job runners:"
+    print "Stage specific settings :"
     for stage in stages:
-        print "-- %s: %s" % (stage,runners[stage])
-    if args.modulefiles is not None:
+        print "-- %s: %s (nprocs=%d)" % (stage,
+                                  runners[stage],
+                                  nprocessors[stage])
+    if modulefiles is not None:
         print "Environment modules:"
-        for modulefile in modulefiles:
+        for modulefile in modulefiles.split(','):
             print "-- %s" % modulefile
     print "Clean-up intermediate Fastqs: %s" % \
         ('yes' if do_clean_up else 'no')
@@ -1339,8 +1430,8 @@ if __name__ == "__main__":
                                        os.path.join(stats_dir,"icell8_stats.tsv"),
                                        well_list,
                                        unassigned=True,
-                                       nprocs=args.threads)
-        ppl.add_task(initial_stats,runner=runners['contaminant_filter'])
+                                       nprocs=nprocessors['statistics'])
+        ppl.add_task(initial_stats,runner=runners['statistics'])
 
         # Split fastqs into batches
         batch_dir = os.path.join(icell8_dir,"_fastqs.batched")
@@ -1366,9 +1457,9 @@ if __name__ == "__main__":
                                       initial_stats.output(),
                                       suffix="_filtered",
                                       append=True,
-                                      nprocs=args.threads)
+                                      nprocs=nprocessors['statistics'])
         ppl.add_task(filter_stats,requires=(initial_stats,filter_fastqs),
-                     runner=runners['contaminant_filter'])
+                     runner=runners['statistics'])
 
         # Use cutadapt to find reads with poly-G regions
         poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
@@ -1382,9 +1473,9 @@ if __name__ == "__main__":
                                            initial_stats.output(),
                                            suffix="_poly_g",
                                            append=True,
-                                           nprocs=args.threads)
+                                           nprocs=nprocessors['statistics'])
         ppl.add_task(poly_g_stats,requires=(get_poly_g_reads,filter_stats),
-                     runner=runners['contaminant_filter'])
+                     runner=runners['statistics'])
 
         # Set up the cutadapt jobs as a group
         trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
@@ -1399,20 +1490,21 @@ if __name__ == "__main__":
                                     initial_stats.output(),
                                     suffix="_trimmed",
                                     append=True,
-                                    nprocs=args.threads)
+                                    nprocs=nprocessors['statistics'])
         ppl.add_task(trim_stats,requires=(trim_reads,poly_g_stats),
-                     runner=runners['contaminant_filter'])
+                     runner=runners['statistics'])
 
         # Set up the contaminant filter jobs as a group
         contaminant_filter_dir = os.path.join(icell8_dir,
                                               "_fastqs.contaminant_filter")
-        contaminant_filter = FilterContaminatedReads("Contaminant filtering",
-                                                     trim_reads.output(),
-                                                     contaminant_filter_dir,
-                                                     args.mammalian_conf,
-                                                     args.contaminants_conf,
-                                                     aligner=args.aligner,
-                                                     threads=args.threads)
+        contaminant_filter = FilterContaminatedReads(
+            "Contaminant filtering",
+            trim_reads.output(),
+            contaminant_filter_dir,
+            args.mammalian_conf,
+            args.contaminants_conf,
+            aligner=args.aligner,
+            threads=nprocessors['contaminant_filter'])
         ppl.add_task(contaminant_filter,requires=(trim_reads,),
                      runner=runners['contaminant_filter'])
 
@@ -1422,9 +1514,9 @@ if __name__ == "__main__":
                                      initial_stats.output(),
                                      suffix="_contaminant_filtered",
                                      append=True,
-                                     nprocs=args.threads)
+                                     nprocs=nprocessors['statistics'])
         ppl.add_task(final_stats,requires=(contaminant_filter,trim_stats),
-                     runner=runners['contaminant_filter'])
+                     runner=runners['statistics'])
 
         # Prepare for rebatching reads by barcode and sample by splitting
         # each batch by barcode
@@ -1457,9 +1549,9 @@ if __name__ == "__main__":
             initial_stats.output(),
             suffix="_final",
             append=True,
-            nprocs=args.threads)
+            nprocs=nprocessors['statistics'])
         ppl.add_task(final_barcode_stats,requires=(barcode_fastqs,final_stats),
-                     runner=runners['contaminant_filter'])
+                     runner=runners['statistics'])
 
         # Verify that barcodes are okay
         check_barcodes = CheckICell8Barcodes(
@@ -1508,25 +1600,25 @@ if __name__ == "__main__":
     ppl = Pipeline(name="ICell8: run Illumina QC")
     run_qc_barcodes = RunQC("Run QC for barcodes",
                             outdir,
-                            nthreads=args.threads,
+                            nthreads=nprocessors['qc'],
                             fastq_dir="fastqs.barcodes",
                             qc_dir="qc.barcodes")
     multiqc_barcodes = RunMultiQC("Run MultiQC for barcodes",
                                   outdir,
                                   fastq_dir="fastqs.barcodes",
                                   qc_dir="qc.barcodes")
-    ppl.add_task(run_qc_barcodes,runner=runners['contaminant_filter'])
+    ppl.add_task(run_qc_barcodes,runner=runners['qc'])
     ppl.add_task(multiqc_barcodes,requires=(run_qc_barcodes,))
     run_qc_samples = RunQC("Run QC for samples",
                            outdir,
-                           nthreads=args.threads,
+                           nthreads=nprocessors['qc'],
                            fastq_dir="fastqs.samples",
                            qc_dir="qc.samples")
     multiqc_samples = RunMultiQC("Run MultiQC for samples",
                                  outdir,
                                  fastq_dir="fastqs.samples",
                                  qc_dir="qc.samples")
-    ppl.add_task(run_qc_samples,runner=runners['contaminant_filter'])
+    ppl.add_task(run_qc_samples,runner=runners['qc'])
     ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
 
     # Reset primary fastq dir (if working in a project)
