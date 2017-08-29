@@ -13,6 +13,18 @@ scripts = []
 for pattern in ('bin/*.py','bin/*.sh',):
     scripts.extend(glob(pattern))
 
+# Installation requirements
+install_requires = ['pillow',
+                    'matplotlib',
+                    'pandas',
+                    'genomics-bcftbx',
+                    'nebulizer']
+# If we're on ReadTheDocs then we can reduce this
+# to a smaller set (to avoid build timeouts)
+import os
+if os.environ.get('READTHEDOCS') == 'True':
+    install_requires = ['genomics-bcftbx']
+
 # Setup for installation etc
 from setuptools import setup
 import auto_process_ngs
