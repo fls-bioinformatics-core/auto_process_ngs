@@ -280,7 +280,7 @@ if __name__ == "__main__":
                           'Uncontaminated'],
                          rotation=45)
     plot.set_ylabel("#read pairs")
-    plot.legend(loc='best')
+    plot.legend(loc="upper left", bbox_to_anchor=(1,1))
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')
     sample_info.add(Img(os.path.relpath(plot_filen,
                                         os.path.dirname(out_file))))
