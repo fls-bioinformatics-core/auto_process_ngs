@@ -100,58 +100,132 @@ This results in two fastq directories: ``fastqs.barcodes`` and
 ``fastqs.samples``. Note that the read pairs themselves are the same
 in each set.
 
-Reports
--------
-
 The standard QC procedure is run on each set of FASTQS (barcodes and
-samples) and reports are generated for each.
+samples) and QC reports are generated for each.
 
-In addition the ``stats`` directory contains a summary of the read
-and UMI counts after each stage (in TSV and XLSX format).
+Outputs and reports
+-------------------
 
-There is also a final summary report ``icell8_processing.html``.
+The pipeline directory will contain the following output
+directories:
 
-Configuring the ICell8 processing pipeline
-------------------------------------------
+ ========================== ===============================================
+ **Directory**              **Description and contents**
+ -------------------------- -----------------------------------------------
+ ``fastqs``                 Initial FASTQs from ``bcl2fastq``, plus
+                            standard QC outputs.
+ ``fastqs.barcodes``        FASTQs with reads sorted by ICell8 barcode,
+                            plus QC outputs.
+                            The FASTQs will be named according to the
+                            convention ``NAME.BARCODE.r[1|2].fastq.gz``.
+ ``fastqs.samples``         FASTQs with reads sorted by ICell8 sample
+                            name (as defined in the input well list file),
+                            plus QC outputs.
+                            The FASTQs will be named according to the
+                            convention ``SAMPLE.r[1|2].fastq.gz``.
+ ``stats``                  Summary of the read and UMI counts after each
+                            processing stage, in TSV (``icell8_stats.tsv``)
+                            and XLSX format (``icell8_stats.xlsx``)
+ ``logs``                   Logs from the pipeline execution
+ ``scripts``                Scripts generated as part of the pipeline
+                            execution.
+ ``icell8_processing_data`` Data and plots for the final summary report
+                            (see below)
+ ========================== ===============================================
 
-The running of the pipeline can be configured via the command line,
-or by setting the appropriate options in the ``settings.ini``
+The directory will also contain:
+
+ * A copy of the well list file (name preserved)
+ * A final summary report ``icell8_processing.html``
+ * A ``README.info`` file (nb only if the directory was set up as
+   an autoprocess project)
+
+The final report summarises information on the following:
+
+ * Numbers of reads assigned to barcodes
+ * Overall numbers of reads filtered after each stage
+ * Initial and final read count distributions against barcodes
+ * Number of reads assigned and filtered at each stage by sample
+ * Poly-G region counts and distribution
+
+Appendix: configuring the ICell8 processing pipeline
+----------------------------------------------------
+
+The running of the pipeline can be configured via command line options,
+or by setting the appropriate parameters options in the ``settings.ini``
 configuration file.
 
- =========== =============================== ================== ==================================
- Name        Description                     Option             Section and parameter in settings
- ----------- ------------------------------- ------------------ ----------------------------------
- Batch size  Number of reads per batch to    ``-s``             ``[icell8] batch_size``
-             split input FASTQs into
+Reference data
+~~~~~~~~~~~~~~
 
- Environment List of modules to load         ``--modulefiles``  ``[modulefiles] process_icell8``
- modules     before running the pipeline
+ * **Mammalian genome panel**: ``fastq_screen`` conf file with the
+   indices for "mammalian" genomes, to use in the contamination
+   filtering step.
 
- Aligner     Explicitly specify the aligner  ``-a``             ``[icell8] aligner``
-             (``bowtie`` or ``bowtie2``) to
-             use for contamination
-             filtering
+   Set using the ``-m`` option on the command line, or via
+   ``[icell8] mammalian_conf_file`` in the configuration file.
 
- Mammalian   ``fastq_screen`` conf file      ``-m``             ``[icell8] mammalian_conf_file``
- genome      with "mammalian" indices
- panel
+ * **Contaminant genome panel**: ``fastq_screen`` conf file with the
+   indices for "contaminant" genomes, to use in the contamination
+   filtering step.
 
- Contaminant ``fastq_screen`` conf file      ``-c``             ``[icell8] contaminant_conf_file``
- genome      with "contaminant" indices
- panel
- =========== =============================== ================== ==================================
+   Set using the ``-c`` option on the command line, or via
+   ``[icell8] contaminant_conf_file`` in the configuration file.
 
-Also, appropriate runners and numbers of cores can be defined
-for different "stages" of the pipeline (nb a stage is effectively
-a "class" of tasks). The stages are:
+Runtime environment
+~~~~~~~~~~~~~~~~~~~
+
+ * **Environment modules**: specify a list of environment modules
+   (separated with commas) to load before running the pipeline.
+
+   Set using the ``--modulefiles`` option on the command line, or
+   via ``[modulefiles] process_icell8`` in the configuration file.
+
+ * **Job runners and processors**: specify job runners and number
+   of processors to use for specific classes of tasks in the pipeline.
+   See :ref:`job_runners_and_processors` for more details.
+
+ * **Aligner**: explicitly specify the aligner (currently either
+   ``bowtie`` or ``bowtie2``) to use for contamination filtering.
+
+   Set using the ``-a`` option on the command line, or via
+   ``[icell8] aligner`` in the configuration file. (NB if this is
+   not set then an appropriate aligner will be selected
+   automatically from those available in the execution
+   environment.)
+
+FASTQ batching
+~~~~~~~~~~~~~~
+
+ * **Read batch size**: number of reads to assign to each "batch"
+   when splitting FASTQs for processing.
+
+   Batching the reads enables many of the pipeline tasks to run
+   in parallel, if the execution environment allows it (e.g. if
+   running on a compute cluster).
+
+   Set using the ``-s`` option on the command, or via
+   ``[icell8] batch_size``.
+
+Job control
+~~~~~~~~~~~
+
+..  _job_runners_and_nprocessors:
+
+Job runners and processors
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Job runners and numbers of processors can be explicitly defined
+for different "stages" of the pipeline, where a stage is
+essentially a class of tasks).
+
+For the ICell8 processing pipeline the stages are:
 
  ================== ========================================
- Name               Description
+ **Name**           **Description**
  ------------------ ----------------------------------------
  contaminant_filter Tasks for filtering "contaminated" reads
-
  qc                 Tasks for performing QC on the FASTQs
-
  statistics         Tasks for generating statistics
  ================== ========================================
 
