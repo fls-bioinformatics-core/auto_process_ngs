@@ -155,8 +155,8 @@ The running of the pipeline can be configured via command line options,
 or by setting the appropriate parameters options in the ``settings.ini``
 configuration file.
 
-Reference data
-~~~~~~~~~~~~~~
+Reference data and quality filtering
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
  * **Mammalian genome panel**: ``fastq_screen`` conf file with the
    indices for "mammalian" genomes, to use in the contamination
@@ -171,6 +171,14 @@ Reference data
 
    Set using the ``-c`` option on the command line, or via
    ``[icell8] contaminant_conf_file`` in the configuration file.
+
+ * **Quality filtering of barcode and UMI sequences**: by default
+   read pairs are *not* removed if the associated barcode or UMI
+   sequences don't meet the appropriate quality criteria.
+
+   To turn on quality filtering, specify the
+   ``-q``/``--quality_filter`` option (nb there is no equivalent
+   parameter in the configuration file).
 
 Runtime environment
 ~~~~~~~~~~~~~~~~~~~
@@ -210,7 +218,15 @@ FASTQ batching
 Job control
 ~~~~~~~~~~~
 
-..  _job_runners_and_nprocessors:
+ * **Maximum number of concurrent jobs**: limits the number of
+   processes that the pipeline will attempt to run at any one
+   time.
+
+   The default is taken from the ``max_concurrent_jobs``
+   parameter in the configuration file; it can be set at run
+   time using the ``-j``/``--max-jobs`` command line option.
+
+..  _job_runners_and_processors:
 
 Job runners and processors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
