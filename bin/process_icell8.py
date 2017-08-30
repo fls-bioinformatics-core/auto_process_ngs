@@ -309,7 +309,7 @@ class TrimFastqPair(PipelineCommand):
 
 class FilterPolyGReads(PipelineCommand):
     """
-    'cutadapt' to fetch reads with poly-G regions
+    Run 'cutadapt' to fetch reads with poly-G regions
     """
     def init(self,fastq_pair,out_dir):
         """
@@ -391,7 +391,18 @@ class IlluminaQC(PipelineCommand):
     """
     def init(self,fastqs,nthreads=1,working_dir=None,qc_dir=None):
         """
-        Set up parameters
+        Create a new IlluminaQC instance
+
+        Arguments:
+          fastqs (list): list of Fastqs to run the QC
+            pipeline on
+          nthreads (int): number of cores available to
+            run the pipeline with
+          working_dir (str): path to working directory
+            to run the pipeline in (defaults to cwd if
+            not set)
+          qc_dir (str): path specifying where to write
+            the QC outputs to
         """
         self.fastqs = fastqs
         self.nthreads = nthreads
@@ -418,7 +429,15 @@ class MultiQC(PipelineCommand):
     """
     def init(self,qc_dir,out_file,title):
         """
-        Set up parameters
+        Create a new MultiQC instance
+
+        Arguments:
+          qc_dir (str): path to the QC outputs to run
+            MultiQC on
+          out_file (str): path and filename for the
+            output HTML report from MultiQC
+          title (str): title to assign to the MultiQC
+            report
         """
         self.qc_dir = qc_dir
         self.out_file = out_file
@@ -439,10 +458,57 @@ class MultiQC(PipelineCommand):
 
 class GetICell8Stats(PipelineTask):
     """
+    Generate statistics for ICell8 processing stage
+
+    Counts the reads and distinct UMIs per barcode for
+    reads pooled from the set of supplied Fastqs and
+    writes these to columns in a tab-delimited output
+    file.
+
+    If the output file doesn't exist then it will
+    created. If 'append' isn't specified then an
+    existing file will be deleted and its contents
+    lost.
+
+    The barcodes are either taken from the supplied
+    well list file, or from the first column of the
+    output file (if it exists).
+
+    If 'unassigned' is specified then stats will also
+    be collected on reads which don't match any
+    barcode.
+
+    By default the counts are written to columns called
+    ``Nreads`` and ``Distinct_UMIs``; a suffix can be
+    specified to distinguish the counts from those from
+    different stages.
+
+    If the columns already exist in the file when
+    appending then they will be overwritten.
     """
     def init(self,fastqs,stats_file,well_list=None,
              suffix=None,unassigned=False,append=False,
              nprocs=1):
+        """
+        Initialise the GetICell8Stats task
+
+        Arguments:
+          fastqs (list): list of Fastqs to get stats from
+          stats_file (str): path to stats file
+          well_list (str): path to a well list file to
+            take the barcodes from (optional)
+          suffix (str): suffix to append to the output
+            column names (optional)
+          unassigned (bool): if True then also collect stats
+            for read pairs that don't match any of the expected
+            barcodes from the well list or existing stats file
+            (by default unassigned stats are not collected)
+          append (bool): if True then append columns to
+            existing output file (by default creates new
+            output file)
+          nprocs (int): number of cores available for stats
+            (default: 1)
+        """
         pass
     def setup(self):
         # Check if requested columns already exist
@@ -453,9 +519,8 @@ class GetICell8Stats(PipelineTask):
                 if self.args.suffix is not None:
                     col = '%s%s' % (col,self.args.suffix)
                 if col not in stats.header():
-                    print "Missing column: %s" % col
+                    print "Column not in file: %s" % col
                     got_cols = False
-                    break
                 else:
                     print "Found column: %s" % col
             if got_cols:
@@ -471,10 +536,19 @@ class GetICell8Stats(PipelineTask):
                                       unassigned=self.args.unassigned,
                                       nprocs=self.args.nprocs))
     def output(self):
+        """
+        Returns the path to the output statistics file
+        """
         return self.args.stats_file
 
 class GetICell8PolyGStats(GetICell8Stats):
     """
+    Generate statistics for ICell8 poly-G detection
+
+    Subclass of ``GetICell8Stats`` task; generates
+    and appends additional column expressing poly-G
+    read counts as a percentage of total filtered
+    read counts for each barcode.
     """
     def finish(self):
         # Method invoked once commands have run
@@ -502,9 +576,30 @@ class GetICell8PolyGStats(GetICell8Stats):
 
 class SplitFastqsIntoBatches(PipelineTask):
     """
+    Split reads from Fastq pairs into batches
+
+    Sorts the input Fastq files into R1/R2 pairs,
+    pools read pairs and divides into new Fastq
+    pairs consisting of "batches" of specified
+    number of read pairs.
+
+    The output Fastqs will be named
+    ``<BASENAME>.B###.r[1|2].fastq`` (where
+    ``###`` is the batch number)
     """
     def init(self,fastqs,batch_dir,basename,
              batch_size=DEFAULT_BATCH_SIZE):
+        """
+        Initialise the SplitFastqsIntoBatches task
+
+        Arguments:
+          fastqs (list): list of input Fastq files
+          batch_dir (str): destination directory to
+            write output files to
+          basename (str): basename for output Fastqs
+          batch_size (int): number of reads per output
+            FASTQ (in batch mode) (optional)
+        """
         pass
     def setup(self):
         # If output directory already exists then nothing to do
@@ -531,15 +626,49 @@ class SplitFastqsIntoBatches(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_batch_dir,self.args.batch_dir)
     def output(self):
+        """
+        Returns iterator listing the batched Fastq files
+        """
         out_dir = self.args.batch_dir
         return FileCollector(out_dir,"*.B*.r*.fastq")
 
 class FilterICell8Fastqs(PipelineTask):
     """
+    Perform read assignment and optional quality filtering
+
+    For each input R1/R2 Fastq file pair:
+
+    - if a well list is supplied then check that the
+      ICell8 barcode matches one in the well list
+    - if filtering is turned on then remove reads
+      where the ICell8 barcode and/or UMI fail to
+      meet the minimum quality standard across all
+      bases
     """
     def init(self,fastqs,filter_dir,well_list=None,
               mode='none',discard_unknown_barcodes=False,
               quality_filter=False):
+        """
+        Initialise the FilterICell8Fastqs task
+
+        Arguments:
+          fastqs (list): input FASTQ files
+          filter_dir (str): destination directory to
+            write output files to
+          well_list (str): 'well list' file to use
+            (optional)
+          mode (str): mode to run the utility in
+          discard_unknown_barcodes (bool): if True
+            then discard read pairs where the barcode
+            doesn't match one of those in the well
+            list file (nb well list file must also
+            be supplied in this case) (all reads are
+            kept by default)
+          quality_filter (bool): if True then also
+            do filtering based on barcode- and
+            UMI-quality (no filtering is performed
+            by default)
+        """
         pass
     def setup(self):
         if os.path.exists(self.args.filter_dir):
@@ -563,6 +692,21 @@ class FilterICell8Fastqs(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
+        """Returns object pointing to collections of Fastqs
+
+        The returned object has the following properties:
+
+        - 'assigned': iterator listing the Fastqs with assigned reads
+        - 'unassigned': iterator listing the Fastqs with unassigned
+          reads
+        - 'failed_barcodes': iterator listing the Fastqs with reads
+          which failed the barcode quality check
+        - 'failed_umis': iterator listing the Fastqs with reads
+          which failed the UMI quality check
+
+        NB the 'failed_barcodes' and 'failed_umis' will be empty
+        unless the 'quality_filter' argument was set to True.
+        """
         out_dir = self.args.filter_dir
         return AttributeDictionary(
             assigned=FileCollector(out_dir,"*.B*.filtered.r*.fastq"),
@@ -573,8 +717,32 @@ class FilterICell8Fastqs(PipelineTask):
 
 class TrimReads(PipelineTask):
     """
+    Run 'cutadapt' with ICell8 settings
+
+    Given a set of Fastqs, arranges into R1/R2 pairs
+    and performs following operations on the R2
+    reads:
+
+    - Remove sequencing primers
+    - Remove poly-A/T and poly-N sequences
+    - Apply quality filter of Q <= 25
+    - Remove short reads (<= 20 bases) post-trimming
+
+    If an R2 read fails any of the filters then the read
+    pair is rejected.
+
+    Output Fastqs contain the filtered and trimmed reads
+    only.
     """
     def init(self,fastqs,trim_dir):
+        """
+        Initialise the TrimReads task
+
+        Arguments:
+          fastqs (list): input Fastqs
+          trim_dir (str): destination directory to
+            write output files to
+        """
         pass
     def setup(self):
         if os.path.exists(self.args.trim_dir):
@@ -589,13 +757,30 @@ class TrimReads(PipelineTask):
         if not os.path.exists(self.args.trim_dir):
             os.rename(self.tmp_trim_dir,self.args.trim_dir)
     def output(self):
+        """
+        Returns iterator listing the trimmed Fastq files
+        """
         out_dir = self.args.trim_dir
         return FileCollector(out_dir,"*.trimmed.fastq")
 
 class GetReadsWithPolyGRegions(PipelineTask):
     """
+    Run 'cutadapt' to identify reads with poly-G regions
+
+    Given a set of Fastqs, arranges into R1/R2 pairs
+    and identifies read pairs for which R2 appears to
+    contain poly-G regions (all other read pairs are
+    discarded).
     """
     def init(self,fastqs,poly_g_regions_dir):
+        """
+        Initialise the GetReadsWithPolyGRegions task
+
+        Arguments:
+          fastqs (list): input Fastq files
+          out_dir (str): destination directory to
+            write output files to
+        """
         pass
     def setup(self):
         if os.path.exists(self.args.poly_g_regions_dir):
@@ -610,14 +795,45 @@ class GetReadsWithPolyGRegions(PipelineTask):
         if not os.path.exists(self.args.poly_g_regions_dir):
             os.rename(self.tmp_poly_g_regions_dir,self.args.poly_g_regions_dir)
     def output(self):
+        """
+        Returns iterator listing the Fastqs with poly-G regions
+        """
         out_dir = self.args.poly_g_regions_dir
         return FileCollector(out_dir,"*.poly_g.fastq")
 
 class FilterContaminatedReads(PipelineTask):
     """
+    Filter 'contaminated' reads from Fastq files
+
+    Given a set of Fastqs, arrange into R1/R2 file
+    pairs and run 'fastq_screen' on the R2 reads
+    against panels of 'mammalian' and 'contaminant'
+    organisms.
+
+    Read pairs where there is an exclusive match to
+    the contaminants (i.e. without any match to the
+    mammalian genomes) are excluded.
     """
     def init(self,fastqs,filter_dir,mammalian_conf,
              contaminants_conf,aligner=None,threads=None):
+        """
+        Initialise the FilterContaminatedReads task
+
+        Arguments:
+          fastqs (list): input Fastqs
+          filter_dir (str): destination directory to
+            write output files to
+          mammalian_conf (str): path to FastqScreen
+            .conf file with mammalian genome indexes
+          contaminants_conf (str): path FastqScreen
+            .conf file with contaminant genome indexes
+          aligner (str): explicitly specify name of
+            aligner to use with FastqScreen (e.g.
+            'bowtie2') (optional)
+          threads (int): explicitly specify number of
+            threads to run FastqScreen using
+            (optional)
+        """
         pass
     def setup(self):
         if os.path.exists(self.args.filter_dir):
@@ -637,13 +853,30 @@ class FilterContaminatedReads(PipelineTask):
         if not os.path.exists(self.args.filter_dir):
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
+        """
+        Returns iterator listing the contaminant-filtered Fastqs
+        """
         out_dir = self.args.filter_dir
         return FileCollector(out_dir,"*.trimmed.filtered.fastq")
 
 class SplitByBarcodes(PipelineTask):
     """
+    Given a set of Fastq files, arrange into
+    R1/R2 pairs then pool read pairs and group
+    into new Fastq file pairs by ICell8 barcode.
+
+    Output Fastqs are named:
+    ``<BASENAME>.<BARCODE>.r[1|2].fastq``.
     """
     def init(self,fastqs,barcodes_dir):
+        """
+        Initialise the SplitByBarcodes task
+
+        Arguments:
+          fastqs (list): input Fastq files
+          barcodes_dir (str): destination directory
+            to write output files to
+        """
         pass
     def setup(self):
         if os.path.exists(self.args.barcodes_dir):
@@ -662,15 +895,44 @@ class SplitByBarcodes(PipelineTask):
         if not os.path.exists(self.args.barcodes_dir):
             os.rename(self.tmp_barcodes_dir,self.args.barcodes_dir)
     def output(self):
+        """
+        Returns iterator listing the contaminant-filtered Fastqs
+        """
         out_dir = self.args.barcodes_dir
         return FileCollector(out_dir,"*.r*.fastq")
 
 class MergeBarcodeFastqs(PipelineTask):
     """
+    Given a set of Fastq files with filtered reads,
+    arrange into R1/R2 pairs then pool read pairs
+    belonging to the same ICell8 barcode.
+
+    Also concatenate R1/R2 Fastq pairs for unassigned
+    reads, 
     """
     def init(self,fastqs,unassigned_fastqs,
              failed_barcode_fastqs,failed_umi_fastqs,
              merge_dir,basename,batch_size=25):
+        """
+        Initialise the MergeBarcodeFastqs task
+
+        Arguments:
+          fastqs (list): input Fastq files
+          unassigned_fastqs (list): Fastq files with
+            reads not assigned to ICell8 barcodes
+          failed_barcode_fastqs (list): Fastq files
+            with reads failing barcode quality check
+          failed_umi_fastqs (list): Fastq files
+            with reads failing UMI quality check
+          merge_dir (str): destination directory to
+            write output files to
+          basename (str): basename to use for output
+            FASTQ files
+          batch_size (int): number of barcodes to
+            group together into one command for
+            merging (larger batches = fewer jobs, but
+            each job takes longer) (default=25)
+        """
         pass
     def setup(self):
         # If output directory already exists then nothing to do
@@ -736,6 +998,18 @@ class MergeBarcodeFastqs(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
+        """Returns object pointing to collections of Fastqs
+
+        The returned object has the following properties:
+
+        - 'assigned': iterator listing the Fastqs with assigned reads
+        - 'unassigned': iterator listing the Fastqs with unassigned
+          reads
+        - 'failed_barcodes': iterator listing the Fastqs with reads
+          which failed the barcode quality check
+        - 'failed_umis': iterator listing the Fastqs with reads
+          which failed the UMI quality check
+        """
         out_dir = self.args.merge_dir
         return AttributeDictionary(
             assigned=FileCollector(out_dir,"*.[ACGT]*.r*.fastq.gz"),
@@ -746,8 +1020,23 @@ class MergeBarcodeFastqs(PipelineTask):
 
 class MergeSampleFastqs(PipelineTask):
     """
+    Given a set of Fastq files with ICell8 barcodes
+    in the names, arrange into R1/R2 file pairs
+    and pool reads into new Fastq files according
+    to the sample names associated with each barcode
+    in the well list file.
     """
     def init(self,fastqs,well_list,merge_dir):
+        """
+        Initialise the MergeSampleFastqs task
+
+        Arguments:
+          fastqs (list): input Fastq files
+          well_list (str): 'well list' file to get
+            sample names and barcodes from
+          merge_dir (str): destination directory to
+            write output files to
+        """
         pass
     def setup(self):
         # If output directory already exists then nothing to do
@@ -787,6 +1076,9 @@ class MergeSampleFastqs(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
+        """
+        Returns iterator listing the merged Fastqs
+        """
         out_dir = self.args.merge_dir
         return AttributeDictionary(
             fastqs=FileCollector(out_dir,"*.r*.fastq.gz"),
@@ -794,9 +1086,28 @@ class MergeSampleFastqs(PipelineTask):
 
 class RunQC(PipelineTask):
     """
+    Run ``illumina_qc.sh`` pipeline on a set of Fastqs
     """
     def init(self,project_dir,nthreads=1,batch_size=25,
              fastq_dir='fastqs',qc_dir='qc'):
+        """
+        Initialise the RunQC task
+
+        Arguments:
+          project_dir (str): path to the project
+            directory to run the QC pipeline on
+          nthreads (int): number of cores available to
+            run the pipeline with
+          batch_size (int): number of Fastq files to
+            group together into one command for
+            running QC (larger batches = fewer jobs,
+            but each job takes longer) (default=25)
+          fastq_dir (str): name of the subdirectory
+            within the project with the Fastq files
+            to run the pipeline on (default='fastqs')
+          qc_dir (str): path specifying where to write
+            the QC outputs to
+        """
         self.qc_dir = None
         self.qc_report = None
     def setup(self):
@@ -857,6 +1168,14 @@ class RunQC(PipelineTask):
             else:
                 print "QC report: %s" % self.qc_report
     def output(self):
+        """Returns object pointing to collections of Fastqs
+
+        The returned object has the following properties:
+
+        - 'qc_dir': path to the directory with the QC outputs
+        - 'report_zip': path to the ZIP file holding the QC
+          report and supporting files
+        """
         return AttributeDictionary(
             qc_dir=self.qc_dir,
             report_zip=self.qc_report,
@@ -864,8 +1183,22 @@ class RunQC(PipelineTask):
 
 class RunMultiQC(PipelineTask):
     """
+    Run MultiQC on QC outputs from a project
     """
     def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
+        """
+        Initialise the RunMultiQC task
+
+        Arguments:
+          project_dir (str): path to the project
+            directory with the QC outputs
+          fastq_dir (str): name of the subdirectory
+            within the project containing the Fastq
+            files associated with the QC outputs of
+            interest (default='fastqs')
+          qc_dir (str): path to subdirectory holding
+            the QC outputs to run MultiQC on
+        """
         self.multiqc_out = None
     def setup(self):
         project = AnalysisProject(
@@ -885,7 +1218,13 @@ class RunMultiQC(PipelineTask):
                              multiqc_out,
                              title))
         self.multiqc_out = multiqc_out
-    def output(self):
+    def output(self):        
+        """Returns object pointing to MultiQC outputs
+
+        The returned object has the following properties:
+
+        - 'multiqc_out': path to MultiQC output file
+        """
         return AttributeDictionary(
             multiqc_out=self.multiqc_out,
         )
@@ -899,6 +1238,12 @@ class CheckICell8Barcodes(PipelineTask):
     matches the assigned barcode.
     """
     def init(self,fastqs):
+        """
+        Initialise the CheckICell8Barcodes task
+
+        Arguments:
+          fastqs (list): Fastq files to check
+        """
         self.bad_barcodes = None
     def setup(self):
         batch_size = 25
@@ -950,6 +1295,13 @@ class CheckICell8Barcodes(PipelineTask):
                                                            barcode[1])
             self.fail()
     def output(self):
+        """Returns object pointing to bad barcodes outputs
+
+        The returned object has the following properties:
+
+        - 'bad_barcodes': list of tuples with 'bad' barcode
+          and count of times it is not correct
+        """
         return AttributeDictionary(
             bad_barcodes=self.bad_barcodes
         )
@@ -959,6 +1311,13 @@ class ConvertStatsToXLSX(PipelineTask):
     Convert the stats file to XLSX format
     """
     def init(self,stats_file,xlsx_file):
+        """
+        Initialise the ConvertStatsToXLSX task
+
+        Arguments:
+          stats_file (str): path to input stats file
+          xlsx_file (str): path to output XLSX file
+        """
         pass
     def setup(self):
         convert_to_xlsx(self.args.stats_file,
@@ -966,6 +1325,12 @@ class ConvertStatsToXLSX(PipelineTask):
                         title="ICell8 stats",
                         freeze_header=True)
     def output(self):
+        """Returns object pointing to output files
+
+        The returned object has the following properties:
+
+        - 'xlsx_file': path to the output XLSX file
+        """
         return AttributeDictionary(
             xlsx_file=self.args.xlsx_file
         )
@@ -973,8 +1338,22 @@ class ConvertStatsToXLSX(PipelineTask):
 class ReportProcessing(PipelineTask):
     """
     Generate an HTML report on the processing
+
+    Runs the ``icell8_report.py`` script to generate
+    the report.
     """
     def init(self,dirn,stats_file=None,out_file=None,name=None):
+        """
+        Initialise the ReportProcessing task
+
+        Arguments:
+          dirn (str): directory with the ICell8
+            pipeline outputs
+          stats_file (str): name of stats file
+          out_file (str): name of output report
+            file (default: 'icell8_processing.html')
+          name (str): title of report
+        """
         self.out_file = None
     def setup(self):
         dirn = self.args.dirn
@@ -999,14 +1378,31 @@ class ReportProcessing(PipelineTask):
         cmd.add_args(dirn)
         self.add_cmd(cmd)
     def output(self):
+        """Returns object pointing to output files
+
+        The returned object has the following properties:
+
+        - 'report_html': path to the output HTML report
+        """
         return AttributeDictionary(
             report_html=self.out_file
         )
 
 class SetPrimaryFastqDir(PipelineTask):
     """
+    Sets the primary Fastq subdirectory in a project
     """
     def init(self,project_dir,primary_fastq_dir):
+        """
+        Initialise the SetPrimaryFastqDir task
+
+        Arguments:
+          project_dir (str): path to the project
+            directory
+          primary_fastq_dir (str): name of the 
+            Fastq subdirectory to make the
+            primary Fastq set
+        """
         pass
     def setup(self):
         project_dir = os.path.abspath(self.args.project_dir)
@@ -1016,8 +1412,16 @@ class SetPrimaryFastqDir(PipelineTask):
 
 class CleanupDirectory(PipelineTask):
     """
+    Remove a directory and all its contents
     """
     def init(self,dirn):
+        """
+        Initialise the CleanupDirectory task
+
+        Arguments:
+          dirn (str): path to the directory to
+            remove
+        """
         pass
     def setup(self):
         dirn = os.path.abspath(self.args.dirn)
