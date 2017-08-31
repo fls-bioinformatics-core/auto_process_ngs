@@ -4,20 +4,50 @@ Set up and configuration
 Requirements
 ************
 
-The autoprocessor is written in Python and should work with versions 2.6
-and 2.7. It also depends on the ``genomics-bcftbx`` Python module and NGS
-QC scripts which are part of the ``genomics`` github repository.
+The autoprocessor is written in Python and should work with Python 2.7.
 
-In addition the following software must be installed:
+A number of additional Python packages are explicitly required but these
+should be installed automatically from the Python Package Index (PyPI)
+if the autoprocessor is installed via ``pip``:
 
-* ``bcl2fastq``: one or both of:
+ * ``pillow``
+ * ``matplotlib``
+ * ``pandas``
+ * ``nebulizer``
 
-  * ``bcl2fastq`` 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
-  * ``bcl2fastq`` 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
+In addition it also depends on the ``genomics-bcftbx`` Python module,
+which is not currently available from PyPI; it can be obtained from
+the Github repository at
+https://github.com/fls-bioinformatics-core/genomics or can be installed
+via the ``requirements.txt`` file (see :ref:`auto_process_installation`).
 
-* ``bowtie`` http://bowtie-bio.sourceforge.net/index.shtml
-* ``fastq_screen`` http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
-* ``fastqc`` http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+Some of the commands depend on external software packages which must
+also be installed. These include
+
+ * ``bcl2fastq``: used for generating Fastq files from raw Illumina
+   sequencing data in the ``make_fastqs`` command. Version 2.17+ is
+   required for NextSeq data.
+
+   - ``bcl2fastq`` 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
+   - ``bcl2fastq`` 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
+
+ * QC pipeline:
+
+   - ``bowtie`` http://bowtie-bio.sourceforge.net/index.shtml
+   - ``fastq_screen`` http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
+   - ``fastqc`` http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+   - ``multiqc`` http://multiqc.info/
+
+ * ICell8 processing pipeline:
+
+   - ``cutadapt`` http://cutadapt.readthedocs.io
+   - ``bowtie2`` (optional, required if using Bowtie2 genome indexes
+     for contaminant filtering - see :ref:`icell8`)
+     http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+   - Plus software required for the QC pipeline
+
+Some of this software can be obtained from ``bioconda`` - see
+https://bioconda.github.io/ from more details.
 
 The programs provided by these packages must be found on the ``PATH`` when
 the appropriate autoprocessor commands are issued. :ref:`environment-modules`
@@ -25,9 +55,48 @@ can be used to help manage this.
 
 ..  note::
 
-    If there are multiple ``bcl2fastq`` packages available then see
-    :ref:`required_bcl2fastq_versions` for how to specify which version
-    is used.
+    If there are multiple ``bcl2fastq`` packages available on the path
+    at run time then see :ref:`required_bcl2fastq_versions` for how to
+    specify which version is used.
+
+.. _auto_process_installation:
+
+Installation
+************
+
+The autoprocessing package can obtained from its Github respository at
+
+ * https://github.com/fls-bioinformatics-core/auto_process_ngs
+
+The available versions can be found via
+https://github.com/fls-bioinformatics-core/auto_process_ngs/releases
+
+It is recommended to download one of these versions and unpack locally,
+e.g.::
+
+    wget https://github.com/fls-bioinformatics-core/auto_process_ngs/archive/0.6.4.tar.gz
+    tar zxf 0.6.4.tar.gzhttps://github.com/fls-bioinformatics-core/auto_process_ngs/releases/tag/0.6.4
+
+which will download and unpack version 0.6.4 into a new directory
+``auto_process_ngs-0.6.4``.
+
+If the Python dependencies listed above are already available in the
+environment then the scripts and utilities can be run from this
+directory without further installation.
+
+Alternatively the autoprocessor can be installed into a Python
+virtualenv, for example::
+
+    virtualenv venv.auto_process
+    . venv.auto_process/bin/activate
+    pip install -r auto_process_ngs-0.6.4/requirements.txt
+    pip install ./auto_process_ngs
+
+In either case the installation can be configured for local preferences
+by creating a configuration file as outlined in the section
+:ref:`auto_process_configuration`.
+
+.. _auto_process_configuration:
 
 Configuration: settings.ini
 ***************************
