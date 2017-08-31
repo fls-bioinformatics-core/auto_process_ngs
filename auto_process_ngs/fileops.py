@@ -37,6 +37,7 @@ import shutil
 import logging
 import bcftbx.utils as bcftbx_utils
 import applications
+import simple_scheduler
 from utils import split_user_host_dir
 
 # Module specific logger
@@ -111,7 +112,25 @@ class Location(object):
 # Functions
 #########################################################################
 
-def mkdir(newdir):
+def _run_command(cmd,sched=None):
+    """
+    Run the command, either locally or via a scheduler
+
+    Arguments:
+      cmd (Command): command to run
+      sched (SimpleScheduler): optional, a scheduler
+        to use to run the command
+    """
+    print "Running %s" % cmd
+    if sched is None:
+        retcode = cmd.run_subprocess()
+    else:
+        job = sched.submit(cmd)
+        job.wait()
+        retcode = job.exit_code
+    return retcode
+
+def mkdir(newdir,sched=None):
     """
     Create a directory
 
@@ -132,14 +151,13 @@ def mkdir(newdir):
             newdir.server,
             mkdir_cmd.command_line)
     try:
-        print "Running %s" % mkdir_cmd
-        mkdir_cmd.run_subprocess()
+        return _run_command(mkdir_cmd,sched=sched)
     except Exception as ex:
         raise Exception(
             "Exception making directory %s: %s" %
             (newdir,ex))
 
-def copy(src,dest):
+def copy(src,dest,sched=None):
     """
     Copy a file
 
@@ -164,13 +182,12 @@ def copy(src,dest):
                 dest.server,
                 src,dest.path)
     try:
-        print "Running %s" % copy_cmd
-        copy_cmd.run_subprocess()
+        return _run_command(copy_cmd,sched=sched)
     except Exception as ex:
         raise Exception("Exception copying %s to %s: "
                         "%s" % (src,dest,ex))
 
-def set_group(group,path):
+def set_group(group,path,sched=None):
     """
     Set the group for a file or directory
 
@@ -200,14 +217,13 @@ def set_group(group,path):
             path.server,
             chmod_cmd.command_line)
     try:
-        print "Running %s" % chmod_cmd
-        chmod_cmd.run_subprocess()
+        return _run_command(chmod_cmd,sched=sched)
     except Exception as ex:
         raise Exception(
             "Exception changing group to '%s' for "
             "destination %s: %s" % (group,path,ex))
 
-def unzip(zip_file,dest):
+def unzip(zip_file,dest,sched=None):
     """
     Unpack ZIP archive file on local or remote system
 
@@ -232,8 +248,7 @@ def unzip(zip_file,dest):
             zip_file.server,
             unzip_cmd.command_line)
     try:
-        print "Running %s" % unzip_cmd
-        unzip_cmd.run_subprocess()
+        return _run_command(unzip_cmd,sched=sched)
     except Exception as ex:
         raise Exception("Failed to unzip %s: %s" %
                         (zip_file,ex))
