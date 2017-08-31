@@ -170,6 +170,16 @@ class AnalysisFastq(BaseFastqAttrs):
     NA10831_ATCACG
     NA10831_ATCACG_L002
 
+    Finally, the name can be a non-standard name of the form:
+
+    <sample_name>.r<read_number>
+
+    or
+
+    <sample_name>.<barcode_sequence>.r<read_number>
+
+    In this case the sample_names are permitted to include dots.
+
     Provides the follow attributes:
 
     fastq:            the original fastq file name
@@ -192,12 +202,36 @@ class AnalysisFastq(BaseFastqAttrs):
         BaseFastqAttrs.__init__(self,fastq)
         # Base name for sample (no leading path or extension)
         fastq_base = self.basename
-        try:
-            i = fastq_base.index('.')
-            fastq_base = fastq_base[:i]
-        except ValueError:
-            pass
-        # Identify which part of the name is which
+        # Determine if it's a non-standard (dot-separated) name
+        #
+        # These are names of the form e.g.
+        # NH1.2.r2
+        # or
+        # NH1_ChIP-seq.ACAGTG.r2
+        if fastq_base.count('.') > 0:
+            self.delimiter = '.'
+            fields = fastq_base.split('.')
+            field = fields[-1]
+            if len(field) == 2 and field.startswith('r'):
+                # Read number
+                self.read_number = int(field[1])
+                fields = fields[:-1]
+                field = fields[-1]
+            if len(fields) > 1:
+                # Barcode sequence
+                is_tag = True
+                for f in field.split('-'):
+                    for c in f:
+                        is_tag = is_tag and c in 'ACGTN'
+                if is_tag:
+                    self.barcode_sequence = field
+                    fields = fields[:-1]
+                    field = fields[-1]
+            # Remaining fields are the sample name
+            self.sample_name = '.'.join(fields)
+            assert(self.sample_name != '')
+            return
+        # Some form of Illumina-derived name
         #
         # Full Illumina-style names are e.g.
         # NH1_ChIP-seq_Gli1_ACAGTG_L001_R1_001
@@ -216,6 +250,7 @@ class AnalysisFastq(BaseFastqAttrs):
         #
         # The set number is never included, except for full names
         fields = fastq_base.split('_')
+        self.delimiter = '_'
         # Deal with set number first e.g. 001
         field = fields[-1]
         ##logger.debug("Test for set number %s" % field)
@@ -267,18 +302,21 @@ class AnalysisFastq(BaseFastqAttrs):
 
         """
         # Reconstruct name
-        fq = "%s" % self.sample_name
+        fq = ["%s" % self.sample_name]
         if self.sample_number is not None:
-            fq = "%s_S%d" % (fq,self.sample_number)
+            fq.append("S%d" % self.sample_number)
         if self.barcode_sequence is not None:
-            fq = "%s_%s" % (fq,self.barcode_sequence)
+            fq.append("%s" % self.barcode_sequence)
         if self.lane_number is not None:
-            fq = "%s_L%03d" % (fq,self.lane_number)
+            fq.append("L%03d" % self.lane_number)
         if self.read_number is not None:
-            fq = "%s_R%d" % (fq,self.read_number)
+            if self.delimiter == '.':
+                fq.append("r%d" % self.read_number)
+            else:
+                fq.append("R%d" % self.read_number)
         if self.set_number is not None:
-            fq = "%s_%03d" % (fq,self.set_number)
-        return fq
+            fq.append("%03d" % self.set_number)
+        return self.delimiter.join(fq)
 
 class AnalysisDir:
     """Class describing an analysis directory
@@ -363,8 +401,12 @@ class AnalysisDir:
                 self._bcl2fastq_dirs.append(dirn)
                 self.sequencing_data.append(data)
                 continue
-            except IlluminaData.IlluminaDataError, ex:
+            except IlluminaData.IlluminaDataError:
                 pass
+            except Exception as ex:
+                logging.warning("Exception when attempting to load "
+                                "subdir '%s' as CASAVA/bcl2fastq output "
+                                "(ignored): %s" % (dirn,ex))
             # Look for analysis data
             data = AnalysisProject(dirn,os.path.join(self._analysis_dir,dirn))
             if data.is_analysis_dir:
@@ -1759,6 +1801,10 @@ class OutputFiles:
         to the handle. If not supplied then 'name' must
         be associated with a previously closed file (which
         will be reopened).
+
+        If 'append' is True then append to an existing
+        file rather than overwriting (i.e. use mode 'a'
+        instead of 'w').
 
         If 'append' is True then append to an existing
         file rather than overwriting (i.e. use mode 'a'

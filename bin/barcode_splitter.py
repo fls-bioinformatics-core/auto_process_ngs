@@ -27,10 +27,11 @@ For each barcode there will be an output file called BARCODE.fastq
 
 """
 
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.FASTQFile as FASTQFile
+from auto_process_ngs.utils import OutputFiles
 
 #########################################################################
 # Classes
@@ -114,76 +115,6 @@ class BarcodeMatcher:
     @property
     def sequences(self):
         return self._index_seqs
-
-class OutputFiles:
-    """Class for managing multiple output files
-
-    Usage:
-    
-    Create a new OutputFiles instance:
-    >>> fp = OutputFiles()
-
-    Set up files against keys:
-    >>> fp.open('file1','first_file.txt')
-    >>> fp.open('file2','second_file.txt')
-
-    Write content to files:
-    >>> fp.write('file1','some content for first file')
-    >>> fp.write('file2','content for\nsecond file')
-
-    Finish and close all open files
-    >>> fp.close()
-    
-    """
-    def __init__(self,base_dir=None):
-        """Create a new OutputFiles instance
-
-        """
-        self._fp = dict()
-        self._file = dict()
-        self._base_dir = base_dir
-    def open(self,name,filen):
-        """Open a new output file
-
-        'name' is the handle used to reference the
-        file when using the 'write' and 'close' methods.
-
-        'filen' is the name of the file, and is unrelated
-        to the handle.
-
-        """
-        if self._base_dir is not None:
-            filen = os.path.join(self._base_dir,filen)
-        else:
-            filen = os.path.abspath(filen)
-        self._file[name] = filen
-        self._fp[name] = open(filen,'w')
-    def write(self,name,s):
-        """Write content to file
-
-        Writes 's' as a newline-terminated string to the
-        file that is referenced with the handle 'name'.
-
-        """
-        self._fp[name].write("%s\n" % s)
-    def file_name(self,name):
-        """Get the file name associated with a handle
-
-        """
-        return self._file[name]
-    def close(self,name=None):
-        """Close one or all open files
-
-        If a 'name' is specified then only the file matching
-        that handle will be closed; with no arguments all
-        open files will be closed.
-
-        """
-        if name is not None:
-            self._fp[name].close()
-        else:
-            for name in self._fp:
-                self._fp[name].close()
 
 def get_fastqs_from_dir(dirn,lane,unaligned_dir=None):
     """Automatically collect Fastq files for specified lane
@@ -351,36 +282,6 @@ class TestBarcodeMatcher(unittest.TestCase):
         self.assertRaises(Exception,BarcodeMatcher,('AGGTCTC','AGGTCTA'),max_dist=1)
         self.assertRaises(Exception,BarcodeMatcher,('AGGTCCC','AGGTCTA'),max_dist=2)
 
-import tempfile
-import shutil
-import os
-class TestOutputFiles(unittest.TestCase):
-    def setUp(self):
-        # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='.test_outputfile')
-    def tearDown(self):
-        # Remove temporary working dir
-        if os.path.isdir(self.wd):
-            shutil.rmtree(self.wd)
-    def test_outputfiles(self):
-        out = OutputFiles()
-        out.open('test1',os.path.join(self.wd,'test1.txt'))
-        out.open('test2',os.path.join(self.wd,'test2.txt'))
-        self.assertEqual(out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
-        self.assertEqual(out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
-        out.write('test1','Some test text')
-        out.write('test2','Some more\ntest text')
-        out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
-                         "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
-                         "Some more\ntest text\n")
-    def test_outputfiles_with_basedir(self):
-        out = OutputFiles(self.wd)
-        out.open('test1','test1.txt')
-        out.open('test2','test2.txt')
-        self.assertEqual(out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
-        self.assertEqual(out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
 
 fastq_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
 TTTACAACTAGCTTCTCTTTTTCTT

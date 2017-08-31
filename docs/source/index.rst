@@ -19,6 +19,7 @@ Contents
    metadata
    utilities
    managing_data
+   icell8
    problems
 
 Indices and tables

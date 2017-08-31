@@ -66,6 +66,19 @@ class TestCommand(unittest.TestCase):
                          "echo hello")
         self.assertEqual(cmd.make_wrapper_script(shell="/bin/bash"),
                          "#!/bin/bash\necho hello")
+        self.assertEqual(
+            cmd.make_wrapper_script(prologue="# Prints hello"),
+            "# Prints hello\necho hello")
+        self.assertEqual(
+            cmd.make_wrapper_script(epilogue="# End of script"),
+            "echo hello\n# End of script")
+        self.assertEqual(
+            cmd.make_wrapper_script(
+                shell="/bin/bash",
+                prologue="echo \"# $(hostname)\"",
+                epilogue="echo \"# $(date)\""),
+            "#!/bin/bash\necho \"# $(hostname)\"\n"
+            "echo hello\necho \"# $(date)\"")
         fp = cStringIO.StringIO()
         cmd.make_wrapper_script(fp=fp)
         self.assertEqual(fp.getvalue(),"echo hello")

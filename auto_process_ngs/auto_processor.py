@@ -418,6 +418,10 @@ class AutoProcess:
                 continue
             except IlluminaData.IlluminaDataError:
                 pass
+            except Exception as ex:
+                logging.warning("Exception when attempting to load "
+                                "subdir '%s' as CASAVA/bcl2fastq output "
+                                "(ignored): %s" % (dirn,ex))
             # Try loading as a project
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
@@ -753,17 +757,18 @@ class AutoProcess:
             if tmp_sample_sheet is None:
                 logging.error("Unable to acquire sample sheet")
                 return
+            # Keep a copy of the original sample sheet
+            original_sample_sheet = os.path.join(self.analysis_dir,
+                                                 'SampleSheet.orig.csv')
+            print "Copying original sample sheetd to %s" % original_sample_sheet
+            shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
+            # Set the permissions for the original SampleSheet
+            os.chmod(original_sample_sheet,0664)
             # Process acquired sample sheet
             custom_sample_sheet = os.path.join(self.analysis_dir,
                                                'custom_SampleSheet.csv')
             sample_sheet = bcl2fastq_utils.make_custom_sample_sheet(
                 tmp_sample_sheet,custom_sample_sheet)
-            print "Keeping copy of original sample sheet"
-            original_sample_sheet = os.path.join(self.analysis_dir,
-                                                 'SampleSheet.orig.csv')
-            os.rename(tmp_sample_sheet,original_sample_sheet)
-            # Set the permissions for the original SampleSheet
-            os.chmod(original_sample_sheet,0664)
         else:
             sample_sheet = IlluminaData.SampleSheet(custom_sample_sheet)
             original_sample_sheet = os.path.join(self.analysis_dir,
@@ -2893,6 +2898,10 @@ class AutoProcess:
                     if report_copied:
                         qc_base = "%s_report" % qc_dir
                         fastq_dir = project.qc_info(qc_dir).fastq_dir
+                        if fastq_dir != project.info.primary_fastq_dir:
+                            fastq_set = fastq_dir
+                        else:
+                            fastq_set = None
                         # Index
                         report_html.append(
                             "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
@@ -2900,14 +2909,14 @@ class AutoProcess:
                                project.name,
                                os.path.basename(self.analysis_dir),
                                qc_base,
-                               (" (%s)" % fastq_dir
-                                if fastq_dir != 'fastqs' else "")))
+                               (" (%s)" % fastq_set
+                                if fastq_set is not None else "")))
                         # Zip file
                         report_html.append(
                             "<a href='%s'>[Zip%s]</a>"
                             % (os.path.basename(qc_zip),
                                (" (%s)" % fastq_dir
-                                if fastq_dir != 'fastqs' else "")))
+                                if fastq_set is not None else "")))
                     # MultiQC
                     multiqc_report = os.path.join(project.dirn,
                                                   "multi%s.html" % qc_base)
@@ -2932,6 +2941,37 @@ class AutoProcess:
                 # Check there is something to add
                 if not report_html:
                     report_html.append("QC reports not available")
+                # Locate and copy ICell8 processing reports
+                icell8_processing_zip = os.path.join(
+                    project.dirn,
+                    "icell8_processing.%s.%s.zip" %
+                    (project.name,
+                     os.path.basename(self.analysis_dir)))
+                if os.path.isfile(icell8_processing_zip):
+                    print icell8_processing_zip
+                    icell8_report_copied = True
+                    try:
+                        fileops.copy(icell8_processing_zip,dirn)
+                        fileops.unzip(os.path.join(
+                            dirn,
+                            os.path.basename(icell8_processing_zip)),
+                                      fileops.Location(dirn).path)
+                    except Exception as ex:
+                        print "Failed to copy ICell8 report: %s" % ex
+                        icell8_report_copied = False
+                else:
+                    # No ICell8 processing report to copy
+                    icell8_report_copied = False
+                # Append info to the index page
+                if icell8_report_copied:
+                    report_html.append(
+                        "<a href='icell8_processing.%s.%s/" \
+                        "icell8_processing.html'>" \
+                        "[Icell8 processing]</a>" % \
+                        (project.name,
+                         os.path.basename(self.analysis_dir)))
+                    report_html.append("<a href='%s'>[Zip]</a>" % \
+                                       os.path.basename(icell8_processing_zip))
                 # Add to the index
                 index_page.add("<td>%s</td>"
                                % null_str.join(report_html))
