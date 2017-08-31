@@ -389,7 +389,8 @@ class IlluminaQC(PipelineCommand):
     """
     Run the 'illumina_qc.sh' script on one or more Fastqs
     """
-    def init(self,fastqs,nthreads=1,working_dir=None,qc_dir=None):
+    def init(self,fastqs,nthreads=1,working_dir=None,qc_dir=None,
+             fastq_screen_subset=None):
         """
         Create a new IlluminaQC instance
 
@@ -403,6 +404,9 @@ class IlluminaQC(PipelineCommand):
             not set)
           qc_dir (str): path specifying where to write
             the QC outputs to
+          fastq_screen_subset (int): if set then
+            explicitly specifies the number of reads to
+            use for fastq_screen's --subset option
         """
         self.fastqs = fastqs
         self.nthreads = nthreads
@@ -410,6 +414,7 @@ class IlluminaQC(PipelineCommand):
             working_dir = os.getcwd()
         self.working_dir = os.path.abspath(working_dir)
         self.qc_dir = qc_dir
+        self.fastq_screen_subset = fastq_screen_subset
     def cmd(self):
         """
         Build the command
@@ -421,6 +426,9 @@ class IlluminaQC(PipelineCommand):
                 cmd.add_args('--threads',self.nthreads)
             if self.qc_dir is not None:
                 cmd.add_args('--qc_dir',self.qc_dir)
+            if self.fastq_screen_subset is not None:
+                cmd.add_args('--subset',
+                             self.fastq_screen_subset)
         return cmd
 
 class MultiQC(PipelineCommand):
@@ -1089,7 +1097,8 @@ class RunQC(PipelineTask):
     Run ``illumina_qc.sh`` pipeline on a set of Fastqs
     """
     def init(self,project_dir,nthreads=1,batch_size=25,
-             fastq_dir='fastqs',qc_dir='qc'):
+             fastq_dir='fastqs',qc_dir='qc',
+             fastq_screen_subset=None):
         """
         Initialise the RunQC task
 
@@ -1107,6 +1116,9 @@ class RunQC(PipelineTask):
             to run the pipeline on (default='fastqs')
           qc_dir (str): path specifying where to write
             the QC outputs to
+          fastq_screen_subset (int): if set then
+            explicitly specifies the number of reads to
+            use for fastq_screen's --subset option
         """
         self.qc_dir = None
         self.qc_report = None
@@ -1131,7 +1143,9 @@ class RunQC(PipelineTask):
             self.add_cmd(IlluminaQC(fastqs[:batch_size],
                                     nthreads=self.args.nthreads,
                                     working_dir=self.args.project_dir,
-                                    qc_dir=self.qc_dir))
+                                    qc_dir=self.qc_dir,
+                                    fastq_screen_subset=
+                                    self.args.fastq_screen_subset))
             fastqs = fastqs[batch_size:]
     def finish(self):
         # Verify the QC outputs for each fastq
@@ -1495,6 +1509,7 @@ if __name__ == "__main__":
     default_aligner = __settings.icell8.aligner
     default_mammalian_conf = __settings.icell8.mammalian_conf_file
     default_contaminants_conf = __settings.icell8.contaminants_conf_file
+    default_fastq_screen_subset = __settings.qc.fastq_screen_subset
     default_nprocessors = 1
     # Handle the command line
     p = argparse.ArgumentParser(
@@ -2006,7 +2021,9 @@ if __name__ == "__main__":
                             outdir,
                             nthreads=nprocessors['qc'],
                             fastq_dir="fastqs.barcodes",
-                            qc_dir="qc.barcodes")
+                            qc_dir="qc.barcodes",
+                            fastq_screen_subset=
+                            default_fastq_screen_subset)
     multiqc_barcodes = RunMultiQC("Run MultiQC for barcodes",
                                   outdir,
                                   fastq_dir="fastqs.barcodes",
@@ -2017,7 +2034,9 @@ if __name__ == "__main__":
                            outdir,
                            nthreads=nprocessors['qc'],
                            fastq_dir="fastqs.samples",
-                           qc_dir="qc.samples")
+                           qc_dir="qc.samples",
+                           fastq_screen_subset=
+                           default_fastq_screen_subset)
     multiqc_samples = RunMultiQC("Run MultiQC for samples",
                                  outdir,
                                  fastq_dir="fastqs.samples",
