@@ -14,7 +14,7 @@ fileops
 
 Utility functions providing a single interface for performing
 various file system operations (e.g. make a directory, copy
-files etc) trasparently on either a local or a remote system.
+files etc) transparently on either a local or a remote system.
 
 Classes:
 
@@ -123,22 +123,21 @@ def mkdir(newdir):
         be on local or remote system)
     """
     newdir = Location(newdir)
-    if not newdir.is_remote:
-        # Local directory
-        bcftbx_utils.mkdir(newdir.path)
-    else:
+    mkdir_cmd = applications.Command('mkdir',
+                                     newdir.path)
+    if newdir.is_remote:
         # Remote directory
-        try:
-            mkdir_cmd = applications.general.ssh_command(
-                newdir.user,
-                newdir.server,
-                ('mkdir',newdir.path))
-            print "Running %s" % mkdir_cmd
-            mkdir_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception(
-                "Exception making remote directory %s: %s" %
-                (newdir,ex))
+        mkdir_cmd = applications.general.ssh_command(
+            newdir.user,
+            newdir.server,
+            mkdir_cmd.command_line)
+    try:
+        print "Running %s" % mkdir_cmd
+        mkdir_cmd.run_subprocess()
+    except Exception as ex:
+        raise Exception(
+            "Exception making directory %s: %s" %
+            (newdir,ex))
 
 def copy(src,dest):
     """
@@ -154,21 +153,22 @@ def copy(src,dest):
     """
     dest = Location(dest)
     if not dest.is_remote:
-        # Local copy
-        shutil.copy(src,dest.path)
-    else:
-        try:
-            # Remote copy
-            copy_cmd = applications.general.scp(
+        # Local-to-local copy
+        copy_cmd = applications.Command('cp',
+                                        src,
+                                        dest.path)
+    if dest.is_remote:
+        # Local-to-remote copy
+        copy_cmd = applications.general.scp(
                 dest.user,
                 dest.server,
                 src,dest.path)
-            print "Running %s" % copy_cmd
-            copy_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception("Exception copying %s to remote "
-                            "destination %s: %s" %
-                            (src,dest,ex))
+    try:
+        print "Running %s" % copy_cmd
+        copy_cmd.run_subprocess()
+    except Exception as ex:
+        raise Exception("Exception copying %s to %s: "
+                        "%s" % (src,dest,ex))
 
 def set_group(group,path):
     """
@@ -189,28 +189,23 @@ def set_group(group,path):
         specifier of the form '[[USER@]HOST:]PATH'
     """
     path = Location(path)
-    if not path.is_remote:
-        # Set the group for local files
-        gid = bcftbx_utils.get_gid_from_group(group)
-        if gid is None:
-            raise Exception("Failed to get gid for group '%s'" % group)
-        for f in bcftbx_utils.walk(path.path,include_dirs=True):
-            logger.debug("Updating group for %s" % f)
-            os.lchown(f,-1,gid)
-    else:
-        try:
-            # Set group for remote files
-            chmod_cmd = applications.general.ssh_command(
-                path.user,
-                path.server,
-                ('chgrp','-R',group,path.path))
-            print "Running %s" % chmod_cmd
-            chmod_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception(
-                "Exception changing group to '%s' on remote "
-                "destination %s: %s" %
-                (group,path,ex))
+    chmod_cmd = applications.Command('chgrp',
+                                     '-R',
+                                     group,
+                                     path.path)
+    if path.is_remote:
+        # Set group for remote files
+        chmod_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            chmod_cmd.command_line)
+    try:
+        print "Running %s" % chmod_cmd
+        chmod_cmd.run_subprocess()
+    except Exception as ex:
+        raise Exception(
+            "Exception changing group to '%s' for "
+            "destination %s: %s" % (group,path,ex))
 
 def unzip(zip_file,dest):
     """
