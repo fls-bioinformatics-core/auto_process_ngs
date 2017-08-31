@@ -24,9 +24,8 @@ via the ``requirements.txt`` file (see :ref:`auto_process_installation`).
 Some of the commands depend on external software packages which must
 also be installed. These include
 
- * ``bcl2fastq``: used for generating Fastq files from raw Illumina
-   sequencing data in the ``make_fastqs`` command. Version 2.17+ is
-   required for NextSeq data.
+ * Fastq generation: uses Illumina's ``bcl2fastq`` software (nb version
+   2.17+ is required for NextSeq data):
 
    - ``bcl2fastq`` 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
    - ``bcl2fastq`` 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
@@ -75,7 +74,7 @@ It is recommended to download one of these versions and unpack locally,
 e.g.::
 
     wget https://github.com/fls-bioinformatics-core/auto_process_ngs/archive/0.6.4.tar.gz
-    tar zxf 0.6.4.tar.gzhttps://github.com/fls-bioinformatics-core/auto_process_ngs/releases/tag/0.6.4
+    tar zxf 0.6.4.tar.gz
 
 which will download and unpack version 0.6.4 into a new directory
 ``auto_process_ngs-0.6.4``.
