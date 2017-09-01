@@ -22,10 +22,20 @@ Classes:
 
 Functions:
 
+These functions perform specific operations directly:
+
 - mkdir: create a directory
 - copy: copy a file
 - set_group: set the group on a file or directory
 - unzip: unpack a ZIP archive
+
+These functions generate commands that can be executed e.g.
+via a scheduler, to perform the required operations:
+
+- copy_command: generate command to perform copy operation
+- set_group_command: generate command to perform group set
+  operation
+- unzip_command: generate command to unpack a ZIP archive
 """
 
 ########################################################################
@@ -109,7 +119,7 @@ class Location(object):
         return self._location
 
 ########################################################################
-# Functions
+# Command execution functions
 #########################################################################
 
 def _run_command(cmd,sched=None):
@@ -169,18 +179,7 @@ def copy(src,dest,sched=None):
         on a local or remote system, identified by
         a specifier of the form '[[USER@]HOST:]DEST'
     """
-    dest = Location(dest)
-    if not dest.is_remote:
-        # Local-to-local copy
-        copy_cmd = applications.Command('cp',
-                                        src,
-                                        dest.path)
-    if dest.is_remote:
-        # Local-to-remote copy
-        copy_cmd = applications.general.scp(
-                dest.user,
-                dest.server,
-                src,dest.path)
+    copy_cmd = copy_command(src,dest)
     try:
         return _run_command(copy_cmd,sched=sched)
     except Exception as ex:
@@ -205,17 +204,7 @@ def set_group(group,path,sched=None):
         to change the group of, identified by a
         specifier of the form '[[USER@]HOST:]PATH'
     """
-    path = Location(path)
-    chmod_cmd = applications.Command('chgrp',
-                                     '-R',
-                                     group,
-                                     path.path)
-    if path.is_remote:
-        # Set group for remote files
-        chmod_cmd = applications.general.ssh_command(
-            path.user,
-            path.server,
-            chmod_cmd.command_line)
+    chmod_cmd = set_group_command(group,path)
     try:
         return _run_command(chmod_cmd,sched=sched)
     except Exception as ex:
@@ -235,6 +224,105 @@ def unzip(zip_file,dest,sched=None):
         contents to (on the same system as the ZIP
         archive)
     """
+    unzip_cmd = unzip_command(zip_file,dest)
+    try:
+        return _run_command(unzip_cmd,sched=sched)
+    except Exception as ex:
+        raise Exception("Failed to unzip %s: %s" %
+                        (zip_file,ex))
+
+########################################################################
+# Command generation functions
+#########################################################################
+
+def copy_command(src,dest):
+    """
+    Generate command to copy a file
+
+    Creates a command which copies a local file to a
+    local or remote location.
+
+    Arguments:
+      src (str): local file to copy
+      dest (str): destination (file or directory)
+        on a local or remote system, identified by
+        a specifier of the form '[[USER@]HOST:]DEST'
+
+    Returns:
+      Command: Command instance that can be used to
+        perform the copy operation.
+    """
+    dest = Location(dest)
+    if not dest.is_remote:
+        # Local-to-local copy
+        copy_cmd = applications.Command('cp',
+                                        src,
+                                        dest.path)
+    if dest.is_remote:
+        # Local-to-remote copy
+        copy_cmd = applications.general.scp(
+                dest.user,
+                dest.server,
+                src,dest.path)
+    return copy_cmd
+
+def set_group_command(group,path):
+    """
+    Generate command to set group on file or directory
+
+    Creates a command which sets the group on a
+    file or directory.
+
+    'path' can be a file or directory on a local
+    or remote system; if it is a directory then it
+    will operate recursively i.e. all subdirectories
+    and files will also have their group changed.
+
+    'group' is the name of the group to change
+    ownership to (must exist on the target system).
+
+    Arguments:
+      group (str): name of the new group
+      path (str): path to the file or directory
+        to change the group of, identified by a
+        specifier of the form '[[USER@]HOST:]PATH'
+
+    Returns:
+      Command: Command instance that can be used to
+        set the group.
+    """
+    path = Location(path)
+    chmod_cmd = applications.Command('chgrp',
+                                     '-R',
+                                     group,
+                                     path.path)
+    if path.is_remote:
+        # Set group for remote files
+        chmod_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            chmod_cmd.command_line)
+    return chmod_cmd
+
+def unzip_command(zip_file,dest):
+    """
+    Generate command to unpack ZIP archive file
+
+    The ZIP archive can be on a local or a remote
+    system.
+
+    Arguments:
+      zip_file (str): ZIP archive file identified
+        using a specifier of the form
+        '[[USER@]HOST:]ZIP_FILE'
+      dest (str): path to extract the archive
+        contents to (on the same system as the ZIP
+        archive)
+
+    Returns:
+      Command: Command instance that can be used to
+        perform the unzip operation.
+    """
     zip_file = Location(zip_file)
     unzip_cmd = applications.Command('unzip',
                                      '-q',
@@ -247,8 +335,4 @@ def unzip(zip_file,dest,sched=None):
             zip_file.user,
             zip_file.server,
             unzip_cmd.command_line)
-    try:
-        return _run_command(unzip_cmd,sched=sched)
-    except Exception as ex:
-        raise Exception("Failed to unzip %s: %s" %
-                        (zip_file,ex))
+    return unzip_cmd
