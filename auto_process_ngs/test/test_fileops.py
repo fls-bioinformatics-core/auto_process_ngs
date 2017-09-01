@@ -241,3 +241,80 @@ class TestUnzip(FileopsTestCase):
         self.assertEqual(open(out_file).read(),
                          "This is a test file")
 
+class TestCopyCommand(unittest.TestCase):
+    """Tests for the 'copy_command' function
+    """
+    def test_copy_command_to_local(self):
+        """fileops.copy_command: copy file locally
+        """
+        copy_cmd = copy_command("/here/myfile.txt",
+                                "/there/myfile.txt")
+        self.assertEqual(copy_cmd.command_line,
+                         ['cp',
+                          '/here/myfile.txt',
+                          '/there/myfile.txt'])
+    def test_copy_command_to_remote(self):
+        """fileops.copy_command: copy file to remote
+        """
+        copy_cmd = copy_command("/here/myfile.txt",
+                                "pjx@remote.com:/there/myfile.txt")
+        self.assertEqual(copy_cmd.command_line,
+                         ['scp',
+                          '/here/myfile.txt',
+                          'pjx@remote.com:/there/myfile.txt'])
+
+class TestSetGroupCommand(unittest.TestCase):
+    """Tests for the 'set_group_command' function
+    """
+    def test_set_group_command_local(self):
+        """fileops.set_group_command: set group on local files
+        """
+        set_group_cmd = set_group_command("adm",
+                                          "/here/files")
+        self.assertEqual(set_group_cmd.command_line,
+                         ['chgrp',
+                          '-R',
+                          'adm',
+                          '/here/files'])
+    def test_set_group_command_remote(self):
+        """fileops.set_group_command: set group on remote files
+        """
+        set_group_cmd = set_group_command("adm",
+                                          "pjx@remote.com:/there/files")
+        self.assertEqual(set_group_cmd.command_line,
+                         ['ssh',
+                          'pjx@remote.com',
+                          'chgrp',
+                          '-R',
+                          'adm',
+                          '/there/files'])
+
+class TestUnzipCommand(unittest.TestCase):
+    """Tests for the 'unzip_command' function
+    """
+    def test_unzip_command_local(self):
+        """fileops.unzip_command: unzip local ZIP archive
+        """
+        unzip_cmd = unzip_command("/here/myarchive.zip",
+                                  "/here/unpacked")
+        self.assertEqual(unzip_cmd.command_line,
+                         ['unzip',
+                          '-q',
+                          '-o',
+                          '-d',
+                          '/here/unpacked',
+                          '/here/myarchive.zip'])
+    def test_unzip_command_remote(self):
+        """fileops.unzip_command: unzip remote ZIP archive
+        """
+        unzip_cmd = unzip_command("pjx@remote.com:/there/myarchive.zip",
+                                  "/there/unpacked")
+        self.assertEqual(unzip_cmd.command_line,
+                         ['ssh',
+                          'pjx@remote.com',
+                          'unzip',
+                          '-q',
+                          '-o',
+                          '-d',
+                          '/there/unpacked',
+                          '/there/myarchive.zip'])
