@@ -47,7 +47,6 @@ import shutil
 import logging
 import bcftbx.utils as bcftbx_utils
 import applications
-import simple_scheduler
 from utils import split_user_host_dir
 
 # Module specific logger
@@ -133,14 +132,14 @@ def _run_command(cmd,sched=None):
     """
     print "Running %s" % cmd
     if sched is None:
-        retcode = cmd.run_subprocess()
+        retcode,output = cmd.subprocess_check_output()
     else:
         job = sched.submit(cmd)
         job.wait()
         retcode = job.exit_code
     return retcode
 
-def mkdir(newdir,sched=None):
+def mkdir(newdir):
     """
     Create a directory
 
@@ -161,13 +160,13 @@ def mkdir(newdir,sched=None):
             newdir.server,
             mkdir_cmd.command_line)
     try:
-        return _run_command(mkdir_cmd,sched=sched)
+        return _run_command(mkdir_cmd)
     except Exception as ex:
         raise Exception(
             "Exception making directory %s: %s" %
             (newdir,ex))
 
-def copy(src,dest,sched=None):
+def copy(src,dest):
     """
     Copy a file
 
@@ -181,12 +180,12 @@ def copy(src,dest,sched=None):
     """
     copy_cmd = copy_command(src,dest)
     try:
-        return _run_command(copy_cmd,sched=sched)
+        return _run_command(copy_cmd)
     except Exception as ex:
         raise Exception("Exception copying %s to %s: "
                         "%s" % (src,dest,ex))
 
-def set_group(group,path,sched=None):
+def set_group(group,path):
     """
     Set the group for a file or directory
 
@@ -206,13 +205,13 @@ def set_group(group,path,sched=None):
     """
     chmod_cmd = set_group_command(group,path)
     try:
-        return _run_command(chmod_cmd,sched=sched)
+        return _run_command(chmod_cmd)
     except Exception as ex:
         raise Exception(
             "Exception changing group to '%s' for "
             "destination %s: %s" % (group,path,ex))
 
-def unzip(zip_file,dest,sched=None):
+def unzip(zip_file,dest):
     """
     Unpack ZIP archive file on local or remote system
 
@@ -226,7 +225,7 @@ def unzip(zip_file,dest,sched=None):
     """
     unzip_cmd = unzip_command(zip_file,dest)
     try:
-        return _run_command(unzip_cmd,sched=sched)
+        return _run_command(unzip_cmd)
     except Exception as ex:
         raise Exception("Failed to unzip %s: %s" %
                         (zip_file,ex))
