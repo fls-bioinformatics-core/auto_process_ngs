@@ -14,6 +14,7 @@ import time
 import applications
 import simple_scheduler
 import tenx_genomics_utils
+import applications
 import fileops
 import logging
 from bcftbx.JobRunner import fetch_runner
@@ -137,8 +138,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     print "Copying to archive directory: %s" % archive_dir
     print "Platform   : %s" % platform
     print "Year       : %s" % year
-    print "Destination: %s%s" % (dest,
-                                 " (final)" if final else "")
+    print "Destination: %s %s" % (dest,
+                                  "(final)" if final else
+                                  "(staging)")
     # Check if final archive already exists
     if fileops_exists(os.path.join(archive_dir,final_dest)):
         logging.fatal("Final archive already exists, stopping")
@@ -178,7 +180,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     excludes.append('--exclude="%s*"' %
                     tenx_genomics_utils.flow_cell_id(self.run_name))
     # Log dir
-    ap.set_log_dir(ap.get_log_subdir('archive'))
+    log_dir = 'archive%s' % ('_final' if final else '_staging')
+    if dry_run:
+        log_dir += '_dry_run'
+    ap.set_log_dir(ap.get_log_subdir(log_dir))
     # Set up runner
     if runner is not None:
         runner = fetch_runner(runner)
@@ -244,21 +249,54 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     # Set the group
     if group is not None:
         print "Setting group of archived files to '%s'" % group
-        fileops.set_group(
-            group,
-            os.path.join(archive_dir,staging))
+        if not dry_run:
+            fileops.set_group(
+                group,
+                os.path.join(archive_dir,staging))
     # Move to final location
     if final:
         print "Moving to final location: %s" % final_dest
-        fileops_rename(os.path.join(archive_dir,staging),
-                       os.path.join(archive_dir,final_dest))
+        if not dry_run:
+            fileops_rename(os.path.join(archive_dir,staging),
+                           os.path.join(archive_dir,final_dest))
     # Finish
     return retval
 
-def fileops_rename(src,dest):
+def fileops_rename(src,dst):
     # Placeholder for renaming operation
-    os.rename(src,dest)
+    src = fileops.Location(src)
+    dst = fileops.Location(dst)
+    # Sanity check: if destination is remote then
+    # must be on same server as source
+    if dst.is_remote:
+        if dst.server != src.server:
+            raise Exception("Rename: can't rename on different "
+                            "servers")
+    # Build generic system command
+    rename_cmd = applications.Command('mv',
+                                      src.path,
+                                      dst.path)
+    if src.is_remote:
+        # Renaming file on remote system
+        rename_cmd = applications.general.ssh_command(
+            src.user,
+            src.server,
+            rename_cmd.command_line)
+    # Run command and return
+    retval,output = rename_cmd.subprocess_check_output()
+    return retval
 
 def fileops_exists(path):
     # Placeholder for path existence checker
-    return os.path.exists(path)
+    path = fileops.Location(path)
+    test_cmd = applications.Command('test',
+                                    '-e',
+                                    path.path)
+    if path.is_remote:
+        # Run test on remote system
+        test_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            test_cmd.command_line)
+    retval,output = test_cmd.subprocess_check_output()
+    return (retval == 0)
