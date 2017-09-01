@@ -48,6 +48,20 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     The YEAR and PLATFORM can be overriden using the appropriate
     arguments.
 
+    By default the data is copied to a 'staging' directory
+    called '__ANALYSIS_DIR.pending' in the archive directory.
+    The archiving can be finalised by setting the 'final'
+    argumente to 'True', which performs a last update of the
+    staging area before moving the data to its final location.
+
+    Once the archive has been finalised any further archiving
+    attempts will be refused.
+
+    Copying of the data is performed using 'rsync'; multiple
+    archive operations mirror the contents of the analysis
+    directory (so any data removed from the source will also
+    be removed from the archive).
+
     By default the 'bcl2fastq' directory is omitted from the
     archive, unless the fastq files in any projects are links to
     the data. Inclusion of this directory can be forced by
@@ -55,8 +69,6 @@ def archive(ap,archive_dir=None,platform=None,year=None,
 
     The fastqs will be switched to be read-only in the archive
     by default.
-
-    'rsync' is used to perform the transfer.
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
@@ -100,18 +112,6 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     """
     # Return value
     retval = 0
-    # Check first: are there any projects?
-    projects = ap.get_analysis_projects()
-    if not projects:
-        raise Exception("No project directories found, nothing "
-                        "to archive")
-    # Check metadata
-    check_metadata = ap.check_metadata(('source','run_number'))
-    if not check_metadata:
-        if not force:
-            logging.error("Some metadata items not set, stopping")
-            return
-        logging.warning("Some metadata items not set, proceeding")
     # Fetch archive location
     if archive_dir is None:
         archive_dir = ap.settings.archive.dirn
@@ -127,9 +127,34 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     if year is None:
         year = time.strftime("%Y")
     archive_dir = os.path.join(archive_dir,year,platform)
+    # Determine target directory
+    final_dest = os.path.basename(ap.analysis_dir)
+    staging = "__%s.pending" % final_dest
+    if final:
+        dest = final_dest
+    else:
+        dest = staging
     print "Copying to archive directory: %s" % archive_dir
-    print "Platform: %s" % platform
-    print "Year    : %s" % year
+    print "Platform   : %s" % platform
+    print "Year       : %s" % year
+    print "Destination: %s%s" % (dest,
+                                 " (final)" if final else "")
+    # Check if final archive already exists
+    if fileops_exists(os.path.join(archive_dir,final_dest)):
+        logging.fatal("Final archive already exists, stopping")
+        return 1
+    # Are there any projects to?
+    projects = ap.get_analysis_projects()
+    if not projects:
+        raise Exception("No project directories found, nothing "
+                        "to archive")
+    # Check metadata
+    check_metadata = ap.check_metadata(('source','run_number'))
+    if not check_metadata:
+        if not force:
+            logging.fatal("Some metadata items not set, stopping")
+            return 1
+        logging.warning("Some metadata items not set, proceeding")
     # Determine which directories to exclude
     excludes = ['--exclude=primary_data',
                 '--exclude=save.*',
@@ -166,16 +191,17 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         max_concurrent=ap.settings.general.max_concurrent_jobs)
     sched.start()
     # If making fastqs read-only then transfer them separately
-    if read_only_fastqs:
-        rsync_fastqs = applications.general.rsync(ap.analysis_dir,
-                                                  archive_dir,
-                                                  prune_empty_dirs=True,
-                                                  dry_run=dry_run,
-                                                  chmod='ugo-w',
-                                                  extra_options=(
-                                                      '--include=*/',
-                                                      '--include=fastqs/**',
-                                                      '--exclude=*',))
+    if read_only_fastqs and final:
+        rsync_fastqs = applications.general.rsync(
+            "%s/" % ap.analysis_dir,
+            os.path.join(archive_dir,staging),
+            prune_empty_dirs=True,
+            dry_run=dry_run,
+            chmod='ugo-w',
+            extra_options=(
+                '--include=*/',
+                '--include=fastqs/**',
+                '--exclude=*',))
         print "Running %s" % rsync_fastqs
         rsync_fastqs_job = sched.submit(rsync_fastqs,
                                         name="rsync.archive_fastqs")
@@ -184,13 +210,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         wait_for = [rsync_fastqs_job.job_name]
     else:
         rsync_fastqs_job = None
-        wait_for = None
+        wait_for = ()
     # Main rsync command
-    rsync = applications.general.rsync(ap.analysis_dir,archive_dir,
-                                       prune_empty_dirs=True,
-                                       dry_run=dry_run,
-                                       chmod=perms,
-                                       extra_options=excludes)
+    rsync = applications.general.rsync(
+        "%s/" % ap.analysis_dir,
+        os.path.join(archive_dir,staging),
+        prune_empty_dirs=True,
+        mirror=True,
+        dry_run=dry_run,
+        chmod=perms,
+        extra_options=excludes)
     print "Running %s" % rsync
     rsync_job = sched.submit(rsync,name="rsync.archive",
                              wait_for=wait_for)
@@ -217,7 +246,19 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         print "Setting group of archived files to '%s'" % group
         fileops.set_group(
             group,
-            os.path.join(archive_dir,
-                         os.path.basename(ap.analysis_dir)))
+            os.path.join(archive_dir,staging))
+    # Move to final location
+    if final:
+        print "Moving to final location: %s" % final_dest
+        fileops_rename(os.path.join(archive_dir,staging),
+                       os.path.join(archive_dir,final_dest))
     # Finish
     return retval
+
+def fileops_rename(src,dest):
+    # Placeholder for renaming operation
+    os.rename(src,dest)
+
+def fileops_exists(path):
+    # Placeholder for path existence checker
+    return os.path.exists(path)
