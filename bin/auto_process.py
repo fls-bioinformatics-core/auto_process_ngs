@@ -76,6 +76,7 @@ from bcftbx.cmdparse import add_runner_option
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
+import auto_process_ngs.commands as commands
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.samplesheet_utils import predict_outputs
 from auto_process_ngs.utils import paginate
@@ -605,6 +606,9 @@ def add_archive_command(cmdparser):
     p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
                  help="specify chmod operations for the archived files (default: "
                  "%s)" % default_chmod)
+    p.add_option('--final',action='store',dest='final',default=False,
+                 help="copy data to final archive location (default is to "
+                 "copy to staging area)")
     p.add_option('--force',action='store_true',dest='force',default=False,
                  help="perform archiving operation even if key metadata items are "
                  "not set")
@@ -1070,13 +1074,15 @@ if __name__ == "__main__":
                         if options.view:
                             paginate(open(d.readme_file,'r').read())
         elif cmd == 'archive':
-            retcode = d.copy_to_archive(archive_dir=options.archive_dir,
-                                        platform=options.platform,
-                                        year=options.year,
-                                        dry_run=options.dry_run,
-                                        group=options.group,
-                                        chmod=options.chmod,
-                                        force=options.force)
+            retcode = commands.archive(d,
+                                       archive_dir=options.archive_dir,
+                                       platform=options.platform,
+                                       year=options.year,
+                                       group=options.group,
+                                       perms=options.chmod,
+                                       final=options.final,
+                                       force=options.force,
+                                       dry_run=options.dry_run)
             sys.exit(retcode)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
