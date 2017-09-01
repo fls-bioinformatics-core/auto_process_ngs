@@ -606,7 +606,7 @@ def add_archive_command(cmdparser):
     p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
                  help="specify chmod operations for the archived files (default: "
                  "%s)" % default_chmod)
-    p.add_option('--final',action='store',dest='final',default=False,
+    p.add_option('--final',action='store_true',dest='final',default=False,
                  help="copy data to final archive location (default is to "
                  "copy to staging area)")
     p.add_option('--force',action='store_true',dest='force',default=False,
