@@ -1681,27 +1681,24 @@ class ProjectMetadataFile(TabFile.TabFile):
         """Add information about a project into the file
 
         Arguments:
-          project_name: name of the project
-          sample_names: Python list of sample names
-          user: (optional) user name(s)
-          library_type: (optional) library type
-          organism: (optional) organism(s)
-          PI: (optional) principal investigator name(s)
-          comments: (optional) additional information about
-            the project
-
+          project_name (str): name of the new project
+          sample_names (list): Python list of sample names
+          user (str): (optional) user name(s)
+          library_type (str): (optional) library type
+          organism (str): (optional) organism(s)
+          PI (str): (optional) principal investigator name(s)
+          comments (str): (optional) additional information
+            about the project
         """
         # Check project name doesn't already exist
-        if project_name in [p[self._fields[0]] for p in self]:
+        if project_name in self:
             raise Exception("Project '%s' already exists" %
                             project_name)
-        # Assemble dictionary with all values
-        values = { 'project_name': project_name,
-                   'sample_names': ','.join(sample_names), }
-        for kw in kws:
-            values[kw] = kws[kw]
-        # Build the data line to append to the file
-        data = []
+        kws['project_name'] = project_name
+        kws['sample_names'] = ','.join(sample_names)
+        # Create an empty data line for the project
+        project = self.append()
+        # Assign the data
         for field in self._fields:
             # Identify the keyword parameter for this field
             try:
@@ -1710,16 +1707,56 @@ class ProjectMetadataFile(TabFile.TabFile):
                 raise ex
             # Look up the assigned value
             try:
-                value = values[kw]
+                value = kws[kw]
             except KeyError:
                 value = None
-            # Append to the data line
+            # Set value in the data line
             if value is None:
-                data.append('.')
+                project[field] = '.'
             else:
-                data.append(value)
-        # Add project info to the metadata file
-        self.append(data=data)
+                project[field] = value
+
+    def update_project(self,project_name,**kws):
+        """Update information about a project in the file
+
+        Arguments:
+          project_name (str): name of the project to update
+          sample_names (list): (optional) Python list of
+            new sample names
+          user (str): (optional) new user name(s)
+          library_type (str): (optional) new library type
+          organism (str): (optional) new organism(s)
+          PI (str): (optional) new principal investigator
+            name(s)
+          comments (str): (optional) new additional
+            information about the project
+        """
+        # Fetch data line for existing project
+        if project_name not in self:
+            raise Exception("Project '%s' not found" %
+                            project_name)
+        project = self.lookup("Project",project_name)[0]
+        # Set sample names, if supplied
+        try:
+            kws['sample_names'] = ','.join(kws['sample_names'])
+        except KeyError:
+            pass
+        # Update the data
+        for field in self._fields:
+            # Identify the keyword parameter for this field
+            try:
+                kw = self._kwmap[field]
+            except KeyError,ex:
+                raise ex
+            # Assign the new values
+            if kw not in kws:
+                continue
+            value = kws[kw]
+            # Set value in the data line
+            if value is None:
+                project[field] = '.'
+            else:
+                project[field] = value
 
     def project(self,name):
         """Return AttributeDictionary for a project
@@ -1738,6 +1775,11 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+    def __contains__(self,name):
+        """
+        """
+        return (name in [p[self._fields[0]] for p in self])
 
 class AnalysisProjectQCDirInfo(MetadataDict):
     """Class for storing metadata for a QC output directory
