@@ -33,6 +33,7 @@ from auto_process_ngs.docwriter import Document
 from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Link
 import auto_process_ngs.css_rules as css_rules
+from auto_process_ngs.utils import ProjectMetadataFile
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.tenx_genomics_utils import flow_cell_id
 from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
@@ -284,6 +285,38 @@ def cellranger_count(unaligned_dir,
         zip_file.close()
         os.chdir(pwd)
 
+def update_project_metadata(unaligned_dir,
+                            project_metadata_file):
+    """
+    """
+    analysis_dir = os.path.dirname(os.path.abspath(unaligned_dir))
+    unaligned_dir = os.path.basename(unaligned_dir)
+    try:
+        illumina_data = IlluminaData(analysis_dir,
+                                     unaligned_dir=unaligned_dir)
+    except IlluminaDataError as ex:
+        logging.critical("Failed to load bcl2fastq outputs from "
+                         "%s/%s: %s" % (analysis_dir,
+                                        unaligned_dir,
+                                        ex))
+        return
+    filen = os.path.abspath(project_metadata_file)
+    if os.path.exists(filen):
+        # Load data from existing file
+        print "Loading project metadata from existing file: %s" % filen
+        project_metadata = ProjectMetadataFile(filen)
+    else:
+        # New (empty) metadata file
+        print "Creating new project metadata file: %s" % filen
+        project_metadata = ProjectMetadataFile()
+    # Populate
+    for project in illumina_data.projects:
+        project_name = project.name
+        sample_names = [s.name for s in project.samples]
+        project_metadata.add_project(project_name,sample_names)
+    # Save
+    project_metadata.save(filen)
+
 def add_cellranger_args(cmd,
                         jobmode='sge',
                         maxjobs=None,
@@ -359,6 +392,22 @@ if __name__ == "__main__":
                               help="collect all outputs from 'cellranger "
                               "count' (default: only collect the "
                               "'web_summary.html' files)")
+    # 'update_projects' parser
+    update_projects_parser = subparsers.add_parser(
+        "update_projects",
+        help="update project metadata file")
+    update_projects_parser.add_argument("-u","--unaligned",
+                                        dest="unaligned_dir",
+                                        default="bcl2fastq",
+                                        help="'unaligned' dir with "
+                                        "output from bcl2fastq")
+    update_projects_parser.add_argument("project_metadata_file",
+                                        metavar="PROJECT_METADATA_FILE",
+                                        nargs="?",
+                                        default="projects.info",
+                                        help="name of project "
+                                        "metadata file (default: "
+                                        "'projects.info')")
     # Add generic options
     for p in (mkfastq_parser,count_parser):
         p.add_argument("--jobmode",
@@ -433,3 +482,7 @@ if __name__ == "__main__":
                          max_jobs=4,
                          dry_run=args.dry_run,
                          log_dir='logs')
+    elif args.command == "update_projects":
+        # Generate or update the project metadata file
+        update_project_metadata(args.unaligned_dir,
+                                args.metadata_file)
