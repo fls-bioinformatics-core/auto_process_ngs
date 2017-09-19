@@ -309,11 +309,15 @@ def update_project_metadata(unaligned_dir,
         # New (empty) metadata file
         print "Creating new project metadata file: %s" % filen
         project_metadata = ProjectMetadataFile()
-    # Populate
+    # Populate/update
     for project in illumina_data.projects:
         project_name = project.name
         sample_names = [s.name for s in project.samples]
-        project_metadata.add_project(project_name,sample_names)
+        if project_name not in project_metadata:
+            project_metadata.add_project(project_name,sample_names)
+        else:
+            project_metadata.update_project(project_name,
+                                            sample_names=sample_names)
     # Save
     project_metadata.save(filen)
 
@@ -486,4 +490,4 @@ if __name__ == "__main__":
     elif args.command == "update_projects":
         # Generate or update the project metadata file
         update_project_metadata(args.unaligned_dir,
-                                args.metadata_file)
+                                args.project_metadata_file)
