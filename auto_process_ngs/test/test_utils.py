@@ -1217,7 +1217,6 @@ class TestProjectMetadataFile(unittest.TestCase):
     def test_refuse_to_add_duplicate_projects(self):
         """Refuse to add duplicated project names
         """
-        metadata = ProjectMetadataFile()
         # Make new 'file' and add project
         metadata = ProjectMetadataFile()
         metadata.add_project('Charlie',['C1','C2'],
@@ -1228,6 +1227,63 @@ class TestProjectMetadataFile(unittest.TestCase):
         # Attempt to add same project name again
         self.assertRaises(Exception,
                           metadata.add_project,'Charlie',['C1','C2'])
+
+    def test_check_if_project_in_metadata(self):
+        """Check if project appears in metadata
+        """
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check for existing project
+        self.assertTrue("Charlie" in metadata)
+        # Check for non-existent project
+        self.assertFalse("Marley" in metadata)
+
+    def test_update_exisiting_project(self):
+        """Update the data for an existing project
+        """
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check initial data is correct
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
+        # Update some attributes
+        metadata.update_project('Charlie',
+                                user="Charlie Percival",
+                                library_type="scRNA-seq")
+        # Check the data has been updated
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie Percival")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
+        # Update the samples
+        metadata.update_project('Charlie',
+                                sample_names=['C01','C02'])
+        # Check the data has been updated
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C01,C02")
+        self.assertEqual(project[2],"Charlie Percival")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
 
 class TestZipArchive(unittest.TestCase):
     """
