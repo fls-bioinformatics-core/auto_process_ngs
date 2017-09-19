@@ -442,10 +442,11 @@ if __name__ == "__main__":
     print "command: %s" % args.command
 
     # Deal with module files
-    if args.modulefiles is not None:
-        modulefiles = args.modulefiles.split(',')
-        for modulefile in modulefiles:
-            envmod.load(modulefile)
+    if args.command in ("mkfastq","count"):
+        if args.modulefiles is not None:
+            modulefiles = args.modulefiles.split(',')
+            for modulefile in modulefiles:
+                envmod.load(modulefile)
 
     # Check for underlying programs
     if args.command == "mkfastq":
