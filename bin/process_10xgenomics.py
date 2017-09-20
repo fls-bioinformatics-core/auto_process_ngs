@@ -19,7 +19,6 @@ import os
 import argparse
 import logging
 import shutil
-from bcftbx.utils import mkdir
 from bcftbx.utils import find_program
 from bcftbx.utils import list_dirs
 from bcftbx.IlluminaData import IlluminaData
@@ -33,6 +32,7 @@ from auto_process_ngs.docwriter import Document
 from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Link
 import auto_process_ngs.css_rules as css_rules
+from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import ProjectMetadataFile
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.tenx_genomics_utils import flow_cell_id
@@ -285,6 +285,32 @@ def cellranger_count(unaligned_dir,
         zip_file.close()
         os.chdir(pwd)
 
+def cellranger_count_for_project(project_dir,
+                                 transcriptome,
+                                 cellranger_jobmode='sge',
+                                 cellranger_maxjobs=None,
+                                 cellranger_mempercore=None,
+                                 cellranger_jobinterval=None,
+                                 max_jobs=4,
+                                 log_dir=None,
+                                 dry_run=False,
+                                 summary_only=True):
+    """
+    """
+    # Build the 'fastq_path' dir for cellranger
+    unaligned_dir = build_fastq_path_dir(project_dir)
+    # Run the count procedure
+    cellranger_count(unaligned_dir,
+                     transcriptome,
+                     cellranger_jobmode=cellranger_jobmode,
+                     cellranger_maxjobs=cellranger_maxjobs,
+                     cellranger_mempercore=cellranger_mempercore,
+                     cellranger_jobinterval=cellranger_jobinterval,
+                     max_jobs=max_jobs,
+                     log_dir=log_dir,
+                     dry_run=dry_run,
+                     summary_only=summary_only)
+
 def update_project_metadata(unaligned_dir,
                             project_metadata_file):
     """
@@ -320,6 +346,26 @@ def update_project_metadata(unaligned_dir,
                                             sample_names=sample_names)
     # Save
     project_metadata.save(filen)
+
+def build_fastq_path_dir(project_dir):
+    """
+    """
+    project = AnalysisProject(os.path.basename(project_dir.rstrip(os.sep)),
+                              os.path.abspath(project_dir))
+    fastq_path_dir = os.path.join(project.dirn,
+                                  "cellranger_fastq_path")
+    mkdir(fastq_path_dir)
+    mkdir(os.path.join(fastq_path_dir,"Reports"))
+    mkdir(os.path.join(fastq_path_dir,"Stats"))
+    fq_dir = os.path.join(fastq_path_dir,project.name)
+    mkdir(fq_dir)
+    for fastq in project.fastqs:
+        print fastq
+        link_name = os.path.join(fq_dir,os.path.basename(fastq))
+        target = os.path.relpath(fastq,fq_dir)
+        logging.debug("Linking: %s -> %s" % (link_name,target))
+        os.symlink(target,link_name)
+    return fastq_path_dir
 
 def add_cellranger_args(cmd,
                         jobmode='sge',
@@ -383,10 +429,15 @@ if __name__ == "__main__":
     # 'count' parser
     count_parser = subparsers.add_parser("count",
                                          help="run 'cellranger count'")
+    count_parser.add_argument("projects",metavar="PROJECT",
+                              nargs="*",
+                              help="project directory to run "
+                              "'cellranger count' on")
     count_parser.add_argument("-u","--unaligned",
                               dest="unaligned_dir",default="bcl2fastq",
                               help="'unaligned' dir with output from "
-                              "bcl2fastq")
+                              "bcl2fastq (nb ignored if one or more "
+                              "projects are supplied)")
     count_parser.add_argument("-t","--transcriptome",
                               dest="transcriptome",default=None,
                               help="directory with reference data for "
@@ -478,15 +529,29 @@ if __name__ == "__main__":
                            log_dir='logs')
     elif args.command == "count":
         # Run cellranger count over the samples
-        cellranger_count(args.unaligned_dir,
-                         args.transcriptome,
-                         cellranger_jobmode=args.job_mode,
-                         cellranger_maxjobs=args.max_jobs,
-                         cellranger_mempercore=args.mem_per_core,
-                         cellranger_jobinterval=args.job_interval,
-                         max_jobs=4,
-                         dry_run=args.dry_run,
-                         log_dir='logs')
+        if args.projects:
+            for project in args.projects:
+                print "Project: %s" % project
+                cellranger_count_for_project(
+                    project,
+                    args.transcriptome,
+                    cellranger_jobmode=args.job_mode,
+                    cellranger_maxjobs=args.max_jobs,
+                    cellranger_mempercore=args.mem_per_core,
+                    cellranger_jobinterval=args.job_interval,
+                    max_jobs=4,
+                    dry_run=args.dry_run,
+                    log_dir='logs')
+        else:
+            cellranger_count(args.unaligned_dir,
+                             args.transcriptome,
+                             cellranger_jobmode=args.job_mode,
+                             cellranger_maxjobs=args.max_jobs,
+                             cellranger_mempercore=args.mem_per_core,
+                             cellranger_jobinterval=args.job_interval,
+                             max_jobs=4,
+                             dry_run=args.dry_run,
+                             log_dir='logs')
     elif args.command == "update_projects":
         # Generate or update the project metadata file
         update_project_metadata(args.unaligned_dir,
