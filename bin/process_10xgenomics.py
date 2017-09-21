@@ -71,7 +71,8 @@ def cellranger_mkfastq(samplesheet,
                        cellranger_mempercore=None,
                        cellranger_jobinterval=None,
                        log_dir=None,
-                       dry_run=False):
+                       dry_run=False,
+                       project_metadata_file='projects.info'):
     """
     """
     # Construct the command
@@ -128,6 +129,8 @@ def cellranger_mkfastq(samplesheet,
                                  "qc_summary.json")
         html_file = "cellranger_qc_summary%s.html" % lanes_suffix
         make_qc_summary_html(json_file,html_file)
+        # Update the project metadata file
+        update_project_metadata(output_dir,project_metadata_file)
 
 def cellranger_count(unaligned_dir,
                      transcriptome,
@@ -526,7 +529,8 @@ if __name__ == "__main__":
                            cellranger_mempercore=args.mem_per_core,
                            cellranger_jobinterval=args.job_interval,
                            dry_run=args.dry_run,
-                           log_dir='logs')
+                           log_dir='logs',
+                           project_metadata_file='projects.info')
     elif args.command == "count":
         # Run cellranger count over the samples
         if args.projects:
