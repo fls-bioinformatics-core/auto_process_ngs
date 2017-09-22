@@ -222,10 +222,6 @@ The ``cellranger_count`` directories each further contain one
 subdirectory for each sample, within which there is the ``outs``
 directory produced by ``cellranger_count``.
 
-The ``cellranger_fastq_path`` directory is a facsimile of the bcl2fastq
-output directory produced by ``cellranger mkfastq``, which can be supplied
-as the input to one the ``cellranger`` analysis commands if desired.
-
 .. note::
 
    By default these ``outs`` directories only contain the
@@ -233,6 +229,10 @@ as the input to one the ``cellranger`` analysis commands if desired.
    ``cellranger count`` (i.e. the ``.cloupe``, ``BAM``, and gene
    matrix files required for subsequent analyses), use the
    ``--all-outputs`` option.
+
+The ``cellranger_fastq_path`` directory is a facsimile of the bcl2fastq
+output directory produced by ``cellranger mkfastq``, which can be supplied
+as the input to one of the ``cellranger`` analysis commands if desired.
 
 The directory will also contain:
 
