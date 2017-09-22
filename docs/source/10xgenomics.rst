@@ -242,6 +242,19 @@ The directory will also contain:
    for viewing elsewhere
  * A ``README.info`` file
 
+Appendix: known issues
+----------------------
+
+It has been observed that when the Fastq files produced by the ``mkfastq``
+command have very low read counts then the single-library analyses may
+fail, with ``cellranger count`` reporting an error of the form e.g.::
+
+    Could not auto-detect Single Cell 3' chemistry. Fraction of barcodes
+    on whitelist was at best 0.23%, while we expected at least 10.00% for
+    one of the chemistries.
+
+There is currently no workaround for this issue.
+
 Appendix: options for 'process_10xgenomics.py'
 ----------------------------------------------
 
