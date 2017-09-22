@@ -1069,18 +1069,20 @@ class AutoProcess:
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return utils.AnalysisProject(dirs[0],undetermined_dir)
         
-    def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
+    def make_fastqs(self,protocol=None,
+                    unaligned_dir=None,sample_sheet=None,lanes=None,
+                    ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
                     nprocessors=None,require_bcl2fastq_version=None,
-                    unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,no_lane_splitting=None,
                     minimum_trimmed_read_length=None,
                     mask_short_adapter_reads=None,
                     generate_stats=True,stats_file=None,
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
-                    skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    lanes=None,create_empty_fastqs=None,runner=None):
+                    skip_fastq_generation=False,
+                    only_fetch_primary_data=False,
+                    create_empty_fastqs=None,runner=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1097,6 +1099,17 @@ class AutoProcess:
         values will be used for both steps.
 
         Arguments:
+          protocol            : if set then specifies the protocol to use
+                                for fastq generation, otherwise use the
+                                'standard' bcl2fastq protocol
+          unaligned_dir       : if set then use this as the output directory for
+                                bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
+                                an alternative is already specified in the config file)
+          sample_sheet        : if set then use this as the input samplesheet
+          lanes               : (optional) specify a list of lane numbers to
+                                use in the processing; lanes not in the list
+                                will be excluded (default is to include all
+                                lanes)
           nprocessors         : number of processors to run bclToFastq.py with
           ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
@@ -1109,10 +1122,6 @@ class AutoProcess:
                                 Should be a string of the form '1.8.4' or
                                 '>2.0'. Set to None to automatically determine
                                 bcl2fastq version.
-          unaligned_dir       : if set then use this as the output directory for
-                                bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
-                                an alternative is already specified in the config file)
-          sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
           no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
           minimum_trimmed_read_length: if set then specify minimum length
@@ -1130,12 +1139,8 @@ class AutoProcess:
                                 i.e. don't do barcode analyses)
           barcodes_file       : if set then use this as the name of the report file for
                                 barcode sequences analysis
-          skip_bcl2fastq      : if True then don't perform fastq generation
+          skip_fastq_generation: if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
-          lanes               : (optional) specify a list of lane numbers to
-                                use in the processing; lanes not in the list
-                                will be excluded (default is to include all
-                                lanes)
           create_empty_fastqs : if True then create empty 'placeholder' fastq
                                 files for any missing fastqs after bcl2fastq
                                 (must have completed with zero exit status)
@@ -1167,26 +1172,38 @@ class AutoProcess:
                 raise Exception, "Failed to acquire primary data"
             if only_fetch_primary_data:
                 return
-        # Run bcl_to_fastq
-        if not skip_bcl2fastq:
-            try:
-                self.bcl_to_fastq(require_bcl2fastq=require_bcl2fastq_version,
-                                  unaligned_dir=unaligned_dir,
-                                  sample_sheet=sample_sheet,
-                                  bases_mask=bases_mask,
-                                  ignore_missing_bcl=ignore_missing_bcl,
-                                  ignore_missing_stats=ignore_missing_stats,
-                                  no_lane_splitting=no_lane_splitting,
-                                  minimum_trimmed_read_length=minimum_trimmed_read_length,
-                                  mask_short_adapter_reads=mask_short_adapter_reads,
-                                  nprocessors=nprocessors,
-                                  lanes=lanes,
-                                  create_empty_fastqs=create_empty_fastqs,
-                                  runner=runner)
-            except Exception,ex:
-                raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+        # Do fastq generation using the specified protocol
+        if not skip_fastq_generation:
+            if protocol is None:
+                # Standard protocol
+                try:
+                    self.bcl_to_fastq(
+                        require_bcl2fastq=require_bcl2fastq_version,
+                        unaligned_dir=unaligned_dir,
+                        sample_sheet=sample_sheet,
+                        bases_mask=bases_mask,
+                        ignore_missing_bcl=ignore_missing_bcl,
+                        ignore_missing_stats=ignore_missing_stats,
+                        no_lane_splitting=no_lane_splitting,
+                        minimum_trimmed_read_length=minimum_trimmed_read_length,
+                        mask_short_adapter_reads=mask_short_adapter_reads,
+                        nprocessors=nprocessors,
+                        lanes=lanes,
+                        create_empty_fastqs=create_empty_fastqs,
+                        runner=runner)
+                except Exception,ex:
+                    raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+            elif protocol == '10x_chromium':
+                # 10xGenomics Chromium
+                raise NotImplementedError("10x_chromium protocol not yet "
+                                          "implemented")
+            else:
+                # Unknown protocol
+                raise Exception("Unknown protocol '%s'" % protocol)
+            # Check the outputs
             if not self.verify_bcl_to_fastq(lanes=lanes):
-                raise Exception("Bcl2fastq failed to produce expected outputs")
+                raise Exception("Fastq generation failed to produce expected "
+                                "outputs")
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file=stats_file,
