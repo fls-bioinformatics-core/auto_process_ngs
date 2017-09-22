@@ -92,6 +92,103 @@ def make_qc_summary_html(json_file,html_file):
     # Write the report
     qc_summary.write(html_file)
 
+def run_cellranger_mkfastq(sample_sheet,
+                           primary_data_dir,
+                           output_dir,
+                           lanes=None,
+                           cellranger_jobmode=None,
+                           cellranger_maxjobs=None,
+                           cellranger_mempercore=None,
+                           cellranger_jobinterval=None,
+                           log_dir=None,
+                           dry_run=False):
+    """
+    Wrapper for running 'cellranger mkfastq'
+
+    Runs the 10xGenomics 'cellranger mkfastq' command to
+    generate Fastqs from bcl files for Chromium single-cell
+    data.
+
+    Arguments:
+      samplesheet (str): path to input samplesheet with
+        10xGenomics barcode indices
+      primary_data_dir (str): path to the top-level
+        directory holding the sequencing data
+      output_dir (str): path to the output directory
+      lanes (str): optional, specify the subset of lanes
+        to process (default is to process all lanes
+        in the run)
+      cellranger_jobmode (str): specify the job mode to
+        pass to cellranger (default: None)
+      cellranger_maxjobs (int): specify the maximum
+        number of jobs to pass to cellranger (default:
+        None)
+      cellranger_mempercore (int): specify the memory
+        per core (in Gb) to pass to cellranger (default:
+        None)
+      cellranger_jobinterval (int): specify the interval
+        between launching jobs (in ms) to pass to
+        cellranger (default: None)
+      log_dir (str): path to a directory to write logs
+        (default: current working directory)
+      dry_run (bool): if True then only report actions
+        that would be performed but don't run anything
+    """
+    # Construct the command
+    cmd = Command("cellranger","mkfastq",
+                  "--samplesheet",samplesheet,
+                  "--run",primary_data_dir,
+                  "--output-dir",output_dir)
+    if lanes is not None:
+        cmd.add_args("--lanes=%s" % lanes)
+    add_cellranger_args(cmd,
+                        jobmode=cellranger_jobmode,
+                        mempercore=cellranger_mempercore,
+                        maxjobs=cellranger_maxjobs,
+                        jobinterval=cellranger_jobinterval)
+    # Run the command
+    print "Running: %s" % cmd
+    if not dry_run:
+        # Make a log directory
+        if log_dir is None:
+            log_dir = os.getcwd()
+        log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
+        mkdir(log_dir)
+        # Submit the job
+        cellranger_mkfastq_job = SchedulerJob(
+            SimpleJobRunner(),
+            cmd.command_line,
+            name='cellranger_mkfastq',
+            working_dir=os.getcwd(),
+            log_dir=log_dir)
+        cellranger_mkfastq_job.start()
+        try:
+            cellranger_mkfastq_job.wait()
+        except KeyboardInterrupt,ex:
+            logging.warning("Keyboard interrupt, terminating cellranger")
+            cellranger_mkfastq_job.terminate()
+            raise ex
+        exit_code = cellranger_mkfastq_job.exit_code
+        print "cellranger mkfastq completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logging.error("cellranger mkfastq exited with an error")
+            return
+        # Deal with the QC summary report
+        flow_cell_dir = flow_cell_id(primary_data_dir)
+        if lanes is not None:
+            lanes_suffix = "_%s" % lanes.replace(',','')
+        else:
+            lanes_suffix = ""
+        flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
+        if not os.path.isdir(flow_cell_dir):
+            logging.error("No output directory '%s'" % flow_cell_dir)
+            return
+        json_file = os.path.join(flow_cell_dir,
+                                 "outs",
+                                 "qc_summary.json")
+        html_file = "cellranger_qc_summary%s.html" % lanes_suffix
+        make_qc_summary_html(json_file,html_file)
+
 def add_cellranger_args(cellranger_cmd,
                         jobmode=None,
                         maxjobs=None,
