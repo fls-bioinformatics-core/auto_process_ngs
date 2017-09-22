@@ -65,7 +65,7 @@ from config import Config
 # Classes
 #######################################################################
 
-class Settings:
+class Settings(object):
     """
     Load parameter values from an external config file
 
@@ -263,6 +263,12 @@ class Settings:
         except ValueError:
             self._sections.append(section)
             setattr(self,section,AttributeDictionary())
+
+    def __getitem__(self,section):
+        """
+        Implement __getitem__ to enable s[SECTION]
+        """
+        return getattr(self,section)
 
     def has_subsections(self,section):
         """
