@@ -1164,7 +1164,12 @@ class AutoProcess:
                                     runner=runner)
             return
         # Log dir
-        self.set_log_dir(self.get_log_subdir('make_fastqs'))
+        log_dir = 'make_fastqs'
+        if protocol:
+            log_dir += "_%s" % protocol
+        if lanes:
+            log_dir += "_%s" % ''.join(sorted(lanes))
+        self.set_log_dir(self.get_log_subdir(log_dir))
         # Fetch primary data
         if not skip_rsync:
             if self.get_primary_data() != 0:
