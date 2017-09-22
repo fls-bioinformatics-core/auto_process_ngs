@@ -15,6 +15,16 @@ data. This sits alongside the standard ``auto_process`` commands, and
 wraps a subset of the ``cellranger`` commands whilst also providing a
 degree of integration with the ``auto_process`` protocols.
 
+The stages are:
+
+1. :ref:`10xgenomics-fastq-generation`
+2. :ref:`10xgenomics-set-up-analysis-dirs`
+3. :ref:`10xgenomics-initial-single-library-analysis`
+
+Each of these is covered in detail in the subsequent sections.
+
+.. _10xgenomics-fastq-generation:
+
 Fastq generation
 ----------------
 
@@ -89,17 +99,7 @@ Finally, to update the statistics with the Chromium Fastqs, run e.g.::
 ``--add`` is necessary to combine the statistics for the Chromium data
 with those from the standard datasets.
 
-'process_10xgenomics.py mkfastq' options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The relevant options are::
-
-    -s : specify the sample sheet to use
-    -r : specify the location of the primary data for the run
-    -l : optionally, specify the lane numbers
-    -o : specify the output directory
-
-(See also :ref:`10xgenomics-additional-options`.)
+.. _10xgenomics-set-up-analysis-dirs:
 
 Set up project analysis directories and run QC
 ----------------------------------------------
@@ -150,6 +150,8 @@ Once the projects are set up, the standard QC pipeline can be run
 using the ``run_qc`` command::
 
        auto_process.py run_qc
+
+.. _10xgenomics-initial-single-library-analysis:
 
 Perform initial single-library analysis
 ---------------------------------------
