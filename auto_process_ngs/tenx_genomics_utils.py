@@ -92,6 +92,44 @@ def make_qc_summary_html(json_file,html_file):
     # Write the report
     qc_summary.write(html_file)
 
+def add_cellranger_args(cellranger_cmd,
+                        jobmode=None,
+                        maxjobs=None,
+                        mempercore=None,
+                        jobinterval=None):
+    """
+    Configure options for cellranger
+
+    Given a Command instance for running cellranger,
+    add the appropriate options (e.g. --jobmode)
+    according to the supplied arguments.
+
+    Arguments:
+      cellranger_cmd (Command): Command instance for
+        running cellranger
+      jobmode (str): if specified, will be passed to the
+        --jobmode option
+      maxjobs (int): if specified, will be passed to the
+        --mempercore option
+      mempercore (int): if specified, will be passed to
+        the --maxjobs option
+      jobinterval (int):  if specified, will be passed to
+        the --jobinterval option
+
+    Returns:
+      Command: the original command updated with the
+        appropriate options.
+    """
+    if jobmode is not None:
+        cellranger_cmd.add_args("--jobmode=%s" % jobmode)
+    if mempercore is not None:
+        cellranger_cmd.add_args("--mempercore=%s" % mempercore)
+    if maxjobs is not None:
+        cellranger_cmd.add_args("--maxjobs=%s" % maxjobs)
+    if jobinterval is not None:
+        cellranger_cmd.add_args("--jobinterval=%s" % jobinterval)
+    return cellranger_cmd
+
 import sys
 if __name__ == "__main__":
     json_file = sys.argv[1]

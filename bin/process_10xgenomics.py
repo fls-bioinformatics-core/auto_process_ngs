@@ -37,6 +37,7 @@ from auto_process_ngs.utils import ProjectMetadataFile
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.tenx_genomics_utils import flow_cell_id
 from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
+from auto_process_ngs.tenx_genomics_utils import add_cellranger_args
 import auto_process_ngs.envmod as envmod
 
 # Initialise logging
@@ -369,23 +370,6 @@ def build_fastq_path_dir(project_dir):
         logging.debug("Linking: %s -> %s" % (link_name,target))
         os.symlink(target,link_name)
     return fastq_path_dir
-
-def add_cellranger_args(cmd,
-                        jobmode='sge',
-                        maxjobs=None,
-                        mempercore=None,
-                        jobinterval=None):
-    """
-    """
-    if jobmode is not None:
-        cmd.add_args("--jobmode=%s" % jobmode)
-    if mempercore is not None:
-        cmd.add_args("--mempercore=%s" % mempercore)
-    if maxjobs is not None:
-        cmd.add_args("--maxjobs=%s" % maxjobs)
-    if jobinterval is not None:
-        cmd.add_args("--jobinterval=%s" % jobinterval)
-    return cmd
 
 def get_log_subdir(log_dir,name):
     """
