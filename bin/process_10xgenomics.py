@@ -423,23 +423,29 @@ if __name__ == "__main__":
     # Add generic options
     for p in (mkfastq_parser,count_parser):
         p.add_argument("--jobmode",
-                       dest="job_mode",default="sge",
+                       dest="job_mode",
+                       default=__settings['10xgenomics'].cellranger_jobmode,
                        help="job mode to run cellranger in (default: "
-                       "'sge'")
+                       "'%s')"
+                       % __settings['10xgenomics'].cellranger_jobmode)
         p.add_argument("--mempercore",
-                       dest="mem_per_core",default=5,
+                       dest="mem_per_core",
+                       default=__settings['10xgenomics'].cellranger_mempercore,
                        help="memory assumed per core (in Gbs; "
-                       "default: 5Gb")
+                       "default: %dGb)"
+                       % __settings['10xgenomics'].cellranger_mempercore)
         p.add_argument("--maxjobs",type=int,
                        dest="max_jobs",
-                       default= __settings.general.max_concurrent_jobs,
+                       default=__settings.general.max_concurrent_jobs,
                        help="maxiumum number of concurrent jobs to run "
                        "(default: %d)"
                        % __settings.general.max_concurrent_jobs)
         p.add_argument("--jobinterval",type=int,
-                       dest="job_interval",default=100,
+                       dest="job_interval",
+                       default=__settings['10xgenomics'].cellranger_jobinterval,
                        help="how often jobs are submitted (in ms; "
-                       "default: 100ms)")
+                       "default: %dms)"
+                       % __settings['10xgenomics'].cellranger_jobinterval)
         p.add_argument('--modulefiles',action='store',
                        dest='modulefiles',default=None,
                        help="comma-separated list of environment "

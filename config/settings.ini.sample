@@ -33,6 +33,12 @@ contaminants_conf_file = None
 nprocessors_contaminant_filter = 1
 nprocessors_statistics = 1
 
+# 10xGenomics settings
+[10xgenomics]
+cellranger_jobmode = sge
+cellranger_mempercore = 5
+cellranger_jobinterval = 100
+
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
 # override the default bcl2fastq settings (i.e. number of

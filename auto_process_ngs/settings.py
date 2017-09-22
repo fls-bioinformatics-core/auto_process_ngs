@@ -154,6 +154,12 @@ class Settings(object):
                                                            'contaminants_conf_file')
         self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter',1)
         self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics',1)
+        # 10xgenomics
+        self.add_section('10xgenomics')
+        self['10xgenomics']['cellranger_jobmode'] = config.get('10xgenomics',
+                                                               'cellranger_jobmode')
+        self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
+        self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
