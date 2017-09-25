@@ -77,6 +77,12 @@ def cellranger_mkfastq(samplesheet,
                        project_metadata_file='projects.info'):
     """
     """
+    # Make a log directory
+    if not dry_run:
+        if log_dir is None:
+            log_dir = os.getcwd()
+        log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
+        mkdir(log_dir)
     # Run cellranger mkfastq
     run_cellranger_mkfastq(samplesheet,
                            primary_data_dir,

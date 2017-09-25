@@ -19,6 +19,9 @@ Chromium SC 3'v2 system:
 
 import os
 import json
+from bcftbx.JobRunner import SimpleJobRunner
+from .applications import Command
+from .simple_scheduler import SchedulerJob
 from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
@@ -110,7 +113,7 @@ def run_cellranger_mkfastq(sample_sheet,
     data.
 
     Arguments:
-      samplesheet (str): path to input samplesheet with
+      sample_sheet (str): path to input samplesheet with
         10xGenomics barcode indices
       primary_data_dir (str): path to the top-level
         directory holding the sequencing data
@@ -136,7 +139,7 @@ def run_cellranger_mkfastq(sample_sheet,
     """
     # Construct the command
     cmd = Command("cellranger","mkfastq",
-                  "--samplesheet",samplesheet,
+                  "--samplesheet",sample_sheet,
                   "--run",primary_data_dir,
                   "--output-dir",output_dir)
     if lanes is not None:
@@ -152,8 +155,8 @@ def run_cellranger_mkfastq(sample_sheet,
         # Make a log directory
         if log_dir is None:
             log_dir = os.getcwd()
-        log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
-        mkdir(log_dir)
+        else:
+            log_dir = os.path.abspath(log_dir)
         # Submit the job
         cellranger_mkfastq_job = SchedulerJob(
             SimpleJobRunner(),
