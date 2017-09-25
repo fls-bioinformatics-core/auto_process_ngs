@@ -390,6 +390,28 @@ def add_make_fastqs_command(cmdparser):
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
+    # Cellranger (10xgenomics Chromium) options
+    cellranger = optparse.OptionGroup(p,'Cellranger options (10xGenomics '
+                                      'Chromium data only)')
+    cellranger.add_option("--jobmode",
+                          dest="job_mode",default="sge",
+                          help="job mode to run cellranger in (default: "
+                          "'sge'")
+    cellranger.add_option("--mempercore",
+                          dest="mem_per_core",default=5,
+                          help="memory assumed per core (in Gbs; "
+                          "default: 5Gb)")
+    cellranger.add_option("--maxjobs",type=int,
+                          dest="max_jobs",
+                          default=__settings.general.max_concurrent_jobs,
+                          help="maxiumum number of concurrent jobs to run "
+                          "(default: %d)"
+                          % __settings.general.max_concurrent_jobs)
+    cellranger.add_option("--jobinterval",type=int,
+                          dest="job_interval",default=100,
+                          help="how often jobs are submitted (in ms; "
+                          "default: 100ms)")
+    p.add_option_group(cellranger)
     # Statistics
     statistics = optparse.OptionGroup(p,'Statistics generation')
     statistics.add_option('--stats-file',action='store',
@@ -930,7 +952,11 @@ if __name__ == "__main__":
                 barcodes_file=options.barcodes_file,
                 skip_fastq_generation=skip_fastq_generation,
                 only_fetch_primary_data=options.only_fetch_primary_data,
-                create_empty_fastqs=create_empty_fastqs)
+                create_empty_fastqs=create_empty_fastqs,
+                cellranger_jobmode=options.job_mode,
+                cellranger_mempercore=options.mem_per_core,
+                cellranger_maxjobs=options.max_jobs,
+                cellranger_jobinterval=options.job_interval)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
                                output_dir=options.output_dir,

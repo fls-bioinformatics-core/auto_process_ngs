@@ -1082,7 +1082,11 @@ class AutoProcess:
                     report_barcodes=False,barcodes_file=None,
                     skip_fastq_generation=False,
                     only_fetch_primary_data=False,
-                    create_empty_fastqs=None,runner=None):
+                    create_empty_fastqs=None,runner=None,
+                    cellranger_jobmode=None,
+                    cellranger_mempercore=None,
+                    cellranger_maxjobs=None,
+                    cellranger_jobinterval=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1146,23 +1150,32 @@ class AutoProcess:
                                 (must have completed with zero exit status)
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
+          cellranger_jobmode  : (optional) job mode to run cellranger in
+                                (10xGenomics Chromium data only)
+          cellranger_mempercore: (optional) memory assumed per core (in Gbs)
+                                (10xGenomics Chromium data only)
+          cellranger_maxjobs  : (optional) maxiumum number of concurrent jobs
+                                to run (10xGenomics Chromium data only)
+          cellranger_jobinterval: (optional) how often jobs are submitted (in
+                                ms) (10xGenomics Chromium data only)
 
         """
-        #
-        # Check for pre-existing bcl2fastq outputs
-        if self.verify_bcl_to_fastq(unaligned_dir=unaligned_dir,
-                                    lanes=lanes):
-            print "Bcl to fastq outputs already present"
-            # Check for project metadata file
-            self.make_project_metadata_file()
-            # (Re)generate stats?
-            if generate_stats:
-                self.generate_stats(stats_file=stats_file,
-                                    per_lane_stats_file=per_lane_stats_file,
-                                    unaligned_dir=unaligned_dir,
-                                    nprocessors=nprocessors,
-                                    runner=runner)
-            return
+        # Tweak the verification settings as appropriate for
+        # the specified protocol
+        if protocol == '10x_chromium':
+            # Force inclusion of sample-name subdirectories
+            # when verifying Chromium data
+            include_sample_dir = True
+        else:
+            include_sample_dir = False
+        # Check for pre-existing Fastq outputs
+        if self.verify_bcl_to_fastq(
+                unaligned_dir=unaligned_dir,
+                lanes=lanes,
+                include_sample_dir=include_sample_dir):
+            print "Expected Fastq outputs already present"
+            skip_rsync = True
+            skip_fastq_generation = True
         # Log dir
         log_dir = 'make_fastqs'
         if protocol:
@@ -1200,13 +1213,35 @@ class AutoProcess:
                     raise Exception("Bcl2fastq stage failed: '%s'" % ex)
             elif protocol == '10x_chromium':
                 # 10xGenomics Chromium
-                raise NotImplementedError("10x_chromium protocol not yet "
-                                          "implemented")
+                try:
+                    if unaligned_dir is not None:
+                        self.params['unaligned_dir'] = unaligned_dir
+                    elif self.params['unaligned_dir'] is None:
+                        self.params['unaligned_dir'] = 'bcl2fastq'
+                    tenx_genomics_utils.run_cellranger_mkfastq(
+                        sample_sheet=(self.params.sample_sheet
+                                      if sample_sheet is None
+                                      else sample_sheet),
+                        primary_data_dir=os.path.join(
+                            self.params.primary_data_dir,
+                            os.path.basename(self.params.data_dir)),
+                        output_dir=self.params.unaligned_dir,
+                        lanes=(None if lanes is None
+                               else ','.join([str(l) for l in lanes])),
+                        cellranger_jobmode=cellranger_jobmode,
+                        cellranger_maxjobs=cellranger_maxjobs,
+                        cellranger_mempercore=cellranger_mempercore,
+                        cellranger_jobinterval=cellranger_jobinterval,
+                        log_dir=self.log_dir)
+                except Exception,ex:
+                    raise Exception("'cellranger mkfastq' stage failed: "
+                                    "'%s'" % ex)
             else:
                 # Unknown protocol
                 raise Exception("Unknown protocol '%s'" % protocol)
             # Check the outputs
-            if not self.verify_bcl_to_fastq(lanes=lanes):
+            if not self.verify_bcl_to_fastq(lanes=lanes,
+                                            include_sample_dir=include_sample_dir):
                 raise Exception("Fastq generation failed to produce expected "
                                 "outputs")
         # Generate statistics
@@ -1891,7 +1926,8 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
-    def verify_bcl_to_fastq(self,unaligned_dir=None,lanes=None):
+    def verify_bcl_to_fastq(self,unaligned_dir=None,lanes=None,
+                            include_sample_dir=False):
         """Check that bcl to fastq outputs match sample sheet predictions
 
         Arguments:
@@ -1899,6 +1935,9 @@ class AutoProcess:
             directory to check
           lanes (list): specify a list of lane numbers (integers) to
             check (others will be ignored)
+          include_sample_dir (bool): if True then include a
+            'sample_name' directory level when checking for
+            bcl2fastq2 outputs, even if one shouldn't be present
 
         Returns:
           True if outputs match sample sheet, False otherwise.
@@ -1940,13 +1979,14 @@ class AutoProcess:
                 unaligned_dir=unaligned_dir)
         except IlluminaData.IlluminaDataError, ex:
             # Failed to initialise
-            logging.debug("Failed to get information from %s: %s" %
-                          (bcl_to_fastq_dir,ex))
+            logging.warning("Failed to get information from %s: %s" %
+                            (bcl_to_fastq_dir,ex))
             return False
         # Do check
         return IlluminaData.verify_run_against_sample_sheet(
             illumina_data,
-            tmp_sample_sheet)
+            tmp_sample_sheet,
+            include_sample_dir=include_sample_dir)
 
     def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
                          dry_run=False):
