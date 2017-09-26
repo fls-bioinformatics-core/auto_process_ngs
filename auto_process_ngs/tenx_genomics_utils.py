@@ -136,6 +136,9 @@ def run_cellranger_mkfastq(sample_sheet,
         (default: current working directory)
       dry_run (bool): if True then only report actions
         that would be performed but don't run anything
+
+    Returns:
+      Integer: exit code from the cellranger command.
     """
     # Construct the command
     cmd = Command("cellranger","mkfastq",
@@ -150,7 +153,7 @@ def run_cellranger_mkfastq(sample_sheet,
                         maxjobs=cellranger_maxjobs,
                         jobinterval=cellranger_jobinterval)
     # Run the command
-    print "Running: %s" % cmd
+    print "Running %s" % cmd
     if not dry_run:
         # Make a log directory
         if log_dir is None:
@@ -159,7 +162,7 @@ def run_cellranger_mkfastq(sample_sheet,
             log_dir = os.path.abspath(log_dir)
         # Submit the job
         cellranger_mkfastq_job = SchedulerJob(
-            SimpleJobRunner(),
+            SimpleJobRunner(join_logs=True),
             cmd.command_line,
             name='cellranger_mkfastq',
             working_dir=os.getcwd(),
@@ -175,7 +178,7 @@ def run_cellranger_mkfastq(sample_sheet,
         print "cellranger mkfastq completed: exit code %s" % exit_code
         if exit_code != 0:
             logging.error("cellranger mkfastq exited with an error")
-            return
+            return exit_code
         # Deal with the QC summary report
         flow_cell_dir = flow_cell_id(primary_data_dir)
         if lanes is not None:
@@ -185,12 +188,13 @@ def run_cellranger_mkfastq(sample_sheet,
         flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
         if not os.path.isdir(flow_cell_dir):
             logging.error("No output directory '%s'" % flow_cell_dir)
-            return
+            return -1
         json_file = os.path.join(flow_cell_dir,
                                  "outs",
                                  "qc_summary.json")
         html_file = "cellranger_qc_summary%s.html" % lanes_suffix
         make_qc_summary_html(json_file,html_file)
+        return exit_code
 
 def add_cellranger_args(cellranger_cmd,
                         jobmode=None,
