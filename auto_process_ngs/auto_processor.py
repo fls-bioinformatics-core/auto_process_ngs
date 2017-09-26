@@ -1181,7 +1181,7 @@ class AutoProcess:
         if protocol:
             log_dir += "_%s" % protocol
         if lanes:
-            log_dir += "_%s" % ''.join(sorted(lanes))
+            log_dir += "_L%s" % ''.join([str(l) for l in sorted(lanes)])
         self.set_log_dir(self.get_log_subdir(log_dir))
         # Fetch primary data
         if not skip_rsync:
