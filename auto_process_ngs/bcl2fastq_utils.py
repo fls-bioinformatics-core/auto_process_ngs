@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2017 Peter Briggs
 #
 ########################################################################
 #
@@ -16,7 +16,7 @@ Utility functions for bcl to fastq conversion operations:
 
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
-- make_custom_sample_sheet: create a fixed copy of a sample sheet file
+- make_custom_sample_sheet: create a corrected copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
 - get_nmismatches: determine number of mismatches from bases mask
 - check_barcode_collisions: look for too-similiar pairs of barcode sequences
@@ -214,23 +214,28 @@ def bcl_to_fastq_info(path=None):
     return (bcl2fastq_path,package_name,package_version)
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
-                             fmt=None):
+                             lanes=None,fmt=None):
     """
     Creates a corrected copy of a sample sheet file
 
     Creates and returns a SampleSheet object with a copy of the
     input sample sheet, with any illegal or duplicated names fixed.
-    Optionally also writes the updated sample sheet data to a new
-    file.
+    Optionally it can also: write the updated sample sheet data to a
+    new file, switch the format, and include only a subset of lanes
+    from the original file
 
     Arguments:
       input_sample_sheet (str): name and path of the original sample
         sheet file
       output_sample_sheet (str): (optional) name and path to write
         updated sample sheet to, or `None`
+      lanes (list): (optional) list of lane numbers to keep in the
+        output sample sheet; if `None` then all lanes will be kept
+        (the default), otherwise lanes will be dropped if they don't
+        appear in the supplied list
       fmt (str): (optional) format for the output sample sheet,
-        either 'CASAVA' or 'IEM'; if this `None` then the format of
-        the original file will be used
+        either 'CASAVA' or 'IEM'; if this is `None` then the format
+        of the original file will be used
 
     Returns:
       SampleSheet object with the data for the corrected sample
@@ -256,6 +261,18 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     # Fix other problems
     sample_sheet.fix_illegal_names()
     sample_sheet.fix_duplicated_names()
+    # Select subset of lanes if requested
+    if lanes is not None:
+        print "Updating to include only specified lanes: %s" % \
+            ','.join([str(l) for l in lanes])
+        i = 0
+        while i < len(sample_sheet):
+            line = sample_sheet[i]
+            if line['Lane'] in lanes:
+                print "Keeping %s" % line
+                i += 1
+            else:
+                del(sample_sheet[i])
     # Write out new sample sheet
     if output_sample_sheet is not None:
         sample_sheet.write(output_sample_sheet,fmt=fmt)
