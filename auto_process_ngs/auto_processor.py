@@ -1213,6 +1213,20 @@ class AutoProcess:
             elif protocol == '10x_chromium':
                 # 10xGenomics Chromium
                 try:
+                    bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
+                        '>=2')
+                    if bcl2fastq:
+                        bcl2fastq_exe = bcl2fastq[0]
+                        bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(
+                            bcl2fastq_exe)
+                    else:
+                        raise Exception("No appropriate bcl2fastq software "
+                                        "located")
+                    cellranger = utils.find_executables(
+                        ('cellranger',),
+                        tenx_genomics_utils.cellranger_info)
+                    if not cellranger:
+                        raise Exception("No cellranger package found")
                     if unaligned_dir is not None:
                         self.params['unaligned_dir'] = unaligned_dir
                     elif self.params['unaligned_dir'] is None:
@@ -1440,13 +1454,6 @@ class AutoProcess:
         bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
             require_bcl2fastq)
         if bcl2fastq:
-            print "Found available bcl2fastq packages:"
-            for i,package in enumerate(bcl2fastq):
-                bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(package)
-                print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
-                                         bcl2fastq_info[0],
-                                         bcl2fastq_info[1],
-                                         bcl2fastq_info[2])
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(bcl2fastq_exe)
         else:
