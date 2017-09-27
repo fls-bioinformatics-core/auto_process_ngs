@@ -7,8 +7,10 @@ import tempfile
 import shutil
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
+from bcftbx.utils import find_program
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.applications import Command
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -1524,6 +1526,168 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
+
+class TestFindExecutables(unittest.TestCase):
+    """
+    Tests for the find_executables function
+
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestCellrangerInfo")
+        # Store the original state of PATH env var
+        self.original_path = os.environ['PATH']
+        # Info function
+        def info_func(p):
+            name = os.path.basename(p)
+            exe = find_program(p)
+            version = ''
+            output = Command(exe).subprocess_check_output()[1]
+            for line in output.split('\n'):
+                if line.startswith(name):
+                    try:
+                        version = line.split()[1]
+                    except IndexError:
+                        pass
+                    break
+            return (exe,name.upper(),version)
+        self.info_func = info_func
+
+    def tearDown(self):
+        # Restore the PATH env var
+        os.environ['PATH'] = self.original_path
+        # Remove temp dir
+        shutil.rmtree(self.wd)
+
+    def _make_executable(self,name,dirn=None,version=None):
+        # Create an executable for testing
+        # The executable will be created in the working dir,
+        # optionally under the specified subdir
+        if dirn is not None:
+            path = self.wd
+            for d in dirn.split(os.sep):
+                path = os.path.join(path,d)
+                os.mkdir(path)
+            dirn = path
+        else:
+            dirn = self.wd
+        exe = os.path.join(dirn,name)
+        with open(exe,'w') as fp:
+            fp.write(
+                "#!/bin/bash\necho %s %s" %
+                (name,
+                 (version if version is not None else "")))
+        os.chmod(exe,0775)
+        return exe
+
+    def _info_func(self):
+        # Create an info_func for testing
+        def info_func(p):
+            name = os.path.basename(p)
+            exe = find_program(p)
+            version = ''
+            output = Command(exe).subprocess_check_output()[1]
+            for line in output.split('\n'):
+                if line.startswith(name):
+                    try:
+                        version = line.split()[1]
+                    except IndexError:
+                        pass
+                    break
+            return (exe,name.upper(),version)
+        return info_func
+
+    def _prepend_path(self,p):
+        # Add to start of PATH
+        os.environ['PATH'] = "%s:%s" % (p,os.environ['PATH'])
+
+    def test_no_versions(self):
+        """
+        find_executables: no matching software present
+        """
+        os.environ['PATH'] = ''
+        self.assertEqual(find_executables(("xyxyz",),self.info_func),[])
+
+    def test_single_version(self):
+        """
+        find_executable: only single version available
+        """
+        xyxyz = self._make_executable("xyxyz",version="1.0.0")
+        self._prepend_path(os.path.dirname(xyxyz))
+        self.assertEqual(find_executables(("xyxyz",),self._info_func()),[xyxyz,])
+    def test_multiple_versions(self):
+        """
+        find_executable: multiple versions available
+        """
+        exes = []
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            exes.insert(0,exe)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),self._info_func()),exes)
+
+    def test_require_specific_version(self):
+        """
+        find_executable: require specific version
+        """
+        exes = []
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            if v == '1.2.1':
+                exes.append(exe)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),
+                                          self._info_func(),
+                                          reqs='1.2.1'),exes)
+
+    def test_required_version_not_found(self):
+        """
+        find_executable: required version is not found
+        """
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),
+                                          self._info_func(),
+                                          reqs='2.0.1'),[])
+
+    def test_multiple_exes(self):
+        """
+        find_executable: look for multiple executables
+        """
+        exes = []
+        names = ('xyxyz','zyzyx','pqrst')
+        for n in names:
+            exe = self._make_executable(n)
+            if n != 'pqrst':
+                exes.insert(0,exe)
+        self._prepend_path(self.wd)
+        self.assertEqual(find_executables(("zyzyx","xyxyz",),
+                                          self._info_func()),exes)
+
+    def test_specify_path(self):
+        """
+        find_executable: look for multiple executables
+        """
+        exes = []
+        paths = []
+        names = ('xyxyz','zyzyx','pqrst')
+        for n in names:
+            exe = self._make_executable(n,dirn=n)
+            if n == 'zyzyx':
+                exes.append(exe)
+                paths.append(os.path.dirname(exe))
+            self._prepend_path(os.path.dirname(exe))
+        print os.environ['PATH']
+        self.assertEqual(find_executables(("zyzyx","xyxyz",),
+                                          self.info_func,
+                                          paths=paths),exes)
 
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function
