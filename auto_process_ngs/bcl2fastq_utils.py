@@ -31,12 +31,11 @@ Utility functions for bcl to fastq conversion operations:
 #######################################################################
 import os
 import re
-import operator
 import logging
 import auto_process_ngs.applications as applications
+import auto_process_ngs.utils as utils
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
-from pkg_resources import parse_version
 
 #######################################################################
 # Functions
@@ -82,62 +81,11 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
       List: full paths to bcl2fastq converter executables.
 
     """
-    # Search paths
-    if paths is None:
-        paths = os.environ['PATH'].split(os.pathsep)
-    # Search for executables
-    available_exes = []
-    for path in paths:
-        if os.path.isfile(path):
-            path = os.path.dirname(path)
-        for name in ('bcl2fastq','configureBclToFastq.pl',):
-            prog_path = os.path.abspath(os.path.join(path,name))
-            if bcf_utils.PathInfo(prog_path).is_executable:
-                available_exes.append(prog_path)
-    # Filter on requirement
-    if reqs:
-        # Loop over ranges
-        for req in reqs.split(','):
-            logging.debug("Filtering on expression: %s" % req)
-            # Determine operator and version
-            req_op = None
-            req_version = None
-            for op in ('==','>=','<=','>','<'):
-                if req.startswith(op):
-                    req_op = op
-                    req_version = req[len(op):].strip()
-                    break
-            if req_version is None:
-                req_op = '=='
-                req_version = req.strip()
-            logging.debug("Required version: %s %s" % (req_op,req_version))
-            if req_op == '==':
-                op = operator.eq
-            elif req_op == '>=':
-                op = operator.ge
-            elif req_op == '>':
-                op = operator.gt
-            elif req_op == '<':
-                op = operator.lt
-            elif req_op == '<=':
-                op = operator.le
-            # Filter the available executables on version
-            logging.debug("Pre filter: %s" % available_exes)
-            logging.debug("Versions  : %s" % [bcl_to_fastq_info(x)[2]
-                                              for x in available_exes])
-            available_exes = filter(lambda x: op(
-                parse_version(bcl_to_fastq_info(x)[2]),
-                parse_version(req_version)),
-                                    available_exes)
-            logging.debug("Post filter: %s" % available_exes)
-        # Sort into version order, highest to lowest
-        available_exes.sort(
-            key=lambda x: parse_version(bcl_to_fastq_info(x)[2]),
-            reverse=True)
-        logging.debug("Post sort: %s" % available_exes)
-        logging.debug("Versions : %s" % [bcl_to_fastq_info(x)[2]
-                                 for x in available_exes])
-    return available_exes
+    return utils.find_executables(('bcl2fastq',
+                                  'configureBclToFastq.pl'),
+                                  info_func=bcl_to_fastq_info,
+                                  reqs=reqs,
+                                  paths=paths)
 
 def bcl_to_fastq_info(path=None):
     """
