@@ -20,6 +20,7 @@ Chromium SC 3'v2 system:
 import os
 import json
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.utils import find_program
 from .applications import Command
 from .simple_scheduler import SchedulerJob
 from .docwriter import Document
@@ -27,6 +28,10 @@ from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
 import css_rules
+
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Functions
@@ -94,6 +99,60 @@ def make_qc_summary_html(json_file,html_file):
         sample_qc.add(tbl)
     # Write the report
     qc_summary.write(html_file)
+
+def cellranger_info(path=None):
+    """
+    Retrieve information on the cellranger software
+
+    If called without any arguments this will locate the first
+    cellranger executable that is available on the user's PATH,
+    and attempts to extract the version.
+
+    Alternatively if the path to an executable is supplied then
+    the version will be determined from that instead.
+
+    If no version is identified then the script path is still
+    returned, but without any version info.
+
+    In all cases the package package name will be returned as
+    'cellranger'.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the cellranger program, PACKAGE is
+        'cellranger', and VERSION is the package version. If any
+        value can't be determined then it will be returned as an
+        empty string.
+    """
+    # Initialise
+    cellranger_path = ''
+    package_name = 'cellranger'
+    package_version = ''
+    # Locate the core script
+    if not path:
+        cellranger_path = find_program('cellranger')
+    else:
+        cellranger_path = os.path.abspath(path)
+    # Identify the version
+    if os.path.basename(cellranger_path) == 'cellranger':
+        # Run the program to get the version
+        version_cmd = Command(cellranger_path,'--version')
+        output = version_cmd.subprocess_check_output()[1]
+        for line in output.split('\n'):
+            if line.startswith('cellranger'):
+                # Extract version from line of the form
+                # cellranger  (2.0.1)
+                try:
+                    package_version = line.split('(')[-1].strip(')')
+                except Exception as ex:
+                    logging.warning("Unable to get version from '%s': %s" %
+                                    (line,ex))
+    else:
+        # No package supplied or located
+        logging.warning("Unable to identify cellranger package "
+                        "from '%s'" % cellranger_path)
+    # Return what we found
+    return (cellranger_path,package_name,package_version)
 
 def run_cellranger_mkfastq(sample_sheet,
                            primary_data_dir,
