@@ -47,7 +47,17 @@ logger = logging.getLogger(__name__)
 
 def flow_cell_id(run_name):
     """
-    Extract the flow cell ID from the run name
+    Extract the flow cell ID from a run name
+
+    For example for run name "170426_K00311_0033_AHJCY7BBXX"
+    the extracted flow cell ID will be "HJCY7BBXX".
+
+    Arguments:
+      run_name (str): path to the run name to extract
+        flow cell ID from
+
+    Returns:
+      String: the extracted flow cell ID.
     """
     flow_cell_id = os.path.basename(run_name).split("_")[-1]
     return flow_cell_id[1:]

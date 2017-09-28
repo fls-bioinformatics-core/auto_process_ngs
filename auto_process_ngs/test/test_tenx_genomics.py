@@ -8,6 +8,17 @@ import os
 import shutil
 from auto_process_ngs.tenx_genomics_utils import *
 
+class TestFlowCellId(unittest.TestCase):
+    """
+    Tests for the 'flow_cell_id' function
+    """
+    def test_flow_cell_id(self):
+        """
+        flow_cell_id: returns correct ID
+        """
+        self.assertEqual(flow_cell_id("170426_K00311_0033_AHJCY7BBXX"),
+                         "HJCY7BBXX")
+
 class TestHasChromiumIndices(unittest.TestCase):
     """
     Tests for the 'has_chromium_indices' function
