@@ -11,6 +11,7 @@ Utility classes and functions for processing the outputs from 10xGenomics's
 Chromium SC 3'v2 system:
 
 - flow_cell_id
+- has_chromium_indices
 - cellranger_info
 - make_qc_summary_html
 - run_cellranger_mkfastq
@@ -23,7 +24,9 @@ Chromium SC 3'v2 system:
 #######################################################################
 
 import os
+import re
 import json
+from bcftbx.IlluminaData import SampleSheet
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from .applications import Command
@@ -48,6 +51,35 @@ def flow_cell_id(run_name):
     """
     flow_cell_id = os.path.basename(run_name).split("_")[-1]
     return flow_cell_id[1:]
+
+def has_chromium_indices(sample_sheet):
+    """
+    Check if a sample sheet contains Chromium indices
+
+    The Chromium indices can be obtained from:
+
+    https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm
+
+    The Chromium SC 3'v2 indices are of the form:
+
+    SI-GA-[A-H][1-12]
+
+    e.g. 'SI-GA-B11'
+
+    Arguments:
+      sample_sheet (str): path to the sample sheet CSV
+        file to check
+
+    Returns:
+      Boolean: True if the sample sheet contains at least
+        one Chromium index, False if not.
+    """
+    index_pattern = re.compile(r"SI-GA-[A-H](1[1-2]|[1-9])$")
+    s = SampleSheet(sample_sheet)
+    for line in s:
+        if index_pattern.match(line['index']):
+            return True
+    return False
 
 def make_qc_summary_html(json_file,html_file):
     """
