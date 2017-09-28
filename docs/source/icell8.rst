@@ -112,8 +112,7 @@ directories:
  ========================== ===============================================
  **Directory**              **Description and contents**
  -------------------------- -----------------------------------------------
- ``fastqs``                 Initial FASTQs from ``bcl2fastq``, plus
-                            standard QC outputs.
+ ``fastqs``                 Initial FASTQs from ``bcl2fastq``
  ``fastqs.barcodes``        FASTQs with reads sorted by ICell8 barcode,
                             plus QC outputs.
                             The FASTQs will be named according to the
@@ -123,6 +122,9 @@ directories:
                             plus QC outputs.
                             The FASTQs will be named according to the
                             convention ``SAMPLE.r[1|2].fastq.gz``.
+ ``qc``                     QC for the initial FASTQs
+ ``qc.barcodes``            QC for the FASTQs in ``fastqs.barcodes``
+ ``qc.samples``             QC for the FASTQs in ``fastqs.samples``
  ``stats``                  Summary of the read and UMI counts after each
                             processing stage, in TSV (``icell8_stats.tsv``)
                             and XLSX format (``icell8_stats.xlsx``)
