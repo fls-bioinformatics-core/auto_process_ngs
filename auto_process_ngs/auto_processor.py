@@ -1268,6 +1268,7 @@ class AutoProcess:
                         output_dir=self.params.unaligned_dir,
                         lanes=(None if lanes is None
                                else ','.join([str(l) for l in lanes])),
+                        bases_mask=bases_mask,
                         cellranger_jobmode=cellranger_jobmode,
                         cellranger_maxjobs=cellranger_maxjobs,
                         cellranger_mempercore=cellranger_mempercore,
