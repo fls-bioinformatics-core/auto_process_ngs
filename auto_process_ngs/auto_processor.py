@@ -1160,22 +1160,6 @@ class AutoProcess:
                                 ms) (10xGenomics Chromium data only)
 
         """
-        # Tweak the verification settings as appropriate for
-        # the specified protocol
-        if protocol == '10x_chromium':
-            # Force inclusion of sample-name subdirectories
-            # when verifying Chromium data
-            include_sample_dir = True
-        else:
-            include_sample_dir = False
-        # Check for pre-existing Fastq outputs
-        if self.verify_bcl_to_fastq(
-                unaligned_dir=unaligned_dir,
-                lanes=lanes,
-                include_sample_dir=include_sample_dir):
-            print "Expected Fastq outputs already present"
-            skip_rsync = True
-            skip_fastq_generation = True
         # Check primary data
         primary_data_dir = os.path.join(
             self.params.primary_data_dir,
@@ -1207,6 +1191,24 @@ class AutoProcess:
                 if l not in samplesheet_lanes:
                     raise Exception("Requested lane '%d' not present "
                                     "in samplesheet" % l)
+        # Adjust verification settings for 10xGenomics Chromium
+        # data if necessary
+        verify_include_sample_dir = False
+        if protocol == '10x_chromium':
+            if tenx_genomics_utils.has_chromium_indices(
+                    self.params.sample_sheet):
+                # Force inclusion of sample-name subdirectories
+                # when verifying Chromium data
+                print "Sample sheet includes Chromium SC indices"
+                verify_include_sample_dir = True
+        # Check for pre-existing Fastq outputs
+        if self.verify_fastq_generation(
+                unaligned_dir=unaligned_dir,
+                lanes=lanes,
+                include_sample_dir=verify_include_sample_dir):
+            print "Expected Fastq outputs already present"
+            skip_rsync = True
+            skip_fastq_generation = True
         # Log dir
         log_dir = 'make_fastqs'
         if protocol:
@@ -1284,9 +1286,9 @@ class AutoProcess:
             if exit_code != 0:
                 raise Exception("Fastq generation finished with error: "
                                 "exit code %d" % exit_code)
-            if not self.verify_bcl_to_fastq(
+            if not self.verify_fastq_generation(
                     lanes=lanes,
-                    include_sample_dir=include_sample_dir):
+                    include_sample_dir=verify_include_sample_dir):
                 # Check failed
                 logging.error("Failed to verify output Fastqs against "
                               "sample sheet")
@@ -1942,9 +1944,9 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
-    def verify_bcl_to_fastq(self,unaligned_dir=None,lanes=None,
-                            include_sample_dir=False):
-        """Check that bcl to fastq outputs match sample sheet predictions
+    def verify_fastq_generation(self,unaligned_dir=None,lanes=None,
+                                include_sample_dir=False):
+        """Check that generated Fastqs match sample sheet predictions
 
         Arguments:
           unaligned_dir (str): explicitly specify the bcl2fastq output
