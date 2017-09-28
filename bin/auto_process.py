@@ -217,8 +217,8 @@ def add_make_fastqs_command(cmdparser):
                                 dest='protocol',default='standard',
                                 help="specify Fastq generation protocol "
                                 "depending on the data being processed. "
-                                "Must be one of 'standard', '10x_chromium' "
-                                "(default: 'standard')")
+                                "Must be one of 'standard', "
+                                "'10x_chromium_sc' (default: 'standard')")
     fastq_generation.add_option('--sample-sheet',action="store",
                                 dest="sample_sheet",default=None,
                                 help="use an alternative sample sheet to "
@@ -391,9 +391,9 @@ def add_make_fastqs_command(cmdparser):
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
-    # Cellranger (10xgenomics Chromium) options
+    # Cellranger (10xgenomics Chromium SC 3') options
     cellranger = optparse.OptionGroup(p,'Cellranger options (10xGenomics '
-                                      'Chromium data only)')
+                                      'Chromium SC 3\' data only)')
     cellranger.add_option("--jobmode",
                           dest="job_mode",default="sge",
                           help="job mode to run cellranger in (default: "

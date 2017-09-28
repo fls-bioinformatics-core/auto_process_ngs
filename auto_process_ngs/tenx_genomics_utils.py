@@ -11,7 +11,7 @@ Utility classes and functions for processing the outputs from 10xGenomics's
 Chromium SC 3'v2 system:
 
 - flow_cell_id
-- has_chromium_indices
+- has_chromium_sc_indices
 - cellranger_info
 - make_qc_summary_html
 - run_cellranger_mkfastq
@@ -62,11 +62,11 @@ def flow_cell_id(run_name):
     flow_cell_id = os.path.basename(run_name).split("_")[-1]
     return flow_cell_id[1:]
 
-def has_chromium_indices(sample_sheet):
+def has_chromium_sc_indices(sample_sheet):
     """
-    Check if a sample sheet contains Chromium indices
+    Check if a sample sheet contains Chromium SC indices
 
-    The Chromium indices can be obtained from:
+    The Chromium SC indices can be obtained from:
 
     https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm
 
@@ -82,7 +82,7 @@ def has_chromium_indices(sample_sheet):
 
     Returns:
       Boolean: True if the sample sheet contains at least
-        one Chromium index, False if not.
+        one Chromium SC index, False if not.
     """
     index_pattern = re.compile(r"SI-GA-[A-H](1[1-2]|[1-9])$")
     s = SampleSheet(sample_sheet)

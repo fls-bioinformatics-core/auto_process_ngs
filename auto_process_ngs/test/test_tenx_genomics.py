@@ -19,9 +19,9 @@ class TestFlowCellId(unittest.TestCase):
         self.assertEqual(flow_cell_id("170426_K00311_0033_AHJCY7BBXX"),
                          "HJCY7BBXX")
 
-class TestHasChromiumIndices(unittest.TestCase):
+class TestHasChromiumSCIndices(unittest.TestCase):
     """
-    Tests for the 'has_chromium_indices' function
+    Tests for the 'has_chromium_sc_indices' function
     """
     def setUp(self):
         # Sample sheet contents
@@ -80,7 +80,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 4,smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
 """
         # Make temporary working dir
-        self.wd = tempfile.mkdtemp(suffix="TestHasChromiumIndices")
+        self.wd = tempfile.mkdtemp(suffix="TestHasChromiumSCIndices")
     def tearDown(self):
         # Remove temp dir
         shutil.rmtree(self.wd)
@@ -97,21 +97,21 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_chromium_indices)
-        self.assertTrue(has_chromium_indices(s))
+        self.assertTrue(has_chromium_sc_indices(s))
     def test_sample_sheet_no_chromium_indices(self):
         """
-        has_chromium_indices: sample sheet with no Chromium indices
+        has_chromium_indices: sample sheet with no Chromium SC indices
         """
         s = self._make_sample_sheet(
             self.sample_sheet_standard_indices)
-        self.assertFalse(has_chromium_indices(s))
+        self.assertFalse(has_chromium_sc_indices(s))
     def test_sample_sheet_some_chromium_sc_3_v2_indices(self):
         """
         has_chromium_indices: sample sheet with some Chromium SC 3'v2 indices
         """
         s = self._make_sample_sheet(
             self.sample_sheet_mixed_indices)
-        self.assertTrue(has_chromium_indices(s))
+        self.assertTrue(has_chromium_sc_indices(s))
 
 class TestCellrangerInfo(unittest.TestCase):
     """

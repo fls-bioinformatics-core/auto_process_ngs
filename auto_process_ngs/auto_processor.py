@@ -1151,13 +1151,13 @@ class AutoProcess:
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
           cellranger_jobmode  : (optional) job mode to run cellranger in
-                                (10xGenomics Chromium data only)
+                                (10xGenomics Chromium SC data only)
           cellranger_mempercore: (optional) memory assumed per core (in Gbs)
-                                (10xGenomics Chromium data only)
+                                (10xGenomics Chromium SC data only)
           cellranger_maxjobs  : (optional) maxiumum number of concurrent jobs
-                                to run (10xGenomics Chromium data only)
+                                to run (10xGenomics Chromium SC data only)
           cellranger_jobinterval: (optional) how often jobs are submitted (in
-                                ms) (10xGenomics Chromium data only)
+                                ms) (10xGenomics Chromium SC data only)
 
         """
         # Check primary data
@@ -1191,14 +1191,14 @@ class AutoProcess:
                 if l not in samplesheet_lanes:
                     raise Exception("Requested lane '%d' not present "
                                     "in samplesheet" % l)
-        # Adjust verification settings for 10xGenomics Chromium
+        # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
         verify_include_sample_dir = False
-        if protocol == '10x_chromium':
+        if protocol == '10x_chromium_sc':
             if tenx_genomics_utils.has_chromium_indices(
                     self.params.sample_sheet):
                 # Force inclusion of sample-name subdirectories
-                # when verifying Chromium data
+                # when verifying Chromium SC data
                 print "Sample sheet includes Chromium SC indices"
                 verify_include_sample_dir = True
         # Check for pre-existing Fastq outputs
@@ -1244,8 +1244,8 @@ class AutoProcess:
                         runner=runner)
                 except Exception,ex:
                     raise Exception("Bcl2fastq stage failed: '%s'" % ex)
-            elif protocol == '10x_chromium':
-                # 10xGenomics Chromium
+            elif protocol == '10x_chromium_sc':
+                # 10xGenomics Chromium SC
                 try:
                     # Check we have bcl2fastq
                     bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
