@@ -1176,6 +1176,37 @@ class AutoProcess:
             print "Expected Fastq outputs already present"
             skip_rsync = True
             skip_fastq_generation = True
+        # Check primary data
+        primary_data_dir = os.path.join(
+            self.params.primary_data_dir,
+            os.path.basename(self.params.data_dir))
+        if not os.path.isdir(primary_data_dir):
+            raise Exception("Missing primary data directory: %s" %
+                            primary_data_dir)
+        # Unaligned dir
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        elif self.params['unaligned_dir'] is None:
+            self.params['unaligned_dir'] = 'bcl2fastq'
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        if not os.path.isabs(sample_sheet):
+            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
+        if not os.path.isfile(sample_sheet):
+            raise Exception("Missing sample sheet '%s'" % sample_sheet)
+        self.params['sample_sheet'] = sample_sheet
+        # Check requested lanes are actually present
+        if lanes is not None:
+            s = IlluminaData.SampleSheet(self.params.sample_sheet)
+            if not s.has_lanes:
+                raise Exception("Requested lanes but samplesheet "
+                                "doesn't contain any")
+            samplesheet_lanes = list(set([l['Lane'] for l in s]))
+            for l in lanes:
+                if l not in samplesheet_lanes:
+                    raise Exception("Requested lane '%d' not present "
+                                    "in samplesheet" % l)
         # Log dir
         log_dir = 'make_fastqs'
         if protocol:
@@ -1196,9 +1227,10 @@ class AutoProcess:
                 # Standard protocol
                 try:
                     exit_code = self.bcl_to_fastq(
+                        unaligned_dir=self.params.unaligned_dir,
+                        sample_sheet=self.params.sample_sheet,
+                        primary_data_dir=primary_data_dir,
                         require_bcl2fastq=require_bcl2fastq_version,
-                        unaligned_dir=unaligned_dir,
-                        sample_sheet=sample_sheet,
                         bases_mask=bases_mask,
                         ignore_missing_bcl=ignore_missing_bcl,
                         ignore_missing_stats=ignore_missing_stats,
@@ -1227,17 +1259,10 @@ class AutoProcess:
                         tenx_genomics_utils.cellranger_info)
                     if not cellranger:
                         raise Exception("No cellranger package found")
-                    if unaligned_dir is not None:
-                        self.params['unaligned_dir'] = unaligned_dir
-                    elif self.params['unaligned_dir'] is None:
-                        self.params['unaligned_dir'] = 'bcl2fastq'
+                    # Run cellranger mkfastq
                     exit_code = tenx_genomics_utils.run_cellranger_mkfastq(
-                        sample_sheet=(self.params.sample_sheet
-                                      if sample_sheet is None
-                                      else sample_sheet),
-                        primary_data_dir=os.path.join(
-                            self.params.primary_data_dir,
-                            os.path.basename(self.params.data_dir)),
+                        sample_sheet=self.params.sample_sheet,
+                        primary_data_dir=primary_data_dir,
                         output_dir=self.params.unaligned_dir,
                         lanes=(None if lanes is None
                                else ','.join([str(l) for l in lanes])),
@@ -1259,15 +1284,25 @@ class AutoProcess:
             if not self.verify_bcl_to_fastq(
                     lanes=lanes,
                     include_sample_dir=include_sample_dir):
-                # Check failed - get a list of missing FASTQs
+                # Check failed
                 logging.error("Failed to verify output Fastqs against "
                               "sample sheet")
+                # Try to load the data from unaligned dir
+                try:
+                    illumina_data = IlluminaData.IlluminaData(
+                        self.analysis_dir,
+                        unaligned_dir=self.params.unaligned_dir)
+                except IlluminaData.IlluminaDataError as ex:
+                    raise Exception("Unable to load data from %s: %s"
+                                    % (unaligned_dir,ex))
+                # Make a temporary sample sheet to check against
                 tmp_sample_sheet = os.path.join(self.tmp_dir,
                                                 "SampleSheet.missing.%s.csv" %
                                                 time.strftime("%Y%m%d%H%M%S"))
                 bcl2fastq_utils.make_custom_sample_sheet(sample_sheet,
                                                          tmp_sample_sheet,
                                                          lanes=lanes)
+                # Generate a list of missing Fastqs
                 missing_fastqs = IlluminaData.list_missing_fastqs(
                     illumina_data,
                     tmp_sample_sheet,
@@ -1293,7 +1328,7 @@ class AutoProcess:
                     logging.warning("Making 'empty' Fastqs as placeholders")
                     for fq in missing_fastqs:
                         fastq = os.path.join(self.analysis_dir,
-                                             bcl2fastq_dir,fq)
+                                             self.unaligned_dir,fq)
                         print "-- %s" % fastq
                     with gzip.GzipFile(filename=fastq,mode='wb') as fp:
                         fp.write('')
@@ -1368,8 +1403,8 @@ class AutoProcess:
                           "exit code returned)")
         return exit_code
 
-    def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
-                     sample_sheet=None,bases_mask=None,
+    def bcl_to_fastq(self,unaligned_dir,sample_sheet,primary_data_dir,
+                     require_bcl2fastq=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
@@ -1381,14 +1416,14 @@ class AutoProcess:
         wraps the 'configureBclToFastq' and 'make' steps).
 
         Arguments:
+          unaligned_dir: output directory for bcl-to-fastq conversion
+          sample_sheet: input sample sheet file
+          primary_data_dir: path to the top-level directory holding
+            the sequencing data
           require_bcl2fastq: if set then should be a string of the form
             '1.8.4' or '>2.0' explicitly specifying the version of
             bcl2fastq to use. (Default to use specifications from the
             settings)
-          unaligned_dir: if set then use this as the output directory for
-            bcl-to-fastq conversion. Default is 'bcl2fastq' (unless an
-            alternative is already specified in the settings)
-          sample_sheet: if set then use this as the input sample sheet file
           bases_mask: if set then use this as an alternative bases mask setting
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
@@ -1408,15 +1443,6 @@ class AutoProcess:
         """
         # Directories
         analysis_dir = self.params.analysis_dir
-        if unaligned_dir is not None:
-            self.params['unaligned_dir'] = unaligned_dir
-        elif self.params['unaligned_dir'] is None:
-            self.params['unaligned_dir'] = 'bcl2fastq'
-        # Examine primary data
-        primary_data = os.path.join(self.params.primary_data_dir,
-                                    os.path.basename(self.params.data_dir))
-        if not os.path.isdir(primary_data):
-            raise Exception("Missing primary data directory: %s" % primary_data)
         # Bases mask
         if bases_mask is None:
             bases_mask = self.params.bases_mask
@@ -1460,15 +1486,6 @@ class AutoProcess:
             raise Exception("No appropriate bcl2fastq software located")
         # Store info on bcl2fastq package
         self.metadata['bcl2fastq_software'] = bcl2fastq_info
-        # Sample sheet
-        if sample_sheet is None:
-            sample_sheet = self.params.sample_sheet
-        if not os.path.isabs(sample_sheet):
-            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
-        if not os.path.isfile(sample_sheet):
-            raise Exception("Missing sample sheet '%s'" % sample_sheet)
-        self.params['sample_sheet'] = sample_sheet
-        sample_sheet = self.params.sample_sheet
         # Generate temporary sample sheet with required format
         fmt = bcl2fastq_utils.get_required_samplesheet_format(bcl2fastq_info[2])
         tmp_sample_sheet = os.path.join(self.tmp_dir,
@@ -1484,7 +1501,7 @@ class AutoProcess:
         # Create bcl2fastq directory
         bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
         # Get info on the run
-        illumina_run = IlluminaData.IlluminaRun(primary_data)
+        illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
         # Determine initial number of mismatches
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         # Check for barcode collisions
@@ -1518,7 +1535,7 @@ class AutoProcess:
         print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
         print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
-        print "Primary data dir      : %s" % primary_data
+        print "Primary data dir      : %s" % primary_data_dir
         print "%s" % illumina_run.run_dir
         print "Platform              : %s" % illumina_run.platform
         print "Bcl format            : %s" % illumina_run.bcl_extension
@@ -1561,7 +1578,7 @@ class AutoProcess:
                                mask_short_adapter_reads)
         bcl2fastq.add_args('--bcl2fastq_path',
                            bcl2fastq_exe,
-                           primary_data,
+                           primary_data_dir,
                            bcl2fastq_dir,
                            tmp_sample_sheet)
         print "Running %s" % bcl2fastq
@@ -1964,7 +1981,7 @@ class AutoProcess:
             illumina_data = IlluminaData.IlluminaData(
                 self.analysis_dir,
                 unaligned_dir=unaligned_dir)
-        except IlluminaData.IlluminaDataError, ex:
+        except IlluminaData.IlluminaDataError as ex:
             # Failed to initialise
             logging.warning("Failed to get information from %s: %s" %
                             (bcl_to_fastq_dir,ex))
