@@ -1195,7 +1195,7 @@ class AutoProcess:
         # data if necessary
         verify_include_sample_dir = False
         if protocol == '10x_chromium_sc':
-            if tenx_genomics_utils.has_chromium_indices(
+            if tenx_genomics_utils.has_chromium_sc_indices(
                     self.params.sample_sheet):
                 # Force inclusion of sample-name subdirectories
                 # when verifying Chromium SC data
