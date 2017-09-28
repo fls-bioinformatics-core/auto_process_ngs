@@ -1453,9 +1453,9 @@ class AutoProcess:
             self.params['bases_mask'] = bases_mask
         # Check for basic information needed to do bcl2fastq conversion
         if self.params.data_dir is None:
-            raise Exception, "No source data directory"
+            raise Exception("No source data directory")
         if bases_mask is None:
-            raise Exception, "No bases mask"
+            raise Exception("No bases mask")
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
