@@ -10,7 +10,12 @@ tenx_genomics_utils.py
 Utility classes and functions for processing the outputs from 10xGenomics's
 Chromium SC 3'v2 system:
 
+- flow_cell_id
+- cellranger_info
 - make_qc_summary_html
+- run_cellranger_mkfastq
+- add_cellranger_args
+
 """
 
 #######################################################################
