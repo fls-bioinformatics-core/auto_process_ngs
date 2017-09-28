@@ -38,29 +38,33 @@ There are currently two possible scenarios:
 The Fastq protocols for these two scenarios are slightly different and
 are described in the following sections.
 
+.. note::
+
+   The output directory structure from ``cellranger mkfastq`` doesn't
+   conform precisely to that from ``bcl2fastq2`` as outlined in the
+   manual for the latter.
+
 Sequencing run only contains Chromium samples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In this case the initial step after setp is to fetch the primary data
-for the run, by running the command::
+Fastq generation can be performed by running the command::
 
-    auto_process.py make_fastqs --only-fetch-primary-data
+    auto_process.py make_fastqs --protocol=10x_chromium_sc
 
-Once the data has been retrieved, the Fastq generation can be performed
-using ``process_10xgenomics.py`` to run ``cellranger mkfastq``, e.g.::
+which fetches the data and runs ``cellranger mkfastq``.
 
-    process_10xgenomics.py mkfastq \
-        -s custom_SampleSheet.10xgenomics.csv \
-        -r primary_data/170426_K00311_0033_AHJCY7BBXX \
-        -o bcl2fastq
+.. info::
+
+   This replaces the ``process_10xgenomics.py mkfastq`` command::
+
+       process_10xgenomics.py mkfastq \
+           -s custom_SampleSheet.10xgenomics.csv \
+           -r primary_data/170426_K00311_0033_AHJCY7BBXX \
+           -o bcl2fastq
 
 This will generate the Fastqs in the specified output directory (e.g.
 ``bcl2fastq``) along with an HTML report derived from the ``cellranger``
-JSON QC summary file.
-
-Finally, to generate statistics for the Fastqs run::
-
-    auto_process.py update_fastq_statistics
+JSON QC summary file, statistics for the Fastqs.
 
 Sequencing run contains both Chromium and non-Chromium samples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -75,15 +79,16 @@ It is recommended to generate Fastqs for the lanes containing
 ``auto_process.py make_fastqs --lanes=...`` command.
 
 When this has completed, the Fastqs can be generated for the lanes
-with the Chromium datasets using the ``process_10xgenomics.py``
-utility and specifying the lanes which contain these data via the
-``-l/--lanes`` option. E.g.::
+with the Chromium datasets by rerunning the ``make_fastqs`` command
+specifying the ``10x_chromium_sc`` protocol along with the lanes
+which contain these data, e.g.::
 
-    process_10xgenomics.py mkfastq \
-        -s custom_SampleSheet.10xgenomics.csv \
-        -r primary_data/170426_K00311_0033_AHJCY7BBXX \
-	-l 5,6 \
-        -o bcl2fastq.chromium
+    auto_process.py make_fastqs \
+        --protocol=10x_chromium_sc \
+        --lanes=5,6 \
+	--output-dir=bcl2fastq.chromium \
+        --skip-rsync \
+        --no-stats
 
 This will generate the Fastqs in the specified output directory (e.g.
 ``bcl2fastq.chromium``) along with an HTML report derived from the
