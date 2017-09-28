@@ -205,6 +205,7 @@ def run_cellranger_mkfastq(sample_sheet,
                            primary_data_dir,
                            output_dir,
                            lanes=None,
+                           bases_mask=None,
                            cellranger_jobmode=None,
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
@@ -227,6 +228,9 @@ def run_cellranger_mkfastq(sample_sheet,
       lanes (str): optional, specify the subset of lanes
         to process (default is to process all lanes
         in the run)
+      bases_mask (str): optional, specify an alternative
+        bases mask setting (default is to let cellranger
+        determine the bases mask automatically)
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: None)
       cellranger_maxjobs (int): specify the maximum
@@ -253,6 +257,8 @@ def run_cellranger_mkfastq(sample_sheet,
                   "--output-dir",output_dir)
     if lanes is not None:
         cmd.add_args("--lanes=%s" % lanes)
+    if bases_mask is not None:
+        cmd.add_args("--use-bases-mask=%s" % bases_mask)
     add_cellranger_args(cmd,
                         jobmode=cellranger_jobmode,
                         mempercore=cellranger_mempercore,

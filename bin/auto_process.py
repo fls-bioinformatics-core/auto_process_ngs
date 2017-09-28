@@ -237,6 +237,12 @@ def add_make_fastqs_command(cmdparser):
                                 help="explicitly set the output "
                                 "(sub)directory for bcl-to-fastq "
                                 "conversion (overrides default)")
+    fastq_generation.add_option('--use-bases-mask',action="store",
+                                dest="bases_mask",default=None,
+                                help="explicitly set the bases-mask string "
+                                "to indicate how each cycle should be used "
+                                "in the bcl-to-fastq conversion (overrides "
+                                "default)")
     fastq_generation.add_option('--skip-fastq-generation',
                                 action='store_true',
                                 dest='skip_fastq_generation',default=False,
@@ -244,11 +250,6 @@ def add_make_fastqs_command(cmdparser):
     p.add_option_group(fastq_generation)
     # Options to control bcl2fastq
     bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
-    bcl_to_fastq.add_option('--use-bases-mask',action="store",
-                            dest="bases_mask",default=None,
-                            help="explicitly set the bases-mask string to indicate how each "
-                            "cycle should be used in the bcl-to-fastq conversion (overrides "
-                            "default)")
     bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
                             dest='ignore_missing_bcl',default=False,
                             help="use the --ignore-missing-bcl option for bcl2fastq (treat "
