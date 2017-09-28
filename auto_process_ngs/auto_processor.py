@@ -1245,8 +1245,9 @@ class AutoProcess:
             elif protocol == '10x_chromium':
                 # 10xGenomics Chromium
                 try:
+                    # Check we have bcl2fastq
                     bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
-                        '>=2')
+                        '>=2.17')
                     if bcl2fastq:
                         bcl2fastq_exe = bcl2fastq[0]
                         bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(
@@ -1254,6 +1255,7 @@ class AutoProcess:
                     else:
                         raise Exception("No appropriate bcl2fastq software "
                                         "located")
+                    # Check we have cellranger
                     cellranger = utils.find_executables(
                         ('cellranger',),
                         tenx_genomics_utils.cellranger_info)
