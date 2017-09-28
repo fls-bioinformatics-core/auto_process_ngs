@@ -930,34 +930,38 @@ if __name__ == "__main__":
             skip_fastq_generation = (options.skip_fastq_generation or
                                      options.skip_bcl2fastq)
             # Do the make_fastqs step
-            d.make_fastqs(
-                protocol=protocol,
-                skip_rsync=options.skip_rsync,
-                nprocessors=options.nprocessors,
-                runner=options.runner,
-                remove_primary_data=options.remove_primary_data,
-                ignore_missing_bcl=options.ignore_missing_bcl,
-                ignore_missing_stats=options.ignore_missing_stats,
-                generate_stats=(not options.no_stats),
-                require_bcl2fastq_version=options.bcl2fastq_version,
-                unaligned_dir=options.unaligned_dir,
-                sample_sheet=options.sample_sheet,
-                bases_mask=options.bases_mask,
-                lanes=lanes,
-                no_lane_splitting=no_lane_splitting,
-                minimum_trimmed_read_length=options.minimum_trimmed_read_length,
-                mask_short_adapter_reads=options.mask_short_adapter_reads,
-                stats_file=options.stats_file,
-                per_lane_stats_file=options.per_lane_stats_file,
-                report_barcodes=options.report_barcodes,
-                barcodes_file=options.barcodes_file,
-                skip_fastq_generation=skip_fastq_generation,
-                only_fetch_primary_data=options.only_fetch_primary_data,
-                create_empty_fastqs=create_empty_fastqs,
-                cellranger_jobmode=options.job_mode,
-                cellranger_mempercore=options.mem_per_core,
-                cellranger_maxjobs=options.max_jobs,
-                cellranger_jobinterval=options.job_interval)
+            try:
+                d.make_fastqs(
+                    protocol=protocol,
+                    skip_rsync=options.skip_rsync,
+                    nprocessors=options.nprocessors,
+                    runner=options.runner,
+                    remove_primary_data=options.remove_primary_data,
+                    ignore_missing_bcl=options.ignore_missing_bcl,
+                    ignore_missing_stats=options.ignore_missing_stats,
+                    generate_stats=(not options.no_stats),
+                    require_bcl2fastq_version=options.bcl2fastq_version,
+                    unaligned_dir=options.unaligned_dir,
+                    sample_sheet=options.sample_sheet,
+                    bases_mask=options.bases_mask,
+                    lanes=lanes,
+                    no_lane_splitting=no_lane_splitting,
+                    minimum_trimmed_read_length=options.minimum_trimmed_read_length,
+                    mask_short_adapter_reads=options.mask_short_adapter_reads,
+                    stats_file=options.stats_file,
+                    per_lane_stats_file=options.per_lane_stats_file,
+                    report_barcodes=options.report_barcodes,
+                    barcodes_file=options.barcodes_file,
+                    skip_fastq_generation=skip_fastq_generation,
+                    only_fetch_primary_data=options.only_fetch_primary_data,
+                    create_empty_fastqs=create_empty_fastqs,
+                    cellranger_jobmode=options.job_mode,
+                    cellranger_mempercore=options.mem_per_core,
+                    cellranger_maxjobs=options.max_jobs,
+                    cellranger_jobinterval=options.job_interval)
+            except Exception as ex:
+                logging.fatal("make_fastqs: %s" % ex)
+                sys.exit(1)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
                                output_dir=options.output_dir,
