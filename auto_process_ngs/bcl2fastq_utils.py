@@ -212,13 +212,13 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     sample_sheet.fix_duplicated_names()
     # Select subset of lanes if requested
     if lanes is not None:
-        print "Updating to include only specified lanes: %s" % \
-            ','.join([str(l) for l in lanes])
+        logging.debug("Updating to include only specified lanes: %s" %
+                      ','.join([str(l) for l in lanes]))
         i = 0
         while i < len(sample_sheet):
             line = sample_sheet[i]
             if line['Lane'] in lanes:
-                print "Keeping %s" % line
+                logging.debug("Keeping %s" % line)
                 i += 1
             else:
                 del(sample_sheet[i])
