@@ -36,6 +36,7 @@ import auto_process_ngs.applications as applications
 import auto_process_ngs.utils as utils
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
+from pkg_resources import parse_version
 
 #######################################################################
 # Functions
