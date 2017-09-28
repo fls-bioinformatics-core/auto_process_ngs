@@ -13,6 +13,7 @@ Contents
 
    setup
    standard_protocol
+   usage
    commands
    barcode_analysis
    analysis_dirs
