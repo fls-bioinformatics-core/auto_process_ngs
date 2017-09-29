@@ -1510,7 +1510,7 @@ class AutoProcess:
         # Determine initial number of mismatches
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         # Check for barcode collisions
-        collisions = bcl2fastq_utils.check_barcode_collisions(sample_sheet,
+        collisions = bcl2fastq_utils.check_barcode_collisions(tmp_sample_sheet,
                                                               nmismatches)
         if collisions:
             # Report problem barcodes
@@ -1524,7 +1524,7 @@ class AutoProcess:
             while nmismatches > 0 and collisions:
                 nmismatches -= 1
                 collisions = bcl2fastq_utils.check_barcode_collisions(
-                    sample_sheet,
+                    tmp_sample_sheet,
                     nmismatches)
                 if not collisions:
                     print "No collisions using %d mismatches" % nmismatches
