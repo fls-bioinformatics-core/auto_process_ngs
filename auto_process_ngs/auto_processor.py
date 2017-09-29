@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-16 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17 Peter Briggs
 #
 #########################################################################
 #
@@ -1541,7 +1541,6 @@ class AutoProcess:
         print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
         print "Primary data dir      : %s" % primary_data_dir
-        print "%s" % illumina_run.run_dir
         print "Platform              : %s" % illumina_run.platform
         print "Bcl format            : %s" % illumina_run.bcl_extension
         print "Source sample sheet   : %s" % sample_sheet
