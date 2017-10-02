@@ -1160,6 +1160,8 @@ class AutoProcess:
                                 ms) (10xGenomics Chromium SC data only)
 
         """
+        # Report protocol
+        print "Protocol              : %s" % protocol
         # Check primary data
         primary_data_dir = os.path.join(
             self.params.primary_data_dir,
@@ -1167,11 +1169,16 @@ class AutoProcess:
         if not os.path.isdir(primary_data_dir):
             raise Exception("Missing primary data directory: %s" %
                             primary_data_dir)
+        illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
+        print "Primary data dir      : %s" % primary_data_dir
+        print "Platform              : %s" % illumina_run.platform
+        print "Bcl format            : %s" % illumina_run.bcl_extension
         # Unaligned dir
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
         elif self.params['unaligned_dir'] is None:
             self.params['unaligned_dir'] = 'bcl2fastq'
+        print "Output dir            : %s" % self.params.unaligned_dir
         # Sample sheet
         if sample_sheet is None:
             sample_sheet = self.params.sample_sheet
@@ -1220,7 +1227,7 @@ class AutoProcess:
                 verify_include_sample_dir = True
         # Check for pre-existing Fastq outputs
         if self.verify_fastq_generation(
-                unaligned_dir=unaligned_dir,
+                unaligned_dir=self.params.unaligned_dir,
                 lanes=lanes,
                 include_sample_dir=verify_include_sample_dir):
             print "Expected Fastq outputs already present"
@@ -1344,7 +1351,7 @@ class AutoProcess:
                     logging.warning("Making 'empty' Fastqs as placeholders")
                     for fq in missing_fastqs:
                         fastq = os.path.join(self.analysis_dir,
-                                             self.unaligned_dir,fq)
+                                             self.params.unaligned_dir,fq)
                         print "-- %s" % fastq
                     with gzip.GzipFile(filename=fastq,mode='wb') as fp:
                         fp.write('')
@@ -1354,7 +1361,7 @@ class AutoProcess:
         if generate_stats:
             self.generate_stats(stats_file=stats_file,
                                 per_lane_stats_file=per_lane_stats_file,
-                                unaligned_dir=unaligned_dir,
+                                unaligned_dir=self.params.unaligned_dir,
                                 nprocessors=nprocessors,
                                 runner=runner)
         # Count and report barcode sequences
@@ -1509,9 +1516,7 @@ class AutoProcess:
         # Put a copy in the log directory
         shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
-        bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
-        # Get info on the run
-        illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
+        bcl2fastq_dir = self.add_directory(unaligned_dir)
         # Determine initial number of mismatches
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         # Check for barcode collisions
@@ -1545,10 +1550,7 @@ class AutoProcess:
         print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
         print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
-        print "Primary data dir      : %s" % primary_data_dir
-        print "Platform              : %s" % illumina_run.platform
-        print "Bcl format            : %s" % illumina_run.bcl_extension
-        print "Source sample sheet   : %s" % sample_sheet
+        print "Sample sheet          : %s" % os.path.basename(tmp_sample_sheet)
         print "Bases mask            : %s" % bases_mask
         print "Nmismatches           : %d" % nmismatches
         print "Nprocessors           : %s" % nprocessors
@@ -1557,7 +1559,6 @@ class AutoProcess:
         print "No lane splitting     : %s" % no_lane_splitting
         print "Min trimmed read len  : %s" % minimum_trimmed_read_length
         print "Mask short adptr reads: %s" % mask_short_adapter_reads
-        print "Output dir            : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
             runner = fetch_runner(runner)
