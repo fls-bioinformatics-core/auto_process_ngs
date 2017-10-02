@@ -896,11 +896,6 @@ if __name__ == "__main__":
         # Run the specified stage
         d = AutoProcess(analysis_dir,allow_save_params=allow_save)
         if cmd == 'make_fastqs':
-            # Deal with --protocol
-            if options.protocol == 'standard':
-                protocol = None
-            else:
-                protocol = options.protocol
             # Deal with --no-lane-splitting
             if options.no_lane_splitting and options.use_lane_splitting:
                 p.error("--no-lane-splitting and --use-lane-splitting "
@@ -932,7 +927,7 @@ if __name__ == "__main__":
             # Do the make_fastqs step
             try:
                 d.make_fastqs(
-                    protocol=protocol,
+                    protocol=options.protocol,
                     skip_rsync=options.skip_rsync,
                     nprocessors=options.nprocessors,
                     runner=options.runner,

@@ -1069,7 +1069,7 @@ class AutoProcess:
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return utils.AnalysisProject(dirs[0],undetermined_dir)
         
-    def make_fastqs(self,protocol=None,
+    def make_fastqs(self,protocol='standard',
                     unaligned_dir=None,sample_sheet=None,lanes=None,
                     ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
