@@ -1507,8 +1507,9 @@ class AutoProcess:
         # Generate temporary sample sheet with required format
         fmt = bcl2fastq_utils.get_required_samplesheet_format(bcl2fastq_info[2])
         tmp_sample_sheet = os.path.join(self.tmp_dir,
-                                        "SampleSheet.%s.csv" %
-                                        time.strftime("%Y%m%d%H%M%S"))
+                                        "SampleSheet.%s.%s.csv" %
+                                        (fmt,
+                                         time.strftime("%Y%m%d%H%M%S")))
         print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
         bcl2fastq_utils.make_custom_sample_sheet(sample_sheet,
                                                  tmp_sample_sheet,
