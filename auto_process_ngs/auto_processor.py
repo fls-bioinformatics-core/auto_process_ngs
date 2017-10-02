@@ -1253,7 +1253,7 @@ class AutoProcess:
                 return
         # Do fastq generation using the specified protocol
         if not skip_fastq_generation:
-            if protocol is None:
+            if protocol == 'standard':
                 # Standard protocol
                 try:
                     exit_code = self.bcl_to_fastq(
