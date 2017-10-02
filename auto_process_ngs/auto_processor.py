@@ -1239,7 +1239,7 @@ class AutoProcess:
             return
         # Log dir
         log_dir = 'make_fastqs'
-        if protocol:
+        if protocol != 'standard':
             log_dir += "_%s" % protocol
         if lanes:
             log_dir += "_L%s" % ''.join([str(l) for l in sorted(lanes)])
