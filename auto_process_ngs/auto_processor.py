@@ -1234,7 +1234,7 @@ class AutoProcess:
             skip_rsync = True
             skip_fastq_generation = True
         # Check if there's anything to do
-        if not (skip_rsync or skip_fastq_generation or generate_stats):
+        if (skip_rsync and skip_fastq_generation) and not generate_stats:
             print "Nothing to do"
             return
         # Log dir
