@@ -1180,23 +1180,40 @@ class AutoProcess:
         if not os.path.isfile(sample_sheet):
             raise Exception("Missing sample sheet '%s'" % sample_sheet)
         self.params['sample_sheet'] = sample_sheet
+        print "Source sample sheet   : %s" % self.params.sample_sheet
         # Check requested lanes are actually present
+        print "Lanes                 : %s" % ('all' if lanes is None
+                                              else
+                                              ','.join([str(l)
+                                                        for l in lanes]))
         if lanes is not None:
             s = IlluminaData.SampleSheet(self.params.sample_sheet)
             if not s.has_lanes:
-                raise Exception("Requested lanes but samplesheet "
-                                "doesn't contain any")
+                raise Exception("Requested subset of lanes but "
+                                "samplesheet doesn't contain any "
+                                "lane information")
             samplesheet_lanes = list(set([l['Lane'] for l in s]))
             for l in lanes:
                 if l not in samplesheet_lanes:
                     raise Exception("Requested lane '%d' not present "
                                     "in samplesheet" % l)
+        # Make a temporary sample sheet
+        if lanes:
+            lanes_id = ".L%s" % ''.join([str(l) for l in lanes])
+        else:
+            lanes_id = ""
+        sample_sheet = os.path.join(self.tmp_dir,
+                                    "SampleSheet%s.%s.csv" %
+                                    (lanes_id,
+                                     time.strftime("%Y%m%d%H%M%S")))
+        bcl2fastq_utils.make_custom_sample_sheet(self.params.sample_sheet,
+                                                 sample_sheet,
+                                                 lanes=lanes)
         # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
         verify_include_sample_dir = False
         if protocol == '10x_chromium_sc':
-            if tenx_genomics_utils.has_chromium_sc_indices(
-                    self.params.sample_sheet):
+            if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
                 # Force inclusion of sample-name subdirectories
                 # when verifying Chromium SC data
                 print "Sample sheet includes Chromium SC indices"
@@ -1230,7 +1247,7 @@ class AutoProcess:
                 try:
                     exit_code = self.bcl_to_fastq(
                         unaligned_dir=self.params.unaligned_dir,
-                        sample_sheet=self.params.sample_sheet,
+                        sample_sheet=sample_sheet,
                         primary_data_dir=primary_data_dir,
                         require_bcl2fastq=require_bcl2fastq_version,
                         bases_mask=bases_mask,
@@ -1240,7 +1257,6 @@ class AutoProcess:
                         minimum_trimmed_read_length=minimum_trimmed_read_length,
                         mask_short_adapter_reads=mask_short_adapter_reads,
                         nprocessors=nprocessors,
-                        lanes=lanes,
                         runner=runner)
                 except Exception,ex:
                     raise Exception("Bcl2fastq stage failed: '%s'" % ex)
@@ -1263,9 +1279,11 @@ class AutoProcess:
                         tenx_genomics_utils.cellranger_info)
                     if not cellranger:
                         raise Exception("No cellranger package found")
+                    # Put a copy of sample sheet in the log directory
+                    shutil.copy(sample_sheet,self.log_dir)
                     # Run cellranger mkfastq
                     exit_code = tenx_genomics_utils.run_cellranger_mkfastq(
-                        sample_sheet=self.params.sample_sheet,
+                        sample_sheet=sample_sheet,
                         primary_data_dir=primary_data_dir,
                         output_dir=self.params.unaligned_dir,
                         lanes=(None if lanes is None
@@ -1299,18 +1317,11 @@ class AutoProcess:
                         unaligned_dir=self.params.unaligned_dir)
                 except IlluminaData.IlluminaDataError as ex:
                     raise Exception("Unable to load data from %s: %s"
-                                    % (unaligned_dir,ex))
-                # Make a temporary sample sheet to check against
-                tmp_sample_sheet = os.path.join(self.tmp_dir,
-                                                "SampleSheet.missing.%s.csv" %
-                                                time.strftime("%Y%m%d%H%M%S"))
-                bcl2fastq_utils.make_custom_sample_sheet(sample_sheet,
-                                                         tmp_sample_sheet,
-                                                         lanes=lanes)
+                                    % (self.params.unaligned_dir,ex))
                 # Generate a list of missing Fastqs
                 missing_fastqs = IlluminaData.list_missing_fastqs(
                     illumina_data,
-                    tmp_sample_sheet,
+                    sample_sheet,
                     include_sample_dir=include_sample_dir)
                 assert(len(missing_fastqs) > 0)
                 missing_fastqs_file = os.path.join(self.log_dir,
@@ -1413,7 +1424,7 @@ class AutoProcess:
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None,lanes=None):
+                     runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1440,11 +1451,6 @@ class AutoProcess:
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
-          lanes: (optional) specify a list of lane numbers (integers) to
-            include from the samplesheet; lanes not in the list will be
-            excluded (and will not be included in the processing). Default is
-            to include all lanes from the sample sheet.
-        
         """
         # Directories
         analysis_dir = self.params.analysis_dir
@@ -1499,7 +1505,6 @@ class AutoProcess:
         print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
         bcl2fastq_utils.make_custom_sample_sheet(sample_sheet,
                                                  tmp_sample_sheet,
-                                                 lanes=lanes,
                                                  fmt=fmt)
         # Put a copy in the log directory
         shutil.copy(tmp_sample_sheet,self.log_dir)
@@ -1545,9 +1550,6 @@ class AutoProcess:
         print "Bcl format            : %s" % illumina_run.bcl_extension
         print "Source sample sheet   : %s" % sample_sheet
         print "Bases mask            : %s" % bases_mask
-        print "Lanes                 : %s" % ('all' if lanes is None
-                                              else
-                                              ','.join([str(l) for l in lanes]))
         print "Nmismatches           : %d" % nmismatches
         print "Nprocessors           : %s" % nprocessors
         print "Ignore missing bcl    : %s" % ignore_missing_bcl
