@@ -28,6 +28,15 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8Stats
 
+# Module specific logger
+logger = logging.getLogger(__name__)
+
+######################################################################
+# Magic numbers
+######################################################################
+
+MAXIMUM_BATCH_SIZE = 100000000
+
 ######################################################################
 # Functions
 ######################################################################
@@ -62,6 +71,11 @@ def batch_fastqs(fastqs,nbatches,basename="batched",
 
     # Determine batch size
     batch_size = nreads/nbatches
+    if MAXIMUM_BATCH_SIZE > 0 and batch_size > MAXIMUM_BATCH_SIZE:
+        # Reset the batch size
+        logger.warning("Batch size exceeded maximum (%s), resetting" %
+                       MAXIMUM_BATCH_SIZE)
+        batch_size = MAXIMUM_BATCH_SIZE
     if nreads%batch_size:
         # Round up batch size
         batch_size += 1
