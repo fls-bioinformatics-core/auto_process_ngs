@@ -30,6 +30,8 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from .applications import Command
+from .bcl2fastq_utils import available_bcl2fastq_versions
+from .bcl2fastq_utils import bcl_to_fastq_info
 from .simple_scheduler import SchedulerJob
 from .docwriter import Document
 from .docwriter import List
@@ -250,6 +252,26 @@ def run_cellranger_mkfastq(sample_sheet,
     Returns:
       Integer: exit code from the cellranger command.
     """
+    # Check we have cellranger
+    cellranger = find_program('cellranger')
+    if not cellranger:
+        raise Exception("No cellranger package found")
+    print "Using cellranger %s: %s" % (cellranger_info(cellranger)[-1],
+                                       cellranger)
+    # Check we have bcl2fastq
+    bcl2fastq = find_program('bcl2fastq')
+    if not bcl2fastq:
+        raise Exception("No bcl2fastq package found")
+    bcl2fastq = available_bcl2fastq_versions(
+        paths=(os.path.dirname(bcl2fastq),),
+        reqs='>=2.17')
+    if not bcl2fastq:
+        raise Exception("No appropriate bcl2fastq software "
+                        "located")
+    bcl2fastq = bcl2fastq[0]
+    print "Using bcl2fastq %s: %s" % (
+        bcl_to_fastq_info(bcl2fastq)[-1],
+        bcl2fastq)
     # Construct the command
     cmd = Command("cellranger","mkfastq",
                   "--samplesheet",sample_sheet,

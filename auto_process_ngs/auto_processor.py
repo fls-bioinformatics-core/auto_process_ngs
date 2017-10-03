@@ -1323,22 +1323,6 @@ class AutoProcess:
             elif protocol == '10x_chromium_sc':
                 # 10xGenomics Chromium SC
                 try:
-                    # Check we have bcl2fastq
-                    bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
-                        '>=2.17')
-                    if bcl2fastq:
-                        bcl2fastq_exe = bcl2fastq[0]
-                        bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(
-                            bcl2fastq_exe)
-                    else:
-                        raise Exception("No appropriate bcl2fastq software "
-                                        "located")
-                    # Check we have cellranger
-                    cellranger = utils.find_executables(
-                        ('cellranger',),
-                        tenx_genomics_utils.cellranger_info)
-                    if not cellranger:
-                        raise Exception("No cellranger package found")
                     # Put a copy of sample sheet in the log directory
                     shutil.copy(sample_sheet,self.log_dir)
                     # Run cellranger mkfastq
