@@ -395,6 +395,55 @@ class AutoProcess:
         # Return the metadata object
         return project_metadata
 
+    def update_project_metadata_file(self,unaligned_dir=None,
+                                     project_metadata_file='projects.info'):
+        """
+        Update project metadata file from bcl2fastq outputs
+
+        Updates the contents of the project metadata file
+        (default: "projects.info") from a bcl-to-fastq output
+        directory, by adding new entries for projects in the
+        bcl-to-fastq outputs which don't currently appear.
+
+        Arguments:
+          unaligned_dir (str): path to the bcl-to-fastq
+            output directory relative to the analysis dir.
+            Defaults to the unaligned dir stored in the
+            analysis directory parameter file.
+          project_metatadata_file (str): optional, path to
+            the project metadata file to update
+        """
+        if project_metadata_file is not None:
+            self.params['project_metadata'] = project_metadata_file
+        print "Project metadata file: %s" % self.params.project_metadata
+        filen = os.path.join(self.analysis_dir,
+                             self.params.project_metadata)
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        print "Unaligned_dir: %s" % self.params.unaligned_dir
+        illumina_data = IlluminaData.IlluminaData(
+            self.analysis_dir,
+            unaligned_dir=self.params.unaligned_dir)
+        if os.path.exists(filen):
+            # Load data from existing file
+            print "Loading project metadata from existing file: %s" % filen
+            project_metadata = utils.ProjectMetadataFile(filen)
+        else:
+            # New (empty) metadata file
+            print "Creating new project metadata file: %s" % filen
+            project_metadata = utils.ProjectMetadataFile()
+        # Populate/update
+        for project in illumina_data.projects:
+            project_name = project.name
+            sample_names = [s.name for s in project.samples]
+            if project_name not in project_metadata:
+                project_metadata.add_project(project_name,sample_names)
+            else:
+                project_metadata.update_project(project_name,
+                                                sample_names=sample_names)
+        # Save
+        project_metadata.save(filen)
+
     def get_analysis_projects_from_dirs(self):
         """
         Return a list of AnalysisProjects in the analysis directory
@@ -1372,7 +1421,10 @@ class AutoProcess:
         if report_barcodes:
             self.report_barcodes(barcodes_file)
         # Make a 'projects.info' metadata file
-        self.make_project_metadata_file()
+        if lanes:
+            self.update_project_metadata_file()
+        else:
+            self.make_project_metadata_file()
         # Remove primary data
         if remove_primary_data:
             self.remove_primary_data()
