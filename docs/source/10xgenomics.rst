@@ -55,12 +55,8 @@ which fetches the data and runs ``cellranger mkfastq``.
 
 .. info::
 
-   This replaces the ``process_10xgenomics.py mkfastq`` command::
-
-       process_10xgenomics.py mkfastq \
-           -s custom_SampleSheet.10xgenomics.csv \
-           -r primary_data/170426_K00311_0033_AHJCY7BBXX \
-           -o bcl2fastq
+   This replaces the ``process_10xgenomics.py mkfastq`` command,
+   which is now deprecated and likely to be removed in future.
 
 This will generate the Fastqs in the specified output directory (e.g.
 ``bcl2fastq``) along with an HTML report derived from the ``cellranger``
@@ -122,7 +118,8 @@ non-Chromium datasets (if any).
            -u bcl2fastq.chromium
 
    which will add entries for the Chromium projects and samples
-   to the ``projects.info`` file.
+   to the ``projects.info`` file. However this option is likely
+   to be deprecated in future.
 
 Once the file has been edited to include additional data on the user,
 PI etc, the ``setup_analysis_dirs`` command can be used to create
