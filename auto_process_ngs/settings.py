@@ -163,6 +163,7 @@ class Settings:
                      'qc',
                      'stats',
                      'rsync',
+                     'icell8',
                      'icell8_contaminant_filter',
                      'icell8_statistics',):
             self.runners[name] = config.getrunner('runners',name,

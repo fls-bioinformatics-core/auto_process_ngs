@@ -51,6 +51,7 @@ bcl2fastq = SimpleJobRunner
 qc = SimpleJobRunner
 stats = SimpleJobRunner
 rsync = SimpleJobRunner
+icell8 = SimpleJobRunner
 icell8_contaminant_filter = SimpleJobRunner
 icell8_statistics = SimpleJobRunner
 

@@ -1644,7 +1644,7 @@ if __name__ == "__main__":
     try:
         default_runner = runners['default']
     except KeyError:
-        default_runner = __settings.general.default_runner
+        default_runner = __settings.runners.icell8
     for stage in stages:
         if stage not in runners:
             if stage == 'qc':
