@@ -77,6 +77,9 @@ def cellranger_mkfastq(samplesheet,
                        project_metadata_file='projects.info'):
     """
     """
+    # Warn that this command is now deprecated
+    logging.warning("This command is deprecated, use 'auto_process"
+                    "make_fastqs --protocol=10x_chromium_sc' instead")
     # Make a log directory
     if not dry_run:
         if log_dir is None:
@@ -284,6 +287,8 @@ def update_project_metadata(unaligned_dir,
                             project_metadata_file):
     """
     """
+    # Warn that this command is now deprecated
+    logging.warning("This command is deprecated")
     analysis_dir = os.path.dirname(os.path.abspath(unaligned_dir))
     unaligned_dir = os.path.basename(unaligned_dir)
     try:
