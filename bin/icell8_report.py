@@ -14,6 +14,7 @@ Utility to report summary of ICell8 processing pipeline.
 ######################################################################
 
 import os
+import sys
 import argparse
 import matplotlib
 import matplotlib.pyplot as plt
@@ -27,6 +28,10 @@ from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Img
 from auto_process_ngs.utils import ZipArchive
 import auto_process_ngs.css_rules as css_rules
+
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
 
 ######################################################################
 # Main
@@ -102,6 +107,24 @@ if __name__ == "__main__":
     # Load data from input file
     df = pd.read_csv(stats_file,sep='\t')
 
+    # Check columns
+    cols = list(df.columns.values)
+    for c in ('Nreads',
+              'Nreads_filtered',
+              'Nreads_poly_g',
+              'Nreads_trimmed',
+              'Nreads_final'):
+        if c not in cols:
+            logging.critical("Missing column '%s' for stats file"
+                             % c)
+            sys.exit(1)
+    # Special case: no filtered reads
+    if 'Nreads_contaminant_filtered' in cols:
+        contaminant_filtered = True
+    else:
+        logging.warning("No stats on contaminant filtering")
+        contaminant_filtered = False
+
     # Rename the '#Barcodes' and '%reads_poly_g' columns
     df.rename(columns={'#Barcode':'Barcode',
                        '%reads_poly_g':'percent_poly_g'},
@@ -175,23 +198,26 @@ if __name__ == "__main__":
     general_info.add(tbl)
 
     # Reads at each stage
+    cols = ['Nreads',
+            'Nreads_filtered',
+            'Nreads_trimmed']
+    if contaminant_filtered:
+        cols.append('Nreads_contaminant_filtered')
     plot_filen = os.path.join(out_dir,"reads_per_stage.png")
     reads_per_stage = \
         pd.Series([data.total_reads,],
                   ['Nreads_initial',]).append(
-                      df[['Nreads',
-                          'Nreads_filtered',
-                          'Nreads_trimmed',
-                          'Nreads_contaminant_filtered']].sum())
+                      df[cols].sum())
     print reads_per_stage
     fig=plt.figure()
     plot = reads_per_stage.plot.bar(figsize=(6,4))
-    plot.set_xticklabels(['Initial',
-                          'Assigned',
-                          'Quality filtered',
-                          'Trimmed',
-                          'Uncontaminated'],
-                         rotation=45)
+    labels = ['Initial',
+              'Assigned',
+              'Quality filtered',
+              'Trimmed']
+    if contaminant_filtered:
+        labels.append('Uncontaminated')
+    plot.set_xticklabels(labels,rotation=45)
     plot.set_ylabel("#read pairs")
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')
     general_info.add(Img(os.path.relpath(plot_filen,
@@ -261,11 +287,13 @@ if __name__ == "__main__":
     # Sample info
     sample_info = report.add_section("Samples",
                                      name="sample_info")
-    samples = df[['Sample',
-                  'Nreads',
-                  'Nreads_filtered',
-                  'Nreads_trimmed',
-                  'Nreads_contaminant_filtered']].groupby('Sample').sum()
+    cols = ['Sample',
+            'Nreads',
+            'Nreads_filtered',
+            'Nreads_trimmed',]
+    if contaminant_filtered:
+        cols.append('Nreads_contaminant_filtered')
+    samples = df[cols].groupby('Sample').sum()
     sample_info.add(samples.to_html(na_rep='-'))
     toc_list.add_item(Link(sample_info.title,sample_info))
 
@@ -274,11 +302,12 @@ if __name__ == "__main__":
     fig=plt.figure()
     plot = samples.transpose().plot.bar(stacked=True,
                                         figsize=(6,4))
-    plot.set_xticklabels(['Assigned',
-                          'Quality filtered',
-                          'Trimmed',
-                          'Uncontaminated'],
-                         rotation=45)
+    labels = ['Assigned',
+              'Quality filtered',
+              'Trimmed']
+    if contaminant_filtered:
+        labels.append('Uncontaminated')
+    plot.set_xticklabels(labels,rotation=45)
     plot.set_ylabel("#read pairs")
     plot.legend(loc="upper left", bbox_to_anchor=(1,1))
     plot.get_figure().savefig(plot_filen,bbox_inches='tight')

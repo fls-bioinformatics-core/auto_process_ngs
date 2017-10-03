@@ -81,6 +81,12 @@ The following steps are performed:
    then they must be explicitly supplied to the utility using
    the ``-m``/``--mammalian`` and ``-c``/``--contaminants`` options.
 
+.. note::
+
+   The contaminant filtering step can be turned off by specifying
+   the ``--no-contaminant-filter`` option, for example if analysing
+   data from a non-mammalian organism.
+
 Reorganisation by barcode and sample
 ------------------------------------
 
@@ -173,6 +179,9 @@ Reference data and quality filtering
 
    Set using the ``-c`` option on the command line, or via
    ``[icell8] contaminant_conf_file`` in the configuration file.
+
+   To turn off the contaminant filtering, specify the
+   ``--no-contaminant-filter`` option.
 
  * **Quality filtering of barcode and UMI sequences**: by default
    read pairs are *not* removed if the associated barcode or UMI
