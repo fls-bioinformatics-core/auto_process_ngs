@@ -210,6 +210,16 @@ if __name__ == "__main__":
             sys.exit(1)
     print "ok"
 
+    # Switch to requested Fastq set
+    if options.fastq_dir is not None:
+        try:
+            project.use_fastq_dir(fastq_dir=options.fastq_dir)
+        except Exception as ex:
+            sys.stderr.write("ERROR %s\n" % ex)
+            sys.stderr.write("FAILED unable to switch to fastq set '%s'\n"
+                             % options.fastq_dir)
+            sys.exit(1)
+
     # Filter fastqs on pattern
     if options.pattern is not None:
         print "Filtering fastqs using pattern '%s'" % options.pattern
@@ -219,15 +229,6 @@ if __name__ == "__main__":
     try:
         cmd = args[2]
     except IndexError:
-        # Switch to requested Fastq set
-        if options.fastq_dir is not None:
-            try:
-                project.use_fastq_dir(fastq_dir=options.fastq_dir)
-            except Exception as ex:
-                sys.stderr.write("ERROR %s\n" % ex)
-                sys.stderr.write("FAILED unable to switch to fastq set '%s'\n"
-                                 % options.fastq_dir)
-                sys.exit(1)
         # List fastqs and exit
         total_size = 0
         n_fastqs = 0
