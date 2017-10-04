@@ -23,6 +23,12 @@ For example, to get a list of projects within a run::
 
     manage_fastqs.py RUN_DIR
 
+.. note::
+
+   If a project contains multiple sets of FASTQs then these
+   will be listed under the project name, with the default
+   "primary" project marked with an asterisk.
+
 To see a list of the FASTQ files associated with a particular project::
 
     manage_fastqs.py RUN_DIR PROJECTNAME
@@ -44,6 +50,19 @@ Finally to make a zip file containing the FASTQs, use the ``zip`` command::
 .. note::
 
     The ``zip`` option works best if the FASTQs are relatively small.
+
+Working with multiple FASTQ sets
+--------------------------------
+
+If a project has more than one FASTQ set associated with it then by
+default the operations described above will use the "primary" set
+(typically, the set of FASTQ files in the ``fastqs`` subdirectory
+of the project).
+
+To operate on an alternative set, use the ``--fastq_dir`` option to
+switch e.g.::
+
+    manage_fastqs.py RUN_DIR PROJECTNAME --fastq_dir=ALT_FASTQS_DIR
 
 Handling subsets of files
 -------------------------
