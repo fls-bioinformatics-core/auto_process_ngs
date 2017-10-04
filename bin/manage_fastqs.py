@@ -165,6 +165,9 @@ if __name__ == "__main__":
                               version="%prog "+get_version())
     p.add_option('--filter',action='store',dest='pattern',default=None,
                  help="filter file names for reporting and copying based on PATTERN")
+    p.add_option('--fastq_dir',action='store',dest='fastq_dir',default=None,
+                 help="explicitly specify subdirectory of DIR with "
+                 "Fastq files to run the QC on.")
     options,args = p.parse_args()
     # Get analysis dir
     try:
@@ -182,6 +185,13 @@ if __name__ == "__main__":
         print "Projects:"
         for project in analysis_dir.projects:
             print "%s" % project.name
+            if len(project.fastq_dirs) > 1:
+                # List the fastq sets if there are more than one
+                # and flag the primary set with an asterisk
+                for d in project.fastq_dirs:
+                    is_primary = (d == project.info.primary_fastq_dir)
+                    print "- %s%s" % (d,
+                                      (" *" if is_primary else ""))
         if analysis_dir.undetermined:
             print "_undetermined"
         sys.exit(0)
@@ -199,6 +209,7 @@ if __name__ == "__main__":
             sys.stderr.write("FAILED cannot find project '%s'\n" % project_name)
             sys.exit(1)
     print "ok"
+
     # Filter fastqs on pattern
     if options.pattern is not None:
         print "Filtering fastqs using pattern '%s'" % options.pattern
@@ -208,11 +219,25 @@ if __name__ == "__main__":
     try:
         cmd = args[2]
     except IndexError:
+        # Switch to requested Fastq set
+        if options.fastq_dir is not None:
+            try:
+                project.use_fastq_dir(fastq_dir=options.fastq_dir)
+            except Exception as ex:
+                sys.stderr.write("ERROR %s\n" % ex)
+                sys.stderr.write("FAILED unable to switch to fastq set '%s'\n"
+                                 % options.fastq_dir)
+                sys.exit(1)
         # List fastqs and exit
         total_size = 0
         n_fastqs = 0
         sample_names = set()
         # Collect information
+        fastq_set = os.path.relpath(project.fastq_dir,project.dirn)
+        print "Fastq set: %s%s" % (
+            ("default" if fastq_set == "fastqs" else fastq_set),
+            (" (primary)"
+             if fastq_set == project.info.primary_fastq_dir else ""))
         for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             # File size
             fsize = os.lstat(fq).st_size
