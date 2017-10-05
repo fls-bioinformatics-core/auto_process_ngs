@@ -395,13 +395,16 @@ def add_make_fastqs_command(cmdparser):
     cellranger = optparse.OptionGroup(p,'Cellranger options (10xGenomics '
                                       'Chromium SC 3\' data only)')
     cellranger.add_option("--jobmode",
-                          dest="job_mode",default="sge",
-                          help="job mode to run cellranger in (default: "
-                          "'sge'")
+                          dest="job_mode",
+                          default=__settings['10xgenomics'].cellranger_jobmode,
+                          help="job mode to run cellranger in (default: '%s')"
+                          % __settings['10xgenomics'].cellranger_jobmode)
     cellranger.add_option("--mempercore",
-                          dest="mem_per_core",default=5,
+                          dest="mem_per_core",
+                          default=__settings['10xgenomics'].cellranger_mempercore,
                           help="memory assumed per core (in Gbs; "
-                          "default: 5Gb)")
+                          "default: %s)" %
+                          __settings['10xgenomics'].cellranger_mempercore)
     cellranger.add_option("--maxjobs",type=int,
                           dest="max_jobs",
                           default=__settings.general.max_concurrent_jobs,
@@ -409,9 +412,11 @@ def add_make_fastqs_command(cmdparser):
                           "(default: %d)"
                           % __settings.general.max_concurrent_jobs)
     cellranger.add_option("--jobinterval",type=int,
-                          dest="job_interval",default=100,
+                          dest="job_interval",
+                          default=__settings['10xgenomics'].cellranger_jobinterval,
                           help="how often jobs are submitted (in ms; "
-                          "default: 100ms)")
+                          "default: %d)" %
+                          __settings['10xgenomics'].cellranger_jobinterval)
     p.add_option_group(cellranger)
     # Statistics
     statistics = optparse.OptionGroup(p,'Statistics generation')
