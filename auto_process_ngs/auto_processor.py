@@ -1211,17 +1211,6 @@ class AutoProcess:
         """
         # Report protocol
         print "Protocol              : %s" % protocol
-        # Check primary data
-        primary_data_dir = os.path.join(
-            self.params.primary_data_dir,
-            os.path.basename(self.params.data_dir))
-        if not os.path.isdir(primary_data_dir):
-            raise Exception("Missing primary data directory: %s" %
-                            primary_data_dir)
-        illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
-        print "Primary data dir      : %s" % primary_data_dir
-        print "Platform              : %s" % illumina_run.platform
-        print "Bcl format            : %s" % illumina_run.bcl_extension
         # Unaligned dir
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
@@ -1302,6 +1291,14 @@ class AutoProcess:
                 return
         # Do fastq generation using the specified protocol
         if not skip_fastq_generation:
+            # Set primary data location and report info
+            primary_data_dir = os.path.join(
+                self.params.primary_data_dir,
+                os.path.basename(self.params.data_dir))
+            print "Primary data dir      : %s" % primary_data_dir
+            illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
+            print "Platform              : %s" % illumina_run.platform
+            print "Bcl format            : %s" % illumina_run.bcl_extension
             if protocol == 'standard':
                 # Standard protocol
                 try:
