@@ -432,7 +432,7 @@ if __name__ == "__main__":
                        dest="mem_per_core",
                        default=__settings['10xgenomics'].cellranger_mempercore,
                        help="memory assumed per core (in Gbs; "
-                       "default: %dGb)"
+                       "default: %d)"
                        % __settings['10xgenomics'].cellranger_mempercore)
         p.add_argument("--maxjobs",type=int,
                        dest="max_jobs",
@@ -444,7 +444,7 @@ if __name__ == "__main__":
                        dest="job_interval",
                        default=__settings['10xgenomics'].cellranger_jobinterval,
                        help="how often jobs are submitted (in ms; "
-                       "default: %dms)"
+                       "default: %d)"
                        % __settings['10xgenomics'].cellranger_jobinterval)
         p.add_argument('--modulefiles',action='store',
                        dest='modulefiles',default=None,
