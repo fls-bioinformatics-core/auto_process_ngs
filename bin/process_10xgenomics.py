@@ -134,8 +134,6 @@ def update_project_metadata(unaligned_dir,
       project_metadata_file (str): path to a project
         metadata file to update
     """
-    # Warn that this command is now deprecated
-    logging.warning("This command is deprecated")
     analysis_dir = os.path.dirname(os.path.abspath(unaligned_dir))
     unaligned_dir = os.path.basename(unaligned_dir)
     try:
@@ -295,7 +293,7 @@ if __name__ == "__main__":
     # Run the requested command
     if args.command == "mkfastq":
         # Warn that this command is now deprecated
-        logging.warning("This command is deprecated, use 'auto_process"
+        logging.warning("This command is deprecated, use 'auto_process "
                         "make_fastqs --protocol=10x_chromium_sc' instead")
         cellranger_mkfastq(args.samplesheet,
                            args.run_dir,
@@ -335,5 +333,7 @@ if __name__ == "__main__":
                                  log_dir='logs')
     elif args.command == "update_projects":
         # Generate or update the project metadata file
+        # Warn that this command is now deprecated
+        logging.warning("This command is deprecated")
         update_project_metadata(args.unaligned_dir,
                                 args.project_metadata_file)
