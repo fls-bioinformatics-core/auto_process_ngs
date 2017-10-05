@@ -476,6 +476,7 @@ def run_cellranger_count(fastq_dir,
         mkdirs(log_dir)
 
     # Submit the cellranger count jobs
+    jobs = []
     for project in projects:
         print "Project: %s" % project
         for sample in sample_names[project]:
@@ -507,19 +508,30 @@ def run_cellranger_count(fastq_dir,
                                 jobinterval=cellranger_jobinterval)
             print "Running: %s" % cmd
             if not dry_run:
-                sched.submit(cmd,
-                             name="cellranger_count.%s.%s" %
-                             (project,
-                              sample),
-                             log_dir=log_dir,
-                             wd=work_dir)
+                job = sched.submit(cmd,
+                                   name="cellranger_count.%s.%s" %
+                                   (project,
+                                    sample),
+                                   log_dir=log_dir,
+                                   wd=work_dir)
+                jobs.append(job)
     sched.wait()
+    sched.stop()
 
     # If dry run then stop here
     if dry_run:
-        return
+        return 0
 
-    # Finished, handle the outputs
+    # Finished, check the exit status
+    retval = 0
+    for job in jobs:
+        retval += job.exit_code
+    if retval != 0:
+        logging.critical("One or more jobs finished with non-zero "
+                         "exit code")
+        return retval
+
+    # Handle outputs
     for project in projects:
         print "Project: %s" % project
         for sample in sample_names[project]:
@@ -585,6 +597,8 @@ def run_cellranger_count(fastq_dir,
         # Finish
         zip_file.close()
         os.chdir(pwd)
+    # Done
+    return retval
 
 def run_cellranger_count_for_project(project_dir,
                                      transcriptome,
@@ -637,7 +651,7 @@ def run_cellranger_count_for_project(project_dir,
     # Build the 'fastq_path' dir for cellranger
     fastq_dir = build_fastq_path_dir(project_dir)
     # Run the count procedure
-    run_cellranger_count(
+    return run_cellranger_count(
         fastq_dir,
         transcriptome,
         cellranger_jobmode=cellranger_jobmode,
