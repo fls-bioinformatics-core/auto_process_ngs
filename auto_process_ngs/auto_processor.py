@@ -544,18 +544,9 @@ class AutoProcess:
         Returns:
           String: name for the new log subdirectory
             (nb not the full path).
-
         """
-        # Get the highest current step number
-        # from the names of the existing subdirs
-        i = 0
-        for d in bcf_utils.list_dirs(self.log_dir):
-            try:
-                i = max(i,int(d.split('_')[0]))
-            except ValueError:
-                pass
-        # Return the name
-        return "%03d_%s" % (i+1,str(name))
+        return utils.get_numbered_subdir(name,
+                                         parent_dir=self.log_dir)
 
     def __del__(self):
         """
