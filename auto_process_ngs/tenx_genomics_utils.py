@@ -198,6 +198,9 @@ def build_fastq_path_dir(project_dir):
     for fastq in project.fastqs:
         print fastq
         link_name = os.path.join(fq_dir,os.path.basename(fastq))
+        if os.path.exists(link_name):
+            logging.warning("%s: already exists" % link_name)
+            continue
         target = os.path.relpath(fastq,fq_dir)
         logging.debug("Linking: %s -> %s" % (link_name,target))
         os.symlink(target,link_name)
