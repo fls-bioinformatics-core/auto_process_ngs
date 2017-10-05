@@ -17,28 +17,15 @@ SC 3'v2 platform.
 import sys
 import os
 import argparse
-import logging
-import shutil
 from bcftbx.utils import find_program
-from bcftbx.utils import list_dirs
+from bcftbx.utils import mkdirs
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
-from bcftbx.JobRunner import SimpleJobRunner
-from auto_process_ngs.applications import Command
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.simple_scheduler import SchedulerJob
-from auto_process_ngs.simple_scheduler import SchedulerReporter
-from auto_process_ngs.docwriter import Document
-from auto_process_ngs.docwriter import List
-from auto_process_ngs.docwriter import Link
-import auto_process_ngs.css_rules as css_rules
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.utils import get_numbered_subdir
 from auto_process_ngs.utils import ProjectMetadataFile
-from auto_process_ngs.utils import ZipArchive
-from auto_process_ngs.tenx_genomics_utils import flow_cell_id
-from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
-from auto_process_ngs.tenx_genomics_utils import add_cellranger_args
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_mkfastq
+from auto_process_ngs.tenx_genomics_utils import run_cellranger_count
+from auto_process_ngs.tenx_genomics_utils import run_cellranger_count_for_project
 import auto_process_ngs.envmod as envmod
 
 # Initialise logging
@@ -52,17 +39,6 @@ __settings = auto_process_ngs.settings.Settings()
 ######################################################################
 # Functions
 ######################################################################
-
-def mkdir(path):
-    """
-    """
-    if os.path.exists(path):
-	return
-    parent = os.path.dirname(path)
-    if not os.path.exists(parent):
-        mkdir(parent)
-    print "Making dir: %s" % path
-    os.mkdir(path)
 
 def cellranger_mkfastq(samplesheet,
                        primary_data_dir,
@@ -118,8 +94,10 @@ def cellranger_mkfastq(samplesheet,
     if not dry_run:
         if log_dir is None:
             log_dir = os.getcwd()
-        log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
-        mkdir(log_dir)
+        log_dir = get_numbered_subdir("cellranger_mkfastq",
+                                      parent_dir=log_dir,
+                                      full_path=True)
+        mkdirs(log_dir)
     # Run cellranger mkfastq
     retval = run_cellranger_mkfastq(
         samplesheet,
@@ -137,191 +115,24 @@ def cellranger_mkfastq(samplesheet,
         update_project_metadata(output_dir,project_metadata_file)
     return retval
 
-def cellranger_count(unaligned_dir,
-                     transcriptome,
-                     cellranger_jobmode='sge',
-                     cellranger_maxjobs=None,
-                     cellranger_mempercore=None,
-                     cellranger_jobinterval=None,
-                     max_jobs=4,
-                     log_dir=None,
-                     dry_run=False,
-                     summary_only=True):
-    """
-    """
-    # Input data
-    sample_names = {}
-    try:
-        illumina_data = IlluminaData(os.getcwd(),
-                                     unaligned_dir=unaligned_dir)
-        for project in illumina_data.projects:
-            sample_names[project.name] = []
-            for sample in project.samples:
-                sample_names[project.name].append(sample.name)
-    except IlluminaDataError:
-        logging.critical("Couldn't load data from '%s'" %
-                         unaligned_dir)
-        sys.exit(1)
-    print "Samples: %s" % sample_names
-    projects = sample_names.keys()
-
-    # Set up a scheduler
-    sched_reporter = SchedulerReporter(
-        job_start="SCHEDULER: Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
-        job_end=  "SCHEDULER: Finished #%(job_number)d: %(job_name)s"
-    )
-    sched_reporter = SchedulerReporter()
-    sched = SimpleScheduler(max_concurrent=max_jobs,
-                            reporter=sched_reporter)
-    sched.start()
-
-    # Make a log directory
-    if not dry_run:
-        if log_dir is None:
-            log_dir = os.getcwd()
-        log_dir = get_log_subdir(log_dir,"cellranger_count")
-        mkdir(log_dir)
-
-    # Submit the cellranger count jobs
-    for project in projects:
-        print "Project: %s" % project
-        for sample in sample_names[project]:
-            print "Sample: %s" % sample
-            # Check if outputs already exist
-            count_dir = os.path.abspath(
-                os.path.join(project,
-                             "cellranger_count",
-                             sample,
-                             "outs"))
-            if os.path.isdir(count_dir):
-                print "-- %s: outputs exist, nothing to do" % sample
-                continue
-            else:
-                print "-- %s: setting up cellranger count" % sample
-            # Set up job for this sample
-            work_dir = os.path.abspath("tmp.cellranger_count.%s.%s" %
-                                       (project,sample))
-            mkdir(work_dir)
-            cmd = Command("cellranger","count",
-                          "--id",sample,
-                          "--fastqs",os.path.abspath(unaligned_dir),
-                          "--sample",sample,
-                          "--transcriptome",transcriptome)
-            add_cellranger_args(cmd,
-                                jobmode=cellranger_jobmode,
-                                mempercore=cellranger_mempercore,
-                                maxjobs=cellranger_maxjobs,
-                                jobinterval=cellranger_jobinterval)
-            print "Running: %s" % cmd
-            if not dry_run:
-                sched.submit(cmd,
-                             name="cellranger_count.%s.%s" %
-                             (project,
-                              sample),
-                             log_dir=log_dir,
-                             wd=work_dir)
-    sched.wait()
-
-    # If dry run then stop here
-    if dry_run:
-        return
-
-    # Finished, handle the outputs
-    for project in projects:
-        print "Project: %s" % project
-        for sample in sample_names[project]:
-            print "Sample: %s" % sample
-            # Destination for count output
-            count_dir = os.path.abspath(
-                os.path.join(project,
-                             "cellranger_count",
-                             sample))
-            mkdir(count_dir)
-            # Copy the cellranger count outputs
-            outs_dir = os.path.join("tmp.cellranger_count.%s.%s"
-                                    % (project,sample),
-                                    sample,
-                                    "outs")
-            if not summary_only:
-                # Collect all outputs
-                print "Copying contents of %s to %s" % (outs_dir,count_dir)
-                shutil.copytree(outs_dir,count_dir)
-            else:
-                # Only collect the web summary
-                count_dir = os.path.join(count_dir,"outs")
-                mkdir(count_dir)
-                print "Copying web_summary.html from %s to %s" % (outs_dir,count_dir)
-                shutil.copy(os.path.join(outs_dir,"web_summary.html"),count_dir)
-
-    # Create a report and zip archive for each project
-    pwd = os.getcwd()
-    analysis_dir = os.path.basename(pwd)
-    for project in projects:
-        # Descend into project dir
-        os.chdir(project)
-        # Set up zip file
-        report_zip = os.path.join("cellranger_count_report.%s.%s.zip" %
-                                  (project,analysis_dir))
-        zip_file = ZipArchive(report_zip,
-                              prefix="cellranger_count_report.%s.%s" %
-                              (project,analysis_dir))
-        # Construct index page
-        print "Making report for project %s" % project
-        count_report = Document("%s: cellranger count" % project)
-        count_report.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
-        summaries = count_report.add_section()
-        summaries.add("Reports from cellranger count for each sample:")
-        summary_links = List()
-        for sample in sample_names[project]:
-            # Link to summary for sample
-            web_summary = os.path.join("cellranger_count",
-                                       sample,
-                                       "outs",
-                                       "web_summary.html")
-            print "Adding web summary (%s) for %s" % (web_summary,
-                                                      sample)
-            summary_links.add_item(Link("%s" % sample,
-                                        web_summary))
-            # Add to the zip file
-            zip_file.add_file(web_summary)
-        summaries.add(summary_links)
-        # Write the report and add to the zip file
-        html_file = "cellranger_count_report.html"
-        count_report.write(html_file)
-        zip_file.add_file(html_file)
-        # Finish
-        zip_file.close()
-        os.chdir(pwd)
-
-def cellranger_count_for_project(project_dir,
-                                 transcriptome,
-                                 cellranger_jobmode='sge',
-                                 cellranger_maxjobs=None,
-                                 cellranger_mempercore=None,
-                                 cellranger_jobinterval=None,
-                                 max_jobs=4,
-                                 log_dir=None,
-                                 dry_run=False,
-                                 summary_only=True):
-    """
-    """
-    # Build the 'fastq_path' dir for cellranger
-    unaligned_dir = build_fastq_path_dir(project_dir)
-    # Run the count procedure
-    cellranger_count(unaligned_dir,
-                     transcriptome,
-                     cellranger_jobmode=cellranger_jobmode,
-                     cellranger_maxjobs=cellranger_maxjobs,
-                     cellranger_mempercore=cellranger_mempercore,
-                     cellranger_jobinterval=cellranger_jobinterval,
-                     max_jobs=max_jobs,
-                     log_dir=log_dir,
-                     dry_run=dry_run,
-                     summary_only=summary_only)
-
 def update_project_metadata(unaligned_dir,
                             project_metadata_file):
     """
+    Update the entries in a projects.info file
+
+    Adds new entries to a project metadata file (aka
+    'projects.info') for projects found in the specified
+    bcl2fastq/cellranger mkfastq output directory, or
+    updates those which are already present.
+
+    If the metadata file doesn't already exist then a
+    new file will be created.
+
+    Arguments:
+      unaligned_dir (str): path to bcl2fastq/cellranger
+        mkfastq output directory
+      project_metadata_file (str): path to a project
+        metadata file to update
     """
     # Warn that this command is now deprecated
     logging.warning("This command is deprecated")
@@ -356,39 +167,6 @@ def update_project_metadata(unaligned_dir,
                                             sample_names=sample_names)
     # Save
     project_metadata.save(filen)
-
-def build_fastq_path_dir(project_dir):
-    """
-    """
-    project = AnalysisProject(os.path.basename(project_dir.rstrip(os.sep)),
-                              os.path.abspath(project_dir))
-    fastq_path_dir = os.path.join(project.dirn,
-                                  "cellranger_fastq_path")
-    mkdir(fastq_path_dir)
-    mkdir(os.path.join(fastq_path_dir,"Reports"))
-    mkdir(os.path.join(fastq_path_dir,"Stats"))
-    fq_dir = os.path.join(fastq_path_dir,project.name)
-    mkdir(fq_dir)
-    for fastq in project.fastqs:
-        print fastq
-        link_name = os.path.join(fq_dir,os.path.basename(fastq))
-        target = os.path.relpath(fastq,fq_dir)
-        logging.debug("Linking: %s -> %s" % (link_name,target))
-        os.symlink(target,link_name)
-    return fastq_path_dir
-
-def get_log_subdir(log_dir,name):
-    """
-    """
-    # NB based on 'get_log_subdir' from auto_processor.py
-    i = 0
-    for d in list_dirs(log_dir):
-        try:
-            i = max(i,int(d.split('_')[0]))
-        except ValueError:
-            pass
-    # Return the full name
-    return os.path.join(log_dir,"%03d_%s" % (i+1,str(name)))
 
 ######################################################################
 # Main
@@ -535,7 +313,7 @@ if __name__ == "__main__":
         if args.projects:
             for project in args.projects:
                 print "Project: %s" % project
-                cellranger_count_for_project(
+                run_cellranger_count_for_project(
                     project,
                     args.transcriptome,
                     cellranger_jobmode=args.job_mode,
@@ -546,15 +324,15 @@ if __name__ == "__main__":
                     dry_run=args.dry_run,
                     log_dir='logs')
         else:
-            cellranger_count(args.unaligned_dir,
-                             args.transcriptome,
-                             cellranger_jobmode=args.job_mode,
-                             cellranger_maxjobs=args.max_jobs,
-                             cellranger_mempercore=args.mem_per_core,
-                             cellranger_jobinterval=args.job_interval,
-                             max_jobs=4,
-                             dry_run=args.dry_run,
-                             log_dir='logs')
+            run_cellranger_count(args.unaligned_dir,
+                                 args.transcriptome,
+                                 cellranger_jobmode=args.job_mode,
+                                 cellranger_maxjobs=args.max_jobs,
+                                 cellranger_mempercore=args.mem_per_core,
+                                 cellranger_jobinterval=args.job_interval,
+                                 max_jobs=4,
+                                 dry_run=args.dry_run,
+                                 log_dir='logs')
     elif args.command == "update_projects":
         # Generate or update the project metadata file
         update_project_metadata(args.unaligned_dir,
