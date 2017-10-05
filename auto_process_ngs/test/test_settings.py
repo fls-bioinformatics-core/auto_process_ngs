@@ -42,3 +42,10 @@ class TestSettings(unittest.TestCase):
         # QC reporting
         self.assertEqual(s.qc_web_server.dirn,None)
         self.assertEqual(s.qc_web_server.url,None)
+    def test_get_item(self):
+        sample_settings_file = os.path.join(get_config_dir(),
+                                            'settings.ini.sample')
+        s = Settings(sample_settings_file)
+        max_concurrent_jobs = s.general.max_concurrent_jobs
+        self.assertEqual(s['general'].max_concurrent_jobs,
+                         max_concurrent_jobs)
