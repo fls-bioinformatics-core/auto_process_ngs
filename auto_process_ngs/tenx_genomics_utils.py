@@ -14,7 +14,10 @@ Chromium SC 3'v2 system:
 - has_chromium_sc_indices
 - cellranger_info
 - make_qc_summary_html
+- build_fastq_path_dir
 - run_cellranger_mkfastq
+- run_cellranger_count
+- run_cellranger_count_for_project
 - add_cellranger_args
 
 """
@@ -26,17 +29,26 @@ Chromium SC 3'v2 system:
 import os
 import re
 import json
+import shutil
 from bcftbx.IlluminaData import SampleSheet
+from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
+from bcftbx.utils import mkdirs
 from .applications import Command
 from .bcl2fastq_utils import available_bcl2fastq_versions
 from .bcl2fastq_utils import bcl_to_fastq_info
 from .simple_scheduler import SchedulerJob
+from .simple_scheduler import SimpleScheduler
+from .simple_scheduler import SchedulerReporter
 from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
+from .utils import get_numbered_subdir
+from .utils import AnalysisProject
+from .utils import ZipArchive
 import css_rules
 
 # Initialise logging
@@ -95,7 +107,12 @@ def has_chromium_sc_indices(sample_sheet):
 
 def make_qc_summary_html(json_file,html_file):
     """
-    Generate HTML report of processing stats from cellranger mkfastqs
+    Make HTML report for cellranger mkfastqs processing stats
+
+    Arguments:
+      json_file (str): path to JSON file output from
+        cellranger mkfastq command
+      html_file (str): path to output HTML file
     """
     # Load the JSON data
     with open(json_file,'r') as fp:
@@ -148,6 +165,43 @@ def make_qc_summary_html(json_file,html_file):
         sample_qc.add(tbl)
     # Write the report
     qc_summary.write(html_file)
+
+def build_fastq_path_dir(project_dir):
+    """
+    Create directory mimicking output from cellranger mkfastq
+
+    This function creates and populates a 'cellranger mkfastq'
+    style 'fastq_path' directory from an autoprocess analysis
+    project, which can then be used as input to 'cellranger
+    count'.
+
+    The new directory will be called 'cellranger_fastq_path'
+    and will created in the project directory, and will be
+    populated by links to the Fastq files in the project.
+
+    Arguments:
+      project_dir (str): path to the project directory in
+        which to create the 'fastq_path' directory
+
+    Returns:
+      String: path to the 'cellranger_fastq_path' directory.
+    """
+    project = AnalysisProject(os.path.basename(project_dir.rstrip(os.sep)),
+                              os.path.abspath(project_dir))
+    fastq_path_dir = os.path.join(project.dirn,
+                                  "cellranger_fastq_path")
+    mkdirs(fastq_path_dir)
+    mkdirs(os.path.join(fastq_path_dir,"Reports"))
+    mkdirs(os.path.join(fastq_path_dir,"Stats"))
+    fq_dir = os.path.join(fastq_path_dir,project.name)
+    mkdirs(fq_dir)
+    for fastq in project.fastqs:
+        print fastq
+        link_name = os.path.join(fq_dir,os.path.basename(fastq))
+        target = os.path.relpath(fastq,fq_dir)
+        logging.debug("Linking: %s -> %s" % (link_name,target))
+        os.symlink(target,link_name)
+    return fastq_path_dir
 
 def cellranger_info(path=None):
     """
@@ -329,6 +383,268 @@ def run_cellranger_mkfastq(sample_sheet,
         html_file = "cellranger_qc_summary%s.html" % lanes_suffix
         make_qc_summary_html(json_file,html_file)
         return exit_code
+
+def run_cellranger_count(fastq_dir,
+                         transcriptome,
+                         cellranger_jobmode='sge',
+                         cellranger_maxjobs=None,
+                         cellranger_mempercore=None,
+                         cellranger_jobinterval=None,
+                         max_jobs=4,
+                         log_dir=None,
+                         dry_run=False,
+                         summary_only=True):
+    """
+    Wrapper for running 'cellranger count'
+
+    Runs the 10xGenomics 'cellranger count' command to
+    perform single library analysis on Fastqs from
+    Chromium single-cell samples.
+
+    If the supplied 'fastq_dir' is a 'cellranger mkfastq'
+    or 'bcl2fastq' output directory then the analysis
+    will be run for each of the projects.
+
+    Arguments:
+      fastq_dir (str): path of the 'fastq_path' folder
+        from 'cellranger mkfastq', or the output folder
+        from 'bcl2fastq' (or with a similar structure),
+        or any folder containing Fastq files
+      transcriptome (str): path to the cellranger
+        compatible transcriptome reference data
+        directory
+      cellranger_jobmode (str): specify the job mode to
+        pass to cellranger (default: None)
+      cellranger_maxjobs (int): specify the maximum
+        number of jobs to pass to cellranger (default:
+        None)
+      cellranger_mempercore (int): specify the memory
+        per core (in Gb) to pass to cellranger (default:
+        None)
+      cellranger_jobinterval (int): specify the interval
+        between launching jobs (in ms) to pass to
+        cellranger (default: None)
+      max_jobs (int):
+      log_dir (str): path to a directory to write logs
+        (default: current working directory)
+      dry_run (bool): if True then only report actions
+        that would be performed but don't run anything
+      summary_only (bool): if True then only collect
+        the output 'web_summary.html' file, otherwise
+        copy all outputs (warning: this can be very
+        large)
+
+    Returns:
+      Integer: exit code from the cellranger command.
+    """
+    # Input data
+    sample_names = {}
+    try:
+        illumina_data = IlluminaData(os.getcwd(),
+                                     unaligned_dir=fastq_dir)
+        for project in illumina_data.projects:
+            sample_names[project.name] = []
+            for sample in project.samples:
+                sample_names[project.name].append(sample.name)
+    except IlluminaDataError:
+        logging.critical("Couldn't load data from '%s'" %
+                         fastq_dir)
+        return 1
+    print "Samples: %s" % sample_names
+    projects = sample_names.keys()
+
+    # Set up a scheduler
+    sched_reporter = SchedulerReporter(
+        job_start="SCHEDULER: Started  #%(job_number)d: %(job_name)s:\n-- %(command)s",
+        job_end=  "SCHEDULER: Finished #%(job_number)d: %(job_name)s"
+    )
+    sched_reporter = SchedulerReporter()
+    sched = SimpleScheduler(max_concurrent=max_jobs,
+                            reporter=sched_reporter)
+    sched.start()
+
+    # Make a log directory
+    if not dry_run:
+        if log_dir is None:
+            log_dir = os.getcwd()
+        log_dir = get_numbered_subdir("cellranger_count",
+                                      parent_dir=log_dir,
+                                      full_path=True)
+        mkdirs(log_dir)
+
+    # Submit the cellranger count jobs
+    for project in projects:
+        print "Project: %s" % project
+        for sample in sample_names[project]:
+            print "Sample: %s" % sample
+            # Check if outputs already exist
+            count_dir = os.path.abspath(
+                os.path.join(project,
+                             "cellranger_count",
+                             sample,
+                             "outs"))
+            if os.path.isdir(count_dir):
+                print "-- %s: outputs exist, nothing to do" % sample
+                continue
+            else:
+                print "-- %s: setting up cellranger count" % sample
+            # Set up job for this sample
+            work_dir = os.path.abspath("tmp.cellranger_count.%s.%s" %
+                                       (project,sample))
+            mkdirs(work_dir)
+            cmd = Command("cellranger","count",
+                          "--id",sample,
+                          "--fastqs",os.path.abspath(fastq_dir),
+                          "--sample",sample,
+                          "--transcriptome",transcriptome)
+            add_cellranger_args(cmd,
+                                jobmode=cellranger_jobmode,
+                                mempercore=cellranger_mempercore,
+                                maxjobs=cellranger_maxjobs,
+                                jobinterval=cellranger_jobinterval)
+            print "Running: %s" % cmd
+            if not dry_run:
+                sched.submit(cmd,
+                             name="cellranger_count.%s.%s" %
+                             (project,
+                              sample),
+                             log_dir=log_dir,
+                             wd=work_dir)
+    sched.wait()
+
+    # If dry run then stop here
+    if dry_run:
+        return
+
+    # Finished, handle the outputs
+    for project in projects:
+        print "Project: %s" % project
+        for sample in sample_names[project]:
+            print "Sample: %s" % sample
+            # Destination for count output
+            count_dir = os.path.abspath(
+                os.path.join(project,
+                             "cellranger_count",
+                             sample))
+            mkdirs(count_dir)
+            # Copy the cellranger count outputs
+            outs_dir = os.path.join("tmp.cellranger_count.%s.%s"
+                                    % (project,sample),
+                                    sample,
+                                    "outs")
+            if not summary_only:
+                # Collect all outputs
+                print "Copying contents of %s to %s" % (outs_dir,count_dir)
+                shutil.copytree(outs_dir,count_dir)
+            else:
+                # Only collect the web summary
+                count_dir = os.path.join(count_dir,"outs")
+                mkdirs(count_dir)
+                print "Copying web_summary.html from %s to %s" % (outs_dir,count_dir)
+                shutil.copy(os.path.join(outs_dir,"web_summary.html"),count_dir)
+
+    # Create a report and zip archive for each project
+    pwd = os.getcwd()
+    analysis_dir = os.path.basename(pwd)
+    for project in projects:
+        # Descend into project dir
+        os.chdir(project)
+        # Set up zip file
+        report_zip = os.path.join("cellranger_count_report.%s.%s.zip" %
+                                  (project,analysis_dir))
+        zip_file = ZipArchive(report_zip,
+                              prefix="cellranger_count_report.%s.%s" %
+                              (project,analysis_dir))
+        # Construct index page
+        print "Making report for project %s" % project
+        count_report = Document("%s: cellranger count" % project)
+        count_report.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
+        summaries = count_report.add_section()
+        summaries.add("Reports from cellranger count for each sample:")
+        summary_links = List()
+        for sample in sample_names[project]:
+            # Link to summary for sample
+            web_summary = os.path.join("cellranger_count",
+                                       sample,
+                                       "outs",
+                                       "web_summary.html")
+            print "Adding web summary (%s) for %s" % (web_summary,
+                                                      sample)
+            summary_links.add_item(Link("%s" % sample,
+                                        web_summary))
+            # Add to the zip file
+            zip_file.add_file(web_summary)
+        summaries.add(summary_links)
+        # Write the report and add to the zip file
+        html_file = "cellranger_count_report.html"
+        count_report.write(html_file)
+        zip_file.add_file(html_file)
+        # Finish
+        zip_file.close()
+        os.chdir(pwd)
+
+def run_cellranger_count_for_project(project_dir,
+                                     transcriptome,
+                                     cellranger_jobmode='sge',
+                                     cellranger_maxjobs=None,
+                                     cellranger_mempercore=None,
+                                     cellranger_jobinterval=None,
+                                     max_jobs=4,
+                                     log_dir=None,
+                                     dry_run=False,
+                                     summary_only=True):
+    """
+    Wrapper to run 'cellranger count' on a project
+
+    Runs the 10xGenomics 'cellranger count' command to
+    perform single library analysis on Fastqs from
+    Chromium single-cell samples in an autoprocess
+    analysis project directory.
+
+    Arguments:
+      project_dir (str): path to the analysis project
+        containing Fastq files
+      transcriptome (str): path to the cellranger
+        compatible transcriptome reference data
+        directory
+      cellranger_jobmode (str): specify the job mode to
+        pass to cellranger (default: None)
+      cellranger_maxjobs (int): specify the maximum
+        number of jobs to pass to cellranger (default:
+        None)
+      cellranger_mempercore (int): specify the memory
+        per core (in Gb) to pass to cellranger (default:
+        None)
+      cellranger_jobinterval (int): specify the interval
+        between launching jobs (in ms) to pass to
+        cellranger (default: None)
+      max_jobs (int):
+      log_dir (str): path to a directory to write logs
+        (default: current working directory)
+      dry_run (bool): if True then only report actions
+        that would be performed but don't run anything
+      summary_only (bool): if True then only collect
+        the output 'web_summary.html' file, otherwise
+        copy all outputs (warning: this can be very
+        large)
+
+    Returns:
+      Integer: exit code from the cellranger command.
+    """
+    # Build the 'fastq_path' dir for cellranger
+    fastq_dir = build_fastq_path_dir(project_dir)
+    # Run the count procedure
+    run_cellranger_count(
+        fastq_dir,
+        transcriptome,
+        cellranger_jobmode=cellranger_jobmode,
+        cellranger_maxjobs=cellranger_maxjobs,
+        cellranger_mempercore=cellranger_mempercore,
+        cellranger_jobinterval=cellranger_jobinterval,
+        max_jobs=max_jobs,
+        log_dir=log_dir,
+        dry_run=dry_run,
+        summary_only=summary_only)
 
 def add_cellranger_args(cellranger_cmd,
                         jobmode=None,
