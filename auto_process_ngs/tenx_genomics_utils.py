@@ -199,10 +199,10 @@ def build_fastq_path_dir(project_dir):
         print fastq
         link_name = os.path.join(fq_dir,os.path.basename(fastq))
         if os.path.exists(link_name):
-            logging.warning("%s: already exists" % link_name)
+            logger.warning("%s: already exists" % link_name)
             continue
         target = os.path.relpath(fastq,fq_dir)
-        logging.debug("Linking: %s -> %s" % (link_name,target))
+        logger.debug("Linking: %s -> %s" % (link_name,target))
         os.symlink(target,link_name)
     return fastq_path_dir
 
@@ -251,12 +251,12 @@ def cellranger_info(path=None):
                 try:
                     package_version = line.split('(')[-1].strip(')')
                 except Exception as ex:
-                    logging.warning("Unable to get version from '%s': %s" %
-                                    (line,ex))
+                    logger.warning("Unable to get version from '%s': %s" %
+                                   (line,ex))
     else:
         # No package supplied or located
-        logging.warning("Unable to identify cellranger package "
-                        "from '%s'" % cellranger_path)
+        logger.warning("Unable to identify cellranger package "
+                       "from '%s'" % cellranger_path)
     # Return what we found
     return (cellranger_path,package_name,package_version)
 
@@ -362,13 +362,13 @@ def run_cellranger_mkfastq(sample_sheet,
         try:
             cellranger_mkfastq_job.wait()
         except KeyboardInterrupt,ex:
-            logging.warning("Keyboard interrupt, terminating cellranger")
+            logger.warning("Keyboard interrupt, terminating cellranger")
             cellranger_mkfastq_job.terminate()
             raise ex
         exit_code = cellranger_mkfastq_job.exit_code
         print "cellranger mkfastq completed: exit code %s" % exit_code
         if exit_code != 0:
-            logging.error("cellranger mkfastq exited with an error")
+            logger.error("cellranger mkfastq exited with an error")
             return exit_code
         # Deal with the QC summary report
         flow_cell_dir = flow_cell_id(primary_data_dir)
@@ -378,7 +378,7 @@ def run_cellranger_mkfastq(sample_sheet,
             lanes_suffix = ""
         flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
         if not os.path.isdir(flow_cell_dir):
-            logging.error("No output directory '%s'" % flow_cell_dir)
+            logger.error("No output directory '%s'" % flow_cell_dir)
             return -1
         json_file = os.path.join(flow_cell_dir,
                                  "outs",
@@ -450,7 +450,7 @@ def run_cellranger_count(fastq_dir,
             for sample in project.samples:
                 sample_names[project.name].append(sample.name)
     except IlluminaDataError:
-        logging.critical("Couldn't load data from '%s'" %
+        logger.critical("Couldn't load data from '%s'" %
                          fastq_dir)
         return 1
     print "Samples: %s" % sample_names
@@ -527,7 +527,7 @@ def run_cellranger_count(fastq_dir,
     for job in jobs:
         retval += job.exit_code
     if retval != 0:
-        logging.critical("One or more jobs finished with non-zero "
+        logger.critical("One or more jobs finished with non-zero "
                          "exit code")
         return retval
 

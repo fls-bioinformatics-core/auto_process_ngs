@@ -140,10 +140,10 @@ def update_project_metadata(unaligned_dir,
         illumina_data = IlluminaData(analysis_dir,
                                      unaligned_dir=unaligned_dir)
     except IlluminaDataError as ex:
-        logging.critical("Failed to load bcl2fastq outputs from "
-                         "%s/%s: %s" % (analysis_dir,
-                                        unaligned_dir,
-                                        ex))
+        logger.critical("Failed to load bcl2fastq outputs from "
+                        "%s/%s: %s" % (analysis_dir,
+                                       unaligned_dir,
+                                       ex))
         return
     filen = os.path.abspath(project_metadata_file)
     if os.path.exists(filen):
@@ -287,14 +287,14 @@ if __name__ == "__main__":
         required = []
     for prog in required:
         if find_program(prog) is None:
-            logging.critical("couldn't find '%s'" % prog)
+            logger.critical("couldn't find '%s'" % prog)
             sys.exit(1)
 
     # Run the requested command
     if args.command == "mkfastq":
         # Warn that this command is now deprecated
-        logging.warning("This command is deprecated, use 'auto_process "
-                        "make_fastqs --protocol=10x_chromium_sc' instead")
+        logger.warning("This command is deprecated, use 'auto_process "
+                       "make_fastqs --protocol=10x_chromium_sc' instead")
         cellranger_mkfastq(args.samplesheet,
                            args.run_dir,
                            args.output_dir,
@@ -334,6 +334,6 @@ if __name__ == "__main__":
     elif args.command == "update_projects":
         # Generate or update the project metadata file
         # Warn that this command is now deprecated
-        logging.warning("This command is deprecated")
+        logger.warning("This command is deprecated")
         update_project_metadata(args.unaligned_dir,
                                 args.project_metadata_file)
