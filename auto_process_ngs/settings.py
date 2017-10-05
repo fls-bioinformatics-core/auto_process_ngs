@@ -157,7 +157,8 @@ class Settings(object):
         # 10xgenomics
         self.add_section('10xgenomics')
         self['10xgenomics']['cellranger_jobmode'] = config.get('10xgenomics',
-                                                               'cellranger_jobmode')
+                                                               'cellranger_jobmode',
+                                                               'sge')
         self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         # fastq_stats
