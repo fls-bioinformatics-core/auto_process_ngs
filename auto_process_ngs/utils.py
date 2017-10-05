@@ -37,6 +37,8 @@ Functions:
 
 - bases_mask_is_paired_end:
 - split_user_host_dir:
+- get_numbered_subdir:
+- find_executables:
 - pretty_print_rows:
 - write_script_file:
 - edit_file:
@@ -2063,6 +2065,61 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
+
+def get_numbered_subdir(name,parent_dir=None,full_path=False):
+    """
+    Return a name for a new numbered log subdirectory
+
+    Generates the name for a numbered subdirectory.
+
+    Subdirectories are named as NNN_<name>  e.g.
+    001_setup, 002_make_fastqs etc.
+
+    'Gaps' are ignored, so the number associated with
+    the new name will be one plus the highest index
+    that already exists.
+
+    **Note that a directory is not created** - this
+    must be done by the calling subprogram. As a
+    result there is the possibility of a race
+    condition.
+
+    Arguments:
+      name (str): name for the subdirectory
+        (typically the name of the processing
+        stage that will produce logs to be
+        written to the subdirs
+      parent_dir (str): path to the parent
+        directory where the indexed directory
+        would be created; defaults to CWD if
+        not set
+      full_path (bool): if True then return the
+        full path for the new subdirectory;
+        default is to return the name relative
+        to the parent directory
+
+    Returns:
+      String: name for the new log subdirectory
+        (will be the full path if 'full_path'
+        was specified).
+    """
+    # Sort out parent directory
+    if parent_dir is None:
+        parent_dir = os.getcwd()
+    parent_dir = os.path.abspath(parent_dir)
+    # Get the highest number from the names of
+    # any other existing numbered subdirs
+    i = 0
+    for d in bcf_utils.list_dirs(parent_dir):
+        try:
+            i = max(i,int(d.split('_')[0]))
+        except ValueError:
+            pass
+    # Generate and return name/path
+    subdir = "%03d_%s" % (i+1,str(name))
+    if full_path:
+        subdir = os.path.join(parent_dir,subdir)
+    return subdir
 
 def find_executables(names,info_func,reqs=None,paths=None):
     """

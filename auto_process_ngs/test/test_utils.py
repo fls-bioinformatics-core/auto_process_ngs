@@ -1527,6 +1527,66 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
 
+class TestGetNumberedSubdir(unittest.TestCase):
+    """
+    Tests for the 'get_numbered_subdir' function
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestGetNumberedSubdir")
+        # Store cwd
+        self.original_dir = os.getcwd()
+    def tearDown(self):
+        # Restore origin cwd
+        os.chdir(self.original_dir)
+        # Remove working dir
+        shutil.rmtree(self.wd)
+    def test_get_numbered_subdir(self):
+        """
+        get_numbered_subdir: first subdir in parent
+        """
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "001_test")
+    def test_get_numbered_subdir_next_in_sequence(self):
+        """
+        get_numbered_subdir: next subdir in sequence
+        """
+        for d in ("001_test","002_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "003_test")
+    def test_get_numbered_subdir_ignore_gaps(self):
+        """
+        get_numbered_subdir: ignore gaps in sequence
+        """
+        for d in ("001_test","003_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "004_test")
+    def test_get_numbered_subdir_default_to_cwd(self):
+        """
+        get_numbered_subdir: parent defaults to CWD
+        """
+        for d in ("001_test","002_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test"),"001_test")
+        os.chdir(self.wd)
+        self.assertEqual(
+            get_numbered_subdir("test"),"003_test")
+    def test_get_numbered_subdir_full_path(self):
+        """
+        get_numbered_subdir: return full path
+        """
+        self.assertEqual(
+            get_numbered_subdir("test",
+                                parent_dir=self.wd,
+                                full_path=True),
+            os.path.join(self.wd,"001_test"))
+
 class TestFindExecutables(unittest.TestCase):
     """
     Tests for the find_executables function
