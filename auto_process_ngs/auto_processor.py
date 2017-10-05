@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-16 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17 Peter Briggs
 #
 #########################################################################
 #
@@ -394,6 +394,55 @@ class AutoProcess:
                         project_metadata.add_project(project.name,sample_names)
         # Return the metadata object
         return project_metadata
+
+    def update_project_metadata_file(self,unaligned_dir=None,
+                                     project_metadata_file='projects.info'):
+        """
+        Update project metadata file from bcl2fastq outputs
+
+        Updates the contents of the project metadata file
+        (default: "projects.info") from a bcl-to-fastq output
+        directory, by adding new entries for projects in the
+        bcl-to-fastq outputs which don't currently appear.
+
+        Arguments:
+          unaligned_dir (str): path to the bcl-to-fastq
+            output directory relative to the analysis dir.
+            Defaults to the unaligned dir stored in the
+            analysis directory parameter file.
+          project_metatadata_file (str): optional, path to
+            the project metadata file to update
+        """
+        if project_metadata_file is not None:
+            self.params['project_metadata'] = project_metadata_file
+        print "Project metadata file: %s" % self.params.project_metadata
+        filen = os.path.join(self.analysis_dir,
+                             self.params.project_metadata)
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        print "Unaligned_dir: %s" % self.params.unaligned_dir
+        illumina_data = IlluminaData.IlluminaData(
+            self.analysis_dir,
+            unaligned_dir=self.params.unaligned_dir)
+        if os.path.exists(filen):
+            # Load data from existing file
+            print "Loading project metadata from existing file: %s" % filen
+            project_metadata = utils.ProjectMetadataFile(filen)
+        else:
+            # New (empty) metadata file
+            print "Creating new project metadata file: %s" % filen
+            project_metadata = utils.ProjectMetadataFile()
+        # Populate/update
+        for project in illumina_data.projects:
+            project_name = project.name
+            sample_names = [s.name for s in project.samples]
+            if project_name not in project_metadata:
+                project_metadata.add_project(project_name,sample_names)
+            else:
+                project_metadata.update_project(project_name,
+                                                sample_names=sample_names)
+        # Save
+        project_metadata.save(filen)
 
     def get_analysis_projects_from_dirs(self):
         """
@@ -1069,18 +1118,24 @@ class AutoProcess:
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return utils.AnalysisProject(dirs[0],undetermined_dir)
         
-    def make_fastqs(self,ignore_missing_bcl=False,ignore_missing_stats=False,
+    def make_fastqs(self,protocol='standard',
+                    unaligned_dir=None,sample_sheet=None,lanes=None,
+                    ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
                     nprocessors=None,require_bcl2fastq_version=None,
-                    unaligned_dir=None,sample_sheet=None,
                     bases_mask=None,no_lane_splitting=None,
                     minimum_trimmed_read_length=None,
                     mask_short_adapter_reads=None,
                     generate_stats=True,stats_file=None,
                     per_lane_stats_file=None,
                     report_barcodes=False,barcodes_file=None,
-                    skip_bcl2fastq=False,only_fetch_primary_data=False,
-                    lanes=None,create_empty_fastqs=None,runner=None):
+                    skip_fastq_generation=False,
+                    only_fetch_primary_data=False,
+                    create_empty_fastqs=None,runner=None,
+                    cellranger_jobmode=None,
+                    cellranger_mempercore=None,
+                    cellranger_maxjobs=None,
+                    cellranger_jobinterval=None):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1097,6 +1152,17 @@ class AutoProcess:
         values will be used for both steps.
 
         Arguments:
+          protocol            : if set then specifies the protocol to use
+                                for fastq generation, otherwise use the
+                                'standard' bcl2fastq protocol
+          unaligned_dir       : if set then use this as the output directory for
+                                bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
+                                an alternative is already specified in the config file)
+          sample_sheet        : if set then use this as the input samplesheet
+          lanes               : (optional) specify a list of lane numbers to
+                                use in the processing; lanes not in the list
+                                will be excluded (default is to include all
+                                lanes)
           nprocessors         : number of processors to run bclToFastq.py with
           ignore_missing_bcl  : if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
@@ -1109,10 +1175,6 @@ class AutoProcess:
                                 Should be a string of the form '1.8.4' or
                                 '>2.0'. Set to None to automatically determine
                                 bcl2fastq version.
-          unaligned_dir       : if set then use this as the output directory for
-                                bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
-                                an alternative is already specified in the config file)
-          sample_sheet        : if set then use this as the input samplesheet
           bases_mask          : if set then use this as an alternative bases mask setting
           no_lane_splitting   : if True then run bcl2fastq with --no-lane-splitting
           minimum_trimmed_read_length: if set then specify minimum length
@@ -1130,36 +1192,107 @@ class AutoProcess:
                                 i.e. don't do barcode analyses)
           barcodes_file       : if set then use this as the name of the report file for
                                 barcode sequences analysis
-          skip_bcl2fastq      : if True then don't perform fastq generation
+          skip_fastq_generation: if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
-          lanes               : (optional) specify a list of lane numbers to
-                                use in the processing; lanes not in the list
-                                will be excluded (default is to include all
-                                lanes)
           create_empty_fastqs : if True then create empty 'placeholder' fastq
                                 files for any missing fastqs after bcl2fastq
                                 (must have completed with zero exit status)
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
+          cellranger_jobmode  : (optional) job mode to run cellranger in
+                                (10xGenomics Chromium SC data only)
+          cellranger_mempercore: (optional) memory assumed per core (in Gbs)
+                                (10xGenomics Chromium SC data only)
+          cellranger_maxjobs  : (optional) maxiumum number of concurrent jobs
+                                to run (10xGenomics Chromium SC data only)
+          cellranger_jobinterval: (optional) how often jobs are submitted (in
+                                ms) (10xGenomics Chromium SC data only)
 
         """
-        #
-        # Check for pre-existing bcl2fastq outputs
-        if self.verify_bcl_to_fastq(unaligned_dir=unaligned_dir,
-                                    lanes=lanes):
-            print "Bcl to fastq outputs already present"
-            # Check for project metadata file
-            self.make_project_metadata_file()
-            # (Re)generate stats?
-            if generate_stats:
-                self.generate_stats(stats_file=stats_file,
-                                    per_lane_stats_file=per_lane_stats_file,
-                                    unaligned_dir=unaligned_dir,
-                                    nprocessors=nprocessors,
-                                    runner=runner)
+        # Report protocol
+        print "Protocol              : %s" % protocol
+        # Check primary data
+        primary_data_dir = os.path.join(
+            self.params.primary_data_dir,
+            os.path.basename(self.params.data_dir))
+        if not os.path.isdir(primary_data_dir):
+            raise Exception("Missing primary data directory: %s" %
+                            primary_data_dir)
+        illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
+        print "Primary data dir      : %s" % primary_data_dir
+        print "Platform              : %s" % illumina_run.platform
+        print "Bcl format            : %s" % illumina_run.bcl_extension
+        # Unaligned dir
+        if unaligned_dir is not None:
+            self.params['unaligned_dir'] = unaligned_dir
+        elif self.params['unaligned_dir'] is None:
+            self.params['unaligned_dir'] = 'bcl2fastq'
+        print "Output dir            : %s" % self.params.unaligned_dir
+        # Sample sheet
+        if sample_sheet is None:
+            sample_sheet = self.params.sample_sheet
+        if not os.path.isabs(sample_sheet):
+            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
+        if not os.path.isfile(sample_sheet):
+            raise Exception("Missing sample sheet '%s'" % sample_sheet)
+        self.params['sample_sheet'] = sample_sheet
+        print "Source sample sheet   : %s" % self.params.sample_sheet
+        # Check requested lanes are actually present
+        print "Lanes                 : %s" % ('all' if lanes is None
+                                              else
+                                              ','.join([str(l)
+                                                        for l in lanes]))
+        if lanes is not None:
+            s = IlluminaData.SampleSheet(self.params.sample_sheet)
+            if not s.has_lanes:
+                raise Exception("Requested subset of lanes but "
+                                "samplesheet doesn't contain any "
+                                "lane information")
+            samplesheet_lanes = list(set([l['Lane'] for l in s]))
+            for l in lanes:
+                if l not in samplesheet_lanes:
+                    raise Exception("Requested lane '%d' not present "
+                                    "in samplesheet" % l)
+        # Make a temporary sample sheet
+        if lanes:
+            lanes_id = ".L%s" % ''.join([str(l) for l in lanes])
+        else:
+            lanes_id = ""
+        sample_sheet = os.path.join(self.tmp_dir,
+                                    "SampleSheet%s.%s.csv" %
+                                    (lanes_id,
+                                     time.strftime("%Y%m%d%H%M%S")))
+        bcl2fastq_utils.make_custom_sample_sheet(self.params.sample_sheet,
+                                                 sample_sheet,
+                                                 lanes=lanes)
+        # Adjust verification settings for 10xGenomics Chromium SC
+        # data if necessary
+        verify_include_sample_dir = False
+        if protocol == '10x_chromium_sc':
+            if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
+                # Force inclusion of sample-name subdirectories
+                # when verifying Chromium SC data
+                print "Sample sheet includes Chromium SC indices"
+                verify_include_sample_dir = True
+        # Check for pre-existing Fastq outputs
+        if self.verify_fastq_generation(
+                unaligned_dir=self.params.unaligned_dir,
+                lanes=lanes,
+                include_sample_dir=verify_include_sample_dir):
+            print "Expected Fastq outputs already present"
+            skip_rsync = True
+            skip_fastq_generation = True
+        # Check if there's anything to do
+        if (skip_rsync and skip_fastq_generation) and not generate_stats:
+            print "Nothing to do"
             return
         # Log dir
-        self.set_log_dir(self.get_log_subdir('make_fastqs'))
+        log_dir = 'make_fastqs'
+        if protocol != 'standard':
+            log_dir += "_%s" % protocol
+        if lanes:
+            log_dir += "_L%s" % ''.join([str(l) for l in sorted(lanes)])
+        self.set_log_dir(self.get_log_subdir(log_dir))
         # Fetch primary data
         if not skip_rsync:
             if self.get_primary_data() != 0:
@@ -1167,38 +1300,115 @@ class AutoProcess:
                 raise Exception, "Failed to acquire primary data"
             if only_fetch_primary_data:
                 return
-        # Run bcl_to_fastq
-        if not skip_bcl2fastq:
-            try:
-                self.bcl_to_fastq(require_bcl2fastq=require_bcl2fastq_version,
-                                  unaligned_dir=unaligned_dir,
-                                  sample_sheet=sample_sheet,
-                                  bases_mask=bases_mask,
-                                  ignore_missing_bcl=ignore_missing_bcl,
-                                  ignore_missing_stats=ignore_missing_stats,
-                                  no_lane_splitting=no_lane_splitting,
-                                  minimum_trimmed_read_length=minimum_trimmed_read_length,
-                                  mask_short_adapter_reads=mask_short_adapter_reads,
-                                  nprocessors=nprocessors,
-                                  lanes=lanes,
-                                  create_empty_fastqs=create_empty_fastqs,
-                                  runner=runner)
-            except Exception,ex:
-                raise Exception("Bcl2fastq stage failed: '%s'" % ex)
-            if not self.verify_bcl_to_fastq(lanes=lanes):
-                raise Exception("Bcl2fastq failed to produce expected outputs")
+        # Do fastq generation using the specified protocol
+        if not skip_fastq_generation:
+            if protocol == 'standard':
+                # Standard protocol
+                try:
+                    exit_code = self.bcl_to_fastq(
+                        unaligned_dir=self.params.unaligned_dir,
+                        sample_sheet=sample_sheet,
+                        primary_data_dir=primary_data_dir,
+                        require_bcl2fastq=require_bcl2fastq_version,
+                        bases_mask=bases_mask,
+                        ignore_missing_bcl=ignore_missing_bcl,
+                        ignore_missing_stats=ignore_missing_stats,
+                        no_lane_splitting=no_lane_splitting,
+                        minimum_trimmed_read_length=minimum_trimmed_read_length,
+                        mask_short_adapter_reads=mask_short_adapter_reads,
+                        nprocessors=nprocessors,
+                        runner=runner)
+                except Exception,ex:
+                    raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+            elif protocol == '10x_chromium_sc':
+                # 10xGenomics Chromium SC
+                try:
+                    # Put a copy of sample sheet in the log directory
+                    shutil.copy(sample_sheet,self.log_dir)
+                    # Run cellranger mkfastq
+                    exit_code = tenx_genomics_utils.run_cellranger_mkfastq(
+                        sample_sheet=sample_sheet,
+                        primary_data_dir=primary_data_dir,
+                        output_dir=self.params.unaligned_dir,
+                        lanes=(None if lanes is None
+                               else ','.join([str(l) for l in lanes])),
+                        bases_mask=bases_mask,
+                        cellranger_jobmode=cellranger_jobmode,
+                        cellranger_maxjobs=cellranger_maxjobs,
+                        cellranger_mempercore=cellranger_mempercore,
+                        cellranger_jobinterval=cellranger_jobinterval,
+                        log_dir=self.log_dir)
+                except Exception,ex:
+                    raise Exception("'cellranger mkfastq' stage failed: "
+                                    "'%s'" % ex)
+            else:
+                # Unknown protocol
+                raise Exception("Unknown protocol '%s'" % protocol)
+            # Check the outputs
+            if exit_code != 0:
+                raise Exception("Fastq generation finished with error: "
+                                "exit code %d" % exit_code)
+            if not self.verify_fastq_generation(
+                    lanes=lanes,
+                    include_sample_dir=verify_include_sample_dir):
+                # Check failed
+                logging.error("Failed to verify output Fastqs against "
+                              "sample sheet")
+                # Try to load the data from unaligned dir
+                try:
+                    illumina_data = IlluminaData.IlluminaData(
+                        self.analysis_dir,
+                        unaligned_dir=self.params.unaligned_dir)
+                except IlluminaData.IlluminaDataError as ex:
+                    raise Exception("Unable to load data from %s: %s"
+                                    % (self.params.unaligned_dir,ex))
+                # Generate a list of missing Fastqs
+                missing_fastqs = IlluminaData.list_missing_fastqs(
+                    illumina_data,
+                    sample_sheet,
+                    include_sample_dir=include_sample_dir)
+                assert(len(missing_fastqs) > 0)
+                missing_fastqs_file = os.path.join(self.log_dir,
+                                                   "missing_fastqs.log")
+                print "Writing list of missing Fastq files to %s" % \
+                    missing_fastqs_file
+                with open(missing_fastqs_file,'w') as fp:
+                    for fq in missing_fastqs:
+                        fp.write("%s\n" % fq)
+                # Create empty FASTQs
+                if create_empty_fastqs is None:
+                    try:
+                        create_empty_fastqs = \
+                            self.settings.platform[self.metadata.platform].\
+                            create_empty_fastqs
+                    except (KeyError,AttributeError):
+                        create_empty_fastqs = \
+                            self.settings.bcl2fastq.create_empty_fastqs
+                if create_empty_fastqs:
+                    logging.warning("Making 'empty' Fastqs as placeholders")
+                    for fq in missing_fastqs:
+                        fastq = os.path.join(self.analysis_dir,
+                                             self.params.unaligned_dir,fq)
+                        print "-- %s" % fastq
+                    with gzip.GzipFile(filename=fastq,mode='wb') as fp:
+                        fp.write('')
+                raise Exception("Fastq generation failed to produce "
+                                "expected outputs")
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file=stats_file,
                                 per_lane_stats_file=per_lane_stats_file,
-                                unaligned_dir=unaligned_dir,
+                                unaligned_dir=self.params.unaligned_dir,
                                 nprocessors=nprocessors,
                                 runner=runner)
         # Count and report barcode sequences
         if report_barcodes:
             self.report_barcodes(barcodes_file)
         # Make a 'projects.info' metadata file
-        self.make_project_metadata_file()
+        if lanes:
+            self.update_project_metadata_file()
+        else:
+            self.make_project_metadata_file()
         # Remove primary data
         if remove_primary_data:
             self.remove_primary_data()
@@ -1256,12 +1466,12 @@ class AutoProcess:
                           "exit code returned)")
         return exit_code
 
-    def bcl_to_fastq(self,require_bcl2fastq=None,unaligned_dir=None,
-                     sample_sheet=None,bases_mask=None,
+    def bcl_to_fastq(self,unaligned_dir,sample_sheet,primary_data_dir,
+                     require_bcl2fastq=None,bases_mask=None,
                      ignore_missing_bcl=False,ignore_missing_stats=False,
                      no_lane_splitting=None,minimum_trimmed_read_length=None,
                      mask_short_adapter_reads=None,nprocessors=None,
-                     runner=None,lanes=None,create_empty_fastqs=None):
+                     runner=None):
         """Generate FASTQ files from the raw BCL files
 
         Performs FASTQ generation from raw BCL files produced by an Illumina
@@ -1269,14 +1479,14 @@ class AutoProcess:
         wraps the 'configureBclToFastq' and 'make' steps).
 
         Arguments:
+          unaligned_dir: output directory for bcl-to-fastq conversion
+          sample_sheet: input sample sheet file
+          primary_data_dir: path to the top-level directory holding
+            the sequencing data
           require_bcl2fastq: if set then should be a string of the form
             '1.8.4' or '>2.0' explicitly specifying the version of
             bcl2fastq to use. (Default to use specifications from the
             settings)
-          unaligned_dir: if set then use this as the output directory for
-            bcl-to-fastq conversion. Default is 'bcl2fastq' (unless an
-            alternative is already specified in the settings)
-          sample_sheet: if set then use this as the input sample sheet file
           bases_mask: if set then use this as an alternative bases mask setting
           ignore_missing_bcl: if True then run bcl2fastq with --ignore-missing-bcl
           ignore_missing_stats: if True then run bcl2fastq with --ignore-missing-stats
@@ -1288,26 +1498,9 @@ class AutoProcess:
           nprocessors: number of processors to run bclToFastq.py with
           runner: (optional) specify a non-default job runner to use for fastq
             generation
-          create_empty_fastqs: if True then create empty 'placeholder' fastq
-            files for any missing fastqs after bcl2fastq (must have completed
-            with zero exit status)
-          lanes: (optional) specify a list of lane numbers (integers) to
-            include from the samplesheet; lanes not in the list will be
-            excluded (and will not be included in the processing). Default is
-            to include all lanes from the sample sheet.
-        
         """
         # Directories
         analysis_dir = self.params.analysis_dir
-        if unaligned_dir is not None:
-            self.params['unaligned_dir'] = unaligned_dir
-        elif self.params['unaligned_dir'] is None:
-            self.params['unaligned_dir'] = 'bcl2fastq'
-        # Examine primary data
-        primary_data = os.path.join(self.params.primary_data_dir,
-                                    os.path.basename(self.params.data_dir))
-        if not os.path.isdir(primary_data):
-            raise Exception("Missing primary data directory: %s" % primary_data)
         # Bases mask
         if bases_mask is None:
             bases_mask = self.params.bases_mask
@@ -1315,9 +1508,9 @@ class AutoProcess:
             self.params['bases_mask'] = bases_mask
         # Check for basic information needed to do bcl2fastq conversion
         if self.params.data_dir is None:
-            raise Exception, "No source data directory"
+            raise Exception("No source data directory")
         if bases_mask is None:
-            raise Exception, "No bases mask"
+            raise Exception("No bases mask")
         # Number of cores
         if nprocessors is None:
             nprocessors = self.settings.bcl2fastq.nprocessors
@@ -1329,14 +1522,6 @@ class AutoProcess:
                 pass
             if no_lane_splitting is None:
                 no_lane_splitting = self.settings.bcl2fastq.no_lane_splitting
-        # Whether to create empty fastq files
-        if create_empty_fastqs is None:
-            try:
-                create_empty_fastqs = self.settings.platform[self.metadata.platform].create_empty_fastqs
-            except (KeyError,AttributeError):
-                pass
-            if create_empty_fastqs is None:
-                create_empty_fastqs = self.settings.bcl2fastq.create_empty_fastqs
         # Determine which bcl2fastq software to use
         if require_bcl2fastq is None:
             try:
@@ -1353,59 +1538,30 @@ class AutoProcess:
         bcl2fastq = bcl2fastq_utils.available_bcl2fastq_versions(
             require_bcl2fastq)
         if bcl2fastq:
-            print "Found available bcl2fastq packages:"
-            for i,package in enumerate(bcl2fastq):
-                bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(package)
-                print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
-                                         bcl2fastq_info[0],
-                                         bcl2fastq_info[1],
-                                         bcl2fastq_info[2])
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl2fastq_utils.bcl_to_fastq_info(bcl2fastq_exe)
         else:
             raise Exception("No appropriate bcl2fastq software located")
         # Store info on bcl2fastq package
         self.metadata['bcl2fastq_software'] = bcl2fastq_info
-        # Sample sheet
-        if sample_sheet is None:
-            sample_sheet = self.params.sample_sheet
-        if not os.path.isabs(sample_sheet):
-            sample_sheet = os.path.join(self.analysis_dir,sample_sheet)
-        if not os.path.isfile(sample_sheet):
-            raise Exception("Missing sample sheet '%s'" % sample_sheet)
-        self.params['sample_sheet'] = sample_sheet
-        sample_sheet = self.params.sample_sheet
         # Generate temporary sample sheet with required format
         fmt = bcl2fastq_utils.get_required_samplesheet_format(bcl2fastq_info[2])
-        timestamp = time.strftime("%Y%m%d%H%M%S")
         tmp_sample_sheet = os.path.join(self.tmp_dir,
-                                        "SampleSheet.%s.csv" % timestamp)
+                                        "SampleSheet.%s.%s.csv" %
+                                        (fmt,
+                                         time.strftime("%Y%m%d%H%M%S")))
         print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
-        sample_sheet_data = IlluminaData.SampleSheet(sample_sheet)
-        # Select subset of lanes if requested
-        if lanes is not None:
-            print "Updating to include only specified lanes: %s" % \
-                ','.join([str(l) for l in lanes])
-            i = 0
-            while i < len(sample_sheet_data):
-                line = sample_sheet_data[i]
-                if line['Lane'] in lanes:
-                    print "Keeping %s" % line
-                    i += 1
-                else:
-                    del(sample_sheet_data[i])
-        # Write out the sample sheet
-        sample_sheet_data.write(tmp_sample_sheet,fmt=fmt)
+        bcl2fastq_utils.make_custom_sample_sheet(sample_sheet,
+                                                 tmp_sample_sheet,
+                                                 fmt=fmt)
         # Put a copy in the log directory
         shutil.copy(tmp_sample_sheet,self.log_dir)
         # Create bcl2fastq directory
-        bcl2fastq_dir = self.add_directory(self.params.unaligned_dir)
-        # Get info on the run
-        illumina_run = IlluminaData.IlluminaRun(primary_data)
+        bcl2fastq_dir = self.add_directory(unaligned_dir)
         # Determine initial number of mismatches
         nmismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
         # Check for barcode collisions
-        collisions = bcl2fastq_utils.check_barcode_collisions(sample_sheet,
+        collisions = bcl2fastq_utils.check_barcode_collisions(tmp_sample_sheet,
                                                               nmismatches)
         if collisions:
             # Report problem barcodes
@@ -1419,7 +1575,7 @@ class AutoProcess:
             while nmismatches > 0 and collisions:
                 nmismatches -= 1
                 collisions = bcl2fastq_utils.check_barcode_collisions(
-                    sample_sheet,
+                    tmp_sample_sheet,
                     nmismatches)
                 if not collisions:
                     print "No collisions using %d mismatches" % nmismatches
@@ -1435,15 +1591,8 @@ class AutoProcess:
         print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
         print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
                                                bcl2fastq_info[2])
-        print "Primary data dir      : %s" % primary_data
-        print "%s" % illumina_run.run_dir
-        print "Platform              : %s" % illumina_run.platform
-        print "Bcl format            : %s" % illumina_run.bcl_extension
-        print "Source sample sheet   : %s" % sample_sheet
+        print "Sample sheet          : %s" % os.path.basename(tmp_sample_sheet)
         print "Bases mask            : %s" % bases_mask
-        print "Lanes                 : %s" % ('all' if lanes is None
-                                              else
-                                              ','.join([str(l) for l in lanes]))
         print "Nmismatches           : %d" % nmismatches
         print "Nprocessors           : %s" % nprocessors
         print "Ignore missing bcl    : %s" % ignore_missing_bcl
@@ -1451,8 +1600,6 @@ class AutoProcess:
         print "No lane splitting     : %s" % no_lane_splitting
         print "Min trimmed read len  : %s" % minimum_trimmed_read_length
         print "Mask short adptr reads: %s" % mask_short_adapter_reads
-        print "Create empty fastqs   : %s" % create_empty_fastqs
-        print "Output dir            : %s" % bcl2fastq_dir
         # Set up runner
         if runner is not None:
             runner = fetch_runner(runner)
@@ -1479,7 +1626,7 @@ class AutoProcess:
                                mask_short_adapter_reads)
         bcl2fastq.add_args('--bcl2fastq_path',
                            bcl2fastq_exe,
-                           primary_data,
+                           primary_data_dir,
                            bcl2fastq_dir,
                            tmp_sample_sheet)
         print "Running %s" % bcl2fastq
@@ -1498,36 +1645,7 @@ class AutoProcess:
         print "bcl2fastq completed: exit code %s" % exit_code
         if exit_code != 0:
             logging.error("bcl2fastq exited with an error")
-        # Verify outputs
-        try:
-            illumina_data = self.load_illumina_data()
-        except IlluminaData.IlluminaDataError,ex:
-            logging.error("Unable to find outputs from bclToFastq (%s)" % ex)
-            return
-        if not IlluminaData.verify_run_against_sample_sheet(illumina_data,
-                                                            tmp_sample_sheet):
-            logging.error("Failed to verify bcl to fastq outputs against sample sheet")
-            # Get a list of missing FASTQs
-            missing_fastqs = IlluminaData.list_missing_fastqs(illumina_data,
-                                                              tmp_sample_sheet)
-            if not missing_fastqs:
-                raise Exception("Verify failed but no missing FASTQs?")
-            missing_fastqs_file = os.path.join(self.log_dir,"missing_fastqs.log")
-            print "Writing list of missing FASTQ files to %s" % \
-                missing_fastqs_file
-            with open(missing_fastqs_file,'w') as fp:
-                for fq in missing_fastqs:
-                    fp.write("%s\n" % fq)
-            # Create empty FASTQs
-            if create_empty_fastqs:
-                logging.warning("Making 'empty' FASTQs as placeholders")
-                for fq in missing_fastqs:
-                    fastq = os.path.join(self.analysis_dir,
-                                         bcl2fastq_dir,fq)
-                    print "-- %s" % fastq
-                    with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-                        fp.write('')
-            return
+        return exit_code
 
     def generate_stats(self,stats_file=None,per_lane_stats_file=None,
                        unaligned_dir=None,add_data=False,nprocessors=None,
@@ -1869,14 +1987,18 @@ class AutoProcess:
             print "Removing copy of primary data in %s" % primary_data
             shutil.rmtree(primary_data)
 
-    def verify_bcl_to_fastq(self,unaligned_dir=None,lanes=None):
-        """Check that bcl to fastq outputs match sample sheet predictions
+    def verify_fastq_generation(self,unaligned_dir=None,lanes=None,
+                                include_sample_dir=False):
+        """Check that generated Fastqs match sample sheet predictions
 
         Arguments:
           unaligned_dir (str): explicitly specify the bcl2fastq output
             directory to check
           lanes (list): specify a list of lane numbers (integers) to
             check (others will be ignored)
+          include_sample_dir (bool): if True then include a
+            'sample_name' directory level when checking for
+            bcl2fastq2 outputs, even if one shouldn't be present
 
         Returns:
           True if outputs match sample sheet, False otherwise.
@@ -1896,35 +2018,27 @@ class AutoProcess:
             # Directory doesn't exist
             return False
         # Make a temporary sample sheet to verify against
-        timestamp = time.strftime("%Y%m%d%H%M%S")
         tmp_sample_sheet = os.path.join(self.tmp_dir,
                                         "SampleSheet.verify.%s.csv" %
-                                        timestamp)
-        sample_sheet_data = IlluminaData.SampleSheet(self.params.sample_sheet)
-        if lanes is not None:
-            # Remove lanes
-            i = 0
-            while i < len(sample_sheet_data):
-                line = sample_sheet_data[i]
-                if line['Lane'] in lanes:
-                    i += 1
-                else:
-                    del(sample_sheet_data[i])
-        sample_sheet_data.write(tmp_sample_sheet)
+                                        time.strftime("%Y%m%d%H%M%S"))
+        bcl2fastq_utils.make_custom_sample_sheet(self.params.sample_sheet,
+                                                 tmp_sample_sheet,
+                                                 lanes=lanes)
         # Try to create an IlluminaData object
         try:
             illumina_data = IlluminaData.IlluminaData(
                 self.analysis_dir,
                 unaligned_dir=unaligned_dir)
-        except IlluminaData.IlluminaDataError, ex:
+        except IlluminaData.IlluminaDataError as ex:
             # Failed to initialise
-            logging.debug("Failed to get information from %s: %s" %
-                          (bcl_to_fastq_dir,ex))
+            logging.warning("Failed to get information from %s: %s" %
+                            (bcl_to_fastq_dir,ex))
             return False
         # Do check
         return IlluminaData.verify_run_against_sample_sheet(
             illumina_data,
-            tmp_sample_sheet)
+            tmp_sample_sheet,
+            include_sample_dir=include_sample_dir)
 
     def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
                          dry_run=False):

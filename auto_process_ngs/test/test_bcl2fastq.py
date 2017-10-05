@@ -503,6 +503,73 @@ class TestBclToFastqInfo(unittest.TestCase):
         self.assertEqual(name,'')
         self.assertEqual(version,'')
 
+class TestMakeCustomSampleSheet(unittest.TestCase):
+    """Tests for the make_custom_sample_sheet function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+        self.iem_content = """[Header]
+IEMFileVersion,4
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+1,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+2,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+2,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+3,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+3,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+4,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+"""
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+    def test_make_custom_sample_sheet_lanes(self):
+        """
+        make_custom_sample_sheet: output subset of lanes
+        """
+        sample_sheet_in = os.path.join(self.wd,
+                                       "SampleSheet.csv")
+        with open(sample_sheet_in,'w') as fp:
+            fp.write(self.iem_content)
+        sample_sheet_out = os.path.join(self.wd,
+                                       "custom_SampleSheet.csv")
+        make_custom_sample_sheet(sample_sheet_in,
+                                 output_sample_sheet=sample_sheet_out,
+                                 lanes=[3,4])
+        expected = """[Header]
+IEMFileVersion,4
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+3,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+3,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+4,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+"""
+        self.assertTrue(os.path.exists(sample_sheet_out))
+        self.assertEqual(open(sample_sheet_out,'r').read(),
+                         expected)
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 

@@ -55,6 +55,7 @@ import logging
 import zipfile
 import pydoc
 import tempfile
+import operator
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -68,6 +69,7 @@ from qc.illumina_qc import QCSample
 from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
 from .exceptions import MissingParameterFileException
+from pkg_resources import parse_version
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -2061,6 +2063,130 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
+
+def find_executables(names,info_func,reqs=None,paths=None):
+    """
+    List available executables matching list of names
+
+    By default searches the PATH for the executables listed
+    in 'names', using the supplied 'info_func' to acquire
+    package names and versions of each, returns a list of
+    executables with the full path, package and version.
+
+    'info_func' is a function that must be supplied by the
+    calling subprogram. Its signature should look like:
+
+    >>> def info_func(p):
+    ...   # Determine full_path, package_name and
+    ...   # version
+    ...   # Then return these as a tuple
+    ...   return (full_path,package_name,version)
+
+    The 'reqs' argument allows a specific version or range
+    of versions to be requested; in this case the returned
+    list will only contain those packages which satisfy
+    the requested versions.
+
+    A range of version specifications can be requested by
+    separating multiple specifiers with a comma - for
+    example '>1.8.3,<2.16'.
+
+    The full set of operators is:
+
+    - ==, >, >=, <=, <
+
+    If no versions are requested then the packages will
+    be returned in PATH order; otherwise they will be
+    returned in version order (highest to lowest).
+
+    Arguments:
+      names (list): list of executable names to look for.
+        These can be full paths or executables with no
+        leading paths
+      info_func (function): function to use to get tuples
+        of (full_path,package_name,version) for an
+        executable
+      reqs (str): optional version requirement expression
+        (for example '>=1.8.4'). If supplied then only
+        executables fulfilling the requirement will be
+        returned. If no operator is supplied then '=='
+        is implied.
+      paths (list): optional set of directory paths to
+        search when looking for executables. If not
+        supplied then the set of paths specified in
+        the PATH environment variable will be searched.
+
+    Returns:
+      List: full paths to executables matching specified
+        criteria.
+
+    """
+    # Search paths
+    if paths is None:
+        paths = os.environ['PATH'].split(os.pathsep)
+    # Search for executables
+    available_exes = []
+    for path in paths:
+        if os.path.isfile(path):
+            path = os.path.dirname(path)
+        for name in names:
+            prog_path = os.path.abspath(os.path.join(path,name))
+            if bcf_utils.PathInfo(prog_path).is_executable:
+                available_exes.append(prog_path)
+    # Filter on requirement
+    if reqs:
+        # Loop over ranges
+        for req in reqs.split(','):
+            logging.debug("Filtering on expression: %s" % req)
+            # Determine operator and version
+            req_op = None
+            req_version = None
+            for op in ('==','>=','<=','>','<'):
+                if req.startswith(op):
+                    req_op = op
+                    req_version = req[len(op):].strip()
+                    break
+            if req_version is None:
+                req_op = '=='
+                req_version = req.strip()
+            logging.debug("Required version: %s %s" % (req_op,req_version))
+            if req_op == '==':
+                op = operator.eq
+            elif req_op == '>=':
+                op = operator.ge
+            elif req_op == '>':
+                op = operator.gt
+            elif req_op == '<':
+                op = operator.lt
+            elif req_op == '<=':
+                op = operator.le
+            # Filter the available executables on version
+            logging.debug("Pre filter: %s" % available_exes)
+            logging.debug("Versions  : %s" % [info_func(x)[2]
+                                              for x in available_exes])
+            available_exes = filter(lambda x: op(
+                parse_version(info_func(x)[2]),
+                parse_version(req_version)),
+                                    available_exes)
+            logging.debug("Post filter: %s" % available_exes)
+        # Sort into version order, highest to lowest
+        available_exes.sort(
+            key=lambda x: parse_version(info_func(x)[2]),
+            reverse=True)
+        logging.debug("Post sort: %s" % available_exes)
+        logging.debug("Versions : %s" % [info_func(x)[2]
+                                 for x in available_exes])
+    if available_exes:
+        print "%s: found available packages:" % ','.join(names)
+        for i,package in enumerate(available_exes):
+            package_info = info_func(package)
+            print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
+                                     package_info[0],
+                                     package_info[1],
+                                     package_info[2])
+    else:
+        print "%s: No packages found" % ','.join(names)
+    return available_exes
 
 def pretty_print_rows(data,prepend=False):
     """Format row-wise data into 'pretty' lines

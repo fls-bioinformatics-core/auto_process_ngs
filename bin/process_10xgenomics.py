@@ -37,6 +37,8 @@ from auto_process_ngs.utils import ProjectMetadataFile
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.tenx_genomics_utils import flow_cell_id
 from auto_process_ngs.tenx_genomics_utils import make_qc_summary_html
+from auto_process_ngs.tenx_genomics_utils import add_cellranger_args
+from auto_process_ngs.tenx_genomics_utils import run_cellranger_mkfastq
 import auto_process_ngs.envmod as envmod
 
 # Initialise logging
@@ -75,60 +77,27 @@ def cellranger_mkfastq(samplesheet,
                        project_metadata_file='projects.info'):
     """
     """
-    # Construct the command
-    cmd = Command("cellranger","mkfastq",
-                  "--samplesheet",samplesheet,
-                  "--run",primary_data_dir,
-                  "--output-dir",output_dir)
-    if lanes is not None:
-        cmd.add_args("--lanes=%s" % lanes)
-    add_cellranger_args(cmd,
-                        jobmode=cellranger_jobmode,
-                        mempercore=cellranger_mempercore,
-                        maxjobs=cellranger_maxjobs,
-                        jobinterval=cellranger_jobinterval)
-    # Run the command
-    print "Running: %s" % cmd
+    # Warn that this command is now deprecated
+    logging.warning("This command is deprecated, use 'auto_process"
+                    "make_fastqs --protocol=10x_chromium_sc' instead")
+    # Make a log directory
     if not dry_run:
-        # Make a log directory
         if log_dir is None:
             log_dir = os.getcwd()
         log_dir = get_log_subdir(log_dir,"cellranger_mkfastq")
         mkdir(log_dir)
-        # Submit the job
-        cellranger_mkfastq_job = SchedulerJob(
-            SimpleJobRunner(),
-            cmd.command_line,
-            name='cellranger_mkfastq',
-            working_dir=os.getcwd(),
-            log_dir=log_dir)
-        cellranger_mkfastq_job.start()
-        try:
-            cellranger_mkfastq_job.wait()
-        except KeyboardInterrupt,ex:
-            logging.warning("Keyboard interrupt, terminating cellranger")
-            cellranger_mkfastq_job.terminate()
-            raise ex
-        exit_code = cellranger_mkfastq_job.exit_code
-        print "cellranger mkfastq completed: exit code %s" % exit_code
-        if exit_code != 0:
-            logging.error("cellranger mkfastq exited with an error")
-            return
-        # Deal with the QC summary report
-        flow_cell_dir = flow_cell_id(primary_data_dir)
-        if lanes is not None:
-            lanes_suffix = "_%s" % lanes.replace(',','')
-        else:
-            lanes_suffix = ""
-        flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
-        if not os.path.isdir(flow_cell_dir):
-            logging.error("No output directory '%s'" % flow_cell_dir)
-            return
-        json_file = os.path.join(flow_cell_dir,
-                                 "outs",
-                                 "qc_summary.json")
-        html_file = "cellranger_qc_summary%s.html" % lanes_suffix
-        make_qc_summary_html(json_file,html_file)
+    # Run cellranger mkfastq
+    run_cellranger_mkfastq(samplesheet,
+                           primary_data_dir,
+                           output_dir,
+                           lanes=lanes,
+                           cellranger_jobmode=cellranger_jobmode,
+                           cellranger_maxjobs=cellranger_maxjobs,
+                           cellranger_mempercore=cellranger_mempercore,
+                           cellranger_jobinterval=cellranger_jobinterval,
+                           log_dir=log_dir,
+                           dry_run=dry_run)
+    if not dry_run:
         # Update the project metadata file
         update_project_metadata(output_dir,project_metadata_file)
 
@@ -318,6 +287,8 @@ def update_project_metadata(unaligned_dir,
                             project_metadata_file):
     """
     """
+    # Warn that this command is now deprecated
+    logging.warning("This command is deprecated")
     analysis_dir = os.path.dirname(os.path.abspath(unaligned_dir))
     unaligned_dir = os.path.basename(unaligned_dir)
     try:
@@ -369,23 +340,6 @@ def build_fastq_path_dir(project_dir):
         logging.debug("Linking: %s -> %s" % (link_name,target))
         os.symlink(target,link_name)
     return fastq_path_dir
-
-def add_cellranger_args(cmd,
-                        jobmode='sge',
-                        maxjobs=None,
-                        mempercore=None,
-                        jobinterval=None):
-    """
-    """
-    if jobmode is not None:
-        cmd.add_args("--jobmode=%s" % jobmode)
-    if mempercore is not None:
-        cmd.add_args("--mempercore=%s" % mempercore)
-    if maxjobs is not None:
-        cmd.add_args("--maxjobs=%s" % maxjobs)
-    if jobinterval is not None:
-        cmd.add_args("--jobinterval=%s" % jobinterval)
-    return cmd
 
 def get_log_subdir(log_dir,name):
     """
