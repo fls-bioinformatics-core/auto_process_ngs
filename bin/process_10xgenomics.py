@@ -30,7 +30,7 @@ import auto_process_ngs.envmod as envmod
 
 # Initialise logging
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("process_10xgenomics")
 
 # Fetch configuration settings
 import auto_process_ngs.settings
