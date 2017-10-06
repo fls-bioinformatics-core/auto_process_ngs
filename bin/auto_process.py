@@ -788,6 +788,23 @@ def add_import_project_command(cmdparser):
                               "ANALYSIS_DIR.")
     add_debug_option(p)
 
+def add_update_projects_command(cmdparser):
+    """Create a parser for the 'update_projects' command
+    """
+    p = cmdparser.add_command('update_projects',
+                              help="Update the projects metadata file",
+                              usage="%prog update_projects [OPTIONS] [ANALYSIS_DIR]",
+                              description="Update the projects.info metadata "
+                              "file in ANALYSIS_DIR.")
+    p.add_option('-u','--unaligned-dir',action='store',
+                 dest='unaligned_dir',default=None,
+                 help="'unaligned' dir with output from bcl2fastq")
+    p.add_option('--project-metadata-file',action='store',
+                 dest='project_metadata_file',default=None,
+                 help="specify an alternative to the current projects "
+                 "metadata file")
+    add_debug_option(p)
+
 def add_update_fastq_stats_command(cmdparser):
     """Create a parser for the 'update_fastq_stats' command
     """
@@ -841,6 +858,7 @@ if __name__ == "__main__":
     add_analyse_barcodes_command(p)
     add_merge_fastq_dirs_command(p)
     add_import_project_command(p)
+    add_update_projects_command(p)
     add_update_fastq_stats_command(p)
     
     # Process remaining command line
@@ -1022,6 +1040,14 @@ if __name__ == "__main__":
                              add_data=options.add_data,
                              nprocessors=options.nprocessors,
                              runner=options.runner)
+        elif cmd == 'update_projects':
+            try:
+                d.update_project_metadata_file(
+                    unaligned_dir=options.unaligned_dir,
+                    project_metadata_file=options.project_metadata_file)
+            except Exception as ex:
+                logging.fatal("update_projects: %s" % ex)
+                sys.exit(1)
         elif cmd == 'analyse_barcodes':
             if options.lanes is not None:
                 lanes = bcf_utils.parse_lanes(options.lanes)
