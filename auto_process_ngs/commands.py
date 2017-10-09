@@ -178,7 +178,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     # 10xgenomics products to exclude
     excludes.append('--exclude=*.mro')
     excludes.append('--exclude="%s*"' %
-                    tenx_genomics_utils.flow_cell_id(self.run_name))
+                    tenx_genomics_utils.flow_cell_id(ap.run_name))
     # Log dir
     log_dir = 'archive%s' % ('_final' if final else '_staging')
     if dry_run:
