@@ -8,18 +8,37 @@ The Wafergen ICell8 system prepares single cell (SC) samples which
 are then sequenced as part of an Illumina sequencing run.
 
 Initial processing of the sequencing data produces a single FASTQ file
-R1/R2 pair, where the R1 reads hold an inline barcode and a UMI for
-the read pair:
+R1/R2 pair, where the R1 reads hold an inline barcode and a unique
+molecular identifier (UMI) for the read pair:
 
  * **Inline barcode:** bases 1-11 in R1
  * **UMI:** bases 12-21 in R1
 
+This is illustrated in the figure below:
+
+.. image:: images/icell8_read1.png 
+
+.. note::
+
+   Each inline barcode corresponds to a specific well in the
+   experiment, which in turn corresponds to a specific single
+   cell.
+
+The corresponding R2 read contains the actual sequence corresponding to
+the cell and UMI referenced by its R1 partner.
+
+.. _icell8_fastq_generation:
+
 Fastq generation
 ----------------
 
-FASTQs can be generated using::
+FASTQs can be generated using the command::
 
     auto_process.py make_fastqs --protocol=icell8 ...
+
+Subsequently the read pairs can be processed using the
+``process_icell8.py`` utility described in the
+:ref:`icell8_qc_and_filtering_protocol` section below
 
 .. note::
 
@@ -37,13 +56,19 @@ FASTQs can be generated using::
    (which are mostly random) from the R1, should they happen to match
    part of an adapter sequence.
 
-Subsequently the read pairs can be processed using the utility script
-``process_icell8.py`` to perform initial filtering and QC as described
-below. The utility also splits the read pairs into FASTQs by both
-barcode and by sample.
+..  _icell8_qc_and_filtering_protocol:
 
 QC and filtering protocol
 -------------------------
+
+The ``process_icell8.py`` utility script performs initial filtering
+and QC according to the protocol described below. The utility also splits
+the read pairs into FASTQs by both barcode and by sample.
+
+In addition to the FASTQS produced from the  :ref:`icell8_fastq_generation`
+step, the processing also requires an input :ref:`icell8_well_list_file``.
+This lists the valid ICell8 barcodes and maps those barcodes to their
+parent sample.
 
 The following steps are performed:
 
@@ -105,18 +130,24 @@ Reorganisation by barcode and sample
 At the end of the QC and filter pipeline the read pairs are
 reorganised in two different ways:
 
- * **Reorganisation by barcode:** the read pairs are sorted into
-   individual FASTQs according to their inline barcodes. This set of
-   FASTQs forms the final outputs of the pipeline. Note that the
-   number of files is equal to the number of barcodes (~1000).
+ * **Reorganisation by barcode:** the filtered read pairs are
+   sorted into individual FASTQs according to their inline barcodes.
+   This set of FASTQs forms the final outputs of the pipeline. Note
+   that each barcode corresponds to a single cell, and the number of
+   R1/R2 file pairs is equal to the number of barcodes/cells (~1000).
 
  * **Reorganisation by sample:** the read pairs are sorted into FASTQs
-   according to the sample name associated with the barcodes in the
-   "well list" file.
+   according to the sample name associated with the barcodes/cells in
+   the "well list" file. Essentially these group all the single cells
+   from each sample, so the number of R1/R2 file pairs corresponds to
+   the number of samples.
 
-This results in two fastq directories: ``fastqs.barcodes`` and
-``fastqs.samples``. Note that the read pairs themselves are the same
-in each set.
+The information on valid barcodes and the relationship of barcode to
+sample are taken from the :ref:`icell8_well_list_file`.
+
+Each set of FASTQs are stored in their own directories:
+``fastqs.barcodes`` and ``fastqs.samples``. Note that the read pairs
+themselves are the same in each set.
 
 The standard QC procedure is run on each set of FASTQS (barcodes and
 samples) and QC reports are generated for each.
@@ -131,8 +162,8 @@ directories:
  **Directory**              **Description and contents**
  -------------------------- -----------------------------------------------
  ``fastqs``                 Initial FASTQs from ``bcl2fastq``
- ``fastqs.barcodes``        FASTQs with reads sorted by ICell8 barcode,
-                            plus QC outputs.
+ ``fastqs.barcodes``        FASTQs with reads sorted by ICell8 barcode
+                            (i.e. cell), plus QC outputs.
                             The FASTQs will be named according to the
                             convention ``NAME.BARCODE.r[1|2].fastq.gz``.
  ``fastqs.samples``         FASTQs with reads sorted by ICell8 sample
@@ -155,7 +186,7 @@ directories:
 
 The directory will also contain:
 
- * A copy of the well list file (name preserved)
+ * A copy of the :ref:`icell8_well_list_file` (name preserved)
  * A final summary report ``icell8_processing.html``
  * A ``README.info`` file (nb only if the directory was set up as
    an autoprocess project)
@@ -167,6 +198,18 @@ The final report summarises information on the following:
  * Initial and final read count distributions against barcodes
  * Number of reads assigned and filtered at each stage by sample
  * Poly-G region counts and distribution
+
+.. _icell8_well_list_file:
+
+Well list file
+--------------
+
+The well list file is a tab-delimited file output from the ICell8 which
+amongst other things lists the valid ICell8 barcodes for the experiment
+and the mapping of barcodes to samples.
+
+(As noted elsewhere, each barcode corresponds to a well which in turn
+corresponds to a single cell.)
 
 Appendix: configuring the ICell8 processing pipeline
 ----------------------------------------------------
