@@ -24,8 +24,8 @@ This is illustrated in the figure below:
    experiment, which in turn corresponds to a specific single
    cell.
 
-The corresponding R2 read contains the actual sequence corresponding to
-the cell and UMI referenced by its R1 partner.
+The corresponding R2 read contains the actual sequence data
+corresponding to the cell and UMI referenced by its R1 partner.
 
 .. _icell8_fastq_generation:
 
@@ -66,7 +66,7 @@ and QC according to the protocol described below. The utility also splits
 the read pairs into FASTQs by both barcode and by sample.
 
 In addition to the FASTQS produced from the  :ref:`icell8_fastq_generation`
-step, the processing also requires an input :ref:`icell8_well_list_file``.
+step, the processing also requires an input :ref:`icell8_well_list_file`.
 This lists the valid ICell8 barcodes and maps those barcodes to their
 parent sample.
 
