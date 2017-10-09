@@ -1645,10 +1645,10 @@ class AutoProcess:
             bcl2fastq.add_args('--ignore-missing-stats')
         if no_lane_splitting:
             bcl2fastq.add_args('--no-lane-splitting')
-        if minimum_trimmed_read_length:
+        if minimum_trimmed_read_length is not None:
             bcl2fastq.add_args('--minimum-trimmed-read-length',
                                minimum_trimmed_read_length)
-        if mask_short_adapter_reads:
+        if mask_short_adapter_reads is not None:
             bcl2fastq.add_args('--mask-short-adapter-reads',
                                mask_short_adapter_reads)
         bcl2fastq.add_args('--bcl2fastq_path',
