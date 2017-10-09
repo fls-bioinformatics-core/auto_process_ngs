@@ -14,16 +14,28 @@ the read pair:
  * **Inline barcode:** bases 1-11 in R1
  * **UMI:** bases 12-21 in R1
 
-FASTQs can be generated using the ``auto_process.py make_fastqs``
-command, with the following settings suggested by Wafergen specifically
-for NextSeq data:
+Fastq generation
+----------------
 
- * Disable adapter trimming and masking by using
-   ``--minimum-trimmed-read-length=21 --mask-short-adapter-reads=0``
+FASTQs can be generated using::
 
-This is recommended to stop unintentional trimming of UMI sequences
-(which are mostly random) from the R1, should they happen to match
-part of an adapter sequence.
+    auto_process.py make_fastqs --protocol=icell8 ...
+
+.. note::
+
+   ``--protocol=icell8`` runs the standard bcl-to-fastq commands with
+   with the following settings:
+
+   * Disable adapter trimming and masking by setting
+     ``--minimum-trimmed-read-length=21`` and
+     ``--mask-short-adapter-reads=0`` (recommended by Wafergen
+     specifically for NextSeq data)
+   * Updating the bases mask setting so that only the first 21 bases
+     of the R1 read are kept.
+
+   This is recommended to stop unintentional trimming of UMI sequences
+   (which are mostly random) from the R1, should they happen to match
+   part of an adapter sequence.
 
 Subsequently the read pairs can be processed using the utility script
 ``process_icell8.py`` to perform initial filtering and QC as described

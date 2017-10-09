@@ -17,6 +17,7 @@ iCell8 platform:
 - ICell8Stats: class for gathering stats from iCell8 FASTQ pairs
 - collect_fastq_stats: get barcode and distince UMI counts for Fastq
 - normalize_sample_name: replace special characters in well list sample names
+- get_icell8_bases_mask: generate bases mask for iCell8 run
 """
 
 #######################################################################
@@ -109,6 +110,32 @@ def normalize_sample_name(s):
         else:
             name.append(c)
     return ''.join(name)
+
+def get_icell8_bases_mask(bases_mask):
+    """
+    Reset the supplied bases mask string so that only the
+    bases containing the inline barcode and UMIs are kept,
+    and any remaining bases are ignored.
+
+    Arguments:
+      bases_mask (str): initial bases mask string to update
+
+    Returns:
+      String: updated bases mask string
+    """
+    # Extract R1 mask
+    bases_mask = bases_mask.split(',')
+    r1_mask = bases_mask[0]
+    # Update to restrict to 21 bases
+    num_cycles = int(r1_mask[1:])
+    icell8_inline_length = (INLINE_BARCODE_LENGTH + UMI_LENGTH)
+    assert(num_cycles >= icell8_inline_length)
+    discard_length = (num_cycles - icell8_inline_length)
+    r1_mask = "y%d" % icell8_inline_length
+    r1_mask += ("n%d" % discard_length if discard_length > 0 else "")
+    # Rebuild and return
+    bases_mask[0] = r1_mask
+    return ','.join(bases_mask)
 
 ######################################################################
 # Classes

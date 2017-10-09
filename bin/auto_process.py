@@ -217,7 +217,7 @@ def add_make_fastqs_command(cmdparser):
                                 dest='protocol',default='standard',
                                 help="specify Fastq generation protocol "
                                 "depending on the data being processed. "
-                                "Must be one of 'standard', "
+                                "Must be one of 'standard', 'icell8', "
                                 "'10x_chromium_sc' (default: 'standard')")
     fastq_generation.add_option('--sample-sheet',action="store",
                                 dest="sample_sheet",default=None,

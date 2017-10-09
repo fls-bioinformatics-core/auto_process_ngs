@@ -35,6 +35,7 @@ import utils
 import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
+import icell8_utils
 import tenx_genomics_utils
 import settings
 from .qc.processing import report_processing_qc
@@ -1202,6 +1203,8 @@ class AutoProcess:
         """
         # Report protocol
         print "Protocol              : %s" % protocol
+        if protocol not in ('standard','icell8','10x_chromium_sc'):
+            raise Exception("Unknown protocol: '%s'" % protocol)
         # Unaligned dir
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
@@ -1290,6 +1293,18 @@ class AutoProcess:
             illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
             print "Platform              : %s" % illumina_run.platform
             print "Bcl format            : %s" % illumina_run.bcl_extension
+            if protocol == 'icell8':
+                # ICell8 data
+                # Update bcl2fastq settings appropriately
+                print "Updating read trimming and masking for ICell8"
+                minimum_trimmed_read_length = 21
+                mask_short_adapter_reads = 0
+                # Reset the default bases mask
+                bases_mask = IlluminaData.IlluminaRunInfo(
+                    illumina_run.runinfo_xml).bases_mask
+                bases_mask = icell8_utils.get_icell8_bases_mask(bases_mask)
+                # Switch to standard protocol
+                protocol = 'standard'
             if protocol == 'standard':
                 # Standard protocol
                 try:

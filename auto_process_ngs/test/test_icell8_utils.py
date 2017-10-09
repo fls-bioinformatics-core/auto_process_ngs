@@ -14,6 +14,7 @@ from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.icell8_utils import ICell8Stats
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.icell8_utils import normalize_sample_name
+from auto_process_ngs.icell8_utils import get_icell8_bases_mask
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -315,3 +316,18 @@ class TestNormalizeSampleNameFunction(unittest.TestCase):
         """
         self.assertEqual(normalize_sample_name("Neg Ctrl"),"Neg_Ctrl")
         self.assertEqual(normalize_sample_name("S1/S2"),"S1_S2")
+
+class TestGetIcell8BasesMaskFunction(unittest.TestCase):
+    """
+    Tests for the get_icell8_bases_mask function
+    """
+    def test_get_icell8_bases_mask(self):
+        """
+        get_icell8_bases_mask: reset bases mask
+        """
+        self.assertEqual(get_icell8_bases_mask("y101,I7,y101"),
+                         "y21n80,I7,y101")
+        self.assertEqual(get_icell8_bases_mask("y250,I8,I8,y250"),
+                         "y21n229,I8,I8,y250")
+        self.assertEqual(get_icell8_bases_mask("y21,I8,I8,y250"),
+                         "y21,I8,I8,y250")
