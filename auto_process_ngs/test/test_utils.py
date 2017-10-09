@@ -7,8 +7,10 @@ import tempfile
 import shutil
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
+from bcftbx.utils import find_program
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.applications import Command
 from auto_process_ngs.utils import *
 
 class TestAnalysisFastq(unittest.TestCase):
@@ -29,6 +31,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
     def test_full_name_dual_index(self):
@@ -44,6 +47,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
 
     def test_full_name_blc2fastq2(self):
@@ -59,7 +63,21 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+
+    def test_index_read_blc2fastq2(self):
+        """Handle Illumina index read fastq name from bcl2fastq2
+        """
+        fq = AnalysisFastq('NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,1)
+        self.assertEqual(fq.set_number,1)
+        self.assertTrue(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
 
     def test_name_no_lane_blc2fastq2(self):
         """Handle Illumina fastq name from bcl2fastq2 (without lane)
@@ -74,6 +92,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_R2_001')
 
     def test_name_only(self):
@@ -88,6 +107,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1')
 
     def test_name_only_paired_end(self):
@@ -102,6 +122,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_R2')
 
     def test_name_and_lane(self):
@@ -116,6 +137,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001')
 
     def test_name_and_lane_paired_end(self):
@@ -130,6 +152,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001_R2')
 
     def test_name_and_tag(self):
@@ -144,6 +167,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG')
 
     def test_name_and_tag_paired_end(self):
@@ -158,6 +182,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_R2')
 
     def test_name_tag_and_lane(self):
@@ -172,6 +197,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,None)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001')
 
     def test_name_tag_and_lane_paired_end(self):
@@ -186,6 +212,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,1)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
 
     def test_AGTC_sample_names(self):
@@ -199,6 +226,7 @@ class TestAnalysisFastq(unittest.TestCase):
             self.assertEqual(fq.lane_number,None)
             self.assertEqual(fq.read_number,1)
             self.assertEqual(fq.set_number,None)
+            self.assertFalse(fq.is_index_read)
             self.assertEqual(str(fq),'%s_R1' % name)
 
     def test_non_standard_sample_name(self):
@@ -213,6 +241,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq.r2')
 
     def test_non_standard_sample_name_with_dots(self):
@@ -241,6 +270,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq.ACAGTG.r2')
 
     def test_input_is_full_path(self):
@@ -255,6 +285,7 @@ class TestAnalysisFastq(unittest.TestCase):
         self.assertEqual(fq.lane_number,3)
         self.assertEqual(fq.read_number,2)
         self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
 
 class TestAnalysisDir(unittest.TestCase):
@@ -842,6 +873,21 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq,[fq_r1,fq_r2])
         self.assertEqual(sample.fastq_subset(read_number=1),[fq_r1])
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
+
+    def test_paired_end_analysis_sample_index_read_fastq(self):
+        """Check AnalysisSample class with index read fastqs
+        """
+        sample = AnalysisSample('PJB1-B')
+        fq_l1_r1 = '/run/sample1/PJB1-B_S1_L001_R1.fastq.gz'
+        fq_l1_r2 = '/run/sample1/PJB1-B_S1_L001_R2.fastq.gz'
+        fq_l1_i1 = '/run/sample1/PJB1-B_S1_L001_I1.fastq.gz'
+        sample.add_fastq(fq_l1_r1)
+        sample.add_fastq(fq_l1_r2)
+        sample.add_fastq(fq_l1_i1)
+        self.assertEqual(sample.name,'PJB1-B')
+        self.assertEqual(sample.fastq,[fq_l1_i1,fq_l1_r1,fq_l1_r2])
+        self.assertEqual(sample.fastq_subset(read_number=1),[fq_l1_r1,])
+        self.assertEqual(sample.fastq_subset(read_number=2),[fq_l1_r2,])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 
@@ -1173,7 +1219,6 @@ class TestProjectMetadataFile(unittest.TestCase):
     def test_refuse_to_add_duplicate_projects(self):
         """Refuse to add duplicated project names
         """
-        metadata = ProjectMetadataFile()
         # Make new 'file' and add project
         metadata = ProjectMetadataFile()
         metadata.add_project('Charlie',['C1','C2'],
@@ -1184,6 +1229,63 @@ class TestProjectMetadataFile(unittest.TestCase):
         # Attempt to add same project name again
         self.assertRaises(Exception,
                           metadata.add_project,'Charlie',['C1','C2'])
+
+    def test_check_if_project_in_metadata(self):
+        """Check if project appears in metadata
+        """
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check for existing project
+        self.assertTrue("Charlie" in metadata)
+        # Check for non-existent project
+        self.assertFalse("Marley" in metadata)
+
+    def test_update_exisiting_project(self):
+        """Update the data for an existing project
+        """
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check initial data is correct
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
+        # Update some attributes
+        metadata.update_project('Charlie',
+                                user="Charlie Percival",
+                                library_type="scRNA-seq")
+        # Check the data has been updated
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie Percival")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
+        # Update the samples
+        metadata.update_project('Charlie',
+                                sample_names=['C01','C02'])
+        # Check the data has been updated
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Project","Charlie")[0]
+        self.assertEqual(project[1],"C01,C02")
+        self.assertEqual(project[2],"Charlie Percival")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],"Yeast")
+        self.assertEqual(project[5],"Marley")
 
 class TestZipArchive(unittest.TestCase):
     """
@@ -1424,6 +1526,228 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(user,None)
         self.assertEqual(host,None)
         self.assertEqual(dirn,None)
+
+class TestGetNumberedSubdir(unittest.TestCase):
+    """
+    Tests for the 'get_numbered_subdir' function
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestGetNumberedSubdir")
+        # Store cwd
+        self.original_dir = os.getcwd()
+    def tearDown(self):
+        # Restore origin cwd
+        os.chdir(self.original_dir)
+        # Remove working dir
+        shutil.rmtree(self.wd)
+    def test_get_numbered_subdir(self):
+        """
+        get_numbered_subdir: first subdir in parent
+        """
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "001_test")
+    def test_get_numbered_subdir_next_in_sequence(self):
+        """
+        get_numbered_subdir: next subdir in sequence
+        """
+        for d in ("001_test","002_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "003_test")
+    def test_get_numbered_subdir_ignore_gaps(self):
+        """
+        get_numbered_subdir: ignore gaps in sequence
+        """
+        for d in ("001_test","003_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test",parent_dir=self.wd),
+            "004_test")
+    def test_get_numbered_subdir_default_to_cwd(self):
+        """
+        get_numbered_subdir: parent defaults to CWD
+        """
+        for d in ("001_test","002_test"):
+            os.mkdir(os.path.join(self.wd,d))
+        self.assertEqual(
+            get_numbered_subdir("test"),"001_test")
+        os.chdir(self.wd)
+        self.assertEqual(
+            get_numbered_subdir("test"),"003_test")
+    def test_get_numbered_subdir_full_path(self):
+        """
+        get_numbered_subdir: return full path
+        """
+        self.assertEqual(
+            get_numbered_subdir("test",
+                                parent_dir=self.wd,
+                                full_path=True),
+            os.path.join(self.wd,"001_test"))
+
+class TestFindExecutables(unittest.TestCase):
+    """
+    Tests for the find_executables function
+
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestCellrangerInfo")
+        # Store the original state of PATH env var
+        self.original_path = os.environ['PATH']
+        # Info function
+        def info_func(p):
+            name = os.path.basename(p)
+            exe = find_program(p)
+            version = ''
+            output = Command(exe).subprocess_check_output()[1]
+            for line in output.split('\n'):
+                if line.startswith(name):
+                    try:
+                        version = line.split()[1]
+                    except IndexError:
+                        pass
+                    break
+            return (exe,name.upper(),version)
+        self.info_func = info_func
+
+    def tearDown(self):
+        # Restore the PATH env var
+        os.environ['PATH'] = self.original_path
+        # Remove temp dir
+        shutil.rmtree(self.wd)
+
+    def _make_executable(self,name,dirn=None,version=None):
+        # Create an executable for testing
+        # The executable will be created in the working dir,
+        # optionally under the specified subdir
+        if dirn is not None:
+            path = self.wd
+            for d in dirn.split(os.sep):
+                path = os.path.join(path,d)
+                os.mkdir(path)
+            dirn = path
+        else:
+            dirn = self.wd
+        exe = os.path.join(dirn,name)
+        with open(exe,'w') as fp:
+            fp.write(
+                "#!/bin/bash\necho %s %s" %
+                (name,
+                 (version if version is not None else "")))
+        os.chmod(exe,0775)
+        return exe
+
+    def _info_func(self):
+        # Create an info_func for testing
+        def info_func(p):
+            name = os.path.basename(p)
+            exe = find_program(p)
+            version = ''
+            output = Command(exe).subprocess_check_output()[1]
+            for line in output.split('\n'):
+                if line.startswith(name):
+                    try:
+                        version = line.split()[1]
+                    except IndexError:
+                        pass
+                    break
+            return (exe,name.upper(),version)
+        return info_func
+
+    def _prepend_path(self,p):
+        # Add to start of PATH
+        os.environ['PATH'] = "%s:%s" % (p,os.environ['PATH'])
+
+    def test_no_versions(self):
+        """
+        find_executables: no matching software present
+        """
+        os.environ['PATH'] = ''
+        self.assertEqual(find_executables(("xyxyz",),self.info_func),[])
+
+    def test_single_version(self):
+        """
+        find_executable: only single version available
+        """
+        xyxyz = self._make_executable("xyxyz",version="1.0.0")
+        self._prepend_path(os.path.dirname(xyxyz))
+        self.assertEqual(find_executables(("xyxyz",),self._info_func()),[xyxyz,])
+    def test_multiple_versions(self):
+        """
+        find_executable: multiple versions available
+        """
+        exes = []
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            exes.insert(0,exe)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),self._info_func()),exes)
+
+    def test_require_specific_version(self):
+        """
+        find_executable: require specific version
+        """
+        exes = []
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            if v == '1.2.1':
+                exes.append(exe)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),
+                                          self._info_func(),
+                                          reqs='1.2.1'),exes)
+
+    def test_required_version_not_found(self):
+        """
+        find_executable: required version is not found
+        """
+        for v in ('2.0.0','1.2.1','1.0.0'):
+            exe = self._make_executable("xyxyz",
+                                        dirn="%s/bin" % v,
+                                        version=v)
+            self._prepend_path(os.path.dirname(exe))
+        self.assertEqual(find_executables(("xyxyz",),
+                                          self._info_func(),
+                                          reqs='2.0.1'),[])
+
+    def test_multiple_exes(self):
+        """
+        find_executable: look for multiple executables
+        """
+        exes = []
+        names = ('xyxyz','zyzyx','pqrst')
+        for n in names:
+            exe = self._make_executable(n)
+            if n != 'pqrst':
+                exes.insert(0,exe)
+        self._prepend_path(self.wd)
+        self.assertEqual(find_executables(("zyzyx","xyxyz",),
+                                          self._info_func()),exes)
+
+    def test_specify_path(self):
+        """
+        find_executable: look for multiple executables
+        """
+        exes = []
+        paths = []
+        names = ('xyxyz','zyzyx','pqrst')
+        for n in names:
+            exe = self._make_executable(n,dirn=n)
+            if n == 'zyzyx':
+                exes.append(exe)
+                paths.append(os.path.dirname(exe))
+            self._prepend_path(os.path.dirname(exe))
+        print os.environ['PATH']
+        self.assertEqual(find_executables(("zyzyx","xyxyz",),
+                                          self.info_func,
+                                          paths=paths),exes)
 
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2017 Peter Briggs
 #
 ########################################################################
 #
@@ -16,7 +16,7 @@ Utility functions for bcl to fastq conversion operations:
 
 - available_bcl2fastq_versions: list available bcl2fastq converters
 - bcl_to_fastq_info: retrieve information on the bcl2fastq software
-- make_custom_sample_sheet: create a fixed copy of a sample sheet file
+- make_custom_sample_sheet: create a corrected copy of a sample sheet file
 - get_required_samplesheet_format: fetch format required by bcl2fastq version
 - get_nmismatches: determine number of mismatches from bases mask
 - check_barcode_collisions: look for too-similiar pairs of barcode sequences
@@ -31,9 +31,9 @@ Utility functions for bcl to fastq conversion operations:
 #######################################################################
 import os
 import re
-import operator
 import logging
 import auto_process_ngs.applications as applications
+import auto_process_ngs.utils as utils
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 from pkg_resources import parse_version
@@ -82,62 +82,11 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
       List: full paths to bcl2fastq converter executables.
 
     """
-    # Search paths
-    if paths is None:
-        paths = os.environ['PATH'].split(os.pathsep)
-    # Search for executables
-    available_exes = []
-    for path in paths:
-        if os.path.isfile(path):
-            path = os.path.dirname(path)
-        for name in ('bcl2fastq','configureBclToFastq.pl',):
-            prog_path = os.path.abspath(os.path.join(path,name))
-            if bcf_utils.PathInfo(prog_path).is_executable:
-                available_exes.append(prog_path)
-    # Filter on requirement
-    if reqs:
-        # Loop over ranges
-        for req in reqs.split(','):
-            logging.debug("Filtering on expression: %s" % req)
-            # Determine operator and version
-            req_op = None
-            req_version = None
-            for op in ('==','>=','<=','>','<'):
-                if req.startswith(op):
-                    req_op = op
-                    req_version = req[len(op):].strip()
-                    break
-            if req_version is None:
-                req_op = '=='
-                req_version = req.strip()
-            logging.debug("Required version: %s %s" % (req_op,req_version))
-            if req_op == '==':
-                op = operator.eq
-            elif req_op == '>=':
-                op = operator.ge
-            elif req_op == '>':
-                op = operator.gt
-            elif req_op == '<':
-                op = operator.lt
-            elif req_op == '<=':
-                op = operator.le
-            # Filter the available executables on version
-            logging.debug("Pre filter: %s" % available_exes)
-            logging.debug("Versions  : %s" % [bcl_to_fastq_info(x)[2]
-                                              for x in available_exes])
-            available_exes = filter(lambda x: op(
-                parse_version(bcl_to_fastq_info(x)[2]),
-                parse_version(req_version)),
-                                    available_exes)
-            logging.debug("Post filter: %s" % available_exes)
-        # Sort into version order, highest to lowest
-        available_exes.sort(
-            key=lambda x: parse_version(bcl_to_fastq_info(x)[2]),
-            reverse=True)
-        logging.debug("Post sort: %s" % available_exes)
-        logging.debug("Versions : %s" % [bcl_to_fastq_info(x)[2]
-                                 for x in available_exes])
-    return available_exes
+    return utils.find_executables(('bcl2fastq',
+                                  'configureBclToFastq.pl'),
+                                  info_func=bcl_to_fastq_info,
+                                  reqs=reqs,
+                                  paths=paths)
 
 def bcl_to_fastq_info(path=None):
     """
@@ -214,23 +163,28 @@ def bcl_to_fastq_info(path=None):
     return (bcl2fastq_path,package_name,package_version)
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
-                             fmt=None):
+                             lanes=None,fmt=None):
     """
     Creates a corrected copy of a sample sheet file
 
     Creates and returns a SampleSheet object with a copy of the
     input sample sheet, with any illegal or duplicated names fixed.
-    Optionally also writes the updated sample sheet data to a new
-    file.
+    Optionally it can also: write the updated sample sheet data to a
+    new file, switch the format, and include only a subset of lanes
+    from the original file
 
     Arguments:
       input_sample_sheet (str): name and path of the original sample
         sheet file
       output_sample_sheet (str): (optional) name and path to write
         updated sample sheet to, or `None`
+      lanes (list): (optional) list of lane numbers to keep in the
+        output sample sheet; if `None` then all lanes will be kept
+        (the default), otherwise lanes will be dropped if they don't
+        appear in the supplied list
       fmt (str): (optional) format for the output sample sheet,
-        either 'CASAVA' or 'IEM'; if this `None` then the format of
-        the original file will be used
+        either 'CASAVA' or 'IEM'; if this is `None` then the format
+        of the original file will be used
 
     Returns:
       SampleSheet object with the data for the corrected sample
@@ -256,6 +210,18 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     # Fix other problems
     sample_sheet.fix_illegal_names()
     sample_sheet.fix_duplicated_names()
+    # Select subset of lanes if requested
+    if lanes is not None:
+        logging.debug("Updating to include only specified lanes: %s" %
+                      ','.join([str(l) for l in lanes]))
+        i = 0
+        while i < len(sample_sheet):
+            line = sample_sheet[i]
+            if line['Lane'] in lanes:
+                logging.debug("Keeping %s" % line)
+                i += 1
+            else:
+                del(sample_sheet[i])
     # Write out new sample sheet
     if output_sample_sheet is not None:
         sample_sheet.write(output_sample_sheet,fmt=fmt)

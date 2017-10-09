@@ -83,6 +83,9 @@ if __name__ == '__main__':
                  default='statistics_full.info',
                  help="name of output file for full statistics (default "
                  "is 'statistics_full.info')")
+    p.add_option('-u','--update',action="store_true",dest="update",
+                 help="update existing full statistics file with stats for "
+                 "additional files")
     p.add_option('-n',"--nprocessors",action="store",dest="n",
                  default=1,type='int',
                  help="spread work across N processors/cores (default is 1)")
@@ -104,10 +107,21 @@ if __name__ == '__main__':
     print "Unaligned subdirectory: %s" % options.unaligned_dir
     print "Basic stats file      : %s" % options.stats_file
     print "Full stats file       : %s" % options.full_stats_file
+    print "Update existing stats?: %s" % ('yes' if options.update else 'no')
     print "Per-lane summary stats: %s" % options.per_lane_stats_file
     print "Per-lane sample stats : %s" % options.per_lane_sample_stats_file
     print "Number of processors  : %s" % options.n
     print "Debug?                : %s" % ('yes' if options.debug else 'no')
+
+    # Check for existing stats
+    if options.update:
+        existing_stats_file = os.path.abspath(options.full_stats_file)
+        if not os.path.exists(existing_stats_file):
+            logging.fatal("No file '%s': cannot update" %
+                          existing_stats_file)
+            sys.exit(1)
+    else:
+        existing_stats_file = None
 
     # Ignore 'force'
     if options.force:
@@ -127,7 +141,10 @@ if __name__ == '__main__':
         sys.exit(1)
     # Generate statistics for fastq files
     stats = FastqStatistics(illumina_data,
-                            n_processors=options.n)
+                            n_processors=options.n,
+                            add_to=existing_stats_file)
+    stats.report_full_stats(options.full_stats_file)
+    print "Full statistics written to %s" % options.full_stats_file
     stats.report_basic_stats(options.stats_file)
     print "Basic statistics written to %s" % options.stats_file
     stats.report_per_lane_sample_stats(options.per_lane_sample_stats_file)
@@ -136,5 +153,3 @@ if __name__ == '__main__':
     stats.report_per_lane_summary_stats(options.per_lane_stats_file)
     print "Per-lane summary statistics written to %s" % \
         options.per_lane_stats_file
-    stats.report_full_stats(options.full_stats_file)
-    print "Full statistics written to %s" % options.full_stats_file

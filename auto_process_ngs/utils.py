@@ -37,6 +37,8 @@ Functions:
 
 - bases_mask_is_paired_end:
 - split_user_host_dir:
+- get_numbered_subdir:
+- find_executables:
 - pretty_print_rows:
 - write_script_file:
 - edit_file:
@@ -55,6 +57,7 @@ import logging
 import zipfile
 import pydoc
 import tempfile
+import operator
 import applications
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
@@ -68,6 +71,7 @@ from qc.illumina_qc import QCSample
 from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
 from .exceptions import MissingParameterFileException
+from pkg_resources import parse_version
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -91,6 +95,7 @@ class BaseFastqAttrs(object):
     lane_number:      integer (or None if no lane number)
     read_number:      integer (or None if no read number)
     set_number:       integer (or None if no set number)
+    is_index_read:    boolean (True if index read, False if not)
 
     Subclasses should process the supplied Fastq name and set
     these attributes appropriately.
@@ -110,6 +115,7 @@ class BaseFastqAttrs(object):
         self.lane_number = None
         self.read_number = None
         self.set_number = None
+        self.is_index_read = False
     def __repr__(self):
         return self.basename
 
@@ -148,6 +154,11 @@ class AnalysisFastq(BaseFastqAttrs):
     lane_number = 3
     read_number = 2
     set_number = 1
+
+    bcl2fastq can also produce 'index read' Fastq files where the
+    R1/R2 is replaced by I1, e.g.:
+
+    ES_exp1_S4_L003_I1_001.fastq.gz
 
     Alternatively it can be a 'reduced' version where one or more
     of the components has been omitted (typically because they are
@@ -189,6 +200,7 @@ class AnalysisFastq(BaseFastqAttrs):
     lane_number:      integer (or None if no lane number)
     read_number:      integer (or None if no read number)
     set_number:       integer (or None if no set number)
+    is_index_read:    boolean (True if index read, False if not)
 
     """
 
@@ -260,9 +272,14 @@ class AnalysisFastq(BaseFastqAttrs):
         # Deal with trailing read number e.g. R1
         field = fields[-1]
         ##logger.debug("Test for read number %s" % field)
-        if len(field) == 2 and field.startswith('R'):
-            self.read_number = int(field[1])
-            fields = fields[:-1]
+        if len(field) == 2:
+            if field.startswith('R'):
+                self.read_number = int(field[1])
+                fields = fields[:-1]
+            elif field.startswith('I'):
+                self.read_number = int(field[1])
+                self.is_index_read = True
+                fields = fields[:-1]
         # Deal with trailing lane number e.g. L001
         field = fields[-1]
         ##logger.debug("Test for lane number %s" % field)
@@ -312,6 +329,8 @@ class AnalysisFastq(BaseFastqAttrs):
         if self.read_number is not None:
             if self.delimiter == '.':
                 fq.append("r%d" % self.read_number)
+            elif self.is_index_read:
+                fq.append("I%d" % self.read_number)
             else:
                 fq.append("R%d" % self.read_number)
         if self.set_number is not None:
@@ -1135,6 +1154,9 @@ class AnalysisSample:
     fastq     : list of fastq files associated with the sample
     paired_end: True if sample is paired end, False if not
 
+    Note that the 'fastq' list will include any index read fastqs
+    (i.e. I1/I2) as well as R1/R2 fastqs.
+
     """
 
     def __init__(self,name,fastq_attrs=None):
@@ -1177,6 +1199,9 @@ class AnalysisSample:
     def fastq_subset(self,read_number=None):
         """Return a subset of fastq files from the sample
 
+        Note that only R1/R2 files will be returned; index read
+        fastqs (i.e. I1/I2) are excluded regardless of read number.
+
         Arguments:
           read_number: select subset based on read_number (1 or 2)
 
@@ -1188,8 +1213,12 @@ class AnalysisSample:
         fastqs = []
         for fastq in self.fastq:
             fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                logger.debug("Rejecting index read %s" % fastq)
+                continue
             if fq.read_number is None:
-                logger.debug("Unable to determine read number for %s, assume R1" % fastq)
+                logger.debug("Unable to determine read number for %s,"
+                             "assume R1" % fastq)
                 fq_read_number = 1
             else:
                 fq_read_number = fq.read_number
@@ -1656,27 +1685,24 @@ class ProjectMetadataFile(TabFile.TabFile):
         """Add information about a project into the file
 
         Arguments:
-          project_name: name of the project
-          sample_names: Python list of sample names
-          user: (optional) user name(s)
-          library_type: (optional) library type
-          organism: (optional) organism(s)
-          PI: (optional) principal investigator name(s)
-          comments: (optional) additional information about
-            the project
-
+          project_name (str): name of the new project
+          sample_names (list): Python list of sample names
+          user (str): (optional) user name(s)
+          library_type (str): (optional) library type
+          organism (str): (optional) organism(s)
+          PI (str): (optional) principal investigator name(s)
+          comments (str): (optional) additional information
+            about the project
         """
         # Check project name doesn't already exist
-        if project_name in [p[self._fields[0]] for p in self]:
+        if project_name in self:
             raise Exception("Project '%s' already exists" %
                             project_name)
-        # Assemble dictionary with all values
-        values = { 'project_name': project_name,
-                   'sample_names': ','.join(sample_names), }
-        for kw in kws:
-            values[kw] = kws[kw]
-        # Build the data line to append to the file
-        data = []
+        kws['project_name'] = project_name
+        kws['sample_names'] = ','.join(sample_names)
+        # Create an empty data line for the project
+        project = self.append()
+        # Assign the data
         for field in self._fields:
             # Identify the keyword parameter for this field
             try:
@@ -1685,16 +1711,56 @@ class ProjectMetadataFile(TabFile.TabFile):
                 raise ex
             # Look up the assigned value
             try:
-                value = values[kw]
+                value = kws[kw]
             except KeyError:
                 value = None
-            # Append to the data line
+            # Set value in the data line
             if value is None:
-                data.append('.')
+                project[field] = '.'
             else:
-                data.append(value)
-        # Add project info to the metadata file
-        self.append(data=data)
+                project[field] = value
+
+    def update_project(self,project_name,**kws):
+        """Update information about a project in the file
+
+        Arguments:
+          project_name (str): name of the project to update
+          sample_names (list): (optional) Python list of
+            new sample names
+          user (str): (optional) new user name(s)
+          library_type (str): (optional) new library type
+          organism (str): (optional) new organism(s)
+          PI (str): (optional) new principal investigator
+            name(s)
+          comments (str): (optional) new additional
+            information about the project
+        """
+        # Fetch data line for existing project
+        if project_name not in self:
+            raise Exception("Project '%s' not found" %
+                            project_name)
+        project = self.lookup("Project",project_name)[0]
+        # Set sample names, if supplied
+        try:
+            kws['sample_names'] = ','.join(kws['sample_names'])
+        except KeyError:
+            pass
+        # Update the data
+        for field in self._fields:
+            # Identify the keyword parameter for this field
+            try:
+                kw = self._kwmap[field]
+            except KeyError,ex:
+                raise ex
+            # Assign the new values
+            if kw not in kws:
+                continue
+            value = kws[kw]
+            # Set value in the data line
+            if value is None:
+                project[field] = '.'
+            else:
+                project[field] = value
 
     def project(self,name):
         """Return AttributeDictionary for a project
@@ -1713,6 +1779,11 @@ class ProjectMetadataFile(TabFile.TabFile):
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
+
+    def __contains__(self,name):
+        """
+        """
+        return (name in [p[self._fields[0]] for p in self])
 
 class AnalysisProjectQCDirInfo(MetadataDict):
     """Class for storing metadata for a QC output directory
@@ -1994,6 +2065,185 @@ def split_user_host_dir(location):
         host = None
         dirn = location
     return (user,host,dirn)
+
+def get_numbered_subdir(name,parent_dir=None,full_path=False):
+    """
+    Return a name for a new numbered log subdirectory
+
+    Generates the name for a numbered subdirectory.
+
+    Subdirectories are named as NNN_<name>  e.g.
+    001_setup, 002_make_fastqs etc.
+
+    'Gaps' are ignored, so the number associated with
+    the new name will be one plus the highest index
+    that already exists.
+
+    **Note that a directory is not created** - this
+    must be done by the calling subprogram. As a
+    result there is the possibility of a race
+    condition.
+
+    Arguments:
+      name (str): name for the subdirectory
+        (typically the name of the processing
+        stage that will produce logs to be
+        written to the subdirs
+      parent_dir (str): path to the parent
+        directory where the indexed directory
+        would be created; defaults to CWD if
+        not set
+      full_path (bool): if True then return the
+        full path for the new subdirectory;
+        default is to return the name relative
+        to the parent directory
+
+    Returns:
+      String: name for the new log subdirectory
+        (will be the full path if 'full_path'
+        was specified).
+    """
+    # Sort out parent directory
+    if parent_dir is None:
+        parent_dir = os.getcwd()
+    parent_dir = os.path.abspath(parent_dir)
+    # Get the highest number from the names of
+    # any other existing numbered subdirs
+    i = 0
+    for d in bcf_utils.list_dirs(parent_dir):
+        try:
+            i = max(i,int(d.split('_')[0]))
+        except ValueError:
+            pass
+    # Generate and return name/path
+    subdir = "%03d_%s" % (i+1,str(name))
+    if full_path:
+        subdir = os.path.join(parent_dir,subdir)
+    return subdir
+
+def find_executables(names,info_func,reqs=None,paths=None):
+    """
+    List available executables matching list of names
+
+    By default searches the PATH for the executables listed
+    in 'names', using the supplied 'info_func' to acquire
+    package names and versions of each, returns a list of
+    executables with the full path, package and version.
+
+    'info_func' is a function that must be supplied by the
+    calling subprogram. Its signature should look like:
+
+    >>> def info_func(p):
+    ...   # Determine full_path, package_name and
+    ...   # version
+    ...   # Then return these as a tuple
+    ...   return (full_path,package_name,version)
+
+    The 'reqs' argument allows a specific version or range
+    of versions to be requested; in this case the returned
+    list will only contain those packages which satisfy
+    the requested versions.
+
+    A range of version specifications can be requested by
+    separating multiple specifiers with a comma - for
+    example '>1.8.3,<2.16'.
+
+    The full set of operators is:
+
+    - ==, >, >=, <=, <
+
+    If no versions are requested then the packages will
+    be returned in PATH order; otherwise they will be
+    returned in version order (highest to lowest).
+
+    Arguments:
+      names (list): list of executable names to look for.
+        These can be full paths or executables with no
+        leading paths
+      info_func (function): function to use to get tuples
+        of (full_path,package_name,version) for an
+        executable
+      reqs (str): optional version requirement expression
+        (for example '>=1.8.4'). If supplied then only
+        executables fulfilling the requirement will be
+        returned. If no operator is supplied then '=='
+        is implied.
+      paths (list): optional set of directory paths to
+        search when looking for executables. If not
+        supplied then the set of paths specified in
+        the PATH environment variable will be searched.
+
+    Returns:
+      List: full paths to executables matching specified
+        criteria.
+
+    """
+    # Search paths
+    if paths is None:
+        paths = os.environ['PATH'].split(os.pathsep)
+    # Search for executables
+    available_exes = []
+    for path in paths:
+        if os.path.isfile(path):
+            path = os.path.dirname(path)
+        for name in names:
+            prog_path = os.path.abspath(os.path.join(path,name))
+            if bcf_utils.PathInfo(prog_path).is_executable:
+                available_exes.append(prog_path)
+    # Filter on requirement
+    if reqs:
+        # Loop over ranges
+        for req in reqs.split(','):
+            logging.debug("Filtering on expression: %s" % req)
+            # Determine operator and version
+            req_op = None
+            req_version = None
+            for op in ('==','>=','<=','>','<'):
+                if req.startswith(op):
+                    req_op = op
+                    req_version = req[len(op):].strip()
+                    break
+            if req_version is None:
+                req_op = '=='
+                req_version = req.strip()
+            logging.debug("Required version: %s %s" % (req_op,req_version))
+            if req_op == '==':
+                op = operator.eq
+            elif req_op == '>=':
+                op = operator.ge
+            elif req_op == '>':
+                op = operator.gt
+            elif req_op == '<':
+                op = operator.lt
+            elif req_op == '<=':
+                op = operator.le
+            # Filter the available executables on version
+            logging.debug("Pre filter: %s" % available_exes)
+            logging.debug("Versions  : %s" % [info_func(x)[2]
+                                              for x in available_exes])
+            available_exes = filter(lambda x: op(
+                parse_version(info_func(x)[2]),
+                parse_version(req_version)),
+                                    available_exes)
+            logging.debug("Post filter: %s" % available_exes)
+        # Sort into version order, highest to lowest
+        available_exes.sort(
+            key=lambda x: parse_version(info_func(x)[2]),
+            reverse=True)
+        logging.debug("Post sort: %s" % available_exes)
+        logging.debug("Versions : %s" % [info_func(x)[2]
+                                 for x in available_exes])
+    if available_exes:
+        print "%s: found available packages:" % ','.join(names)
+        for i,package in enumerate(available_exes):
+            package_info = info_func(package)
+            print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
+                                     package_info[0],
+                                     package_info[1],
+                                     package_info[2])
+    else:
+        print "%s: No packages found" % ','.join(names)
+    return available_exes
 
 def pretty_print_rows(data,prepend=False):
     """Format row-wise data into 'pretty' lines

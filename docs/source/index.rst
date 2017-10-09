@@ -20,6 +20,7 @@ Contents
    utilities
    managing_data
    icell8
+   10xgenomics
    problems
 
 Indices and tables

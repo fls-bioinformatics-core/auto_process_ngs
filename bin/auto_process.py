@@ -194,8 +194,8 @@ def add_make_fastqs_command(cmdparser):
                               description="Generate fastq files from raw bcl files "
                               "produced by Illumina sequencer within ANALYSIS_DIR.")
     # General options
-    add_no_save_option(p)
     add_modulefiles_option(p)
+    add_no_save_option(p)
     add_debug_option(p)
     # Primary data management
     primary_data = optparse.OptionGroup(p,'Primary data management')
@@ -211,31 +211,45 @@ def add_make_fastqs_command(cmdparser):
                             help="Delete the primary data at the end of processing (default "
                             "is to keep data)")
     p.add_option_group(primary_data)
+    # General Fastq generation options
+    fastq_generation = optparse.OptionGroup(p,'General Fastq generation')
+    fastq_generation.add_option('--protocol',action='store',
+                                dest='protocol',default='standard',
+                                help="specify Fastq generation protocol "
+                                "depending on the data being processed. "
+                                "Must be one of 'standard', "
+                                "'10x_chromium_sc' (default: 'standard')")
+    fastq_generation.add_option('--sample-sheet',action="store",
+                                dest="sample_sheet",default=None,
+                                help="use an alternative sample sheet to "
+                                "the default 'custom_SampleSheet.csv' "
+                                "created on setup.")
+    fastq_generation.add_option('--lanes',action='store',
+                                dest='lanes',default=None,
+                                help="list of lanes to include in the "
+                                "processing. LANES should be single integer "
+                                "(e.g. 1), a list of integers "
+                                "(e.g. 1,3,...), a range (e.g. 1-3), or a "
+                                "combination (e.g. 1,3-5,7). Default is to "
+                                "include all lanes")
+    fastq_generation.add_option('--output-dir',action='store',
+                                dest='unaligned_dir',default=None,
+                                help="explicitly set the output "
+                                "(sub)directory for bcl-to-fastq "
+                                "conversion (overrides default)")
+    fastq_generation.add_option('--use-bases-mask',action="store",
+                                dest="bases_mask",default=None,
+                                help="explicitly set the bases-mask string "
+                                "to indicate how each cycle should be used "
+                                "in the bcl-to-fastq conversion (overrides "
+                                "default)")
+    fastq_generation.add_option('--skip-fastq-generation',
+                                action='store_true',
+                                dest='skip_fastq_generation',default=False,
+                                help="don't run Fastq generation step")
+    p.add_option_group(fastq_generation)
     # Options to control bcl2fastq
     bcl_to_fastq = optparse.OptionGroup(p,'Bcl-to-fastq options')
-    bcl_to_fastq.add_option('--skip-bcl2fastq',action='store_true',
-                            dest='skip_bcl2fastq',default=False,
-                            help="don't run the Fastq generation step")
-    bcl_to_fastq.add_option('--output-dir',action='store',
-                            dest='unaligned_dir',default=None,
-                            help="explicitly set the output (sub)directory for bcl-to-fastq "
-                            "conversion (overrides default)")
-    bcl_to_fastq.add_option('--use-bases-mask',action="store",
-                            dest="bases_mask",default=None,
-                            help="explicitly set the bases-mask string to indicate how each "
-                            "cycle should be used in the bcl-to-fastq conversion (overrides "
-                            "default)")
-    bcl_to_fastq.add_option('--sample-sheet',action="store",
-                            dest="sample_sheet",default=None,
-                            help="use an alternative sample sheet to the default "
-                            "'custom_SampleSheet.csv' created on setup.")
-    bcl_to_fastq.add_option('--lanes',action='store',
-                            dest='lanes',default=None,
-                            help="list of lanes to include in the processing. "
-                            "LANES should be single integer (e.g. 1), a list "
-                            "of integers (e.g. 1,3,...), a range (e.g. 1-3), "
-                            "or a combination (e.g. 1,3-5,7). Default is to "
-                            "include all lanes")
     bcl_to_fastq.add_option('--ignore-missing-bcl',action='store_true',
                             dest='ignore_missing_bcl',default=False,
                             help="use the --ignore-missing-bcl option for bcl2fastq (treat "
@@ -377,6 +391,33 @@ def add_make_fastqs_command(cmdparser):
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
+    # Cellranger (10xgenomics Chromium SC 3') options
+    cellranger = optparse.OptionGroup(p,'Cellranger options (10xGenomics '
+                                      'Chromium SC 3\' data only)')
+    cellranger.add_option("--jobmode",
+                          dest="job_mode",
+                          default=__settings['10xgenomics'].cellranger_jobmode,
+                          help="job mode to run cellranger in (default: '%s')"
+                          % __settings['10xgenomics'].cellranger_jobmode)
+    cellranger.add_option("--mempercore",
+                          dest="mem_per_core",
+                          default=__settings['10xgenomics'].cellranger_mempercore,
+                          help="memory assumed per core (in Gbs; "
+                          "default: %s)" %
+                          __settings['10xgenomics'].cellranger_mempercore)
+    cellranger.add_option("--maxjobs",type=int,
+                          dest="max_jobs",
+                          default=__settings.general.max_concurrent_jobs,
+                          help="maxiumum number of concurrent jobs to run "
+                          "(default: %d)"
+                          % __settings.general.max_concurrent_jobs)
+    cellranger.add_option("--jobinterval",type=int,
+                          dest="job_interval",
+                          default=__settings['10xgenomics'].cellranger_jobinterval,
+                          help="how often jobs are submitted (in ms; "
+                          "default: %d)" %
+                          __settings['10xgenomics'].cellranger_jobinterval)
+    p.add_option_group(cellranger)
     # Statistics
     statistics = optparse.OptionGroup(p,'Statistics generation')
     statistics.add_option('--stats-file',action='store',
@@ -411,6 +452,11 @@ def add_make_fastqs_command(cmdparser):
                           dest='barcodes_file',default=None,
                           help="specify output file for barcode analysis report "
                           "(deprecated: use the 'analyse_barcodes' command instead)")
+    deprecated.add_option('--skip-bcl2fastq',action='store_true',
+                          dest='skip_bcl2fastq',default=False,
+                          help="don't run the Fastq generation step "
+                          "(deprecated: use the '--skip-fastq-generation' "
+                          "option instead)")
     p.add_option_group(deprecated)
 
 def add_setup_analysis_dirs_command(cmdparser):
@@ -424,6 +470,14 @@ def add_setup_analysis_dirs_command(cmdparser):
                  dest='ignore_missing_metadata',default=False,
                  help="force creation of project directories even if metadata is not "
                  "set (default is to fail if metadata is missing)")
+    p.add_option('--unaligned-dir',action='store',
+                 dest='unaligned_dir',default=None,
+                 help="explicitly specify the subdirectory with bcl-to-fastq "
+                 "outputs")
+    p.add_option('--undetermined',action='store',
+                 dest='undetermined',default=None,
+                 help="explicitly specify name for project directory with "
+                 "'undetermined' fastqs")
     p.add_option('--short-fastq-names',action='store_true',
                  dest='short_fastq_names',default=False,
                  help="shorten fastq file names when copying or linking from project "
@@ -704,6 +758,8 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_option('--per-lane-stats-file',action='store',
                  dest='per_lane_stats_file',default=None,
                  help="specify output file for per-lane statistics")
+    p.add_option('-a','--add',action="store_true",dest="add_data",
+                 help="add new data from UNALIGNED_DIR to existing statistics")
     add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
@@ -870,29 +926,42 @@ if __name__ == "__main__":
                 lanes = bcf_utils.parse_lanes(options.lanes)
             else:
                 lanes = None
+            # Deal with --skip-... for fastq generation
+            skip_fastq_generation = (options.skip_fastq_generation or
+                                     options.skip_bcl2fastq)
             # Do the make_fastqs step
-            d.make_fastqs(skip_rsync=options.skip_rsync,
-                          nprocessors=options.nprocessors,
-                          runner=options.runner,
-                          remove_primary_data=options.remove_primary_data,
-                          ignore_missing_bcl=options.ignore_missing_bcl,
-                          ignore_missing_stats=options.ignore_missing_stats,
-                          generate_stats=(not options.no_stats),
-                          require_bcl2fastq_version=options.bcl2fastq_version,
-                          unaligned_dir=options.unaligned_dir,
-                          sample_sheet=options.sample_sheet,
-                          bases_mask=options.bases_mask,
-                          lanes=lanes,
-                          no_lane_splitting=no_lane_splitting,
-                          minimum_trimmed_read_length=options.minimum_trimmed_read_length,
-                          mask_short_adapter_reads=options.mask_short_adapter_reads,
-                          stats_file=options.stats_file,
-                          per_lane_stats_file=options.per_lane_stats_file,
-                          report_barcodes=options.report_barcodes,
-                          barcodes_file=options.barcodes_file,
-                          skip_bcl2fastq=options.skip_bcl2fastq,
-                          only_fetch_primary_data=options.only_fetch_primary_data,
-                          create_empty_fastqs=create_empty_fastqs)
+            try:
+                d.make_fastqs(
+                    protocol=options.protocol,
+                    skip_rsync=options.skip_rsync,
+                    nprocessors=options.nprocessors,
+                    runner=options.runner,
+                    remove_primary_data=options.remove_primary_data,
+                    ignore_missing_bcl=options.ignore_missing_bcl,
+                    ignore_missing_stats=options.ignore_missing_stats,
+                    generate_stats=(not options.no_stats),
+                    require_bcl2fastq_version=options.bcl2fastq_version,
+                    unaligned_dir=options.unaligned_dir,
+                    sample_sheet=options.sample_sheet,
+                    bases_mask=options.bases_mask,
+                    lanes=lanes,
+                    no_lane_splitting=no_lane_splitting,
+                    minimum_trimmed_read_length=options.minimum_trimmed_read_length,
+                    mask_short_adapter_reads=options.mask_short_adapter_reads,
+                    stats_file=options.stats_file,
+                    per_lane_stats_file=options.per_lane_stats_file,
+                    report_barcodes=options.report_barcodes,
+                    barcodes_file=options.barcodes_file,
+                    skip_fastq_generation=skip_fastq_generation,
+                    only_fetch_primary_data=options.only_fetch_primary_data,
+                    create_empty_fastqs=create_empty_fastqs,
+                    cellranger_jobmode=options.job_mode,
+                    cellranger_mempercore=options.mem_per_core,
+                    cellranger_maxjobs=options.max_jobs,
+                    cellranger_jobinterval=options.job_interval)
+            except Exception as ex:
+                logging.fatal("make_fastqs: %s" % ex)
+                sys.exit(1)
         elif cmd == 'merge_fastq_dirs':
             d.merge_fastq_dirs(options.unaligned_dir,
                                output_dir=options.output_dir,
@@ -902,6 +971,7 @@ if __name__ == "__main__":
             d.generate_stats(unaligned_dir=options.unaligned_dir,
                              stats_file=options.stats_file,
                              per_lane_stats_file=options.per_lane_stats_file,
+                             add_data=options.add_data,
                              nprocessors=options.nprocessors,
                              runner=options.runner)
         elif cmd == 'analyse_barcodes':
@@ -918,8 +988,10 @@ if __name__ == "__main__":
                                runner=options.runner,
                                force=options.force)
         elif cmd == 'setup_analysis_dirs':
-            d.setup_analysis_dirs(ignore_missing_metadata=
+            d.setup_analysis_dirs(unaligned_dir=options.unaligned_dir,
+                                  ignore_missing_metadata=
                                   options.ignore_missing_metadata,
+                                  undetermined_project=options.undetermined,
                                   short_fastq_names=options.short_fastq_names,
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':

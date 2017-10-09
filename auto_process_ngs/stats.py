@@ -60,7 +60,7 @@ class FastqStatistics:
     >>> stats.report_basic_stats('basic_stats.out')
 
     """
-    def __init__(self,illumina_data,n_processors=1):
+    def __init__(self,illumina_data,n_processors=1,add_to=None):
         """
         Create a new FastqStatistics instance
 
@@ -70,14 +70,16 @@ class FastqStatistics:
           n_processors: number of processors to use (if >1 then uses
             the multiprocessing library to run the statistics gathering
             using multiple cores).
+          add_to: optional, add the data to that from an existing
+            statistics file
         """
         self._illumina_data = illumina_data
         self._n_processors = n_processors
         self._stats = None
         self._lane_names = []
-        self._get_data()
+        self._get_data(filen=add_to)
 
-    def _get_data(self):
+    def _get_data(self,filen=None):
         """
         Collect statistics for FASTQ outputs from an Illumina run
         """
@@ -108,6 +110,11 @@ class FastqStatistics:
         else:
             # Single core
             results = map(collect_fastq_data,fastqstats)
+        # Set up tabfile to hold pre-existing data
+        if filen is not None:
+            existing_stats = TabFile(filen,first_line_is_header=True)
+        else:
+            existing_stats = None
         # Set up class to hold all collected data
         self._stats = TabFile(column_names=('Project',
                                             'Sample',
@@ -128,11 +135,32 @@ class FastqStatistics:
                           ','.join([str(l) for l in fastq.lanes])))
             for lane in fastq.lanes:
                 lanes.add(lane)
+        # Add lane numbers from pre-existing stats file
+        if existing_stats is not None:
+            for c in existing_stats.header():
+                if c.startswith('L'):
+                    lanes.add(int(c[1:]))
         self._lanes = sorted(list(lanes))
         logger.debug("Lanes found: %s" %
                      ','.join([str(l) for l in self._lanes]))
         for lane in self._lanes:
             self._stats.appendColumn("L%s" % lane)
+        # Copy pre-existing stats into new tabfile
+        if existing_stats:
+            for line in existing_stats:
+                data = [line['Project'],
+                        line['Sample'],
+                        line['Fastq'],
+                        line['Size'],
+                        line['Nreads'],
+                        line['Paired_end'],
+                        line['Read_number']]
+                for lane in lanes:
+                    try:
+                        data.append(line["L%s" % lane])
+                    except:
+                        data.append('')
+                self._stats.append(data=data)
         # Copy reads per lane from R1 FASTQs into R2
         for r2_fastq in results_r2:
             # Get corresponding R1 name
@@ -148,19 +176,47 @@ class FastqStatistics:
         # Write the data into the tabfile
         paired_end = ('Y' if self._illumina_data.paired_end else 'N')
         for fastq in results:
-            data = [fastq.project,
-                    fastq.sample,
-                    fastq.name,
-                    bcf_utils.format_file_size(fastq.fsize),
-                    fastq.nreads,
-                    paired_end,
-                    fastq.read_number]
-            for lane in lanes:
-                try:
-                    data.append(fastq.reads_by_lane[lane])
-                except:
-                    data.append('')
-            self._stats.append(data=data)
+            # Check for existing entry
+            existing_entry = False
+            for line in self._stats:
+                if (line['Project'] == fastq.project and
+                    line['Sample'] == fastq.sample and
+                    line['Fastq'] == fastq.name):
+                    # Overwrite the existing entry
+                    existing_entry = True
+                    break
+            # Write the data
+            if not existing_entry:
+                # Append new entry
+                data = [fastq.project,
+                        fastq.sample,
+                        fastq.name,
+                        bcf_utils.format_file_size(fastq.fsize),
+                        fastq.nreads,
+                        paired_end,
+                        fastq.read_number]
+                for lane in lanes:
+                    try:
+                        data.append(fastq.reads_by_lane[lane])
+                    except:
+                        data.append('')
+                self._stats.append(data=data)
+            else:
+                # Overwrite existing entry
+                logging.warning("Overwriting exisiting entry for "
+                                "%s/%s/%s" % (fastq.project,
+                                              fastq.sample,
+                                              fastq.name))
+                line['Size'] = bcf_utils.format_file_size(fastq.fsize)
+                line['Nreads'] = fastq.nreads
+                line['Paired_end'] = paired_end
+                line['Read_number'] = fastq.read_number
+                for lane in lanes:
+                    lane_name = "L%d" % lane
+                    try:
+                        line[lane_name] = fastq.reads_by_lane[lane]
+                    except:
+                        line[lane_name] = ''
 
     @property
     def lane_names(self):
@@ -284,7 +340,17 @@ class FastqStatistics:
             samples = filter(lambda x:
                              x['Read_number'] == 1 and bool(x[lane]),
                              self._stats)
-            total_reads = sum([s[lane] for s in samples])
+            try:
+                total_reads = sum([int(s[lane]) for s in samples])
+            except Exception as ex:
+                for s in samples:
+                    try:
+                        int(s[lane])
+                    except ValueError:
+                        logging.critical("Bad value for read count in "
+                                         "lane %s sample %s: '%s'" %
+                                         (lane,s['Sample'],s[lane]))
+                raise ex
             fpp.write("\nLane %d\n" % lane_number)
             fpp.write("Total reads = %d\n" % total_reads)
             for sample in samples:
@@ -331,7 +397,8 @@ class FastqStatistics:
             assigned[lane] = 0
             unassigned[lane] = 0
         # Count assigned and unassigned (= undetermined) reads
-        for line in filter(lambda x: x['Read_number'] == 1,
+        for line in filter(lambda x: x['Read_number'] == 1 and
+                           not IlluminaFastq(x['Fastq']).is_index_read,
                            self._stats):
             if line['Project'] != 'Undetermined_indices':
                 counts = assigned
