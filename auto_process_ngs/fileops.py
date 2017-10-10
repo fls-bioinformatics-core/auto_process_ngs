@@ -14,7 +14,7 @@ fileops
 
 Utility functions providing a single interface for performing
 various file system operations (e.g. make a directory, copy
-files etc) trasparently on either a local or a remote system.
+files etc) transparently on either a local or a remote system.
 
 Classes:
 
@@ -22,10 +22,20 @@ Classes:
 
 Functions:
 
+These functions perform specific operations directly:
+
 - mkdir: create a directory
 - copy: copy a file
 - set_group: set the group on a file or directory
 - unzip: unpack a ZIP archive
+
+These functions generate commands that can be executed e.g.
+via a scheduler, to perform the required operations:
+
+- copy_command: generate command to perform copy operation
+- set_group_command: generate command to perform group set
+  operation
+- unzip_command: generate command to unpack a ZIP archive
 """
 
 ########################################################################
@@ -108,8 +118,26 @@ class Location(object):
         return self._location
 
 ########################################################################
-# Functions
+# Command execution functions
 #########################################################################
+
+def _run_command(cmd,sched=None):
+    """
+    Run the command, either locally or via a scheduler
+
+    Arguments:
+      cmd (Command): command to run
+      sched (SimpleScheduler): optional, a scheduler
+        to use to run the command
+    """
+    print "Running %s" % cmd
+    if sched is None:
+        retcode,output = cmd.subprocess_check_output()
+    else:
+        job = sched.submit(cmd)
+        job.wait()
+        retcode = job.exit_code
+    return retcode
 
 def mkdir(newdir):
     """
@@ -123,22 +151,20 @@ def mkdir(newdir):
         be on local or remote system)
     """
     newdir = Location(newdir)
-    if not newdir.is_remote:
-        # Local directory
-        bcftbx_utils.mkdir(newdir.path)
-    else:
+    mkdir_cmd = applications.Command('mkdir',
+                                     newdir.path)
+    if newdir.is_remote:
         # Remote directory
-        try:
-            mkdir_cmd = applications.general.ssh_command(
-                newdir.user,
-                newdir.server,
-                ('mkdir',newdir.path))
-            print "Running %s" % mkdir_cmd
-            mkdir_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception(
-                "Exception making remote directory %s: %s" %
-                (newdir,ex))
+        mkdir_cmd = applications.general.ssh_command(
+            newdir.user,
+            newdir.server,
+            mkdir_cmd.command_line)
+    try:
+        return _run_command(mkdir_cmd)
+    except Exception as ex:
+        raise Exception(
+            "Exception making directory %s: %s" %
+            (newdir,ex))
 
 def copy(src,dest):
     """
@@ -152,23 +178,12 @@ def copy(src,dest):
         on a local or remote system, identified by
         a specifier of the form '[[USER@]HOST:]DEST'
     """
-    dest = Location(dest)
-    if not dest.is_remote:
-        # Local copy
-        shutil.copy(src,dest.path)
-    else:
-        try:
-            # Remote copy
-            copy_cmd = applications.general.scp(
-                dest.user,
-                dest.server,
-                src,dest.path)
-            print "Running %s" % copy_cmd
-            copy_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception("Exception copying %s to remote "
-                            "destination %s: %s" %
-                            (src,dest,ex))
+    copy_cmd = copy_command(src,dest)
+    try:
+        return _run_command(copy_cmd)
+    except Exception as ex:
+        raise Exception("Exception copying %s to %s: "
+                        "%s" % (src,dest,ex))
 
 def set_group(group,path):
     """
@@ -188,29 +203,13 @@ def set_group(group,path):
         to change the group of, identified by a
         specifier of the form '[[USER@]HOST:]PATH'
     """
-    path = Location(path)
-    if not path.is_remote:
-        # Set the group for local files
-        gid = bcftbx_utils.get_gid_from_group(group)
-        if gid is None:
-            raise Exception("Failed to get gid for group '%s'" % group)
-        for f in bcftbx_utils.walk(path.path,include_dirs=True):
-            logger.debug("Updating group for %s" % f)
-            os.lchown(f,-1,gid)
-    else:
-        try:
-            # Set group for remote files
-            chmod_cmd = applications.general.ssh_command(
-                path.user,
-                path.server,
-                ('chgrp','-R',group,path.path))
-            print "Running %s" % chmod_cmd
-            chmod_cmd.run_subprocess()
-        except Exception as ex:
-            raise Exception(
-                "Exception changing group to '%s' on remote "
-                "destination %s: %s" %
-                (group,path,ex))
+    chmod_cmd = set_group_command(group,path)
+    try:
+        return _run_command(chmod_cmd)
+    except Exception as ex:
+        raise Exception(
+            "Exception changing group to '%s' for "
+            "destination %s: %s" % (group,path,ex))
 
 def unzip(zip_file,dest):
     """
@@ -224,6 +223,105 @@ def unzip(zip_file,dest):
         contents to (on the same system as the ZIP
         archive)
     """
+    unzip_cmd = unzip_command(zip_file,dest)
+    try:
+        return _run_command(unzip_cmd)
+    except Exception as ex:
+        raise Exception("Failed to unzip %s: %s" %
+                        (zip_file,ex))
+
+########################################################################
+# Command generation functions
+#########################################################################
+
+def copy_command(src,dest):
+    """
+    Generate command to copy a file
+
+    Creates a command which copies a local file to a
+    local or remote location.
+
+    Arguments:
+      src (str): local file to copy
+      dest (str): destination (file or directory)
+        on a local or remote system, identified by
+        a specifier of the form '[[USER@]HOST:]DEST'
+
+    Returns:
+      Command: Command instance that can be used to
+        perform the copy operation.
+    """
+    dest = Location(dest)
+    if not dest.is_remote:
+        # Local-to-local copy
+        copy_cmd = applications.Command('cp',
+                                        src,
+                                        dest.path)
+    if dest.is_remote:
+        # Local-to-remote copy
+        copy_cmd = applications.general.scp(
+                dest.user,
+                dest.server,
+                src,dest.path)
+    return copy_cmd
+
+def set_group_command(group,path):
+    """
+    Generate command to set group on file or directory
+
+    Creates a command which sets the group on a
+    file or directory.
+
+    'path' can be a file or directory on a local
+    or remote system; if it is a directory then it
+    will operate recursively i.e. all subdirectories
+    and files will also have their group changed.
+
+    'group' is the name of the group to change
+    ownership to (must exist on the target system).
+
+    Arguments:
+      group (str): name of the new group
+      path (str): path to the file or directory
+        to change the group of, identified by a
+        specifier of the form '[[USER@]HOST:]PATH'
+
+    Returns:
+      Command: Command instance that can be used to
+        set the group.
+    """
+    path = Location(path)
+    chmod_cmd = applications.Command('chgrp',
+                                     '-R',
+                                     group,
+                                     path.path)
+    if path.is_remote:
+        # Set group for remote files
+        chmod_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            chmod_cmd.command_line)
+    return chmod_cmd
+
+def unzip_command(zip_file,dest):
+    """
+    Generate command to unpack ZIP archive file
+
+    The ZIP archive can be on a local or a remote
+    system.
+
+    Arguments:
+      zip_file (str): ZIP archive file identified
+        using a specifier of the form
+        '[[USER@]HOST:]ZIP_FILE'
+      dest (str): path to extract the archive
+        contents to (on the same system as the ZIP
+        archive)
+
+    Returns:
+      Command: Command instance that can be used to
+        perform the unzip operation.
+    """
     zip_file = Location(zip_file)
     unzip_cmd = applications.Command('unzip',
                                      '-q',
@@ -236,9 +334,4 @@ def unzip(zip_file,dest):
             zip_file.user,
             zip_file.server,
             unzip_cmd.command_line)
-    try:
-        print "Running %s" % unzip_cmd
-        unzip_cmd.run_subprocess()
-    except Exception as ex:
-        raise Exception("Failed to unzip %s: %s" %
-                        (zip_file,ex))
+    return unzip_cmd
