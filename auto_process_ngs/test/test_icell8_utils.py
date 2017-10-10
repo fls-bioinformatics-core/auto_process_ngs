@@ -112,8 +112,8 @@ class TestICell8Read1(unittest.TestCase):
         """ICell8Read1: get UMI
         """
         r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
-        self.assertEqual(r1.umi,"AGTCAAGTGC")
-        self.assertEqual(r1.umi_quality,"EEEEEEEEEE")
+        self.assertEqual(r1.umi,"AGTCAAGTGCTGGG")
+        self.assertEqual(r1.umi_quality,"EEEEEEEEEE//6/")
     def test_icell8_read1_min_barcode_quality(self):
         """ICell8Read1: get minimum quality score for barcode
         """
@@ -123,7 +123,7 @@ class TestICell8Read1(unittest.TestCase):
         """ICell8Read1: get minimum quality score for UMI
         """
         r1 = ICell8Read1(self._fastqread(icell8_read_pair['r1']))
-        self.assertEqual(r1.min_umi_quality,'E')
+        self.assertEqual(r1.min_umi_quality,'/')
 
 # ICell8ReadPair
 class TestICell8ReadPair(unittest.TestCase):
@@ -164,8 +164,8 @@ AGAAGAGTACCTGGAAAATGTTGGCG
         """
         pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
                               self._fastqread(icell8_read_pair['r2']))
-        self.assertEqual(pair.umi,"AGTCAAGTGC")
-        self.assertEqual(pair.umi_quality,"EEEEEEEEEE")
+        self.assertEqual(pair.umi,"AGTCAAGTGCTGGG")
+        self.assertEqual(pair.umi_quality,"EEEEEEEEEE//6/")
     def test_icell8_read_pair_min_barcode_quality(self):
         """ICell8ReadPair: get minimum quality score for barcode
         """
@@ -177,7 +177,7 @@ AGAAGAGTACCTGGAAAATGTTGGCG
         """
         pair = ICell8ReadPair(self._fastqread(icell8_read_pair['r1']),
                               self._fastqread(icell8_read_pair['r2']))
-        self.assertEqual(pair.min_umi_quality,'E')
+        self.assertEqual(pair.min_umi_quality,'/')
 
 # ICell8FastqIterator
 icell8_fastq_r1 = """@NB500968:70:HCYMKBGX2:1:11101:22672:1659 1:N:0:1
@@ -269,15 +269,15 @@ class TestICell8Stats(unittest.TestCase):
         self.assertEqual(stats.nreads('GTTCCTGATTA'),1)
         self.assertEqual(stats.nreads('AGAAGAGTACC'),1)
         self.assertEqual(stats.nreads('GTCTGCAACGC'),1)
-        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGC',
-                                                'GGAGGCCGGA',
-                                                'TGGAAAATGT'])
+        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGCTGGG',
+                                                'GGAGGCCGGATCGC',
+                                                'TGGAAAATGTTGGC'])
         self.assertEqual(stats.distinct_umis('GTTCCTGATTA'),
-                         ['AGTCAAGTGC'])
+                         ['AGTCAAGTGCTGGG'])
         self.assertEqual(stats.distinct_umis('AGAAGAGTACC'),
-                         ['TGGAAAATGT'])
+                         ['TGGAAAATGTTGGC'])
         self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
-                         ['GGAGGCCGGA'])
+                         ['GGAGGCCGGATCGC'])
     def test_icell8stats_multicore(self):
         """ICell8Stats: collect stats from Icell8 R1 FASTQ (multicore)
         """
@@ -290,15 +290,15 @@ class TestICell8Stats(unittest.TestCase):
         self.assertEqual(stats.nreads('GTTCCTGATTA'),2)
         self.assertEqual(stats.nreads('AGAAGAGTACC'),2)
         self.assertEqual(stats.nreads('GTCTGCAACGC'),2)
-        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGC',
-                                                'GGAGGCCGGA',
-                                                'TGGAAAATGT'])
+        self.assertEqual(stats.distinct_umis(),['AGTCAAGTGCTGGG',
+                                                'GGAGGCCGGATCGC',
+                                                'TGGAAAATGTTGGC'])
         self.assertEqual(stats.distinct_umis('GTTCCTGATTA'),
-                         ['AGTCAAGTGC'])
+                         ['AGTCAAGTGCTGGG'])
         self.assertEqual(stats.distinct_umis('AGAAGAGTACC'),
-                         ['TGGAAAATGT'])
+                         ['TGGAAAATGTTGGC'])
         self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
-                         ['GGAGGCCGGA'])
+                         ['GGAGGCCGGATCGC'])
 
 class TestNormalizeSampleNameFunction(unittest.TestCase):
     """
@@ -326,8 +326,8 @@ class TestGetIcell8BasesMaskFunction(unittest.TestCase):
         get_icell8_bases_mask: reset bases mask
         """
         self.assertEqual(get_icell8_bases_mask("y101,I7,y101"),
-                         "y21n80,I7,y101")
+                         "y25n76,I7,y101")
         self.assertEqual(get_icell8_bases_mask("y250,I8,I8,y250"),
-                         "y21n229,I8,I8,y250")
-        self.assertEqual(get_icell8_bases_mask("y21,I8,I8,y250"),
-                         "y21,I8,I8,y250")
+                         "y25n225,I8,I8,y250")
+        self.assertEqual(get_icell8_bases_mask("y25,I8,I8,y250"),
+                         "y25,I8,I8,y250")
