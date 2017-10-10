@@ -553,7 +553,7 @@ class general:
         return ssh_command
 
     @staticmethod
-    def scp(user,server,source,target):
+    def scp(user,server,source,target,recursive=False):
         """Generate Command instance for 'scp'
 
         Creates a Command instance to run 'scp' to copy to another system.
@@ -563,10 +563,16 @@ class general:
           server: name of the server
           source: source file on local system
           target: target destination on remote system
+          recursive: optional, if True then copy source
+            recursively (i.e. specify the '-r' option)
 
         Returns:
           Command object.
 
         """
-        scp_command = Command('scp',source,'%s@%s:%s' % (user,server,target))
+        scp_command = Command('scp')
+        if recursive:
+            scp_command.add_args('-r')
+        scp_command.add_args(source,
+                             '%s@%s:%s' % (user,server,target))
         return scp_command
