@@ -86,6 +86,32 @@ class TestCopyFunction(FileopsTestCase):
         self.assertEqual(open(tgt_file).read(),
                          "This is a test file")
 
+class TestCopytreeFunction(FileopsTestCase):
+    """Tests for the 'copy' function
+    """
+    def test_local_copytree(self):
+        """fileops.copytree: recursively copy a local directory
+        """
+        # Build a source directory
+        src_dir = os.path.join(self.test_dir,'test_src')
+        os.mkdir(src_dir)
+        os.mkdir(os.path.join(src_dir,'subdir'))
+        with open(os.path.join(src_dir,'test1.txt'),'w') as fp:
+            fp.write("This is test file 1")
+        with open(os.path.join(src_dir,'subdir','test2.txt'),'w') as fp:
+            fp.write("This is test file 2")
+        # Copy contents recursively
+        tgt_dir = os.path.join(self.test_dir,'test_dst')
+        self.assertFalse(os.path.exists(tgt_dir))
+        status = copytree(src_dir,tgt_dir)
+        self.assertEqual(status,0)
+        self.assertTrue(os.path.isdir(tgt_dir))
+        self.assertTrue(os.path.isdir(os.path.join(tgt_dir,'subdir')))
+        self.assertEqual(open(os.path.join(tgt_dir,'test1.txt')).read(),
+                         "This is test file 1")
+        self.assertEqual(open(os.path.join(tgt_dir,'subdir','test2.txt')).read(),
+                         "This is test file 2")
+
 class TestSetGroupFunction(FileopsTestCase):
     """Tests for the 'set_group' function
     """
@@ -171,6 +197,31 @@ class TestCopyCommand(unittest.TestCase):
                          ['scp',
                           '/here/myfile.txt',
                           'pjx@remote.com:/there/myfile.txt'])
+
+class TestCopytreeCommand(unittest.TestCase):
+    """Tests for the 'copytree_command' function
+    """
+    def test_copytree_command_to_local(self):
+        """fileops.copytree_command: copy directory locally
+        """
+        copytree_cmd = copytree_command("/here",
+                                        "/there")
+        self.assertEqual(copytree_cmd.command_line,
+                         ['cp',
+                          '-a',
+                          '-n',
+                          '/here',
+                          '/there'])
+    def test_copytree_command_to_remote(self):
+        """fileops.copytree_command: copy directory to remote
+        """
+        copytree_cmd = copytree_command("/here",
+                                        "pjx@remote.com:/there")
+        self.assertEqual(copytree_cmd.command_line,
+                         ['scp',
+                          '-r',
+                          '/here',
+                          'pjx@remote.com:/there'])
 
 class TestSetGroupCommand(unittest.TestCase):
     """Tests for the 'set_group_command' function

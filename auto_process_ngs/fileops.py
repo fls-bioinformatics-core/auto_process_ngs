@@ -26,6 +26,7 @@ These functions perform specific operations directly:
 
 - mkdir: create a directory
 - copy: copy a file
+- copytree: recursively copy a directory
 - set_group: set the group on a file or directory
 - unzip: unpack a ZIP archive
 
@@ -33,6 +34,8 @@ These functions generate commands that can be executed e.g.
 via a scheduler, to perform the required operations:
 
 - copy_command: generate command to perform copy operation
+- copytree_command: generate command to perform recursive copy
+  operation
 - set_group_command: generate command to perform group set
   operation
 - unzip_command: generate command to unpack a ZIP archive
@@ -185,6 +188,30 @@ def copy(src,dest):
         raise Exception("Exception copying %s to %s: "
                         "%s" % (src,dest,ex))
 
+def copytree(src,dest):
+    """
+    Recursively copy a local directory tree
+
+    Recursively copies an entire local directory tree
+    rooted at 'src', to a local or remote destination
+    directory 'dest'.
+
+    Note that if 'dest' already exists then 'src' will
+    be copied into it as a subdirectory.
+
+    Arguments:
+      src (str): local directory to copy
+      dest (str): destination directory)
+        on a local or remote system, identified by
+        a specifier of the form '[[USER@]HOST:]DEST'
+    """
+    copytree_cmd = copytree_command(src,dest)
+    try:
+        return _run_command(copytree_cmd)
+    except Exception as ex:
+        raise Exception("Exception copying %s to %s: "
+                        "%s" % (src,dest,ex))
+
 def set_group(group,path):
     """
     Set the group for a file or directory
@@ -264,6 +291,44 @@ def copy_command(src,dest):
                 dest.server,
                 src,dest.path)
     return copy_cmd
+
+def copytree_command(src,dest):
+    """
+    Generate command to recursively copy a directory tree
+
+    Creates a command which recursively copies an entire
+    local directory tree rooted at 'src', to a local or
+    remote destination directory 'dest'.
+
+    Note that if 'dest' already exists then 'src' will
+    be copied into it as a subdirectory.
+
+    Arguments:
+      src (str): local directory to copy
+      dest (str): destination directory)
+        on a local or remote system, identified by
+        a specifier of the form '[[USER@]HOST:]DEST'
+
+    Returns:
+      Command: Command instance that can be used to
+        perform the copy operation.
+    """
+    dest = Location(dest)
+    if not dest.is_remote:
+        # Local-to-local copy
+        copytree_cmd = applications.Command('cp',
+                                            '-a',
+                                            '-n',
+                                            src,
+                                            dest.path)
+    else:
+        # Local-to-remote copy
+        copytree_cmd = applications.general.scp(
+            dest.user,
+            dest.server,
+            src,dest.path,
+            recursive=True)
+    return copytree_cmd
 
 def set_group_command(group,path):
     """
