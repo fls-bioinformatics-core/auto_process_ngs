@@ -12,7 +12,7 @@ R1/R2 pair, where the R1 reads hold an inline barcode and a unique
 molecular identifier (UMI) for the read pair:
 
  * **Inline barcode:** bases 1-11 in R1
- * **UMI:** bases 12-21 in R1
+ * **UMI:** bases 12-25 in R1
 
 This is illustrated in the figure below:
 

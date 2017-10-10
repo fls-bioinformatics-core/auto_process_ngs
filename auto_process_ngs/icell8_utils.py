@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 ######################################################################
 
 INLINE_BARCODE_LENGTH = 11
-UMI_LENGTH = 10
+UMI_LENGTH = 14
 
 ######################################################################
 # Other constants
