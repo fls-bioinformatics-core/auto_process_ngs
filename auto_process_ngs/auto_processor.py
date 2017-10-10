@@ -2092,7 +2092,7 @@ class AutoProcess:
 
         """
         if primary_unaligned_dir is None:
-            raise Exception,"Primary unaligned dir not defined"
+            raise Exception("Primary unaligned dir not defined")
         # Output directory
         if output_dir is None:
             output_dir = primary_unaligned_dir
@@ -2122,7 +2122,15 @@ class AutoProcess:
         # Is there anything to do?
         if not unaligned_dirs:
             print "No extra bcl2fastq output directories found, nothing to do"
-            return
+            return 0
+        # Make log directory and set up scheduler (if not dry run)
+        if not dry_run:
+            self.set_log_dir(self.get_log_subdir('merge_fastq_dirs'))
+            runner = self.settings.general.default_runner
+            runner.set_log_dir(self.log_dir)
+            sched = simple_scheduler.SimpleScheduler(runner=runner)
+            sched.start()
+            jobs = []
         # Top-level for undetermined reads
         if primary_illumina_data.undetermined.dirn != \
            primary_illumina_data.unaligned_dir:
@@ -2166,9 +2174,8 @@ class AutoProcess:
                     print "- %s: will be merged in" % project.name
                     projects.append(project)
                 else:
-                    logging.error("collision: %s already exists" %
-                                  project.name)
-                    return
+                    raise Exception("collision: %s already exists" %
+                                    project.name)
             # Deal with undetermined reads
             if illumina_data.undetermined is not None:
                 print "Examining undetermined samples:"
@@ -2184,9 +2191,8 @@ class AutoProcess:
                             print "- %s: will be merged in" % sample.name
                             undetermined.append(sample)
                         else:
-                            logging.error("collision: %s already exists" %
-                                          sample.name)
-                            return
+                            raise Exception("collision: %s already exists" %
+                                            sample.name)
             else:
                 print "No undetermined samples"
         # Collect any remaining projects from the primary
@@ -2224,29 +2230,32 @@ class AutoProcess:
             merge_undetermined_dir = os.path.join(merge_dir,
                                                   undetermined_dir)
         else:
-             merge_undetermined_dir = os.path.join(merge_dir)
+            merge_undetermined_dir = merge_dir
         if not dry_run:
             print "Making temporary merge directory %s" % merge_dir
             bcf_utils.mkdir(merge_dir)
+            if not os.path.exists(merge_undetermined_dir):
+                print "Making directory for undetermined %s" \
+                    %  merge_undetermined_dir
+                bcf_utils.mkdir(merge_undetermined_dir)
         # Copy the projects
         print "Importing projects:"
         for project in projects:
             print "- %s" % project.name
             project_dir = os.path.join(merge_dir,
                                        os.path.basename(project.dirn))
+            cmd = fileops.copytree_command(project.dirn,project_dir)
+            print "- Running %s" % cmd
             if not dry_run:
-                shutil.copytree(project.dirn,project_dir)
+                job = sched.submit(cmd,
+                                   name="copy_project.%s" % project.name,
+                                   wd=merge_dir)
+                print "Job: %s" % job
+                jobs.append(job)
         # Handle the undetermined reads
         print "Dealing with undetermined reads:"
         if no_lane_splitting:
             # No lane info: merge undetermined fastqs
-            if not dry_run:
-                self.set_log_dir(self.get_log_subdir('merge_fastq_dirs'))
-                runner = self.settings.general.default_runner
-                runner.set_log_dir(self.log_dir)
-                sched = simple_scheduler.SimpleScheduler(runner=runner)
-                sched.start()
-                jobs = []
             for read in (1,2):
                 if read == 2 and not paired_end:
                     break
@@ -2265,36 +2274,48 @@ class AutoProcess:
                                        wd=merge_dir)
                     print "Job: %s" % job
                     jobs.append(job)
-            if not dry_run:
-                # Wait for scheduler jobs to complete
-                sched.wait()
-                sched.stop()
-                # Check job exit status
-                if filter(lambda j: j.exit_status != 0,jobs):
-                    logging.critical("One or more jobs failed (non-zero "
-                                     "exit status)")
-                    return
         else:
             for sample in undetermined:
                 print "- %s" % sample.name
                 if fmt == "bcl2fastq2":
-                    # Need to copy fastqs directly
+                    # Hardlink copy fastqs directly
                     sample_dir = merge_undetermined_dir
                     if not dry_run:
                         for fq in sample.fastq:
                             src_fq = os.path.join(sample.dirn,fq)
                             dst_fq = os.path.join(sample_dir,fq)
-                            shutil.copyfile(src_fq,dst_fq)
+                            os.link(src_fq,dst_fq)
                 else:
                     # Just copy directory tree wholesale
                     sample_dir = os.path.join(merge_undetermined_dir,
                                               os.path.basename(sample.dirn))
+                    cmd = fileops.copytree_command(sample.dirn,sample_dir)
+                    print "- Running %s" % cmd
                     if not dry_run:
-                        shutil.copytree(sample.dirn,sample_dir)
+                        job = sched.submit(cmd,
+                                           name="copy_sample_dir.%s" %
+                                           sample.name,
+                                           wd=merge_dir)
+                        print "Job: %s" % job.name
+                        jobs.append(job)
         # Make expected subdirs for bcl2fastq2
         if not dry_run and fmt == "bcl2fastq2":
             for dirn in ('Reports','Stats'):
-                bcf_utils.mkdir(os.path.join(merge_dir,dirn))
+               bcf_utils.mkdir(os.path.join(merge_dir,dirn))
+        # Wait for scheduler jobs to complete
+        if not dry_run:
+            sched.wait()
+            sched.stop()
+            # Check job exit status
+            exit_status = 0
+            for j in jobs:
+                exit_status += j.exit_status
+                if j.exit_status != 0:
+                    logging.warning("Job failed: %s" % j)
+            if exit_status:
+                logging.critical("One or more jobs failed (non-zero "
+                                 "exit status)")
+                return exit_status
         # Move all the 'old' directories out of the way
         all_unaligned = [u for u in unaligned_dirs]
         all_unaligned.append(primary_unaligned_dir)
@@ -2327,6 +2348,7 @@ class AutoProcess:
         print "Creating new projects.info file"
         if not dry_run:
             self.make_project_metadata_file()
+        return 0
 
     def setup_analysis_dirs(self,unaligned_dir=None,
                             project_metadata_file=None,
