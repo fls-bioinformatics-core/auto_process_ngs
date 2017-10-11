@@ -3044,10 +3044,12 @@ class AutoProcess:
         else:
             processing_qc_html = None
         # Add to link to 10xGenomics cellranger QC summaries
-        cellranger_qc_html = filter(lambda f: os.path.isfile(f)
-                                    and f.startswith("cellranger_qc_summary")
+        cellranger_qc_html = filter(lambda f: os.path.isfile(f) and
+                                    os.path.basename(f).startswith(
+                                        "cellranger_qc_summary")
                                     and f.endswith(".html"),
-                                    os.listdir(self.analysis_dir))
+                                    [os.path.join(self.analysis_dir,f)
+                                     for f in os.listdir(self.analysis_dir)])
         if cellranger_qc_html:
             index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
             for qc_html in cellranger_qc_html:

@@ -124,6 +124,13 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         zip_file.add(os.path.join(p.dirn,"icell8_processing_data"))
         zip_file.close()
 
+    def _add_cellranger_qc_output(self,dirn,lanes=None):
+        # Add mock cellranger qc report
+        cellranger_qc = "cellranger_qc_summary%s.html" % ("_%s" % lanes
+                                                          if lanes is not None
+                                                          else "")
+        self._make_file(os.path.join(dirn,cellranger_qc))
+
     def test_publish_qc_metadata_missing(self):
         """publish_qc: raises exception if metadata not set
         """
@@ -447,3 +454,68 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_publish_qc_with_cellranger_qc(self):
+        """publish_qc: projects with cellranger QC output (no projects)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Add cellranger QC report
+        self._add_cellranger_qc_output(ap.analysis_dir)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        ap.publish_qc(location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html",
+                   "cellranger_qc_summary.html"]
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_with_cellranger_qc_lanes_subset(self):
+        """publish_qc: projects with cellranger QC for subset of lanes
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Add cellranger QC report
+        self._add_cellranger_qc_output(ap.analysis_dir,lanes="45")
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        ap.publish_qc(location=publication_dir)
+        print "::::TESTING::: %s" % os.listdir(ap.analysis_dir)
+        print "::::TESTING::: %s" % os.listdir(publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html",
+                   "cellranger_qc_summary_45.html"]
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
