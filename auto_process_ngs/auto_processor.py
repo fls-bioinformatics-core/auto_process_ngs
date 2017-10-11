@@ -2853,6 +2853,10 @@ class AutoProcess:
                    regenerate_reports=False,force=False):
         # Copy the QC reports to the webserver
         #
+        # Raises an exception if:
+        #
+        # - 'source' and 'run_number' metadata items are not set
+        #
         # projects: specify a pattern to match one or more projects to
         #           publish the reports for (default is to publish all reports)
         # location: override the target location specified in the settings
@@ -2870,8 +2874,7 @@ class AutoProcess:
         # Check metadata
         check_metadata = self.check_metadata(('source','run_number'))
         if not check_metadata:
-            logging.error("Some metadata items not set, stopping")
-            return
+            raise Exception("Some metadata items not set, stopping")
         # Process pattern matching
         if projects is None:
             project_pattern = '*'
