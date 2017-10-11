@@ -3033,11 +3033,12 @@ class AutoProcess:
                        self.run_reference_id)
         index_page.add("</table>")
         # Add link to processing statistics
-        processing_qc_html = "processing_qc.html"
+        processing_qc_html = os.path.join(self.analysis_dir,
+                                          "processing_qc.html")
         if os.path.exists(processing_qc_html):
             index_page.add("<h2>Processing Statistics</h2>")
             index_page.add("<a href='%s'>Processing QC report</a>" %
-                           processing_qc_html)
+                           os.path.basename(processing_qc_html))
         else:
             processing_qc_html = None
         # Add to link to 10xGenomics cellranger QC summaries
