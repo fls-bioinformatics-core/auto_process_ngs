@@ -1053,7 +1053,8 @@ class AutoProcess:
     def get_analysis_projects(self,pattern=None):
         # Return the analysis projects in a list
         #
-        # By default returns all projects within the analysis
+        # By default returns all projects within the analysis directory
+        # (including 'undetermined').
         #
         # If the 'pattern' is not None then it should be a simple pattern
         # used to match against available names to select a subset of
