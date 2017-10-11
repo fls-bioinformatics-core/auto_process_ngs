@@ -51,6 +51,12 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         # Add mock processing report
         self._make_file(os.path.join(dirn,"processing_qc.html"))
 
+    def _add_barcode_analysis(self,dirn):
+        # Add mock barode analysis outputs
+        os.mkdir(os.path.join(dirn,"barcode_analysis"))
+        for f in ("barcodes.report","barcodes.xls","barcodes.html"):
+            self._make_file(os.path.join(dirn,"barcode_analysis",f))
+
     def _add_qc_outputs(self,project_dir,include_multiqc=True):
         # Add mock QC outputs
         logger.debug("_add_qc_outputs: adding QC outputs for %s" %
@@ -201,6 +207,39 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         # Check outputs
         outputs = ("index.html",
                    "processing_qc.html")
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_barcode_analysis(self):
+        """publish_qc: barcode analysis outputs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Add barcode analysis reports
+        self._add_barcode_analysis(ap.analysis_dir)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish QC
+        ap.publish_qc(location=publication_dir)
+        # Check outputs
+        outputs = ("index.html",
+                   "processing_qc.html",
+                   os.path.join("barcodes","barcodes.report"),
+                   os.path.join("barcodes","barcodes.xls"),
+                   os.path.join("barcodes","barcodes.html"))
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",

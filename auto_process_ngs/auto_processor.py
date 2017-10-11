@@ -2979,6 +2979,9 @@ class AutoProcess:
             barcode_analysis_dir = self.params.barcode_analysis_dir
         else:
             barcode_analysis_dir = 'barcode_analysis'
+        if not os.path.isabs(barcode_analysis_dir):
+            barcode_analysis_dir = os.path.join(self.analysis_dir,
+                                                barcode_analysis_dir)
         for filen in barcodes_files:
             if not os.path.exists(
                     os.path.join(barcode_analysis_dir,filen)):
