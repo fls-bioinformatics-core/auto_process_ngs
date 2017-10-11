@@ -81,9 +81,48 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                                analysis_dir))
         zip_file.add_file(os.path.join(p.dirn,"qc_report.html"))
         zip_file.add(p.qc_dir)
+        zip_file.close()
         if include_multiqc:
             logger.debug("_add_qc_outputs: adding MultiQC output")
             self._make_file(os.path.join(p.dirn,"multiqc_report.html"))
+
+    def _add_icell8_outputs(self,project_dir):
+        # Add mock ICell8 outputs
+        logger.debug("_add_icell8_outputs: adding ICell8 outputs for %s" %
+                     project_dir)
+        p = AnalysisProject(os.path.basename(project_dir),
+                            project_dir)
+        self._make_file(os.path.join(p.dirn,"icell8_processing.html"))
+        os.mkdir(os.path.join(p.dirn,"stats"))
+        self._make_file(os.path.join(p.dirn,
+                                     "stats",
+                                     "icell8_stats.tsv"))
+        self._make_file(os.path.join(p.dirn,
+                                     "stats",
+                                     "icell8_stats.xlsx"))
+        os.mkdir(os.path.join(p.dirn,"icell8_processing_data"))
+        for png in ("poly_g_dist.png",
+                    "read_dist.png",
+                    "reads_per_stage.png",
+                    "samples.png"):
+            self._make_file(os.path.join(p.dirn,
+                                         "icell8_processing_data",
+                                         png))
+        # Build ZIP archive
+        analysis_dir = os.path.basename(os.path.dirname(p.dirn))
+        icell8_zip = os.path.join(p.dirn,
+                                  "icell8_processing.%s.%s.zip" %
+                                  (p.name,
+                                   analysis_dir))
+        zip_file = ZipArchive(icell8_zip,
+                              relpath=p.dirn,
+                              prefix="icell8_processing.%s.%s" %
+                              (p.name,
+                               analysis_dir))
+        zip_file.add_file(os.path.join(p.dirn,"icell8_processing.html"))
+        zip_file.add(os.path.join(p.dirn,"stats"))
+        zip_file.add(os.path.join(p.dirn,"icell8_processing_data"))
+        zip_file.close()
 
     def test_publish_qc_metadata_missing(self):
         """publish_qc: raises exception if metadata not set
@@ -351,3 +390,60 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                                                   os.path.basename(
                                                       ap.analysis_dir)))),
                              "%s exists, but shouldn't" % project.name)
+
+    def test_publish_qc_with_icell8_outputs(self):
+        """publish_qc: projects with ICell8 QC outputs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Add QC outputs
+        projects = ap.get_analysis_projects()
+        for project in projects:
+            self._add_qc_outputs(project.dirn)
+        # Add ICell8 report for one project
+        icell8_project = projects[0]
+        self._add_icell8_outputs(icell8_project.dirn)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        ap.publish_qc(location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        # ICell8 outputs
+        icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
+                                                  os.path.basename(
+                                                      ap.analysis_dir))
+        outputs.append(icell8_dir)
+        outputs.append("%s.zip" % icell8_dir)
+        outputs.append(os.path.join(icell8_dir,"icell8_processing_data"))
+        outputs.append(os.path.join(icell8_dir,"icell8_processing.html"))
+        outputs.append(os.path.join(icell8_dir,"stats"))
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
