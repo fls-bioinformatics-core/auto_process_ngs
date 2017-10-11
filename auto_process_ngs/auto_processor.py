@@ -2857,6 +2857,8 @@ class AutoProcess:
         # Raises an exception if:
         #
         # - 'source' and 'run_number' metadata items are not set
+        # - a subset of projects don't have associated QC outputs
+        #   (unless 'ignore_missing_qc' is True)
         #
         # projects: specify a pattern to match one or more projects to
         #           publish the reports for (default is to publish all reports)
@@ -2962,8 +2964,7 @@ class AutoProcess:
                       ', '.join([x.name for x in no_qc_projects])
             if not ignore_missing_qc:
                 # Fatal error
-                logging.error(err_msg + " (fatal)")
-                return False
+                raise Exception(err_msg)
             # Proceed with a warning
             logging.warning(err_msg)
         # Remove the 'bad' projects from the list before proceeding
