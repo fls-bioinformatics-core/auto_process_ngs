@@ -107,7 +107,7 @@ class MockAnalysisDir(MockIlluminaData):
         if not no_undetermined:
             self.add_undetermined(lanes=lanes)
 
-    def create(self):
+    def create(self,no_project_dirs=False):
         """
         Build and populate the directory structure
 
@@ -195,7 +195,8 @@ class MockAnalysisDir(MockIlluminaData):
                         fp.write('%s,,,,,,%s,\n' % (sample,
                                                     project_name))
             # Write the project directory to disk
-            project_dir.create(top_dir=self.dirn)
+            if not no_project_dirs:
+                project_dir.create(top_dir=self.dirn)
         # Finished
         return self.dirn
 
@@ -273,7 +274,8 @@ class MockAnalysisDirFactory(object):
                    run_name,platform,
                    paired_end=True,
                    no_lane_splitting=True,
-                   top_dir=None):
+                   top_dir=None,
+                   metadata=None):
         """
         Basic analysis dir from bcl2fastq v2
         """
@@ -287,6 +289,7 @@ class MockAnalysisDirFactory(object):
                               paired_end=paired_end,
                               no_lane_splitting=no_lane_splitting,
                               lanes=lanes,
+                              metadata=metadata,
                               top_dir=top_dir)
         mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
@@ -298,6 +301,7 @@ class MockAnalysisDirFactory(object):
     def casava(self,
                run_name,platform,
                paired_end=True,
+               metadata=None,
                top_dir=None):
         """
         Basic analysis dir from CASAVA/bcl2fastq v1.8
@@ -308,6 +312,7 @@ class MockAnalysisDirFactory(object):
                               fmt='casava',
                               paired_end=paired_end,
                               lanes=lanes,
+                              metadata=metadata,
                               top_dir=top_dir)
         mad.add_fastq_batch('AB','AB1','AB1_GCCAAT',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_AGTCAA',lanes=lanes)
