@@ -35,6 +35,18 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         # Remove the temporary test directory
         shutil.rmtree(self.dirn)
 
+    def _make_file(self,filen,content=None):
+        # Make a file
+        with open(filen,'w') as fp:
+            if content is not None:
+                fp.write("%s" % content)
+            else:
+                fp.write("")
+
+    def _add_processing_report(self,dirn):
+        # Add mock processing report
+        self._make_file(os.path.join(dirn,"processing_qc.html"))
+
     def test_publish_qc_metadata_missing(self):
         """publish_qc: raises exception if metadata not set
         """
@@ -52,3 +64,36 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         self.assertRaises(Exception,
                           ap.publish_qc,
                           location=publication_dir)
+
+    def test_publish_qc_processing_qc(self):
+        """publish_qc: processing QC report only
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish QC
+        ap.publish_qc(location=publication_dir)
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             "processing_qc.html")))
+        # Check outputs
+        outputs = ("index.html",
+                   "processing_qc.html")
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
