@@ -8,10 +8,9 @@ import shutil
 import os
 import logging
 from auto_process_ngs.auto_processor import AutoProcess
-from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.utils import ZipArchive
-from auto_process_ngs.qc.illumina_qc import expected_qc_outputs
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.mock import UpdateAnalysisDir
+from auto_process_ngs.mock import UpdateAnalysisProject
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -38,154 +37,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         os.chdir(self.pwd)
         # Remove the temporary test directory
         shutil.rmtree(self.dirn)
-
-    def _make_file(self,filen,content=None):
-        # Make a file
-        with open(filen,'w') as fp:
-            if content is not None:
-                fp.write("%s" % content)
-            else:
-                fp.write("")
-
-    def _add_fastq_set(self,project_dir,fastq_set):
-        # Add an additional fastq set to a project
-        p = AnalysisProject(os.path.basename(project_dir),
-                            project_dir)
-        fastq_dir = os.path.join(p.dirn,fastq_set)
-        os.mkdir(fastq_dir)
-        for fq in ("Alt1.r1.fastq.gz","Alt2.r1.fastq.gz"):
-            self._make_file(os.path.join(fastq_dir,fq))
-
-    def _add_processing_report(self,dirn):
-        # Add mock processing report
-        self._make_file(os.path.join(dirn,"processing_qc.html"))
-
-    def _add_barcode_analysis(self,dirn):
-        # Add mock barode analysis outputs
-        os.mkdir(os.path.join(dirn,"barcode_analysis"))
-        for f in ("barcodes.report","barcodes.xls","barcodes.html"):
-            self._make_file(os.path.join(dirn,"barcode_analysis",f))
-
-    def _add_qc_outputs(self,project_dir,include_multiqc=True,
-                        fastq_set=None,qc_dir=None):
-        # Add mock QC outputs
-        logger.debug("_add_qc_outputs: adding QC outputs for %s" %
-                     project_dir)
-        p = AnalysisProject(os.path.basename(project_dir),
-                            project_dir)
-        if fastq_set is not None:
-            p.use_fastq_dir(fastq_dir=fastq_set)
-        p.setup_qc_dir(qc_dir=qc_dir,fastq_dir=fastq_set)
-        if qc_dir is not None:
-            p.use_qc_dir(qc_dir)
-        logger.debug("_add_qc_outputs: QC dir is %s" % p.qc_dir)
-        for fq in p.fastqs:
-            logger.debug("_add_qc_outputs: adding outputs for %s" % fq)
-            for f in expected_qc_outputs(fq,p.qc_dir):
-                logger.debug("_add_qc_outputs: %s" % f)
-                self._make_file(f)
-        # Determine report name
-        fastq_set = os.path.basename(p.fastq_dir)
-        qc_name = "qc%s_report" % fastq_set[6:]
-        logger.debug("_add_qc_outputs: adding qc_report.html")
-        self._make_file(os.path.join(p.dirn,"%s.html" % qc_name))
-        logger.debug("_add_qc_outputs: adding ZIP file")
-        analysis_dir = os.path.basename(os.path.dirname(p.dirn))
-        logger.debug("_add_qc_outputs: analysis dir %s" % analysis_dir)
-        report_zip = os.path.join(p.dirn,
-                                  "%s.%s.%s.zip" %
-                                  (qc_name,
-                                   p.name,
-                                   analysis_dir))
-        logger.debug("_add_qc_outputs: ZIP file name %s" % report_zip)
-        zip_file = ZipArchive(report_zip,
-                              relpath=p.dirn,
-                              prefix="%s.%s.%s" %
-                              (qc_name,
-                               p.name,
-                               analysis_dir))
-        zip_file.add_file(os.path.join(p.dirn,"%s.html" % qc_name))
-        zip_file.add(p.qc_dir)
-        zip_file.close()
-        if include_multiqc:
-            logger.debug("_add_qc_outputs: adding MultiQC output")
-            multiqc_name = "multiqc%s_report" % fastq_set[6:]
-            self._make_file(os.path.join(p.dirn,"%s.html" % multiqc_name))
-
-    def _add_icell8_outputs(self,project_dir):
-        # Add mock ICell8 outputs
-        logger.debug("_add_icell8_outputs: adding ICell8 outputs for %s" %
-                     project_dir)
-        p = AnalysisProject(os.path.basename(project_dir),
-                            project_dir)
-        self._make_file(os.path.join(p.dirn,"icell8_processing.html"))
-        os.mkdir(os.path.join(p.dirn,"stats"))
-        self._make_file(os.path.join(p.dirn,
-                                     "stats",
-                                     "icell8_stats.tsv"))
-        self._make_file(os.path.join(p.dirn,
-                                     "stats",
-                                     "icell8_stats.xlsx"))
-        os.mkdir(os.path.join(p.dirn,"icell8_processing_data"))
-        for png in ("poly_g_dist.png",
-                    "read_dist.png",
-                    "reads_per_stage.png",
-                    "samples.png"):
-            self._make_file(os.path.join(p.dirn,
-                                         "icell8_processing_data",
-                                         png))
-        # Build ZIP archive
-        analysis_dir = os.path.basename(os.path.dirname(p.dirn))
-        icell8_zip = os.path.join(p.dirn,
-                                  "icell8_processing.%s.%s.zip" %
-                                  (p.name,
-                                   analysis_dir))
-        zip_file = ZipArchive(icell8_zip,
-                              relpath=p.dirn,
-                              prefix="icell8_processing.%s.%s" %
-                              (p.name,
-                               analysis_dir))
-        zip_file.add_file(os.path.join(p.dirn,"icell8_processing.html"))
-        zip_file.add(os.path.join(p.dirn,"stats"))
-        zip_file.add(os.path.join(p.dirn,"icell8_processing_data"))
-        zip_file.close()
-
-    def _add_cellranger_qc_output(self,dirn,lanes=None):
-        # Add mock cellranger qc report
-        cellranger_qc = "cellranger_qc_summary%s.html" % ("_%s" % lanes
-                                                          if lanes is not None
-                                                          else "")
-        self._make_file(os.path.join(dirn,cellranger_qc))
-
-    def _add_cellranger_count_outputs(self,project_dir):
-        # Add mock cellranger count outputs
-        logger.debug("_add_cellranger_count_outputs: adding cellranger "
-                     "count outputs for %s" % project_dir)
-        p = AnalysisProject(os.path.basename(project_dir),
-                            project_dir)
-        self._make_file(os.path.join(p.dirn,"cellranger_count_report.html"))
-        os.mkdir(os.path.join(p.dirn,"cellranger_count"))
-        for sample in p.samples:
-            sample_dir = os.path.join(p.dirn,"cellranger_count",sample.name)
-            os.mkdir(sample_dir)
-            os.mkdir(os.path.join(sample_dir,"outs"))
-            self._make_file(os.path.join(sample_dir,
-                                         "outs",
-                                         "web_summary.html"))
-        # Build ZIP archive
-        analysis_dir = os.path.basename(os.path.dirname(p.dirn))
-        cellranger_zip = os.path.join(p.dirn,
-                                      "cellranger_count_report.%s.%s.zip" %
-                                      (p.name,
-                                       analysis_dir))
-        zip_file = ZipArchive(cellranger_zip,
-                              relpath=p.dirn,
-                              prefix="cellranger_count_report.%s.%s" %
-                              (p.name,
-                               analysis_dir))
-        zip_file.add_file(os.path.join(p.dirn,"cellranger_count_report.html"))
-        zip_file.add(os.path.join(p.dirn,"cellranger_count"))
-        zip_file.close()
 
     def test_publish_qc_metadata_missing(self):
         """publish_qc: raises exception if metadata not set
@@ -218,7 +69,7 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
         # Add processing report
-        self._add_processing_report(ap.analysis_dir)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -245,10 +96,9 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add barcode analysis reports
-        self._add_barcode_analysis(ap.analysis_dir)
+        # Add processing and barcode analysis reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_barcode_analysis()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -278,12 +128,11 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add QC outputs
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
-            self._add_qc_outputs(project.dirn,
-                                 include_multiqc=False)
+            UpdateAnalysisProject(project).add_qc_outputs(
+                include_multiqc=False)
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -323,11 +172,10 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add QC outputs
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -365,18 +213,18 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add QC outputs
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Add additional fastq set for first project
         multi_fastqs_project = ap.get_analysis_projects()[0]
-        self._add_fastq_set(multi_fastqs_project.dirn,
-                            "fastqs.extra")
-        self._add_qc_outputs(multi_fastqs_project.dirn,
-                             fastq_set="fastqs.extra",
-                             qc_dir="qc.extra")
+        UpdateAnalysisProject(multi_fastqs_project).add_fastq_set(
+            "fastqs.extra",
+            ("Alt1.r1.fastq.gz","Alt2.r1.fastq.gz"))
+        UpdateAnalysisProject(multi_fastqs_project).add_qc_outputs(
+            fastq_set="fastqs.extra",
+            qc_dir="qc.extra")
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -426,11 +274,11 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
         # Add processing report
-        self._add_processing_report(ap.analysis_dir)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
         projects = ap.get_analysis_projects()[1:]
         for project in projects:
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -452,13 +300,13 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
         # Add processing report
-        self._add_processing_report(ap.analysis_dir)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
         projects = ap.get_analysis_projects()
         missing_project = projects[0]
         projects = projects[1:]
         for project in projects:
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -505,13 +353,13 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
         # Add processing report
-        self._add_processing_report(ap.analysis_dir)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
         projects = ap.get_analysis_projects()
         missing_projects = projects[1:]
         projects = projects[0:1]
         for project in ap.get_analysis_projects():
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -559,15 +407,14 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add QC outputs
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
         projects = ap.get_analysis_projects()
         for project in projects:
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Add ICell8 report for one project
         icell8_project = projects[0]
-        self._add_icell8_outputs(icell8_project.dirn)
+        UpdateAnalysisProject(icell8_project).add_icell8_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -615,10 +462,9 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add cellranger QC report
-        self._add_cellranger_qc_output(ap.analysis_dir)
+        # Add processing and cellranger QC reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_cellranger_qc_output()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -647,10 +493,9 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add cellranger QC report
-        self._add_cellranger_qc_output(ap.analysis_dir,lanes="45")
+        # Add processing and cellranger QC reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_cellranger_qc_output(lanes="45")
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -679,11 +524,10 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add cellranger QC reports
-        self._add_cellranger_qc_output(ap.analysis_dir,lanes="45")
-        self._add_cellranger_qc_output(ap.analysis_dir,lanes="78")
+        # Add processing and cellranger QC reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_cellranger_qc_output(lanes="45")
+        UpdateAnalysisDir(ap).add_cellranger_qc_output(lanes="78")
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -713,17 +557,16 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
-        # Add processing report
-        self._add_processing_report(ap.analysis_dir)
-        # Add cellranger QC report
-        self._add_cellranger_qc_output(ap.analysis_dir)
+        # Add processing and cellranger QC reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_cellranger_qc_output()
         # Add QC outputs
         projects = ap.get_analysis_projects()
         for project in projects:
-            self._add_qc_outputs(project.dirn)
+            UpdateAnalysisProject(project).add_qc_outputs()
         # Add cellranger count output for one project
         tenxgenomics_project = projects[0]
-        self._add_cellranger_count_outputs(tenxgenomics_project.dirn)
+        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs()
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
