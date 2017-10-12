@@ -1570,13 +1570,18 @@ class TestGetNumberedSubdir(unittest.TestCase):
         """
         get_numbered_subdir: parent defaults to CWD
         """
+        test_dir1 = os.path.join(self.wd,"test1")
+        os.mkdir(test_dir1)
         for d in ("001_test","002_test"):
-            os.mkdir(os.path.join(self.wd,d))
-        self.assertEqual(
-            get_numbered_subdir("test"),"001_test")
-        os.chdir(self.wd)
+            os.mkdir(os.path.join(test_dir1,d))
+        os.chdir(test_dir1)
         self.assertEqual(
             get_numbered_subdir("test"),"003_test")
+        test_dir2 = os.path.join(self.wd,"test2")
+        os.mkdir(test_dir2)
+        os.chdir(test_dir2)
+        self.assertEqual(
+            get_numbered_subdir("test"),"001_test")
     def test_get_numbered_subdir_full_path(self):
         """
         get_numbered_subdir: return full path
