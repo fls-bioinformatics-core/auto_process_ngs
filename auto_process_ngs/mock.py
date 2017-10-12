@@ -85,6 +85,44 @@ class MockAnalysisDir(MockIlluminaData):
                  top_dir=None,
                  metadata=None,
                  readme=None):
+        """
+        Create a mock-up of an analysis directory
+
+        Arguments:
+          run_name (str): name for the run e.g.
+            '1130904_PJB_XXXXX'
+          platform (str): name for the platform
+            e.g. 'nextseq'
+          unaligned_dir (str): for the bcl2fastq
+            output directory (default: 'bcl2fastq')
+          fmt (str): format of the outputs (can be
+            'casava' or 'bcl2fastq2'; default is
+            'bcl2fastq')
+          paired_end (bool): whether run should be
+            paired end (set True, default) or single
+            end (set False)
+          lanes (list): if not None then specify a
+            list of lane numbers to include
+          no_lane_splitting (bool): whether to
+            mimic the '--no-lane-splitting' option
+            of bcl2fastq2 in generating Fastq names
+            (default: make separate Fastqs for each
+            lane)
+          no_undetermined (bool): whether to
+            include 'undetermined' outputs (default:
+            False, do include 'undetermined'
+            outputs)
+          top_dir (str): set parent directory to
+            make the mock analysis directory in
+            (default: current working directory)
+          metadata (dict): if set then should be
+            a dictionary of metadata items with
+            corresponding values, which will be
+            written to the metadata.info file
+          readme (str): if set then will be
+            written to a 'README' file in the mock
+            analysis directory
+        """
         # Make a mock-up of an analysis dir
         self.run_name = os.path.basename(str(run_name))
         self.platform = str(platform).lower()
@@ -122,9 +160,13 @@ class MockAnalysisDir(MockIlluminaData):
         remove the directory structure, and then re-invoke the create
         method.
 
-        create raises an OSError exception if any part of the directory
-        structure already exists.
+        'create' raises an OSError exception if any part of the
+        directory structure already exists.
 
+        Arguments:
+          no_project_dirs (bool): if False then don't create
+            analysis project subdirectories (these are created by
+            default)
         """
         MockIlluminaData.create(self)
         # Add (empty) metadata file
