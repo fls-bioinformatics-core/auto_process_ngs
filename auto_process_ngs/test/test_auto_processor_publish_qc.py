@@ -47,6 +47,15 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             else:
                 fp.write("")
 
+    def _add_fastq_set(self,project_dir,fastq_set):
+        # Add an additional fastq set to a project
+        p = AnalysisProject(os.path.basename(project_dir),
+                            project_dir)
+        fastq_dir = os.path.join(p.dirn,fastq_set)
+        os.mkdir(fastq_dir)
+        for fq in ("Alt1.r1.fastq.gz","Alt2.r1.fastq.gz"):
+            self._make_file(os.path.join(fastq_dir,fq))
+
     def _add_processing_report(self,dirn):
         # Add mock processing report
         self._make_file(os.path.join(dirn,"processing_qc.html"))
@@ -57,40 +66,51 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         for f in ("barcodes.report","barcodes.xls","barcodes.html"):
             self._make_file(os.path.join(dirn,"barcode_analysis",f))
 
-    def _add_qc_outputs(self,project_dir,include_multiqc=True):
+    def _add_qc_outputs(self,project_dir,include_multiqc=True,
+                        fastq_set=None,qc_dir=None):
         # Add mock QC outputs
         logger.debug("_add_qc_outputs: adding QC outputs for %s" %
                      project_dir)
         p = AnalysisProject(os.path.basename(project_dir),
                             project_dir)
-        p.setup_qc_dir()
+        if fastq_set is not None:
+            p.use_fastq_dir(fastq_dir=fastq_set)
+        p.setup_qc_dir(qc_dir=qc_dir,fastq_dir=fastq_set)
+        if qc_dir is not None:
+            p.use_qc_dir(qc_dir)
         logger.debug("_add_qc_outputs: QC dir is %s" % p.qc_dir)
         for fq in p.fastqs:
             logger.debug("_add_qc_outputs: adding outputs for %s" % fq)
             for f in expected_qc_outputs(fq,p.qc_dir):
                 logger.debug("_add_qc_outputs: %s" % f)
                 self._make_file(f)
+        # Determine report name
+        fastq_set = os.path.basename(p.fastq_dir)
+        qc_name = "qc%s_report" % fastq_set[6:]
         logger.debug("_add_qc_outputs: adding qc_report.html")
-        self._make_file(os.path.join(p.dirn,"qc_report.html"))
+        self._make_file(os.path.join(p.dirn,"%s.html" % qc_name))
         logger.debug("_add_qc_outputs: adding ZIP file")
         analysis_dir = os.path.basename(os.path.dirname(p.dirn))
         logger.debug("_add_qc_outputs: analysis dir %s" % analysis_dir)
         report_zip = os.path.join(p.dirn,
-                                  "qc_report.%s.%s.zip" %
-                                  (p.name,
+                                  "%s.%s.%s.zip" %
+                                  (qc_name,
+                                   p.name,
                                    analysis_dir))
         logger.debug("_add_qc_outputs: ZIP file name %s" % report_zip)
         zip_file = ZipArchive(report_zip,
                               relpath=p.dirn,
-                              prefix="qc_report.%s.%s" %
-                              (p.name,
+                              prefix="%s.%s.%s" %
+                              (qc_name,
+                               p.name,
                                analysis_dir))
-        zip_file.add_file(os.path.join(p.dirn,"qc_report.html"))
+        zip_file.add_file(os.path.join(p.dirn,"%s.html" % qc_name))
         zip_file.add(p.qc_dir)
         zip_file.close()
         if include_multiqc:
             logger.debug("_add_qc_outputs: adding MultiQC output")
-            self._make_file(os.path.join(p.dirn,"multiqc_report.html"))
+            multiqc_name = "multiqc%s_report" % fastq_set[6:]
+            self._make_file(os.path.join(p.dirn,"%s.html" % multiqc_name))
 
     def _add_icell8_outputs(self,project_dir):
         # Add mock ICell8 outputs
@@ -327,6 +347,66 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append(os.path.join(project_qc,"qc"))
             # MultiQC output
             outputs.append("multiqc_report.%s.html" % project.name)
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_with_projects_with_multiple_fastq_sets(self):
+        """publish_qc: projects with multiple Fastq sets
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report
+        self._add_processing_report(ap.analysis_dir)
+        # Add QC outputs
+        for project in ap.get_analysis_projects():
+            self._add_qc_outputs(project.dirn)
+        # Add additional fastq set for first project
+        multi_fastqs_project = ap.get_analysis_projects()[0]
+        self._add_fastq_set(multi_fastqs_project.dirn,
+                            "fastqs.extra")
+        self._add_qc_outputs(multi_fastqs_project.dirn,
+                             fastq_set="fastqs.extra",
+                             qc_dir="qc.extra")
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        ap.publish_qc(location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        # Additional QC for second fastq set in first project
+        project_qc = "qc.extra_report.%s.%s" % (multi_fastqs_project.name,
+                                                os.path.basename(
+                                                    ap.analysis_dir))
+        outputs.append(project_qc)
+        outputs.append("%s.zip" % project_qc)
+        outputs.append(os.path.join(project_qc,"qc.extra_report.html"))
+        outputs.append(os.path.join(project_qc,"qc.extra"))
+        # MultiQC output
+        outputs.append("multiqc.extra_report.%s.html" %
+                       multi_fastqs_project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
