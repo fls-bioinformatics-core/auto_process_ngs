@@ -2953,76 +2953,6 @@ class AutoProcess:
                             os.path.basename(self.analysis_dir))
         # Get general data
         analysis_dir = utils.AnalysisDir(self.analysis_dir)
-        # Get project data
-        projects = analysis_dir.get_projects(project_pattern)
-        # Check QC situation for each project
-        print "Checking QC status for each project:"
-        project_qc = {}
-        for project in projects:
-            print "* Project '%s':" % project.name
-            print "  Verifying QC directories:"
-            # Get putative qc dirs and verify
-            project_qc[project.name] = []
-            for qc_dir in project.qc_dirs:
-                # Set the source Fastqs dir
-                fastq_dir = project.qc_info(qc_dir).fastq_dir
-                project.use_fastq_dir(fastq_dir)
-                if project.verify_qc(
-                        qc_dir=os.path.join(project.dirn,qc_dir)):
-                    status = "ok"
-                    project_qc[project.name].append(qc_dir)
-                else:
-                    status = "failed"
-                    if force:
-                        project_qc[project.name].append(qc_dir)
-                print "-- %s...%s" % (qc_dir,status)
-            # Check status of reports for verified dirs
-            print "  Checking QC reports:"
-            for qc_dir in project_qc[project.name]:
-                fastq_dir = project.qc_info(qc_dir).fastq_dir
-                project.use_fastq_dir(fastq_dir)
-                generate_report = regenerate_reports
-                qc_zip = os.path.join(project.dirn,
-                                      "%s_report.%s.%s.zip" %
-                                      (qc_dir,project.name,
-                                       os.path.basename(self.analysis_dir)))
-                if os.path.isfile(qc_zip):
-                    status = "existing report"
-                else:
-                    status = "no QC report"
-                    generate_report = True
-                print "-- %s/%s...%s" % (project.name,
-                                         qc_dir,
-                                         status)
-                # (Re)create report
-                if generate_report:
-                    try:
-                        project.qc_report(qc_dir=qc_dir,
-                                          force=force)
-                    except Exception as ex:
-                        logging.error("publish_qc: failed to generate "
-                                      "QC report for %s (%s): %s" %
-                                      (project.name,qc_dir,ex))
-                        project_qc[project.name].remove(qc_dir)
-        # Projects with no QC
-        no_qc_projects = filter(lambda p: not project_qc[p.name],
-                                projects)
-        # Final results
-        if no_qc_projects:
-            # Failed to generate results for some projects
-            err_msg = "No QC reports for projects: %s" % \
-                      ', '.join([x.name for x in no_qc_projects])
-            if not ignore_missing_qc:
-                # Fatal error
-                raise Exception(err_msg)
-            # Proceed with a warning
-            logging.warning(err_msg)
-        # Remove the 'bad' projects from the list before proceeding
-        for project in no_qc_projects:
-            print "Project %s will be skipped" % project.name
-            projects.remove(project)
-        if not projects:
-            logging.warning("No projects with QC results to publish")
         # Collect processing statistics
         print "Checking for processing QC report"
         processing_qc_html = os.path.join(self.analysis_dir,
@@ -3064,6 +2994,71 @@ class AutoProcess:
                     os.path.join(self.analysis_dir,filen))
         if not cellranger_qc_html:
             print "...no cellranger QC summaries found"
+        # Collect QC for project directories
+        print "Checking QC for project directories"
+        projects = analysis_dir.get_projects(project_pattern)
+        project_qc = {}
+        for project in projects:
+            # Check qc subdirectories
+            print "...found project '%s':" % project.name
+            project_qc[project.name] = []
+            for qc_dir in project.qc_dirs:
+                # Set the source Fastqs dir
+                fastq_dir = project.qc_info(qc_dir).fastq_dir
+                project.use_fastq_dir(fastq_dir)
+                # Verify the QC and check for report
+                verified = project.verify_qc(
+                    qc_dir=os.path.join(project.dirn,qc_dir))
+                if verified:
+                    print "...%s: QC dir '%s' ok" % (project.name,
+                                                     qc_dir)
+                    # Check for an existing report
+                    qc_zip = os.path.join(
+                        project.dirn,
+                        "%s_report.%s.%s.zip" %
+                        (qc_dir,project.name,
+                         os.path.basename(self.analysis_dir)))
+                    # Check if we need to (re)generate report
+                    if (regenerate_reports or
+                        not os.path.exists(qc_zip)):
+                        try:
+                            project.qc_report(qc_dir=qc_dir,
+                                              force=force)
+                            print "...%s: (re)generated report" \
+                                % project.name
+                        except Exception as ex:
+                            print "...%s: failed to (re)generate " \
+                                "QC report: %s" \
+                                 % (project.name,ex)
+                    # Add to the list of verified QC dirs
+                    if os.path.exists(qc_zip):
+                        project_qc[project.name].append(qc_dir)
+                    else:
+                        print "...%s: missing report for '%s'" \
+                            % (project.name,qc_dir)
+                else:
+                    # Not verified
+                    print "...%s: failed to verify QC dir '%s'" % \
+                        (project.name,qc_dir)
+        # Projects with no QC
+        no_qc_projects = filter(lambda p: not project_qc[p.name],
+                                projects)
+        # Determine what projects are left and if we can proceed
+        if no_qc_projects:
+            # Failed to generate results for some projects
+            err_msg = "No QC reports for projects: %s" % \
+                      ', '.join([x.name for x in no_qc_projects])
+            if not ignore_missing_qc:
+                # Fatal error
+                raise Exception(err_msg)
+            # Proceed with a warning
+            logging.warning(err_msg)
+        # Remove the 'bad' projects from the list before proceeding
+        for project in no_qc_projects:
+            print "Project %s will be skipped" % project.name
+            projects.remove(project)
+        if not projects:
+            logging.warning("No projects with QC results to publish")
         # Make a directory for the QC reports
         fileops.mkdir(dirn)
         # Start building an index page
