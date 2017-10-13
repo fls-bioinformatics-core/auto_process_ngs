@@ -2874,25 +2874,53 @@ class AutoProcess:
 
     def publish_qc(self,projects=None,location=None,ignore_missing_qc=False,
                    regenerate_reports=False,force=False):
-        # Copy the QC reports to the webserver
-        #
-        # Raises an exception if:
-        #
-        # - 'source' and 'run_number' metadata items are not set
-        # - a subset of projects don't have associated QC outputs
-        #   (unless 'ignore_missing_qc' is True)
-        #
-        # projects: specify a pattern to match one or more projects to
-        #           publish the reports for (default is to publish all reports)
-        # location: override the target location specified in the settings
-        #           can be of the form '[[user@]server:]directory'
-        # ignore_missing_qc: if True then skip directories with missing QC data
-        #           or reports (otherwise raises an exception)
-        # regenerate_reports: if True then try to create reports even when they
-        #           already exist
-        # force:    if True then force QC report (re)generation even
-        #           if QC is unverified
-        #
+        """
+        Copy the QC reports to the webserver
+
+        Looks for and copies various QC reports and outputs to
+        a 'QC server' directory, and generates an HTML index.
+
+        The reports include:
+
+        - processing QC report
+        - 'cellranger mkfastq' QC report
+        - barcode analysis report
+
+        Also if the analysis includes project directories then for
+        each Fastq set in each project:
+
+        - QC report for standard QC
+        - MultiQC report
+
+        Also if a project comprises ICell8 or 10xGenomics Chromium
+        data:
+
+        - ICell8 processing report, or
+        - 'cellranger count' reports for each sample
+
+        Raises an exception if:
+
+        - 'source' and 'run_number' metadata items are not set
+        - a subset of projects don't have associated QC outputs
+          (unless 'ignore_missing_qc' is True)
+
+        Arguments:
+          projects (str): specify a glob-style pattern to match one
+            or more projects to publish the reports for (default is
+            to publish all reports)
+          location (str): override the target location specified in
+            the settings; can be of the form
+            '[[user@]server:]directory'
+          ignore_missing_qc (bool): if True then skip directories
+            with missing QC data or reports (default is to raise
+            an exception if projects have missing QC)
+          regenerate_reports (bool): if True then try to create
+            reports even when they already exist (default is to
+            use existing reports)
+          force (bool): if True then force QC report (re)generation
+            even if QC is unverified (default is to raise an
+            exception if projects cannot be verified)
+        """
         # Turn off saving of parameters etc
         self._save_params = False
         self._save_metadata = False
