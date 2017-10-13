@@ -3023,6 +3023,15 @@ class AutoProcess:
             projects.remove(project)
         if not projects:
             logging.warning("No projects with QC results to publish")
+        # Collect processing statistics
+        print "Checking for processing QC report"
+        processing_qc_html = os.path.join(self.analysis_dir,
+                                          "processing_qc.html")
+        if os.path.exists(processing_qc_html):
+            print "...found %s" % os.path.basename(processing_qc_html)
+        else:
+            print "...no processing QC report found"
+            processing_qc_html = None
         # Collect barcode analysis artefacts
         print "Checking for barcode analysis"
         if self.params.barcode_analysis_dir is not None:
@@ -3094,15 +3103,12 @@ class AutoProcess:
         index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
                        self.run_reference_id)
         index_page.add("</table>")
-        # Add link to processing statistics
-        processing_qc_html = os.path.join(self.analysis_dir,
-                                          "processing_qc.html")
-        if os.path.exists(processing_qc_html):
+        # Processing QC report
+        if processing_qc_html:
+            fileops.copy(processing_qc_html,dirn)
             index_page.add("<h2>Processing Statistics</h2>")
             index_page.add("<a href='%s'>Processing QC report</a>" %
                            os.path.basename(processing_qc_html))
-        else:
-            processing_qc_html = None
         # Add to link to 10xGenomics cellranger QC summaries
         cellranger_qc_html = filter(lambda f: os.path.isfile(f) and
                                     os.path.basename(f).startswith(
@@ -3307,8 +3313,6 @@ class AutoProcess:
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
         fileops.copy(index_html,dirn)
-        if processing_qc_html:
-            fileops.copy(processing_qc_html,dirn)
         for qc_html in cellranger_qc_html:
             fileops.copy(qc_html,dirn)
         # Print the URL if given
