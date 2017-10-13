@@ -3023,8 +3023,8 @@ class AutoProcess:
             projects.remove(project)
         if not projects:
             logging.warning("No projects with QC results to publish")
-        # Include barcode analysis
-        barcodes_files = ('barcodes.report','barcodes.xls','barcodes.html')
+        # Collect barcode analysis artefacts
+        print "Checking for barcode analysis"
         if self.params.barcode_analysis_dir is not None:
             barcode_analysis_dir = self.params.barcode_analysis_dir
         else:
@@ -3032,11 +3032,18 @@ class AutoProcess:
         if not os.path.isabs(barcode_analysis_dir):
             barcode_analysis_dir = os.path.join(self.analysis_dir,
                                                 barcode_analysis_dir)
-        for filen in barcodes_files:
-            if not os.path.exists(
-                    os.path.join(barcode_analysis_dir,filen)):
-                barcode_analysis_dir = None
-                break
+        barcodes_files = []
+        if os.path.exists(barcode_analysis_dir):
+            print "- Barcode analysis dir: %s" % barcode_analysis_dir
+            for filen in ('barcodes.report',
+                          'barcodes.xls',
+                          'barcodes.html'):
+                filen = os.path.join(barcode_analysis_dir,filen)
+                if os.path.exists(filen):
+                    print "...found %s" % os.path.basename(filen)
+                    barcodes_files.append(filen)
+        if not barcodes_files:
+            print "...no barcode analysis found"
         # Make a directory for the QC reports
         fileops.mkdir(dirn)
         # Start building an index page
@@ -3119,7 +3126,7 @@ class AutoProcess:
                                 ("all lanes" if lanes is None
                                  else "lanes %s" % lanes)))
         # Barcode analysis
-        if barcode_analysis_dir:
+        if barcodes_files:
             # Create section
             index_page.add("<h2>Barcode analysis</h2>")
             index_page.add("<p>Plain text report: "
@@ -3133,8 +3140,7 @@ class AutoProcess:
             barcodes_dirn = os.path.join(dirn,'barcodes')
             fileops.mkdir(barcodes_dirn)
             for filen in barcodes_files:
-                fileops.copy(os.path.join(barcode_analysis_dir,filen),
-                             barcodes_dirn)
+                fileops.copy(filen,barcodes_dirn)
         if projects:
             # Table of projects
             index_page.add("<h2>QC Reports</h2>")
