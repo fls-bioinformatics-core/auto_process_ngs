@@ -3053,6 +3053,17 @@ class AutoProcess:
                     barcodes_files.append(filen)
         if not barcodes_files:
             print "...no barcode analysis found"
+        # Collect 10xGenomics cellranger QC summaries
+        print "Checking for 10xGenomics cellranger QC summaries"
+        cellranger_qc_html = []
+        for filen in os.listdir(self.analysis_dir):
+            if filen.startswith("cellranger_qc_summary") and \
+               filen.endswith(".html"):
+                print "...found %s" % filen
+                cellranger_qc_html.append(
+                    os.path.join(self.analysis_dir,filen))
+        if not cellranger_qc_html:
+            print "...no cellranger QC summaries found"
         # Make a directory for the QC reports
         fileops.mkdir(dirn)
         # Start building an index page
@@ -3109,28 +3120,6 @@ class AutoProcess:
             index_page.add("<h2>Processing Statistics</h2>")
             index_page.add("<a href='%s'>Processing QC report</a>" %
                            os.path.basename(processing_qc_html))
-        # Add to link to 10xGenomics cellranger QC summaries
-        cellranger_qc_html = filter(lambda f: os.path.isfile(f) and
-                                    os.path.basename(f).startswith(
-                                        "cellranger_qc_summary")
-                                    and f.endswith(".html"),
-                                    [os.path.join(self.analysis_dir,f)
-                                     for f in os.listdir(self.analysis_dir)])
-        if cellranger_qc_html:
-            index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
-            for qc_html in cellranger_qc_html:
-                # Check for lane list at tail of QC summary
-                # e.g. cellranger_qc_summary_45.html
-                # This might not be present
-                lanes = qc_html.split('.')[0].split('_')[-1]
-                if all(c in string.digits for c in lanes):
-                    lanes = ','.join(lanes)
-                else:
-                    lanes = None
-                index_page.add("<a href='%s'>QC summary for %s</a>" %
-                               (qc_html,
-                                ("all lanes" if lanes is None
-                                 else "lanes %s" % lanes)))
         # Barcode analysis
         if barcodes_files:
             # Create section
@@ -3147,6 +3136,23 @@ class AutoProcess:
             fileops.mkdir(barcodes_dirn)
             for filen in barcodes_files:
                 fileops.copy(filen,barcodes_dirn)
+        # 10xGenomics cellranger QC summaries
+        if cellranger_qc_html:
+            index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
+            for qc_html in cellranger_qc_html:
+                # Check for optional lane list at tail of QC summary
+                # e.g. cellranger_qc_summary_45.html
+                # This might not be present
+                lanes = qc_html.split('.')[0].split('_')[-1]
+                if all(c in string.digits for c in lanes):
+                    lanes = ','.join(lanes)
+                else:
+                    lanes = None
+                fileops.copy(qc_html,dirn)
+                index_page.add("<a href='%s'>QC summary for %s</a>" %
+                               (os.path.basename(qc_html),
+                                ("all lanes" if lanes is None
+                                 else "lanes %s" % lanes)))
         if projects:
             # Table of projects
             index_page.add("<h2>QC Reports</h2>")
@@ -3313,8 +3319,6 @@ class AutoProcess:
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
         fileops.copy(index_html,dirn)
-        for qc_html in cellranger_qc_html:
-            fileops.copy(qc_html,dirn)
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
