@@ -7,7 +7,6 @@ import tempfile
 import shutil
 import time
 import os
-import platform
 import getpass
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
@@ -332,7 +331,7 @@ class TestPipelineTask(unittest.TestCase):
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),8) # 8 = 7 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Echo text")
-        self.assertEqual(stdout[1],"#### HOSTNAME %s" % platform.node())
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
         self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
         self.assertTrue(stdout[3].startswith("#### START "))
         self.assertEqual(stdout[4],"Hello!")
@@ -379,7 +378,7 @@ class TestPipelineTask(unittest.TestCase):
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),7) # 7 = 6 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Nonexistant")
-        self.assertEqual(stdout[1],"#### HOSTNAME %s" % platform.node())
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
         self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
         self.assertTrue(stdout[3].startswith("#### START "))
         self.assertTrue(stdout[4].startswith("#### END "))
@@ -430,7 +429,7 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
         for i in xrange(3):
             self.assertEqual(stdout[0+i*7],"#### COMMAND Echo text")
-            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % platform.node())
+            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
             self.assertEqual(stdout[2+i*7],"#### USER %s" % getpass.getuser())
             self.assertTrue(stdout[3+i*7].startswith("#### START "))
             self.assertEqual(stdout[4+i*7],"Hello!")

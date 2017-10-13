@@ -1053,7 +1053,8 @@ class AutoProcess:
     def get_analysis_projects(self,pattern=None):
         # Return the analysis projects in a list
         #
-        # By default returns all projects within the analysis
+        # By default returns all projects within the analysis directory
+        # (including 'undetermined').
         #
         # If the 'pattern' is not None then it should be a simple pattern
         # used to match against available names to select a subset of
@@ -2853,6 +2854,12 @@ class AutoProcess:
                    regenerate_reports=False,force=False):
         # Copy the QC reports to the webserver
         #
+        # Raises an exception if:
+        #
+        # - 'source' and 'run_number' metadata items are not set
+        # - a subset of projects don't have associated QC outputs
+        #   (unless 'ignore_missing_qc' is True)
+        #
         # projects: specify a pattern to match one or more projects to
         #           publish the reports for (default is to publish all reports)
         # location: override the target location specified in the settings
@@ -2870,8 +2877,7 @@ class AutoProcess:
         # Check metadata
         check_metadata = self.check_metadata(('source','run_number'))
         if not check_metadata:
-            logging.error("Some metadata items not set, stopping")
-            return
+            raise Exception("Some metadata items not set, stopping")
         # Process pattern matching
         if projects is None:
             project_pattern = '*'
@@ -2958,8 +2964,7 @@ class AutoProcess:
                       ', '.join([x.name for x in no_qc_projects])
             if not ignore_missing_qc:
                 # Fatal error
-                logging.error(err_msg + " (fatal)")
-                return False
+                raise Exception(err_msg)
             # Proceed with a warning
             logging.warning(err_msg)
         # Remove the 'bad' projects from the list before proceeding
@@ -2974,6 +2979,9 @@ class AutoProcess:
             barcode_analysis_dir = self.params.barcode_analysis_dir
         else:
             barcode_analysis_dir = 'barcode_analysis'
+        if not os.path.isabs(barcode_analysis_dir):
+            barcode_analysis_dir = os.path.join(self.analysis_dir,
+                                                barcode_analysis_dir)
         for filen in barcodes_files:
             if not os.path.exists(
                     os.path.join(barcode_analysis_dir,filen)):
@@ -3030,18 +3038,21 @@ class AutoProcess:
                        self.run_reference_id)
         index_page.add("</table>")
         # Add link to processing statistics
-        processing_qc_html = "processing_qc.html"
+        processing_qc_html = os.path.join(self.analysis_dir,
+                                          "processing_qc.html")
         if os.path.exists(processing_qc_html):
             index_page.add("<h2>Processing Statistics</h2>")
             index_page.add("<a href='%s'>Processing QC report</a>" %
-                           processing_qc_html)
+                           os.path.basename(processing_qc_html))
         else:
             processing_qc_html = None
         # Add to link to 10xGenomics cellranger QC summaries
-        cellranger_qc_html = filter(lambda f: os.path.isfile(f)
-                                    and f.startswith("cellranger_qc_summary")
+        cellranger_qc_html = filter(lambda f: os.path.isfile(f) and
+                                    os.path.basename(f).startswith(
+                                        "cellranger_qc_summary")
                                     and f.endswith(".html"),
-                                    os.listdir(self.analysis_dir))
+                                    [os.path.join(self.analysis_dir,f)
+                                     for f in os.listdir(self.analysis_dir)])
         if cellranger_qc_html:
             index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
             for qc_html in cellranger_qc_html:
