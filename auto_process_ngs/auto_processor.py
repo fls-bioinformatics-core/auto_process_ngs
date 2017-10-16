@@ -3001,8 +3001,14 @@ class AutoProcess:
         for project in projects:
             # Check qc subdirectories
             print "...found project '%s':" % project.name
-            project_qc[project.name] = []
+            project_qc[project.name] = bcf_utils.AttributeDictionary()
+            project_qc[project.name]['qc_dirs'] = {}
             for qc_dir in project.qc_dirs:
+                # Gather the QC artefacts
+                qc_artefacts = bcf_utils.AttributeDictionary()
+                project_qc[project.name].qc_dirs[qc_dir] = qc_artefacts
+                # Base name for QC reports
+                qc_base = "%s_report" % qc_dir
                 # Set the source Fastqs dir
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
                 project.use_fastq_dir(fastq_dir)
@@ -3032,7 +3038,7 @@ class AutoProcess:
                                  % (project.name,ex)
                     # Add to the list of verified QC dirs
                     if os.path.exists(qc_zip):
-                        project_qc[project.name].append(qc_dir)
+                        qc_artefacts['qc_zip'] = qc_zip
                     else:
                         print "...%s: missing report for '%s'" \
                             % (project.name,qc_dir)
@@ -3040,8 +3046,33 @@ class AutoProcess:
                     # Not verified
                     print "...%s: failed to verify QC dir '%s'" % \
                         (project.name,qc_dir)
+                # MultiQC report
+                multiqc_report = os.path.join(project.dirn,
+                                              "multi%s.html"
+                                              % qc_base)
+                if os.path.exists(multiqc_report):
+                    print "...%s: found MultiQC report" % project.name
+                    qc_artefacts['multiqc_report'] = multiqc_report
+                else:
+                    print "...%s: no MultiQC report"
+            # ICell8 pipeline report
+            icell8_zip = os.path.join(project.dirn,
+                                      "icell8_processing.%s.%s.zip" %
+                                      (project.name,
+                                       os.path.basename(self.analysis_dir)))
+            if os.path.exists(icell8_zip):
+                print "...%s: found ICell8 pipeline report" % project.name
+                project_qc[project.name]['icell8_zip'] = icell8_zip
+            # Cellranger count report
+            cellranger_zip = os.path.join(project.dirn,
+                                          "cellranger_count_report.%s.%s.zip" %
+                                          (project.name,
+                                           os.path.basename(self.analysis_dir)))
+            if os.path.exists(cellranger_zip):
+                print "...%s: found cellranger count report" % project.name
+                project_qc[project.name]['cellranger_zip'] = cellranger_zip
         # Projects with no QC
-        no_qc_projects = filter(lambda p: not project_qc[p.name],
+        no_qc_projects = filter(lambda p: not project_qc[p.name].qc_dirs,
                                 projects)
         # Determine what projects are left and if we can proceed
         if no_qc_projects:
@@ -3174,134 +3205,115 @@ class AutoProcess:
                 index_page.add("<td>%s</td>" % PI)
                 index_page.add("<td>%s</td>" % project.prettyPrintSamples())
                 index_page.add("<td>%d</td>" % len(project.samples))
-                # Locate and copy QC reports
+                # Copy QC reports and other artefacts
                 report_html = []
-                for qc_dir in project_qc[project.name]:
-                    qc_zip = os.path.join(project.dirn,
-                                          "%s_report.%s.%s.zip" %
-                                          (qc_dir,
-                                           project.name,
-                                           os.path.basename(self.analysis_dir)))
-                    print qc_zip
-                    assert(os.path.isfile(qc_zip))
-                    qc_report_copied = True
+                for qc_dir in project_qc[project.name].qc_dirs:
+                    qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
+                    qc_base = "%s_report" % qc_dir
+                    fastq_dir = project.qc_info(qc_dir).fastq_dir
+                    if fastq_dir != project.info.primary_fastq_dir:
+                        fastq_set = fastq_dir
+                    else:
+                        fastq_set = None
+                    # QC report
                     try:
-                        fileops.copy(qc_zip,dirn)
-                        fileops.unzip(os.path.join(
-                            dirn,
-                            os.path.basename(qc_zip)),
-                                      fileops.Location(dirn).path)
-                    except Exception, ex:
-                        print "Failed to copy QC report: %s" % ex
-                        qc_report_copied = False
-                    # Append info to the index page
-                    if qc_report_copied:
-                        qc_base = "%s_report" % qc_dir
-                        fastq_dir = project.qc_info(qc_dir).fastq_dir
-                        if fastq_dir != project.info.primary_fastq_dir:
-                            fastq_set = fastq_dir
-                        else:
-                            fastq_set = None
-                        # Index
-                        report_html.append(
-                            "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
-                            % (qc_base,
-                               project.name,
-                               os.path.basename(self.analysis_dir),
-                               qc_base,
-                               (" (%s)" % fastq_set
-                                if fastq_set is not None else "")))
-                        # Zip file
-                        report_html.append(
-                            "<a href='%s'>[Zip%s]</a>"
-                            % (os.path.basename(qc_zip),
-                               (" (%s)" % fastq_dir
-                                if fastq_set is not None else "")))
+                        qc_zip = qc_artefacts.qc_zip
+                        try:
+                            fileops.copy(qc_zip,dirn)
+                            fileops.unzip(os.path.join(
+                                dirn,
+                                os.path.basename(qc_zip)),
+                                          fileops.Location(dirn).path)
+                            # Append info to the index page
+                            report_html.append(
+                                "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
+                                % (qc_base,
+                                   project.name,
+                                   os.path.basename(self.analysis_dir),
+                                   qc_base,
+                                   (" (%s)" % fastq_set
+                                    if fastq_set is not None else "")))
+                            report_html.append(
+                                "<a href='%s'>[Zip%s]</a>"
+                                % (os.path.basename(qc_zip),
+                                   (" (%s)" % fastq_dir
+                                    if fastq_set is not None else "")))
+                        except Exception as ex:
+                            print "Failed to copy QC report: %s" % ex
+                    except AttributeError:
+                        # No QC report
+                        pass
                     # MultiQC
-                    multiqc_report = os.path.join(project.dirn,
-                                                  "multi%s.html" % qc_base)
-                    if os.path.exists(multiqc_report):
-                        print "Found MultiQC report: %s" % multiqc_report
-                        final_multiqc = "multi%s.%s.html" % (qc_base,project.name)
+                    try:
+                        multiqc_report = qc_artefacts.multiqc_report
+                        assert(os.path.isfile(multiqc_report))
+                        final_multiqc = "multi%s.%s.html" % (qc_base,
+                                                             project.name)
                         try:
                             fileops.copy(multiqc_report,
                                          os.path.join(dirn,final_multiqc))
-                        except Exception, ex:
+                            report_html.append("<a href='%s'>[MultiQC%s]</a>"
+                                               % (final_multiqc,
+                                                  (" (%s)" % fastq_dir
+                                                   if fastq_dir != 'fastqs'
+                                                   else "")))
+                        except Exception as ex:
                             print "Failed to copy MultiQC report: %s" % ex
-                            multiqc_report = None
-                    else:
-                        print "No MultiQC report found for %s" % \
-                            os.path.basename(qc_dir)
-                        multiqc_report = None
-                    if multiqc_report:
-                        report_html.append("<a href='%s'>[MultiQC%s]</a>"
-                                           % (final_multiqc,
-                                              (" (%s)" % fastq_dir
-                                               if fastq_dir != 'fastqs' else "")))
+                    except AttributeError:
+                        # No MultiQC report
+                        pass
                 # Check there is something to add
                 if not report_html:
                     report_html.append("QC reports not available")
-                # Locate and copy ICell8 processing reports
-                icell8_processing_zip = os.path.join(
-                    project.dirn,
-                    "icell8_processing.%s.%s.zip" %
-                    (project.name,
-                     os.path.basename(self.analysis_dir)))
-                if os.path.isfile(icell8_processing_zip):
-                    print icell8_processing_zip
-                    icell8_report_copied = True
+                # ICell8 pipeline report
+                try:
+                    icell8_zip = project_qc[project.name].icell8_zip
                     try:
-                        fileops.copy(icell8_processing_zip,dirn)
+                        # Copy and unzip ICell8 report
+                        fileops.copy(icell8_zip,dirn)
                         fileops.unzip(os.path.join(
                             dirn,
-                            os.path.basename(icell8_processing_zip)),
+                            os.path.basename(icell8_zip)),
                                       fileops.Location(dirn).path)
+                        # Append info to the index page
+                        report_html.append(
+                            "<a href='icell8_processing.%s.%s/" \
+                            "icell8_processing.html'>" \
+                            "[Icell8 processing]</a>" % \
+                            (project.name,
+                             os.path.basename(self.analysis_dir)))
+                        report_html.append("<a href='%s'>[Zip]</a>" % \
+                                           os.path.basename(
+                                               icell8_processing_zip))
                     except Exception as ex:
                         print "Failed to copy ICell8 report: %s" % ex
-                        icell8_report_copied = False
-                else:
-                    # No ICell8 processing report to copy
-                    icell8_report_copied = False
-                # Append info to the index page
-                if icell8_report_copied:
-                    report_html.append(
-                        "<a href='icell8_processing.%s.%s/" \
-                        "icell8_processing.html'>" \
-                        "[Icell8 processing]</a>" % \
-                        (project.name,
-                         os.path.basename(self.analysis_dir)))
-                    report_html.append("<a href='%s'>[Zip]</a>" % \
-                                       os.path.basename(icell8_processing_zip))
-                # Locate and copy cellranger count reports
-                cellranger_zip = os.path.join(project.dirn,
-                                      "cellranger_count_report.%s.%s.zip" %
-                                      (project.name,
-                                       os.path.basename(self.analysis_dir)))
-                if os.path.isfile(cellranger_zip):
-                    print cellranger_zip
-                    cellranger_report_copied = True
+                except AttributeError:
+                    # No ICell8 report
+                    pass
+                # Cellranger count reports
+                try:
+                    cellranger_zip = project_qc[project.name].cellranger_zip
                     try:
+                        # Copy and unzip cellranger report
                         fileops.copy(cellranger_zip,dirn)
                         fileops.unzip(os.path.join(
                             dirn,
                             os.path.basename(cellranger_zip)),
                                       fileops.Location(dirn).path)
+                        # Append info to the index page
+                        report_html.append(
+                            "<a href='cellranger_count_report.%s.%s/" \
+                            "cellranger_count_report.html'>" \
+                            "[Cellranger count]</a>" % \
+                            (project.name,
+                             os.path.basename(self.analysis_dir)))
+                        report_html.append("<a href='%s'>[Zip]</a>" % \
+                                           os.path.basename(cellranger_zip))
                     except Exception as ex:
                         print "Failed to copy cellranger report: %s" % ex
-                        cellranger_report_copied = False
-                else:
+                except AttributeError:
                     # No cellranger count data to copy
-                    cellranger_report_copied = False
-                # Append info to the index page
-                if cellranger_report_copied:
-                    report_html.append(
-                        "<a href='cellranger_count_report.%s.%s/" \
-                        "cellranger_count_report.html'>" \
-                        "[Cellranger count]</a>" % \
-                        (project.name,
-                         os.path.basename(self.analysis_dir)))
-                    report_html.append("<a href='%s'>[Zip]</a>" % \
-                                       os.path.basename(cellranger_zip))
+                    pass
                 # Add to the index
                 index_page.add("<td>%s</td>"
                                % null_str.join(report_html))
