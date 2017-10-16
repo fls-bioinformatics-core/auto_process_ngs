@@ -3091,6 +3091,15 @@ class AutoProcess:
             projects.remove(project)
         if not projects:
             logging.warning("No projects with QC results to publish")
+        # Do file transfer and unpacking
+        if projects:
+            # Make log directory and set up scheduler
+            # to farm out the intensive operations to
+            self.set_log_dir(self.get_log_subdir('publish_qc'))
+            runner = self.settings.general.default_runner
+            runner.set_log_dir(self.log_dir)
+            sched = simple_scheduler.SimpleScheduler(runner=runner)
+            sched.start()
         # Make a directory for the QC reports
         fileops.mkdir(dirn)
         # Start building an index page
@@ -3220,11 +3229,19 @@ class AutoProcess:
                     try:
                         qc_zip = qc_artefacts.qc_zip
                         try:
-                            fileops.copy(qc_zip,dirn)
-                            fileops.unzip(os.path.join(
-                                dirn,
-                                os.path.basename(qc_zip)),
-                                          fileops.Location(dirn).path)
+                            copy_job = sched.submit(
+                                fileops.copy_command(qc_zip,dirn),
+                                name="copy.qc_report.%s.%s" % (project.name,
+                                                               qc_dir))
+                            unzip_job = sched.submit(
+                                fileops.unzip_command(os.path.join(
+                                    dirn,
+                                    os.path.basename(qc_zip)),
+                                              fileops.Location(dirn).path),
+                                name="unzip.qc_report.%s.%s" % (project.name,
+                                                                qc_dir),
+                                wait_for=(copy_job.name,))
+                            sched.wait()
                             # Append info to the index page
                             report_html.append(
                                 "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
@@ -3271,11 +3288,17 @@ class AutoProcess:
                     icell8_zip = project_qc[project.name].icell8_zip
                     try:
                         # Copy and unzip ICell8 report
-                        fileops.copy(icell8_zip,dirn)
-                        fileops.unzip(os.path.join(
-                            dirn,
-                            os.path.basename(icell8_zip)),
-                                      fileops.Location(dirn).path)
+                        copy_job = sched.submit(
+                            fileops.copy_command(icell8_zip,dirn),
+                            name="copy.icell8_report.%s" % project.name)
+                        unzip_job = sched.submit(
+                            fileops.unzip_command(os.path.join(
+                                dirn,
+                                os.path.basename(icell8_zip)),
+                                                  fileops.Location(dirn).path),
+                            name="unzip.icell8_report.%s" % project.name,
+                            wait_for=(copy_job.name,))
+                        sched.wait()
                         # Append info to the index page
                         report_html.append(
                             "<a href='icell8_processing.%s.%s/" \
@@ -3296,11 +3319,17 @@ class AutoProcess:
                     cellranger_zip = project_qc[project.name].cellranger_zip
                     try:
                         # Copy and unzip cellranger report
-                        fileops.copy(cellranger_zip,dirn)
-                        fileops.unzip(os.path.join(
-                            dirn,
-                            os.path.basename(cellranger_zip)),
-                                      fileops.Location(dirn).path)
+                        copy_job = sched.submit(
+                            fileops.copy_command(cellranger_zip,dirn),
+                            name="copy.cellranger_report.%s" % project.name)
+                        unzip_job = sched.submit(
+                            fileops.unzip_command(os.path.join(
+                                dirn,
+                                os.path.basename(cellranger_zip)),
+                                                  fileops.Location(dirn).path),
+                            name="unzip.cellranger_report.%s" % project.name,
+                            wait_for=(copy_job.name,))
+                        sched.wait()
                         # Append info to the index page
                         report_html.append(
                             "<a href='cellranger_count_report.%s.%s/" \
@@ -3327,6 +3356,8 @@ class AutoProcess:
         index_html = os.path.join(self.tmp_dir,'index.html')
         index_page.write(index_html)
         fileops.copy(index_html,dirn)
+        # Stop scheduler
+        sched.stop()
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
