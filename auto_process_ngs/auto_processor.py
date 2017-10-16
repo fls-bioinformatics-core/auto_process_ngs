@@ -3100,6 +3100,8 @@ class AutoProcess:
             runner.set_log_dir(self.log_dir)
             sched = simple_scheduler.SimpleScheduler(runner=runner)
             sched.start()
+        else:
+            sched = None
         # Make a directory for the QC reports
         fileops.mkdir(dirn)
         # Start building an index page
@@ -3229,6 +3231,7 @@ class AutoProcess:
                     try:
                         qc_zip = qc_artefacts.qc_zip
                         try:
+                            # Copy and unzip QC report
                             copy_job = sched.submit(
                                 fileops.copy_command(qc_zip,dirn),
                                 name="copy.qc_report.%s.%s" % (project.name,
@@ -3242,6 +3245,9 @@ class AutoProcess:
                                                                 qc_dir),
                                 wait_for=(copy_job.name,))
                             sched.wait()
+                            # Check the jobs completed ok
+                            if copy_job.exit_status or unzip_job.exit_status:
+                                raise Exception("copy and/or unzip job failed")
                             # Append info to the index page
                             report_html.append(
                                 "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
@@ -3299,6 +3305,9 @@ class AutoProcess:
                             name="unzip.icell8_report.%s" % project.name,
                             wait_for=(copy_job.name,))
                         sched.wait()
+                        # Check the jobs completed ok
+                        if copy_job.exit_status or unzip_job.exit_status:
+                            raise Exception("copy and/or unzip job failed")
                         # Append info to the index page
                         report_html.append(
                             "<a href='icell8_processing.%s.%s/" \
@@ -3330,6 +3339,9 @@ class AutoProcess:
                             name="unzip.cellranger_report.%s" % project.name,
                             wait_for=(copy_job.name,))
                         sched.wait()
+                        # Check the jobs completed ok
+                        if copy_job.exit_status or unzip_job.exit_status:
+                            raise Exception("copy and/or unzip job failed")
                         # Append info to the index page
                         report_html.append(
                             "<a href='cellranger_count_report.%s.%s/" \
@@ -3357,7 +3369,8 @@ class AutoProcess:
         index_page.write(index_html)
         fileops.copy(index_html,dirn)
         # Stop scheduler
-        sched.stop()
+        if sched is not None:
+            sched.stop()
         # Print the URL if given
         if self.settings.qc_web_server.url is not None:
             print "QC published to %s" % self.settings.qc_web_server.url
