@@ -2973,7 +2973,7 @@ class AutoProcess:
                                                 barcode_analysis_dir)
         barcodes_files = []
         if os.path.exists(barcode_analysis_dir):
-            print "- Barcode analysis dir: %s" % barcode_analysis_dir
+            print "...found barcode analysis dir: %s" % barcode_analysis_dir
             for filen in ('barcodes.report',
                           'barcodes.xls',
                           'barcodes.html'):
@@ -2995,15 +2995,18 @@ class AutoProcess:
         if not cellranger_qc_html:
             print "...no cellranger QC summaries found"
         # Collect QC for project directories
-        print "Checking QC for project directories"
+        print "Checking project directories"
         projects = analysis_dir.get_projects(project_pattern)
         project_qc = {}
         for project in projects:
             # Check qc subdirectories
-            print "...found project '%s':" % project.name
+            print "Checking project '%s':" % project.name
             project_qc[project.name] = bcf_utils.AttributeDictionary()
             project_qc[project.name]['qc_dirs'] = {}
+            if not project.qc_dirs:
+                print "...no QC directories found"
             for qc_dir in project.qc_dirs:
+                print "...found QC dir '%s'" % qc_dir
                 # Gather the QC artefacts
                 qc_artefacts = bcf_utils.AttributeDictionary()
                 project_qc[project.name].qc_dirs[qc_dir] = qc_artefacts
@@ -3012,12 +3015,13 @@ class AutoProcess:
                 # Set the source Fastqs dir
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
                 project.use_fastq_dir(fastq_dir)
+                print "...associated Fastq set '%s'" % \
+                    os.path.basename(fastq_dir)
                 # Verify the QC and check for report
                 verified = project.verify_qc(
                     qc_dir=os.path.join(project.dirn,qc_dir))
                 if verified:
-                    print "...%s: QC dir '%s' ok" % (project.name,
-                                                     qc_dir)
+                    print "...%s: verified QC" % qc_dir
                     # Check for an existing report
                     qc_zip = os.path.join(
                         project.dirn,
@@ -3030,31 +3034,28 @@ class AutoProcess:
                         try:
                             project.qc_report(qc_dir=qc_dir,
                                               force=force)
-                            print "...%s: (re)generated report" \
-                                % project.name
+                            print "...%s: (re)generated report" % qc_dir
                         except Exception as ex:
                             print "...%s: failed to (re)generate " \
                                 "QC report: %s" \
-                                 % (project.name,ex)
+                                 % (qc_dir,ex)
                     # Add to the list of verified QC dirs
                     if os.path.exists(qc_zip):
                         qc_artefacts['qc_zip'] = qc_zip
                     else:
-                        print "...%s: missing report for '%s'" \
-                            % (project.name,qc_dir)
+                        print "...%s: missing QC report" % qc_dir
                 else:
                     # Not verified
-                    print "...%s: failed to verify QC dir '%s'" % \
-                        (project.name,qc_dir)
+                    print "...%s: failed to verify QC" % qc_dir
                 # MultiQC report
                 multiqc_report = os.path.join(project.dirn,
                                               "multi%s.html"
                                               % qc_base)
                 if os.path.exists(multiqc_report):
-                    print "...%s: found MultiQC report" % project.name
+                    print "...%s: found MultiQC report" % qc_dir
                     qc_artefacts['multiqc_report'] = multiqc_report
                 else:
-                    print "...%s: no MultiQC report"
+                    print "...%s: no MultiQC report" % qc_dir
             # ICell8 pipeline report
             icell8_zip = os.path.join(project.dirn,
                                       "icell8_processing.%s.%s.zip" %
