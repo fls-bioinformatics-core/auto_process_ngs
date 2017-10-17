@@ -1394,7 +1394,7 @@ class AutoProcess:
                 missing_fastqs = IlluminaData.list_missing_fastqs(
                     illumina_data,
                     sample_sheet,
-                    include_sample_dir=include_sample_dir)
+                    include_sample_dir=verify_include_sample_dir)
                 assert(len(missing_fastqs) > 0)
                 missing_fastqs_file = os.path.join(self.log_dir,
                                                    "missing_fastqs.log")
