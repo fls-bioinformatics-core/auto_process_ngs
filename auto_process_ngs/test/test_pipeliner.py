@@ -8,6 +8,7 @@ import shutil
 import time
 import os
 import getpass
+import platform
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
@@ -229,6 +230,20 @@ class TestPipelineTask(unittest.TestCase):
         if os.path.exists(self.working_dir):
             shutil.rmtree(self.working_dir)
 
+    def _user(self):
+        # Internal function to determine user
+        return getpass.getuser()
+
+    def _hostname(self):
+        # Internal function to determine hostname
+        try:
+            return os.environ['HOSTNAME']
+        except KeyError:
+            # HOSTNAME not defined in the
+            # environment, try 'platform'
+            # module instead
+            return platform.node()
+
     def test_pipelinetask_invocations(self):
         """
         PipelineTask: check task methods are invoked
@@ -331,8 +346,8 @@ class TestPipelineTask(unittest.TestCase):
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),8) # 8 = 7 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Echo text")
-        self.assertEqual(stdout[1],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
-        self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
         self.assertTrue(stdout[3].startswith("#### START "))
         self.assertEqual(stdout[4],"Hello!")
         self.assertTrue(stdout[5].startswith("#### END "))
@@ -378,8 +393,8 @@ class TestPipelineTask(unittest.TestCase):
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),7) # 7 = 6 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Nonexistant")
-        self.assertEqual(stdout[1],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
-        self.assertEqual(stdout[2],"#### USER %s" % getpass.getuser())
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
         self.assertTrue(stdout[3].startswith("#### START "))
         self.assertTrue(stdout[4].startswith("#### END "))
         self.assertEqual(stdout[5],"#### EXIT_CODE 127")
@@ -429,8 +444,8 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
         for i in xrange(3):
             self.assertEqual(stdout[0+i*7],"#### COMMAND Echo text")
-            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % os.environ['HOSTNAME'])
-            self.assertEqual(stdout[2+i*7],"#### USER %s" % getpass.getuser())
+            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % self._hostname())
+            self.assertEqual(stdout[2+i*7],"#### USER %s" % self._user())
             self.assertTrue(stdout[3+i*7].startswith("#### START "))
             self.assertEqual(stdout[4+i*7],"Hello!")
             self.assertTrue(stdout[5+i*7].startswith("#### END "))
