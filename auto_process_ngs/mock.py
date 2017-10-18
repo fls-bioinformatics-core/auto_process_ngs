@@ -8,7 +8,7 @@ mock.py
 
 Provides classes for mocking up examples of inputs and outputs for
 various parts of the process pipeline (including example directory
-structures), to be used in testing.
+structures), as well as mock executables, to be used in testing.
 
 The core classes are:
 
@@ -26,10 +26,15 @@ using the "updater" classes:
 - UpdateAnalysisDir: add artefacts to an analysis directory
 - UpdateAnalysisProject: add artefacts to an analysis project
 
-Finally there is a factory class which provides methods to quickly
-make "default" analysis directories for testing:
+There is also a convenience factory class which provides methods to
+quickly make "default" analysis directories for testing:
 
 - MockAnalysisDirFactory
+
+It is also possible to make mock executables which mimick some of
+the external software required for parts of the pipeline:
+
+- MockBcl2fastqExe
 
 """
 
@@ -38,12 +43,17 @@ make "default" analysis directories for testing:
 #######################################################################
 
 import os
+import argparse
+import uuid
+import shutil
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
+from bcftbx.IlluminaData import IlluminaRun
+from bcftbx.IlluminaData import IlluminaRunInfo
+from bcftbx.IlluminaData import SampleSheetPredictor
 from .utils import AnalysisProject
 from .utils import ZipArchive
 from .qc.illumina_qc import expected_qc_outputs
-
 
 #######################################################################
 # Classes for making mock directories
@@ -694,3 +704,177 @@ class MockAnalysisDirFactory(object):
         mad.add_fastq_batch('CDE','CDE3','CDE3_GCCAAT',lanes=lanes)
         mad.add_fastq_batch('CDE','CDE4','CDE4_AGTCAA',lanes=lanes)
         return mad
+
+#######################################################################
+# Classes for making mock executables
+#######################################################################
+
+class MockBcl2fastq2Exe(object):
+    """
+    Create mock bcl2fastq2 executable
+
+    This class can be used to create a mock bcl2fastq
+    executable, which in turn can be used in place of
+    the actual bcl2fastq software for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockBcl2fastq2Exe.create("/tmpbin/bcl2fastq")
+
+    The resulting executable will generate mock outputs
+    when run on actual or mock Illumina sequencer output
+    directories (mock versions can be produced using the
+    'mock.IlluminaRun' class in the genomics-bcftbx
+    package).
+    """
+    @staticmethod
+    def create(path):
+        """
+        Create a "mock" bcl2fastq executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+        """
+        path = os.path.abspath(path)
+        print "Building mock executable: %s" % path
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockBcl2fastqExe
+sys.exit(MockBcl2fastqExe.main(sys.argv[1:]))
+""")
+            os.chmod(path,0775)
+        return path
+
+    @staticmethod
+    def main(args):
+        """
+        Internal: provides mock bcl2fastq2 functionality
+        """
+        # Build generic header
+        header = """BCL to FASTQ file converter
+bcl2fastq v2.17.1.14
+Copyright (c) 2007-2015 Illumina, Inc.
+
+2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq %s""" \
+    % ' '.join(args[1:])
+        # Handle version request
+        if "--version" in args:
+            print header
+            return 0
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--runfolder-dir",action="store")
+        p.add_argument("--output-dir",action="store")
+        p.add_argument("--sample-sheet",action="store")
+        p.add_argument("--use-bases-mask",action="store")
+        p.add_argument("--barcode-mismatches",action="store")
+        p.add_argument("--minimum-trimmed-read-length",action="store")
+        p.add_argument("--mask-short-adapter-reads",action="store")
+        p.add_argument("--ignore-missing-bcls",action="store_true")
+        p.add_argument("--no-lane-splitting",action="store_true")
+        p.add_argument("-r",action="store")
+        p.add_argument("-d",action="store")
+        p.add_argument("-p",action="store")
+        p.add_argument("-w",action="store")
+        args = p.parse_args(args)
+        # Run folder (input data)
+        runfolder = args.runfolder_dir
+        print "Runfolder dir: %s" % runfolder
+        if runfolder is None:
+            return 1
+        run_info_xml = os.path.join(runfolder,"RunInfo.xml")
+        if not os.path.exists(run_info_xml):
+            return 1
+        # Determine if run is paired end
+        nreads = 0
+        for r in IlluminaRunInfo(run_info_xml).reads:
+            if r['is_indexed_read'] == 'N':
+                nreads += 1
+        if nreads == 2:
+            paired_end = True
+        else:
+            paired_end = False
+        print "Paired-end: %s" % paired_end
+        # Lanes
+        lanes = IlluminaRun(runfolder).lanes
+        print "Lanes: %s" % lanes
+        # Output folder
+        output_dir = args.output_dir
+        if output_dir is None:
+            output_dir = "bcl2fastq"
+        print "Output dir: %s" % output_dir
+        # Sample sheet
+        sample_sheet = args.sample_sheet
+        if sample_sheet is None:
+            for d in (runfolder,
+                      os.path.join(runfolder,
+                                   "Data",
+                                   "Intensities",
+                                   "BaseCalls")):
+                sample_sheet = os.path.join(d,"SampleSheet.csv")
+                if os.path.exists(sample_sheet):
+                    break
+                sample_sheet = None
+        print "Sample sheet: %s" % sample_sheet
+        # Modifiers
+        no_lane_splitting = bool(args.no_lane_splitting)
+        print "No lane splitting: %s" % no_lane_splitting
+        # Generate mock output based on inputs
+        tmpname = "tmp.%s" % uuid.uuid4()
+        output = MockIlluminaData(name=tmpname,
+                                  package="bcl2fastq2",
+                                  unaligned_dir="bcl2fastq")
+        # Add outputs from sample sheet (if supplied)
+        if sample_sheet is not None:
+            s = SampleSheetPredictor(sample_sheet_file=sample_sheet)
+            s.set(paired_end=paired_end,
+                  no_lane_splitting=no_lane_splitting,
+                  lanes=lanes)
+            for project in s.projects:
+                print "Adding project: %s" % project.name
+                for sample in project.samples:
+                    for fq in sample.fastqs():
+                        if sample.sample_name is None:
+                            sample_name = sample.sample_id
+                        else:
+                            sample_name = sample.sample_name
+                            output.add_fastq(project.name,
+                                             sample_name,
+                                             fq)
+        # Add undetermined fastqs
+        # NB Would like to use the 'add_undetermined'
+        # method but this doesn't play well with using
+        # the predictor-based approach above
+        if paired_end:
+            reads = (1,2)
+        else:
+            reads = (1,)
+        if no_lane_splitting:
+            lanes = None
+        for r in reads:
+            if lanes is None:
+                output.add_fastq(
+                    "Undetermined_indices",
+                    "undetermined",
+                    "Undetermined_S0_R%d_001.fastq.gz" % r)
+            else:
+                for lane in lanes:
+                    output.add_fastq(
+                        "Undetermined_indices",
+                        "undetermined",
+                        "Undetermined_S0_L%03d_R%d_001.fastq.gz"
+                        % (lane,r))
+        # Build the output directory
+        output.create()
+        # Move to final location
+        os.rename(os.path.join(tmpname,"bcl2fastq"),
+                  output_dir)
+        shutil.rmtree(tmpname)
+        return 1
