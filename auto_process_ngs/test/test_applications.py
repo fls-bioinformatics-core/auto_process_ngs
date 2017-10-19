@@ -185,3 +185,11 @@ class TestGeneral(unittest.TestCase):
             general.scp('user','example.com','my_file','remotedir').command_line,
             ['scp','my_file','user@example.com:remotedir'])
 
+    def test_scp_recursive(self):
+        """Construct 'scp -r' command lines
+        """
+        self.assertEqual(
+            general.scp('user','example.com','my_dir','remotedir',
+                        recursive=True).command_line,
+            ['scp','-r','my_dir','user@example.com:remotedir'])
+
