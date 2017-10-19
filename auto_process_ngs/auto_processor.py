@@ -1413,15 +1413,16 @@ class AutoProcess:
                         create_empty_fastqs = \
                             self.settings.bcl2fastq.create_empty_fastqs
                 if create_empty_fastqs:
-                    logging.warning("Making 'empty' Fastqs as placeholders")
+                    logging.warning("Making 'empty' placeholder Fastqs")
                     for fq in missing_fastqs:
                         fastq = os.path.join(self.analysis_dir,
                                              self.params.unaligned_dir,fq)
                         print "-- %s" % fastq
-                    with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-                        fp.write('')
-                raise Exception("Fastq generation failed to produce "
-                                "expected outputs")
+                        with gzip.GzipFile(filename=fastq,mode='wb') as fp:
+                            fp.write('')
+                else:
+                    raise Exception("Fastq generation failed to produce "
+                                    "expected outputs")
         # Generate statistics
         if generate_stats:
             self.generate_stats(stats_file=stats_file,
