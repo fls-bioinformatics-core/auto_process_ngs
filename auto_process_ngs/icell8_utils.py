@@ -201,8 +201,6 @@ class ICell8Read1(object):
         Arguments:
           fastq_read (FastqRead): the R1 read in the pair
         """
-        self._barcode_length = 11
-        self._umi_length = 10
         self._read = fastq_read
     @property
     def read(self):
