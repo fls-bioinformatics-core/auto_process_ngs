@@ -12,7 +12,7 @@ R1/R2 pair, where the R1 reads hold an inline barcode and a unique
 molecular identifier (UMI) for the read pair:
 
  * **Inline barcode:** bases 1-11 in R1
- * **UMI:** bases 12-21 in R1
+ * **UMI:** bases 12-25 in R1
 
 This is illustrated in the figure below:
 
@@ -23,6 +23,11 @@ This is illustrated in the figure below:
    Each inline barcode corresponds to a specific well in the
    experiment, which in turn corresponds to a specific single
    cell.
+
+.. note::
+
+   Older versions of the pipeline (autoprocess version 0.8.0
+   and earlier) assumed that the UMI length was 10 bases.
 
 The corresponding R2 read contains the actual sequence data
 corresponding to the cell and UMI referenced by its R1 partner.
