@@ -20,8 +20,8 @@ import argparse
 import logging
 import tempfile
 import shutil
-from bcftbx import FASTQFile
 from bcftbx.TabFile import TabFile
+from auto_process_ngs.stats import FastqReadCounter
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.applications import Command
@@ -64,7 +64,7 @@ def batch_fastqs(fastqs,nbatches,basename="batched",
     print "Fetching read counts:"
     nreads = 0
     for fq in fastqs:
-        n = FASTQFile.nreads(fq)
+        n = FastqReadCounter.zcat_wc(fq)
         print "%s:\t%d" % (os.path.basename(fq),n)
         nreads += n
     print "Total reads: %d" % nreads
