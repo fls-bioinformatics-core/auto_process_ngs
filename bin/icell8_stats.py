@@ -69,6 +69,9 @@ def get_batch_size(fastqs,min_batches=1,
       max_batch_size (int): the maxiumum batch size
       incr_function (Function): optional function to use
         to generate new number of batches to try
+
+    Returns:
+      Tuple: tuple of (batch_size,nbatches).
     """
     # Count the total number of reads
     print "Fetching read counts"
@@ -103,7 +106,7 @@ def get_batch_size(fastqs,min_batches=1,
         batch_size += 1
     print "Final batch size: %d" % batch_size
     assert(batch_size*nbatches >= nreads)
-    return nbatches
+    return (batch_size,nbatches)
 
 def batch_fastqs(fastqs,batch_size,basename="batched",
                  out_dir=None):
@@ -233,7 +236,8 @@ if __name__ == "__main__":
     # Split into batches for multiprocessing
     if nprocs > 1:
         try:
-            batch_size = get_batch_size(fastqs,min_batches=nprocs)
+            batch_size,nbatches = get_batch_size(fastqs,
+                                                 min_batches=nprocs)
             batched_fastqs = batch_fastqs(fastqs,batch_size,
                                           basename="icell8_stats",
                                           out_dir=working_dir)
