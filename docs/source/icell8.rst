@@ -24,6 +24,11 @@ This is illustrated in the figure below:
    experiment, which in turn corresponds to a specific single
    cell.
 
+.. note::
+
+   Older versions of the pipeline (autoprocess version 0.8.0
+   and earlier) assumed that the UMI length was 10 bases.
+
 The corresponding R2 read contains the actual sequence data
 corresponding to the cell and UMI referenced by its R1 partner.
 
