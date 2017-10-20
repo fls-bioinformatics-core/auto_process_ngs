@@ -41,6 +41,20 @@ MAXIMUM_BATCH_SIZE = 100000000
 # Functions
 ######################################################################
 
+def get_read_count(fastqs):
+    """
+    Get the total count of reads across multiple Fastqs
+
+    Arguments:
+      fastqs (list): lpaths to one or more Fastq files
+    """
+    nreads = 0
+    for fq in fastqs:
+        n = FastqReadCounter.zcat_wc(fq)
+        print "%s:\t%d" % (os.path.basename(fq),n)
+        nreads += n
+    return nreads
+
 def get_batch_size(fastqs,min_batches=1,
                    max_batch_size=MAXIMUM_BATCH_SIZE,
                    incr_function=None):
@@ -57,12 +71,8 @@ def get_batch_size(fastqs,min_batches=1,
         to generate new number of batches to try
     """
     # Count the total number of reads
-    print "Fetching read counts:"
-    nreads = 0
-    for fq in fastqs:
-        n = FastqReadCounter.zcat_wc(fq)
-        print "%s:\t%d" % (os.path.basename(fq),n)
-        nreads += n
+    print "Fetching read counts"
+    nreads = get_read_count(fastqs)
     print "Total reads: %d" % nreads
 
     # Default incrementer function: add the initial
@@ -114,8 +124,14 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
       out_dir (str): optional path to a directory where
         the batched Fastqs will be written
     """
+    # Determine number of batches
+    nreads = get_read_count(fastqs)
+    nbatches = nreads/batch_size
+    if nbatches*batch_size < nreads:
+        nbatches += 1
     print "Creating %d batches of %d reads" % (nbatches,
                                                batch_size)
+    assert(batch_size*nbatches >= nreads)
 
     # Check if fastqs are compressed
     gzipped = fastqs[0].endswith('.gz')
