@@ -142,7 +142,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                                   "(final)" if final else
                                   "(staging)")
     # Check if final archive already exists
-    if fileops_exists(os.path.join(archive_dir,final_dest)):
+    if fileops.exists(os.path.join(archive_dir,final_dest)):
         logging.fatal("Final archive already exists, stopping")
         return 1
     # Are there any projects to?
@@ -257,46 +257,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     if final:
         print "Moving to final location: %s" % final_dest
         if not dry_run:
-            fileops_rename(os.path.join(archive_dir,staging),
+            fileops.rename(os.path.join(archive_dir,staging),
                            os.path.join(archive_dir,final_dest))
     # Finish
     return retval
-
-def fileops_rename(src,dst):
-    # Placeholder for renaming operation
-    src = fileops.Location(src)
-    dst = fileops.Location(dst)
-    # Sanity check: if destination is remote then
-    # must be on same server as source
-    if dst.is_remote:
-        if dst.server != src.server:
-            raise Exception("Rename: can't rename on different "
-                            "servers")
-    # Build generic system command
-    rename_cmd = applications.Command('mv',
-                                      src.path,
-                                      dst.path)
-    if src.is_remote:
-        # Renaming file on remote system
-        rename_cmd = applications.general.ssh_command(
-            src.user,
-            src.server,
-            rename_cmd.command_line)
-    # Run command and return
-    retval,output = rename_cmd.subprocess_check_output()
-    return retval
-
-def fileops_exists(path):
-    # Placeholder for path existence checker
-    path = fileops.Location(path)
-    test_cmd = applications.Command('test',
-                                    '-e',
-                                    path.path)
-    if path.is_remote:
-        # Run test on remote system
-        test_cmd = applications.general.ssh_command(
-            path.user,
-            path.server,
-            test_cmd.command_line)
-    retval,output = test_cmd.subprocess_check_output()
-    return (retval == 0)
