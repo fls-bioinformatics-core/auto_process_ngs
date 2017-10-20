@@ -29,6 +29,7 @@ Functions:
 # Imports
 #######################################################################
 
+import os
 import time
 import logging
 from itertools import izip
@@ -37,6 +38,7 @@ from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from .fastq_utils import pair_fastqs
+from .stats import FastqReadCounter
 
 # Initialise logging
 import logging
@@ -77,9 +79,14 @@ def collect_fastq_stats(fastq):
         is a dictionary with barcodes as keys and
         sets of UMIs as values.
     """
+    print "collect_fastq_stats: started: %s" % fastq
+    n = FastqReadCounter.zcat_wc(fastq)
     counts = {}
     umis = {}
-    for r in FastqIterator(fastq):
+    for i,r in enumerate(FastqIterator(fastq),start=1):
+        if i%1000000 == 0:
+            print "%s: %s: %d/%d" % (time.strftime("%Y%m%d.%H%M%S"),
+                                     os.path.basename(fastq),i,n)
         r = ICell8Read1(r)
         barcode = r.barcode
         try:
@@ -91,6 +98,7 @@ def collect_fastq_stats(fastq):
             umis[barcode].add(umi)
         except KeyError:
             umis[barcode] = set((umi,))
+    print "collect_fastq_stats: returning: %s" % fastq
     return (fastq,counts,umis)
 
 def normalize_sample_name(s):
@@ -350,24 +358,25 @@ class ICell8Stats(object):
                                 (self.__class__.__name__,kw))
             if kw == 'nprocs':
                 nprocs = int(kws['nprocs'])
-        print "#procs = %s" % nprocs
         # Collect statistics for each file
         print "Collecting stats..."
         if nprocs > 1:
             # Multiple cores
+            print "Multicore mode (%d cores)" % nprocs
             pool = Pool(nprocs)
             results = pool.map(collect_fastq_stats,fastqs)
             pool.close()
             pool.join()
         else:
             # Single core
+            print "Single core mode"
             results = map(collect_fastq_stats,fastqs)
         # Combine results
         print "Merging stats from each Fastq:"
         self._counts = {}
         self._umis = {}
         for fq,fq_counts,fq_umis in results:
-            print "%s" % fq
+            print "- %s" % fq
             for barcode in fq_counts:
                 try:
                     self._counts[barcode] += fq_counts[barcode]
@@ -378,8 +387,11 @@ class ICell8Stats(object):
                 except KeyError:
                     self._umis[barcode] = set(fq_umis[barcode])
         # Create unique sorted UMI lists
+        print "Sorting UMI lists for each barcode:"
         for barcode in self._umis:
+            print "- %s" % barcode
             self._umis[barcode] = sorted(list(self._umis[barcode]))
+        print "Finished stats collection"
 
     def barcodes(self):
         """
