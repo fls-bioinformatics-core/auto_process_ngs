@@ -41,7 +41,61 @@ MAXIMUM_BATCH_SIZE = 100000000
 # Functions
 ######################################################################
 
-def batch_fastqs(fastqs,nbatches,basename="batched",
+def get_batch_size(fastqs,min_batches=1,
+                   max_batch_size=MAXIMUM_BATCH_SIZE,
+                   incr_function=None):
+    """
+    Determine number of reads per batch
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      min_batches (int): initial minimum number of batches
+        to try
+      max_batch_size (int): the maxiumum batch size
+      incr_function (Function): optional function to use
+        to generate new number of batches to try
+    """
+    # Count the total number of reads
+    print "Fetching read counts:"
+    nreads = 0
+    for fq in fastqs:
+        n = FastqReadCounter.zcat_wc(fq)
+        print "%s:\t%d" % (os.path.basename(fq),n)
+        nreads += n
+    print "Total reads: %d" % nreads
+
+    # Default incrementer function: add the initial
+    # number of batches on to get new number
+    if incr_function is None:
+        incr_function = lambda n: n + min_batches
+
+    # Determine batch size
+    batch_size = nreads/min_batches
+    nbatches = min_batches
+    print  "Initial batch size: %d" % batch_size
+    if max_batch_size > 0:
+        while batch_size > max_batch_size:
+            # Reset the number of batches
+            nbatches = incr_function(nbatches)
+            batch_size = nreads/nbatches
+            print "Trying %d: %d" % (nbatches,batch_size)
+        logger.warning("Maximum batch size exceeded (%d), "
+                       "increasing number of batches to %d"
+                       % (max_batch_size,nbatches))
+        logger.warning("New batch size: %d" % batch_size)
+
+    # Adjust to ensure that all reads are covered
+    # with no remainder
+    if nreads%batch_size:
+        # Round up batch size
+        logger.warning("Rounding up batch size to cover all reads")
+        batch_size += 1
+    print "Final batch size: %d" % batch_size
+    assert(batch_size*nbatches >= nreads)
+    return nbatches
+
+def batch_fastqs(fastqs,batch_size,basename="batched",
                  out_dir=None):
     """
     Splits reads from one or more Fastqs into batches
@@ -53,34 +107,15 @@ def batch_fastqs(fastqs,nbatches,basename="batched",
     Arguments:
       fastqs (list): list of paths to one or more Fastq
         files to take reads from
-      nbatches (int): number of batches to output reads
-        into
+      batch_size (int): number of reads to allocate to
+        each batch
       basename (str): optional basename to use for the
         output Fastq files (default: 'batched')
       out_dir (str): optional path to a directory where
         the batched Fastqs will be written
     """
-    # Count the total number of reads
-    print "Fetching read counts:"
-    nreads = 0
-    for fq in fastqs:
-        n = FastqReadCounter.zcat_wc(fq)
-        print "%s:\t%d" % (os.path.basename(fq),n)
-        nreads += n
-    print "Total reads: %d" % nreads
-
-    # Determine batch size
-    batch_size = nreads/nbatches
-    if MAXIMUM_BATCH_SIZE > 0 and batch_size > MAXIMUM_BATCH_SIZE:
-        # Reset the batch size
-        logger.warning("Batch size exceeded maximum (%s), resetting" %
-                       MAXIMUM_BATCH_SIZE)
-        batch_size = MAXIMUM_BATCH_SIZE
-    if nreads%batch_size:
-        # Round up batch size
-        batch_size += 1
-    assert(batch_size*nbatches >= nreads)
-    print "Creating batches of %d reads" % batch_size
+    print "Creating %d batches of %d reads" % (nbatches,
+                                               batch_size)
 
     # Check if fastqs are compressed
     gzipped = fastqs[0].endswith('.gz')
@@ -113,6 +148,7 @@ def batch_fastqs(fastqs,nbatches,basename="batched",
                           working_dir=out_dir)
     if retcode != 0:
         raise Exception("Batching failed: exit code %s" % retcode)
+    print "Batching completed"
 
     # Collect and return the batched Fastq names
     batched_fastqs = [os.path.join(out_dir,
@@ -178,15 +214,19 @@ if __name__ == "__main__":
     working_dir = tempfile.mkdtemp(suffix="icell8_stats")
     print "Using working dir %s" % working_dir
 
-    # Split into batches
-    try:
-        batched_fastqs = batch_fastqs(fastqs,nprocs,
-                                      basename="icell8_stats",
-                                      out_dir=working_dir)
-    except Exception as ex:
-        logging.critical("Failed to split Fastqs into batches: "
-                         "%s" % ex)
-        sys.exit(1)
+    # Split into batches for multiprocessing
+    if nprocs > 1:
+        try:
+            batch_size = get_batch_size(fastqs,min_batches=nprocs)
+            batched_fastqs = batch_fastqs(fastqs,batch_size,
+                                          basename="icell8_stats",
+                                          out_dir=working_dir)
+        except Exception as ex:
+            logging.critical("Failed to split Fastqs into batches: "
+                             "%s" % ex)
+            sys.exit(1)
+    else:
+        batched_fastqs = fastqs
 
     # Collect statistics
     stats = ICell8Stats(*batched_fastqs,nprocs=nprocs)
