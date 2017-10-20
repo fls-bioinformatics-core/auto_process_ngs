@@ -29,7 +29,7 @@ from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8Stats
 
 # Module specific logger
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("icell8_stats")
 
 ######################################################################
 # Magic numbers
