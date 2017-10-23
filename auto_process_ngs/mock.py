@@ -746,8 +746,8 @@ class MockBcl2fastq2Exe(object):
         with open(path,'w') as fp:
             fp.write("""#!/usr/bin/env python
 import sys
-from auto_process_ngs.mock import MockBcl2fastqExe
-sys.exit(MockBcl2fastqExe.main(sys.argv[1:]))
+from auto_process_ngs.mock import MockBcl2fastq2Exe
+sys.exit(MockBcl2fastq2Exe.main(sys.argv[1:]))
 """)
             os.chmod(path,0775)
         return path
@@ -877,4 +877,4 @@ Copyright (c) 2007-2015 Illumina, Inc.
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
         shutil.rmtree(tmpname)
-        return 1
+        return 0
