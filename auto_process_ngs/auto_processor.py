@@ -65,7 +65,8 @@ class AutoProcess:
 
         """
         # Initialise
-        self._log_dir = 'logs'
+        self._master_log_dir = "logs"
+        self._log_dir = self._master_log_dir
         # Load configuration settings
         self.settings = settings.Settings()
         # Create empty parameter and metadata set
@@ -521,7 +522,9 @@ class AutoProcess:
         if os.path.isabs(path):
             self._log_dir = path
         else:
-            self._log_dir = self.log_path(path)
+            self._log_dir = os.path.join(self.analysis_dir,
+                                         self._master_log_dir,
+                                         path)
         return self.log_dir
 
     def log_path(self,*args):
@@ -546,8 +549,9 @@ class AutoProcess:
           String: name for the new log subdirectory
             (nb not the full path).
         """
-        return utils.get_numbered_subdir(name,
-                                         parent_dir=self.log_dir)
+        return utils.get_numbered_subdir(
+            name,
+            parent_dir=os.path.join(self.analysis_dir,self._master_log_dir))
 
     def __del__(self):
         """

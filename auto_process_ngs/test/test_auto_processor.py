@@ -16,6 +16,72 @@ from auto_process_ngs.mock import UpdateAnalysisProject
 
 # Unit tests
 
+class TestAutoProcess(unittest.TestCase):
+
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_set_log_dir(self):
+        """AutoProcess.set_log_dir: sets correct log directory
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Load into AutoProcess object
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Check the initial log directory
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs"))
+        # Set a log subdir
+        subdir = ap.get_log_subdir("testing")
+        self.assertEqual(subdir,"001_testing")
+        ap.set_log_dir("001_testing")
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing"))
+        self.assertEqual(ap.log_path("test.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing",
+                                      "test.log"))
+        self.assertEqual(ap.log_path("test_1",
+                                     "test1.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing",
+                                      "test_1",
+                                      "test1.log"))
+        # Set a second log subdir
+        subdir = ap.get_log_subdir("testing")
+        self.assertEqual(subdir,"002_testing")
+        ap.set_log_dir("002_testing")
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing"))
+        self.assertEqual(ap.log_path("test.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing",
+                                      "test.log"))
+        self.assertEqual(ap.log_path("test_2",
+                                     "test2.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing",
+                                      "test_2",
+                                      "test2.log"))
+
 class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):
