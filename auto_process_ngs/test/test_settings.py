@@ -23,7 +23,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.run_qc,None)
         # Bcl2fastq
         self.assertEqual(s.bcl2fastq.nprocessors,1)
-        self.assertEqual(s.bcl2fastq.default_version,'<=1.8.4')
+        self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
         self.assertEqual(s.bcl2fastq.no_lane_splitting,False)
         # NextSeq-specific
         self.assertEqual(s.platform.nextseq.bcl2fastq,'>=2.0')
