@@ -15,7 +15,7 @@ process_icell8 = None
 # bcl2fastq settings
 [bcl2fastq]
 nprocessors = 1
-default_version = <=1.8.4
+default_version = >=1.8.4
 no_lane_splitting = False
 create_empty_fastqs = True
 
