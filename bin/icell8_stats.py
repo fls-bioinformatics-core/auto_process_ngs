@@ -202,6 +202,11 @@ if __name__ == "__main__":
                    type=int,default=1,
                    help="number of processors/cores available for "
                    "statistics generation (default: 1)")
+    p.add_argument("-m","--max-batch-size",
+                   type=int,default=MAXIMUM_BATCH_SIZE,
+                   help="maximum number of reads per batch "
+                   "when dividing Fastqs (multicore only; "
+                   "default: %d)" % MAXIMUM_BATCH_SIZE)
     args = p.parse_args()
 
     # Input Fastqs
@@ -236,11 +241,14 @@ if __name__ == "__main__":
     # Split into batches for multiprocessing
     if nprocs > 1:
         try:
-            batch_size,nbatches = get_batch_size(fastqs,
-                                                 min_batches=nprocs)
-            batched_fastqs = batch_fastqs(fastqs,batch_size,
-                                          basename="icell8_stats",
-                                          out_dir=working_dir)
+            batch_size,nbatches = get_batch_size(
+                fastqs,
+                max_batch_size=args.max_batch_size,
+                min_batches=nprocs)
+            batched_fastqs = batch_fastqs(
+                fastqs,batch_size,
+                basename="icell8_stats",
+                out_dir=working_dir)
         except Exception as ex:
             logging.critical("Failed to split Fastqs into batches: "
                              "%s" % ex)
