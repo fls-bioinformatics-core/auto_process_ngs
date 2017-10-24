@@ -80,24 +80,29 @@ def collect_fastq_stats(fastq):
         sets of UMIs as values.
     """
     print "collect_fastq_stats: started: %s" % fastq
-    n = FastqReadCounter.zcat_wc(fastq)
-    counts = {}
-    umis = {}
-    for i,r in enumerate(FastqIterator(fastq),start=1):
-        if i%1000000 == 0:
-            print "%s: %s: %d/%d" % (time.strftime("%Y%m%d.%H%M%S"),
-                                     os.path.basename(fastq),i,n)
-        r = ICell8Read1(r)
-        barcode = r.barcode
-        try:
-            counts[barcode] += 1
-        except KeyError:
-            counts[barcode] = 1
-        umi = r.umi
-        try:
-            umis[barcode].add(umi)
-        except KeyError:
-            umis[barcode] = set((umi,))
+    try:
+        n = FastqReadCounter.zcat_wc(fastq)
+        counts = {}
+        umis = {}
+        for i,r in enumerate(FastqIterator(fastq),start=1):
+            if i%1000000 == 0:
+                print "%s: %s: %d/%d" % (time.strftime("%Y%m%d.%H%M%S"),
+                                         os.path.basename(fastq),i,n)
+            r = ICell8Read1(r)
+            barcode = r.barcode
+            try:
+                counts[barcode] += 1
+            except KeyError:
+                counts[barcode] = 1
+            umi = r.umi
+            try:
+                umis[barcode].add(umi)
+            except KeyError:
+                umis[barcode] = set((umi,))
+    except Exception as ex:
+        print "collect_fastq_stats: caught exception: '%s'" % ex
+        raise Exception("collect_fastq_stats: %s: caught exception "
+                        "'%s'",(fastq,ex))
     print "collect_fastq_stats: returning: %s" % fastq
     return (fastq,counts,umis)
 
@@ -365,8 +370,10 @@ class ICell8Stats(object):
             print "Multicore mode (%d cores)" % nprocs
             pool = Pool(nprocs)
             results = pool.map(collect_fastq_stats,fastqs)
+            print "Processes completed, disposing of pool.."
             pool.close()
             pool.join()
+            print "Pool disposal complete"
         else:
             # Single core
             print "Single core mode"
