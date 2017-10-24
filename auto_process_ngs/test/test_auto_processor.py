@@ -163,6 +163,29 @@ class TestAutoProcessSetup(unittest.TestCase):
         self.assertTrue(os.path.isdir(
             '160621_M00879_0087_000000000-AGEW9'))
 
+    def test_autoprocess_setup_absolute_paths(self):
+        """AutoProcess.setup ensure absolute path for data dir
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        data_dir_rel = '160621_M00879_0087_000000000-AGEW9'
+        data_dir_abs = os.path.join(self.dirn,data_dir_rel)
+        # Do setup using absolute path
+        ap = AutoProcess()
+        ap.setup(data_dir_abs)
+        self.assertEqual(ap.params.data_dir,data_dir_abs)
+        shutil.rmtree(
+            os.path.join(self.dirn,
+                         "160621_M00879_0087_000000000-AGEW9_analysis"))
+        # Do setup using relative path
+        ap = AutoProcess()
+        ap.setup(data_dir_rel)
+        self.assertEqual(ap.params.data_dir,data_dir_abs)
+
 class TestAutoProcessPublishQc(unittest.TestCase):
     """
     Tests for AutoProcess.publish_qc

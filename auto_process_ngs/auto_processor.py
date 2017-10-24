@@ -726,6 +726,8 @@ class AutoProcess:
 
         """
         data_dir = data_dir.rstrip(os.sep)
+        if not fileops.Location(data_dir).is_remote:
+            data_dir = os.path.abspath(data_dir)
         if analysis_dir is None:
             self.analysis_dir = os.path.join(os.getcwd(),
                                              os.path.basename(data_dir))+'_analysis'
