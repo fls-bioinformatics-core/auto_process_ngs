@@ -727,9 +727,19 @@ class MockBcl2fastq2Exe(object):
     directories (mock versions can be produced using the
     'mock.IlluminaRun' class in the genomics-bcftbx
     package).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - Fastqs can be removed from the output by
+      specifying their names in the `missing_fastqs`
+      argument
     """
+
     @staticmethod
-    def create(path):
+    def create(path,exit_code=0,missing_fastqs=None):
         """
         Create a "mock" bcl2fastq executable
 
@@ -738,6 +748,11 @@ class MockBcl2fastq2Exe(object):
             to create. The final executable must
             not exist, however the directory it
             will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+          missing_fastqs (list): list of Fastq
+            names that will not be created
         """
         path = os.path.abspath(path)
         print "Building mock executable: %s" % path
@@ -747,13 +762,21 @@ class MockBcl2fastq2Exe(object):
             fp.write("""#!/usr/bin/env python
 import sys
 from auto_process_ngs.mock import MockBcl2fastq2Exe
-sys.exit(MockBcl2fastq2Exe.main(sys.argv[1:]))
-""")
+sys.exit(MockBcl2fastq2Exe(exit_code=%s,
+                           missing_fastqs=%s).main(sys.argv[1:]))
+            """ % (exit_code,missing_fastqs))
             os.chmod(path,0775)
         return path
 
-    @staticmethod
-    def main(args):
+    def __init__(self,exit_code=0,
+                 missing_fastqs=None):
+        """
+        Internal: configure the mock bcl2fastq2
+        """
+        self._exit_code = exit_code
+        self._missing_fastqs = missing_fastqs
+
+    def main(self,args):
         """
         Internal: provides mock bcl2fastq2 functionality
         """
@@ -763,11 +786,11 @@ bcl2fastq v2.17.1.14
 Copyright (c) 2007-2015 Illumina, Inc.
 
 2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq %s""" \
-    % ' '.join(args[1:])
+    % ' '.join(args)
         # Handle version request
         if "--version" in args:
             print header
-            return 0
+            return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
         p.add_argument("--runfolder-dir",action="store")
@@ -831,6 +854,7 @@ Copyright (c) 2007-2015 Illumina, Inc.
         output = MockIlluminaData(name=tmpname,
                                   package="bcl2fastq2",
                                   unaligned_dir="bcl2fastq")
+        missing_fastqs = self._missing_fastqs
         # Add outputs from sample sheet (if supplied)
         if sample_sheet is not None:
             s = SampleSheetPredictor(sample_sheet_file=sample_sheet)
@@ -841,13 +865,15 @@ Copyright (c) 2007-2015 Illumina, Inc.
                 print "Adding project: %s" % project.name
                 for sample in project.samples:
                     for fq in sample.fastqs():
+                        if missing_fastqs and (fq in missing_fastqs):
+                            continue
                         if sample.sample_name is None:
                             sample_name = sample.sample_id
                         else:
                             sample_name = sample.sample_name
-                            output.add_fastq(project.name,
-                                             sample_name,
-                                             fq)
+                        output.add_fastq(project.name,
+                                         sample_name,
+                                         fq)
         # Add undetermined fastqs
         # NB Would like to use the 'add_undetermined'
         # method but this doesn't play well with using
@@ -877,4 +903,4 @@ Copyright (c) 2007-2015 Illumina, Inc.
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
         shutil.rmtree(tmpname)
-        return 0
+        return self._exit_code
