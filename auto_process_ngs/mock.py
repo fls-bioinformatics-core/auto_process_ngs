@@ -736,10 +736,17 @@ class MockBcl2fastq2Exe(object):
     - Fastqs can be removed from the output by
       specifying their names in the `missing_fastqs`
       argument
+
+    The executable can also be configured to check
+    supplied values:
+
+    - the bases mask can be checked via the
+      `assert_bases_mask` argument
     """
 
     @staticmethod
-    def create(path,exit_code=0,missing_fastqs=None):
+    def create(path,exit_code=0,missing_fastqs=None,
+               assert_bases_mask=None):
         """
         Create a "mock" bcl2fastq executable
 
@@ -763,18 +770,25 @@ class MockBcl2fastq2Exe(object):
 import sys
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 sys.exit(MockBcl2fastq2Exe(exit_code=%s,
-                           missing_fastqs=%s).main(sys.argv[1:]))
-            """ % (exit_code,missing_fastqs))
+                           missing_fastqs=%s,
+                           assert_bases_mask=%s).main(sys.argv[1:]))
+            """ % (exit_code,
+                   missing_fastqs,
+                   ("\"%s\"" % assert_bases_mask
+                    if assert_bases_mask is not None
+                    else None)))
             os.chmod(path,0775)
         return path
 
     def __init__(self,exit_code=0,
-                 missing_fastqs=None):
+                 missing_fastqs=None,
+                 assert_bases_mask=None):
         """
         Internal: configure the mock bcl2fastq2
         """
         self._exit_code = exit_code
         self._missing_fastqs = missing_fastqs
+        self._assert_bases_mask = assert_bases_mask
 
     def main(self,args):
         """
@@ -807,6 +821,10 @@ Copyright (c) 2007-2015 Illumina, Inc.
         p.add_argument("-p",action="store")
         p.add_argument("-w",action="store")
         args = p.parse_args(args)
+        # Check bases mask
+        if self._assert_bases_mask:
+            print "Checking bases mask: %s" % args.use_bases_mask
+            assert(args.use_bases_mask == self._assert_bases_mask)
         # Run folder (input data)
         runfolder = args.runfolder_dir
         print "Runfolder dir: %s" % runfolder
