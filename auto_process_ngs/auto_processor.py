@@ -809,7 +809,7 @@ class AutoProcess:
             # Keep a copy of the original sample sheet
             original_sample_sheet = os.path.join(self.analysis_dir,
                                                  'SampleSheet.orig.csv')
-            print "Copying original sample sheetd to %s" % original_sample_sheet
+            print "Copying original sample sheet to %s" % original_sample_sheet
             shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
             os.chmod(original_sample_sheet,0664)
