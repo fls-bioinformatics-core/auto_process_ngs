@@ -82,7 +82,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
-   def test_make_fastqs_icell8_protocol(self):
+    def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
         """
         # Create mock source data
