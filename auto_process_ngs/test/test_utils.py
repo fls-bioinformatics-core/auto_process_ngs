@@ -1754,6 +1754,33 @@ class TestFindExecutables(unittest.TestCase):
                                           self.info_func,
                                           paths=paths),exes)
 
+class TestParseVersion(unittest.TestCase):
+    """Tests for the parse_version function
+    """
+    def test_parse_version(self):
+        """parse_version splits version numbers
+        """
+        self.assertEqual(parse_version("2.17.1.4"),
+                         (2,17,1,4))
+        self.assertEqual(parse_version("1.8.4"),
+                         (1,8,4))
+        self.assertEqual(parse_version("1.9.rc1"),
+                         (1,9,"rc1"))
+
+    def test_compare_versions(self):
+        """parse_version compares versions correctly
+        """
+        self.assertTrue(
+            parse_version("2.17.1.4") > parse_version("1.8.4"))
+        self.assertTrue(
+            parse_version("2.17.1.4") == parse_version("2.17.1.4"))
+        self.assertTrue(
+            parse_version("1.8.4") < parse_version("2.17.1.4"))
+        self.assertTrue(
+            parse_version("10.0") > parse_version("9.1"))
+        self.assertTrue(
+            parse_version("1.10") > parse_version("1.9.rc1"))
+
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function
 

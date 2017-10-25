@@ -36,7 +36,6 @@ import auto_process_ngs.applications as applications
 import auto_process_ngs.utils as utils
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
-from pkg_resources import parse_version
 
 #######################################################################
 # Functions
@@ -242,12 +241,12 @@ def get_required_samplesheet_format(bcl2fastq_version):
         etc).
 
     """
-    version = parse_version(bcl2fastq_version)
+    version = utils.parse_version(bcl2fastq_version)
     major,minor = version[0:2]
-    if (major,minor) == parse_version('1.8')[0:2]:
+    if (major,minor) == utils.parse_version('1.8')[0:2]:
         # Version 1.8.*
         return 'CASAVA'
-    elif major == parse_version('2')[0]:
+    elif major == utils.parse_version('2')[0]:
         # Version 2.*
         return 'IEM'
     else:
