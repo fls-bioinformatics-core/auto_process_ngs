@@ -736,8 +736,9 @@ class AutoProcess:
         if not fileops.Location(data_dir).is_remote:
             data_dir = os.path.abspath(data_dir)
         if analysis_dir is None:
-            self.analysis_dir = os.path.join(os.getcwd(),
-                                             os.path.basename(data_dir))+'_analysis'
+            self.analysis_dir = os.path.join(
+                os.getcwd(),
+                os.path.basename(data_dir))+'_analysis'
         else:
             self.analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
