@@ -1771,7 +1771,8 @@ class AutoProcess:
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
         print "Generating processing QC report"
-        processing_qc_html = "processing_qc.html"
+        processing_qc_html = os.path.join(self.analysis_dir,
+                                          "processing_qc.html")
         report_processing_qc(self,processing_qc_html)
         print "Finished"
 
