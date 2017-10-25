@@ -16,6 +16,114 @@ from auto_process_ngs.mock import UpdateAnalysisProject
 
 # Unit tests
 
+class TestAutoProcess(unittest.TestCase):
+
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_analysis_dir_path(self):
+        """AutoProcess: analysis dir path is absolute and normalized
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Set up new AutoProcess instance
+        ap = AutoProcess()
+        self.assertEqual(ap.analysis_dir,None)
+        # Make a mock analysis dir
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Create Autoprocess instances from different
+        # forms of path and check stored value
+        rel_path = "160621_M00879_0087_000000000-AGEW9_analysis"
+        abs_path = os.path.join(self.dirn,rel_path)
+        rel_unnormalised = os.path.join("..",
+                                        os.path.basename(self.dirn),
+                                        rel_path)
+        abs_unnormalised = os.path.join(self.dirn,
+                                        rel_unnormalised)
+        ap = AutoProcess(analysis_dir=abs_path)
+        self.assertEqual(ap.analysis_dir,abs_path)
+        ap = AutoProcess(analysis_dir=rel_path)
+        self.assertEqual(ap.analysis_dir,abs_path)
+        ap = AutoProcess(analysis_dir=abs_unnormalised)
+        self.assertEqual(ap.analysis_dir,abs_path)
+        ap = AutoProcess(analysis_dir=rel_unnormalised)
+        self.assertEqual(ap.analysis_dir,abs_path)
+
+    def test_set_log_dir(self):
+        """AutoProcess.set_log_dir: sets correct log directory
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Load into AutoProcess object
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Check the initial log directory
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs"))
+        # Set a log subdir
+        subdir = ap.get_log_subdir("testing")
+        self.assertEqual(subdir,"001_testing")
+        ap.set_log_dir("001_testing")
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing"))
+        self.assertEqual(ap.log_path("test.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing",
+                                      "test.log"))
+        self.assertEqual(ap.log_path("test_1",
+                                     "test1.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "001_testing",
+                                      "test_1",
+                                      "test1.log"))
+        # Set a second log subdir
+        subdir = ap.get_log_subdir("testing")
+        self.assertEqual(subdir,"002_testing")
+        ap.set_log_dir("002_testing")
+        self.assertEqual(ap.log_dir,
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing"))
+        self.assertEqual(ap.log_path("test.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing",
+                                      "test.log"))
+        self.assertEqual(ap.log_path("test_2",
+                                     "test2.log"),
+                         os.path.join(mockdir.dirn,
+                                      "logs",
+                                      "002_testing",
+                                      "test_2",
+                                      "test2.log"))
+
 class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):
@@ -96,6 +204,50 @@ class TestAutoProcessSetup(unittest.TestCase):
         ap.setup(mock_illumina_run.dirn)
         self.assertTrue(os.path.isdir(
             '160621_M00879_0087_000000000-AGEW9'))
+
+    def test_autoprocess_setup_absolute_paths(self):
+        """AutoProcess.setup data dir path is absolute and normalised
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        data_dir_rel = '160621_M00879_0087_000000000-AGEW9'
+        data_dir_abs = os.path.join(self.dirn,data_dir_rel)
+        data_dir_rel_unnormalised = os.path.join(
+            "..",
+            os.path.basename(self.dirn),
+            data_dir_rel)
+        data_dir_abs_unnormalised = os.path.join(
+            self.dirn,
+            "..",
+            os.path.basename(self.dirn),
+            data_dir_rel)
+        analysis_dir = os.path.join(
+            self.dirn,
+            "160621_M00879_0087_000000000-AGEW9_analysis")
+        # Do setup using absolute path
+        ap = AutoProcess()
+        ap.setup(data_dir_abs)
+        self.assertEqual(ap.params.data_dir,data_dir_abs)
+        self.assertEqual(ap.analysis_dir,analysis_dir)
+        del(ap)
+        shutil.rmtree(analysis_dir)
+        # Do setup using relative path
+        ap = AutoProcess()
+        ap.setup(data_dir_rel)
+        self.assertEqual(ap.params.data_dir,data_dir_abs)
+        self.assertEqual(ap.analysis_dir,analysis_dir)
+        del(ap)
+        shutil.rmtree(analysis_dir)
+        # Do setup using absolute unnormalized path
+        ap = AutoProcess()
+        ap.setup(data_dir_abs_unnormalised)
+        self.assertEqual(ap.params.data_dir,data_dir_abs)
+        self.assertEqual(ap.analysis_dir,analysis_dir)
+        del(ap)
 
 class TestAutoProcessPublishQc(unittest.TestCase):
     """

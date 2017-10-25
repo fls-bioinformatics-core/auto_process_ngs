@@ -420,8 +420,14 @@ class FastqStatistics:
                 # lane doesn't have any unassigned reads
                 unassigned_reads = 0
             total_reads = assigned_reads + unassigned_reads
-            percent_assigned = float(assigned_reads)/float(total_reads)*100.0
-            percent_unassigned = float(unassigned_reads)/float(total_reads)*100.0
+            if total_reads > 0:
+                percent_assigned = float(assigned_reads)/ \
+                                   float(total_reads)*100.0
+                percent_unassigned = float(unassigned_reads)/ \
+                                     float(total_reads)*100.0
+            else:
+                percent_assigned = 0.0
+                percent_unassigned = 0.0
             per_lane_stats.append(data=("Lane %d" % lane_number,
                                         total_reads,
                                         assigned_reads,

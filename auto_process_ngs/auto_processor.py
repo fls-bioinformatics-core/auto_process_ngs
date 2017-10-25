@@ -65,7 +65,8 @@ class AutoProcess:
 
         """
         # Initialise
-        self._log_dir = 'logs'
+        self._master_log_dir = "logs"
+        self._log_dir = self._master_log_dir
         # Load configuration settings
         self.settings = settings.Settings()
         # Create empty parameter and metadata set
@@ -521,7 +522,9 @@ class AutoProcess:
         if os.path.isabs(path):
             self._log_dir = path
         else:
-            self._log_dir = self.log_path(path)
+            self._log_dir = os.path.join(self.analysis_dir,
+                                         self._master_log_dir,
+                                         path)
         return self.log_dir
 
     def log_path(self,*args):
@@ -546,8 +549,9 @@ class AutoProcess:
           String: name for the new log subdirectory
             (nb not the full path).
         """
-        return utils.get_numbered_subdir(name,
-                                         parent_dir=self.log_dir)
+        return utils.get_numbered_subdir(
+            name,
+            parent_dir=os.path.join(self.analysis_dir,self._master_log_dir))
 
     def __del__(self):
         """
@@ -558,17 +562,24 @@ class AutoProcess:
         object is destroyed.
 
         """
-        if self.analysis_dir is None:
-            return
-        tmp_dir = os.path.join(self.analysis_dir,'tmp')
-        if os.path.isdir(tmp_dir):
-            logging.debug("Removing %s" % tmp_dir)
-            import shutil
-            shutil.rmtree(tmp_dir)
-        logging.debug("Saving parameters to file")
-        self.save_parameters()
-        logging.debug("Saving metadata to file")
-        self.save_metadata()
+        try:
+            if not os.path.exists(self.analysis_dir):
+                logging.warning("Analysis dir '%s' not found" %
+                                self.analysis_dir)
+                return
+            tmp_dir = os.path.join(self.analysis_dir,'tmp')
+            if os.path.isdir(tmp_dir):
+                logging.debug("Removing %s" % tmp_dir)
+                import shutil
+                shutil.rmtree(tmp_dir)
+            logging.debug("Saving parameters to file")
+            self.save_parameters()
+            logging.debug("Saving metadata to file")
+            self.save_metadata()
+        except Exception as ex:
+            logging.warning("Exception trying to delete "
+                            "AutoProcess instance: %s" %
+                            ex)
 
     @property
     def run_name(self):
@@ -722,9 +733,12 @@ class AutoProcess:
 
         """
         data_dir = data_dir.rstrip(os.sep)
+        if not fileops.Location(data_dir).is_remote:
+            data_dir = os.path.abspath(data_dir)
         if analysis_dir is None:
-            self.analysis_dir = os.path.join(os.getcwd(),
-                                             os.path.basename(data_dir))+'_analysis'
+            self.analysis_dir = os.path.join(
+                os.getcwd(),
+                os.path.basename(data_dir))+'_analysis'
         else:
             self.analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
@@ -803,7 +817,7 @@ class AutoProcess:
             # Keep a copy of the original sample sheet
             original_sample_sheet = os.path.join(self.analysis_dir,
                                                  'SampleSheet.orig.csv')
-            print "Copying original sample sheetd to %s" % original_sample_sheet
+            print "Copying original sample sheet to %s" % original_sample_sheet
             shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
             os.chmod(original_sample_sheet,0664)
@@ -1765,7 +1779,8 @@ class AutoProcess:
         self.params['per_lane_stats_file'] = per_lane_stats_file
         print "Statistics generation completed: %s" % self.params.stats_file
         print "Generating processing QC report"
-        processing_qc_html = "processing_qc.html"
+        processing_qc_html = os.path.join(self.analysis_dir,
+                                          "processing_qc.html")
         report_processing_qc(self,processing_qc_html)
         print "Finished"
 
