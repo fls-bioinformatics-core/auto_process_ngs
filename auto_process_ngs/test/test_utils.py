@@ -1781,6 +1781,13 @@ class TestParseVersion(unittest.TestCase):
         self.assertTrue(
             parse_version("1.10") > parse_version("1.9.rc1"))
 
+    def test_handle_empty_version(self):
+        """parse_version handles empty version
+        """
+        self.assertEqual(parse_version(""),(-99999,))
+        self.assertTrue(
+            parse_version("") < parse_version("1.8.4"))
+
 class TestPrettyPrintRows(unittest.TestCase):
     """Tests for the pretty_print_rows function
 

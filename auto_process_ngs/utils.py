@@ -2255,6 +2255,10 @@ def parse_version(s):
     Where possible components will be coverted to
     integers.
 
+    If the version string is empty then the version
+    number will be set to an arbitrary negative
+    integer.
+
     Typically the result from this function would not
     be used directly, instead it is used to compare
     two versions, for example:
@@ -2268,6 +2272,10 @@ def parse_version(s):
     Returns:
       Tuple: tuple of the version string
     """
+    if s == "":
+        # Essentially versionless; set to an
+        # arbitrarily small integer
+        s = "-99999"
     items = []
     for i in s.split('.'):
         try:
