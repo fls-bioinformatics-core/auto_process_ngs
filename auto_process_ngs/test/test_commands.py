@@ -96,7 +96,75 @@ class TestArchiveCommand(unittest.TestCase):
                          read_only_fastqs=False,
                          final=True)
         self.assertEqual(status,0)
-        # Check that staging dir exists
+        # Check that final dir exists
+        self.assertTrue(
+            os.path.exists(
+                os.path.join(
+                    archive_dir,
+                    "2017",
+                    "miseq",
+                    "170901_M00879_0087_000000000-AGEW9_analysis")))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+
+    def test_archive_staging_to_final(self):
+        """archive: test archiving directly from staging dir
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        ap.save_metadata()
+        # Move to the archive area as a "pending" directory
+        os.rename(mockdir.dirn,
+                  os.path.join(
+                    archive_dir,
+                    "2017",
+                    "miseq",
+                    "__170901_M00879_0087_000000000-AGEW9_analysis.pending"))
+        # Load pending dir into a new autoprocess instance
+        ap = AutoProcess(
+            analysis_dir=os.path.join(
+                archive_dir,
+                "2017",
+                "miseq",
+                "__170901_M00879_0087_000000000-AGEW9_analysis.pending"))
+        # Staging archiving attempt should fail
+        self.assertRaises(Exception,
+                          archive,
+                          ap,
+                          archive_dir=archive_dir,
+                          year='2017',platform='miseq',
+                          read_only_fastqs=False,
+                          final=False)
+        self.assertFalse(
+            os.path.exists(
+                os.path.join(
+                    archive_dir,
+                    "2017",
+                    "miseq",
+                    "170901_M00879_0087_000000000-AGEW9_analysis")))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Copy to final should work
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=False,
+                         final=True)
+        self.assertEqual(status,0)
         self.assertTrue(
             os.path.exists(
                 os.path.join(

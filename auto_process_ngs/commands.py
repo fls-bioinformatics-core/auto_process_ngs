@@ -26,10 +26,8 @@ __settings = auto_process_ngs.settings.Settings()
 # Module specific logger
 logger = logging.getLogger(__name__)
 
-import logging
-
 #######################################################################
-# Functions
+# Command functions
 #######################################################################
 
 def archive(ap,archive_dir=None,platform=None,year=None,
@@ -113,6 +111,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     """
     # Return value
     retval = 0
+    # Check if analysis dir is actually staging directory
+    analysis_dir = os.path.basename(ap.analysis_dir)
+    is_staging = False
+    if analysis_dir.startswith("__") and analysis_dir.endswith(".pending"):
+        logger.warning("Operating directly on staged directory")
+        if not final:
+            raise Exception("Cannot re-stage already staged "
+                            "analysis directory")
+        else:
+            is_staging = True
     # Fetch archive location
     if archive_dir is None:
         archive_dir = ap.settings.archive.dirn
@@ -129,8 +137,12 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         year = time.strftime("%Y")
     archive_dir = os.path.join(archive_dir,year,platform)
     # Determine target directory
-    final_dest = os.path.basename(ap.analysis_dir)
-    staging = "__%s.pending" % final_dest
+    if not is_staging:
+        final_dest = analysis_dir
+        staging = "__%s.pending" % analysis_dir
+    else:
+        final_dest = analysis_dir[len("__"):-len(".pending")]
+        staging = analysis_dir
     if final:
         dest = final_dest
     else:
@@ -145,107 +157,108 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     if fileops.exists(os.path.join(archive_dir,final_dest)):
         logging.fatal("Final archive already exists, stopping")
         return 1
-    # Are there any projects to?
-    projects = ap.get_analysis_projects()
-    if not projects:
-        raise Exception("No project directories found, nothing "
-                        "to archive")
     # Check metadata
     check_metadata = ap.check_metadata(('source','run_number'))
     if not check_metadata:
-        if not force:
+        if not force or not is_staging:
             logging.fatal("Some metadata items not set, stopping")
             return 1
         logging.warning("Some metadata items not set, proceeding")
-    # Determine which directories to exclude
-    excludes = ['--exclude=primary_data',
-                '--exclude=save.*',
-                '--exclude=*.bak',
-                '--exclude=tmp.*']
-    if not include_bcl2fastq:
-        # Determine whether bcl2fastq dir should be included implicitly
-        # because there are links from the analysis directories
-        for project in projects:
-            if project.fastqs_are_symlinks:
-                print "Found at least one project with fastq " \
-                    "symlinks (%s)" % project.name
-                include_bcl2fastq = True
-                break
-    if not include_bcl2fastq:
-        print "Excluding '%s' directory from archive" % \
-            ap.params.unaligned_dir
-        excludes.append('--exclude=%s' % ap.params.unaligned_dir)
-    # 10xgenomics products to exclude
-    excludes.append('--exclude=*.mro')
-    excludes.append('--exclude="%s*"' %
-                    tenx_genomics_utils.flow_cell_id(ap.run_name))
-    # Log dir
-    log_dir = 'archive%s' % ('_final' if final else '_staging')
-    if dry_run:
-        log_dir += '_dry_run'
-    ap.set_log_dir(ap.get_log_subdir(log_dir))
-    # Set up runner
-    if runner is not None:
-        runner = fetch_runner(runner)
-    else:
-        runner = ap.settings.runners.rsync
-    runner.set_log_dir(ap.log_dir)
-    # Setup a scheduler for multiple rsync jobs
-    sched = simple_scheduler.SimpleScheduler(
-        runner=runner,
-        max_concurrent=ap.settings.general.max_concurrent_jobs)
-    sched.start()
-    # If making fastqs read-only then transfer them separately
-    if read_only_fastqs and final:
-        rsync_fastqs = applications.general.rsync(
+    if not is_staging:
+        # Are there any projects to archive?
+        projects = ap.get_analysis_projects()
+        if not projects:
+            raise Exception("No project directories found, nothing "
+                            "to archive")
+        # Determine which directories to exclude
+        excludes = ['--exclude=primary_data',
+                    '--exclude=save.*',
+                    '--exclude=*.bak',
+                    '--exclude=tmp.*']
+        if not include_bcl2fastq:
+            # Determine whether bcl2fastq dir should be included implicitly
+            # because there are links from the analysis directories
+            for project in projects:
+                if project.fastqs_are_symlinks:
+                    print "Found at least one project with fastq " \
+                        "symlinks (%s)" % project.name
+                    include_bcl2fastq = True
+                    break
+        if not include_bcl2fastq:
+            print "Excluding '%s' directory from archive" % \
+                ap.params.unaligned_dir
+            excludes.append('--exclude=%s' % ap.params.unaligned_dir)
+        # 10xgenomics products to exclude
+        excludes.append('--exclude=*.mro')
+        excludes.append('--exclude="%s*"' %
+                        tenx_genomics_utils.flow_cell_id(ap.run_name))
+        # Log dir
+        log_dir = 'archive%s' % ('_final' if final else '_staging')
+        if dry_run:
+            log_dir += '_dry_run'
+        ap.set_log_dir(ap.get_log_subdir(log_dir))
+        # Set up runner
+        if runner is not None:
+            runner = fetch_runner(runner)
+        else:
+            runner = ap.settings.runners.rsync
+        runner.set_log_dir(ap.log_dir)
+        # Setup a scheduler for multiple rsync jobs
+        sched = simple_scheduler.SimpleScheduler(
+            runner=runner,
+            max_concurrent=ap.settings.general.max_concurrent_jobs)
+        sched.start()
+        # If making fastqs read-only then transfer them separately
+        if read_only_fastqs and final:
+            rsync_fastqs = applications.general.rsync(
+                "%s/" % ap.analysis_dir,
+                os.path.join(archive_dir,staging),
+                prune_empty_dirs=True,
+                dry_run=dry_run,
+                chmod='ugo-w',
+                extra_options=(
+                    '--include=*/',
+                    '--include=fastqs/**',
+                    '--exclude=*',))
+            print "Running %s" % rsync_fastqs
+            rsync_fastqs_job = sched.submit(rsync_fastqs,
+                                            name="rsync.archive_fastqs")
+            # Exclude fastqs from main rsync
+            excludes.append('--exclude=fastqs')
+            wait_for = [rsync_fastqs_job.job_name]
+        else:
+            rsync_fastqs_job = None
+            wait_for = ()
+        # Main rsync command
+        rsync = applications.general.rsync(
             "%s/" % ap.analysis_dir,
             os.path.join(archive_dir,staging),
             prune_empty_dirs=True,
+            mirror=True,
             dry_run=dry_run,
-            chmod='ugo-w',
-            extra_options=(
-                '--include=*/',
-                '--include=fastqs/**',
-                '--exclude=*',))
-        print "Running %s" % rsync_fastqs
-        rsync_fastqs_job = sched.submit(rsync_fastqs,
-                                        name="rsync.archive_fastqs")
-        # Exclude fastqs from main rsync
-        excludes.append('--exclude=fastqs')
-        wait_for = [rsync_fastqs_job.job_name]
-    else:
-        rsync_fastqs_job = None
-        wait_for = ()
-    # Main rsync command
-    rsync = applications.general.rsync(
-        "%s/" % ap.analysis_dir,
-        os.path.join(archive_dir,staging),
-        prune_empty_dirs=True,
-        mirror=True,
-        dry_run=dry_run,
-        chmod=perms,
-        extra_options=excludes)
-    print "Running %s" % rsync
-    rsync_job = sched.submit(rsync,name="rsync.archive",
-                             wait_for=wait_for)
-    # Wait for scheduler to complete
-    sched.wait()
-    sched.stop()
-    # Check exit status on job(s)
-    if rsync_fastqs_job:
-        exit_code = rsync_fastqs_job.exit_code
-        print "rsync of FASTQs completed: exit code %s" % exit_code
-        if exit_code != 0:
-            logging.error("Failed to copy FASTQs to archive location "
-                          "(non-zero exit code returned)")
-    else:
-        exit_code = 0
-    print "rsync of data completed: exit code %s" % rsync_job.exit_code
-    if rsync_job.exit_code != 0:
-        logging.error("Failed to copy data to archive location "
-                      "(non-zero exit code returned)")
-    # Set returncode
-    retval = exit_code if exit_code != 0 else rsync_job.exit_code
+            chmod=perms,
+            extra_options=excludes)
+        print "Running %s" % rsync
+        rsync_job = sched.submit(rsync,name="rsync.archive",
+                                 wait_for=wait_for)
+        # Wait for scheduler to complete
+        sched.wait()
+        sched.stop()
+        # Check exit status on job(s)
+        if rsync_fastqs_job:
+            exit_code = rsync_fastqs_job.exit_code
+            print "rsync of FASTQs completed: exit code %s" % exit_code
+            if exit_code != 0:
+                raise Exception("Failed to copy FASTQs to archive location "
+                                "(non-zero exit code returned)")
+        else:
+            exit_code = 0
+        print "rsync of data completed: exit code %s" % rsync_job.exit_code
+        if rsync_job.exit_code != 0:
+            raise Exception("Failed to copy data to archive location "
+                            "(non-zero exit code returned)")
+        # Set returncode
+        retval = exit_code if exit_code != 0 else rsync_job.exit_code
     # Set the group
     if group is not None:
         print "Setting group of archived files to '%s'" % group
