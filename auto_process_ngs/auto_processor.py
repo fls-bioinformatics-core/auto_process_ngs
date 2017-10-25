@@ -562,17 +562,24 @@ class AutoProcess:
         object is destroyed.
 
         """
-        if self.analysis_dir is None:
-            return
-        tmp_dir = os.path.join(self.analysis_dir,'tmp')
-        if os.path.isdir(tmp_dir):
-            logging.debug("Removing %s" % tmp_dir)
-            import shutil
-            shutil.rmtree(tmp_dir)
-        logging.debug("Saving parameters to file")
-        self.save_parameters()
-        logging.debug("Saving metadata to file")
-        self.save_metadata()
+        try:
+            if not os.path.exists(self.analysis_dir):
+                logging.warning("Analysis dir '%s' not found" %
+                                self.analysis_dir)
+                return
+            tmp_dir = os.path.join(self.analysis_dir,'tmp')
+            if os.path.isdir(tmp_dir):
+                logging.debug("Removing %s" % tmp_dir)
+                import shutil
+                shutil.rmtree(tmp_dir)
+            logging.debug("Saving parameters to file")
+            self.save_parameters()
+            logging.debug("Saving metadata to file")
+            self.save_metadata()
+        except Exception as ex:
+            logging.warning("Exception trying to delete "
+                            "AutoProcess instance: %s" %
+                            ex)
 
     @property
     def run_name(self):
