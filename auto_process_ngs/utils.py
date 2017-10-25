@@ -39,6 +39,7 @@ Functions:
 - split_user_host_dir:
 - get_numbered_subdir:
 - find_executables:
+- parse_version:
 - pretty_print_rows:
 - write_script_file:
 - edit_file:
@@ -71,7 +72,6 @@ from qc.illumina_qc import QCSample
 from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
 from .exceptions import MissingParameterFileException
-from pkg_resources import parse_version
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -2244,6 +2244,46 @@ def find_executables(names,info_func,reqs=None,paths=None):
     else:
         print "%s: No packages found" % ','.join(names)
     return available_exes
+
+def parse_version(s):
+    """
+    Split a version string into a tuple for comparison
+
+    Given a version string of the form e.g. "X.Y.Z",
+    return a tuple of the components e.g. (X,Y,Z)
+
+    Where possible components will be coverted to
+    integers.
+
+    If the version string is empty then the version
+    number will be set to an arbitrary negative
+    integer.
+
+    Typically the result from this function would not
+    be used directly, instead it is used to compare
+    two versions, for example:
+
+    >>> parse_version("2.17") < parse_version("1.8")
+    False
+
+    Arguments:
+      s (str): version string
+
+    Returns:
+      Tuple: tuple of the version string
+    """
+    if s == "":
+        # Essentially versionless; set to an
+        # arbitrarily small integer
+        s = "-99999"
+    items = []
+    for i in s.split('.'):
+        try:
+            i = int(i)
+        except ValueError:
+            pass
+        items.append(i)
+    return tuple(items)
 
 def pretty_print_rows(data,prepend=False):
     """Format row-wise data into 'pretty' lines
