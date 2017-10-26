@@ -273,7 +273,9 @@ if __name__ == "__main__":
         batched_fastqs = fastqs
 
     # Collect statistics
-    stats = ICell8Stats(*batched_fastqs,nprocs=nprocs)
+    stats = ICell8Stats(*batched_fastqs,
+                        nprocs=nprocs,
+                        verbose=True)
 
     # Remove the working directory
     shutil.rmtree(working_dir)
