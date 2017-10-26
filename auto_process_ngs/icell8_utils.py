@@ -39,6 +39,7 @@ from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
 from .fastq_utils import pair_fastqs
 from .stats import FastqReadCounter
+from .utils import ProgressChecker
 
 # Initialise logging
 import logging
@@ -60,51 +61,6 @@ SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
 ######################################################################
 # Functions
 ######################################################################
-
-def collect_fastq_stats(fastq):
-    """
-    Get barcode and distince UMI counts for Fastq file
-
-    Used by Icell8Stats to collect counts for each file
-    supplied.
-
-    Arguments:
-      fastq (str): path to Fastq file
-
-    Returns:
-      Tuple: tuple consisting of (fastq,counts,umis)
-        where 'fastq' is the path to the input Fastq
-        file, 'counts' is a dictionary with barcodes
-        as keys and read counts as values, and 'umis'
-        is a dictionary with barcodes as keys and
-        sets of UMIs as values.
-    """
-    print "collect_fastq_stats: started: %s" % fastq
-    try:
-        n = FastqReadCounter.zcat_wc(fastq)
-        counts = {}
-        umis = {}
-        for i,r in enumerate(FastqIterator(fastq),start=1):
-            if i%1000000 == 0:
-                print "%s: %s: %d/%d" % (time.strftime("%Y%m%d.%H%M%S"),
-                                         os.path.basename(fastq),i,n)
-            r = ICell8Read1(r)
-            barcode = r.barcode
-            try:
-                counts[barcode] += 1
-            except KeyError:
-                counts[barcode] = 1
-            umi = r.umi
-            try:
-                umis[barcode].add(umi)
-            except KeyError:
-                umis[barcode] = set((umi,))
-    except Exception as ex:
-        print "collect_fastq_stats: caught exception: '%s'" % ex
-        raise Exception("collect_fastq_stats: %s: caught exception "
-                        "'%s'",(fastq,ex))
-    print "collect_fastq_stats: returning: %s" % fastq
-    return (fastq,counts,umis)
 
 def normalize_sample_name(s):
     """
@@ -331,6 +287,109 @@ class ICell8FastqIterator(Iterator):
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
 
+class ICell8StatsCollector(object):
+    """
+    Class to collect ICell8 barcode and UMI counts
+
+    This class essentially wraps a single function
+    which gets ICell8 barcodes and distinct UMI
+    counts from a Fastq file. It is used by the
+    `Icell8Stats` class to collect counts for each
+    file supplied.
+
+    Example usage:
+
+    >>> collector = ICell8StatsCollector()
+    >>> fq,counts,barcodes = collector(fastq)
+
+    By default the collection process is (relatively)
+    quiet; more verbose output can be requested by
+    setting the `verbose` argument to True on
+    instantiation.
+
+    The collector has been implemented as a callable
+    class so that it can be used with both the built-in
+    `map` function and `Pool.map` from the Python
+    `multiprocessing` module. (Specifically, this
+    implementation works around issues with
+    `multiprocessing` being unable to pickle an
+    instance method - otherwise we could use e.g.
+
+    >>> pool.map(collector.collect_fastq_stats,fastqs)
+
+    See the question at
+    https://stackoverflow.com/q/1816958/579925
+    and specifically the answer at
+    https://stackoverflow.com/a/6975654/579925
+    for more elaboration.)
+    """
+    def __init__(self,verbose=False):
+        """
+        Create a new ICell8StatsCollector instance
+
+        Arguments:
+          verbose (bool): if True then periodically
+            reports progress to stdout (default:
+            False)
+        """
+        self._verbose = bool(verbose)
+
+    def __call__(self,fastq):
+        return self.collect_fastq_stats(fastq)
+
+    def collect_fastq_stats(self,fastq):
+        """
+        Get barcode and distinct UMI counts for Fastq file
+
+        This method can be called directly, but is
+        also invoked implicitly if its parent instance
+        is called.
+
+        Arguments:
+          fastq (str): path to Fastq file
+
+        Returns:
+          Tuple: tuple consisting of (fastq,counts,umis)
+            where 'fastq' is the path to the input Fastq
+            file, 'counts' is a dictionary with barcodes
+            as keys and read counts as values, and 'umis'
+            is a dictionary with barcodes as keys and
+            sets of UMIs as values.
+        """
+        print "collect_fastq_stats: started: %s" % fastq
+        try:
+            n = FastqReadCounter.zcat_wc(fastq)
+            print "%s: processing %d read%s" % (
+                os.path.basename(fastq),
+                n,('s' if n != 1 else ''))
+            counts = {}
+            umis = {}
+            progress = ProgressChecker(percent=1,total=n)
+            for i,r in enumerate(FastqIterator(fastq),start=1):
+                r = ICell8Read1(r)
+                barcode = r.barcode
+                try:
+                    counts[barcode] += 1
+                except KeyError:
+                    counts[barcode] = 1
+                umi = r.umi
+                try:
+                    umis[barcode].add(umi)
+                except KeyError:
+                    umis[barcode] = set((umi,))
+                if self._verbose:
+                    if progress.check(i):
+                        print "%s: %s: processed %d reads (%.1f%%)" % (
+                            time.strftime("%Y%m%d.%H%M%S"),
+                            os.path.basename(fastq),
+                            i,progress.percent(i))
+        except Exception as ex:
+            print "collect_fastq_stats: caught exception: '%s'" % ex
+            raise Exception("collect_fastq_stats: %s: caught exception "
+                            "'%s'",(fastq,ex))
+        print "collect_fastq_stats: returning: %s" % fastq
+        return (fastq,counts,umis)
+
 class ICell8Stats(object):
     """
     Class for gathering statistics on iCell8 FASTQ R1 files
@@ -353,23 +412,31 @@ class ICell8Stats(object):
             file pairs to be processed
           nprocs (int): number of cores to use for
             statistics generation (default: 1)
+          verbose (bool): if True then print additional
+            output reporting progress of statistics
+            gathering (default: don't report progress)
         """
         # Handle keywords
         nprocs = 1
+        verbose = False
         for kw in kws:
-            if kw not in ('nprocs',):
+            if kw not in ('nprocs','verbose'):
                 raise TypeError("%s got an unexpected keyword "
                                 "argument '%s'" %
                                 (self.__class__.__name__,kw))
             if kw == 'nprocs':
                 nprocs = int(kws['nprocs'])
+            elif kw == 'verbose':
+                verbose = bool(kws['verbose'])
+        # Set up collector instance
+        collector = ICell8StatsCollector(verbose=True)
         # Collect statistics for each file
         print "Collecting stats..."
         if nprocs > 1:
             # Multiple cores
             print "Multicore mode (%d cores)" % nprocs
             pool = Pool(nprocs)
-            results = pool.map(collect_fastq_stats,fastqs)
+            results = pool.map(collector,fastqs)
             print "Processes completed, disposing of pool.."
             pool.close()
             pool.join()
@@ -377,14 +444,19 @@ class ICell8Stats(object):
         else:
             # Single core
             print "Single core mode"
-            results = map(collect_fastq_stats,fastqs)
+            results = map(collector,fastqs)
         # Combine results
         print "Merging stats from each Fastq:"
         self._counts = {}
         self._umis = {}
         for fq,fq_counts,fq_umis in results:
             print "- %s" % fq
-            for barcode in fq_counts:
+            nbarcodes = len(fq_counts)
+            progress = ProgressChecker(percent=5,total=nbarcodes)
+            print "  %d barcode%s" % (nbarcodes,
+                                      ('s' if nbarcodes != 1
+                                       else ''))
+            for i,barcode in enumerate(fq_counts):
                 try:
                     self._counts[barcode] += fq_counts[barcode]
                 except KeyError:
@@ -393,11 +465,23 @@ class ICell8Stats(object):
                     self._umis[barcode].update(fq_umis[barcode])
                 except KeyError:
                     self._umis[barcode] = set(fq_umis[barcode])
+                if verbose:
+                    if progress.check(i):
+                        print "  %d barcodes merged (%.1f%%)" \
+                            % (i,progress.percent(i))
+        nbarcodes = len(self._counts)
+        print "Total %s barcode%s" % (nbarcodes,
+                                      ('s' if nbarcodes != 1
+                                       else ''))
         # Create unique sorted UMI lists
-        print "Sorting UMI lists for each barcode:"
-        for barcode in self._umis:
-            print "- %s" % barcode
+        print "Sorting UMI lists for each barcode"
+        progress = ProgressChecker(percent=1,total=nbarcodes)
+        for i,barcode in enumerate(self._umis):
             self._umis[barcode] = sorted(list(self._umis[barcode]))
+            if verbose:
+                if progress.check(i):
+                    print "- UMIs sorted for %d barcodes (%.1f%%)" \
+                        % (i,progress.percent(i))
         print "Finished stats collection"
 
     def barcodes(self):
