@@ -50,6 +50,7 @@ via a scheduler, to perform the required operations:
 
 import os
 import shutil
+import getpass
 import logging
 import bcftbx.utils as bcftbx_utils
 import applications
@@ -423,7 +424,7 @@ def copytree_command(src,dest):
             recursive=True)
     return copytree_cmd
 
-def set_group_command(group,path,verbose=False):
+def set_group_command(group,path,verbose=False,safe=False):
     """
     Generate command to set group on file or directory
 
@@ -446,18 +447,30 @@ def set_group_command(group,path,verbose=False):
       verbose (bool): if True then output a
         diagnostic for every file processed
         (default: don't output diagnostics)
+      safe (bool): if True then run in 'safe'
+        mode i.e. only files owned by user will
+        be have group updated (default: try to
+        set on all files and directories)
 
     Returns:
       Command: Command instance that can be used to
         set the group.
     """
     path = Location(path)
-    chmod_cmd = applications.Command('chgrp')
+    username = path.user
+    if username is None:
+        username = getpass.getuser()
+    chmod_cmd = applications.Command('find',
+                                     path.path)
+    if safe:
+        chmod_cmd.add_args('-user',username)
+    chmod_cmd.add_args('-exec',
+                       'chgrp')
     if verbose:
         chmod_cmd.add_args('--verbose')
-    chmod_cmd.add_args('-R',
-                       group,
-                       path.path)
+    chmod_cmd.add_args(group,
+                       '{}',
+                       ';')
     if path.is_remote:
         # Set group for remote files
         chmod_cmd = applications.general.ssh_command(
