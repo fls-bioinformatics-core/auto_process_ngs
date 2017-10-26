@@ -20,6 +20,7 @@ import argparse
 import logging
 import tempfile
 import shutil
+import time
 from bcftbx.TabFile import TabFile
 from auto_process_ngs.stats import FastqReadCounter
 from auto_process_ngs.fastq_utils import pair_fastqs
@@ -181,6 +182,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
 ######################################################################
 
 if __name__ == "__main__":
+    print "[%s] ICell8 stats started" % time.strftime("%Y/%m/%d-%H:%M:%S")
     # Handle the command line
     p = argparse.ArgumentParser()
     p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
@@ -207,6 +209,10 @@ if __name__ == "__main__":
                    help="maximum number of reads per batch "
                    "when dividing Fastqs (multicore only; "
                    "default: %d)" % MAXIMUM_BATCH_SIZE)
+    p.add_argument("-T","--temporary-directory",
+                   action="store",default=None,metavar="DIR",
+                   help="use DIR for temporaries, not $TMPDIR "
+                   "or /tmp")
     args = p.parse_args()
 
     # Input Fastqs
@@ -220,7 +226,9 @@ if __name__ == "__main__":
 
     # Number of cores
     nprocs = args.nprocessors
-    print "%d processors will be used" % nprocs
+    print "%d processor%s will be used" % (nprocs,
+                                           ('s' if nprocs != 1
+                                            else ''))
 
     # Pair up Fastq files
     fastqs,unpaired = pair_fastqs(fastqs)
@@ -235,7 +243,15 @@ if __name__ == "__main__":
     fastqs = [pair[0] for pair in fastqs]
 
     # Set up a working directory
-    working_dir = tempfile.mkdtemp(suffix="icell8_stats")
+    if args.temporary_directory is not None:
+        tmpdir = os.path.abspath(args.temporary_directory)
+    else:
+        try:
+            tmpdir = os.path.abspath(os.environ["TMPDIR"])
+        except KeyError:
+            tmpdir = None
+    working_dir = tempfile.mkdtemp(suffix="icell8_stats",
+                                   dir=tmpdir)
     print "Using working dir %s" % working_dir
 
     # Split into batches for multiprocessing
@@ -332,3 +348,4 @@ if __name__ == "__main__":
     # Report summary
     print "#barcodes     : %s" % len(stats.barcodes())
     print "#reads        : %s" % stats.nreads()
+    print "[%s] ICell8 stats completed" % time.strftime("%Y/%m/%d-%H:%M:%S")
