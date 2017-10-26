@@ -176,6 +176,48 @@ class TestUnzip(FileopsTestCase):
         self.assertEqual(open(out_file).read(),
                          "This is a test file")
 
+class TestRename(FileopsTestCase):
+    """Tests for the 'rename' function
+    """
+    def test_local_rename_file(self):
+        """fileops.rename: rename a local file
+        """
+        old_file = os.path.join(self.test_dir,'test.txt')
+        new_file = os.path.join(self.test_dir,'test2.txt')
+        with open(old_file,'w') as fp:
+            fp.write("This is a test file")
+        status = rename(old_file,new_file)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(old_file))
+        self.assertTrue(os.path.exists(new_file))
+
+    def test_local_rename_dir(self):
+        """fileops.rename: rename a local directory
+        """
+        old_dir = os.path.join(self.test_dir,'test_dir')
+        new_dir = os.path.join(self.test_dir,'test_dir2')
+        os.mkdir(old_dir)
+        status = rename(old_dir,new_dir)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(old_dir))
+        self.assertTrue(os.path.exists(new_dir))
+
+class TestExists(FileopsTestCase):
+    """Tests for the 'exists' function
+    """
+    def test_local_exists(self):
+        """fileops.exists: test for a local file/directory
+        """
+        test_file = os.path.join(self.test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        missing = os.path.join(self.test_dir,'missing')
+        self.assertTrue(exists(test_file))
+        self.assertTrue(exists(test_dir))
+        self.assertFalse(exists(missing))
+
 class TestCopyCommand(unittest.TestCase):
     """Tests for the 'copy_command' function
     """
@@ -232,10 +274,15 @@ class TestSetGroupCommand(unittest.TestCase):
         set_group_cmd = set_group_command("adm",
                                           "/here/files")
         self.assertEqual(set_group_cmd.command_line,
-                         ['chgrp',
-                          '-R',
+                         ['find',
+                          '/here/files',
+                          '-user',
+                          getpass.getuser(),
+                          '-exec',
+                          'chgrp',
                           'adm',
-                          '/here/files'])
+                          '{}',
+                          ';'])
     def test_set_group_command_remote(self):
         """fileops.set_group_command: set group on remote files
         """
@@ -244,10 +291,15 @@ class TestSetGroupCommand(unittest.TestCase):
         self.assertEqual(set_group_cmd.command_line,
                          ['ssh',
                           'pjx@remote.com',
+                          'find',
+                          '/there/files',
+                          '-user',
+                          'pjx',
+                          '-exec',
                           'chgrp',
-                          '-R',
                           'adm',
-                          '/there/files'])
+                          '{}',
+                          ';'])
 
 class TestUnzipCommand(unittest.TestCase):
     """Tests for the 'unzip_command' function
