@@ -47,6 +47,7 @@ via a scheduler, to perform the required operations:
 
 import os
 import shutil
+import getpass
 import logging
 import bcftbx.utils as bcftbx_utils
 import applications
@@ -257,6 +258,62 @@ def unzip(zip_file,dest):
         raise Exception("Failed to unzip %s: %s" %
                         (zip_file,ex))
 
+def rename(src,dst):
+    """
+    Rename (move) a file or directory
+
+    Arguments:
+      src (str): path to file or directory to
+        rename
+      dst (str): path to rename 'src' to
+    """
+    src = Location(src)
+    dst = Location(dst)
+    # Sanity check: if destination is remote then
+    # must be on same server as source
+    if dst.is_remote:
+        if dst.server != src.server:
+            raise Exception("Rename: can't rename on different "
+                            "servers")
+    # Build generic system command
+    rename_cmd = applications.Command('mv',
+                                      src.path,
+                                      dst.path)
+    if src.is_remote:
+        # Renaming file on remote system
+        rename_cmd = applications.general.ssh_command(
+            src.user,
+            src.server,
+            rename_cmd.command_line)
+    # Run command and return
+    retval,output = rename_cmd.subprocess_check_output()
+    return retval
+
+def exists(path):
+    """
+    Test if a file or directory exists
+
+    Arguments:
+      path (str): path to file or directory to
+        check existence of
+
+    Returns:
+      Boolean: True if file or directory exists,
+        False otherwise.
+    """
+    path = Location(path)
+    test_cmd = applications.Command('test',
+                                    '-e',
+                                    path.path)
+    if path.is_remote:
+        # Run test on remote system
+        test_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            test_cmd.command_line)
+    retval,output = test_cmd.subprocess_check_output()
+    return (retval == 0)
+
 ########################################################################
 # Command generation functions
 #########################################################################
@@ -356,10 +413,18 @@ def set_group_command(group,path):
         set the group.
     """
     path = Location(path)
-    chmod_cmd = applications.Command('chgrp',
-                                     '-R',
+    username = path.user
+    if username is None:
+        username = getpass.getuser()
+    chmod_cmd = applications.Command('find',
+                                     path.path,
+                                     '-user',
+                                     username,
+                                     '-exec',
+                                     'chgrp',
                                      group,
-                                     path.path)
+                                     '{}',
+                                     ';')
     if path.is_remote:
         # Set group for remote files
         chmod_cmd = applications.general.ssh_command(
