@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2017 Peter Briggs
 #
 ########################################################################
 #
@@ -32,6 +32,7 @@ Classes:
 - ProjectMetadataFile:
 - ZipArchive:
 - OutputFiles:
+- ProgressChecker:
 
 Functions:
 
@@ -2017,6 +2018,75 @@ class ZipArchive(object):
 
     def __del__(self):
         self.close()
+
+class ProgressChecker(object):
+    """
+    Check if an index is a multiple of a value or percentage
+
+    Utility class to help with reporting progress of iterations
+    over large numbers of items.
+
+    Typically progress would only be reported after a certain
+    number or percentage of items have been consumed; the
+    ProgressChecker can be used to check if this number or
+    percentage has been reached.
+
+    Example usage: to report after every 100th item:
+
+    >>> progress = ProgressChecker(every=100)
+    >>> for i in range(10000):
+    >>>    if progress.check(i):
+    >>>       print "Item %d" % i
+
+    To report every 5% of items:
+
+    >>> nitems = 10000
+    >>> progress = ProgressChecker(percent=5,total=nitems)
+    >>> for i in range(nitems):
+    >>>    if progress.check(i):
+    >>>       print "Item %d (%.2f%%)" % (i,progress.percent(i))
+    """
+    def __init__(self,every=None,percent=None,total=None):
+        """
+        Create a new ProgressChecker instance
+
+        Arguments:
+          every (int): specify interval number of items
+            for reporting
+          percent (float): specify a percentage interval
+          total (int): total number of items (must be
+            provided if using `percent`)
+        """
+        if every is None:
+            every = max(int(float(total)*float(percent)/100.0),1)
+        self._every = int(every)
+        self._total = total
+
+    def check(self,i):
+        """
+        Check index to see if it matches the interval
+
+        Arguments:
+          i (int): index to check
+
+        Returns:
+          Boolean: True if index matches the interval,
+            False if not.
+        """
+        return (i%self._every == 0)
+
+    def percent(self,i):
+        """
+        Convert index to a percentage
+
+        Arguments:
+          i (int): index to convert
+
+        Returns:
+          Float: index expressed as a percentage of the
+            total number of items.
+        """
+        return float(i)/float(self._total)*100.0
 
 #######################################################################
 # Functions
