@@ -208,6 +208,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             runner=runner,
             max_concurrent=ap.settings.general.max_concurrent_jobs)
         sched.start()
+        # Keep track of jobs
+        archiving_jobs = []
         # If making fastqs read-only then transfer them separately
         if read_only_fastqs and final:
             rsync_fastqs = applications.general.rsync(
@@ -226,7 +228,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             # Exclude fastqs from main rsync
             excludes.append('--exclude=fastqs')
             wait_for = [rsync_fastqs_job.job_name]
+            # Add to list of jobs
+            archiving_jobs.append(rsync_fastqs_job)
         else:
+            # No separate Fastq rsync
             rsync_fastqs_job = None
             wait_for = ()
         # Main rsync command
@@ -241,31 +246,44 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         print "Running %s" % rsync
         rsync_job = sched.submit(rsync,name="rsync.archive",
                                  wait_for=wait_for)
-        # Wait for scheduler to complete
+        archiving_jobs.append(rsync_job)
+        # Wait for jobs to complete
+        rsync_job.wait()
+        # Check exit status on jobs
+        for job in archiving_jobs:
+            print "%s completed: exit code %s" % (job.name,
+                                                  job.exit_code)
+        retval = sum([j.exit_code for j in archiving_jobs])
+        if retval != 0:
+            logger.warning("One or more archiving jobs failed "
+                           "(non-zero exit code returned)")
+        else:
+            # Set the group
+            if group is not None:
+                print "Setting group of archived files to '%s'" % group
+                if not dry_run:
+                    set_group = fileops.set_group_command(
+                        group,
+                        os.path.join(archive_dir,staging))
+                    set_group_job = sched.submit(
+                        set_group,
+                        name="set_group.archive")
+                    set_group_job.wait()
+                    # Check exit status
+                    exit_code = set_group_job.exit_code
+                    print "%s completed: exit code %s" % (
+                        set_group_job.name,
+                        exit_code)
+                    if exit_code != 0:
+                        logger.warning("Setting group failed (non-zero "
+                                       "exit status code returned)")
+                    retval = retval + exit_code
+        # Finish with scheduler
         sched.wait()
         sched.stop()
-        # Check exit status on job(s)
-        if rsync_fastqs_job:
-            exit_code = rsync_fastqs_job.exit_code
-            print "rsync of FASTQs completed: exit code %s" % exit_code
-            if exit_code != 0:
-                raise Exception("Failed to copy FASTQs to archive location "
-                                "(non-zero exit code returned)")
-        else:
-            exit_code = 0
-        print "rsync of data completed: exit code %s" % rsync_job.exit_code
-        if rsync_job.exit_code != 0:
-            raise Exception("Failed to copy data to archive location "
-                            "(non-zero exit code returned)")
-        # Set returncode
-        retval = exit_code if exit_code != 0 else rsync_job.exit_code
-    # Set the group
-    if group is not None:
-        print "Setting group of archived files to '%s'" % group
-        if not dry_run:
-            fileops.set_group(
-                group,
-                os.path.join(archive_dir,staging))
+        # Bail out if there was a problem
+        if retval != 0:
+            raise Exception("Staging to archive failed")
     # Move to final location
     if final:
         print "Moving to final location: %s" % final_dest
