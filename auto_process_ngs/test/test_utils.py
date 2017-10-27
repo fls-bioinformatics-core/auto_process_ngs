@@ -1460,6 +1460,54 @@ class TestOutputFiles(unittest.TestCase):
         out.open('test2',append=True)
         self.assertEqual(len(out),1)
 
+class TestShowProgressChecker(unittest.TestCase):
+    """
+    Tests for the ProgressChecker class
+    """
+    def test_check_progress_every(self):
+        """
+        ProgressChecker: check every N items
+        """
+        progress = ProgressChecker(every=1)
+        self.assertTrue(progress.check(0))
+        self.assertTrue(progress.check(1))
+        progress = ProgressChecker(every=5)
+        self.assertTrue(progress.check(0))
+        self.assertFalse(progress.check(1))
+        self.assertTrue(progress.check(5))
+        self.assertTrue(progress.check(20))
+        self.assertFalse(progress.check(21))
+    def test_check_progress_every_percent(self):
+        """
+        ProgressChecker: check every percentage of items
+        """
+        progress = ProgressChecker(percent=5,total=12209)
+        self.assertTrue(progress.check(0))
+        self.assertFalse(progress.check(1))
+        self.assertFalse(progress.check(609))
+        self.assertTrue(progress.check(610))
+    def test_check_progress_every_percent_zero_total(self):
+        """
+        ProgressChecker: supplied total is zero for percentage
+        """
+        progress = ProgressChecker(percent=5,total=0)
+        self.assertFalse(progress.check(0))
+    def test_check_progress_every_percent_zero_total(self):
+        """
+        ProgressChecker: supplied total is smaller than percentage
+        """
+        progress = ProgressChecker(percent=10,total=9)
+        self.assertTrue(progress.check(0))
+        self.assertTrue(progress.check(1))
+    def test_get_percentage(self):
+        """
+        ProgressChecker: check returned percentage
+        """
+        progress = ProgressChecker(percent=5,total=12209)
+        self.assertEqual(progress.percent(0),float(0))
+        self.assertEqual(progress.percent(610),610.0/12209.0*100.0)
+        self.assertEqual(progress.percent(12209),float(100))
+
 class TestBasesMaskIsPairedEnd(unittest.TestCase):
     """Tests for the bases_mask_is_paired_end function
 

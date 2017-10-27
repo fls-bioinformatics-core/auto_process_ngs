@@ -11,8 +11,8 @@ from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import ICell8Read1
 from auto_process_ngs.icell8_utils import ICell8ReadPair
 from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8_utils import ICell8StatsCollector
 from auto_process_ngs.icell8_utils import ICell8Stats
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
 from auto_process_ngs.icell8_utils import normalize_sample_name
 from auto_process_ngs.icell8_utils import get_icell8_bases_mask
 
@@ -242,6 +242,49 @@ class TestICell8FastqIterator(unittest.TestCase):
             fqr2_data += "%s\n" % pair.r2
         self.assertEqual(fqr1_data,icell8_fastq_r1)
         self.assertEqual(fqr2_data,icell8_fastq_r2)
+
+class TestICell8StatsCollector(unittest.TestCase):
+    """Tests for the ICell8StatsCollector class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.ICell8Stats')
+        # Test files
+        self.r1 = os.path.join(self.wd,'icell8.r1.fq')
+        with open(self.r1,'w') as fp:
+            fp.write(icell8_fastq_r1)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_icell8statscollector(self):
+        """ICell8StatsCollector: collect barcodes and UMIs
+        """
+        collector = ICell8StatsCollector()
+        fastq,counts,umis = collector(self.r1)
+        self.assertEqual(fastq,self.r1)
+        self.assertEqual(len(counts),3)
+        self.assertEqual(counts['GTTCCTGATTA'],1)
+        self.assertEqual(counts['AGAAGAGTACC'],1)
+        self.assertEqual(counts['GTCTGCAACGC'],1)
+        self.assertEqual(len(umis),3)
+        self.assertEqual(umis['GTTCCTGATTA'],set(['AGTCAAGTGCTGGG']))
+        self.assertEqual(umis['AGAAGAGTACC'],set(['TGGAAAATGTTGGC']))
+        self.assertEqual(umis['GTCTGCAACGC'],set(['GGAGGCCGGATCGC']))
+    def test_icell8statscollector_verbose_output(self):
+        """ICell8StatsCollector: collect in verbose mode
+        """
+        collector = ICell8StatsCollector(verbose=True)
+        fastq,counts,umis = collector(self.r1)
+        self.assertEqual(fastq,self.r1)
+        self.assertEqual(len(counts),3)
+        self.assertEqual(counts['GTTCCTGATTA'],1)
+        self.assertEqual(counts['AGAAGAGTACC'],1)
+        self.assertEqual(counts['GTCTGCAACGC'],1)
+        self.assertEqual(len(umis),3)
+        self.assertEqual(umis['GTTCCTGATTA'],set(['AGTCAAGTGCTGGG']))
+        self.assertEqual(umis['AGAAGAGTACC'],set(['TGGAAAATGTTGGC']))
+        self.assertEqual(umis['GTCTGCAACGC'],set(['GGAGGCCGGATCGC']))
 
 class TestICell8Stats(unittest.TestCase):
     """Tests for the ICell8Stats class
