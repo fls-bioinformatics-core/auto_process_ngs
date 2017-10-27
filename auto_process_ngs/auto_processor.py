@@ -29,6 +29,7 @@ import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
 import config
+import commands
 import applications
 import fileops
 import utils
@@ -43,9 +44,60 @@ from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
 #######################################################################
+# Decorators
+#######################################################################
+
+def add_command(name,f):
+    """
+    Add a method to a class
+
+    Implements an '@add_command' decorator which can be
+    used to add a function to a class as a new method
+    (aka 'command').
+
+    For example:
+
+    >>> def hello(cls):
+    ...    print "Hello %s" % cls.person
+    ...
+    >>> @command("greeting",hello)
+    ... class Example:
+    ...   def __init__(self):
+    ...      self.person = "World"
+    ...
+    >>> Example().greeting()
+    Running 'greeting' command
+    Hello World
+    'greeting': finished
+
+    The function must accept a class instance as the
+    first argument.
+    """
+    def wrapped_func(*args,**kws):
+        # Wraps execution of the supplied
+        # function to trap exceptions and
+        # add additional commentary
+        print "Running '%s' command" % name
+        try:
+            ret = f(*args,**kws)
+        except Exception as ex:
+            logging.fatal("%s: %s" % (name,ex))
+            ret = 1
+        else:
+            print "%s: finished" % name
+        return ret
+    def wrapper(cls):
+        # Adds the supplied function to
+        # to the class
+        setattr(cls,name,wrapped_func)
+        return cls
+    return wrapper
+
+#######################################################################
 # Classes
 #######################################################################
 
+@add_command("archive",commands.archive_cmd.archive)
 class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
