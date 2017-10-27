@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#     commands.py: implement auto process commands
+#     archive_cmd.py: implement auto process archive command
 #     Copyright (C) University of Manchester 2017 Peter Briggs
 #
 #########################################################################
@@ -11,12 +11,11 @@
 
 import os
 import time
-import applications
-import simple_scheduler
-import tenx_genomics_utils
-import applications
-import fileops
 import logging
+import auto_process_ngs.applications as applications
+import auto_process_ngs.fileops as fileops
+import auto_process_ngs.simple_scheduler as simple_scheduler
+import auto_process_ngs.tenx_genomics_utils as tenx_genomics_utils
 from bcftbx.JobRunner import fetch_runner
 
 # Fetch configuration settings

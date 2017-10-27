@@ -10,7 +10,7 @@ import pwd
 import grp
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
-from auto_process_ngs.commands import archive
+from auto_process_ngs.commands.archive_cmd import archive
 
 # Unit tests
 

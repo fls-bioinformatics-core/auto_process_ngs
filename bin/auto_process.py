@@ -76,7 +76,7 @@ from bcftbx.cmdparse import add_runner_option
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
-import auto_process_ngs.commands as commands
+from auto_process_ngs.commands import archive_cmd
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.samplesheet_utils import predict_outputs
 from auto_process_ngs.utils import paginate
@@ -1074,15 +1074,15 @@ if __name__ == "__main__":
                         if options.view:
                             paginate(open(d.readme_file,'r').read())
         elif cmd == 'archive':
-            retcode = commands.archive(d,
-                                       archive_dir=options.archive_dir,
-                                       platform=options.platform,
-                                       year=options.year,
-                                       group=options.group,
-                                       perms=options.chmod,
-                                       final=options.final,
-                                       force=options.force,
-                                       dry_run=options.dry_run)
+            retcode = archive_cmd.archive(d,
+                                          archive_dir=options.archive_dir,
+                                          platform=options.platform,
+                                          year=options.year,
+                                          group=options.group,
+                                          perms=options.chmod,
+                                          final=options.final,
+                                          force=options.force,
+                                          dry_run=options.dry_run)
             sys.exit(retcode)
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
