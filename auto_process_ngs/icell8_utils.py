@@ -364,7 +364,7 @@ class ICell8StatsCollector(object):
                 n,('s' if n != 1 else ''))
             counts = {}
             umis = {}
-            progress = ProgressChecker(percent=1,total=n)
+            progress = ProgressChecker(percent=5,total=n)
             for i,r in enumerate(FastqIterator(fastq),start=1):
                 r = ICell8Read1(r)
                 barcode = r.barcode
@@ -475,7 +475,7 @@ class ICell8Stats(object):
                                        else ''))
         # Create unique sorted UMI lists
         print "Sorting UMI lists for each barcode"
-        progress = ProgressChecker(percent=1,total=nbarcodes)
+        progress = ProgressChecker(percent=5,total=nbarcodes)
         for i,barcode in enumerate(self._umis):
             self._umis[barcode] = sorted(list(self._umis[barcode]))
             if verbose:
