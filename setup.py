@@ -37,6 +37,7 @@ setup(name = "auto_process_ngs",
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
       packages = ['auto_process_ngs',
+                  'auto_process_ngs.commands',
                   'auto_process_ngs.qc',],
       license = 'Artistic License',
       # Pull in dependencies

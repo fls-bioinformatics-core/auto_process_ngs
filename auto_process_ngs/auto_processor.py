@@ -29,6 +29,7 @@ import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
 import config
+import commands
 import applications
 import fileops
 import utils
@@ -43,9 +44,60 @@ from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
 #######################################################################
+# Decorators
+#######################################################################
+
+def add_command(name,f):
+    """
+    Add a method to a class
+
+    Implements an '@add_command' decorator which can be
+    used to add a function to a class as a new method
+    (aka 'command').
+
+    For example:
+
+    >>> def hello(cls):
+    ...    print "Hello %s" % cls.person
+    ...
+    >>> @command("greeting",hello)
+    ... class Example:
+    ...   def __init__(self):
+    ...      self.person = "World"
+    ...
+    >>> Example().greeting()
+    Running 'greeting' command
+    Hello World
+    'greeting': finished
+
+    The function must accept a class instance as the
+    first argument.
+    """
+    def wrapped_func(*args,**kws):
+        # Wraps execution of the supplied
+        # function to trap exceptions and
+        # add additional commentary
+        print "Running '%s' command" % name
+        try:
+            ret = f(*args,**kws)
+        except Exception as ex:
+            logging.fatal("%s: %s" % (name,ex))
+            ret = 1
+        else:
+            print "%s: finished" % name
+        return ret
+    def wrapper(cls):
+        # Adds the supplied function to
+        # to the class
+        setattr(cls,name,wrapped_func)
+        return cls
+    return wrapper
+
+#######################################################################
 # Classes
 #######################################################################
 
+@add_command("archive",commands.archive_cmd.archive)
 class AutoProcess:
     """
     Class implementing an automatic fastq generation and QC
@@ -2706,183 +2758,6 @@ class AutoProcess:
             return 1
         # Finish
         return 0
-
-    def copy_to_archive(self,archive_dir=None,platform=None,year=None,dry_run=False,
-                        chmod=None,group=None,include_bcl2fastq=False,
-                        read_only_fastqs=True,force=False,runner=None):
-        """Copy the analysis directory and contents to an archive area
-
-        Copies the contents of the analysis directory to an archive
-        area, which can be on a local or remote system.
-
-        The archive directory is constructed in the form
-
-        <TOP_DIR>/<YEAR>/<PLATFORM>/<DIR>/...
-
-        The YEAR and PLATFORM can be overriden using the appropriate
-        arguments.
-
-        By default the 'bcl2fastq' directory is omitted from the
-        archive, unless the fastq files in any projects are links to
-        the data. Inclusion of this directory can be forced by
-        setting the appropriate argument.
-
-        The fastqs will be switched to be read-only in the archive
-        by default.
-
-        'rsync' is used to perform the transfer.
-
-        Arguments:
-          archive_dir: top level archive directory, of the form
-            '[[user@]host:]dir'; if not set then use the value from
-            the settings.ini file.
-          platform: set the value of the <PLATFORM> level in the
-            archive.
-          year: set the value of the <YEAR> level in the archive;
-            if not set then defaults to the current year (4 digits)
-          dry_run: report what would be done but don't perform any
-            operations.
-          chmod: change the mode of the destination files and
-            directories according to the supplied argument (e.g.
-            'g+w'); if not set then use the value from
-            the settings.ini file.
-          group: set the group of the destination files to the
-            supplied argument; if not set then use the value from
-            the settings.ini file.
-          include_bcl2fastq: if True then force inclusion of the
-            'bcl2fastq' subdirectory; otherwise only include it if
-            fastq files in project subdirectories are symlinks.
-          read_only_fastqs: if True then make the fastqs read-only
-            in the destination directory; otherwise keep the original
-            permissions.
-          force: if True then do archiving even if key metadata items
-            are not set; otherwise abort archiving operation.
-          runner: (optional) specify a non-default job runner to use
-            for primary data rsync
-
-        Returns:
-          UNIX-style integer returncode: 0 = successful termination,
-          non-zero indicates an error occurred.
-
-        """
-        # Return value
-        retval = 0
-        # Check first: are there any projects?
-        projects = self.get_analysis_projects()
-        if not projects:
-            raise Exception("No project directories found, nothing to archive")
-        # Check metadata
-        check_metadata = self.check_metadata(('source','run_number'))
-        if not check_metadata:
-            if not force:
-                logging.error("Some metadata items not set, stopping")
-                return
-            logging.warning("Some metadata items not set, proceeding")
-        # Fetch archive location
-        if archive_dir is None:
-            archive_dir = self.settings.archive.dirn
-        if archive_dir is None:
-            raise Exception, "No archive directory specified (use --archive_dir option?)"
-        # Construct subdirectory structure i.e. platform and year
-        if platform is None:
-            platform = self.metadata.platform
-        if platform is None:
-            raise Exception, "No platform specified (use --platform option?)"
-        if year is None:
-            year = time.strftime("%Y")
-        archive_dir = os.path.join(archive_dir,year,platform)
-        print "Copying to archive directory: %s" % archive_dir
-        print "Platform: %s" % platform
-        print "Year    : %s" % year
-        # Determine which directories to exclude
-        excludes = ['--exclude=primary_data',
-                    '--exclude=save.*',
-                    '--exclude=*.bak',
-                    '--exclude=tmp.*']
-        if not include_bcl2fastq:
-            # Determine whether bcl2fastq dir should be included implicitly
-            # because there are links from the analysis directories
-            for project in projects:
-                if project.fastqs_are_symlinks:
-                    print "Found at least one project with fastq symlinks (%s)" % project.name
-                    include_bcl2fastq = True
-                    break
-        if not include_bcl2fastq:
-            print "Excluding '%s' directory from archive" % self.params.unaligned_dir
-            excludes.append('--exclude=%s' % self.params.unaligned_dir)
-        # 10xgenomics products to exclude
-        excludes.append('--exclude=*.mro')
-        excludes.append('--exclude="%s*"' %
-                        tenx_genomics_utils.flow_cell_id(self.run_name))
-        # Log dir
-        self.set_log_dir(self.get_log_subdir('archive'))
-        # Set up runner
-        if runner is not None:
-            runner = fetch_runner(runner)
-        else:
-            runner = self.settings.runners.rsync
-        runner.set_log_dir(self.log_dir)
-        # Setup a scheduler for multiple rsync jobs
-        sched = simple_scheduler.SimpleScheduler(
-            runner=runner,
-            max_concurrent=self.settings.general.max_concurrent_jobs)
-        sched.start()
-        # If making fastqs read-only then transfer them separately
-        if read_only_fastqs:
-            rsync_fastqs = applications.general.rsync(self.analysis_dir,
-                                                      archive_dir,
-                                                      prune_empty_dirs=True,
-                                                      dry_run=dry_run,
-                                                      chmod='ugo-w',
-                                                      extra_options=(
-                                                          '--include=*/',
-                                                          '--include=fastqs/**',
-                                                          '--exclude=*',))
-            print "Running %s" % rsync_fastqs
-            rsync_fastqs_job = sched.submit(rsync_fastqs,
-                                            name="rsync.archive_fastqs")
-            # Exclude fastqs from main rsync
-            excludes.append('--exclude=fastqs')
-            wait_for = [rsync_fastqs_job.job_name]
-        else:
-            rsync_fastqs_job = None
-            wait_for = None
-        # Main rsync command
-        rsync = applications.general.rsync(self.analysis_dir,archive_dir,
-                                           prune_empty_dirs=True,
-                                           dry_run=dry_run,
-                                           chmod=chmod,
-                                           extra_options=excludes)
-        print "Running %s" % rsync
-        rsync_job = sched.submit(rsync,name="rsync.archive",
-                                 wait_for=wait_for)
-        # Wait for scheduler to complete
-        sched.wait()
-        sched.stop()
-        # Check exit status on job(s)
-        if rsync_fastqs_job:
-            exit_code = rsync_fastqs_job.exit_code
-            print "rsync of FASTQs completed: exit code %s" % exit_code
-            if exit_code != 0:
-                logging.error("Failed to copy FASTQs to archive location "
-                              "(non-zero exit code returned)")
-        else:
-            exit_code = 0
-        print "rsync of data completed: exit code %s" % rsync_job.exit_code
-        if rsync_job.exit_code != 0:
-            logging.error("Failed to copy data to archive location "
-                          "(non-zero exit code returned)")
-        # Set returncode
-        retval = exit_code if exit_code != 0 else rsync_job.exit_code
-        # Set the group
-        if group is not None:
-            print "Setting group of archived files to '%s'" % group
-            fileops.set_group(
-                group,
-                os.path.join(archive_dir,
-                             os.path.basename(self.analysis_dir)))
-        # Finish
-        return retval
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
