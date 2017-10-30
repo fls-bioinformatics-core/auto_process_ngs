@@ -1117,15 +1117,39 @@ class AutoProcess:
         print "Saving project metadata to %s" % self.params.project_metadata
 
     def get_analysis_projects(self,pattern=None):
-        # Return the analysis projects in a list
-        #
-        # By default returns all projects within the analysis directory
-        # (including 'undetermined').
-        #
-        # If the 'pattern' is not None then it should be a simple pattern
-        # used to match against available names to select a subset of
-        # projects (see bcf_utils.name_matches).
-        project_metadata = self.load_project_metadata(self.params.project_metadata)
+        """
+        Return the analysis projects in a list
+
+        By default returns all projects within the analysis
+        directory (including 'undetermined') which are listed
+        in the 'projects.info' metadata file.
+
+        If the 'pattern' is not None then it should be a simple
+        pattern used to match against available names to select
+        a subset of projects (see bcf_utils.name_matches).
+
+        If any project in 'projects.info' doesn't have a
+        matching analysis directory then an exception is
+        raised.
+
+        Note:
+
+        - If there is no 'projects.info' file then the projects
+          are taken from those in the 'unaligned' directory of
+          the analysis directory.
+        - If there is no 'unaligned' directory then the projects
+          are determined from the subdirectories in the analysis
+          directory.
+
+        Arguments:
+          pattern (str): optional pattern to select a subset
+            of projects (default: select all projects)
+
+        Returns:
+          List: list of AnalysisProject instances.
+        """
+        project_metadata = self.load_project_metadata(
+            self.params.project_metadata)
         projects = []
         if pattern is None:
             pattern = '*'
@@ -1149,9 +1173,11 @@ class AutoProcess:
                         project_dir = name
                     break
             if project_dir is None:
-                logging.error("Unable to resolve directory for project '%s'" % name)
+                logging.error("Unable to resolve directory for project "
+                              "'%s'" % name)
                 logging.error("Possible dirs: %s" % dirs)
-                raise Exception("Unable to resolve directory for project '%s'" % name)
+                raise Exception("Unable to resolve directory for project "
+                                "'%s'" % name)
             # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
             projects.append(utils.AnalysisProject(name,project_dir))

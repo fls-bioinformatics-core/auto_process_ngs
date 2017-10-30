@@ -9,6 +9,7 @@ import os
 import gzip
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.mock import UpdateAnalysisDir
@@ -123,6 +124,169 @@ class TestAutoProcess(unittest.TestCase):
                                       "002_testing",
                                       "test_2",
                                       "test2.log"))
+
+class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
+    """
+    Tests for the 'get_analysis_projects' method
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_no_projects_dot_info_no_project_dirs_no_unaligned(self):
+        """AutoProcess.get_analysis_projects: no project dirs (no projects.info, no unaligned)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Remove the projects.info file
+        os.remove(os.path.join(mockdir.dirn,"projects.info"))
+        # Remove the unaligned dir
+        shutil.rmtree(os.path.join(mockdir.dirn,"bcl2fastq"))
+        print os.listdir(mockdir.dirn)
+        # No projects should be listed
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        self.assertEqual(projects,[])
+
+    def test_no_projects_dot_info_no_project_dirs(self):
+        """AutoProcess.get_analysis_projects: no project dirs  (no projects.info)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Remove the projects.info file
+        os.remove(os.path.join(mockdir.dirn,"projects.info"))
+        print os.listdir(mockdir.dirn)
+        # Listing the projects should raise an exception
+        self.assertRaises(Exception,
+                          AutoProcess(mockdir.dirn).get_analysis_projects)
+
+    def test_projects_dot_info_no_project_dirs(self):
+        """AutoProcess.get_analysis_projects: no project dirs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Listing the projects should raise an exception
+        self.assertRaises(Exception,
+                          AutoProcess(mockdir.dirn).get_analysis_projects)
+
+    def test_with_project_dirs(self):
+        """AutoProcess.get_analysis_projects: project dirs exist
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
+
+    def test_with_project_dirs_no_projects_dot_info(self):
+        """AutoProcess.get_analysis_projects: project dirs exist (no projects.info)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove the projects.info file
+        os.remove(os.path.join(mockdir.dirn,"projects.info"))
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
+
+    def test_with_project_dirs_no_projects_dot_info_no_unaligned(self):
+        """AutoProcess.get_analysis_projects: project dirs exist (no projects.info, no unaligned)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove the projects.info file
+        os.remove(os.path.join(mockdir.dirn,"projects.info"))
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
+
+    def test_with_project_dirs_select_subset(self):
+        """AutoProcess.get_analysis_projects: select subset of projects
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects("C*")
+        expected = ('CDE',)
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
 
 class TestAutoProcessSetup(unittest.TestCase):
 
