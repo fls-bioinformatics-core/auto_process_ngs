@@ -7,4 +7,5 @@
 # Imports
 #######################################################################
 
+from publish_qc_cmd import publish_qc
 from archive_cmd import archive
