@@ -498,45 +498,6 @@ class AutoProcess:
         # Save
         project_metadata.save(filen)
 
-    def get_analysis_projects_from_dirs(self):
-        """
-        Return a list of AnalysisProjects in the analysis directory
-
-        Tests each of the subdirectories in the top-level of the
-        analysis directory and rejects any that appear to be
-        CASVAVA/bcl2fastq outputs or which don't successfully load
-        as AnalysisProject instances.
-
-        Returns:
-          List: list of AnalysisProject instances.
-
-        """
-        logging.debug("Testing subdirectories to determine analysis projects")
-        projects = []
-        # Try loading each subdirectory as a project
-        for dirn in bcf_utils.list_dirs(self.analysis_dir):
-            # Test for bcl2fastq output
-            try:
-                IlluminaData.IlluminaData(self.analysis_dir,
-                                          unaligned_dir=dirn)
-                logging.debug("* %s: rejected" % dirn)
-                continue
-            except IlluminaData.IlluminaDataError:
-                pass
-            except Exception as ex:
-                logging.warning("Exception when attempting to load "
-                                "subdir '%s' as CASAVA/bcl2fastq output "
-                                "(ignored): %s" % (dirn,ex))
-            # Try loading as a project
-            test_project = utils.AnalysisProject(
-                dirn,os.path.join(self.analysis_dir,dirn))
-            if test_project.is_analysis_dir:
-                logging.debug("* %s: analysis directory" % dirn)
-                projects.append(test_project)
-            else:
-                logging.debug("* %s: rejected" % dirn)
-        return projects
-
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
         # containing data from bcl2fastq
@@ -1187,6 +1148,48 @@ class AutoProcess:
             if undetermined_analysis is not None and \
                'undetermined' not in [p.name for p in projects]:
                 projects.append(undetermined_analysis)
+        return projects
+
+    def get_analysis_projects_from_dirs(self):
+        """
+        Return a list of AnalysisProjects in the analysis directory
+
+        Tests each of the subdirectories in the top-level of the
+        analysis directory and rejects any that appear to be
+        CASVAVA/bcl2fastq outputs or which don't successfully load
+        as AnalysisProject instances.
+
+        Unlike the `get_analysis_projects` method, no checking
+        against the project metadata (typically in 'projects.info')
+        is performed.
+
+        Returns:
+          List: list of AnalysisProject instances.
+        """
+        logging.debug("Testing subdirectories to determine analysis projects")
+        projects = []
+        # Try loading each subdirectory as a project
+        for dirn in bcf_utils.list_dirs(self.analysis_dir):
+            # Test for bcl2fastq output
+            try:
+                IlluminaData.IlluminaData(self.analysis_dir,
+                                          unaligned_dir=dirn)
+                logging.debug("* %s: rejected" % dirn)
+                continue
+            except IlluminaData.IlluminaDataError:
+                pass
+            except Exception as ex:
+                logging.warning("Exception when attempting to load "
+                                "subdir '%s' as CASAVA/bcl2fastq output "
+                                "(ignored): %s" % (dirn,ex))
+            # Try loading as a project
+            test_project = utils.AnalysisProject(
+                dirn,os.path.join(self.analysis_dir,dirn))
+            if test_project.is_analysis_dir:
+                logging.debug("* %s: analysis directory" % dirn)
+                projects.append(test_project)
+            else:
+                logging.debug("* %s: rejected" % dirn)
         return projects
 
     def undetermined(self):

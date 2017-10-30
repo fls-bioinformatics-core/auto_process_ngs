@@ -288,6 +288,61 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
             matched_projects = [x for x in projects if x.name == p]
             self.assertEqual(len(matched_projects),1)
 
+class TestAutoProcessGetAnalysisProjectsFromDirsMethod(unittest.TestCase):
+    """
+    Tests for the 'get_analysis_projects_from_dirs' method
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_no_projects(self):
+        """AutoProcess.get_analysis_projects_from_dirs: no project dirs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # No projects should be listed
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects_from_dirs()
+        self.assertEqual(projects,[])
+
+    def test_with_projects(self):
+        """AutoProcess.get_analysis_projects_from_dirs: fetches project dirs
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        expected = ('AB','CDE','undetermined')
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
+
 class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):
