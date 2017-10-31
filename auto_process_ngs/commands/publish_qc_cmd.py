@@ -121,6 +121,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                         year,platform)
     else:
         print "dirn:\t%s" % location.path
+    if exclude_zip_files:
+        print "ZIP archives will be excluded from publication"
     if location.path is None:
         raise Exception("No target directory specified")
     if not fileops.exists(str(location)):
