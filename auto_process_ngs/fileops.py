@@ -142,20 +142,30 @@ def _run_command(cmd,sched=None):
         retcode = job.exit_code
     return retcode
 
-def mkdir(newdir):
+def mkdir(newdir,recursive=False):
     """
     Create a directory
 
     The new directory should be identified using a
     specifier of the form '[[USER@]HOST:]NEWDIR'.
 
+    The parent directories must already exist, unless
+    the 'recursive' argument is set (in which case
+    all missing parent directories will also be
+    created).
+
     Arguments:
       newdir (str): location of the new directory (can
         be on local or remote system)
+      recursive (bool): if True then also create
+        missing parent directories (default is not
+        to create missing directories)
     """
     newdir = Location(newdir)
-    mkdir_cmd = applications.Command('mkdir',
-                                     newdir.path)
+    mkdir_cmd = applications.Command('mkdir')
+    if recursive:
+        mkdir_cmd.add_args('-p')
+    mkdir_cmd.add_args(newdir.path)
     if newdir.is_remote:
         # Remote directory
         mkdir_cmd = applications.general.ssh_command(

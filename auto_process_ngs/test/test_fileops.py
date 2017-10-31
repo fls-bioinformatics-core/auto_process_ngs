@@ -68,6 +68,24 @@ class TestMkdirFunction(FileopsTestCase):
         self.assertEqual(status,0)
         self.assertTrue(os.path.isdir(new_dir))
 
+    def test_local_mkdir_missing_parent(self):
+        """fileops.mkdir: fails to make local dir if parent is missing
+        """
+        new_dir = os.path.join(self.test_dir,'new_dir','sub_dir')
+        self.assertFalse(os.path.exists(new_dir))
+        status = mkdir(new_dir)
+        self.assertEqual(status,1)
+        self.assertFalse(os.path.exists(new_dir))
+
+    def test_local_mkdir_recursive(self):
+        """fileops.mkdir: make a local directory recursively
+        """
+        new_dir = os.path.join(self.test_dir,'new_dir','sub_dir')
+        self.assertFalse(os.path.exists(new_dir))
+        status = mkdir(new_dir,recursive=True)
+        self.assertEqual(status,0)
+        self.assertTrue(os.path.isdir(new_dir))
+
 class TestCopyFunction(FileopsTestCase):
     """Tests for the 'copy' function
     """
