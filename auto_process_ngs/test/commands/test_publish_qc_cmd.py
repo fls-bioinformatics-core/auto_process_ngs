@@ -392,7 +392,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                              "qc_report.%s.%s" % (project.name,
                                                   os.path.basename(
                                                       ap.analysis_dir)))),
-                             "%s exists, but shouldn't" % project.name)
+                             "%s exists in final dir, but shouldn't" %
+                             project.name)
 
     def test_publish_qc_with_icell8_outputs(self):
         """publish_qc: project with ICell8 QC outputs

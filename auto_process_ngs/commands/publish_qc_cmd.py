@@ -14,7 +14,6 @@ import time
 import string
 import ast
 import auto_process_ngs.fileops as fileops
-import auto_process_ngs.utils as utils
 import auto_process_ngs.simple_scheduler as simple_scheduler
 import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
@@ -155,10 +154,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         print "...no cellranger QC summaries found"
     # Collect QC for project directories
     print "Checking project directories"
-    ##projects = ap.get_analysis_projects(project_pattern)
-    ##FIXME why do we need to use AnalysisDir here?
-    analysis_dir = utils.AnalysisDir(ap.analysis_dir)
-    projects = analysis_dir.get_projects(project_pattern)
+    projects = ap.get_analysis_projects_from_dirs(pattern=project_pattern)
     project_qc = {}
     for project in projects:
         # Check qc subdirectories
@@ -301,7 +297,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
                    ap.metadata.platform)
     index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
-                   ('Paired end' if analysis_dir.paired_end else 'Single end'))
+                   ('Paired end' if ap.paired_end else 'Single end'))
     try:
         bcl2fastq_software = ast.literal_eval(
             ap.metadata.bcl2fastq_software)
