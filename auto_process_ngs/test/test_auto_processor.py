@@ -365,6 +365,112 @@ class TestAutoProcessGetAnalysisProjectsFromDirsMethod(unittest.TestCase):
             matched_projects = [x for x in projects if x.name == p]
             self.assertEqual(len(matched_projects),1)
 
+class TestAutoProcessPairedEndMethod(unittest.TestCase):
+    """
+    Tests for the 'paired_end' method
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_single_end(self):
+        """AutoProcess.paired_end: check for single-ended data
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=False,
+            top_dir=self.dirn)
+        mockdir.create()
+        self.assertFalse(AutoProcess(mockdir.dirn).paired_end)
+
+    def test_paired_end(self):
+        """AutoProcess.paired_end: check for paired-ended data
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        self.assertTrue(AutoProcess(mockdir.dirn).paired_end)
+
+    def test_single_end_no_projects(self):
+        """AutoProcess.paired_end: check for single-ended data (no project dirs)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=False,
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        self.assertFalse(AutoProcess(mockdir.dirn).paired_end)
+
+    def test_paired_end_no_projects(self):
+        """AutoProcess.paired_end: check for paired-ended data (no project dirs)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        self.assertTrue(AutoProcess(mockdir.dirn).paired_end)
+
+    def test_single_end_no_projects_no_aligned(self):
+        """AutoProcess.paired_end: check for single-ended data (no project dirs, no unaligned)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=False,
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Remove the unaligned dir
+        shutil.rmtree(os.path.join(mockdir.dirn,"bcl2fastq"))
+        self.assertEqual(AutoProcess(mockdir.dirn).paired_end,None)
+
+    def test_paired_end_no_projects_no_unaligned(self):
+        """AutoProcess.paired_end: check for paired-ended data (no project dirs, no unaligned)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Remove the unaligned dir
+        shutil.rmtree(os.path.join(mockdir.dirn,"bcl2fastq"))
+        self.assertEqual(AutoProcess(mockdir.dirn).paired_end,None)
+
 class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):

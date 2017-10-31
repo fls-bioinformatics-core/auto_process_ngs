@@ -731,6 +731,34 @@ class AutoProcess:
         """
         return os.path.join(self.analysis_dir,'metadata.info')
 
+    @property
+    def paired_end(self):
+        """
+        Check if run is paired end
+
+        The endedness of the run is checked as follows:
+
+        - If there are analysis project directories then the
+          ended-ness is determined by checking the contents of
+          these directories
+        - If there are no project directories then the
+          ended-ness is determined from the contents of the
+          'unaligned' directory
+
+        Returns:
+          Boolean: True if run is paired end, False if single end,
+            None if endedness cannot be determined
+        """
+        projects = self.get_analysis_projects_from_dirs()
+        if projects:
+            return reduce(lambda x,y: x and y.info.paired_end,
+                          projects,True)
+        else:
+            try:
+                return self.load_illumina_data().paired_end
+            except IlluminaData.IlluminaDataError:
+                return None
+
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         """
         Set up the initial analysis directory
