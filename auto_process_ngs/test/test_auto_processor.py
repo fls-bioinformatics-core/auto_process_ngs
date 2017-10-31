@@ -343,6 +343,28 @@ class TestAutoProcessGetAnalysisProjectsFromDirsMethod(unittest.TestCase):
             matched_projects = [x for x in projects if x.name == p]
             self.assertEqual(len(matched_projects),1)
 
+    def test_with_projects_select_subset(self):
+        """AutoProcess.get_analysis_projects_from_dirs: selects subset of projects
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # List the projects
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects_from_dirs("C*")
+        expected = ('CDE',)
+        self.assertEqual(len(projects),len(expected))
+        for p in projects:
+            self.assertTrue(isinstance(p,AnalysisProject))
+            self.assertTrue(p.name in expected)
+        for p in expected:
+            matched_projects = [x for x in projects if x.name == p]
+            self.assertEqual(len(matched_projects),1)
+
 class TestAutoProcessSetup(unittest.TestCase):
 
     def setUp(self):

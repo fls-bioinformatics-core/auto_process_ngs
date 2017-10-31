@@ -1150,7 +1150,7 @@ class AutoProcess:
                 projects.append(undetermined_analysis)
         return projects
 
-    def get_analysis_projects_from_dirs(self):
+    def get_analysis_projects_from_dirs(self,pattern=None):
         """
         Return a list of AnalysisProjects in the analysis directory
 
@@ -1163,11 +1163,21 @@ class AutoProcess:
         against the project metadata (typically in 'projects.info')
         is performed.
 
+        If the 'pattern' is not None then it should be a simple
+        pattern used to match against available names to select
+        a subset of projects (see bcf_utils.name_matches).
+
+        Arguments:
+          pattern (str): optional pattern to select a subset
+            of projects (default: select all projects)
+
         Returns:
           List: list of AnalysisProject instances.
         """
         logging.debug("Testing subdirectories to determine analysis projects")
         projects = []
+        if pattern is None:
+            pattern = '*'
         # Try loading each subdirectory as a project
         for dirn in bcf_utils.list_dirs(self.analysis_dir):
             # Test for bcl2fastq output
@@ -1179,15 +1189,17 @@ class AutoProcess:
             except IlluminaData.IlluminaDataError:
                 pass
             except Exception as ex:
-                logging.warning("Exception when attempting to load "
-                                "subdir '%s' as CASAVA/bcl2fastq output "
-                                "(ignored): %s" % (dirn,ex))
+                logging.debug("Exception when attempting to load "
+                              "subdir '%s' as CASAVA/bcl2fastq output "
+                              "(ignored): %s" % (dirn,ex))
             # Try loading as a project
             test_project = utils.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
                 logging.debug("* %s: analysis directory" % dirn)
-                projects.append(test_project)
+                if bcf_utils.name_matches(test_project.name,
+                                              pattern):
+                    projects.append(test_project)
             else:
                 logging.debug("* %s: rejected" % dirn)
         return projects
