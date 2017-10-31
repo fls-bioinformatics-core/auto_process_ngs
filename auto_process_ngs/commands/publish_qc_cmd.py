@@ -550,4 +550,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         sched.stop()
     # Print the URL if given
     if __settings.qc_web_server.url is not None:
-        print "QC published to %s" % __settings.qc_web_server.url
+        url = __settings.qc_web_server.url
+        if use_hierarchy:
+            url = os.path.join(url,year,platform)
+        print "QC published to %s" % url
