@@ -29,6 +29,9 @@ These functions perform specific operations directly:
 - copytree: recursively copy a directory
 - set_group: set the group on a file or directory
 - unzip: unpack a ZIP archive
+- rename: rename (move) a file or directory
+- exists: test if a file or directory exists
+- remove_file: remove (delete) a file
 
 These functions generate commands that can be executed e.g.
 via a scheduler, to perform the required operations:
@@ -322,6 +325,30 @@ def exists(path):
             test_cmd.command_line)
     retval,output = test_cmd.subprocess_check_output()
     return (retval == 0)
+
+def remove_file(path):
+    """
+    Remove (delete) a file
+
+    Arguments:
+      path (str): path to file to delete
+
+    Returns:
+      Integer: zero on success, non-zero on
+        failure.
+    """
+    path = Location(path)
+    rm_cmd = applications.Command('rm',
+                                  '-f',
+                                  path.path)
+    if path.is_remote:
+        # Run removal on remote system
+        rm_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            rm_cmd.command_line)
+    retval,output = rm_cmd.subprocess_check_output()
+    return retval
 
 ########################################################################
 # Command generation functions

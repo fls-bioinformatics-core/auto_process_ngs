@@ -236,6 +236,29 @@ class TestExists(FileopsTestCase):
         self.assertTrue(exists(test_dir))
         self.assertFalse(exists(missing))
 
+class TestRemoveFile(FileopsTestCase):
+    """Tests for the 'remove_file' function
+    """
+    def test_local_remove_file(self):
+        """fileops.remove_file: remove a local file
+        """
+        test_file = os.path.join(self.test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        self.assertTrue(os.path.exists(test_file))
+        status = remove_file(test_file)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(test_file))
+    def test_local_remove_file_fails_on_dir(self):
+        """fileops.remove_file: cannot remove a local directory
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        status = remove_file(test_dir)
+        self.assertEqual(status,1)
+        self.assertTrue(os.path.exists(test_dir))
+
 class TestCopyCommand(unittest.TestCase):
     """Tests for the 'copy_command' function
     """
