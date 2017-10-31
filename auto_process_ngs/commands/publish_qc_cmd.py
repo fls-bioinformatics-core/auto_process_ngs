@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
-               regenerate_reports=False,force=False):
+               regenerate_reports=False,force=False,use_hierarchy=False):
     """
     Copy the QC reports to the webserver
 
@@ -80,6 +80,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
       force (bool): if True then force QC report (re)generation
         even if QC is unverified (default is to raise an
         exception if projects cannot be verified)
+      use_hierarchy (bool): if True then publish to a
+        YEAR/PLATFORM subdirectory under the target location
+        (default is not to use the hierarchy)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -98,6 +101,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         location = fileops.Location(__settings.qc_web_server.dirn)
     else:
         location = fileops.Location(location)
+    if use_hierarchy:
+        year = time.strftime("%Y")
+        platform = ap.metadata.platform
     # Check the settings
     if location.is_remote:
         print "Copying QC to remote directory"
@@ -106,11 +112,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         print "dirn:\t%s" % location.path
     else:
         print "Copying QC to local directory"
+    if use_hierarchy:
+        print "dirn\t%s" % os.path.join(location.path,
+                                        year,platform)
+    else:
         print "dirn:\t%s" % location.path
     if location.path is None:
-        raise Exception, "No target directory specified"
-    dirn = os.path.join(str(location),
-                        os.path.basename(ap.analysis_dir))
+        raise Exception("No target directory specified")
+    if not fileops.exists(str(location)):
+        raise Exception("Target directory '%s' doesn't exist" %
+                        location)
     # Collect processing statistics
     print "Checking for processing QC report"
     processing_qc_html = os.path.join(ap.analysis_dir,
@@ -249,6 +260,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         projects.remove(project)
     if not projects:
         logging.warning("No projects with QC results to publish")
+    # Set up the final destination
+    if use_hierarchy:
+        dirn = os.path.join(str(location),year,platform)
+    else:
+        dirn = str(location)
+    dirn = os.path.join(dirn,os.path.basename(ap.analysis_dir))
+    # Create the publication directory
+    fileops.mkdir(dirn,recursive=True)
+    if not fileops.exists(dirn):
+        raise Exception("Failed to create directory: %s" % dirn)
     # Do file transfer and unpacking
     if projects:
         # Make log directory and set up scheduler
@@ -260,8 +281,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         sched.start()
     else:
         sched = None
-    # Make a directory for the QC reports
-    fileops.mkdir(dirn)
     # Start building an index page
     title = "QC reports for %s" % os.path.basename(ap.analysis_dir)
     index_page = htmlpagewriter.HTMLPageWriter(title)

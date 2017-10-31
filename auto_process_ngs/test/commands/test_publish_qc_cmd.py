@@ -614,3 +614,75 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                              "160621_K00879_0087_000000000-AGEW9_analysis",
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_use_hierarchy(self):
+        """publish_qc: publish using YEAR/PLATFORM hierarchy
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir,
+                   use_hierarchy=True)
+        # Check outputs
+        final_dir = os.path.join(publication_dir,
+                                 "2017",
+                                 "hiseq")
+        self.assertTrue(os.path.exists(final_dir))
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        for item in outputs:
+            f = os.path.join(final_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_missing_destination(self):
+        """publish_qc: raise exception if destination doesn't exist
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Reference publication area which doesn't exist
+        publication_dir = os.path.join(self.dirn,'QC')
+        self.assertFalse(os.path.exists(publication_dir))
+        # Publish
+        self.assertRaises(Exception,
+                          publish_qc,
+                          ap,
+                          location=publication_dir)
+        self.assertFalse(os.path.exists(publication_dir))
