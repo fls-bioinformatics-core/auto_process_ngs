@@ -661,6 +661,94 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_publish_qc_exclude_zip_files(self):
+        """publish_qc: exclude ZIP files from publication
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        projects = ap.get_analysis_projects()
+        for project in projects:
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Add ICell8 report for one project
+        icell8_project = projects[0]
+        UpdateAnalysisProject(icell8_project).add_icell8_outputs()
+        # Add cellranger count output for one project
+        tenxgenomics_project = projects[-1]
+        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir,
+                   exclude_zip_files=True)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        zip_files = []
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            zip_files.append("%s.zip" % project_qc)
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        # ICell8 outputs
+        icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
+                                                  os.path.basename(
+                                                      ap.analysis_dir))
+        outputs.append(icell8_dir)
+        outputs.append(os.path.join(icell8_dir,"icell8_processing_data"))
+        outputs.append(os.path.join(icell8_dir,"icell8_processing.html"))
+        outputs.append(os.path.join(icell8_dir,"stats"))
+        zip_files.append("%s.zip" % icell8_dir)
+        # Cellranger count outputs
+        cellranger_count_dir = "cellranger_count_report.%s.%s" % (
+            tenxgenomics_project.name,
+            os.path.basename(ap.analysis_dir))
+        outputs.append(cellranger_count_dir)
+        outputs.append(os.path.join(cellranger_count_dir,
+                                    "cellranger_count_report.html"))
+        outputs.append(os.path.join(cellranger_count_dir,"cellranger_count"))
+        for sample in tenxgenomics_project.samples:
+            outputs.append(os.path.join(cellranger_count_dir,
+                                        "cellranger_count",
+                                        sample.name,
+                                        "outs",
+                                        "web_summary.html"))
+        zip_files.append("%s.zip" % cellranger_count_dir)
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+        # Check the ZIP files were excluded
+        for zip_file in zip_files:
+            self.assertFalse(os.path.exists(
+                os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             zip_file)),
+                             "ZIP file '%s' exists, but shouldn't" %
+                             zip_file)
+
     def test_publish_qc_missing_destination(self):
         """publish_qc: raise exception if destination doesn't exist
         """

@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
-               regenerate_reports=False,force=False,use_hierarchy=False):
+               regenerate_reports=False,force=False,use_hierarchy=False,
+               exclude_zip_files=False):
     """
     Copy the QC reports to the webserver
 
@@ -83,6 +84,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
       use_hierarchy (bool): if True then publish to a
         YEAR/PLATFORM subdirectory under the target location
         (default is not to use the hierarchy)
+      exclude_zip_files (bool): if True then exclude any ZIP
+        archives from publication (default is to include ZIP
+        files)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -425,6 +429,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         # Check the jobs completed ok
                         if copy_job.exit_status or unzip_job.exit_status:
                             raise Exception("copy and/or unzip job failed")
+                        if exclude_zip_files:
+                            print "Removing %s from server" % qc_zip
+                            fileops.remove_file(os.path.join(
+                                dirn,
+                                os.path.basename(qc_zip)))
                         # Append info to the index page
                         report_html.append(
                             "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
@@ -434,11 +443,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                qc_base,
                                (" (%s)" % fastq_set
                                 if fastq_set is not None else "")))
-                        report_html.append(
-                            "<a href='%s'>[Zip%s]</a>"
-                            % (os.path.basename(qc_zip),
-                               (" (%s)" % fastq_dir
-                                if fastq_set is not None else "")))
+                        if not exclude_zip_files:
+                            report_html.append(
+                                "<a href='%s'>[Zip%s]</a>"
+                                % (os.path.basename(qc_zip),
+                                   (" (%s)" % fastq_dir
+                                    if fastq_set is not None else "")))
                     except Exception as ex:
                         print "Failed to copy QC report: %s" % ex
                 except AttributeError:
@@ -485,6 +495,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     # Check the jobs completed ok
                     if copy_job.exit_status or unzip_job.exit_status:
                         raise Exception("copy and/or unzip job failed")
+                    if exclude_zip_files:
+                        print "Removing %s from server" % icell8_zip
+                        fileops.remove_file(os.path.join(
+                            dirn,
+                            os.path.basename(icell8_zip)))
                     # Append info to the index page
                     report_html.append(
                         "<a href='icell8_processing.%s.%s/" \
@@ -492,9 +507,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         "[Icell8 processing]</a>" % \
                         (project.name,
                          os.path.basename(ap.analysis_dir)))
-                    report_html.append("<a href='%s'>[Zip]</a>" % \
-                                       os.path.basename(
-                                           icell8_processing_zip))
+                    if not exclude_zip_files:
+                        report_html.append("<a href='%s'>[Zip]</a>" % \
+                                           os.path.basename(
+                                               icell8_processing_zip))
                 except Exception as ex:
                     print "Failed to copy ICell8 report: %s" % ex
             except AttributeError:
@@ -519,6 +535,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     # Check the jobs completed ok
                     if copy_job.exit_status or unzip_job.exit_status:
                         raise Exception("copy and/or unzip job failed")
+                    if exclude_zip_files:
+                            print "Removing %s from server" % cellranger_zip
+                            fileops.remove_file(os.path.join(
+                                dirn,
+                                os.path.basename(cellranger_zip)))
                     # Append info to the index page
                     report_html.append(
                         "<a href='cellranger_count_report.%s.%s/" \
@@ -526,8 +547,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         "[Cellranger count]</a>" % \
                         (project.name,
                          os.path.basename(ap.analysis_dir)))
-                    report_html.append("<a href='%s'>[Zip]</a>" % \
-                                       os.path.basename(cellranger_zip))
+                    if not exclude_zip_files:
+                        report_html.append("<a href='%s'>[Zip]</a>" % \
+                                           os.path.basename(cellranger_zip))
                 except Exception as ex:
                     print "Failed to copy cellranger report: %s" % ex
             except AttributeError:
