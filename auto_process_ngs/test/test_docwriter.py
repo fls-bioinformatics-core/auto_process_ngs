@@ -3,6 +3,9 @@
 #######################################################################
 
 import unittest
+import os
+import tempfile
+import shutil
 from auto_process_ngs.docwriter import Document
 from auto_process_ngs.docwriter import Section
 from auto_process_ngs.docwriter import Table
@@ -17,6 +20,14 @@ class TestDocument(unittest.TestCase):
     """
     Tests for the Document class
     """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestDocument')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
     def test_empty_document(self):
         d = Document()
         self.assertEqual(d.title,None)
@@ -69,6 +80,23 @@ class TestDocument(unittest.TestCase):
                           "h2 { color: grey; }"])
         self.assertEqual(d.html(),
                          "<h1>CSS rules</h1>")
+
+    def test_document_write_to_file(self):
+        d = Document("Test Document")
+        outfile = os.path.join(self.dirn,"test.html")
+        self.assertFalse(os.path.exists(outfile))
+        d.write(outfile)
+        self.assertTrue(os.path.exists(outfile))
+        with open(outfile,'r') as fp:
+            html = fp.read()
+            self.assertEqual(html,
+                             "<html>\n"
+                             "<head>\n"
+                             "<title>Test Document</title>\n"
+                             "</head>\n"
+                             "<body>\n"
+                             "<h1>Test Document</h1></body>\n"
+                             "</html>\n")
 
 class TestSection(unittest.TestCase):
     """

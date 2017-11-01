@@ -176,7 +176,7 @@ class Document:
                 html.append("<p>Failed to render section: %s</p>" % ex)
         return '\n'.join(html)
 
-    def write(self):
+    def write(self,outfile):
         """
         Write document contents to a file
 
