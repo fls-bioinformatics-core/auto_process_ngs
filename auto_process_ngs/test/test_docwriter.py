@@ -13,6 +13,7 @@ from auto_process_ngs.docwriter import List
 from auto_process_ngs.docwriter import Img
 from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Target
+from auto_process_ngs.docwriter import Para
 
 # Unit tests
 
@@ -525,3 +526,36 @@ class TestTarget(unittest.TestCase):
         self.assertEqual(ahref.href,"#my_target")
         self.assertEqual(ahref.html(),
                          "<a href='#my_target'>My target</a>")
+
+class TestPara(unittest.TestCase):
+    """
+    Tests for the Para class
+    """
+    def test_empty_para(self):
+        p = Para()
+        self.assertEqual(p.html(),"")
+
+    def test_para(self):
+        p = Para("some text")
+        self.assertEqual(p.html(),"<p>some text</p>")
+        p.add("that was added")
+        self.assertEqual(p.html(),"<p>some text that was added</p>")
+        p = Para("some text","that was added")
+        self.assertEqual(p.html(),"<p>some text that was added</p>")
+
+    def test_para_with_mixture_of_types(self):
+        img = Img("picture.png")
+        ahref= Link("http://example.com")
+        p = Para("Beautiful picture:",img,"See more at",ahref)
+        self.assertEqual(p.html(),
+                         "<p>Beautiful picture: "
+                         "<img src='picture.png' /> "
+                         "See more at "
+                         "<a href='http://example.com'>"
+                         "http://example.com</a></p>")
+
+    def test_para_non_zero(self):
+        p = Para()
+        self.assertFalse(p)
+        p.add("some text")
+        self.assertTrue(p)

@@ -49,6 +49,7 @@ The full list of available classes are:
 - Img: embed references to images
 - Link: embed references to other documents/items
 - Target: create anchor for referencing via a link
+- Para: wrap heterogeneous items into a single block
 """
 
 #######################################################################
@@ -812,3 +813,69 @@ class Target:
         """
         # Build the anchor
         return "<a id='%s' />" % self._name
+
+class Para(object):
+    """
+    Utility to wrap heterogeneous items into a single block
+
+    The Para class provides a way to put several
+    different items (e.g. plain text, links, images)
+    into a single "block" (by default a '<p>'-delimited
+    paragraph).
+
+    Example usage:
+
+    >>> s = Section("QC reports")
+    >>> s.add(Para("%s" % project.name,
+    ...            Link("qc_report.html")))
+
+    The Para wrapper prevents each plain text (i.e.
+    string-like) content element being wrapped in its
+    own <p>...</p> pair; instead only the completely
+    assembled Para HTML is enclosed in <p>...</p>.
+    """
+
+    def __init__(self,*items):
+        """
+        Create a new Para instance
+
+        Arguments:
+          items (sequence): optional, set of
+            items to add to the block
+        """
+        self._content = [x for x in items]
+        self._delimiter = " "
+        self._tag = "p"
+
+    def add(self,*items):
+        """
+        Add (append) content to the block
+
+        Arguments:
+          items (sequence): optional, set of
+            items to append to the bloc
+        """
+        for item in items:
+            self._content.append(item)
+
+    def html(self):
+        """
+        Generate HTML version of the block
+        """
+        if not self._content:
+            return ""
+        html = []
+        for content in self._content:
+            try:
+                html.append(content.html())
+            except AttributeError,ex:
+                html.append("%s" % str(content))
+        return "<%s>%s</%s>" % (self._tag,
+                                self._delimiter.join(html),
+                                self._tag)
+
+    def __nonzero__(self):
+        """
+        Para instance is True if has content, False otherwise
+        """
+        return bool(self._content)
