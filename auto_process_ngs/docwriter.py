@@ -445,14 +445,26 @@ class Table:
         """
         Associate CSS classes with the table
 
+        By default the supplied CSS classes
+        associated with the whole table. If
+        the 'column' keyword is supplied then
+        the classes will be associated only
+        with the table cells in that column.
+
         Arguments:
           classes (list): one or more classes
             to associate with the table
+          column (str): optional, if supplied
+            then should specify a column name
+            with which the classes will be
+            associated
         """
         css_classes = self._css_classes
         for kw in kws:
             if kw == "column":
                 col = kws[kw]
+                if col not in self._columns:
+                    raise KeyError("'%s'" % col)
                 if col not in self._css_classes_columns:
                     self._css_classes_columns[col] = []
                 css_classes = self._css_classes_columns[col]

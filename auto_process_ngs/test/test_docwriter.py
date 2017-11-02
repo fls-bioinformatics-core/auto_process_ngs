@@ -385,6 +385,10 @@ class TestTable(unittest.TestCase):
                          "<tr><td class='key-column summary sunny'>Employee name</td><td>John Doe</td></tr>\n"
                          "<tr><td class='key-column summary sunny'>D.O.B</td><td>12/06/1982</td></tr>\n"
                          "</table>")
+        self.assertRaises(KeyError,
+                          t.add_css_classes,
+                          "blah",
+                          column="doesntexist")
 
     def test_table_no_header(self):
         t = Table(('Key','Value'))
