@@ -45,7 +45,7 @@ The full list of available classes are:
 - Document: construct HTML documents
 - Section: generic document section
 - Table: construct HTML tables
-- List: create ordered and unordere HTML lists
+- List: create ordered and unordered HTML lists
 - Img: embed references to images
 - Link: embed references to other documents/items
 - Target: create anchor for referencing via a link
@@ -68,7 +68,7 @@ VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 # Classes
 #######################################################################
 
-class Document:
+class Document(object):
     """
     Utility class for constructing documents
 
@@ -191,7 +191,7 @@ class Document:
         html.add(self.html())
         html.write("%s" % outfile)
 
-class Section:
+class Section(object):
     """
     Class representing a generic document section
 
@@ -359,7 +359,7 @@ class Section:
         html.append('</div>')
         return '\n'.join(html)
 
-class Table:
+class Table(object):
     """
     Utility class for constructing HTML tables
 
@@ -598,7 +598,7 @@ class Table:
         html.append("</table>")
         return '\n'.join(html)
 
-class List:
+class List(object):
     """
     Utility class for creating ordered and unordered lists
 
@@ -675,7 +675,7 @@ class List:
         html.append("</%s>" % tag)
         return "".join(html)
 
-class Img:
+class Img(object):
     """
     Utility class for embedding <img> tags
 
@@ -746,7 +746,7 @@ class Img:
         else:
             return " ".join(html)
 
-class Link:
+class Link(object):
     """
     Utility class for embedding <a href=...> tags
 
@@ -805,7 +805,7 @@ class Link:
     def __repr__(self):
         return self.html()
 
-class Target:
+class Target(object):
     """
     Utility class for embedding <a id=... /> tags
 
@@ -831,7 +831,6 @@ class Target:
         Arguments:
           name (str): name (i.e. 'id') for the
             target
-
         """
         self._name = name
 
@@ -839,14 +838,12 @@ class Target:
     def name(self):
         """
         Return the name (id) for the target
-
         """
         return self._name
 
     def html(self):
         """
         Generate HTML version of the target
-
         """
         # Build the anchor
         return "<a id='%s' />" % self._name
