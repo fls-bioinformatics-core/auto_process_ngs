@@ -431,6 +431,7 @@ class Table:
         self._rows = []
         self._column_names = dict(aliases)
         self._css_classes = []
+        self._css_classes_columns = {}
         self._output_header = True
 
     @property
@@ -440,7 +441,7 @@ class Table:
         """
         return len(self._rows)
 
-    def add_css_classes(self,*classes):
+    def add_css_classes(self,*classes,**kws):
         """
         Associate CSS classes with the table
 
@@ -448,8 +449,20 @@ class Table:
           classes (list): one or more classes
             to associate with the table
         """
+        css_classes = self._css_classes
+        for kw in kws:
+            if kw == "column":
+                col = kws[kw]
+                if col not in self._css_classes_columns:
+                    self._css_classes_columns[col] = []
+                css_classes = self._css_classes_columns[col]
+            else:
+                raise TypeError(
+                    "add_css_classes() got an "
+                    "unexpected argument '%s'"
+                    % kw)
         for css_class in classes:
-            self._css_classes.append(css_class)
+            css_classes.append(css_class)
 
     def no_header(self):
         """
@@ -537,10 +550,16 @@ class Table:
             header.append("<tr>")
             for col in self._columns:
                 try:
+                    css_classes = " class='%s'" % \
+                                  ' '.join(self._css_classes_columns[col])
+                except KeyError:
+                    css_classes = ''
+                try:
                     col_name = self._column_names[col]
                 except KeyError:
                     col_name = col
-                header.append("<th>%s</th>" % str(col_name))
+                header.append("<th%s>%s</th>" % (css_classes,
+                                                 str(col_name)))
             header.append("</tr>")
             html.append(''.join(header))
         # Body
@@ -549,12 +568,18 @@ class Table:
             line.append("<tr>")
             for col in self._columns:
                 try:
+                    css_classes = " class='%s'" % \
+                                  ' '.join(self._css_classes_columns[col])
+                except KeyError:
+                    css_classes = ''
+                try:
                     value = row[col].html()
                 except KeyError:
                     value = '&nbsp;'
                 except AttributeError:
                     value = row[col]
-                line.append("<td>%s</td>" % value)
+                line.append("<td%s>%s</td>" % (css_classes,
+                                               value))
             line.append("</tr>")
             html.append(''.join(line))
         # Finish

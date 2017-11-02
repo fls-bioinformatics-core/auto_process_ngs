@@ -361,6 +361,31 @@ class TestTable(unittest.TestCase):
                          "<tr><td>Employee name</td><td>John Doe</td></tr>\n"
                          "</table>")
 
+    def test_table_add_css_classes_to_column(self):
+        t = Table(('Key','Value'))
+        t.add_row(Key="Employee name",Value="John Doe")
+        t.add_row(Key="D.O.B",Value="12/06/1982")
+        self.assertEqual(t.html(),
+                         "<table>\n"
+                         "<tr><th>Key</th><th>Value</th></tr>\n"
+                         "<tr><td>Employee name</td><td>John Doe</td></tr>\n"
+                         "<tr><td>D.O.B</td><td>12/06/1982</td></tr>\n"
+                         "</table>")
+        t.add_css_classes("key-column",column="Key")
+        self.assertEqual(t.html(),
+                         "<table>\n"
+                         "<tr><th class='key-column'>Key</th><th>Value</th></tr>\n"
+                         "<tr><td class='key-column'>Employee name</td><td>John Doe</td></tr>\n"
+                         "<tr><td class='key-column'>D.O.B</td><td>12/06/1982</td></tr>\n"
+                         "</table>")
+        t.add_css_classes("summary","sunny",column="Key")
+        self.assertEqual(t.html(),
+                         "<table>\n"
+                         "<tr><th class='key-column summary sunny'>Key</th><th>Value</th></tr>\n"
+                         "<tr><td class='key-column summary sunny'>Employee name</td><td>John Doe</td></tr>\n"
+                         "<tr><td class='key-column summary sunny'>D.O.B</td><td>12/06/1982</td></tr>\n"
+                         "</table>")
+
     def test_table_no_header(self):
         t = Table(('Key','Value'))
         t.add_row(Key="Employee name",Value="John Doe")
