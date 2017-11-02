@@ -596,6 +596,42 @@ class TestAutoProcessSetup(unittest.TestCase):
         self.assertEqual(ap.analysis_dir,analysis_dir)
         del(ap)
 
+    def test_autoprocess_setup_missing_data_directory(self):
+        """AutoProcess.setup raises exception if data directory is missing
+        """
+        # Set up autoprocessor
+        ap = AutoProcess()
+        self.assertRaises(Exception,
+                          ap.setup,
+                          os.path.join(
+                              self.dirn,
+                              '160621_M00879_0087_000000000-AGEW9'))
+        self.assertFalse(os.path.exists(
+            os.path.join(
+                self.dirn,
+                '160621_M00879_0087_000000000-AGEW9_analysis')))
+
+    def test_autoprocess_setup_missing_sample_sheet(self):
+        """AutoProcess.setup raises exception if sample sheet not found
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '160621_NB00879_0087_000000000-AGEW9',
+            'nextseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Set up autoprocessor
+        ap = AutoProcess()
+        self.assertRaises(Exception,
+                          ap.setup,
+                          os.path.join(
+                              self.dirn,
+                              '160621_NB00879_0087_000000000-AGEW9'))
+        self.assertFalse(os.path.exists(
+            os.path.join(
+                self.dirn,
+                '160621_NB00879_0087_000000000-AGEW9_analysis')))
+
 fastq_reads_r1 = (
     "@HISEQ:1:000000000-A2Y1L:1:1101:19264:2433 1:N:0:AGATCGC",
     "AGATAGCCGA","+","?????BBB@B",
