@@ -1553,6 +1553,8 @@ class AutoProcess:
                         fastq = os.path.join(self.analysis_dir,
                                              self.params.unaligned_dir,fq)
                         print "-- %s" % fastq
+                        if not os.path.exists(os.path.dirname(fastq)):
+                            bcf_utils.mkdirs(os.path.dirname(fastq))
                         with gzip.GzipFile(filename=fastq,mode='wb') as fp:
                             fp.write('')
                 else:
