@@ -423,7 +423,7 @@ def copytree_command(src,dest):
             recursive=True)
     return copytree_cmd
 
-def set_group_command(group,path):
+def set_group_command(group,path,verbose=True):
     """
     Generate command to set group on file or directory
 
@@ -443,16 +443,21 @@ def set_group_command(group,path):
       path (str): path to the file or directory
         to change the group of, identified by a
         specifier of the form '[[USER@]HOST:]PATH'
+      verbose (bool): if True then output a
+        diagnostic for every file processed
+        (default)
 
     Returns:
       Command: Command instance that can be used to
         set the group.
     """
     path = Location(path)
-    chmod_cmd = applications.Command('chgrp',
-                                     '-R',
-                                     group,
-                                     path.path)
+    chmod_cmd = applications.Command('chgrp')
+    if verbose:
+        chmod_cmd.add_args('--verbose')
+    chmod_cmd.add_args('-R',
+                       group,
+                       path.path)
     if path.is_remote:
         # Set group for remote files
         chmod_cmd = applications.general.ssh_command(
