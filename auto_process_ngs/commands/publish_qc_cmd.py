@@ -592,5 +592,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if __settings.qc_web_server.url is not None:
         url = __settings.qc_web_server.url
         if use_hierarchy:
-            url = os.path.join(url,year,platform)
+            url = os.path.join(url,
+                               year,
+                               platform,
+                               os.path.basename(ap.analysis_dir),
+                               "index.html")
         print "QC published to %s" % url
