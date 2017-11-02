@@ -15,8 +15,11 @@ import string
 import ast
 import auto_process_ngs.fileops as fileops
 import auto_process_ngs.simple_scheduler as simple_scheduler
+from ..docwriter import Document
+from ..docwriter import Table
+from ..docwriter import Link
+from ..docwriter import Para
 import bcftbx.utils as bcf_utils
-import bcftbx.htmlpagewriter as htmlpagewriter
 from auto_process_ngs import get_version
 
 # Fetch configuration settings
@@ -26,6 +29,33 @@ __settings = auto_process_ngs.settings.Settings()
 # Module specific logger
 import logging
 logger = logging.getLogger(__name__)
+
+#######################################################################
+# Module data
+#######################################################################
+
+CSS_RULES = \
+"""
+h1       { background-color: #42AEC2;
+           color: white;
+           padding: 5px 10px; }
+table    { margin: 10 10;
+           border: solid 1px grey;
+           background-color: white; }
+th       { background-color: grey;
+           color: white;
+           padding: 2px 5px; }
+td       { text-align: left;
+           vertical-align: top;
+           padding: 2px 5px;
+           border-bottom: solid 1px lightgray; }
+td.param { background-color: grey;
+           color: white;
+           padding: 2px 5px;
+           font-weight: bold; }
+div.footer { font-style: italic;
+             font-size: 70%; }
+"""
 
 #######################################################################
 # Command functions
@@ -289,69 +319,49 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         sched = None
     # Start building an index page
     title = "QC reports for %s" % os.path.basename(ap.analysis_dir)
-    index_page = htmlpagewriter.HTMLPageWriter(title)
-    # Add CSS rules
-    index_page.addCSSRule("h1 { background-color: #42AEC2;\n"
-                          "     color: white;\n"
-                          "     padding: 5px 10px; }")
-    index_page.addCSSRule("table { margin: 10 10;\n"
-                          "        border: solid 1px grey;\n"
-                          "        background-color: white; }")
-    index_page.addCSSRule("th    { background-color: grey;\n"
-                          "        color: white;\n"
-                          "        padding: 2px 5px; }")
-    index_page.addCSSRule("td    { text-align: left;\n"
-                          "        vertical-align: top;\n"
-                          "        padding: 2px 5px;\n"
-                          "        border-bottom: solid 1px lightgray; }")
-    index_page.addCSSRule("td.param { background-color: grey;\n"
-                          "           color: white;\n"
-                          "           padding: 2px 5px;\n"
-                          "           font-weight: bold; }")
-    index_page.addCSSRule("p.footer { font-style: italic;\n"
-                          "           font-size: 70%; }")
-    # Build the page
-    index_page.add("<h1>%s</h1>" % title)
+    index_page = Document(title=title)
+    index_page.add_css_rule(CSS_RULES)
     # General info
-    index_page.add("<h2>General information</h2>")
-    index_page.add("<table>")
-    index_page.add("<tr><td class='param'>Run name</td><td>%s</td></tr>" %
-                   os.path.basename(ap.analysis_dir))
-    index_page.add("<tr><td class='param'>Run number</td><td>%s</td></tr>" %
-                   ap.metadata.run_number)
-    index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
-                   ap.metadata.platform)
-    index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
-                   ('Paired end' if ap.paired_end else 'Single end'))
+    general_info = index_page.add_section("General information")
+    params_tbl = Table(("param","value",))
+    params_tbl.no_header()
+    params_tbl.add_css_classes("param",column="param")
+    params_tbl.add_row(param="Run number",
+                       value=ap.metadata.run_number)
+    params_tbl.add_row(param="Platform",
+                       value=ap.metadata.platform)
+    params_tbl.add_row(param="Endedness",
+                       value=('Paired end' if ap.paired_end
+                              else 'Single end'))
     try:
         bcl2fastq_software = ast.literal_eval(
             ap.metadata.bcl2fastq_software)
     except ValueError:
         bcl2fastq_software = None
-    index_page.add("<tr><td class='param'>Bcl2fastq</td><td>%s</td></tr>" %
-                   ('unspecified' if not bcl2fastq_software else
-                    "%s %s" % (bcl2fastq_software[1],
-                               bcl2fastq_software[2])))
-    index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
-                   ap.run_reference_id)
-    index_page.add("</table>")
+    params_tbl.add_row(param="Bcl2fastq",
+                       value=('unspecified' if not bcl2fastq_software else
+                              "%s %s" % (bcl2fastq_software[1],
+                                         bcl2fastq_software[2])))
+    params_tbl.add_row(param="Reference",
+                       value=ap.run_reference_id)
+    general_info.add(params_tbl)
     # Processing QC report
     if processing_qc_html:
         fileops.copy(processing_qc_html,dirn)
-        index_page.add("<h2>Processing Statistics</h2>")
-        index_page.add("<a href='%s'>Processing QC report</a>" %
-                       os.path.basename(processing_qc_html))
+        processing_stats = index_page.add_section("Processing Statistics")
+        processing_stats.add(Link("Processing QC report",
+                                  os.path.basename(processing_qc_html)))
     # Barcode analysis
     if barcodes_files:
         # Create section
-        index_page.add("<h2>Barcode analysis</h2>")
-        index_page.add("<p>Plain text report: "
-                       "<a href='barcodes/barcodes.report'>barcodes.report</a> "
-                       " | XLS: "
-                       "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
-                       " | HTML: "
-                       "<a href='barcodes/barcodes.html'>barcodes.html</a>"
-                       "</p>")
+        barcodes = index_page.add_section("Barcode Analysis")
+        barcodes.add(
+            Para("Plain text report:",
+                 Link("barcodes.report","barcodes/barcodes.report"),
+                 "| XLS:",
+                 Link("barcodes.xls","barcodes/barcodes.xls"),
+                 "| HTML:",
+                 Link("barcodes.html","barcodes/barcodes.html")))
         # Create subdir and copy files
         barcodes_dirn = os.path.join(dirn,'barcodes')
         fileops.mkdir(barcodes_dirn)
@@ -359,7 +369,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             fileops.copy(filen,barcodes_dirn)
     # 10xGenomics cellranger QC summaries
     if cellranger_qc_html:
-        index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
+        cellranger_qc = index_page.add_section(
+            "QC summary: cellranger mkfastq")
         for qc_html in cellranger_qc_html:
             # Check for optional lane list at tail of QC summary
             # e.g. cellranger_qc_summary_45.html
@@ -370,15 +381,22 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             else:
                 lanes = None
             fileops.copy(qc_html,dirn)
-            index_page.add("<a href='%s'>QC summary for %s</a>" %
-                           (os.path.basename(qc_html),
-                            ("all lanes" if lanes is None
-                             else "lanes %s" % lanes)))
+            cellranger_qc.add(Link("QC summary for %s" %
+                                   ("all lanes" if lanes is None
+                                    else "lanes %s" % lanes),
+                                   os.path.basename(qc_html)))
     if projects:
         # Table of projects
-        index_page.add("<h2>QC Reports</h2>")
-        index_page.add("<table>")
-        index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th>Reports</th></tr>")
+        projects_summary = index_page.add_section("QC Reports")
+        projects_tbl = Table(("Project",
+                              "User",
+                              "Library",
+                              "Organism",
+                              "PI",
+                              "Samples",
+                              "Nsamples",
+                              "Reports"))
+        projects_summary.add(projects_tbl)
         # Set the string to represent "null" table entries
         null_str = '&nbsp;'
         # Deal with QC for each project
@@ -392,16 +410,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             organism = null_str if info.organism is None else info.organism
             PI = null_str if info.PI is None else info.PI
             # Generate line in the table of projects
-            index_page.add("<tr>")
-            index_page.add("<td>%s</td>" % project.name)
-            index_page.add("<td>%s</td>" % project_user)
-            index_page.add("<td>%s</td>" % library_type)
-            index_page.add("<td>%s</td>" % organism)
-            index_page.add("<td>%s</td>" % PI)
-            index_page.add("<td>%s</td>" % project.prettyPrintSamples())
-            index_page.add("<td>%d</td>" % len(project.samples))
+            idx = projects_tbl.add_row(Project=project.name,
+                                       User=project_user,
+                                       Library=library_type,
+                                       Organism=organism,
+                                       PI=PI,
+                                       Samples=project.prettyPrintSamples(),
+                                       Nsamples=len(project.samples))
             # Copy QC reports and other artefacts
-            report_html = []
+            report_html = Para()
             for qc_dir in project_qc[project.name].qc_dirs:
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
                 qc_base = "%s_report" % qc_dir
@@ -437,20 +454,20 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                 dirn,
                                 os.path.basename(qc_zip)))
                         # Append info to the index page
-                        report_html.append(
-                            "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
-                            % (qc_base,
-                               project.name,
-                               os.path.basename(ap.analysis_dir),
-                               qc_base,
-                               (" (%s)" % fastq_set
-                                if fastq_set is not None else "")))
+                        fastq_set_name = (" (%s)" % fastq_set
+                                          if fastq_set is not None
+                                          else "")
+                        report_html.add(
+                            Link("[Report%s]" % fastq_set_name,
+                                 "%s.%s.%s/%s.html"
+                                 % (qc_base,
+                                    project.name,
+                                    os.path.basename(ap.analysis_dir),
+                                    qc_base)))
                         if not exclude_zip_files:
-                            report_html.append(
-                                "<a href='%s'>[Zip%s]</a>"
-                                % (os.path.basename(qc_zip),
-                                   (" (%s)" % fastq_dir
-                                    if fastq_set is not None else "")))
+                            report_html.add(
+                                Link("[ZIP%s]" % fastq_set_name,
+                                     os.path.basename(qc_zip)))
                     except Exception as ex:
                         print "Failed to copy QC report: %s" % ex
                 except AttributeError:
@@ -465,11 +482,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     try:
                         fileops.copy(multiqc_report,
                                      os.path.join(dirn,final_multiqc))
-                        report_html.append("<a href='%s'>[MultiQC%s]</a>"
-                                           % (final_multiqc,
-                                              (" (%s)" % fastq_dir
-                                               if fastq_dir != 'fastqs'
-                                               else "")))
+                        report_html.add(
+                            Link("[MultiQC%s]" % fastq_set_name,
+                                 final_multiqc))
                     except Exception as ex:
                         print "Failed to copy MultiQC report: %s" % ex
                 except AttributeError:
@@ -477,7 +492,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     pass
             # Check there is something to add
             if not report_html:
-                report_html.append("QC reports not available")
+                report_html.add("QC reports not available")
             # ICell8 pipeline report
             try:
                 icell8_zip = project_qc[project.name].icell8_zip
@@ -503,16 +518,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             dirn,
                             os.path.basename(icell8_zip)))
                     # Append info to the index page
-                    report_html.append(
-                        "<a href='icell8_processing.%s.%s/" \
-                        "icell8_processing.html'>" \
-                        "[Icell8 processing]</a>" % \
-                        (project.name,
-                         os.path.basename(ap.analysis_dir)))
+                    report_html.add(
+                        Link("[Icell8 processing]",
+                             "icell8_processing.%s.%s/"
+                             "icell8_processing.html" %
+                             (project.name,
+                              os.path.basename(ap.analysis_dir))))
                     if not exclude_zip_files:
-                        report_html.append("<a href='%s'>[Zip]</a>" % \
-                                           os.path.basename(
-                                               icell8_processing_zip))
+                        report_html.add(
+                            Link("[ZIP]",
+                                 os.path.basename(icell8_processing_zip)))
                 except Exception as ex:
                     print "Failed to copy ICell8 report: %s" % ex
             except AttributeError:
@@ -543,30 +558,31 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                 dirn,
                                 os.path.basename(cellranger_zip)))
                     # Append info to the index page
-                    report_html.append(
-                        "<a href='cellranger_count_report.%s.%s/" \
-                        "cellranger_count_report.html'>" \
-                        "[Cellranger count]</a>" % \
-                        (project.name,
-                         os.path.basename(ap.analysis_dir)))
+                    report_html.add(
+                        Link("[Cellranger count]",
+                             "cellranger_count_report.%s.%s/"
+                             "cellranger_count_report.html" %
+                             (project.name,
+                              os.path.basename(ap.analysis_dir))))
                     if not exclude_zip_files:
-                        report_html.append("<a href='%s'>[Zip]</a>" % \
-                                           os.path.basename(cellranger_zip))
+                        report_html.add(
+                            Link("[ZIP]",
+                                 os.path.basename(cellranger_zip)))
                 except Exception as ex:
                     print "Failed to copy cellranger report: %s" % ex
             except AttributeError:
                 # No cellranger count data to copy
                 pass
             # Add to the index
-            index_page.add("<td>%s</td>"
-                           % null_str.join(report_html))
-            index_page.add("</tr>")
-        index_page.add("</table>")
+            projects_tbl.set_value(idx,"Reports",report_html)
     # Finish index page
-    index_page.add("<p class='footer'>Generated by auto_process.py %s on %s</p>" % \
-                       (get_version(),time.asctime()))
+    footer = index_page.add_section()
+    footer.add_css_classes("footer")
+    footer.add("Generated by auto_process.py %s on %s" %
+               (get_version(),time.asctime()))
     # Copy to server
     index_html = os.path.join(ap.tmp_dir,'index.html')
+    print "Writing index page: %s" % index_html
     index_page.write(index_html)
     fileops.copy(index_html,dirn)
     # Stop scheduler
