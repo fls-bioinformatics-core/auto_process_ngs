@@ -187,6 +187,10 @@ class Settings(object):
         self.add_section('qc_web_server')
         self.qc_web_server['dirn'] = config.get('qc_web_server','dirn',None)
         self.qc_web_server['url'] = config.get('qc_web_server','url',None)
+        self.qc_web_server['use_hierarchy'] = config.getboolean(
+            'qc_web_server','use_hierarchy')
+        self.qc_web_server['exclude_zip_files'] = config.getboolean(
+            'qc_web_server','exclude_zip_files')
 
     def get_bcl2fastq_config(self,section,config):
         """

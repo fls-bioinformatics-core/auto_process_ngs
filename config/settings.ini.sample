@@ -75,3 +75,8 @@ chmod = None
 dirn = None
 # url is the top level URL that the 
 url = None
+# If set then use the YEAR/PLATFORM hierarchy under the
+# directory pointed at by dirn
+use_hierarchy = False
+# If set then exclude ZIP archives from publication
+exclude_zip_files = False

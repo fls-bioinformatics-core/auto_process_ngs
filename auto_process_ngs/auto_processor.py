@@ -21,7 +21,6 @@ import shutil
 import time
 import ast
 import gzip
-import string
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
@@ -97,6 +96,7 @@ def add_command(name,f):
 # Classes
 #######################################################################
 
+@add_command("publish_qc",commands.publish_qc_cmd.publish_qc)
 @add_command("archive",commands.archive_cmd.archive)
 class AutoProcess:
     """
@@ -498,45 +498,6 @@ class AutoProcess:
         # Save
         project_metadata.save(filen)
 
-    def get_analysis_projects_from_dirs(self):
-        """
-        Return a list of AnalysisProjects in the analysis directory
-
-        Tests each of the subdirectories in the top-level of the
-        analysis directory and rejects any that appear to be
-        CASVAVA/bcl2fastq outputs or which don't successfully load
-        as AnalysisProject instances.
-
-        Returns:
-          List: list of AnalysisProject instances.
-
-        """
-        logging.debug("Testing subdirectories to determine analysis projects")
-        projects = []
-        # Try loading each subdirectory as a project
-        for dirn in bcf_utils.list_dirs(self.analysis_dir):
-            # Test for bcl2fastq output
-            try:
-                IlluminaData.IlluminaData(self.analysis_dir,
-                                          unaligned_dir=dirn)
-                logging.debug("* %s: rejected" % dirn)
-                continue
-            except IlluminaData.IlluminaDataError:
-                pass
-            except Exception as ex:
-                logging.warning("Exception when attempting to load "
-                                "subdir '%s' as CASAVA/bcl2fastq output "
-                                "(ignored): %s" % (dirn,ex))
-            # Try loading as a project
-            test_project = utils.AnalysisProject(
-                dirn,os.path.join(self.analysis_dir,dirn))
-            if test_project.is_analysis_dir:
-                logging.debug("* %s: analysis directory" % dirn)
-                projects.append(test_project)
-            else:
-                logging.debug("* %s: rejected" % dirn)
-        return projects
-
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
         # containing data from bcl2fastq
@@ -769,6 +730,34 @@ class AutoProcess:
 
         """
         return os.path.join(self.analysis_dir,'metadata.info')
+
+    @property
+    def paired_end(self):
+        """
+        Check if run is paired end
+
+        The endedness of the run is checked as follows:
+
+        - If there are analysis project directories then the
+          ended-ness is determined by checking the contents of
+          these directories
+        - If there are no project directories then the
+          ended-ness is determined from the contents of the
+          'unaligned' directory
+
+        Returns:
+          Boolean: True if run is paired end, False if single end,
+            None if endedness cannot be determined
+        """
+        projects = self.get_analysis_projects_from_dirs()
+        if projects:
+            return reduce(lambda x,y: x and y.info.paired_end,
+                          projects,True)
+        else:
+            try:
+                return self.load_illumina_data().paired_end
+            except IlluminaData.IlluminaDataError:
+                return None
 
     def setup(self,data_dir,analysis_dir=None,sample_sheet=None):
         """
@@ -1117,15 +1106,39 @@ class AutoProcess:
         print "Saving project metadata to %s" % self.params.project_metadata
 
     def get_analysis_projects(self,pattern=None):
-        # Return the analysis projects in a list
-        #
-        # By default returns all projects within the analysis directory
-        # (including 'undetermined').
-        #
-        # If the 'pattern' is not None then it should be a simple pattern
-        # used to match against available names to select a subset of
-        # projects (see bcf_utils.name_matches).
-        project_metadata = self.load_project_metadata(self.params.project_metadata)
+        """
+        Return the analysis projects in a list
+
+        By default returns all projects within the analysis
+        directory (including 'undetermined') which are listed
+        in the 'projects.info' metadata file.
+
+        If the 'pattern' is not None then it should be a simple
+        pattern used to match against available names to select
+        a subset of projects (see bcf_utils.name_matches).
+
+        If any project in 'projects.info' doesn't have a
+        matching analysis directory then an exception is
+        raised.
+
+        Note:
+
+        - If there is no 'projects.info' file then the projects
+          are taken from those in the 'unaligned' directory of
+          the analysis directory.
+        - If there is no 'unaligned' directory then the projects
+          are determined from the subdirectories in the analysis
+          directory.
+
+        Arguments:
+          pattern (str): optional pattern to select a subset
+            of projects (default: select all projects)
+
+        Returns:
+          List: list of AnalysisProject instances.
+        """
+        project_metadata = self.load_project_metadata(
+            self.params.project_metadata)
         projects = []
         if pattern is None:
             pattern = '*'
@@ -1149,9 +1162,11 @@ class AutoProcess:
                         project_dir = name
                     break
             if project_dir is None:
-                logging.error("Unable to resolve directory for project '%s'" % name)
+                logging.error("Unable to resolve directory for project "
+                              "'%s'" % name)
                 logging.error("Possible dirs: %s" % dirs)
-                raise Exception("Unable to resolve directory for project '%s'" % name)
+                raise Exception("Unable to resolve directory for project "
+                                "'%s'" % name)
             # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
             projects.append(utils.AnalysisProject(name,project_dir))
@@ -1161,6 +1176,60 @@ class AutoProcess:
             if undetermined_analysis is not None and \
                'undetermined' not in [p.name for p in projects]:
                 projects.append(undetermined_analysis)
+        return projects
+
+    def get_analysis_projects_from_dirs(self,pattern=None):
+        """
+        Return a list of AnalysisProjects in the analysis directory
+
+        Tests each of the subdirectories in the top-level of the
+        analysis directory and rejects any that appear to be
+        CASVAVA/bcl2fastq outputs or which don't successfully load
+        as AnalysisProject instances.
+
+        Unlike the `get_analysis_projects` method, no checking
+        against the project metadata (typically in 'projects.info')
+        is performed.
+
+        If the 'pattern' is not None then it should be a simple
+        pattern used to match against available names to select
+        a subset of projects (see bcf_utils.name_matches).
+
+        Arguments:
+          pattern (str): optional pattern to select a subset
+            of projects (default: select all projects)
+
+        Returns:
+          List: list of AnalysisProject instances.
+        """
+        logging.debug("Testing subdirectories to determine analysis projects")
+        projects = []
+        if pattern is None:
+            pattern = '*'
+        # Try loading each subdirectory as a project
+        for dirn in bcf_utils.list_dirs(self.analysis_dir):
+            # Test for bcl2fastq output
+            try:
+                IlluminaData.IlluminaData(self.analysis_dir,
+                                          unaligned_dir=dirn)
+                logging.debug("* %s: rejected" % dirn)
+                continue
+            except IlluminaData.IlluminaDataError:
+                pass
+            except Exception as ex:
+                logging.debug("Exception when attempting to load "
+                              "subdir '%s' as CASAVA/bcl2fastq output "
+                              "(ignored): %s" % (dirn,ex))
+            # Try loading as a project
+            test_project = utils.AnalysisProject(
+                dirn,os.path.join(self.analysis_dir,dirn))
+            if test_project.is_analysis_dir:
+                logging.debug("* %s: analysis directory" % dirn)
+                if bcf_utils.name_matches(test_project.name,
+                                              pattern):
+                    projects.append(test_project)
+            else:
+                logging.debug("* %s: rejected" % dirn)
         return projects
 
     def undetermined(self):
@@ -2762,509 +2831,6 @@ class AutoProcess:
     def log_analysis(self):
         # Add a record of the analysis to the logging file
         raise NotImplementedError
-
-    def publish_qc(self,projects=None,location=None,ignore_missing_qc=False,
-                   regenerate_reports=False,force=False):
-        """
-        Copy the QC reports to the webserver
-
-        Looks for and copies various QC reports and outputs to
-        a 'QC server' directory, and generates an HTML index.
-
-        The reports include:
-
-        - processing QC report
-        - 'cellranger mkfastq' QC report
-        - barcode analysis report
-
-        Also if the analysis includes project directories then for
-        each Fastq set in each project:
-
-        - QC report for standard QC
-        - MultiQC report
-
-        Also if a project comprises ICell8 or 10xGenomics Chromium
-        data:
-
-        - ICell8 processing report, or
-        - 'cellranger count' reports for each sample
-
-        Raises an exception if:
-
-        - 'source' and 'run_number' metadata items are not set
-        - a subset of projects don't have associated QC outputs
-          (unless 'ignore_missing_qc' is True)
-
-        Arguments:
-          projects (str): specify a glob-style pattern to match one
-            or more projects to publish the reports for (default is
-            to publish all reports)
-          location (str): override the target location specified in
-            the settings; can be of the form
-            '[[user@]server:]directory'
-          ignore_missing_qc (bool): if True then skip directories
-            with missing QC data or reports (default is to raise
-            an exception if projects have missing QC)
-          regenerate_reports (bool): if True then try to create
-            reports even when they already exist (default is to
-            use existing reports)
-          force (bool): if True then force QC report (re)generation
-            even if QC is unverified (default is to raise an
-            exception if projects cannot be verified)
-        """
-        # Turn off saving of parameters etc
-        self._save_params = False
-        self._save_metadata = False
-        # Check metadata
-        check_metadata = self.check_metadata(('source','run_number'))
-        if not check_metadata:
-            raise Exception("Some metadata items not set, stopping")
-        # Process pattern matching
-        if projects is None:
-            project_pattern = '*'
-        else:
-            project_pattern = projects
-        # Get location to publish qc reports to
-        if location is None:
-            location = fileops.Location(self.settings.qc_web_server.dirn)
-        else:
-            location = fileops.Location(location)
-        # Check the settings
-        if location.is_remote:
-            print "Copying QC to remote directory"
-            print "user:\t%s" % location.user
-            print "host:\t%s" % location.server
-            print "dirn:\t%s" % location.path
-        else:
-            print "Copying QC to local directory"
-            print "dirn:\t%s" % location.path
-        if location.path is None:
-            raise Exception, "No target directory specified"
-        dirn = os.path.join(str(location),
-                            os.path.basename(self.analysis_dir))
-        # Get general data
-        analysis_dir = utils.AnalysisDir(self.analysis_dir)
-        # Collect processing statistics
-        print "Checking for processing QC report"
-        processing_qc_html = os.path.join(self.analysis_dir,
-                                          "processing_qc.html")
-        if os.path.exists(processing_qc_html):
-            print "...found %s" % os.path.basename(processing_qc_html)
-        else:
-            print "...no processing QC report found"
-            processing_qc_html = None
-        # Collect barcode analysis artefacts
-        print "Checking for barcode analysis"
-        if self.params.barcode_analysis_dir is not None:
-            barcode_analysis_dir = self.params.barcode_analysis_dir
-        else:
-            barcode_analysis_dir = 'barcode_analysis'
-        if not os.path.isabs(barcode_analysis_dir):
-            barcode_analysis_dir = os.path.join(self.analysis_dir,
-                                                barcode_analysis_dir)
-        barcodes_files = []
-        if os.path.exists(barcode_analysis_dir):
-            print "...found barcode analysis dir: %s" % barcode_analysis_dir
-            for filen in ('barcodes.report',
-                          'barcodes.xls',
-                          'barcodes.html'):
-                filen = os.path.join(barcode_analysis_dir,filen)
-                if os.path.exists(filen):
-                    print "...found %s" % os.path.basename(filen)
-                    barcodes_files.append(filen)
-        if not barcodes_files:
-            print "...no barcode analysis found"
-        # Collect 10xGenomics cellranger QC summaries
-        print "Checking for 10xGenomics cellranger QC summaries"
-        cellranger_qc_html = []
-        for filen in os.listdir(self.analysis_dir):
-            if filen.startswith("cellranger_qc_summary") and \
-               filen.endswith(".html"):
-                print "...found %s" % filen
-                cellranger_qc_html.append(
-                    os.path.join(self.analysis_dir,filen))
-        if not cellranger_qc_html:
-            print "...no cellranger QC summaries found"
-        # Collect QC for project directories
-        print "Checking project directories"
-        projects = analysis_dir.get_projects(project_pattern)
-        project_qc = {}
-        for project in projects:
-            # Check qc subdirectories
-            print "Checking project '%s':" % project.name
-            project_qc[project.name] = bcf_utils.AttributeDictionary()
-            project_qc[project.name]['qc_dirs'] = {}
-            if not project.qc_dirs:
-                print "...no QC directories found"
-            for qc_dir in project.qc_dirs:
-                print "...found QC dir '%s'" % qc_dir
-                # Gather the QC artefacts
-                qc_artefacts = bcf_utils.AttributeDictionary()
-                project_qc[project.name].qc_dirs[qc_dir] = qc_artefacts
-                # Base name for QC reports
-                qc_base = "%s_report" % qc_dir
-                # Set the source Fastqs dir
-                fastq_dir = project.qc_info(qc_dir).fastq_dir
-                project.use_fastq_dir(fastq_dir)
-                print "...associated Fastq set '%s'" % \
-                    os.path.basename(fastq_dir)
-                # Verify the QC and check for report
-                verified = project.verify_qc(
-                    qc_dir=os.path.join(project.dirn,qc_dir))
-                if verified:
-                    print "...%s: verified QC" % qc_dir
-                    # Check for an existing report
-                    qc_zip = os.path.join(
-                        project.dirn,
-                        "%s_report.%s.%s.zip" %
-                        (qc_dir,project.name,
-                         os.path.basename(self.analysis_dir)))
-                    # Check if we need to (re)generate report
-                    if (regenerate_reports or
-                        not os.path.exists(qc_zip)):
-                        try:
-                            project.qc_report(qc_dir=qc_dir,
-                                              force=force)
-                            print "...%s: (re)generated report" % qc_dir
-                        except Exception as ex:
-                            print "...%s: failed to (re)generate " \
-                                "QC report: %s" \
-                                 % (qc_dir,ex)
-                    # Add to the list of verified QC dirs
-                    if os.path.exists(qc_zip):
-                        qc_artefacts['qc_zip'] = qc_zip
-                    else:
-                        print "...%s: missing QC report" % qc_dir
-                else:
-                    # Not verified
-                    print "...%s: failed to verify QC" % qc_dir
-                # MultiQC report
-                multiqc_report = os.path.join(project.dirn,
-                                              "multi%s.html"
-                                              % qc_base)
-                if os.path.exists(multiqc_report):
-                    print "...%s: found MultiQC report" % qc_dir
-                    qc_artefacts['multiqc_report'] = multiqc_report
-                else:
-                    print "...%s: no MultiQC report" % qc_dir
-            # ICell8 pipeline report
-            icell8_zip = os.path.join(project.dirn,
-                                      "icell8_processing.%s.%s.zip" %
-                                      (project.name,
-                                       os.path.basename(self.analysis_dir)))
-            if os.path.exists(icell8_zip):
-                print "...%s: found ICell8 pipeline report" % project.name
-                project_qc[project.name]['icell8_zip'] = icell8_zip
-            # Cellranger count report
-            cellranger_zip = os.path.join(project.dirn,
-                                          "cellranger_count_report.%s.%s.zip" %
-                                          (project.name,
-                                           os.path.basename(self.analysis_dir)))
-            if os.path.exists(cellranger_zip):
-                print "...%s: found cellranger count report" % project.name
-                project_qc[project.name]['cellranger_zip'] = cellranger_zip
-        # Projects with no QC
-        no_qc_projects = filter(lambda p: not project_qc[p.name].qc_dirs,
-                                projects)
-        # Determine what projects are left and if we can proceed
-        if no_qc_projects:
-            # Failed to generate results for some projects
-            err_msg = "No QC reports for projects: %s" % \
-                      ', '.join([x.name for x in no_qc_projects])
-            if not ignore_missing_qc:
-                # Fatal error
-                raise Exception(err_msg)
-            # Proceed with a warning
-            logging.warning(err_msg)
-        # Remove the 'bad' projects from the list before proceeding
-        for project in no_qc_projects:
-            print "Project %s will be skipped" % project.name
-            projects.remove(project)
-        if not projects:
-            logging.warning("No projects with QC results to publish")
-        # Do file transfer and unpacking
-        if projects:
-            # Make log directory and set up scheduler
-            # to farm out the intensive operations to
-            self.set_log_dir(self.get_log_subdir('publish_qc'))
-            runner = self.settings.general.default_runner
-            runner.set_log_dir(self.log_dir)
-            sched = simple_scheduler.SimpleScheduler(runner=runner)
-            sched.start()
-        else:
-            sched = None
-        # Make a directory for the QC reports
-        fileops.mkdir(dirn)
-        # Start building an index page
-        title = "QC reports for %s" % os.path.basename(self.analysis_dir)
-        index_page = htmlpagewriter.HTMLPageWriter(title)
-        # Add CSS rules
-        index_page.addCSSRule("h1 { background-color: #42AEC2;\n"
-                              "     color: white;\n"
-                              "     padding: 5px 10px; }")
-        index_page.addCSSRule("table { margin: 10 10;\n"
-                              "        border: solid 1px grey;\n"
-                              "        background-color: white; }")
-        index_page.addCSSRule("th    { background-color: grey;\n"
-                              "        color: white;\n"
-                              "        padding: 2px 5px; }")
-        index_page.addCSSRule("td    { text-align: left;\n"
-                              "        vertical-align: top;\n"
-                              "        padding: 2px 5px;\n"
-                              "        border-bottom: solid 1px lightgray; }")
-        index_page.addCSSRule("td.param { background-color: grey;\n"
-                              "           color: white;\n"
-                              "           padding: 2px 5px;\n"
-                              "           font-weight: bold; }")
-        index_page.addCSSRule("p.footer { font-style: italic;\n"
-                              "           font-size: 70%; }")
-        # Build the page
-        index_page.add("<h1>%s</h1>" % title)
-        # General info
-        index_page.add("<h2>General information</h2>")
-        index_page.add("<table>")
-        index_page.add("<tr><td class='param'>Run name</td><td>%s</td></tr>" %
-                       os.path.basename(self.analysis_dir))
-        index_page.add("<tr><td class='param'>Run number</td><td>%s</td></tr>" %
-                       self.metadata.run_number)
-        index_page.add("<tr><td class='param'>Platform</td><td>%s</td></tr>" %
-                       self.metadata.platform)
-        index_page.add("<tr><td class='param'>Endedness</td><td>%s</td></tr>" %
-                       ('Paired end' if analysis_dir.paired_end else 'Single end'))
-        try:
-            bcl2fastq_software = ast.literal_eval(
-                self.metadata.bcl2fastq_software)
-        except ValueError:
-            bcl2fastq_software = None
-        index_page.add("<tr><td class='param'>Bcl2fastq</td><td>%s</td></tr>" %
-                       ('unspecified' if not bcl2fastq_software else
-                       "%s %s" % (bcl2fastq_software[1],
-                                  bcl2fastq_software[2])))
-        index_page.add("<tr><td class='param'>Reference</td><td>%s</td></tr>" %
-                       self.run_reference_id)
-        index_page.add("</table>")
-        # Processing QC report
-        if processing_qc_html:
-            fileops.copy(processing_qc_html,dirn)
-            index_page.add("<h2>Processing Statistics</h2>")
-            index_page.add("<a href='%s'>Processing QC report</a>" %
-                           os.path.basename(processing_qc_html))
-        # Barcode analysis
-        if barcodes_files:
-            # Create section
-            index_page.add("<h2>Barcode analysis</h2>")
-            index_page.add("<p>Plain text report: "
-                           "<a href='barcodes/barcodes.report'>barcodes.report</a> "
-                           " | XLS: "
-                           "<a href='barcodes/barcodes.xls'>barcodes.xls</a>"
-                           " | HTML: "
-                           "<a href='barcodes/barcodes.html'>barcodes.html</a>"
-                           "</p>")
-            # Create subdir and copy files
-            barcodes_dirn = os.path.join(dirn,'barcodes')
-            fileops.mkdir(barcodes_dirn)
-            for filen in barcodes_files:
-                fileops.copy(filen,barcodes_dirn)
-        # 10xGenomics cellranger QC summaries
-        if cellranger_qc_html:
-            index_page.add("<h2>QC summary: cellranger mkfastq</h2>")
-            for qc_html in cellranger_qc_html:
-                # Check for optional lane list at tail of QC summary
-                # e.g. cellranger_qc_summary_45.html
-                # This might not be present
-                lanes = qc_html.split('.')[0].split('_')[-1]
-                if all(c in string.digits for c in lanes):
-                    lanes = ','.join(lanes)
-                else:
-                    lanes = None
-                fileops.copy(qc_html,dirn)
-                index_page.add("<a href='%s'>QC summary for %s</a>" %
-                               (os.path.basename(qc_html),
-                                ("all lanes" if lanes is None
-                                 else "lanes %s" % lanes)))
-        if projects:
-            # Table of projects
-            index_page.add("<h2>QC Reports</h2>")
-            index_page.add("<table>")
-            index_page.add("<tr><th>Project</th><th>User</th><th>Library</th><th>Organism</th><th>PI</th><th>Samples</th><th>#Samples</th><th>Reports</th></tr>")
-            # Set the string to represent "null" table entries
-            null_str = '&nbsp;'
-            # Deal with QC for each project
-            for project in projects:
-                # Reset source Fastqs dir
-                project.use_fastq_dir()
-                # Get local versions of project information
-                info = project.info
-                project_user = null_str if info.user is None else info.user
-                library_type = null_str if info.library_type is None else info.library_type
-                organism = null_str if info.organism is None else info.organism
-                PI = null_str if info.PI is None else info.PI
-                # Generate line in the table of projects
-                index_page.add("<tr>")
-                index_page.add("<td>%s</td>" % project.name)
-                index_page.add("<td>%s</td>" % project_user)
-                index_page.add("<td>%s</td>" % library_type)
-                index_page.add("<td>%s</td>" % organism)
-                index_page.add("<td>%s</td>" % PI)
-                index_page.add("<td>%s</td>" % project.prettyPrintSamples())
-                index_page.add("<td>%d</td>" % len(project.samples))
-                # Copy QC reports and other artefacts
-                report_html = []
-                for qc_dir in project_qc[project.name].qc_dirs:
-                    qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
-                    qc_base = "%s_report" % qc_dir
-                    fastq_dir = project.qc_info(qc_dir).fastq_dir
-                    if fastq_dir != project.info.primary_fastq_dir:
-                        fastq_set = fastq_dir
-                    else:
-                        fastq_set = None
-                    # QC report
-                    try:
-                        qc_zip = qc_artefacts.qc_zip
-                        try:
-                            # Copy and unzip QC report
-                            copy_job = sched.submit(
-                                fileops.copy_command(qc_zip,dirn),
-                                name="copy.qc_report.%s.%s" % (project.name,
-                                                               qc_dir))
-                            unzip_job = sched.submit(
-                                fileops.unzip_command(os.path.join(
-                                    dirn,
-                                    os.path.basename(qc_zip)),
-                                              fileops.Location(dirn).path),
-                                name="unzip.qc_report.%s.%s" % (project.name,
-                                                                qc_dir),
-                                wait_for=(copy_job.name,))
-                            sched.wait()
-                            # Check the jobs completed ok
-                            if copy_job.exit_status or unzip_job.exit_status:
-                                raise Exception("copy and/or unzip job failed")
-                            # Append info to the index page
-                            report_html.append(
-                                "<a href='%s.%s.%s/%s.html'>[Report%s]</a>"
-                                % (qc_base,
-                                   project.name,
-                                   os.path.basename(self.analysis_dir),
-                                   qc_base,
-                                   (" (%s)" % fastq_set
-                                    if fastq_set is not None else "")))
-                            report_html.append(
-                                "<a href='%s'>[Zip%s]</a>"
-                                % (os.path.basename(qc_zip),
-                                   (" (%s)" % fastq_dir
-                                    if fastq_set is not None else "")))
-                        except Exception as ex:
-                            print "Failed to copy QC report: %s" % ex
-                    except AttributeError:
-                        # No QC report
-                        pass
-                    # MultiQC
-                    try:
-                        multiqc_report = qc_artefacts.multiqc_report
-                        assert(os.path.isfile(multiqc_report))
-                        final_multiqc = "multi%s.%s.html" % (qc_base,
-                                                             project.name)
-                        try:
-                            fileops.copy(multiqc_report,
-                                         os.path.join(dirn,final_multiqc))
-                            report_html.append("<a href='%s'>[MultiQC%s]</a>"
-                                               % (final_multiqc,
-                                                  (" (%s)" % fastq_dir
-                                                   if fastq_dir != 'fastqs'
-                                                   else "")))
-                        except Exception as ex:
-                            print "Failed to copy MultiQC report: %s" % ex
-                    except AttributeError:
-                        # No MultiQC report
-                        pass
-                # Check there is something to add
-                if not report_html:
-                    report_html.append("QC reports not available")
-                # ICell8 pipeline report
-                try:
-                    icell8_zip = project_qc[project.name].icell8_zip
-                    try:
-                        # Copy and unzip ICell8 report
-                        copy_job = sched.submit(
-                            fileops.copy_command(icell8_zip,dirn),
-                            name="copy.icell8_report.%s" % project.name)
-                        unzip_job = sched.submit(
-                            fileops.unzip_command(os.path.join(
-                                dirn,
-                                os.path.basename(icell8_zip)),
-                                                  fileops.Location(dirn).path),
-                            name="unzip.icell8_report.%s" % project.name,
-                            wait_for=(copy_job.name,))
-                        sched.wait()
-                        # Check the jobs completed ok
-                        if copy_job.exit_status or unzip_job.exit_status:
-                            raise Exception("copy and/or unzip job failed")
-                        # Append info to the index page
-                        report_html.append(
-                            "<a href='icell8_processing.%s.%s/" \
-                            "icell8_processing.html'>" \
-                            "[Icell8 processing]</a>" % \
-                            (project.name,
-                             os.path.basename(self.analysis_dir)))
-                        report_html.append("<a href='%s'>[Zip]</a>" % \
-                                           os.path.basename(
-                                               icell8_processing_zip))
-                    except Exception as ex:
-                        print "Failed to copy ICell8 report: %s" % ex
-                except AttributeError:
-                    # No ICell8 report
-                    pass
-                # Cellranger count reports
-                try:
-                    cellranger_zip = project_qc[project.name].cellranger_zip
-                    try:
-                        # Copy and unzip cellranger report
-                        copy_job = sched.submit(
-                            fileops.copy_command(cellranger_zip,dirn),
-                            name="copy.cellranger_report.%s" % project.name)
-                        unzip_job = sched.submit(
-                            fileops.unzip_command(os.path.join(
-                                dirn,
-                                os.path.basename(cellranger_zip)),
-                                                  fileops.Location(dirn).path),
-                            name="unzip.cellranger_report.%s" % project.name,
-                            wait_for=(copy_job.name,))
-                        sched.wait()
-                        # Check the jobs completed ok
-                        if copy_job.exit_status or unzip_job.exit_status:
-                            raise Exception("copy and/or unzip job failed")
-                        # Append info to the index page
-                        report_html.append(
-                            "<a href='cellranger_count_report.%s.%s/" \
-                            "cellranger_count_report.html'>" \
-                            "[Cellranger count]</a>" % \
-                            (project.name,
-                             os.path.basename(self.analysis_dir)))
-                        report_html.append("<a href='%s'>[Zip]</a>" % \
-                                           os.path.basename(cellranger_zip))
-                    except Exception as ex:
-                        print "Failed to copy cellranger report: %s" % ex
-                except AttributeError:
-                    # No cellranger count data to copy
-                    pass
-                # Add to the index
-                index_page.add("<td>%s</td>"
-                               % null_str.join(report_html))
-                index_page.add("</tr>")
-            index_page.add("</table>")
-        # Finish index page
-        index_page.add("<p class='footer'>Generated by auto_process.py %s on %s</p>" % \
-                       (get_version(),time.asctime()))
-        # Copy to server
-        index_html = os.path.join(self.tmp_dir,'index.html')
-        index_page.write(index_html)
-        fileops.copy(index_html,dirn)
-        # Stop scheduler
-        if sched is not None:
-            sched.stop()
-        # Print the URL if given
-        if self.settings.qc_web_server.url is not None:
-            print "QC published to %s" % self.settings.qc_web_server.url
         
     def report(self,logging=False,summary=False,full=False,projects=False):
         # Report the contents of the run in various formats

@@ -546,6 +546,10 @@ def add_run_qc_command(cmdparser):
 def add_publish_qc_command(cmdparser):
     """Create a parser for the 'publish_qc' command
     """
+    default_use_hierarchy = ("yes" if __settings.qc_web_server.use_hierarchy
+                             else "no")
+    default_exclude_zips = ("yes" if __settings.qc_web_server.exclude_zip_files
+                             else "no")
     p = cmdparser.add_command('publish_qc',help="Copy QC reports to publication area",
                               usage="%prog publish_qc [OPTIONS] [ANALYSIS_DIR]",
                               description="Copy QC reports from ANALYSIS_DIR to local "
@@ -563,6 +567,14 @@ def add_publish_qc_command(cmdparser):
                  help="specify target directory to copy QC reports to. QC_DIR can "
                  "be a local directory, or a remote location in the form "
                  "'[[user@]host:]directory'. Overrides the default settings.")
+    p.add_option('--use-hierarchy',type='choice',choices=["yes","no"],
+                 dest='use_hierarchy',default=default_use_hierarchy,
+                 help="use YEAR/PLATFORM hierarchy under QC_DIR; can be "
+                 "'yes' or 'no' (default: %s)" % default_use_hierarchy)
+    p.add_option('--exclude-zip-files',type='choice',choices=["yes","no"],
+                 dest='exclude_zip_files',default=default_exclude_zips,
+                 help="exclude ZIP archives from publication; can be 'yes' "
+                 "or 'no' (default: %s)" % default_exclude_zips)
     p.add_option('--ignore-missing-qc',action='store_true',
                  dest='ignore_missing_qc',default=False,
                  help="skip projects where QC results are missing or can't be verified, "
@@ -1085,6 +1097,8 @@ if __name__ == "__main__":
         elif cmd == 'publish_qc':
             d.publish_qc(projects=options.project_pattern,
                          location=options.qc_dir,
+                         use_hierarchy=(options.use_hierarchy == 'yes'),
+                         exclude_zip_files=(options.exclude_zip_files == 'yes'),
                          ignore_missing_qc=options.ignore_missing_qc,
                          regenerate_reports=options.regenerate_reports,
                          force=options.force)

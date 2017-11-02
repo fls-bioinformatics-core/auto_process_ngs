@@ -68,6 +68,24 @@ class TestMkdirFunction(FileopsTestCase):
         self.assertEqual(status,0)
         self.assertTrue(os.path.isdir(new_dir))
 
+    def test_local_mkdir_missing_parent(self):
+        """fileops.mkdir: fails to make local dir if parent is missing
+        """
+        new_dir = os.path.join(self.test_dir,'new_dir','sub_dir')
+        self.assertFalse(os.path.exists(new_dir))
+        status = mkdir(new_dir)
+        self.assertEqual(status,1)
+        self.assertFalse(os.path.exists(new_dir))
+
+    def test_local_mkdir_recursive(self):
+        """fileops.mkdir: make a local directory recursively
+        """
+        new_dir = os.path.join(self.test_dir,'new_dir','sub_dir')
+        self.assertFalse(os.path.exists(new_dir))
+        status = mkdir(new_dir,recursive=True)
+        self.assertEqual(status,0)
+        self.assertTrue(os.path.isdir(new_dir))
+
 class TestCopyFunction(FileopsTestCase):
     """Tests for the 'copy' function
     """
@@ -217,6 +235,29 @@ class TestExists(FileopsTestCase):
         self.assertTrue(exists(test_file))
         self.assertTrue(exists(test_dir))
         self.assertFalse(exists(missing))
+
+class TestRemoveFile(FileopsTestCase):
+    """Tests for the 'remove_file' function
+    """
+    def test_local_remove_file(self):
+        """fileops.remove_file: remove a local file
+        """
+        test_file = os.path.join(self.test_dir,'test.txt')
+        with open(test_file,'w') as fp:
+            fp.write("This is a test file")
+        self.assertTrue(os.path.exists(test_file))
+        status = remove_file(test_file)
+        self.assertEqual(status,0)
+        self.assertFalse(os.path.exists(test_file))
+    def test_local_remove_file_fails_on_dir(self):
+        """fileops.remove_file: cannot remove a local directory
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        status = remove_file(test_dir)
+        self.assertEqual(status,1)
+        self.assertTrue(os.path.exists(test_dir))
 
 class TestCopyCommand(unittest.TestCase):
     """Tests for the 'copy_command' function

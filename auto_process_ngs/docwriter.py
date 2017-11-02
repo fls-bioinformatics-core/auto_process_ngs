@@ -1,25 +1,142 @@
 #!/usr/bin/env python
 #
-# document generation library
+#     docwriter.py: HTML document generation library
+#     Copyright (C) University of Manchester 2017 Peter Briggs
+#
+#########################################################################
+
+"""
+docwriter
+=========
+
+``docwriter`` provides a set of classes that can be used to create
+HTML documents programmatically.
+
+Example usage: create a new document:
+
+>>> d = Document("Report")
+>>> d.add_css_rule("h1 { color: blue; }")
+>>> d.add_css_rule("h2 { color: green; }")
+>>> d.add_css_rule("h3 { color: red; }")
+
+Add a section:
+
+>>> s = d.add_section("Introduction")
+>>> s.add("This is the introduction")
+
+Add a subsection:
+
+>>> subs = s.add_section("Background")
+>>> subs.add("This is the background")
+
+Generate the HTML directly:
+
+>>> d.html()
+
+Write the HTML document to a file:
+
+>>> d.write("report.html")
+
+There are also classes to create lists, tables, images, links and
+anchors (aka "targets") within documents.
+
+The full list of available classes are:
+
+- Document: construct HTML documents
+- Section: generic document section
+- Table: construct HTML tables
+- List: create ordered and unordered HTML lists
+- Img: embed references to images
+- Link: embed references to other documents/items
+- Target: create anchor for referencing via a link
+- Para: wrap heterogeneous items into a single block
+"""
+
+#######################################################################
+# Imports
+#######################################################################
 
 from bcftbx.htmlpagewriter import HTMLPageWriter
 
+#######################################################################
+# Module data
+#######################################################################
+
 VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
-class Document:
+#######################################################################
+# Classes
+#######################################################################
+
+class Document(object):
     """
     Utility class for constructing documents
 
+    Basic usage:
+
+    >>> d = Document("Report")
+    >>> d.add_css_rule("h1 { color: red; }")
+    >>> s = d.add_section("Introduction")
+    >>> s.write("report.html")
+
+    The following properties are available:
+
+    - title: returns the title string
+    - css_rules: returns the CSS rules as a
+      list
+
+    The 'html' method returns the document
+    body rendered as HTML; the 'write'
+    method writes the full HTML document to
+    file, including the document header, CSS
+    rules etc.
     """
     def __init__(self,title=None):
+        """
+        Create a new Document instance
+
+        Arguments:
+          title (str): title for the document
+        """
         self._title = title
         self._sections = []
         self._css_rules = []
 
+    @property
+    def title(self):
+        """
+        Get the document's title
+        """
+        return self._title
+
+    @property
+    def css_rules(self):
+        """
+        Get the CSS rules as a list
+        """
+        return [rule for rule in self._css_rules]
+
     def add_section(self,title=None,section=None,name=None):
         """
-        Add a new section
+        Add a section to the document
 
+        If an existing section is supplied then
+        this is appended to the document; otherwise
+        a new section is created with the title
+        and name supplied.
+
+        Arguments:
+          title (str): title for the new section
+          section (Section): an existing Section
+            instance which will be appended to the
+            document
+          name (str): internal name for the section;
+            if not supplied then the name will be
+            generated automatically from the title.
+
+        Returns:
+          Section: the new or supplied section as
+            appropriate.
         """
         if section is None:
             section = Section(title=title,name=name)
@@ -28,6 +145,12 @@ class Document:
 
     def add_css_rule(self,css_rule):
         """
+        Add a CSS rule block to the document
+
+        Arguments:
+          css_rule (str): block of text to append
+            to the CSS rules to write to the final
+            document
         """
         self._css_rules.append(css_rule)
 
@@ -35,6 +158,14 @@ class Document:
         """
         Generate HTML version of the document contents
 
+        Note that this only generates the "body"
+        HTML code; the header and footers will not
+        be returned (so this will not be the full
+        HTML that is written by the 'write' method).
+
+        Returns:
+          String: HTML representation of the document
+            content.
         """
         html = []
         if self._title is not None:
@@ -50,6 +181,9 @@ class Document:
         """
         Write document contents to a file
 
+        Arguments
+          outfile (str): path to file to write
+            HTML document to
         """
         html = HTMLPageWriter(self._title)
         for css_rule in self._css_rules:
@@ -57,10 +191,43 @@ class Document:
         html.add(self.html())
         html.write("%s" % outfile)
 
-class Section:
+class Section(object):
     """
     Class representing a generic document section
 
+    A 'section' is a container for arbitrary content
+    which can include text, images, links, tables,
+    or other sections (which are considered to be
+    subsections of the containing section).
+
+    A section typically has a title, however
+    'anonymous' (untitled) sections are also allowed.
+
+    Normally sections are created via the 'add_section'
+    methods of a 'Document' or 'Section' instance,
+    however they can also be created independently
+    and then added (again via the 'add_section' method).
+
+    Content is added to the section using the 'add'
+    method, which can invoked multiple times to
+    append additional content.
+
+    When the content is rendered, each item is
+    rendered to html via its 'html' method; or if the
+    item doesn't have a 'html' method then it will be
+    rendered as a string and wrapped in '<p>' tags.
+
+    Example usage:
+
+    >>> d = Document("Report")
+    >>> abstract = d.section("Abstract")
+    >>> abstract.add("This is the abstract","It's quite short")
+    >>> paper = d.section()
+    >>> methods = paper.add_subsection("Methods")
+    >>> methods.add("This describes the methods used")
+    >>> results = paper.add_subsection("Results)
+    >>> result.add("Some nice figures")
+    >>> result.add(Img("graph.png"))
     """
     def __init__(self,title=None,name=None,level=2):
         """
@@ -101,10 +268,28 @@ class Section:
         """
         return self._title
 
+    @property
+    def level(self):
+        """
+        Return the level of the section
+        """
+        return self._level
+
+    @property
+    def css_classes(self):
+        """
+        Return the CSS classes as a list
+        """
+        return [cls for cls in self._css_classes]
+
     def add_css_classes(self,*classes):
         """
         Associate CSS classes with the section
 
+        Arguments:
+          classes (str): the names of one or
+            more CSS classes to associate with
+            the section when it is rendered
         """
         for css_class in classes:
             self._css_classes.append(css_class)
@@ -113,6 +298,11 @@ class Section:
         """
         Add content to the section
 
+        Arguments:
+          args (object): one or more arbitrary
+            items of content to append to the
+            section; items must implement either
+            a 'html' or '__str__' method
         """
         for content in args:
             self._content.append(content)
@@ -120,6 +310,10 @@ class Section:
     def add_subsection(self,title=None,section=None,name=None):
         """
         Add subsection within the section
+
+        If an existing section is supplied then this
+        is appended to the content; otherwise a new
+        Section instance is created and appended.
 
         Arguments:
           title (str): title text
@@ -129,6 +323,8 @@ class Section:
           name (str): name used for the 'id' of
             the section
 
+        Returns:
+          Section: the appended section.
         """
         if section is None:
             subsection = Section(title=title,name=name,level=self._level+1)
@@ -140,8 +336,11 @@ class Section:
     def html(self):
         """
         Generate HTML version of the section
-
         """
+        if self._title is None and \
+           not self._content and \
+           not self._css_classes:
+            return ""
         div = "<div"
         if self.name:
             div += " id='%s'" % self.name
@@ -161,29 +360,79 @@ class Section:
         html.append('</div>')
         return '\n'.join(html)
 
-class Table:
+class Table(object):
     """
-    Utility class for constructing tables for output
+    Utility class for constructing HTML tables
 
-    Example usage:
+    Usage examples:
 
-    >>> t = Table('Key','Value')
+    - Table with two columns with titles
+      "Key" and "Value", and with one row of
+      data:
 
+      >>> t = Table(('Key','Value'))
+      >>> t.add_row(Key="Employee name",
+      ...           Value="John Doe")
+      >>> print t.html()
+      <table>
+      <tr><th>Key</th><th>Value</th></tr>
+      <tr><td>Employee name</td><td>John Doe</td></tr>
+      </table>
+
+    - Table with three columns, with aliases
+      for column names:
+
+      >>> t = Table(('name','date','result'),
+      ...           name="Experiment",
+      ...           date="Date run",
+      ...           result="Final result")
+      >>> t.add_row(name="Test setup",
+      ...           date="10/10/2017",
+      ...           result="Ok")
+      >>> print t.html()
+      <table>
+      <tr><th>Experiment</th><th>Date run</th><th>Final result</th></tr>
+      <tr><td>Test setup</td><td>10/10/2017</td><td>Ok</td></tr>
+      </table>
+
+    - Add a column to the previous table, and
+      set values:
+
+      >>> t.append_columns('verified',verified="Is verified?")
+      >>> t.set_value(0,"verified","no")
+      >>> print t.html()
+      <table>
+      <tr><th>Experiment</th><th>Date run</th><th>Final result</th><th>Is verified?</th></tr>
+      <tr><td>Test setup</td><td>10/10/2017</td><td>Ok</td><td>no</td></tr>
+      </table>
+
+    The Table class provides the following properties:
+
+    - nrows: number of rows in the table
+
+    It provides the following methods:
+
+    - add_css_classes: associate CSS classes with the table
+    - no_header: turn off writing table header in output HTML
+    - append_columns: add additional columns to the table
+    - add_row: append a row to the table
+    - set_value: set the value in a table cell
     """
-    def __init__(self,columns,**kws):
+    def __init__(self,columns,**aliases):
         """
-        Create a new ReportTable instance
+        Create a new Table instance
 
         Arguments:
           columns (list): list of column ids
-          kws (mapping): optional, mapping of
-            column ids to actual names
-
+          aliases (mapping): optional, mapping of
+            column ids to aliases (i.e. actual
+            names)
         """
         self._columns = [x for x in columns]
         self._rows = []
-        self._column_names = dict(kws)
+        self._column_names = dict(aliases)
         self._css_classes = []
+        self._css_classes_columns = {}
         self._output_header = True
 
     @property
@@ -193,43 +442,84 @@ class Table:
         """
         return len(self._rows)
 
-    def add_css_classes(self,*classes):
+    def add_css_classes(self,*classes,**kws):
         """
         Associate CSS classes with the table
 
+        By default the supplied CSS classes
+        associated with the whole table. If
+        the 'column' keyword is supplied then
+        the classes will be associated only
+        with the table cells in that column.
+
+        Arguments:
+          classes (list): one or more classes
+            to associate with the table
+          column (str): optional, if supplied
+            then should specify a column name
+            with which the classes will be
+            associated
         """
+        css_classes = self._css_classes
+        for kw in kws:
+            if kw == "column":
+                col = kws[kw]
+                if col not in self._columns:
+                    raise KeyError("'%s'" % col)
+                if col not in self._css_classes_columns:
+                    self._css_classes_columns[col] = []
+                css_classes = self._css_classes_columns[col]
+            else:
+                raise TypeError(
+                    "add_css_classes() got an "
+                    "unexpected argument '%s'"
+                    % kw)
         for css_class in classes:
-            self._css_classes.append(css_class)
+            css_classes.append(css_class)
 
     def no_header(self):
         """
         Don't write the table header on output
-
         """
         self._output_header = False
 
-    def append_columns(self,*columns,**kws):
+    def append_columns(self,*columns,**aliases):
         """
         Add a new columns to the table
 
         Arguments:
           columns (list): list of column ids
-          kws (mapping): optional, mapping of
-            column ids to actual names
-
+          aliases (mapping): optional, mapping of
+            column ids to aliases (i.e. actual names)
         """
         for col in columns:
             if col in self._columns:
                 raise KeyError("Column with id '%s' already defined"
                                % col)
             self._columns.append(col)
-        for col in kws:
-            self._column_names[col] = kws[col]
+        for col in aliases:
+            self._column_names[col] = aliases[col]
 
     def add_row(self,**kws):
         """
-        Add a row to the table
+        Add (append) a row to the table
 
+        Appends a new empty row to the end of
+        the table, and returns its row index.
+
+        Optionally values can also be assigned to
+        columns in the new row, e.g.
+
+        t.add_row(col1="value1",col2="value2",...)
+
+        Arguments:
+          kws (mapping): set of key=value
+            assignments, defining the values to
+            assign to columns in the new row
+
+        Returns:
+          Integer: the row index of the appended
+            row (for use e.g. in 'set_value')
         """
         self._rows.append({})
         n = len(self._rows)-1
@@ -239,8 +529,14 @@ class Table:
 
     def set_value(self,row,key,value):
         """
-        Set the value of a field in a row
+        Set the value of a cell in the table
 
+        Arguments:
+          row (int): index of the row to update
+          key (str): id of the column to set the
+            value for in this row
+          value (str): value to assign to the
+            table cell indicated by row/column
         """
         if key not in self._columns:
             raise KeyError("Key '%s' not found" % key)
@@ -267,10 +563,16 @@ class Table:
             header.append("<tr>")
             for col in self._columns:
                 try:
+                    css_classes = " class='%s'" % \
+                                  ' '.join(self._css_classes_columns[col])
+                except KeyError:
+                    css_classes = ''
+                try:
                     col_name = self._column_names[col]
                 except KeyError:
                     col_name = col
-                header.append("<th>%s</th>" % col_name)
+                header.append("<th%s>%s</th>" % (css_classes,
+                                                 str(col_name)))
             header.append("</tr>")
             html.append(''.join(header))
         # Body
@@ -279,19 +581,25 @@ class Table:
             line.append("<tr>")
             for col in self._columns:
                 try:
+                    css_classes = " class='%s'" % \
+                                  ' '.join(self._css_classes_columns[col])
+                except KeyError:
+                    css_classes = ''
+                try:
                     value = row[col].html()
                 except KeyError:
                     value = '&nbsp;'
                 except AttributeError:
                     value = row[col]
-                line.append("<td>%s</td>" % value)
+                line.append("<td%s>%s</td>" % (css_classes,
+                                               value))
             line.append("</tr>")
             html.append(''.join(line))
         # Finish
         html.append("</table>")
         return '\n'.join(html)
 
-class List:
+class List(object):
     """
     Utility class for creating ordered and unordered lists
 
@@ -330,6 +638,9 @@ class List:
         etc), which will be concatenated after
         rendering.
 
+        Arguments:
+          contents (sequence): one or more
+            objects to add to the list item
         """
         item = [c for c in content]
         self._items.append(item)
@@ -337,8 +648,10 @@ class List:
     def html(self):
         """
         Generate HTML version of the list
-
         """
+        # Empty list?
+        if not self._items:
+            return ""
         # List type
         if self._ordered:
             tag = "ol"
@@ -363,7 +676,7 @@ class List:
         html.append("</%s>" % tag)
         return "".join(html)
 
-class Img:
+class Img(object):
     """
     Utility class for embedding <img> tags
 
@@ -405,14 +718,12 @@ class Img:
     def name(self):
         """
         Return the name (id) for the image
-
         """
         return self._name
 
     def html(self):
         """
         Generate HTML version of the image tag
-
         """
         # Build the tag contents
         html = []
@@ -436,7 +747,7 @@ class Img:
         else:
             return " ".join(html)
 
-class Link:
+class Link(object):
     """
     Utility class for embedding <a href=...> tags
 
@@ -468,7 +779,6 @@ class Link:
           target (Object): target to link to; if not
             supplied then 'text' will be used as the
             link target
-
         """
         self._text = text
         if target is None:
@@ -480,7 +790,6 @@ class Link:
     def href(self):
         """
         Show the link target text
-
         """
         try:
             return '#%s' % self._target.name
@@ -490,7 +799,6 @@ class Link:
     def html(self):
         """
         Generate HTML version of the link
-
         """
         # Build the tag contents
         return "<a href='%s'>%s</a>" % (self.href,self._text)
@@ -498,7 +806,7 @@ class Link:
     def __repr__(self):
         return self.html()
 
-class Target:
+class Target(object):
     """
     Utility class for embedding <a id=... /> tags
 
@@ -524,7 +832,6 @@ class Target:
         Arguments:
           name (str): name (i.e. 'id') for the
             target
-
         """
         self._name = name
 
@@ -532,14 +839,78 @@ class Target:
     def name(self):
         """
         Return the name (id) for the target
-
         """
         return self._name
 
     def html(self):
         """
         Generate HTML version of the target
-
         """
         # Build the anchor
         return "<a id='%s' />" % self._name
+
+class Para(object):
+    """
+    Utility to wrap heterogeneous items into a single block
+
+    The Para class provides a way to put several
+    different items (e.g. plain text, links, images)
+    into a single "block" (by default a '<p>'-delimited
+    paragraph).
+
+    Example usage:
+
+    >>> s = Section("QC reports")
+    >>> s.add(Para("%s" % project.name,
+    ...            Link("qc_report.html")))
+
+    The Para wrapper prevents each plain text (i.e.
+    string-like) content element being wrapped in its
+    own <p>...</p> pair; instead only the completely
+    assembled Para HTML is enclosed in <p>...</p>.
+    """
+
+    def __init__(self,*items):
+        """
+        Create a new Para instance
+
+        Arguments:
+          items (sequence): optional, set of
+            items to add to the block
+        """
+        self._content = [x for x in items]
+        self._delimiter = " "
+        self._tag = "p"
+
+    def add(self,*items):
+        """
+        Add (append) content to the block
+
+        Arguments:
+          items (sequence): optional, set of
+            items to append to the bloc
+        """
+        for item in items:
+            self._content.append(item)
+
+    def html(self):
+        """
+        Generate HTML version of the block
+        """
+        if not self._content:
+            return ""
+        html = []
+        for content in self._content:
+            try:
+                html.append(content.html())
+            except AttributeError,ex:
+                html.append("%s" % str(content))
+        return "<%s>%s</%s>" % (self._tag,
+                                self._delimiter.join(html),
+                                self._tag)
+
+    def __nonzero__(self):
+        """
+        Para instance is True if has content, False otherwise
+        """
+        return bool(self._content)
