@@ -264,6 +264,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                     set_group = fileops.set_group_command(
                         group,
                         os.path.join(archive_dir,staging))
+                    print "Running %s" % set_group
                     set_group_job = sched.submit(
                         set_group,
                         name="set_group.archive")
