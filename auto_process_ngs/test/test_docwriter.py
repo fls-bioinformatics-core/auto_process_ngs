@@ -110,6 +110,16 @@ class TestSection(unittest.TestCase):
         self.assertEqual(s.level,2)
         self.assertEqual(s.html(),"")
 
+    def test_empty_section_with_css_class(self):
+        s = Section()
+        s.add_css_classes("clear")
+        self.assertEqual(s.title,None)
+        self.assertEqual(s.name,None)
+        self.assertEqual(s.level,2)
+        self.assertEqual(s.html(),
+                         "<div class='clear'>\n"
+                         "</div>")
+
     def test_section_no_content(self):
         s = Section("Empty section")
         self.assertEqual(s.title,"Empty section")

@@ -336,9 +336,10 @@ class Section(object):
     def html(self):
         """
         Generate HTML version of the section
-
         """
-        if self._title is None and not self._content:
+        if self._title is None and \
+           not self._content and \
+           not self._css_classes:
             return ""
         div = "<div"
         if self.name:
