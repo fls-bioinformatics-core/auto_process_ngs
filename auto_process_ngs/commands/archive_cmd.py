@@ -263,7 +263,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 if not dry_run:
                     set_group = fileops.set_group_command(
                         group,
-                        os.path.join(archive_dir,staging))
+                        os.path.join(archive_dir,staging),
+                        verbose=True)
                     print "Running %s" % set_group
                     set_group_job = sched.submit(
                         set_group,

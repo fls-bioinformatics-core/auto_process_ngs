@@ -423,7 +423,7 @@ def copytree_command(src,dest):
             recursive=True)
     return copytree_cmd
 
-def set_group_command(group,path,verbose=True):
+def set_group_command(group,path,verbose=False):
     """
     Generate command to set group on file or directory
 
@@ -445,7 +445,7 @@ def set_group_command(group,path,verbose=True):
         specifier of the form '[[USER@]HOST:]PATH'
       verbose (bool): if True then output a
         diagnostic for every file processed
-        (default)
+        (default: don't output diagnostics)
 
     Returns:
       Command: Command instance that can be used to

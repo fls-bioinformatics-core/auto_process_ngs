@@ -316,18 +316,18 @@ class TestSetGroupCommand(unittest.TestCase):
                                           "/here/files")
         self.assertEqual(set_group_cmd.command_line,
                          ['chgrp',
-                          '--verbose',
                           '-R',
                           'adm',
                           '/here/files'])
-    def test_set_group_command_local_not_verbose(self):
-        """fileops.set_group_command: set group on local files (quiet)
+    def test_set_group_command_local_verbose(self):
+        """fileops.set_group_command: set group on local files (verbose)
         """
         set_group_cmd = set_group_command("adm",
                                           "/here/files",
-                                          verbose=False)
+                                          verbose=True)
         self.assertEqual(set_group_cmd.command_line,
                          ['chgrp',
+                          '--verbose',
                           '-R',
                           'adm',
                           '/here/files'])
@@ -340,7 +340,6 @@ class TestSetGroupCommand(unittest.TestCase):
                          ['ssh',
                           'pjx@remote.com',
                           'chgrp',
-                          '--verbose',
                           '-R',
                           'adm',
                           '/there/files'])
