@@ -319,6 +319,18 @@ class TestSetGroupCommand(unittest.TestCase):
                           '-R',
                           'adm',
                           '/here/files'])
+    def test_set_group_command_local_verbose(self):
+        """fileops.set_group_command: set group on local files (verbose)
+        """
+        set_group_cmd = set_group_command("adm",
+                                          "/here/files",
+                                          verbose=True)
+        self.assertEqual(set_group_cmd.command_line,
+                         ['chgrp',
+                          '--verbose',
+                          '-R',
+                          'adm',
+                          '/here/files'])
     def test_set_group_command_remote(self):
         """fileops.set_group_command: set group on remote files
         """

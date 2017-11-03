@@ -835,7 +835,8 @@ class SchedulerJob(Job):
         logging.debug("Waiting for job #%s (%s)..." % (self.job_number,
                                                        self.job_id))
         wait_time = 0
-        while ((self.job_id is None) or (not self.completed)):
+        while ((self.job_id is None) or (not self.completed) or
+               (self.exit_status is None)):
             # Check for timeout
             if timeout is not None and wait_time > timeout:
                 self.terminate()
