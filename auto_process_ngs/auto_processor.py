@@ -18,6 +18,7 @@ import os
 import subprocess
 import logging
 import shutil
+import uuid
 import time
 import ast
 import gzip
@@ -575,6 +576,8 @@ class AutoProcess:
         object is destroyed.
 
         """
+        if self.analysis_dir is None:
+            return
         try:
             if not os.path.exists(self.analysis_dir):
                 logging.warning("Analysis dir '%s' not found" %
@@ -774,16 +777,26 @@ class AutoProcess:
 
         """
         data_dir = data_dir.rstrip(os.sep)
+        if not fileops.exists(data_dir):
+            raise Exception("Data directory '%s' not found" %
+                            data_dir)
         if not fileops.Location(data_dir).is_remote:
             data_dir = os.path.abspath(data_dir)
         if analysis_dir is None:
-            self.analysis_dir = os.path.join(
+            analysis_dir = os.path.join(
                 os.getcwd(),
                 os.path.basename(data_dir))+'_analysis'
         else:
-            self.analysis_dir = os.path.abspath(analysis_dir)
+            analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
-        if not os.path.exists(self.analysis_dir):
+        if not os.path.exists(analysis_dir):
+            # Make a temporary analysis dir
+            tmp_analysis_dir = os.path.join(
+                os.path.dirname(analysis_dir),
+                ".%s.%s" % (os.path.basename(analysis_dir),
+                            uuid.uuid4()))
+            self.analysis_dir = tmp_analysis_dir
+            print "Creating temp directory '%s'" % self.analysis_dir
             # Create directory structure
             self.create_directory(self.analysis_dir)
             self.log_dir
@@ -791,6 +804,7 @@ class AutoProcess:
         else:
             # Directory already exists
             logging.warning("Analysis directory already exists")
+            self.analysis_dir = analysis_dir
             # check for parameter file
             if self.has_parameter_file:
                 self.load_parameters()
@@ -809,7 +823,7 @@ class AutoProcess:
             datestamp,instrument,run_number = IlluminaData.split_run_name(
                 os.path.basename(self.analysis_dir))
             run_number = run_number.lstrip('0')
-        except Exception, ex:
+        except Exception as ex:
             logging.warning("Unable to extract information from run name '%s'" \
                             % os.path.basename(self.analysis_dir))
             logging.warning("Exception: %s" % ex)
@@ -853,8 +867,9 @@ class AutoProcess:
                     break
             # Bail out if no sample sheet was acquired
             if tmp_sample_sheet is None:
-                logging.error("Unable to acquire sample sheet")
-                return
+                shutil.rmtree(self.analysis_dir)
+                self.analysis_dir = None
+                raise Exception("Unable to acquire sample sheet")
             # Keep a copy of the original sample sheet
             original_sample_sheet = os.path.join(self.analysis_dir,
                                                  'SampleSheet.orig.csv')
@@ -894,6 +909,15 @@ class AutoProcess:
         # Generate and print predicted outputs and warnings
         print samplesheet_utils.predict_outputs(sample_sheet=sample_sheet)
         samplesheet_utils.check_and_warn(sample_sheet=sample_sheet)
+        # Move analysis dir to final location if necessary
+        if self.analysis_dir != analysis_dir:
+            print "Moving %s to final directory" % self.analysis_dir
+            os.rename(self.analysis_dir,analysis_dir)
+            self.analysis_dir = analysis_dir
+            # Update the custom sample sheet path
+            custom_sample_sheet = os.path.join(
+                analysis_dir,
+                os.path.basename(custom_sample_sheet))
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
