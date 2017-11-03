@@ -576,6 +576,8 @@ class AutoProcess:
         object is destroyed.
 
         """
+        if self.analysis_dir is None:
+            return
         try:
             if not os.path.exists(self.analysis_dir):
                 logging.warning("Analysis dir '%s' not found" %
