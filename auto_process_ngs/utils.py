@@ -1532,6 +1532,10 @@ class AnalysisDirMetadata(MetadataDict):
     platform: sequencing platform e.g. 'miseq'
     assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
     bcl2fastq_software: info on the Bcl conversion software used
+    instrument_name: name/i.d. for the sequencing instrument
+    instrument_datestamp: datestamp from the sequencing instrument
+    instrument_run_number: the run number from the sequencing
+      instrument
 
     """
     def __init__(self,filen=None):
