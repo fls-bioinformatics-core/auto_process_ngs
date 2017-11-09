@@ -796,14 +796,16 @@ class AutoProcess:
                 ".%s.%s" % (os.path.basename(analysis_dir),
                             uuid.uuid4()))
             self.analysis_dir = tmp_analysis_dir
-            print "Creating temp directory '%s'" % self.analysis_dir
+            logging.debug("Creating temp directory '%s'" %
+                          self.analysis_dir)
             # Create directory structure
             self.create_directory(self.analysis_dir)
             self.log_dir
             self.script_code_dir
         else:
             # Directory already exists
-            logging.warning("Analysis directory already exists")
+            logging.warning("Analysis directory '%s' already exists" %
+                            analysis_dir)
             self.analysis_dir = analysis_dir
             # check for parameter file
             if self.has_parameter_file:
@@ -911,13 +913,14 @@ class AutoProcess:
         samplesheet_utils.check_and_warn(sample_sheet=sample_sheet)
         # Move analysis dir to final location if necessary
         if self.analysis_dir != analysis_dir:
-            print "Moving %s to final directory" % self.analysis_dir
+            logging.debug("Moving %s to final directory" % self.analysis_dir)
             os.rename(self.analysis_dir,analysis_dir)
             self.analysis_dir = analysis_dir
             # Update the custom sample sheet path
             custom_sample_sheet = os.path.join(
                 analysis_dir,
                 os.path.basename(custom_sample_sheet))
+            print "Created analysis directory '%s'" % self.analysis_dir
         # Store the parameters
         self.params['data_dir'] = data_dir
         self.params['analysis_dir'] = self.analysis_dir
