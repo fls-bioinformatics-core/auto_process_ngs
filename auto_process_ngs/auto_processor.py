@@ -821,11 +821,11 @@ class AutoProcess:
         # Run datestamp, instrument name and instrument run number
         try:
             datestamp,instrument,run_number = IlluminaData.split_run_name(
-                os.path.basename(self.analysis_dir))
+                os.path.basename(analysis_dir))
             run_number = run_number.lstrip('0')
         except Exception as ex:
             logging.warning("Unable to extract information from run name '%s'" \
-                            % os.path.basename(self.analysis_dir))
+                            % os.path.basename(analysis_dir))
             logging.warning("Exception: %s" % ex)
             datestamp = None
             instrument= None
