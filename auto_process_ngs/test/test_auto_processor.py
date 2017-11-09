@@ -512,6 +512,18 @@ class TestAutoProcessSetup(unittest.TestCase):
                                       'custom_SampleSheet.csv'))
         self.assertEqual(ap.params.bases_mask,
                          'y101,I8,I8,y101')
+        # Check metadata
+        self.assertEqual(ap.metadata.run_name,
+                         "151125_M00879_0001_000000000-ABCDE1")
+        self.assertEqual(ap.metadata.run_number,None)
+        self.assertEqual(ap.metadata.source,None)
+        self.assertEqual(ap.metadata.platform,"miseq")
+        self.assertEqual(ap.metadata.source,None)
+        self.assertEqual(ap.metadata.assay,"TruSeq HT")
+        self.assertEqual(ap.metadata.bcl2fastq_software,None)
+        self.assertEqual(ap.metadata.instrument_name,"M00879")
+        self.assertEqual(ap.metadata.instrument_datestamp,"151125")
+        self.assertEqual(ap.metadata.instrument_run_number,"1")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
