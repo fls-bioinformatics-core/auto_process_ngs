@@ -42,6 +42,7 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '160621_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -62,7 +63,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -90,7 +92,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -122,7 +125,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -166,7 +170,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -207,7 +212,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -267,7 +273,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -294,7 +301,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -347,7 +355,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -403,7 +412,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -458,7 +468,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -489,7 +500,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -520,7 +532,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         ap = AutoProcess(mockdir.dirn)
@@ -553,7 +566,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -670,7 +684,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -758,7 +773,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)

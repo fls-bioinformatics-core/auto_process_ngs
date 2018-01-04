@@ -45,6 +45,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
@@ -110,6 +111,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
@@ -163,6 +165,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
@@ -223,6 +226,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
@@ -283,6 +287,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
@@ -345,6 +350,7 @@ class TestArchiveCommand(unittest.TestCase):
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
             '170901_M00879_0087_000000000-AGEW9',
             'miseq',
+            metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
         # Make a mock archive directory
