@@ -623,7 +623,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             '160621_K00879_0087_000000000-AGEW9',
             'hiseq',
             metadata={ "run_number": 87,
-                       "source": "local" },
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
         ap = AutoProcess(mockdir.dirn)
@@ -639,7 +640,7 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                    use_hierarchy=True)
         # Check outputs
         final_dir = os.path.join(publication_dir,
-                                 "2017",
+                                 "2016",
                                  "hiseq")
         self.assertTrue(os.path.exists(final_dir))
         outputs = ["index.html",
