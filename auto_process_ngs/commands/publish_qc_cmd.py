@@ -136,7 +136,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     else:
         location = fileops.Location(location)
     if use_hierarchy:
-        year = time.strftime("%Y")
+        year = "20%s" % str(ap.metadata.instrument_datestamp)[0:2]
         platform = ap.metadata.platform
     # Check the settings
     if location.is_remote:

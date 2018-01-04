@@ -133,7 +133,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         raise Exception("No platform specified (use --platform "
                         "option?)")
     if year is None:
-        year = time.strftime("%Y")
+        year = "20%s" % str(ap.metadata.instrument_datestamp)[0:2]
     archive_dir = os.path.join(archive_dir,year,platform)
     # Determine target directory
     if not is_staging:
