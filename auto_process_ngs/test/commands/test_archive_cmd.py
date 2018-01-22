@@ -500,11 +500,17 @@ class TestArchiveCommand(unittest.TestCase):
                                  "2017",
                                  "miseq")
         self.assertFalse(os.path.isdir(final_dir))
+        staging_dir = os.path.join(
+            final_dir,
+            "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
         # Make autoprocess instance and set required metadata
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
-        # Staging archiving attempt should fail
+        # Staging attempt should fail
         self.assertRaises(OSError,
                           archive,
                           ap,
@@ -512,9 +518,6 @@ class TestArchiveCommand(unittest.TestCase):
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
                           final=False)
-        staging_dir = os.path.join(
-            final_dir,
-            "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
         self.assertFalse(os.path.exists(staging_dir))
         # Final archiving attempt should fail
         self.assertRaises(OSError,
@@ -524,6 +527,24 @@ class TestArchiveCommand(unittest.TestCase):
                           year='2017',platform='miseq',
                           read_only_fastqs=False,
                           final=True)
-        final_archive_dir = os.path.join(
-            final_dir,
-            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertFalse(os.path.exists(final_archive_dir))
+        # Make "YEAR" level in archive dir
+        os.makedirs(os.path.join(archive_dir,"2017"))
+        # Staging attempt should fail
+        self.assertRaises(OSError,
+                          archive,
+                          ap,
+                          archive_dir=archive_dir,
+                          year='2017',platform='miseq',
+                          read_only_fastqs=False,
+                          final=False)
+        self.assertFalse(os.path.exists(staging_dir))
+        # Final archiving attempt should fail
+        self.assertRaises(OSError,
+                          archive,
+                          ap,
+                          archive_dir=archive_dir,
+                          year='2017',platform='miseq',
+                          read_only_fastqs=False,
+                          final=True)
+        self.assertFalse(os.path.exists(final_archive_dir))
