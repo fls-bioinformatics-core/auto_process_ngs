@@ -482,3 +482,48 @@ class TestArchiveCommand(unittest.TestCase):
         for f in files:
             f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
+
+    def test_archive_oserror_if_destination_doesnt_exist(self):
+        """archive: test archiving raises OSError if destination doesn't exist
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        os.makedirs(archive_dir)
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        self.assertFalse(os.path.isdir(final_dir))
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Staging archiving attempt should fail
+        self.assertRaises(OSError,
+                          archive,
+                          ap,
+                          archive_dir=archive_dir,
+                          year='2017',platform='miseq',
+                          read_only_fastqs=False,
+                          final=False)
+        staging_dir = os.path.join(
+            final_dir,
+            "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
+        self.assertFalse(os.path.exists(staging_dir))
+        # Final archiving attempt should fail
+        self.assertRaises(OSError,
+                          archive,
+                          ap,
+                          archive_dir=archive_dir,
+                          year='2017',platform='miseq',
+                          read_only_fastqs=False,
+                          final=True)
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
