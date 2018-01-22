@@ -46,6 +46,9 @@ The recommended steps are:
 3. Perform ICell8-specific filtering and additional QC on the reads
    by running the ``process_icell8.py`` utility, as described in
    :ref:`icell8_qc_and_filtering_protocol`
+4. Manually update the sample name information in the ``project.info``
+   and ``README.info`` files as described in
+   :ref:`icell8_updating_sample_lists`
 
 .. _icell8_fastq_generation:
 
@@ -231,6 +234,8 @@ and the mapping of barcodes to samples.
 (As noted elsewhere, each barcode corresponds to a well which in turn
 corresponds to a single cell.)
 
+.. _icell8_pipeline_configuration:
+
 Appendix: configuring the ICell8 processing pipeline
 ----------------------------------------------------
 
@@ -346,3 +351,33 @@ Via the configuration file::
 
     [runners]
     icell8_statistics = GEJobRunner(-pe smp.pe 4)
+
+.. _icell8_updating_sample_lists:
+
+Appendix: manually updating sample lists
+----------------------------------------
+
+Currently the processing pipeline implemented in ``process_icell8.py``
+doesn't automatically update the sample lists in ``projects.info``
+and the ``README.info`` in the ICell8 project directories.
+
+To do this manually requires extracting the sample names and editing
+the files to update them with the correct data.
+
+The sample names can be extracted from the well list file using the
+command::
+
+    tail -n +2 WellList.TXT | cut -f5 | sed 's/ /_/g' | sort -u | paste -s -d","
+
+which produces a list suitable for ``projects.info`` (e.g.
+``Pos_Ctrl,SC004,SC005,SC006``).
+
+To get them in a format suitable for the ``README.info`` file::
+
+    tail -n +2 WellList.TXT | cut -f5 | sed 's/ /_/g' | sort -u | paste -s -d"," | sed 's/,/, /g'
+
+(e.g. ``Pos_Ctrl, SC004, SC005, SC006, SC007``).
+
+The number of samples can be obtained by::
+
+    tail -n +2 WellList.TXT | cut -f5 | sort -u | wc -l
