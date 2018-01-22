@@ -135,6 +135,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     if year is None:
         year = "20%s" % str(ap.metadata.instrument_datestamp)[0:2]
     archive_dir = os.path.join(archive_dir,year,platform)
+    if not fileops.exists(archive_dir):
+        raise OSError("Archive directory '%s' doesn't exist" %
+                      archive_dir)
     # Determine target directory
     if not is_staging:
         final_dest = analysis_dir
