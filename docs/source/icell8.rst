@@ -32,6 +32,21 @@ This is illustrated in the figure below:
 The corresponding R2 read contains the actual sequence data
 corresponding to the cell and UMI referenced by its R1 partner.
 
+.. _icell8_processing_protocol:
+
+Processing protocol for ICell8 data
+-----------------------------------
+
+The recommended steps are:
+
+1. Generate initial FASTQs as described in
+   :ref:`icell8_fastq_generation`
+2. Set up analysis directories and run initial QC as per the standard
+   protocol
+3. Perform ICell8-specific filtering and additional QC on the reads
+   by running the ``process_icell8.py`` utility, as described in
+   :ref:`icell8_qc_and_filtering_protocol`
+
 .. _icell8_fastq_generation:
 
 Fastq generation
