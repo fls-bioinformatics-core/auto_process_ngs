@@ -1029,6 +1029,7 @@ class AutoProcess:
                     user=project.info.user,
                     PI=project.info.PI,
                     library_type=project.info.library_type,
+                    protocol=project.info.protocol,
                     organism=project.info.organism,
                     run=project.info.run,
                     comments=project.info.comments,
@@ -2598,6 +2599,7 @@ class AutoProcess:
             PI = line['PI']
             organism = line['Organism']
             library_type = line['Library']
+            protocol = line['Protocol']
             comments = line['Comments']
             # Check it's in the list
             if projects and project_name not in projects:
@@ -2611,6 +2613,7 @@ class AutoProcess:
                                             PI=PI,
                                             organism=organism,
                                             library_type=library_type,
+                                            protocol=protocol,
                                             run=run_name,
                                             comments=comments,
                                             platform=self.metadata.platform)
@@ -2911,6 +2914,7 @@ class AutoProcess:
                 print "  User    : %s" % project.info.user
                 print "  PI      : %s" % project.info.PI
                 print "  Library : %s" % project.info.library_type
+                print "  Protocol: %s" % project.info.protocol
                 print "  Organism: %s" % project.info.organism
                 print "  Dir     : %s" % os.path.basename(project.dirn)
                 print "  #samples: %s" % len(project.samples)
@@ -2943,6 +2947,7 @@ class AutoProcess:
                            p.info.user,
                            p.info.organism,
                            p.info.library_type,
+                           p.info.protocol,
                            p.info.PI,
                            len(p.samples),
                            's' if len(p.samples) > 1 else ''
@@ -2977,6 +2982,7 @@ class AutoProcess:
         - Researcher (aka user)
         - PI
         - Application (aka library type)
+        - Sample prep protocol (e.g. ICell8)
         - Organism
         - Number of samples
 
@@ -3040,7 +3046,7 @@ class AutoProcess:
         comments = bcf_utils.OrderedDictionary()
         for project in analysis_dir.projects:
             project_data = dict(project=project.name)
-            for item in ('user','PI','library_type','organism'):
+            for item in ('user','PI','library_type','protocol','organism'):
                 value = project.info[item]
                 project_data[item] = value if value not in ('.','?') else \
                                     '<unspecified %s>' % item.lower()
@@ -3048,6 +3054,7 @@ class AutoProcess:
                          project_data['user'],
                          project_data['organism'],
                          project_data['library_type'],
+                         project_data['protocol'],
                          "%d sample%s" % (len(project.samples),
                                           's' if len(project.samples) > 1 else ''),
                          "(PI %s)" % project_data['PI']))
@@ -3139,6 +3146,7 @@ class AutoProcess:
         - User
         - PI
         - Application
+        - Protocol
         - Organism
         - Platform
         - #Samples
@@ -3189,6 +3197,7 @@ class AutoProcess:
             project_line.append('' if not info.user else info.user)
             project_line.append('' if not info.PI else info.PI)
             project_line.append('' if not info.library_type else info.library_type)
+            project_line.append('' if not info.protocol else info.protocol)
             project_line.append('' if not info.organism else info.organism)
             project_line.append(platform)
             project_line.append(str(len(project.samples)))
@@ -3244,6 +3253,7 @@ class AutoProcess:
                                      sample_names,
                                      user=project.info.user,
                                      library_type=project.info.library_type,
+                                     protocol=project.info.protocol,
                                      organism=project.info.organism,
                                      PI=project.info.PI,
                                      comments=project.info.comments)

@@ -368,6 +368,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI':'PI',
                                   'organism':'Organism',
                                   'library_type':'Library type',
+                                  'protocol':'Protocol',
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
@@ -380,6 +381,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI',
                                   'organism',
                                   'library_type',
+                                  'protocol',
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
@@ -397,6 +399,7 @@ class ProjectMetadataFile(TabFile.TabFile):
     Samples: list/description of sample names
     User: name(s) of the associated user(s)
     Library: the library type
+    Protocol: sample preparation protocol (e.g. 'ICell8')
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
     Comments: free text containing additional information
@@ -420,6 +423,7 @@ class ProjectMetadataFile(TabFile.TabFile):
                                 'Samples',
                                 'User',
                                 'Library',
+                                'Protocol',
                                 'Organism',
                                 'PI',
                                 'Comments')
@@ -428,6 +432,7 @@ class ProjectMetadataFile(TabFile.TabFile):
                         'Samples': 'sample_names',
                         'User': 'user',
                         'Library': 'library_type',
+                        'Protocol': 'protocol',
                         'Organism': 'organism',
                         'PI' : 'PI',
                         'Comments': 'comments', }
@@ -462,6 +467,7 @@ class ProjectMetadataFile(TabFile.TabFile):
           sample_names (list): Python list of sample names
           user (str): (optional) user name(s)
           library_type (str): (optional) library type
+          protocol (str): (optional) sample prep protocol
           organism (str): (optional) organism(s)
           PI (str): (optional) principal investigator name(s)
           comments (str): (optional) additional information
@@ -502,6 +508,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             new sample names
           user (str): (optional) new user name(s)
           library_type (str): (optional) new library type
+          protocol (str): (optional) sample prep protocol
           organism (str): (optional) new organism(s)
           PI (str): (optional) new principal investigator
             name(s)

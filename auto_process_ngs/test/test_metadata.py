@@ -208,7 +208,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         """
         # Make an empty 'file'
         metadata = ProjectMetadataFile()
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\n"
         self.assertEqual(len(metadata),0)
         for project in metadata:
             self.fail()
@@ -232,7 +232,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                              organism="Mouse",
                              PI="Harley",
                              comments="Squeak!")
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
         self.assertEqual(len(metadata),2)
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
@@ -247,6 +247,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Samples="C1-2",
                          User="Charlie P",
                          Library="RNA-seq",
+                         Protocol=".",
                          Organism="Yeast",
                          PI="Marley",
                          Comments="."))
@@ -254,10 +255,11 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Samples="F3-4",
                          User="Farley G",
                          Library="ChIP-seq",
+                         Protocol=".",
                          Organism="Mouse",
                          PI="Harley",
                          Comments="Squeak!"))
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
         open(self.metadata_file,'w').write(contents)
         # Load and check contents
         metadata = ProjectMetadataFile(self.metadata_file)
@@ -322,7 +324,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         metadata = ProjectMetadataFile()
         metadata.add_project('Charlie',['C1','C2'],
                              user="Charlie P",
-                             library_type="RNA-seq",
+                             library_type="scRNA-seq",
                              organism="Yeast",
                              PI="Marley")
         # Check initial data is correct
@@ -330,21 +332,24 @@ class TestProjectMetadataFile(unittest.TestCase):
         project = metadata.lookup("Project","Charlie")[0]
         self.assertEqual(project[1],"C1,C2")
         self.assertEqual(project[2],"Charlie P")
-        self.assertEqual(project[3],"RNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
         # Update some attributes
         metadata.update_project('Charlie',
                                 user="Charlie Percival",
-                                library_type="scRNA-seq")
+                                library_type="scRNA-seq",
+                                protocol="ICell8")
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
         project = metadata.lookup("Project","Charlie")[0]
         self.assertEqual(project[1],"C1,C2")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
+        self.assertEqual(project[4],"ICell8")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
         # Update the samples
         metadata.update_project('Charlie',
                                 sample_names=['C01','C02'])
@@ -354,5 +359,6 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[1],"C01,C02")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
+        self.assertEqual(project[4],"ICell8")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
