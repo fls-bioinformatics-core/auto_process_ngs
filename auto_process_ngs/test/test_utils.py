@@ -397,6 +397,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.info.library_type,None)
+        self.assertEqual(project.info.single_cell_platform,None)
         self.assertEqual(project.info.organism,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)

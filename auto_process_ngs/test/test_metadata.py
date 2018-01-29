@@ -208,7 +208,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         """
         # Make an empty 'file'
         metadata = ProjectMetadataFile()
-        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\n"
         self.assertEqual(len(metadata),0)
         for project in metadata:
             self.fail()
@@ -232,7 +232,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                              organism="Mouse",
                              PI="Harley",
                              comments="Squeak!")
-        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
         self.assertEqual(len(metadata),2)
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
@@ -247,7 +247,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Samples="C1-2",
                          User="Charlie P",
                          Library="RNA-seq",
-                         Protocol=".",
+                         SC_Platform=".",
                          Organism="Yeast",
                          PI="Marley",
                          Comments="."))
@@ -255,11 +255,11 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Samples="F3-4",
                          User="Farley G",
                          Library="ChIP-seq",
-                         Protocol=".",
+                         SC_Platform=".",
                          Organism="Mouse",
                          PI="Harley",
                          Comments="Squeak!"))
-        contents = "#Project\tSamples\tUser\tLibrary\tProtocol\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
         open(self.metadata_file,'w').write(contents)
         # Load and check contents
         metadata = ProjectMetadataFile(self.metadata_file)
@@ -340,7 +340,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         metadata.update_project('Charlie',
                                 user="Charlie Percival",
                                 library_type="scRNA-seq",
-                                protocol="ICell8")
+                                sc_platform="ICell8")
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
         project = metadata.lookup("Project","Charlie")[0]

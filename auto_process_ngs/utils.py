@@ -522,6 +522,7 @@ class AnalysisProject:
     user        : user name
     PI          : PI name
     library_type: library type, either None or e.g. 'RNA-seq' etc
+    single_cell_platform: single cell prep platform, either None or 'ICell8' etc
     organism    : organism, either None or e.g. 'Human' etc
     platform    : sequencing platform, either None or e.g. 'miseq' etc
     comments    : additional comments, either None or else string of text
@@ -546,8 +547,9 @@ class AnalysisProject:
     'set_primary_fastq_dir' method.
     """
     def __init__(self,name,dirn,user=None,PI=None,library_type=None,
-                 organism=None,run=None,comments=None,platform=None,
-                 fastq_attrs=None,fastq_dir=None):
+                 single_cell_platform=None,organism=None,run=None,
+                 comments=None,platform=None,fastq_attrs=None,
+                 fastq_dir=None):
         """Create a new AnalysisProject instance
 
         Arguments:
@@ -557,6 +559,8 @@ class AnalysisProject:
           PI: optional, specify name of the principal investigator
           library_type: optional, specify library type e.g. 'RNA-seq',
             'miRNA' etc
+          single_cell_platform: optional, specify single cell
+            preparation platform e.g. 'Icell8', '10xGenomics' etc
           organism: optional, specify organism e.g. 'Human', 'Mouse'
             etc
           platform: optional, specify sequencing platform e.g 'miseq'
@@ -596,6 +600,8 @@ class AnalysisProject:
             self.info['PI'] = PI
         if library_type is not None:
             self.info['library_type'] = library_type
+        if single_cell_platform is not None:
+            self.info['single_cell_platform'] = single_cell_platform
         if organism is not None:
             self.info['organism'] = organism
         if platform is not None:

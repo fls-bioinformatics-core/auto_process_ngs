@@ -345,6 +345,7 @@ class AnalysisProjectInfo(MetadataDict):
     PI: the principal investigator associated with the project
     organism: the organism associated with the project
     library_type: the library type e.g. 'RNA-seq'
+    single_cell_platform: the single cell preparation platform
     platform: the platform name e.g. 'miseq'
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
@@ -368,7 +369,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI':'PI',
                                   'organism':'Organism',
                                   'library_type':'Library type',
-                                  'protocol':'Protocol',
+                                  'single_cell_platform':'Single-cell platform',
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
@@ -381,7 +382,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI',
                                   'organism',
                                   'library_type',
-                                  'protocol',
+                                  'single_cell_platform',
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
@@ -399,7 +400,7 @@ class ProjectMetadataFile(TabFile.TabFile):
     Samples: list/description of sample names
     User: name(s) of the associated user(s)
     Library: the library type
-    Protocol: sample preparation protocol (e.g. 'ICell8')
+    SC_Platform: single-cell preparation platform (e.g. 'ICell8')
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
     Comments: free text containing additional information
@@ -423,7 +424,7 @@ class ProjectMetadataFile(TabFile.TabFile):
                                 'Samples',
                                 'User',
                                 'Library',
-                                'Protocol',
+                                'SC_Platform',
                                 'Organism',
                                 'PI',
                                 'Comments')
@@ -432,7 +433,7 @@ class ProjectMetadataFile(TabFile.TabFile):
                         'Samples': 'sample_names',
                         'User': 'user',
                         'Library': 'library_type',
-                        'Protocol': 'protocol',
+                        'SC_Platform': 'sc_platform',
                         'Organism': 'organism',
                         'PI' : 'PI',
                         'Comments': 'comments', }
@@ -467,7 +468,7 @@ class ProjectMetadataFile(TabFile.TabFile):
           sample_names (list): Python list of sample names
           user (str): (optional) user name(s)
           library_type (str): (optional) library type
-          protocol (str): (optional) sample prep protocol
+          sc_platform (str): (optional) single-cell prep platform
           organism (str): (optional) organism(s)
           PI (str): (optional) principal investigator name(s)
           comments (str): (optional) additional information
@@ -508,7 +509,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             new sample names
           user (str): (optional) new user name(s)
           library_type (str): (optional) new library type
-          protocol (str): (optional) sample prep protocol
+          sc_platform (str): (optional) single-cell prep platform
           organism (str): (optional) new organism(s)
           PI (str): (optional) new principal investigator
             name(s)

@@ -852,7 +852,7 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -901,7 +901,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -950,7 +950,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -995,7 +995,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -1043,7 +1043,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -1091,7 +1091,7 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
-        expected = """#Project	Samples	User	Library	Protocol	Organism	PI	Comments
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
 """
@@ -1164,7 +1164,7 @@ User\tPeter Briggs
 PI\tAnne Cleaves
 Organism\tHuman
 Library type\tRNA-seq
-Protocol\tStandard
+SC_Platform\t.
 Paired_end\tY
 Samples\t1 sample (NP01)
 Comments\t1% PhiX spike in
