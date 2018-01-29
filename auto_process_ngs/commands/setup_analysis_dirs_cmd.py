@@ -10,13 +10,9 @@
 #######################################################################
 
 import os
-import time
 import logging
+import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.utils as utils
-
-# Fetch configuration settings
-##import auto_process_ngs.settings
-##__settings = auto_process_ngs.settings.Settings()
 
 # Module specific logger
 logger = logging.getLogger(__name__)
