@@ -711,11 +711,16 @@ class AnalysisProject:
         fastq set) to the specified name, which must be a
         subdirectory of the project directory.
 
+        Updating the primary fastq directory also causes
+        the 'samples' metadata item for the project to be
+        updated.
+
         Note that it doesn't change the active fastq set;
         use the 'use_fastq_dir' method to do this.
         """
         if new_primary_fastq_dir in self.fastq_dirs:
             self.info['primary_fastq_dir'] = new_primary_fastq_dir
+            self.info['samples'] = self.sample_summary()
             self.info.save(self.info_file)
         else:
             raise Exception("Can't update primary fastq dir to '%s' "
@@ -917,21 +922,67 @@ class AnalysisProject:
         self.info['primary_fastq_dir'] = os.path.relpath(fastq_dir,
                                                          self.dirn)
         # Update metadata: sample summary
-        n_samples = len(self.samples)
-        if n_samples == 0:
-            sample_description = "No samples"
-        else:
-            sample_description = "%s %s" % (n_samples,
-                                            'sample' if n_samples == 1 else 'samples')
-            sample_description += " (%s" % \
-                                  bcf_utils.pretty_print_names(
-                                      [s.name for s in self.samples])
-            if self.multiple_fastqs:
-                sample_description += ", multiple fastqs per sample"
-            sample_description += ")"
-        self.info['samples'] = sample_description
+        self.info['samples'] = self.sample_summary()
         # Save metadata
         self.info.save(self.info_file)
+
+    def sample_summary(self):
+        """Generate a summary of the sample names
+
+        Generates a description string which summarises
+        the number and names of samples in the project.
+
+        The description is of the form:
+
+        2 samples (PJB1, PJB2)
+        """
+        # Get Fastqs
+        fq_dir = os.path.join(self.dirn,
+                              self.info.primary_fastq_dir)
+        fastqs = self.find_fastqs(fq_dir)
+        # Assign Fastqs to sample names
+        samples = dict()
+        for fq in fastqs:
+            fq = self.fastq_attrs(fq)
+            name = fq.sample_name
+            try:
+                samples[name].append(fq)
+            except KeyError:
+                samples[name] = [fq,]
+        # Reduce Fastqs for each sample to the minimum set
+        multiple_fastqs = False
+        for sample_name in samples:
+            fastqs = samples[sample_name]
+            reduced_fastqs = [fastqs[0],]
+            for fq in fastqs[1:]:
+                for attr in ('sample_number',
+                             'barcode_sequence',
+                             'lane_number',
+                             'set_number'):
+                    if getattr(reduced_fastqs[0],attr) != \
+                       getattr(fq,attr):
+                        reduced_fastqs.append(fq)
+                        break
+            # Remove index reads
+            reduced_fastqs = filter(lambda fq: not fq.is_index_read,
+                                    reduced_fastqs)
+            if len(reduced_fastqs) > 1:
+                multiple_fastqs = True
+            samples[sample_name] = reduced_fastqs
+        # Generate description
+        sample_names = sorted(samples.keys())
+        n_samples = len(sample_names)
+        if n_samples == 0:
+            samples_description = "No samples"
+        else:
+            samples_description = "%s %s" % \
+                                 (n_samples,
+                                  'sample' if n_samples == 1 else 'samples')
+            samples_description += " (%s" % ', '.join(sample_names)
+            if multiple_fastqs:
+                samples_description += ", multiple fastqs per sample"
+            samples_description += ")"
+        return samples_description
 
     @property
     def exists(self):
