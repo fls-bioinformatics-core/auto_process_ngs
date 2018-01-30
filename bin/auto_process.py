@@ -79,6 +79,7 @@ import auto_process_ngs.envmod as envmod
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.samplesheet_utils import predict_outputs
 from auto_process_ngs.utils import paginate
+from auto_process_ngs.commands.report_cmd import ReportingMode
 
 __version__ = auto_process_ngs.get_version()
 __settings = auto_process_ngs.settings.Settings()
@@ -1103,7 +1104,15 @@ if __name__ == "__main__":
                          regenerate_reports=options.regenerate_reports,
                          force=options.force)
         elif cmd == 'report':
-            d.report(logging=options.logging,
-                     summary=options.summary,
-                     projects=options.projects,
-                     full=options.full)
+            if options.logging:
+                mode = ReportingMode.CONCISE
+            elif options.summary:
+                mode = ReportingMode.SUMMARY
+            elif options.projects:
+                mode = ReportingMode.PROJECTS
+            elif options.full:
+                logging.critical("--full option no longer supported")
+                sys.exit(1)
+            else:
+                mode = None
+            d.report(mode=mode)

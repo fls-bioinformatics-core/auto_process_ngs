@@ -369,7 +369,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI':'PI',
                                   'organism':'Organism',
                                   'library_type':'Library type',
-                                  'single_cell_platform':'Single-cell platform',
+                                  'single_cell_platform':'Single cell platform',
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
