@@ -523,6 +523,8 @@ class AnalysisProject:
     PI          : PI name
     library_type: library type, either None or e.g. 'RNA-seq' etc
     single_cell_platform: single cell prep platform, either None or 'ICell8' etc
+    number of cells: number of cells in single cell projects
+    ICELL8 well list: well list file for ICELL8 single cell projects
     organism    : organism, either None or e.g. 'Human' etc
     platform    : sequencing platform, either None or e.g. 'miseq' etc
     comments    : additional comments, either None or else string of text

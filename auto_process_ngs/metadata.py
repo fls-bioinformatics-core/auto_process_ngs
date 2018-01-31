@@ -341,12 +341,14 @@ class AnalysisProjectInfo(MetadataDict):
     The data items are:
 
     run: the name of the sequencing run
+    platform: the sequencing platform name e.g. 'miseq'
     user: the user associated with the project
     PI: the principal investigator associated with the project
     organism: the organism associated with the project
     library_type: the library type e.g. 'RNA-seq'
     single_cell_platform: the single cell preparation platform
-    platform: the platform name e.g. 'miseq'
+    number of cells: number of cells in single cell projects
+    ICELL8 well list: well list file for ICELL8 single cell projects
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
@@ -370,6 +372,8 @@ class AnalysisProjectInfo(MetadataDict):
                                   'organism':'Organism',
                                   'library_type':'Library type',
                                   'single_cell_platform':'Single cell platform',
+                                  'number_of_cells':'Number of cells',
+                                  'icell8_well_list':'ICELL8 well list',
                                   'paired_end':'Paired_end',
                                   'primary_fastq_dir':'Primary fastqs',
                                   'samples':'Samples',
@@ -383,6 +387,8 @@ class AnalysisProjectInfo(MetadataDict):
                                   'organism',
                                   'library_type',
                                   'single_cell_platform',
+                                  'number_of_cells',
+                                  'icell8_well_list',
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',

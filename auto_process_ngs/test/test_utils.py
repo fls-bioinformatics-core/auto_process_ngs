@@ -408,6 +408,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.info.library_type,None)
         self.assertEqual(project.info.single_cell_platform,None)
         self.assertEqual(project.info.organism,None)
+        self.assertEqual(project.info.number_of_cells,None)
+        self.assertEqual(project.info.icell8_well_list,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)
         self.assertEqual(project.info.primary_fastq_dir,None)

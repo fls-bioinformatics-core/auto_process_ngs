@@ -12,6 +12,7 @@ from auto_process_ngs.commands.report_cmd import report_info
 from auto_process_ngs.commands.report_cmd import report_concise
 from auto_process_ngs.commands.report_cmd import report_summary
 from auto_process_ngs.commands.report_cmd import report_projects
+from auto_process_ngs.commands.report_cmd import default_value
 
 # Unit tests
 
@@ -85,6 +86,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: Human
   Dir     : AB
   #samples: 2
+  #cells  : 
   Samples : AB1-2
   QC      : not verified
   Comments: None
@@ -98,6 +100,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: Mouse
   Dir     : CDE
   #samples: 2
+  #cells  : 
   Samples : CDE3-4
   QC      : not verified
   Comments: None
@@ -111,6 +114,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: None
   Dir     : undetermined
   #samples: 1
+  #cells  : 
   Samples : Undetermined
   QC      : not verified
   Comments: None""" % mockdir.dirn
@@ -133,7 +137,8 @@ Summary of data in 'bcl2fastq' dir:
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8"
+                        "Single cell platform": "ICELL8",
+                        "Number of cells": 1311
                         },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
@@ -166,6 +171,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: Human
   Dir     : AB
   #samples: 2
+  #cells  : 1311
   Samples : AB1-2
   QC      : not verified
   Comments: None
@@ -179,6 +185,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: Mouse
   Dir     : CDE
   #samples: 2
+  #cells  : 
   Samples : CDE3-4
   QC      : not verified
   Comments: None
@@ -192,6 +199,7 @@ Summary of data in 'bcl2fastq' dir:
   Organism: None
   Dir     : undetermined
   #samples: 1
+  #cells  : 
   Samples : Undetermined
   QC      : not verified
   Comments: None""" % mockdir.dirn
@@ -266,7 +274,8 @@ class TestReportConcise(unittest.TestCase):
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8" },
+                        "Single cell platform": "ICELL8",
+                        "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
@@ -278,7 +287,7 @@ class TestReportConcise(unittest.TestCase):
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate concise report
         self.assertEqual(report_concise(ap),
-                         "Paired end: 'AB': Alison Bell, Human ICELL8 scRNA-seq (PI: Audrey Bower) (2 samples); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
+                         "Paired end: 'AB': Alison Bell, Human ICELL8 scRNA-seq (PI: Audrey Bower) (2 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
 class TestReportSummary(unittest.TestCase):
     """
@@ -341,8 +350,8 @@ Bcl2fastq: Unknown
 Assay    : Nextera
 
 2 projects:
-- 'AB':  Alison Bell           Human RNA-seq   2 samples (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq  2 samples (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -366,7 +375,8 @@ Additional notes/comments:
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8" },
+                        "Single cell platform": "ICELL8",
+                        "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
@@ -389,8 +399,8 @@ Bcl2fastq: Unknown
 Assay    : Nextera
 
 2 projects:
-- 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq           2 samples (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)           
+- 'CDE': Charles David Edwards Mouse ChIP-seq           2 samples            (PI Colin Delaney Eccleston)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -449,8 +459,8 @@ class TestReportProjects(unittest.TestCase):
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
         expected = """2 projects found
-MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\tyes\tAB1-2
-MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\tyes\tCDE3-4
+MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
 """
         for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
@@ -471,7 +481,8 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
-                        "Single cell platform": "ICELL8" },
+                        "Single cell platform": "ICELL8",
+                        "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
@@ -483,9 +494,22 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
         expected = """2 projects found
-MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tscRNA-seq\tICELL8\tHuman\tMISEQ\t2\tyes\tAB1-2
-MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\tyes\tCDE3-4
+MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tscRNA-seq\tICELL8\tHuman\tMISEQ\t2\t1311\tyes\tAB1-2
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
 """
         for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
+
+class TestDefaultValueFunction(unittest.TestCase):
+    """
+    Tests for the 'default_value' helper function
+    """
+    def test_default_value(self):
+        """report: test the default_value function
+        """
+        self.assertEqual("Hello",default_value("Hello"))
+        self.assertEqual("Hello",default_value("Hello",default="Goodbye"))
+        self.assertEqual("",default_value(None))
+        self.assertEqual("Goodbye",default_value(None,default="Goodbye"))
+        self.assertEqual(0,default_value(0))

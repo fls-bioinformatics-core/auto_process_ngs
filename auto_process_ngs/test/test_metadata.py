@@ -159,23 +159,6 @@ class TestAnalysisDirParameters(unittest.TestCase):
         self.assertEqual(params.project_metadata,None)
         self.assertEqual(params.stats_file,None)
 
-class TestAnalysisDirParameters(unittest.TestCase):
-    """Tests for the AnalysisDirParameters class
-    """
-
-    def test_create_analysis_dir_parameters(self):
-        """Check creation of an empty AnalysisDirParameters object
-        """
-        params = AnalysisDirParameters()
-        self.assertEqual(params.analysis_dir,None)
-        self.assertEqual(params.data_dir,None)
-        self.assertEqual(params.sample_sheet,None)
-        self.assertEqual(params.bases_mask,None)
-        self.assertEqual(params.primary_data_dir,None)
-        self.assertEqual(params.unaligned_dir,None)
-        self.assertEqual(params.project_metadata,None)
-        self.assertEqual(params.stats_file,None)
-
 class TestAnalysisDirMetadata(unittest.TestCase):
     """Tests for the AnalysisDirMetadata class
     """
@@ -362,3 +345,25 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[4],"ICell8")
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
+
+class TestAnalysisProjectInfo(unittest.TestCase):
+    """Tests for the AnalysisDirMetadata class
+    """
+
+    def test_create_analysis_project_info(self):
+        """Check creation of an empty AnalysisProjectInfo object
+        """
+        info = AnalysisProjectInfo()
+        self.assertEqual(info.run,None)
+        self.assertEqual(info.platform,None)
+        self.assertEqual(info.user,None)
+        self.assertEqual(info.PI,None)
+        self.assertEqual(info.organism,None)
+        self.assertEqual(info.library_type,None)
+        self.assertEqual(info.single_cell_platform,None)
+        self.assertEqual(info.number_of_cells,None)
+        self.assertEqual(info.icell8_well_list,None)
+        self.assertEqual(info.paired_end,None)
+        self.assertEqual(info.primary_fastq_dir,None)
+        self.assertEqual(info.samples,None)
+        self.assertEqual(info.comments,None)

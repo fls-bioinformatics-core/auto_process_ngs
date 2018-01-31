@@ -98,15 +98,17 @@ def report_info(ap):
                                                 "s" if len(projects) != 0
                                                 else ""))
     for project in projects:
+        info = project.info
         report.append("\n- %s" % project.name)
         report.append("  %s" % ('-'*len(project.name),))
-        report.append("  User    : %s" % project.info.user)
-        report.append("  PI      : %s" % project.info.PI)
-        report.append("  Library : %s" % project.info.library_type)
-        report.append("  SC Plat.: %s" % project.info.single_cell_platform)
-        report.append("  Organism: %s" % project.info.organism)
+        report.append("  User    : %s" % info.user)
+        report.append("  PI      : %s" % info.PI)
+        report.append("  Library : %s" % info.library_type)
+        report.append("  SC Plat.: %s" % info.single_cell_platform)
+        report.append("  Organism: %s" % info.organism)
         report.append("  Dir     : %s" % os.path.basename(project.dirn))
         report.append("  #samples: %s" % len(project.samples))
+        report.append("  #cells  : %s" % default_value(info.number_of_cells))
         report.append("  Samples : %s" % project.prettyPrintSamples())
         report.append("  QC      : %s" % ('ok'
                                           if project.verify_qc()
@@ -137,7 +139,14 @@ def report_concise(ap):
     report = []
     analysis_dir = utils.AnalysisDir(ap.analysis_dir)
     for p in analysis_dir.projects:
-        report.append("'%s': %s, %s %s%s (PI: %s) (%d sample%s)" % \
+        samples = "%d sample%s" % (len(p.samples),
+                                   's' if len(p.samples) != 1
+                                   else '')
+        if p.info.number_of_cells is not None:
+            samples += "/%d cell%s" % (p.info.number_of_cells,
+                                       's' if p.info.number_of_cells != 1
+                                       else '')
+        report.append("'%s': %s, %s %s%s (PI: %s) (%s)" % \
                       (p.name,
                        p.info.user,
                        p.info.organism,
@@ -145,8 +154,7 @@ def report_concise(ap):
                         if p.info.single_cell_platform else ''),
                        p.info.library_type,
                        p.info.PI,
-                       len(p.samples),
-                       's' if len(p.samples) > 1 else ''
+                       samples
                    ))
     report = '; '.join(report)
     # Paired end run?
@@ -241,22 +249,33 @@ def report_summary(ap):
     # Projects
     report.append("%d project%s:" % (analysis_dir.n_projects,
                                      '' if analysis_dir.n_projects == 1 else 's'))
+    data_items = ('user',
+                  'PI',
+                  'library_type',
+                  'single_cell_platform',
+                  'number_of_cells',
+                  'organism')
     rows = []
     comments = bcf_utils.OrderedDictionary()
     for project in analysis_dir.projects:
         project_data = dict(project=project.name)
-        for item in ('user','PI','library_type','single_cell_platform','organism'):
+        for item in data_items:
             value = project.info[item]
             project_data[item] = value if value not in ('.','?') else \
                                  '<unspecified %s>' % item.lower()
+        library = project_data['library_type']
+        if project_data['single_cell_platform'] is not None:
+            library += " (%s)" % project_data['single_cell_platform']
+        samples = "%d sample%s" % (len(project.samples),
+                                   's' if len(project.samples) != 1 else '')
+        if project_data['number_of_cells'] is not None:
+            samples += "/%d cell%s" % (int(project_data['number_of_cells']),
+                                       's' if int(project_data['number_of_cells']) != 1 else '')
         rows.append(("- '%s':" % project_data['project'],
                      project_data['user'],
                      project_data['organism'],
-                     project_data['library_type'],
-                     ("(%s)" % project_data['single_cell_platform']
-                      if project_data['single_cell_platform'] else ""),
-                     "%d sample%s" % (len(project.samples),
-                                      's' if len(project.samples) > 1 else ''),
+                     library,
+                     samples,
                      "(PI %s)" % project_data['PI']))
         if project.info.comments:
             comments[project.name] = project.info.comments
@@ -297,6 +316,7 @@ def report_projects(ap):
     - Organism
     - Platform
     - #Samples
+    - #Cells
     - PE (yes/no)
     - Samples
 
@@ -346,14 +366,25 @@ def report_projects(ap):
         info = project.info
         project_line.append('' if not info.user else info.user)
         project_line.append('' if not info.PI else info.PI)
-        project_line.append('' if not info.library_type else info.library_type)
-        project_line.append('' if not info.single_cell_platform else info.single_cell_platform)
+        project_line.append('' if not info.library_type
+                            else info.library_type)
+        project_line.append('' if not info.single_cell_platform
+                            else info.single_cell_platform)
         project_line.append('' if not info.organism else info.organism)
         project_line.append(platform)
         project_line.append(str(len(project.samples)))
+        project_line.append('' if not info.number_of_cells
+                            else str(info.number_of_cells))
         project_line.append(paired_end)
         project_line.append(project.prettyPrintSamples())
         report.append('\t'.join(project_line))
     report = '\n'.join(report)
     return report
 
+def default_value(s,default=""):
+    """
+    Returns supplied value, or default if supplied value is None
+    """
+    if s is None:
+        return default
+    return s
