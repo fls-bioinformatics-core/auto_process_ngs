@@ -406,7 +406,7 @@ class ProjectMetadataFile(TabFile.TabFile):
     Samples: list/description of sample names
     User: name(s) of the associated user(s)
     Library: the library type
-    SC_Platform: single-cell preparation platform (e.g. 'ICell8')
+    Single cell platform: single-cell preparation platform (e.g. 'ICELL8')
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
     Comments: free text containing additional information
@@ -414,7 +414,6 @@ class ProjectMetadataFile(TabFile.TabFile):
 
     Any fields set to None will be written to file with a '.'
     placeholder.
-
     """
     def __init__(self,filen=None):
         """Create a new ProjectsMetadataFile instance
