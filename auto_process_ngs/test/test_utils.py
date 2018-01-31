@@ -1313,7 +1313,7 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(dirn,'/path/to/somewhere')
 
     def test_extra_whitespace(self):
-        """Check we can handle addition leading/trailing whitespace
+        """Check we can handle additional leading/trailing whitespace
         """
         user,host,dirn = split_user_host_dir('\tuser@host.name:/path/to/somewhere  \n')
         self.assertEqual(user,'user')

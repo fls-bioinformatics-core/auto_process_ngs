@@ -36,7 +36,7 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         shutil.rmtree(self.dirn)
 
     def test_publish_qc_metadata_missing(self):
-        """publish_qc: raises exception if metadata not set
+        """publish_qc: raise exception if metadata not set
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
