@@ -464,6 +464,58 @@ class MultiQC(PipelineCommand):
 # ICell8 pipeline tasks
 ######################################################################
 
+class CollectFiles(PipelineTask):
+    """
+    Collect list of files matching glob pattern
+
+    This is a utility task that can be used to collect
+    a list of files in a directory which matches a
+    'glob'-style pattern.
+
+    It is intended to offer an alternative to the
+    FileCollector class, when it is desirable to farm
+    out the file collection to an external process
+    (e.g. when there are very large numbers of files
+    to examine).
+    """
+    def init(self,dirn,pattern):
+        """
+        Initialise the CollectFiles task
+
+        Arguments:
+          dirn (str): path to the directory holding the
+            files to be collected
+          pattern (str): glob-style pattern to match to
+            file names
+        """
+        self.files = list()
+    def setup(self):
+        # Run 'ls' command and return one file per line
+        # Follow with a null command (echo -n) to mask the
+        # non-zero exit code from 'ls' when there are no
+        # matching files
+        self.add_cmd(
+            PipelineCommandWrapper(
+                "List contents of dir '%s' matching pattern '%s"
+                % (self.args.dirn,self.args.pattern),
+                "ls","-1",
+                "%s" % (os.path.join(self.args.dirn,
+                                     self.args.pattern)),
+                "2>1",
+                ";","echo","-n"))
+    def finish(self):
+        # Process the output from the 'ls' command which
+        # was written to stdout
+        # Only keep lines that start with the supplied
+        # directory path
+        for line in self.stdout.split('\n'):
+            if not line.startswith(self.args.dirn):
+                continue
+            self.files.append(line)
+        self.files.sort()
+    def output(self):
+        return self.files
+
 class GetICell8Stats(PipelineTask):
     """
     Generate statistics for ICell8 processing stage
@@ -635,10 +687,20 @@ class SplitFastqsIntoBatches(PipelineTask):
             os.rename(self.tmp_batch_dir,self.args.batch_dir)
     def output(self):
         """
-        Returns iterator listing the batched Fastq files
+        Returns object pointing to outputs
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.batch_dir
-        return FileCollector(out_dir,"*.B*.r*.fastq")
+        pattern = "*.B*.r*.fastq"
+        return AttributeDictionary(
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern)
+        )
 
 class FilterICell8Fastqs(PipelineTask):
     """
@@ -700,27 +762,51 @@ class FilterICell8Fastqs(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
-        """Returns object pointing to collections of Fastqs
+        """Returns object pointing to outputs
 
         The returned object has the following properties:
 
-        - 'assigned': iterator listing the Fastqs with assigned reads
-        - 'unassigned': iterator listing the Fastqs with unassigned
-          reads
-        - 'failed_barcodes': iterator listing the Fastqs with reads
-          which failed the barcode quality check
-        - 'failed_umis': iterator listing the Fastqs with reads
-          which failed the UMI quality check
+        - 'fastqs': object with properties which point to iterators
+           listing output Fastqs (see below)
+        - 'patterns': object with properties which are glob-style
+           patterns matching output Fastqs (see below)
+
+        The output Fastqs are:
+
+        - 'assigned': Fastqs with reads assigned to known barcodes
+        - 'unassigned': Fastqs with reads not assigned to known
+          barcodes
+        - 'failed_barcodes': Fastqs with reads which failed the
+          barcode quality check
+        - 'failed_umis': Fastqs with reads which failed the UMI
+          quality check
+
+        For example:
+
+        * output().pattern.assigned = glob pattern to match Fastqs
+          with assigned reads
+        * output().fastqs.unassigned = iterator listing Fastqs with
+          unassigned reads
 
         NB the 'failed_barcodes' and 'failed_umis' will be empty
         unless the 'quality_filter' argument was set to True.
         """
         out_dir = self.args.filter_dir
+        patterns = AttributeDictionary(
+            assigned="*.B*.filtered.r*.fastq",
+            unassigned="*.unassigned.r*.fastq",
+            failed_barcodes="*.failed_barcode.r*.fastq",
+            failed_umis="*.failed_umi.r*.fastq"
+        )
+        fastqs = AttributeDictionary(
+            assigned=FileCollector(out_dir,patterns.assigned),
+            unassigned=FileCollector(out_dir,patterns.unassigned),
+            failed_barcodes=FileCollector(out_dir,patterns.failed_barcodes),
+            failed_umis=FileCollector(out_dir,patterns.failed_umis)
+        )
         return AttributeDictionary(
-            assigned=FileCollector(out_dir,"*.B*.filtered.r*.fastq"),
-            unassigned=FileCollector(out_dir,"*.unassigned.r*.fastq"),
-            failed_barcodes=FileCollector(out_dir,"*.failed_barcode.r*.fastq"),
-            failed_umis=FileCollector(out_dir,"*.failed_umi.r*.fastq")
+            patterns=patterns,
+            fastqs=fastqs,
         )
 
 class TrimReads(PipelineTask):
@@ -766,10 +852,20 @@ class TrimReads(PipelineTask):
             os.rename(self.tmp_trim_dir,self.args.trim_dir)
     def output(self):
         """
-        Returns iterator listing the trimmed Fastq files
+        Returns object pointing to trimmed Fastq files
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.trim_dir
-        return FileCollector(out_dir,"*.trimmed.fastq")
+        pattern = "*.trimmed.fastq"
+        return AttributeDictionary(
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern)
+        )
 
 class GetReadsWithPolyGRegions(PipelineTask):
     """
@@ -804,10 +900,20 @@ class GetReadsWithPolyGRegions(PipelineTask):
             os.rename(self.tmp_poly_g_regions_dir,self.args.poly_g_regions_dir)
     def output(self):
         """
-        Returns iterator listing the Fastqs with poly-G regions
+        Returns object pointing to Fastqs with poly-G regions
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.poly_g_regions_dir
-        return FileCollector(out_dir,"*.poly_g.fastq")
+        pattern = "*.poly_g.fastq"
+        return AttributeDictionary(
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern)
+        )
 
 class FilterContaminatedReads(PipelineTask):
     """
@@ -862,10 +968,20 @@ class FilterContaminatedReads(PipelineTask):
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
     def output(self):
         """
-        Returns iterator listing the contaminant-filtered Fastqs
+        Returns object pointing to the contaminant-filtered Fastqs
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.filter_dir
-        return FileCollector(out_dir,"*.trimmed.filtered.fastq")
+        pattern = "*.trimmed.filtered.fastq"
+        return AttributeDictionary(
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern)
+        )
 
 class SplitByBarcodes(PipelineTask):
     """
@@ -904,10 +1020,20 @@ class SplitByBarcodes(PipelineTask):
             os.rename(self.tmp_barcodes_dir,self.args.barcodes_dir)
     def output(self):
         """
-        Returns iterator listing the contaminant-filtered Fastqs
+        Returns object pointing to the barcode-pooled Fastqs
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.barcodes_dir
-        return FileCollector(out_dir,"*.r*.fastq")
+        pattern = "*.r*.fastq"
+        return AttributeDictionary(
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern)
+        )
 
 class MergeBarcodeFastqs(PipelineTask):
     """
@@ -1006,24 +1132,48 @@ class MergeBarcodeFastqs(PipelineTask):
             print "Moving tmp dir to final location"
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
-        """Returns object pointing to collections of Fastqs
+        """Returns object pointing to outputs
 
         The returned object has the following properties:
 
-        - 'assigned': iterator listing the Fastqs with assigned reads
-        - 'unassigned': iterator listing the Fastqs with unassigned
-          reads
-        - 'failed_barcodes': iterator listing the Fastqs with reads
-          which failed the barcode quality check
-        - 'failed_umis': iterator listing the Fastqs with reads
-          which failed the UMI quality check
+        - 'fastqs': object with properties which point to iterators
+           listing output Fastqs (see below)
+        - 'patterns': object with properties which are glob-style
+           patterns matching output Fastqs (see below)
+
+        The output Fastqs are:
+
+        - 'assigned': Fastqs with reads assigned to known barcodes
+        - 'unassigned': Fastqs with reads not assigned to known
+          barcodes
+        - 'failed_barcodes': Fastqs with reads which failed the
+          barcode quality check
+        - 'failed_umis': Fastqs with reads which failed the UMI
+          quality check
+
+        For example:
+
+        * output().pattern.assigned = glob pattern to match Fastqs
+          with assigned reads
+        * output().fastqs.unassigned = iterator listing Fastqs with
+          unassigned reads
         """
         out_dir = self.args.merge_dir
+        patterns = AttributeDictionary(
+            assigned="*.[ACGT]*.r*.fastq.gz",
+            unassigned="*.unassigned.r*.fastq.gz",
+            failed_barcodes="*.failed_barcodes.r*.fastq.gz",
+            failed_umis="*.failed_umis.r*.fastq.gz",
+        )
+        fastqs = AttributeDictionary(
+            assigned=FileCollector(out_dir,patterns.assigned),
+            unassigned=FileCollector(out_dir,patterns.unassigned),
+            failed_barcodes=FileCollector(out_dir,patterns.failed_barcodes),
+            failed_umis=FileCollector(out_dir,patterns.failed_umis),
+        )
         return AttributeDictionary(
-            assigned=FileCollector(out_dir,"*.[ACGT]*.r*.fastq.gz"),
-            unassigned=FileCollector(out_dir,"*.unassigned.r*.fastq.gz"),
-            failed_barcodes=FileCollector(out_dir,"*.failed_barcodes.r*.fastq.gz"),
-            failed_umis=FileCollector(out_dir,"*.failed_umis.r*.fastq.gz"),
+            patterns=patterns,
+            fastqs=fastqs
         )
 
 class MergeSampleFastqs(PipelineTask):
@@ -1085,11 +1235,19 @@ class MergeSampleFastqs(PipelineTask):
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
     def output(self):
         """
-        Returns iterator listing the merged Fastqs
+        Returns object pointing to the merged Fastqs
+
+        Returned object has the following properties:
+
+        - pattern: glob-style pattern matching output Fastq
+          file names
+        - fastqs: FileCollector listing output Fastq files
         """
         out_dir = self.args.merge_dir
+        pattern = "*.r*.fastq.gz"
         return AttributeDictionary(
-            fastqs=FileCollector(out_dir,"*.r*.fastq.gz"),
+            pattern=pattern,
+            fastqs=FileCollector(out_dir,pattern),
         )
 
 class RunQC(PipelineTask):
@@ -1880,59 +2038,96 @@ if __name__ == "__main__":
                                               batch_dir,basename,
                                               batch_size=args.batch_size)
         ppl.add_task(batch_fastqs)
+        collect_batch_fastqs = CollectFiles("Collect batched files",
+                                            batch_dir,
+                                            batch_fastqs.output().pattern)
+        ppl.add_task(collect_batch_fastqs,requires=(batch_fastqs,))
 
         # Setup the filtering jobs as a group
         filter_dir = os.path.join(icell8_dir,"_fastqs.quality_filter")
         filter_fastqs = FilterICell8Fastqs("Filter Fastqs",
-                                           batch_fastqs.output(),
+                                           collect_batch_fastqs.output(),
                                            filter_dir,
                                            well_list=well_list,
                                            mode='none',
                                            discard_unknown_barcodes=True,
                                            quality_filter=do_quality_filter)
-        ppl.add_task(filter_fastqs,requires=(batch_fastqs,))
+        ppl.add_task(filter_fastqs,requires=(collect_batch_fastqs,))
+        # Collect the files from the filtering jobs
+        collect_filtered_fastqs = CollectFiles(
+            "Collect filtered fastqs",
+            filter_dir,
+            filter_fastqs.output().patterns.assigned)
+        collect_filtered_unassigned = CollectFiles(
+            "Collect filtered fastqs (unassigned barcodes)",
+            filter_dir,
+            filter_fastqs.output().patterns.unassigned)
+        collect_filtered_failed_barcodes = CollectFiles(
+            "Collect filtered fastqs (failed barcodes)",
+            filter_dir,
+            filter_fastqs.output().patterns.failed_barcodes)
+        collect_filtered_failed_umis = CollectFiles(
+            "Collect filtered fastqs (failed UMIs)",
+            filter_dir,
+            filter_fastqs.output().patterns.assigned)
+        for task in (collect_filtered_fastqs,
+                     collect_filtered_unassigned,
+                     collect_filtered_failed_barcodes,
+                     collect_filtered_failed_umis):
+            ppl.add_task(task,requires=(filter_fastqs,))
     
         # Post filtering stats
         filter_stats = GetICell8Stats("Post-filtering statistics",
-                                      filter_fastqs.output().assigned,
+                                      collect_filtered_fastqs.output(),
                                       initial_stats.output(),
                                       suffix="_filtered",
                                       append=True,
                                       nprocs=nprocessors['statistics'])
-        ppl.add_task(filter_stats,requires=(initial_stats,filter_fastqs),
+        ppl.add_task(filter_stats,requires=(initial_stats,
+                                            collect_filtered_fastqs),
                      runner=runners['statistics'])
 
         # Use cutadapt to find reads with poly-G regions
         poly_g_dir = os.path.join(icell8_dir,"_fastqs.poly_g")
         get_poly_g_reads = GetReadsWithPolyGRegions(
             "Find reads with poly-G regions",
-            filter_fastqs.output().assigned,
+            collect_filtered_fastqs.output(),
             poly_g_dir)
-        ppl.add_task(get_poly_g_reads,requires=(filter_fastqs,))
+        ppl.add_task(get_poly_g_reads,requires=(collect_filtered_fastqs,))
+        collect_poly_g_fastqs = CollectFiles("Collect poly-G fastqs",
+                                             poly_g_dir,
+                                             get_poly_g_reads.output().pattern)
+        ppl.add_task(collect_poly_g_fastqs,requires=(get_poly_g_reads,))
         poly_g_stats = GetICell8PolyGStats("Poly-G region statistics",
-                                           get_poly_g_reads.output(),
+                                           collect_poly_g_fastqs.output(),
                                            initial_stats.output(),
                                            suffix="_poly_g",
                                            append=True,
                                            nprocs=nprocessors['statistics'])
-        ppl.add_task(poly_g_stats,requires=(get_poly_g_reads,filter_stats),
+        ppl.add_task(poly_g_stats,
+                     requires=(collect_poly_g_fastqs,filter_stats),
                      runner=runners['statistics'])
 
         # Set up the cutadapt jobs as a group
         trim_dir = os.path.join(icell8_dir,"_fastqs.trim_reads")
         trim_reads = TrimReads("Read trimming",
-                               filter_fastqs.output().assigned,
+                               collect_filtered_fastqs.output(),
                                trim_dir)
-        ppl.add_task(trim_reads,requires=(filter_fastqs,))
+        ppl.add_task(trim_reads,requires=(collect_filtered_fastqs,))
+        collect_trimmed_fastqs = CollectFiles("Collect trimmed fastqs",
+                                              trim_dir,
+                                              trim_reads.output().pattern)
+        ppl.add_task(collect_trimmed_fastqs,requires=(trim_reads,))
 
         # Post read trimming stats
         trim_stats = GetICell8Stats("Post-trimming statistics",
-                                    trim_reads.output(),
+                                    collect_trimmed_fastqs.output(),
                                     initial_stats.output(),
                                     suffix="_trimmed",
                                     append=True,
                                     nprocs=nprocessors['statistics'])
-        ppl.add_task(trim_stats,requires=(trim_reads,poly_g_stats),
+        ppl.add_task(trim_stats,requires=(collect_trimmed_fastqs,
+                                          poly_g_stats),
                      runner=runners['statistics'])
 
         # Set up the contaminant filter jobs as a group
@@ -1942,31 +2137,39 @@ if __name__ == "__main__":
                 "_fastqs.contaminant_filter")
             contaminant_filter = FilterContaminatedReads(
                 "Contaminant filtering",
-                trim_reads.output(),
+                collect_trimmed_fastqs.output(),
                 contaminant_filter_dir,
                 args.mammalian_conf,
                 args.contaminants_conf,
                 aligner=args.aligner,
                 threads=nprocessors['contaminant_filter'])
-            ppl.add_task(contaminant_filter,requires=(trim_reads,),
+            ppl.add_task(contaminant_filter,
+                         requires=(collect_trimmed_fastqs,),
                          runner=runners['contaminant_filter'])
+            collect_contaminant_filtered = CollectFiles(
+                "Collect contaminant-filtered fastqs",
+                contaminant_filter_dir,
+                contaminant_filter.output().pattern)
+            ppl.add_task(collect_contaminant_filtered,
+                         requires=(contaminant_filter,))
 
             # Post contaminant filter stats
             final_stats = GetICell8Stats(
                 "Post-contaminant filter statistics",
-                contaminant_filter.output(),
+                collect_contaminant_filtered.output(),
                 initial_stats.output(),
                 suffix="_contaminant_filtered",
                 append=True,
                 nprocs=nprocessors['statistics'])
             ppl.add_task(final_stats,
-                         requires=(contaminant_filter,trim_stats),
+                         requires=(collect_contaminant_filtered,
+                                   trim_stats),
                          runner=runners['statistics'])
-            fastqs_in = contaminant_filter.output()
-            split_barcodes_requires = (contaminant_filter,)
+            fastqs_in = collect_contaminant_filtered.output()
+            split_barcodes_requires = (collect_contaminant_filtered,)
         else:
-            fastqs_in = trim_reads.output()
-            split_barcodes_requires = (trim_reads,)
+            fastqs_in = collect_trimmed_fastqs.output()
+            split_barcodes_requires = (collect_trimmed_fastqs,)
 
         # Prepare for rebatching reads by barcode and sample by splitting
         # each batch by barcode
@@ -1975,35 +2178,47 @@ if __name__ == "__main__":
                                          fastqs_in,
                                          split_barcoded_fastqs_dir)
         ppl.add_task(split_barcodes,requires=split_barcodes_requires)
+        collect_split_barcodes = CollectFiles("Collect barcode-split fastqs",
+                                              split_barcoded_fastqs_dir,
+                                              split_barcodes.output().pattern)
+        ppl.add_task(collect_split_barcodes,requires=(split_barcodes,))
         # Merge (concat) fastqs into single pairs per barcode
-        barcode_fastqs = MergeBarcodeFastqs("Assemble reads by barcode",
-                                            split_barcodes.output(),
-                                            filter_fastqs.output().unassigned,
-                                            filter_fastqs.output().failed_barcodes,
-                                            filter_fastqs.output().failed_umis,
-                                            barcode_fastqs_dir,
-                                            basename)
-        ppl.add_task(barcode_fastqs,requires=(split_barcodes,))
+        barcode_fastqs = MergeBarcodeFastqs(
+            "Assemble reads by barcode",
+            collect_split_barcodes.output(),
+            collect_filtered_unassigned.output(),
+            collect_filtered_failed_barcodes.output(),
+            collect_filtered_failed_umis.output(),
+            barcode_fastqs_dir,
+            basename)
+        ppl.add_task(barcode_fastqs,requires=(collect_split_barcodes,))
+        collect_barcode_fastqs = CollectFiles(
+            "Collect final barcoded fastqs",
+            barcode_fastqs_dir,
+            barcode_fastqs.output().patterns.assigned)
+        ppl.add_task(collect_barcode_fastqs,requires=(barcode_fastqs,))
         # Merge (concat) fastqs into single pairs per barcode
         sample_fastqs_dir = os.path.join(icell8_dir,"fastqs.samples")
         sample_fastqs = MergeSampleFastqs("Assemble reads by sample",
-                                          split_barcodes.output(),
+                                          collect_split_barcodes.output(),
                                           well_list,
                                           sample_fastqs_dir)
-        ppl.add_task(sample_fastqs,requires=(split_barcodes,))
+        ppl.add_task(sample_fastqs,requires=(collect_split_barcodes,))
 
         # Final stats for verification
         final_barcode_stats = GetICell8Stats(
             "Post-barcode splitting and merging statistics",
-            barcode_fastqs.output().assigned,
+            collect_barcode_fastqs.output(),
             initial_stats.output(),
             suffix="_final",
             append=True,
             nprocs=nprocessors['statistics'])
         if do_contaminant_filter:
-            final_barcode_stats_requires = (barcode_fastqs,final_stats,)
+            final_barcode_stats_requires = (collect_barcode_fastqs,
+                                            final_stats,)
         else:
-            final_barcode_stats_requires = (barcode_fastqs,trim_stats,)
+            final_barcode_stats_requires = (collect_barcode_fastqs,
+                                            trim_stats,)
         ppl.add_task(final_barcode_stats,
                      requires=final_barcode_stats_requires,
                      runner=runners['statistics'])
@@ -2011,8 +2226,8 @@ if __name__ == "__main__":
         # Verify that barcodes are okay
         check_barcodes = CheckICell8Barcodes(
             "Verify barcodes are consistent",
-            barcode_fastqs.output().assigned)
-        ppl.add_task(check_barcodes,requires=(barcode_fastqs,))
+            collect_barcode_fastqs.output())
+        ppl.add_task(check_barcodes,requires=(collect_barcode_fastqs,))
 
         # Generate XLSX version of stats
         xlsx_stats = ConvertStatsToXLSX(
@@ -2040,7 +2255,7 @@ if __name__ == "__main__":
             
         if do_clean_up:
             # Wait until all stages are finished before doing clean up
-            cleanup_requirements = [barcode_fastqs,
+            cleanup_requirements = [collect_barcode_fastqs,
                                     sample_fastqs]
             if do_contaminant_filter:
                 cleanup_requirements.append(final_stats)
