@@ -501,7 +501,7 @@ class CollectFiles(PipelineTask):
                 "ls","-1",
                 "%s" % (os.path.join(self.args.dirn,
                                      self.args.pattern)),
-                "2>1",
+                "2>&1",
                 ";","echo","-n"))
     def finish(self):
         # Process the output from the 'ls' command which
