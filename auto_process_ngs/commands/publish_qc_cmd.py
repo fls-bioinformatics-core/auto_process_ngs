@@ -406,7 +406,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             # Get local versions of project information
             info = project.info
             project_user = null_str if info.user is None else info.user
-            library_type = null_str if info.library_type is None else info.library_type
+            if info.library_type is not None:
+                library_type = info.library_type
+                if info.single_cell_platform is not None:
+                    library_type += " (%s)" % info.single_cell_platform
+            else:
+                library_type = null_str
             organism = null_str if info.organism is None else info.organism
             PI = null_str if info.PI is None else info.PI
             # Generate line in the table of projects
