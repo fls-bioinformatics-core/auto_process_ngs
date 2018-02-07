@@ -53,6 +53,98 @@ import logging
 logger = logging.getLogger(__name__)
 
 #######################################################################
+# Classes
+#######################################################################
+
+class MetricsSummary(object):
+    """
+    Extract data from metrics_summary.csv file
+
+    Utility class for extracting data from a
+    'metrics_summary.csv' file output from running
+    'cellranger count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+
+    In addition: integer data values are formatted to
+    use commas to separate thousands (e.g. 2,272) and
+    values which contain commas are enclosed in
+    double quotes.
+
+    For example:
+
+    Estimated Number of Cells,Mean Reads per Cell,...
+    "2,272","107,875","1,282","245,093,084",98.3%,...
+
+    This class extracts the data values and where
+    possible converts them to integers.
+    """
+    def __init__(self,s):
+        """
+        Create a new MetricsSummary instance
+
+        Arguments:
+          s (str): contents of a
+            'metrics_summary.csv' file
+        """
+        self._data = dict()
+        s = s.split('\n')
+        fields = self._tokenise(s[0])
+        line = self._tokenise(s[1])
+        for key,value in zip(fields,line):
+            self._data[key] = value
+    def _tokenise(self,line):
+        """
+        Internal: process line from metrics_summary.csv
+
+        Arguments:
+          line (str): line to tokenise
+
+        Returns:
+          List: list of tokens extracted from the
+            supplied line, with enclosing quotes
+            removed and converted to integers
+            where possible.
+        """
+        # Split the line into tokens
+        # (taking account of quotes)
+        tokens = list()
+        this_token = ''
+        quoted = False
+        for c in line:
+            if c == '"':
+                # Start or end of a quote
+                quoted = (not quoted)
+            elif c == ',':
+                if not quoted:
+                    # End of a token
+                    tokens.append(this_token)
+                    this_token = ''
+                    continue
+            # Append to current token
+            this_token += c
+        # Deal with the last token
+        tokens.append(this_token)
+        # Strip quotes
+        tokens = [t.strip('"') for t in tokens]
+        # Convert to integer where possible
+        # (i.e. remove commas from e.g. "2,272")
+        for i in xrange(len(tokens)):
+            try:
+                tokens[i] = int(tokens[i].replace(',',''))
+            except ValueError:
+                pass
+        return tokens
+    @property
+    def estimated_number_of_cells(self):
+        """
+        Return the estimated number of cells
+        """
+        return self._data['Estimated Number of Cells']
+
+#######################################################################
 # Functions
 #######################################################################
 
@@ -202,6 +294,46 @@ def build_fastq_path_dir(project_dir):
         logger.debug("Linking: %s -> %s" % (link_name,target))
         os.symlink(target,link_name)
     return fastq_path_dir
+
+def set_cell_count_for_project(project_dir):
+    """
+    Set the total number of cells for a project
+
+    Sums the number of cells for each sample in a project
+    (as determined from 'cellranger count', and extracted
+    from the 'metrics_summary.csv' file) and writes this
+    to the 'number_of_cells' metadata item for the
+    project.
+
+    Arguments:
+      project_dir (str): path to the project directory
+
+    Returns:
+      Integer: exit code, non-zero values indicate problems
+        were encountered.
+    """
+    project = AnalysisProject(project_dir,
+                              os.path.basename(project_dir))
+    number_of_cells = 0
+    for sample in project.samples:
+        try:
+            metrics_summary_csv = os.path.join(
+                project_dir,
+                "cellranger_count",
+                sample.name,
+                "outs",
+                "metrics_summary.csv")
+            metrics = MetricsSummary(
+                open(metrics_summary_csv,'r').read())
+            number_of_cells += metrics.estimated_number_of_cells
+        except Exception as ex:
+            logger.critical("Failed to add cell count for sample "
+                            "'%s': %s" % (sample.name,ex))
+            return 1
+    # Store in the project metadata
+    project.info['number_of_cells'] = number_of_cells
+    project.info.save()
+    return 0
 
 def cellranger_info(path=None):
     """
@@ -410,7 +542,8 @@ def run_cellranger_count(fastq_dir,
       dry_run (bool): if True then only report actions
         that would be performed but don't run anything
       summary_only (bool): if True then only collect
-        the output 'web_summary.html' file, otherwise
+        the output 'web_summary.html' and
+        'metrics_summary.csv' files, otherwise
         copy all outputs (warning: this can be very
         large)
 
@@ -529,11 +662,24 @@ def run_cellranger_count(fastq_dir,
                 print "Copying contents of %s to %s" % (outs_dir,count_dir)
                 shutil.copytree(outs_dir,count_dir)
             else:
-                # Only collect the web summary
+                # Only collect the web and csv summaries
                 count_dir = os.path.join(count_dir,"outs")
                 mkdirs(count_dir)
-                print "Copying web_summary.html from %s to %s" % (outs_dir,count_dir)
-                shutil.copy(os.path.join(outs_dir,"web_summary.html"),count_dir)
+                for f in ("web_summary.html","metrics_summary.csv"):
+                    path = os.path.join(outs_dir,f)
+                    if not os.path.exists(path):
+                        logger.warning("%s: not found in %s" % (f,outs_dir))
+                        retval = 1
+                    else:
+                        print "Copying %s from %s to %s" % (f,
+                                                            outs_dir,
+                                                            count_dir)
+                        shutil.copy(path,count_dir)
+                # Stop if there was an error
+                if retval != 0:
+                    logger.critical("Some cellranger count outputs are "
+                                    "missing")
+                    return retval
 
     # Create a report and zip archive for each project
     pwd = os.getcwd()
@@ -628,7 +774,7 @@ def run_cellranger_count_for_project(project_dir,
     # Build the 'fastq_path' dir for cellranger
     fastq_dir = build_fastq_path_dir(project_dir)
     # Run the count procedure
-    return run_cellranger_count(
+    retval = run_cellranger_count(
         fastq_dir,
         transcriptome,
         cellranger_jobmode=cellranger_jobmode,
@@ -639,6 +785,11 @@ def run_cellranger_count_for_project(project_dir,
         log_dir=log_dir,
         dry_run=dry_run,
         summary_only=summary_only)
+    # Extract and store the cell count from the cellranger
+    # metric file
+    if retval == 0:
+        retval = set_cell_count_for_project(project_dir)
+    return retval
 
 def add_cellranger_args(cellranger_cmd,
                         jobmode=None,

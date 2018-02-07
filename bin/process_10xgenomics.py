@@ -215,7 +215,8 @@ if __name__ == "__main__":
                               action="store_true",
                               help="collect all outputs from 'cellranger "
                               "count' (default: only collect the "
-                              "'web_summary.html' files)")
+                              "'web_summary.html' and 'metrics_summary.csv' "
+                              "files)")
     # 'update_projects' parser
     update_projects_parser = subparsers.add_parser(
         "update_projects",
