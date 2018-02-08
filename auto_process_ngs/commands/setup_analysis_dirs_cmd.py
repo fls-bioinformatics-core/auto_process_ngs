@@ -40,7 +40,7 @@ def setup_analysis_dirs(ap,
         information from
       ignore_missing_metadata (bool): if True then make
         project directories for all projects even if metadata
-        hasn't been set (defaults is to stop if metadata isn't
+        hasn't been set (default is to stop if metadata isn't
         set)
       short_fastq_names (bool): if True then use 'short' Fastq
         names (default is to use full Fastq names as output
