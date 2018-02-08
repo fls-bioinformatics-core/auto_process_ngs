@@ -113,7 +113,8 @@ class MockAnalysisDir(MockIlluminaData):
                  no_undetermined=False,
                  top_dir=None,
                  metadata=None,
-                 readme=None):
+                 readme=None,
+                 project_metadata=None):
         """
         Create a mock-up of an analysis directory
 
@@ -151,6 +152,11 @@ class MockAnalysisDir(MockIlluminaData):
           readme (str): if set then will be
             written to a 'README' file in the mock
             analysis directory
+          project_metadata (dict): if set then should
+            be a dictionary where keys are names of
+            projects and values are dictionaries of
+            metadata items, which will be written to
+            the README.info file for that project
         """
         # Make a mock-up of an analysis dir
         self.run_name = os.path.basename(str(run_name))
@@ -162,6 +168,11 @@ class MockAnalysisDir(MockIlluminaData):
         if metadata is not None:
             for item in metadata:
                 self.metadata[item] = metadata[item]
+        self.project_metadata = dict()
+        if project_metadata is not None:
+            for project in project_metadata:
+                self.project_metadata[project] = \
+                            project_metadata[project]
         name = "%s_analysis" % run_name
         if top_dir is None:
             top_dir = os.getcwd()
@@ -244,7 +255,12 @@ class MockAnalysisDir(MockIlluminaData):
                 project_name = 'undetermined'
             else:
                 project_name = project
-            project_dir = MockAnalysisProject(project_name)
+            try:
+                project_metadata = self.project_metadata[project_name]
+            except KeyError:
+                project_metadata = dict()
+            project_dir = MockAnalysisProject(project_name,
+                                              metadata=project_metadata)
             sample_names = []
             for sample in self.samples_in_project(project):
                 sample_names.append(sample)
@@ -331,7 +347,7 @@ class MockAnalysisProject(object):
         if readme:
             with open(os.path.join(project_dir,'README.info'),'w') as info:
                 for key in self.metadata:
-                    info.write("%s\t%s" % (key,self.metadata[key]))
+                    info.write("%s\t%s\n" % (key,self.metadata[key]))
         # Add ScriptCode directory
         if scriptcode:
             os.mkdir(os.path.join(project_dir,'ScriptCode'))
@@ -660,7 +676,8 @@ class MockAnalysisDirFactory(object):
                    paired_end=True,
                    no_lane_splitting=True,
                    top_dir=None,
-                   metadata=None):
+                   metadata=None,
+                   project_metadata=None):
         """
         Basic analysis dir from bcl2fastq v2
         """
@@ -675,6 +692,7 @@ class MockAnalysisDirFactory(object):
                               no_lane_splitting=no_lane_splitting,
                               lanes=lanes,
                               metadata=metadata,
+                              project_metadata=project_metadata,
                               top_dir=top_dir)
         mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)

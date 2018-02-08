@@ -208,13 +208,17 @@ class QCReporter:
         # Set up summary section & metadata
         summary = report.add_section("Summary",name='summary')
         metadata_tbl = Table(('item','value',))
+        metadata_items = ['user','PI','library_type','organism',]
+        if self._project.info.single_cell_platform is not None:
+            metadata_items.insert(3,'single_cell_platform')
         metadata_titles = {
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
+            'single_cell_platform': 'Single cell preparation platform',
             'organism': 'Organism',
         }
-        for item in ('user','PI','library_type','organism',):
+        for item in metadata_items:
             if self._project.info[item]:
                 metadata_tbl.add_row(item=metadata_titles[item],
                                      value=self._project.info[item])

@@ -376,7 +376,16 @@ class TestAnalysisProject(unittest.TestCase):
         # Make a mock project directory
         if primary_fastq_dir is None:
             primary_fastq_dir = fastq_dir
-        metadata = { 'Primary fastqs': primary_fastq_dir }
+        sample_names = list(
+            set([AnalysisFastq(fq).sample_name for fq in fastq_list]))
+        sample_names.sort()
+        n_samples = len(sample_names)
+        sample_names = "%d sample%s (%s)" % \
+                       (n_samples,
+                        '' if n_samples == 1 else 's',
+                        ', '.join(sample_names))
+        metadata = { 'Primary fastqs': primary_fastq_dir,
+                     'Samples': sample_names }
         MockAnalysisProject(name,
                             fastq_list,
                             fastq_dir=fastq_dir,
@@ -397,10 +406,14 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertEqual(project.fastq_dir,None)
         self.assertEqual(project.info.library_type,None)
+        self.assertEqual(project.info.single_cell_platform,None)
         self.assertEqual(project.info.organism,None)
+        self.assertEqual(project.info.number_of_cells,None)
+        self.assertEqual(project.info.icell8_well_list,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)
         self.assertEqual(project.info.primary_fastq_dir,None)
+        self.assertEqual(project.info.samples,None)
         self.assertEqual(project.fastq_dirs,[])
 
     def test_create_single_end_analysis_project(self):
@@ -416,6 +429,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -437,6 +451,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,
+                         '2 samples (PJB1-A, PJB1-B, multiple fastqs per sample)')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -458,8 +474,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.samples[0].name,'PJB1-A')
-        self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
@@ -484,6 +500,8 @@ class TestAnalysisProject(unittest.TestCase):
                          os.path.join(project.dirn,'fastqs'))
         self.assertEqual(project.fastq_dirs,['fastqs',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,
+                         '1 sample (PJB1-B, multiple fastqs per sample)')
 
     def test_create_analysis_project_not_standard_fastq_dir(self):
         """Check creation of AnalysisProject directory with non-standard fastq dir
@@ -502,6 +520,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(project.info.paired_end)
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.test'))
+        self.assertEqual(project.info.samples,
+                         '1 sample (PJB1-B, multiple fastqs per sample)')
         self.assertEqual(project.fastq_dirs,['fastqs.test',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.test')
 
@@ -522,6 +542,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,['fastqs',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
 
@@ -543,6 +564,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.test'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,['fastqs.test',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.test')
 
@@ -561,6 +583,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,
+                         '2 samples (PB04_S4_R1_unpaired, PB04_trimmoPE_bowtie2_notHg38.1)')
         self.assertEqual(project.fastq_dirs,['fastqs',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
 
@@ -586,6 +610,8 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PB02')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,
+                         '1 sample (PB02.trimmed.filtered)')
         self.assertEqual(project.fastq_dirs,['fastqs',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
 
@@ -618,6 +644,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         # Load and check AnalysisProject: default fastqs dir
@@ -632,6 +659,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -677,6 +705,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -710,6 +739,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -723,6 +753,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dirs,
                          ['fastqs','fastqs.untrimmed'])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
@@ -752,16 +783,22 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.info.samples,
+                         '2 samples (PJB1-A-untrimmed, PJB1-B-untrimmed)')
         # Load again with alternative fastq set
         project = AnalysisProject('PJB',dirn,fastq_dir='fastqs')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,
+                         '2 samples (PJB1-A-untrimmed, PJB1-B-untrimmed)')
         # Implicitly switch to primary fastq set
         project.use_fastq_dir()
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.untrimmed')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
+        self.assertEqual(project.info.samples,
+                         '2 samples (PJB1-A-untrimmed, PJB1-B-untrimmed)')
 
     def test_analysis_project_update_primary_fastq_dir(self):
         """Check AnalysisProject primary fastq set can be updated
@@ -785,27 +822,26 @@ class TestAnalysisProject(unittest.TestCase):
         dirn = os.path.join(self.dirn,'PJB')
         project = AnalysisProject('PJB',dirn)
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
-        self.assertEqual(project.fastq_dirs,['fastqs','fastqs.untrimmed'])
-        # Switch active fastq set
-        project.use_fastq_dir('fastqs.untrimmed')
-        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
-        self.assertEqual(project.fastq_dir,
-                         os.path.join(project.dirn,'fastqs.untrimmed'))
         self.assertEqual(project.fastq_dirs,['fastqs','fastqs.untrimmed'])
         # Update the primary fastq set
         project.set_primary_fastq_dir('fastqs.untrimmed')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.untrimmed')
         self.assertEqual(project.fastq_dir,
-                         os.path.join(project.dirn,'fastqs.untrimmed'))
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,
+                         '2 samples (PJB1-A-untrimmed, PJB1-B-untrimmed)')
         self.assertEqual(project.fastq_dirs,['fastqs','fastqs.untrimmed'])
         # Reload the project and check that the change has stuck
         project1 = AnalysisProject('PJB',dirn)
         self.assertEqual(project1.info.primary_fastq_dir,'fastqs.untrimmed')
         self.assertEqual(project1.fastq_dir,
                          os.path.join(project.dirn,'fastqs.untrimmed'))
-        self.assertEqual(project.fastq_dirs,['fastqs','fastqs.untrimmed'])
+        self.assertEqual(project1.fastq_dirs,['fastqs','fastqs.untrimmed'])
+        self.assertEqual(project1.info.samples,
+                         '2 samples (PJB1-A-untrimmed, PJB1-B-untrimmed)')
 
     def test_analysis_project_switch_to_non_existant_fastq_dir(self):
         """Check AnalysisProject fails when switching to non-existant fastqs dir
@@ -818,6 +854,82 @@ class TestAnalysisProject(unittest.TestCase):
         project = AnalysisProject('PJB',dirn)
         self.assertRaises(Exception,
                           project.use_fastq_dir,'fastqs.non_existant')
+
+    def test_sample_summary_single_ended(self):
+        """AnalysisProject: sample_summary works for SE data
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),
+                         "2 samples (PJB1-A, PJB1-B)")
+
+    def test_sample_summary_paired_ended(self):
+        """AnalysisProject: sample_summary works for PE data
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),
+                         "2 samples (PJB1-A, PJB1-B)")
+
+    def test_sample_summary_single_ended_multiple_fastqs(self):
+        """AnalysisProject: sample_summary works for SE data, multiple fastqs
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-A_ACAGTG_L002_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),
+                         "2 samples (PJB1-A, PJB1-B, multiple fastqs per sample)")
+
+    def test_sample_summary_paired_ended_multiple_fastqs(self):
+        """AnalysisProject: sample_summary works for PE data, multiple fastqs
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
+             'PJB1-A_ACAGTG_L002_R1_001.fastq.gz',
+             'PJB1-A_ACAGTG_L002_R2_001.fastq.gz',
+             'PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',
+             'PJB1-B_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),
+                         "2 samples (PJB1-A, PJB1-B, multiple fastqs per sample)")
+
+    def test_sample_summary_paired_ended_ignore_index_reads(self):
+        """AnalysisProject: sample_summary works for PE data with index reads
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
+             'PJB1-A_ACAGTG_L001_I1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_I1_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),
+                         "2 samples (PJB1-A, PJB1-B)")
+
+    def test_sample_summary_no_samples(self):
+        """AnalysisProject: sample_summary works when there are no samples
+        """
+        self.make_mock_project_dir('PJB',())
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        self.assertEqual(project.sample_summary(),"No samples")
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
@@ -931,361 +1043,6 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
-
-class TestMetadataDict(unittest.TestCase):
-    """Tests for the MetadataDict class
-
-    """
-
-    def setUp(self):
-        self.metadata_file = None
-
-    def tearDown(self):
-        if self.metadata_file is not None:
-            os.remove(self.metadata_file)
-
-    def test_create_metadata_object(self):
-        """Check creation of a metadata object
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        self.assertEqual(metadata.salutation,None)
-        self.assertEqual(metadata.valediction,None)
-
-    def test_set_and_get(self):
-        """Check metadata values can be stored and retrieved
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        metadata['salutation'] = "hello"
-        metadata['valediction'] = "goodbye"
-        self.assertEqual(metadata.salutation,"hello")
-        self.assertEqual(metadata.valediction,"goodbye")
-
-    def test_save_and_load(self):
-        """Check metadata can be saved to file and reloaded
-        """
-        self.metadata_file = tempfile.mkstemp()[1]
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction',
-                                            'chat': 'Chit chat'})
-        metadata['salutation'] = "hello"
-        metadata['valediction'] = "goodbye"
-        metadata.save(self.metadata_file)
-        metadata2 = MetadataDict(attributes={'salutation':'Salutation',
-                                             'valediction': 'Valediction',
-                                             'chat': 'Chit chat'})
-        metadata2.load(self.metadata_file)
-        self.assertEqual(metadata2.salutation,"hello")
-        self.assertEqual(metadata2.valediction,"goodbye")
-        self.assertEqual(metadata2.chat,None)
-
-    def test_get_non_existent_attribute(self):
-        """Check that accessing non-existent attribute raises exception
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        self.assertRaises(AttributeError,lambda: metadata.conversation)
-
-    def test_set_non_existent_attribute(self):
-        """Check that setting non-existent attribute raises exception
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        try:
-            metadata['conversation'] = 'hrm'
-            self.fail('AttributeError not raised')
-        except AttributeError,ex:
-            pass
-
-    def test_specify_key_order(self):
-        """Check that specified key ordering is respected
-        """
-        self.metadata_file = tempfile.mkstemp()[1]
-        expected_keys = ('Salutation',
-                         'Chit chat',
-                         'Valediction',)
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction',
-                                            'chat': 'Chit chat'},
-                                order=('salutation','chat','valediction'))
-        metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
-        for line,expected_key in zip(fp,expected_keys):
-            self.assertEqual(line.split('\t')[0],expected_key)
-
-    def test_implicit_key_order(self):
-        """Check that keys are implicitly ordered on output
-        """
-        self.metadata_file = tempfile.mkstemp()[1]
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction',
-                                            'chat': 'Chit chat'})
-        expected_keys = ('Chit chat',
-                         'Salutation',
-                         'Valediction',)
-        metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
-        for line,expected_key in zip(fp,expected_keys):
-            self.assertEqual(line.split('\t')[0],expected_key)
-
-    def test_get_null_items(self):
-        """Check fetching of items with null values
-        """
-        metadata = MetadataDict(attributes={'salutation':'.',
-                                            'valediction': '.',
-                                            'chat': '.'})
-        self.assertEqual(metadata.null_items(),['chat',
-                                                'salutation',
-                                                'valediction'])
-        #
-        metadata['salutation'] = 'hello'
-        metadata['valediction'] = 'ave'
-        metadata['chat'] = 'awight'
-        self.assertEqual(metadata.null_items(),[])
-        #
-        metadata['chat'] = None
-        self.assertEqual(metadata.null_items(),['chat'])
-
-    def test_undefined_items_in_file(self):
-        """Check handling of additional undefined items in file
-        """
-        # Set up a metadata dictionary
-        metadata = MetadataDict(attributes={'salutation':'salutation',
-                                            'valediction': 'valediction'})
-        # Create a file with an additional item
-        self.metadata_file = tempfile.mkstemp()[1]
-        contents = ('salutation\thello',
-                    'valediction\tgoodbye',
-                    'chit_chat\tstuff')
-        with open(self.metadata_file,'w') as fp:
-            for line in contents:
-                fp.write("%s\n" % line)
-        # Load into the dictionary and check that all
-        # items are present
-        metadata.load(self.metadata_file,strict=False)
-        self.assertEqual(metadata.salutation,'hello')
-        self.assertEqual(metadata.valediction,'goodbye')
-        self.assertEqual(metadata.chit_chat,'stuff')
-
-class TestAnalysisDirParameters(unittest.TestCase):
-    """Tests for the AnalysisDirParameters class
-
-    """
-
-    def test_create_analysis_dir_parameters(self):
-        """Check creation of an empty AnalysisDirParameters object
-        """
-        params = AnalysisDirParameters()
-        self.assertEqual(params.analysis_dir,None)
-        self.assertEqual(params.data_dir,None)
-        self.assertEqual(params.sample_sheet,None)
-        self.assertEqual(params.bases_mask,None)
-        self.assertEqual(params.primary_data_dir,None)
-        self.assertEqual(params.unaligned_dir,None)
-        self.assertEqual(params.project_metadata,None)
-        self.assertEqual(params.stats_file,None)
-
-class TestAnalysisDirParameters(unittest.TestCase):
-    """Tests for the AnalysisDirParameters class
-
-    """
-
-    def test_create_analysis_dir_parameters(self):
-        """Check creation of an empty AnalysisDirParameters object
-        """
-        params = AnalysisDirParameters()
-        self.assertEqual(params.analysis_dir,None)
-        self.assertEqual(params.data_dir,None)
-        self.assertEqual(params.sample_sheet,None)
-        self.assertEqual(params.bases_mask,None)
-        self.assertEqual(params.primary_data_dir,None)
-        self.assertEqual(params.unaligned_dir,None)
-        self.assertEqual(params.project_metadata,None)
-        self.assertEqual(params.stats_file,None)
-
-class TestAnalysisDirMetadata(unittest.TestCase):
-    """Tests for the AnalysisDirMetadata class
-
-    """
-
-    def test_create_analysis_dir_metadata(self):
-        """Check creation of an empty AnalysisDirMetadata object
-        """
-        metadata = AnalysisDirMetadata()
-        self.assertEqual(metadata.run_number,None)
-        self.assertEqual(metadata.platform,None)
-        self.assertEqual(metadata.source,None)
-        self.assertEqual(metadata.assay,None)
-        self.assertEqual(metadata.bcl2fastq_software,None)
-
-class TestProjectMetadataFile(unittest.TestCase):
-    """Tests for the ProjectMetadataFile class
-
-    """
-
-    def setUp(self):
-        self.metadata_file = tempfile.mkstemp()[1]
-        self.projects = list()
-        self.lines = list()
-
-    def tearDown(self):
-        if self.metadata_file is not None:
-            os.remove(self.metadata_file)
-
-    def test_empty_project_metadata_file(self):
-        """Create and save empty ProjectMetadataFile
-        """
-        # Make an empty 'file'
-        metadata = ProjectMetadataFile()
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\n"
-        self.assertEqual(len(metadata),0)
-        for project in metadata:
-            self.fail()
-        # Save to an actual file and check its contents
-        metadata.save(self.metadata_file)
-        self.assertEqual(open(self.metadata_file,'r').read(),contents)
-
-    def test_create_new_project_metadata_file(self):
-        """Create and save ProjectMetadataFile with content
-        """
-        # Make new 'file' and add projects
-        metadata = ProjectMetadataFile()
-        metadata.add_project('Charlie',['C1','C2'],
-                             user="Charlie P",
-                             library_type="RNA-seq",
-                             organism="Yeast",
-                             PI="Marley")
-        metadata.add_project('Farley',['F3','F4'],
-                             user="Farley G",
-                             library_type="ChIP-seq",
-                             organism="Mouse",
-                             PI="Harley",
-                             comments="Squeak!")
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
-        self.assertEqual(len(metadata),2)
-        # Save to an actual file and check its contents
-        metadata.save(self.metadata_file)
-        self.assertEqual(open(self.metadata_file,'r').read(),contents)
-
-    def test_read_existing_project_metadata_file(self):
-        """Read contents from existing ProjectMetadataFile
-        """
-        # Create metadata file independently
-        data = list()
-        data.append(dict(Project="Charlie",
-                         Samples="C1-2",
-                         User="Charlie P",
-                         Library="RNA-seq",
-                         Organism="Yeast",
-                         PI="Marley",
-                         Comments="."))
-        data.append(dict(Project="Farley",
-                         Samples="F3-4",
-                         User="Farley G",
-                         Library="ChIP-seq",
-                         Organism="Mouse",
-                         PI="Harley",
-                         Comments="Squeak!"))
-        contents = "#Project\tSamples\tUser\tLibrary\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\tMouse\tHarley\tSqueak!\n"
-        open(self.metadata_file,'w').write(contents)
-        # Load and check contents
-        metadata = ProjectMetadataFile(self.metadata_file)
-        self.assertEqual(len(metadata),2)
-        for x,y in zip(data,metadata):
-            for attr in ('Project','User','Library','Organism','PI','Comments'):
-                self.assertEqual(x[attr],y[attr])
-
-    def test_projects_with_numbers_for_names(self):
-        """Handle projects with names that look like numbers
-        """
-        metadata = ProjectMetadataFile()
-        metadata.add_project('1234',['C1','C2'],
-                             user="Charlie P",
-                             library_type="RNA-seq",
-                             organism="Yeast",
-                             PI="Marley")
-        metadata.add_project('56.78',['F3','F4'],
-                             user="Farley G",
-                             library_type="ChIP-seq",
-                             organism="Mouse",
-                             PI="Harley",
-                             comments="Squeak!")
-        for project in metadata:
-            print "%s" % project
-            print "%s" % type(project['Project'])
-            self.assertTrue(isinstance(project['Project'],str))
-
-    def test_refuse_to_add_duplicate_projects(self):
-        """Refuse to add duplicated project names
-        """
-        # Make new 'file' and add project
-        metadata = ProjectMetadataFile()
-        metadata.add_project('Charlie',['C1','C2'],
-                             user="Charlie P",
-                             library_type="RNA-seq",
-                             organism="Yeast",
-                             PI="Marley")
-        # Attempt to add same project name again
-        self.assertRaises(Exception,
-                          metadata.add_project,'Charlie',['C1','C2'])
-
-    def test_check_if_project_in_metadata(self):
-        """Check if project appears in metadata
-        """
-        # Make new 'file' and add project
-        metadata = ProjectMetadataFile()
-        metadata.add_project('Charlie',['C1','C2'],
-                             user="Charlie P",
-                             library_type="RNA-seq",
-                             organism="Yeast",
-                             PI="Marley")
-        # Check for existing project
-        self.assertTrue("Charlie" in metadata)
-        # Check for non-existent project
-        self.assertFalse("Marley" in metadata)
-
-    def test_update_exisiting_project(self):
-        """Update the data for an existing project
-        """
-        # Make new 'file' and add project
-        metadata = ProjectMetadataFile()
-        metadata.add_project('Charlie',['C1','C2'],
-                             user="Charlie P",
-                             library_type="RNA-seq",
-                             organism="Yeast",
-                             PI="Marley")
-        # Check initial data is correct
-        self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
-        self.assertEqual(project[1],"C1,C2")
-        self.assertEqual(project[2],"Charlie P")
-        self.assertEqual(project[3],"RNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
-        # Update some attributes
-        metadata.update_project('Charlie',
-                                user="Charlie Percival",
-                                library_type="scRNA-seq")
-        # Check the data has been updated
-        self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
-        self.assertEqual(project[1],"C1,C2")
-        self.assertEqual(project[2],"Charlie Percival")
-        self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
-        # Update the samples
-        metadata.update_project('Charlie',
-                                sample_names=['C01','C02'])
-        # Check the data has been updated
-        self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
-        self.assertEqual(project[1],"C01,C02")
-        self.assertEqual(project[2],"Charlie Percival")
-        self.assertEqual(project[3],"scRNA-seq")
-        self.assertEqual(project[4],"Yeast")
-        self.assertEqual(project[5],"Marley")
 
 class TestZipArchive(unittest.TestCase):
     """
@@ -1556,7 +1313,7 @@ class TestSplitUserHostDir(unittest.TestCase):
         self.assertEqual(dirn,'/path/to/somewhere')
 
     def test_extra_whitespace(self):
-        """Check we can handle addition leading/trailing whitespace
+        """Check we can handle additional leading/trailing whitespace
         """
         user,host,dirn = split_user_host_dir('\tuser@host.name:/path/to/somewhere  \n')
         self.assertEqual(user,'user')

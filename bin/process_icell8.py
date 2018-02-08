@@ -1402,9 +1402,9 @@ class ReportProcessing(PipelineTask):
             report_html=self.out_file
         )
 
-class SetPrimaryFastqDir(PipelineTask):
+class UpdateProjectData(PipelineTask):
     """
-    Sets the primary Fastq subdirectory in a project
+    Updates data (e.g. primary Fastq set) in a project
     """
     def init(self,project_dir,primary_fastq_dir):
         """
@@ -1419,10 +1419,21 @@ class SetPrimaryFastqDir(PipelineTask):
         """
         pass
     def setup(self):
+        # Load the project data
         project_dir = os.path.abspath(self.args.project_dir)
-        AnalysisProject(project_dir,
-                        os.path.basename(project_dir)
-                    ).set_primary_fastq_dir(self.args.primary_fastq_dir)
+        project = AnalysisProject(project_dir,
+                                  os.path.basename(project_dir))
+        # Set the primary fastq set
+        project.set_primary_fastq_dir(self.args.primary_fastq_dir)
+        # Set the number of cells
+        well_list_file = os.path.join(project_dir,
+                                      project.info.icell8_well_list)
+        well_list = ICell8WellList(well_list_file)
+        project.info['number_of_cells'] = len(well_list.barcodes())
+        project.info.save()
+        # Report
+        print "Primary fastq dir: %s" % project.info.primary_fastq_dir
+        print "Number of cells  : %s" % project.info.number_of_cells
 
 class CleanupDirectory(PipelineTask):
     """
@@ -1835,6 +1846,9 @@ if __name__ == "__main__":
     # Copy well list file into output directory
     shutil.copy(well_list,outdir)
     well_list = os.path.join(outdir,os.path.basename(well_list))
+    if analysis_project is not None:
+        analysis_project.info['icell8_well_list'] = os.path.basename(well_list)
+        analysis_project.info.save()
 
     # Final Fastq directories
     barcode_fastqs_dir = os.path.join(icell8_dir,"fastqs.barcodes")
@@ -2070,10 +2084,10 @@ if __name__ == "__main__":
 
     # Reset primary fastq dir (if working in a project)
     if analysis_project is not None:
-        set_primary_fastqs = SetPrimaryFastqDir(
-            "Set the primary Fastq directory",
+        update_project_data = UpdateProjectData(
+            "Updating metadata associated with the project",
             icell8_dir,"fastqs.samples")
-        ppl.add_task(set_primary_fastqs)
+        ppl.add_task(update_project_data)
 
     # Add to list of pipelines
     pipelines.append(ppl)
