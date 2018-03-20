@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#     qcreporter2.py: generate report file for Illumina NGS qc runs
+#     reportqc.py: generate report file for Illumina NGS qc runs
 #     Copyright (C) University of Manchester 2015-2018 Peter Briggs
 #
 
@@ -22,8 +22,10 @@ from auto_process_ngs import get_version
 logger = logging.getLogger(__name__)
 
 """
-qc_reporter2
+reportqc
 
+Utility to verify and report on QC outputs from
+auto_process pipeline.
 """
 
 #######################################################################

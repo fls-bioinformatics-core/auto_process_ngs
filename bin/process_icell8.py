@@ -1271,7 +1271,7 @@ class CollectFastqsForQC(PipelineTask):
             PipelineCommandWrapper(
                 "Generate QC report for project '%s'" %
                 os.path.basename(self.args.project_dir),
-                "qcreporter2.py",
+                "reportqc.py",
                 "--fastq_dir",self.args.fastq_dir,
                 "--qc_dir",self.args.qc_dir,
                 "--verify",
@@ -1390,7 +1390,7 @@ class ReportQC(PipelineTask):
             PipelineCommandWrapper(
                 "Generate QC report for project '%s'" %
                 os.path.basename(self.args.project_dir),
-                "qcreporter2.py",
+                "reportqc.py",
                 "--fastq_dir",self.args.fastq_dir,
                 "--qc_dir",self.args.qc_dir,
                 "--title","'%s'" % self.title,
