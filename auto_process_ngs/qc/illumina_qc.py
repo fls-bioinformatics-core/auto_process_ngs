@@ -105,6 +105,9 @@ class QCReporter:
             then use relative paths for links in the report
             (default is to use absolute paths)
 
+        Returns:
+          String: filename of the HTML report.
+
         """
         # Set title and output destination
         if title is None:
@@ -306,6 +309,8 @@ class QCReporter:
                 clear.add_css_classes("clear")
         # Write the report
         report.write(filename)
+        # Return the output filename
+        return filename
 
     def _report_fastq(self,fq,read_id,summary,idx,report,
                       qc_dir=None,relpath=None):
