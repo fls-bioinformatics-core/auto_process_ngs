@@ -1820,11 +1820,14 @@ class AutoProcess:
         if mask_short_adapter_reads is not None:
             bcl2fastq.add_args('--mask-short-adapter-reads',
                                mask_short_adapter_reads)
-        bcl2fastq.add_args('--bcl2fastq_path',
+        bcl2fastq.add_args('--platform',
+                           self.metadata.platform,
+                           '--bcl2fastq_path',
                            bcl2fastq_exe,
                            primary_data_dir,
                            bcl2fastq_dir,
                            tmp_sample_sheet)
+
         print "Running %s" % bcl2fastq
         bcl2fastq_job = simple_scheduler.SchedulerJob(runner,
                                                       bcl2fastq.command_line,
