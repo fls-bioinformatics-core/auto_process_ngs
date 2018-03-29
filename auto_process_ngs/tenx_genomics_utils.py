@@ -795,7 +795,8 @@ def add_cellranger_args(cellranger_cmd,
                         jobmode=None,
                         maxjobs=None,
                         mempercore=None,
-                        jobinterval=None):
+                        jobinterval=None,
+                        disable_ui=True):
     """
     Configure options for cellranger
 
@@ -814,6 +815,8 @@ def add_cellranger_args(cellranger_cmd,
         the --maxjobs option
       jobinterval (int):  if specified, will be passed to
         the --jobinterval option
+      disable_ui (bool): if True, add the --disable-ui
+        option (default)
 
     Returns:
       Command: the original command updated with the
@@ -827,6 +830,8 @@ def add_cellranger_args(cellranger_cmd,
         cellranger_cmd.add_args("--maxjobs=%s" % maxjobs)
     if jobinterval is not None:
         cellranger_cmd.add_args("--jobinterval=%s" % jobinterval)
+    if disable_ui:
+        cellranger_cmd.add_args("--disable-ui")
     return cellranger_cmd
 
 import sys
