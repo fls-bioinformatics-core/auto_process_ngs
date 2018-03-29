@@ -124,6 +124,13 @@ def main():
                                 "with fewer ACGT bases will be completely "
                                 "masked with Ns (default: 22)")
     p.add_option_group(adapter_trimming)
+    # Advanced options
+    advanced = optparse.OptionGroup(p,'Advanced options')
+    advanced.add_option('--platform',action="store",
+                        dest="platform",default=None,
+                        help="Explicitly specify platform; only use this if "
+                        "the platform can't be read from the instrument name")
+    p.add_option_group(advanced)
 
     options,args = p.parse_args()
     if not (2 <= len(args) <=3):
@@ -167,7 +174,8 @@ def main():
         logging.error("%s: doesn't exist or is not a directory" %
                       illumina_run_dir)
         sys.exit(1)
-    illumina_run = IlluminaData.IlluminaRun(illumina_run_dir)
+    illumina_run = IlluminaData.IlluminaRun(illumina_run_dir,
+                                            options.platform)
     # Output directory
     output_dir = os.path.abspath(args[1].rstrip(os.sep))
     # Sample sheet

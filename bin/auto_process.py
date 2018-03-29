@@ -67,6 +67,7 @@ import subprocess
 import optparse
 import time
 import bcftbx.utils as bcf_utils
+import bcftbx.platforms
 from bcftbx.cmdparse import CommandParser
 from bcftbx.cmdparse import add_debug_option
 from bcftbx.cmdparse import add_no_save_option
@@ -238,6 +239,12 @@ def add_make_fastqs_command(cmdparser):
                                 help="explicitly set the output "
                                 "(sub)directory for bcl-to-fastq "
                                 "conversion (overrides default)")
+    fastq_generation.add_option('--platform',action="store",
+                                dest="platform",default=None,
+                                help="explicitly specify the sequencing "
+                                "platform. Only use this if the platform "
+                                "cannot be identified from the instrument "
+                                "name")
     fastq_generation.add_option('--use-bases-mask',action="store",
                                 dest="bases_mask",default=None,
                                 help="explicitly set the bases-mask string "
@@ -961,6 +968,7 @@ if __name__ == "__main__":
                     sample_sheet=options.sample_sheet,
                     bases_mask=options.bases_mask,
                     lanes=lanes,
+                    platform=options.platform,
                     no_lane_splitting=no_lane_splitting,
                     minimum_trimmed_read_length=options.minimum_trimmed_read_length,
                     mask_short_adapter_reads=options.mask_short_adapter_reads,

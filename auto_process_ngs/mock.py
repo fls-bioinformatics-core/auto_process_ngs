@@ -764,7 +764,7 @@ class MockBcl2fastq2Exe(object):
 
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
-               assert_bases_mask=None):
+               platform=None,assert_bases_mask=None):
         """
         Create a "mock" bcl2fastq executable
 
@@ -778,6 +778,9 @@ class MockBcl2fastq2Exe(object):
             with
           missing_fastqs (list): list of Fastq
             names that will not be created
+          platform (str): platform for primary
+            data (if it cannot be determined from
+            the directory/instrument name)
         """
         path = os.path.abspath(path)
         print "Building mock executable: %s" % path
@@ -789,23 +792,32 @@ import sys
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            missing_fastqs=%s,
+                           platform=%s,
                            assert_bases_mask=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
+                   ("\"%s\"" % platform
+                    if platform is not None
+                    else None),
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
                     else None)))
             os.chmod(path,0775)
+        with open(path,'r') as fp:
+            print "bcl2fastq:"
+            print "%s" % fp.read()
         return path
 
     def __init__(self,exit_code=0,
                  missing_fastqs=None,
+                 platform=None,
                  assert_bases_mask=None):
         """
         Internal: configure the mock bcl2fastq2
         """
         self._exit_code = exit_code
         self._missing_fastqs = missing_fastqs
+        self._platform = platform
         self._assert_bases_mask = assert_bases_mask
 
     def main(self,args):
@@ -843,6 +855,8 @@ Copyright (c) 2007-2015 Illumina, Inc.
         if self._assert_bases_mask:
             print "Checking bases mask: %s" % args.use_bases_mask
             assert(args.use_bases_mask == self._assert_bases_mask)
+        # Platform
+        print "Platform (default): %s" % self._platform
         # Run folder (input data)
         runfolder = args.runfolder_dir
         print "Runfolder dir: %s" % runfolder
@@ -862,7 +876,7 @@ Copyright (c) 2007-2015 Illumina, Inc.
             paired_end = False
         print "Paired-end: %s" % paired_end
         # Lanes
-        lanes = IlluminaRun(runfolder).lanes
+        lanes = IlluminaRun(runfolder,platform=self._platform).lanes
         print "Lanes: %s" % lanes
         # Output folder
         output_dir = args.output_dir

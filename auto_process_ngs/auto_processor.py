@@ -1276,7 +1276,7 @@ class AutoProcess:
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return utils.AnalysisProject(dirs[0],undetermined_dir)
         
-    def make_fastqs(self,protocol='standard',
+    def make_fastqs(self,protocol='standard',platform=None,
                     unaligned_dir=None,sample_sheet=None,lanes=None,
                     ignore_missing_bcl=False,ignore_missing_stats=False,
                     skip_rsync=False,remove_primary_data=False,
@@ -1313,6 +1313,9 @@ class AutoProcess:
           protocol            : if set then specifies the protocol to use
                                 for fastq generation, otherwise use the
                                 'standard' bcl2fastq protocol
+          platform            : if set then specifies the sequencing platform
+                                (otherwise platform will be determined from the
+                                primary data)
           unaligned_dir       : if set then use this as the output directory for
                                 bcl-to-fastq conversion. Default is 'bcl2fastq' (unless
                                 an alternative is already specified in the config file)
@@ -1449,6 +1452,9 @@ class AutoProcess:
                 raise Exception, "Failed to acquire primary data"
             if only_fetch_primary_data:
                 return
+        # Deal with platform information
+        if not platform:
+            platform = self.metadata.platform
         # Do fastq generation using the specified protocol
         if not skip_fastq_generation:
             # Set primary data location and report info
@@ -1456,9 +1462,22 @@ class AutoProcess:
                 self.params.primary_data_dir,
                 os.path.basename(self.params.data_dir))
             print "Primary data dir      : %s" % primary_data_dir
-            illumina_run = IlluminaData.IlluminaRun(primary_data_dir)
+            try:
+                illumina_run = IlluminaData.IlluminaRun(primary_data_dir,
+                                                        platform=platform)
+            except IlluminaData.IlluminaDataPlatformError as ex:
+                logging.critical("Error loading primary data: %s" % ex)
+                if platform is None:
+                    logging.critical("Try specifying platform using --platform?")
+                else:
+                    logging.critical("Check specified platform is valid (or "
+                                     "omit --platform")
+                raise Exception("Error determining sequencer platform")
             print "Platform              : %s" % illumina_run.platform
             print "Bcl format            : %s" % illumina_run.bcl_extension
+            # Set platform in metadata
+            self.metadata['platform'] = illumina_run.platform
+            # Do fastq generation according to protocol
             if protocol == 'icell8':
                 # ICell8 data
                 # Update bcl2fastq settings appropriately
@@ -1820,11 +1839,14 @@ class AutoProcess:
         if mask_short_adapter_reads is not None:
             bcl2fastq.add_args('--mask-short-adapter-reads',
                                mask_short_adapter_reads)
-        bcl2fastq.add_args('--bcl2fastq_path',
+        bcl2fastq.add_args('--platform',
+                           self.metadata.platform,
+                           '--bcl2fastq_path',
                            bcl2fastq_exe,
                            primary_data_dir,
                            bcl2fastq_dir,
                            tmp_sample_sheet)
+
         print "Running %s" % bcl2fastq
         bcl2fastq_job = simple_scheduler.SchedulerJob(runner,
                                                       bcl2fastq.command_line,

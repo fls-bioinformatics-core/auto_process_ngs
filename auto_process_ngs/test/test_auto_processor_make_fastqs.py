@@ -276,3 +276,115 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
             self.assertFalse(os.path.exists(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    def test_make_fastqs_unknown_platform(self):
+        """make_fastqs: unknown platform raises exception
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_UNKNOWN_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_UNKNOWN_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertRaises(Exception,
+                          ap.make_fastqs,
+                          protocol="standard")
+
+    def test_make_fastqs_explicitly_specify_platform(self):
+        """make_fastqs: explicitly specify the platform
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_UNKNOWN_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 platform="miseq")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_UNKNOWN_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        ap.make_fastqs(protocol="standard",
+                       platform="miseq")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_UNKNOWN_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_UNKNOWN_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    def test_make_fastqs_specify_platform_via_metadata(self):
+        """make_fastqs: implicitly specify the platform via metadata
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_UNKNOWN_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 platform="miseq")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_UNKNOWN_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertTrue(ap.metadata.platform is None)
+        ap.metadata["platform"] = "miseq"
+        ap.make_fastqs(protocol="standard")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_UNKNOWN_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_UNKNOWN_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
