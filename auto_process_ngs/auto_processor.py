@@ -1419,6 +1419,15 @@ class AutoProcess:
         bcl2fastq_utils.make_custom_sample_sheet(self.params.sample_sheet,
                                                  sample_sheet,
                                                  lanes=lanes)
+        # Check the temporary sample sheet
+        print "Checking temporary sample sheet"
+        invalid_barcodes = samplesheet_utils.SampleSheetLinter(
+            sample_sheet_file=sample_sheet).has_invalid_barcodes()
+        if invalid_barcodes:
+            logging.error("Invalid barcodes detected")
+            for line in invalid_barcodes:
+                logging.error("%s" % line)
+            raise Exception("Errors detected in generated sample sheet")
         # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
         verify_include_sample_dir = False
