@@ -304,6 +304,8 @@ class AnalysisDirMetadata(MetadataDict):
     instrument_datestamp: datestamp from the sequencing instrument
     instrument_run_number: the run number from the sequencing
       instrument
+    instrument_flow_cell_id: the flow cell ID from the sequencing
+      instrument
 
     """
     def __init__(self,filen=None):
@@ -324,6 +326,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'bcl2fastq_software': 'bcl2fastq_software',
                                   'instrument_name': 'instrument_name',
                                   'instrument_datestamp': 'instrument_datestamp',
+                                  'instrument_flow_cell_id': 'instrument_flow_cell_id',
                                   'instrument_run_number': 'instrument_run_number',
                               },
                               order=('run_name',
