@@ -832,6 +832,7 @@ class AutoProcess:
                 IlluminaData.split_run_name_full(
                     os.path.basename(analysis_dir))
             run_number = run_number.lstrip('0')
+            flow_cell = flow_cell_prefix + flow_cell_id
         except Exception as ex:
             logging.warning("Unable to extract information from run name '%s'" \
                             % os.path.basename(analysis_dir))
@@ -839,7 +840,7 @@ class AutoProcess:
             datestamp = None
             instrument= None
             run_number = None
-            flow_cell = flow_cell_prefix + flow_cell_id
+            flow_cell = None
         # Log dir
         self.set_log_dir(self.get_log_subdir('setup'))
         # Custom SampleSheet.csv file
