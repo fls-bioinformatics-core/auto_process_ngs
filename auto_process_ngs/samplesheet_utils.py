@@ -323,6 +323,7 @@ def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     - samples associated with more than one project
     - invalid lines
     - invalid characters
+    - invalid barcodes
 
     Arguments:
       sample_sheet (SampleSheet): if supplied then must be a
@@ -353,6 +354,9 @@ def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     if linter.has_invalid_characters():
         logging.warning("Sample sheet file contains invalid characters "
                         "(non-printing ASCII or non-ASCII)")
+        warnings = True
+    if linter.has_invalid_barcodes():
+        logging.warning("Some samples have invalid barcodes")
         warnings = True
     if linter.has_invalid_lines():
         logging.warning("Sample sheet has one or more invalid lines")
