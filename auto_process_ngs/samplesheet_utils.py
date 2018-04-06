@@ -30,11 +30,14 @@ Helper functions:
 # Imports
 #######################################################################
 
-import logging
 import difflib
 import re
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
+
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -343,23 +346,23 @@ def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     # Do checks
     warnings = False
     if linter.close_project_names():
-        logging.warning("Some projects have similar names: check for typos")
+        logger.warning("Some projects have similar names: check for typos")
         warnings = True
     if linter.samples_with_multiple_barcodes():
-        logging.warning("Some samples have more than one barcode assigned")
+        logger.warning("Some samples have more than one barcode assigned")
         warnings = True
     if linter.samples_in_multiple_projects():
-        logging.warning("Some samples appear in more than one project")
+        logger.warning("Some samples appear in more than one project")
         warnings = True
     if linter.has_invalid_characters():
-        logging.warning("Sample sheet file contains invalid characters "
-                        "(non-printing ASCII or non-ASCII)")
+        logger.warning("Sample sheet file contains invalid characters "
+                       "(non-printing ASCII or non-ASCII)")
         warnings = True
     if linter.has_invalid_barcodes():
-        logging.warning("Some samples have invalid barcodes")
+        logger.warning("Some samples have invalid barcodes")
         warnings = True
     if linter.has_invalid_lines():
-        logging.warning("Sample sheet has one or more invalid lines")
+        logger.warning("Sample sheet has one or more invalid lines")
         warnings = True
     return warnings
 
