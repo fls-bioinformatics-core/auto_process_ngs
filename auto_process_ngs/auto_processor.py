@@ -1286,7 +1286,6 @@ class AutoProcess:
                     mask_short_adapter_reads=None,
                     generate_stats=True,stats_file=None,
                     per_lane_stats_file=None,
-                    report_barcodes=False,barcodes_file=None,
                     skip_fastq_generation=False,
                     only_fetch_primary_data=False,
                     create_empty_fastqs=None,runner=None,
@@ -1349,10 +1348,6 @@ class AutoProcess:
                                 per-fastq stats file.
           per_lane_stats_file : if set then use this as the name of the output
                                 per-lane stats file.
-          report_barcodes     : if True then analyse barcodes in outputs (default is False
-                                i.e. don't do barcode analyses)
-          barcodes_file       : if set then use this as the name of the report file for
-                                barcode sequences analysis
           skip_fastq_generation: if True then don't perform fastq generation
           only_fetch_primary_data: if True then fetch primary data, don't do anything else
           create_empty_fastqs : if True then create empty 'placeholder' fastq
@@ -1616,9 +1611,6 @@ class AutoProcess:
                                 unaligned_dir=self.params.unaligned_dir,
                                 nprocessors=nprocessors,
                                 runner=runner)
-        # Count and report barcode sequences
-        if report_barcodes:
-            self.report_barcodes(barcodes_file)
         # Make a 'projects.info' metadata file
         if lanes:
             self.update_project_metadata_file()
@@ -2160,42 +2152,6 @@ class AutoProcess:
         else:
             logging.error("Missing barcode analysis HTML report: %s" %
                           html_file)
-
-    def report_barcodes(self,report_file=None):
-        """Count and report barcode sequences in FASTQs for each lane
-
-        Runs the 'count_barcodes.py' program to count unique barcode index
-        sequences for all FASTQ files in each lane.
-
-        Arguments:
-          report_file: (optional) specify the name and path of
-            the report file; otherwise this defaults to a file called
-            'index_sequences.report'.
-
-        """
-        # Output files
-        if report_file is None:
-            barcode_report = os.path.join(self.analysis_dir,'index_sequences.report')
-        else:
-            barcode_report = report_file
-        barcode_counts = os.path.join(self.analysis_dir,'index_sequences.counts')
-        # Set up runner
-        runner = self.settings.runners.stats
-        runner.set_log_dir(self.log_dir)
-        # Run count_barcodes.py
-        count_barcodes = applications.Command('count_barcodes.py',
-                                              '-o',barcode_counts,
-                                              '-r',barcode_report,
-                                                os.path.join(self.analysis_dir,
-                                                             self.params.unaligned_dir))
-        print "Counting barcode index sequences: running %s" % count_barcodes    
-        count_barcodes_job = simple_scheduler.SchedulerJob(runner,
-                                                           count_barcodes.command_line,
-                                                           name='count_barcodes',
-                                                           working_dir=self.analysis_dir)
-        count_barcodes_job.start()
-        count_barcodes_job.wait()
-        print "Barcode counting completed"
 
     def remove_primary_data(self):
         """Remove primary data
