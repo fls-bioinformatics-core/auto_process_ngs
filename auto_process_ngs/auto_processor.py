@@ -2082,7 +2082,7 @@ class AutoProcess:
                 # Get counts for this file
                 barcode_count_cmd = applications.Command(
                     'analyse_barcodes.py',
-                    '-o',counts_files[fq],
+                    '-o',os.path.join(self.analysis_dir,counts_files[fq]),
                     '--no-report',fq)
                 print "Running %s" % barcode_count_cmd
                 group.add(barcode_count_cmd,
@@ -2130,7 +2130,8 @@ class AutoProcess:
         # Add the list of count files to process
         barcode_report_cmd.add_args('-c')
         for counts_file in [counts_files[f] for f in req_counts]:
-            barcode_report_cmd.add_args(counts_file)
+            barcode_report_cmd.add_args(os.path.join(self.analysis_dir,
+                                                     counts_file))
         # Write a script file
         script_file = os.path.join(self.log_dir,'report_barcodes.sh')
         utils.write_script_file(script_file,barcode_report_cmd,
