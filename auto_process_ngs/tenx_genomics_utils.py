@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx_genomics_utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 
 """
@@ -33,6 +33,7 @@ import shutil
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdirs
 from .applications import Command
@@ -162,8 +163,8 @@ def flow_cell_id(run_name):
     Returns:
       String: the extracted flow cell ID.
     """
-    flow_cell_id = os.path.basename(run_name).split("_")[-1]
-    return flow_cell_id[1:]
+    ds,inst,run,prefix,flow_cell_id = split_run_name_full(run_name)
+    return flow_cell_id
 
 def has_chromium_sc_indices(sample_sheet):
     """
