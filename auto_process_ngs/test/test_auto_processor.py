@@ -510,8 +510,7 @@ class TestAutoProcessSetup(unittest.TestCase):
         self.assertEqual(ap.params.sample_sheet,
                          os.path.join(self.dirn,analysis_dirn,
                                       'custom_SampleSheet.csv'))
-        self.assertEqual(ap.params.bases_mask,
-                         'y101,I8,I8,y101')
+        self.assertEqual(ap.params.bases_mask,'auto')
         # Check metadata
         self.assertEqual(ap.metadata.run_name,
                          "151125_M00879_0001_000000000-ABCDE1")
