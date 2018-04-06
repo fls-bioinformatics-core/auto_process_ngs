@@ -10,6 +10,9 @@ from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.auto_processor import AutoProcess
 
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
 class TestAutoProcessMakeFastqs(unittest.TestCase):
     """
     Tests for AutoProcess.make_fastqs
@@ -38,7 +41,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         # Restore PATH
         os.environ['PATH'] = self.path
         # Remove the temporary test directory
-        ##shutil.rmtree(self.wd)
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
 
     def test_make_fastqs_standard_protocol(self):
         """make_fastqs: standard protocol
