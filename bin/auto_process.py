@@ -250,7 +250,8 @@ def add_make_fastqs_command(cmdparser):
                                 help="explicitly set the bases-mask string "
                                 "to indicate how each cycle should be used "
                                 "in the bcl-to-fastq conversion (overrides "
-                                "default)")
+                                "default). Set to 'auto' to determine "
+                                "automatically")
     fastq_generation.add_option('--skip-fastq-generation',
                                 action='store_true',
                                 dest='skip_fastq_generation',default=False,
