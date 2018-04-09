@@ -282,19 +282,40 @@ def get_bases_mask(run_info_xml,sample_sheet_file):
                                                                   example_barcode)
     return bases_mask
 
+def bases_mask_is_valid(bases_mask):
+    """
+    Check if a bases mask is valid
+
+    Arguments:
+      bases_mask: bases mask string to check
+
+    Returns:
+      Boolean: True if the supplied bases mask is valid,
+        False if not.
+    """
+    try:
+        for read in bases_mask.upper().split(','):
+            if not re.match(r'^([IY][0-9]+|[IY]*)(N[0-9]+|N*)$',read):
+                return False
+        return True
+    except AttributeError:
+        return False
+
 def get_nmismatches(bases_mask):
     """
     Determine number of mismatches from bases mask
 
-    Automatically determines the maximum number of mismatches that should
-    be allowed for a bcl to fastq conversion run, based on the tag
-    length i.e. the length of the index barcode sequences.
+    Automatically determines the maximum number of mismatches that
+    should be allowed for a bcl to fastq conversion run, based on
+    the tag length i.e. the length of the index barcode sequences.
 
     Tag lengths of 6 or more use 1 mismatch, otherwise use zero
     mismatches.
 
     The number of mismatches should be supplied to the bclToFastq
     conversion process.
+
+    Raises an exception if the supplied bases mask is not valid.
 
     Arguments:
       bases_mask: bases mask string of the form e.g. 'y101,I6,y101'
@@ -304,14 +325,19 @@ def get_nmismatches(bases_mask):
       contain any index reads then returns zero.)
 
     """
-    for read in bases_mask.split(','):
+    if not bases_mask_is_valid(bases_mask):
+        raise Exception("'%s': not a valid bases mask" % bases_mask)
+    for read in bases_mask.upper().split(','):
         if read.startswith('I'):
             try:
-                i = read.index('n')
+                i = read.index('N')
                 read = read[:i]
             except ValueError:
                 pass
-            index_length = int(read[1:].rstrip('n'))
+            try:
+                index_length = int(read[1:])
+            except ValueError:
+                index_length = len(read)
             if index_length >= 6:
                 return 1
             else:
