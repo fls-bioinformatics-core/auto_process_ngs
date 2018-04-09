@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-#     auto_processor.py: core module for automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-17 Peter Briggs
+#     auto_processor.py: automated processing of Illumina sequence data
+#     Copyright (C) University of Manchester 2013-2018 Peter Briggs
 #
 #########################################################################
 #
@@ -302,14 +302,18 @@ class AutoProcess:
             print "Attempting to set missing instrument metadata items"
             # Extract from run name
             try:
-                datestamp,instrument,run_number = \
-                    IlluminaData.split_run_name(self.run_name)
+                datestamp,instrument,run_number,\
+                    flow_cell_prefix,flow_cell_id = \
+                    IlluminaData.split_run_name_full(self.run_name)
                 if self.metadata.instrument_name is None:
                     self.metadata['instrument_name'] = instrument
                 if self.metadata.instrument_datestamp is None:
                     self.metadata['instrument_datestamp'] = datestamp
                 if self.metadata.instrument_run_number is None:
                     self.metadata['instrument_run_number'] = run_number
+                if self.metadata.instrument_flow_cell_id is None:
+                    self.metadata['instrument_flow_cell_id'] = \
+                        flow_cell_prefix + flow_cell_id
             except Exception, ex:
                 logging.warning("Unable to extract missing instrument metadata "
                                 "from run name")
@@ -784,10 +788,10 @@ class AutoProcess:
                             data_dir)
         if not fileops.Location(data_dir).is_remote:
             data_dir = os.path.abspath(data_dir)
+        run_name = os.path.basename(data_dir)
         if analysis_dir is None:
             analysis_dir = os.path.join(
-                os.getcwd(),
-                os.path.basename(data_dir))+'_analysis'
+                os.getcwd(),run_name)+'_analysis'
         else:
             analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
@@ -824,16 +828,18 @@ class AutoProcess:
         print "Platform identified as '%s'" % platform
         # Run datestamp, instrument name and instrument run number
         try:
-            datestamp,instrument,run_number = IlluminaData.split_run_name(
-                os.path.basename(analysis_dir))
+            datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
+                IlluminaData.split_run_name_full(run_name)
             run_number = run_number.lstrip('0')
+            flow_cell = flow_cell_prefix + flow_cell_id
         except Exception as ex:
             logging.warning("Unable to extract information from run name '%s'" \
-                            % os.path.basename(analysis_dir))
+                            % run_name)
             logging.warning("Exception: %s" % ex)
             datestamp = None
             instrument= None
             run_number = None
+            flow_cell = None
         # Log dir
         self.set_log_dir(self.get_log_subdir('setup'))
         # Custom SampleSheet.csv file
@@ -934,6 +940,7 @@ class AutoProcess:
         self.metadata['instrument_name'] = instrument
         self.metadata['instrument_datestamp'] = datestamp
         self.metadata['instrument_run_number'] = run_number
+        self.metadata['instrument_flow_cell_id'] = flow_cell
         self.metadata['assay'] = assay
         # Set flags to allow parameters etc to be saved back
         self._save_params = True
