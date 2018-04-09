@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     samplesheet_utils.py: utilities for handling samplesheet files
-#     Copyright (C) University of Manchester 2016 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2018 Peter Briggs
 #
 ########################################################################
 #
@@ -30,10 +30,14 @@ Helper functions:
 # Imports
 #######################################################################
 
-import logging
 import difflib
+import re
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
+
+# Initialise logging
+import logging
+logger = logging.getLogger(__name__)
 
 #######################################################################
 # Classes
@@ -195,6 +199,27 @@ class SampleSheetLinter(SampleSheetPredictor):
                 invalid_lines.append(line)
         return invalid_lines
 
+    def has_invalid_barcodes(self):
+        """
+        Return list of lines with invalid barcodes
+
+        Returns:
+          List: list of lines which contain invalid barcode
+            sequences in the sample sheet.
+        """
+        invalid_lines = list()
+        indices = list()
+        for indx in ('index','index2'):
+            if indx in self._sample_sheet.data.header():
+                indices.append(indx)
+        if indices:
+            for line in self._sample_sheet.data:
+                for indx in indices:
+                    if not barcode_is_valid(line[indx]):
+                        invalid_lines.append(line)
+                        continue
+        return invalid_lines
+
     def has_invalid_characters(self):
         """
         Check if text file contains any 'invalid' characters
@@ -213,6 +238,26 @@ class SampleSheetLinter(SampleSheetPredictor):
 #######################################################################
 # Functions
 #######################################################################
+
+def barcode_is_valid(s):
+    """
+    Check if a sample sheet barcode sequence is valid
+
+    Valid barcodes must consist of only the letters A,T,G or C
+    in any order, and always uppercase.
+
+    10xGenomics sample set IDs of the form e.g. 'SI-P03-C9' or
+    'SI-GA-B3' are also considered to be valid.
+
+    Arguments:
+      s (str): barcode sequence to validate
+
+    Returns:
+      Boolean: True if barcode is valid, False if not.
+
+    """
+    return bool(re.match(r'^[ATGC]*$',s) or
+                re.match(r'^SI\-[A-Z0-9]+\-[A-Z0-9]+$',s))
 
 def predict_outputs(sample_sheet=None,sample_sheet_file=None):
     """
@@ -281,6 +326,7 @@ def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     - samples associated with more than one project
     - invalid lines
     - invalid characters
+    - invalid barcodes
 
     Arguments:
       sample_sheet (SampleSheet): if supplied then must be a
@@ -300,20 +346,23 @@ def check_and_warn(sample_sheet=None,sample_sheet_file=None):
     # Do checks
     warnings = False
     if linter.close_project_names():
-        logging.warning("Some projects have similar names: check for typos")
+        logger.warning("Some projects have similar names: check for typos")
         warnings = True
     if linter.samples_with_multiple_barcodes():
-        logging.warning("Some samples have more than one barcode assigned")
+        logger.warning("Some samples have more than one barcode assigned")
         warnings = True
     if linter.samples_in_multiple_projects():
-        logging.warning("Some samples appear in more than one project")
+        logger.warning("Some samples appear in more than one project")
         warnings = True
     if linter.has_invalid_characters():
-        logging.warning("Sample sheet file contains invalid characters "
-                        "(non-printing ASCII or non-ASCII)")
+        logger.warning("Sample sheet file contains invalid characters "
+                       "(non-printing ASCII or non-ASCII)")
+        warnings = True
+    if linter.has_invalid_barcodes():
+        logger.warning("Some samples have invalid barcodes")
         warnings = True
     if linter.has_invalid_lines():
-        logging.warning("Sample sheet has one or more invalid lines")
+        logger.warning("Sample sheet has one or more invalid lines")
         warnings = True
     return warnings
 

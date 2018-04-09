@@ -11,6 +11,7 @@ import cStringIO
 from bcftbx.IlluminaData import SampleSheet
 from auto_process_ngs.samplesheet_utils import SampleSheetLinter
 from auto_process_ngs.samplesheet_utils import has_invalid_characters
+from auto_process_ngs.samplesheet_utils import barcode_is_valid
 from auto_process_ngs.samplesheet_utils import get_close_names
 
 sample_sheet_header = """[Header]
@@ -150,6 +151,57 @@ FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
             self.sample_sheet_with_invalid_lines_no_lane))
         self.assertTrue(linter.has_invalid_lines())
 
+class TestLinterHasInvalidBarcodes(unittest.TestCase):
+    def test_sample_sheet_with_valid_barcodes(self):
+        self.sample_sheet_with_valid_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
+"""
+        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+            self.sample_sheet_with_valid_barcodes))
+        self.assertEqual(linter.has_invalid_barcodes(),list())
+    def test_sample_sheet_with_no_barcodes(self):
+        self.sample_sheet_with_no_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,,,,,Andrew_Bloggs,
+"""
+        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+            self.sample_sheet_with_no_barcodes))
+        self.assertEqual(linter.has_invalid_barcodes(),list())
+    def test_sample_sheet_with_10xgenomics_barcodes(self):
+        self.sample_sheet_with_10xgenomics_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,AB1,AB1,,,N701,SI-GA-B3,Philip_Crook,
+2,AB2,AB2,,,N701,SI-GA-B3,Philip_Crook,
+3,AB3,AB3,,,N701,SI-GA-G1,Philip_Crook,
+4,AB4,AB4,,,N701,SI-GA-G1,Philip_Crook,
+5,AB5,AB5,,,N701,SI-GA-H1,Philip_Crook,
+6,AB6,AB6,,,N701,SI-GA-H1,Philip_Crook,
+7,AB7,AB7,,,N701,SI-P03-C9,Philip_Crook,
+8,AB8,AB8,,,N701,SI-P03-C9,Philip_Crook,
+"""
+        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+            self.sample_sheet_with_10xgenomics_barcodes))
+        self.assertEqual(linter.has_invalid_barcodes(),list())
+    def test_sample_sheet_with_invalid_barcodes(self):
+        self.sample_sheet_with_invalid_barcodes = """[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,AB1,AB1,,,N701,CGATGTNN,N501,TCTTTCCC,Andrew_Bloggs,
+1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTNNNN,Andrew_Bloggs,
+2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
+2,FG2,FG2,,,N702,tgaccaat,N502,tctttccc,Filipe_Greer,
+3,HJ1,HJ1,,,N702,AGHJATTC,N502,TCTTTCCC,Hugh_Jaxman,
+3,HJ2,HJ2,,,N702,CGATGTAT,N502,TCTTKCCC,Hugh_Jaxman,
+4,KL1,KL1,,,N702,TGACC&^&,N502,TCTTTCCC,Karl_Landseer,
+4,KL2,KL2,,,N702,TGACCAAT,N502,TC%$TCCC,Karl_Landseer,
+"""
+        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+            self.sample_sheet_with_invalid_barcodes))
+        self.assertTrue(linter.has_invalid_barcodes())
+
 class TestLinterHasInvalidCharacters(unittest.TestCase):
     def test_sample_sheet_with_non_printing_ascii_character(self):
         self.sample_sheet_with_non_printing_ascii_characters = """[Data]
@@ -236,6 +288,35 @@ a non-ASCII character here\x80
 - {}[]
 - \t\n
 """))
+
+class TestBarcodeIsValidFunction(unittest.TestCase):
+    def test_standard_barcodes(self):
+        """barcode_is_valid: standard barcode
+        """
+        self.assertTrue(barcode_is_valid("TGACCAAT"))
+    def test_empty_barcode(self):
+        """barcode_is_valid: 'empty' barcode
+        """
+        self.assertTrue(barcode_is_valid(""))
+    def test_barcode_with_Ns(self):
+        """barcode_is_valid: barcode with Ns
+        """
+        self.assertFalse(barcode_is_valid("TGACCANN"))
+    def test_barcode_with_lower_case_characters(self):
+        """barcode_is_valid: barcode with lower case characters
+        """
+        self.assertFalse(barcode_is_valid("tgaccaat"))
+    def test_barcode_with_random_string(self):
+        """barcode_is_valid: barcode with random string
+        """
+        self.assertFalse(barcode_is_valid("TADF%$12"))
+    def test_10xgenomics_barcodes(self):
+        """barcode_is_valid: 10xGenomics 'barcodes'
+        """
+        self.assertTrue(barcode_is_valid("SI-GA-B3"))
+        self.assertTrue(barcode_is_valid("SI-GA-G1"))
+        self.assertTrue(barcode_is_valid("SI-GA-H1"))
+        self.assertTrue(barcode_is_valid("SI-P03-C9"))
 
 class TestCloseNamesFunction(unittest.TestCase):
     def test_close_names(self):

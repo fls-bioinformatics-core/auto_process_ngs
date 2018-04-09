@@ -10,6 +10,9 @@ from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.auto_processor import AutoProcess
 
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
 class TestAutoProcessMakeFastqs(unittest.TestCase):
     """
     Tests for AutoProcess.make_fastqs
@@ -38,7 +41,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         # Restore PATH
         os.environ['PATH'] = self.path
         # Remove the temporary test directory
-        ##shutil.rmtree(self.wd)
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
 
     def test_make_fastqs_standard_protocol(self):
         """make_fastqs: standard protocol
@@ -388,3 +392,51 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    def test_make_fastqs_invalid_barcodes(self):
+        """make_fastqs: stop for invalid barcodes
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            sample_sheet_content="""[Header],,,,,,,,,
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGNN,,
+Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
+""",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 platform="miseq")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_M00879_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertRaises(Exception,
+                          ap.make_fastqs)
+        #ap.make_fastqs()
+        #self.fail()
