@@ -1479,9 +1479,7 @@ class AutoProcess:
             # Set platform in metadata
             self.metadata['platform'] = illumina_run.platform
             # Bases mask
-            if bases_mask is not None:
-                self.params.bases_mask = bases_mask
-            else:
+            if bases_mask is None:
                 bases_mask = self.params.bases_mask
             print "Bases mask setting    : %s" % bases_mask
             if bases_mask == "auto":
@@ -1489,6 +1487,10 @@ class AutoProcess:
                 bases_mask = bcl2fastq_utils.get_bases_mask(
                     illumina_run.runinfo_xml,
                     sample_sheet)
+            if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                raise Exception("Invalid bases mask: '%s'" %
+                                bases_mask)
+            self.params.bases_mask = bases_mask
             # Do fastq generation according to protocol
             if protocol == 'icell8':
                 # ICell8 data
@@ -1500,6 +1502,10 @@ class AutoProcess:
                 bases_mask = IlluminaData.IlluminaRunInfo(
                     illumina_run.runinfo_xml).bases_mask
                 bases_mask = icell8_utils.get_icell8_bases_mask(bases_mask)
+                if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                    raise Exception("Invalid bases mask: '%s'" %
+                                    bases_mask)
+                self.params.bases_mask = bases_mask
                 # Switch to standard protocol
                 protocol = 'standard'
             if protocol == 'standard':

@@ -63,7 +63,15 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="standard")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -107,7 +115,15 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_SN7001250_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="icell8")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y25n76,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "primary_data"))
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -152,6 +168,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
                           ap.make_fastqs,
                           protocol="standard",
@@ -206,8 +224,16 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="standard",
                        create_empty_fastqs=True)
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -256,6 +282,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
                           ap.make_fastqs,
                           protocol="standard")
@@ -300,6 +328,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
                           ap.make_fastqs,
                           protocol="standard")
@@ -324,8 +354,16 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         ap.setup(os.path.join(self.wd,
                               "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="standard",
                        platform="miseq")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_UNKNOWN_00002_AHGXXXX_analysis",
+                                      "primary_data"))
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -370,7 +408,16 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertTrue(ap.metadata.platform is None)
         ap.metadata["platform"] = "miseq"
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="standard")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_UNKNOWN_00002_AHGXXXX_analysis",
+                                      "primary_data"))
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -436,7 +483,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
                           ap.make_fastqs)
-        #ap.make_fastqs()
-        #self.fail()
