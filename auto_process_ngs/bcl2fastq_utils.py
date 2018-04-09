@@ -325,8 +325,11 @@ def get_nmismatches(bases_mask):
       contain any index reads then returns zero.)
 
     """
+    # Check mask is valid
     if not bases_mask_is_valid(bases_mask):
         raise Exception("'%s': not a valid bases mask" % bases_mask)
+    # Total the length of all index reads
+    index_length = 0
     for read in bases_mask.upper().split(','):
         if read.startswith('I'):
             try:
@@ -335,15 +338,14 @@ def get_nmismatches(bases_mask):
             except ValueError:
                 pass
             try:
-                index_length = int(read[1:])
+                index_length += int(read[1:])
             except ValueError:
-                index_length = len(read)
-            if index_length >= 6:
-                return 1
-            else:
-                return 0
-    # Failed to find any indexed reads
-    return 0
+                index_length += len(read)
+    # Return number of mismatches
+    if index_length >= 6:
+        return 1
+    else:
+        return 0
 
 def check_barcode_collisions(sample_sheet_file,nmismatches):
     """

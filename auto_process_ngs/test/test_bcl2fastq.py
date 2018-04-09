@@ -604,6 +604,7 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('yyyyyyyyy,IIIINN'),0)
         self.assertEqual(get_nmismatches('yyyyyyyyy,IIII'),0)
         self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4'),0)
+        self.assertEqual(get_nmismatches('y250,I4,I4,y250'),1)
 
     def test_n_mismatches_invalid_input(self):
         self.assertRaises(Exception,get_nmismatches,'auto')
