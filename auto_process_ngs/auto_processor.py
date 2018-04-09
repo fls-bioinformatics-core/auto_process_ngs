@@ -788,10 +788,10 @@ class AutoProcess:
                             data_dir)
         if not fileops.Location(data_dir).is_remote:
             data_dir = os.path.abspath(data_dir)
+        run_name = os.path.basename(data_dir)
         if analysis_dir is None:
             analysis_dir = os.path.join(
-                os.getcwd(),
-                os.path.basename(data_dir))+'_analysis'
+                os.getcwd(),run_name)+'_analysis'
         else:
             analysis_dir = os.path.abspath(analysis_dir)
         # Create the analysis directory structure
@@ -829,13 +829,12 @@ class AutoProcess:
         # Run datestamp, instrument name and instrument run number
         try:
             datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
-                IlluminaData.split_run_name_full(
-                    os.path.basename(analysis_dir))
+                IlluminaData.split_run_name_full(run_name)
             run_number = run_number.lstrip('0')
             flow_cell = flow_cell_prefix + flow_cell_id
         except Exception as ex:
             logging.warning("Unable to extract information from run name '%s'" \
-                            % os.path.basename(analysis_dir))
+                            % run_name)
             logging.warning("Exception: %s" % ex)
             datestamp = None
             instrument= None
