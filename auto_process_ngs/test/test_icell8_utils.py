@@ -364,6 +364,15 @@ class TestGetIcell8BasesMaskFunction(unittest.TestCase):
     """
     Tests for the get_icell8_bases_mask function
     """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.GetICell8BasesMask')
+
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+
     def test_get_icell8_bases_mask(self):
         """
         get_icell8_bases_mask: reset bases mask
@@ -374,3 +383,80 @@ class TestGetIcell8BasesMaskFunction(unittest.TestCase):
                          "y25n225,I8,I8,y250")
         self.assertEqual(get_icell8_bases_mask("y25,I8,I8,y250"),
                          "y25,I8,I8,y250")
+
+    def test_get_icell8_bases_mask_with_sample_sheet(self):
+        """
+        get_icell8_bases_mask: reset bases mask with sample sheet
+        """
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,ATTCAG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        self.assertEqual(
+            get_icell8_bases_mask("y101,I7,y101",
+                                  sample_sheet=sample_sheet),
+            "y25n76,I6n,y101")
+        self.assertEqual(
+            get_icell8_bases_mask("y250,I8,I8,y250",
+                                  sample_sheet=sample_sheet),
+            "y25n225,I6nn,nnnnnnnn,y250")
+
+    def test_get_icell8_bases_mask_with_sample_sheet_no_barcodes(self):
+        """
+        get_icell8_bases_mask: reset bases mask with sample sheet (no barcodes)
+        """
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,,,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        self.assertEqual(
+            get_icell8_bases_mask("y101,I7,y101",
+                                  sample_sheet=sample_sheet),
+            "y25n76,nnnnnnn,y101")
+        self.assertEqual(
+            get_icell8_bases_mask("y250,I8,I8,y250",
+                                  sample_sheet=sample_sheet),
+            "y25n225,nnnnnnnn,nnnnnnnn,y250")
