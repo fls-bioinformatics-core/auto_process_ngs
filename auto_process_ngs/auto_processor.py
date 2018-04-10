@@ -1501,7 +1501,9 @@ class AutoProcess:
                 # Reset the default bases mask
                 bases_mask = IlluminaData.IlluminaRunInfo(
                     illumina_run.runinfo_xml).bases_mask
-                bases_mask = icell8_utils.get_icell8_bases_mask(bases_mask)
+                bases_mask = icell8_utils.get_icell8_bases_mask(
+                    bases_mask,
+                    sample_sheet=sample_sheet)
                 if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)

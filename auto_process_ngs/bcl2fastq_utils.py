@@ -276,7 +276,10 @@ def get_bases_mask(run_info_xml,sample_sheet_file):
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print "Bases mask: %s (from RunInfo.xml)" % bases_mask
     # Update bases mask from sample sheet
-    example_barcode = IlluminaData.get_casava_sample_sheet(sample_sheet_file)[0]['Index']
+    example_barcode = IlluminaData.samplesheet_index_sequence(
+        IlluminaData.SampleSheet(sample_sheet_file).data[0])
+    if example_barcode is None:
+        example_barcode = ""
     bases_mask = IlluminaData.fix_bases_mask(bases_mask,example_barcode)
     print "Bases mask: %s (updated for barcode sequence '%s')" % (bases_mask,
                                                                   example_barcode)

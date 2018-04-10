@@ -94,6 +94,71 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    def test_make_fastqs_standard_protocol_no_demultiplexing(self):
+        """make_fastqs: standard protocol with no demultiplexing
+        """
+        # Sample sheet with no barcodes
+        samplesheet_no_demultiplexing = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,,,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_no_demultiplexing)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        # Check that bases mask is as expected
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 assert_bases_mask="y76,nnnnnn,y76")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        ap.make_fastqs(protocol="standard")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_NB500968_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_NB500968_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
         """
@@ -130,6 +195,71 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
             "171020_SN7001250_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_icell8"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    def test_make_fastqs_icell8_protocol_no_demultiplexing(self):
+        """make_fastqs: icell8 protocol with no demultiplexing
+        """
+        # Sample sheet with no barcodes
+        samplesheet_no_demultiplexing = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,,,icell8,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_no_demultiplexing)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        # Check that bases mask is as expected
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 assert_bases_mask="y25n51,nnnnnn,y76")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        ap.make_fastqs(protocol="icell8")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_NB500968_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
                        "bcl2fastq"):

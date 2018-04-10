@@ -36,6 +36,9 @@ from itertools import izip
 from collections import Iterator
 from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.IlluminaData import SampleSheet
+from bcftbx.IlluminaData import samplesheet_index_sequence
+from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
 from .fastq_utils import pair_fastqs
 from .stats import FastqReadCounter
@@ -85,14 +88,19 @@ def normalize_sample_name(s):
             name.append(c)
     return ''.join(name)
 
-def get_icell8_bases_mask(bases_mask):
+def get_icell8_bases_mask(bases_mask,sample_sheet=None):
     """
     Reset the supplied bases mask string so that only the
     bases containing the inline barcode and UMIs are kept,
     and any remaining bases are ignored.
 
+    If a sample sheet is also supplied then an additional
+    update will be made to ensure that the bases mask
+    respects the barcode lengths given there.
+
     Arguments:
       bases_mask (str): initial bases mask string to update
+      sample_sheet (str): path to optional sample sheet
 
     Returns:
       String: updated bases mask string
@@ -107,9 +115,17 @@ def get_icell8_bases_mask(bases_mask):
     discard_length = (num_cycles - icell8_inline_length)
     r1_mask = "y%d" % icell8_inline_length
     r1_mask += ("n%d" % discard_length if discard_length > 0 else "")
-    # Rebuild and return
     bases_mask[0] = r1_mask
-    return ','.join(bases_mask)
+    # Rebuild full bases mask
+    bases_mask = ','.join(bases_mask)
+    # Handle sample sheet
+    if sample_sheet is not None:
+        index_seq = samplesheet_index_sequence(
+            SampleSheet(sample_sheet).data[0])
+        if index_seq is None:
+            index_seq = ""
+        bases_mask = fix_bases_mask(bases_mask,index_seq)
+    return bases_mask
 
 ######################################################################
 # Classes
