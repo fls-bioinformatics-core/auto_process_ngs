@@ -764,6 +764,87 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,i
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y101,I6nn,nnnnnnnn,y101")
 
+    def test_get_bases_mask_single_index_no_barcode(self):
+        """get_bases_mask: handle single index with no barcode
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,,,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y76,nnnnnn,y76")
+
+    def test_get_bases_mask_dual_index_no_barcode(self):
+        """get_bases_mask: handle dual index with no barcode
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,AB1,AB1,,,,,,,AB,
+2,AB2,AB2,,,,,,,AB,
+3,AB1,AB1,,,,,,,AB,
+4,AB2,AB2,,,,,,,AB,
+5,CD1,CD1,,,,,,,CD,
+6,CD2,CD2,,,,,,,CD,
+7,CD1,CD1,,,,,,,CD,
+8,CD2,CD2,,,,,,,CD,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y101,nnnnnnnn,nnnnnnnn,y101")
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 
