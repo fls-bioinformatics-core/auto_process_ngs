@@ -614,9 +614,11 @@ def add_archive_command(cmdparser):
                  help="specify the name of group for the archived files NB only works "
                  "when the archive is a local directory (default: %s)" % default_group)
     default_chmod = __settings.archive.chmod
-    p.add_option('--chmod',action='store',dest='chmod',default=default_chmod,
-                 help="specify chmod operations for the archived files (default: "
-                 "%s)" % default_chmod)
+    p.add_option('--chmod',action='store',dest='permissions',
+                 default=default_chmod,
+                 help="specify permissions for the archived files. "
+                 "PERMISSIONS should be a string recognised by the 'chmod' "
+                 "command (e.g. 'o-rwX') (default: %s)" % default_chmod)
     p.add_option('--final',action='store_true',dest='final',default=False,
                  help="copy data to final archive location (default is to "
                  "copy to staging area)")
@@ -1089,7 +1091,7 @@ if __name__ == "__main__":
                                 platform=options.platform,
                                 year=options.year,
                                 group=options.group,
-                                perms=options.chmod,
+                                perms=options.permissions,
                                 final=options.final,
                                 force=options.force,
                                 dry_run=options.dry_run)
