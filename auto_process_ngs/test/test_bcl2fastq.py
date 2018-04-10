@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import os
 import shutil
+from bcftbx.mock import RunInfoXml
 from auto_process_ngs.bcl2fastq_utils import *
 
 class MockBcl2fastq:
@@ -586,6 +587,182 @@ class TestBasesMaskIsValid(unittest.TestCase):
         self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIIII'))
         self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIInn'))
         self.assertFalse(bases_mask_is_valid(123))
+
+class TestGetBasesMask(unittest.TestCase):
+    """Tests for the get_bases_mask function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+
+    def test_get_bases_mask_single_index(self):
+        """get_bases_mask: handle single index
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTA,AB,
+AB2,AB2,,,D702,ATTCAG,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y76,I6,y76")
+
+    def test_get_bases_mask_dual_index(self):
+        """get_bases_mask: handle dual index
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+2,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+3,AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+4,AB2,AB2,,,D701,CGTGTAGG,D501,GACCTGTA,AB,
+5,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+6,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+7,CD1,CD1,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+8,CD2,CD2,,,D701,CGTGTAGG,D501,GACCTGTA,CD,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y101,I8,I8,y101")
+
+    def test_get_bases_mask_single_index_truncated(self):
+        """get_bases_mask: handle truncated single index
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+AB1,AB1,,,D701,CGTGT,AB,
+AB2,AB2,,,D702,ATTCA,AB,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y76,I5n,y76")
+
+    def test_get_bases_mask_dual_index_truncated(self):
+        """get_bases_mask: handle truncated dual index
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,11/23/2015
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,AB1,AB1,,,D701,CGTGTA,,,AB,
+2,AB2,AB2,,,D701,CGTGTA,,,AB,
+3,AB1,AB1,,,D701,CGTGTA,,,AB,
+4,AB2,AB2,,,D701,CGTGTA,,,AB,
+5,CD1,CD1,,,D701,CGTGTA,,,CD,
+6,CD2,CD2,,,D701,CGTGTA,,,CD,
+7,CD1,CD1,,,D701,CGTGTA,,,CD,
+8,CD2,CD2,,,D701,CGTGTA,,,CD,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y101,I6nn,nnnnnnnn,y101")
 
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
