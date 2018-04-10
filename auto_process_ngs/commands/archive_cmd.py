@@ -158,15 +158,13 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                                   "(staging)")
     # Check if final archive already exists
     if fileops.exists(os.path.join(archive_dir,final_dest)):
-        logging.fatal("Final archive already exists, stopping")
-        return 1
+        raise Exception("Final archive already exists, stopping")
     # Check metadata
     check_metadata = ap.check_metadata(('source','run_number'))
     if not check_metadata:
         if not force or not is_staging:
-            logging.fatal("Some metadata items not set, stopping")
-            return 1
-        logging.warning("Some metadata items not set, proceeding")
+            raise Exception("Some metadata items not set, stopping")
+        logger.warning("Some metadata items not set, proceeding")
     if not is_staging:
         # Are there any projects to archive?
         projects = ap.get_analysis_projects()
