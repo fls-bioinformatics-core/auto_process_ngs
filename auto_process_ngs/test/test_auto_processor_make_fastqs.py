@@ -112,7 +112,7 @@ Adapter,CTGTCTCTTATACACATCT
 
 [Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-AB1,AB1,,,,,icell8,
+AB1,AB1,,,,,AB,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
@@ -127,7 +127,7 @@ AB1,AB1,,,,,icell8,
         # Check that bases mask is as expected
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"),
-                                 assert_bases_mask="y76,n8,y76")
+                                 assert_bases_mask="y76,nnnnnn,y76")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -142,7 +142,7 @@ AB1,AB1,,,,,icell8,
             self.wd,
             "171020_NB500968_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
-                                    "171020_SN7001250_00002_AHGXXXX"),
+                                    "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
                        "bcl2fastq"):
@@ -244,7 +244,7 @@ AB1,AB1,,,,,icell8,
         # Check that bases mask is as expected
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"),
-                                 assert_bases_mask="y25n51,n8,y76")
+                                 assert_bases_mask="y25n51,nnnnnn,y76")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
