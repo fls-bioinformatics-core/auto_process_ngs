@@ -570,6 +570,23 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(open(sample_sheet_out,'r').read(),
                          expected)
 
+class TestBasesMaskIsValid(unittest.TestCase):
+    """Tests for the bases_mask_is_valid function
+    """
+    def test_bases_mask_is_valid(self):
+        self.assertTrue(bases_mask_is_valid('y50'))
+        self.assertTrue(bases_mask_is_valid('y50,I4'))
+        self.assertTrue(bases_mask_is_valid('y50,I6'))
+        self.assertTrue(bases_mask_is_valid('y101,I6,y101'))
+        self.assertTrue(bases_mask_is_valid('y250,I8,I8,y250'))
+        self.assertTrue(bases_mask_is_valid('y250,I6nn,I6nn,y250'))
+        self.assertTrue(bases_mask_is_valid('y250,I6n2,I6n2,y250'))
+        self.assertTrue(bases_mask_is_valid('y25n76,I8,I8,y101'))
+        self.assertTrue(bases_mask_is_valid('y250,I16'))
+        self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIIII'))
+        self.assertTrue(bases_mask_is_valid('yyyyyyyyy,IIIInn'))
+        self.assertFalse(bases_mask_is_valid(123))
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 
@@ -583,4 +600,12 @@ class TestGetNmismatches(unittest.TestCase):
         self.assertEqual(get_nmismatches('y250,I6nn,I6nn,y250'),1)
         self.assertEqual(get_nmismatches('y250,I6n2,I6n2,y250'),1)
         self.assertEqual(get_nmismatches('y250,I16'),1)
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIII'),1)
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIINN'),0)
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIII'),0)
+        self.assertEqual(get_nmismatches('yyyyyyyyy,IIIIN4'),0)
+        self.assertEqual(get_nmismatches('y250,I4,I4,y250'),1)
 
+    def test_n_mismatches_invalid_input(self):
+        self.assertRaises(Exception,get_nmismatches,'auto')
+        self.assertRaises(Exception,get_nmismatches,123)

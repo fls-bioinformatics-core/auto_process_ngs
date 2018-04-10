@@ -904,18 +904,8 @@ class AutoProcess:
             logging.warning("No element 'Assay' found in sample sheet")
             assay = None
         # Bases mask
-        bases_mask = self.params.bases_mask
-        if bases_mask is None:
-            print "Acquiring RunInfo.xml to determine bases mask..."
-            tmp_run_info = os.path.join(self.tmp_dir,'RunInfo.xml')
-            rsync = applications.general.rsync(os.path.join(data_dir,
-                                                            'RunInfo.xml'),
-                                               self.tmp_dir)
-            status = rsync.run_subprocess(log=self.log_path('rsync.run_info.log'))
-            bases_mask = bcl2fastq_utils.get_bases_mask(tmp_run_info,
-                                                        custom_sample_sheet)
-            os.remove(tmp_run_info)
-        print "Corrected bases mask: %s" % bases_mask
+        print "Bases mask set to 'auto' (will be determined at run time)"
+        bases_mask = "auto"
         # Generate and print predicted outputs and warnings
         print samplesheet_utils.predict_outputs(sample_sheet=sample_sheet)
         samplesheet_utils.check_and_warn(sample_sheet=sample_sheet)
@@ -1488,6 +1478,19 @@ class AutoProcess:
             print "Bcl format            : %s" % illumina_run.bcl_extension
             # Set platform in metadata
             self.metadata['platform'] = illumina_run.platform
+            # Bases mask
+            if bases_mask is None:
+                bases_mask = self.params.bases_mask
+            print "Bases mask setting    : %s" % bases_mask
+            if bases_mask == "auto":
+                print "Determining bases mask from RunInfo.xml"
+                bases_mask = bcl2fastq_utils.get_bases_mask(
+                    illumina_run.runinfo_xml,
+                    sample_sheet)
+            if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                raise Exception("Invalid bases mask: '%s'" %
+                                bases_mask)
+            self.params.bases_mask = bases_mask
             # Do fastq generation according to protocol
             if protocol == 'icell8':
                 # ICell8 data
@@ -1499,6 +1502,10 @@ class AutoProcess:
                 bases_mask = IlluminaData.IlluminaRunInfo(
                     illumina_run.runinfo_xml).bases_mask
                 bases_mask = icell8_utils.get_icell8_bases_mask(bases_mask)
+                if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                    raise Exception("Invalid bases mask: '%s'" %
+                                    bases_mask)
+                self.params.bases_mask = bases_mask
                 # Switch to standard protocol
                 protocol = 'standard'
             if protocol == 'standard':
