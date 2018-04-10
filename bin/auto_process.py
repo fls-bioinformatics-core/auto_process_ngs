@@ -621,8 +621,9 @@ def add_archive_command(cmdparser):
                  help="copy data to final archive location (default is to "
                  "copy to staging area)")
     p.add_option('--force',action='store_true',dest='force',default=False,
-                 help="perform archiving operation even if key metadata items are "
-                 "not set")
+                 help="attempt to complete archiving operations ignoring "
+                 "any errors (e.g. key metadata items not set, unable to "
+                 "set group etc)")
     add_dry_run_option(p)
     add_debug_option(p)
 

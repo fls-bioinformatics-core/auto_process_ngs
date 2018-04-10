@@ -315,10 +315,13 @@ class TestSetGroupCommand(unittest.TestCase):
         set_group_cmd = set_group_command("adm",
                                           "/here/files")
         self.assertEqual(set_group_cmd.command_line,
-                         ['chgrp',
-                          '-R',
+                         ['find',
+                          '/here/files',
+                          '-exec',
+                          'chgrp',
                           'adm',
-                          '/here/files'])
+                          '{}',
+                          ';'])
     def test_set_group_command_local_verbose(self):
         """fileops.set_group_command: set group on local files (verbose)
         """
@@ -326,11 +329,32 @@ class TestSetGroupCommand(unittest.TestCase):
                                           "/here/files",
                                           verbose=True)
         self.assertEqual(set_group_cmd.command_line,
-                         ['chgrp',
+                         ['find',
+                          '/here/files',
+                          '-exec',
+                          'chgrp',
                           '--verbose',
-                          '-R',
                           'adm',
-                          '/here/files'])
+                          '{}',
+                          ';'])
+
+    def test_set_group_command_local_safe(self):
+        """fileops.set_group_command: set group on local files ('safe' mode)
+        """
+        set_group_cmd = set_group_command("adm",
+                                          "/here/files",
+                                          safe=True)
+        self.assertEqual(set_group_cmd.command_line,
+                         ['find',
+                          '/here/files',
+                          '-user',
+                          getpass.getuser(),
+                          '-exec',
+                          'chgrp',
+                          'adm',
+                          '{}',
+                          ';'])
+
     def test_set_group_command_remote(self):
         """fileops.set_group_command: set group on remote files
         """
@@ -339,10 +363,13 @@ class TestSetGroupCommand(unittest.TestCase):
         self.assertEqual(set_group_cmd.command_line,
                          ['ssh',
                           'pjx@remote.com',
+                          'find',
+                          '/there/files',
+                          '-exec',
                           'chgrp',
-                          '-R',
                           'adm',
-                          '/there/files'])
+                          '{}',
+                          ';'])
 
 class TestUnzipCommand(unittest.TestCase):
     """Tests for the 'unzip_command' function

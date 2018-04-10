@@ -98,8 +98,9 @@ def archive(ap,archive_dir=None,platform=None,year=None,
       final (bool): if True then finalize the archive by
         moving the '.pending' temporary archive to the final
         location
-      force (bool): if True then do archiving even if key
-        metadata items are not set; otherwise abort archiving
+      force (bool): if True then do archiving even if there are
+        errors (e.g. key metadata items not set, permission error
+        when setting group etc); otherwise abort archiving
         operation.
       dry_run (bool): report what would be done but don't
         perform any operations.
@@ -267,6 +268,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                     set_group = fileops.set_group_command(
                         group,
                         os.path.join(archive_dir,staging),
+                        safe=force,
                         verbose=True)
                     print "Running %s" % set_group
                     set_group_job = sched.submit(
@@ -287,7 +289,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         sched.stop()
         # Bail out if there was a problem
         if retval != 0:
-            raise Exception("Staging to archive failed")
+            if not force:
+                raise Exception("Staging to archive failed")
+            else:
+                logger.warning("Staging to archive failed (ignored)")
     # Move to final location
     if final:
         print "Moving to final location: %s" % final_dest
