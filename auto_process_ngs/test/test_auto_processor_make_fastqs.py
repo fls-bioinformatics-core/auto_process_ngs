@@ -259,7 +259,7 @@ AB1,AB1,,,,,icell8,
             self.wd,
             "171020_NB500968_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
-                                    "171020_SN7001250_00002_AHGXXXX"),
+                                    "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
                        "bcl2fastq"):
