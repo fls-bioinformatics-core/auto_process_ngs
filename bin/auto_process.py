@@ -611,8 +611,8 @@ def add_archive_command(cmdparser):
                  help="specify the year e.g. '2014' (default is the current year)")
     default_group = __settings.archive.group
     p.add_option('--group',action='store',dest='group',default=default_group,
-                 help="specify the name of group for the archived files NB only works "
-                 "when the archive is a local directory (default: %s)" % default_group)
+                 help="specify the name of group for the archived files "
+                 "(default: %s)" % default_group)
     default_chmod = __settings.archive.chmod
     p.add_option('--chmod',action='store',dest='permissions',
                  default=default_chmod,
