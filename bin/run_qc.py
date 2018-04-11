@@ -109,6 +109,13 @@ if __name__ == "__main__":
                    "running QC script. RUNNER must be a valid job "
                    "runner specification e.g. 'GEJobRunner(-j y)' "
                    "(default: '%s')" % __settings.runners.qc)
+    p.add_argument('-m','--max-jobs',metavar='N',action='store',
+                   dest='max_jobs',type=int,
+                   default=__settings.general.max_concurrent_jobs,
+                   help="explicitly specify maximum number of "
+                   "concurrent QC jobs to run (default %d, change "
+                   "in settings file)"
+                   % __settings.general.max_concurrent_jobs)
     p.add_argument('--qc_dir',metavar='QC_DIR',
                    action='store',dest='qc_dir',default=None,
                    help="explicitly specify QC output directory. "
@@ -161,9 +168,8 @@ if __name__ == "__main__":
 
     # Run the QC
     announce("Running QC")
-    max_jobs = __settings.general.max_concurrent_jobs
     runqc = RunQC(runner=qc_runner,
-                  max_jobs=max_jobs)
+                  max_jobs=args.max_jobs)
     runqc.add_project(project,
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
