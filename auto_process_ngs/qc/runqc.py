@@ -57,7 +57,7 @@ class RunQC(object):
                                       max_concurrent=max_jobs)
 
     def add_project(self,project,fastq_dir=None,qc_dir=None,
-                    sample_pattern='*',ungzip_fastqs=False,
+                    sample_pattern=None,ungzip_fastqs=False,
                     run_multiqc=True):
         """
         Add a project to run the QC for
@@ -85,7 +85,8 @@ class RunQC(object):
                                         ungzip_fastqs=ungzip_fastqs,
                                         run_multiqc=run_multiqc))
 
-    def run(self,nthreads=1,fastq_screen_subset=10000):
+    def run(self,nthreads=1,fastq_screen_subset=10000,
+            report_html=None):
         """
         Schedule and execute QC jobs
 
@@ -95,6 +96,8 @@ class RunQC(object):
           fastq_screen_subset (int): the size of
             subset to use with FastQScreen (default:
             10000)
+          report_html (str): optional, path to the name of
+            the QC report
 
         Returns:
           Integer: returns 0 if QC ran to completion
@@ -117,7 +120,7 @@ class RunQC(object):
             if not project.verify():
                 failed_projects.append(project)
             else:
-                project.report()
+                project.report(report_html=report_html)
         # Report failed projects
         if failed_projects:
             logger.error("QC failed for one or more samples in the "
@@ -132,7 +135,7 @@ class ProjectQC(object):
     """
     Class for setting up QC jobs for a project
     """
-    def __init__(self,project,fastq_dir=None,sample_pattern="*",
+    def __init__(self,project,fastq_dir=None,sample_pattern=None,
                  qc_dir=None,ungzip_fastqs=False,
                  run_multiqc=False):
         """
@@ -157,6 +160,8 @@ class ProjectQC(object):
         self.project = project
         self.fastq_dir = fastq_dir
         self.sample_pattern = sample_pattern
+        if self.sample_pattern is None:
+            self.sample_pattern = '*'
         self.qc_dir = qc_dir
         self.ungzip_fastqs = ungzip_fastqs
         self.run_multiqc = run_multiqc
@@ -177,6 +182,9 @@ class ProjectQC(object):
         """
         project = self.project
         print "=== Setting up QC for %s ===" % project.name
+        print "Subdirectories with Fastqs:"
+        for fastq_dir in project.fastq_dirs:
+            print "- %s" % fastq_dir
         # Set up qc directory
         project_qc_dir = project.setup_qc_dir(self.qc_dir,
                                               fastq_dir=self.fastq_dir)
@@ -185,7 +193,7 @@ class ProjectQC(object):
         # Sort out fastq source
         fastq_dir = project.qc_info(project_qc_dir).fastq_dir
         project.use_fastq_dir(self.fastq_dir)
-        print "Set fastq_dir to %s" % project.fastq_dir
+        print "Gathering Fastqs from %s" % project.fastq_dir
         # Set up the logs directory
         log_dir = os.path.join(project_qc_dir,'logs')
         if not os.path.exists(log_dir):
@@ -197,6 +205,10 @@ class ProjectQC(object):
         if len(samples) == 0:
             logger.warning("No samples found for QC analysis in "
                            "project '%s'" % project.name)
+            return
+        print "%d samples matched:" % len(samples)
+        for sample in samples:
+            print "-- %s" % sample.name
         groups = []
         for sample in samples:
             group = None
@@ -292,15 +304,18 @@ class ProjectQC(object):
           report_html (str): optional, path to the name of
             the QC report.
         """
-        qc_base = os.path.basename(self.qc_dir)
+        qc_base = os.path.basename(self.project.qc_dir)
         if report_html is None:
             out_file = '%s_report.html' % qc_base
         else:
             out_file = report_html
         if not os.path.isabs(out_file):
             out_file = os.path.join(self.project.dirn,out_file)
-        title = "%s/%s" % (self.project.info.run,
-                           self.project.name)
+        if self.project.info.run is None:
+            title = "%s" % self.project.name
+        else:
+            title = "%s/%s" % (self.project.info.run,
+                               self.project.name)
         if self.fastq_dir is not None:
             title = "%s (%s)" % (title,self.fastq_dir)
         title = "%s: QC report" % title

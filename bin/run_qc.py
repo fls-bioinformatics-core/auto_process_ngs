@@ -24,9 +24,7 @@ import logging
 from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.applications import Command
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.qc.illumina_qc import check_qc_outputs
+from auto_process_ngs.qc.runqc import RunQC
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -153,85 +151,28 @@ if __name__ == "__main__":
     project_name = os.path.basename(project_dir)
     project = AnalysisProject(project_name,project_dir)
 
-    # Get list of samples
-    project = AnalysisProject(project_name,project_dir,
-                              fastq_dir=args.fastq_dir)
-    print "Subdirectories with Fastqs:"
-    for fastq_dir in project.fastq_dirs:
-        print "- %s" % fastq_dir
-    print "Gathering Fastqs from %s" % project.fastq_dir
-    if args.sample_pattern is not None:
-        samples = project.get_samples(args.sample_pattern)
-    else:
-        samples = project.samples
-    if not samples:
-        logger.warning("No samples specified for QC, quitting")
-        sys.exit()
-    print "%d samples matched" % len(samples)
-    for sample in samples:
-        print "-- %s" % sample.name
-
-    # Set up QC dir
-    qc_dir = project.setup_qc_dir(qc_dir=args.qc_dir)
-    print "QC output dir: %s" % qc_dir
-    log_dir = os.path.join(qc_dir,'logs')
-    mkdir(log_dir)
-    qc_base = os.path.basename(qc_dir)
-
     # Output file name
     if args.filename is None:
-        out_file = '%s_report.html' % qc_base
+        out_file = None
     else:
         out_file = args.filename
-    if not os.path.isabs(out_file):
-        out_file = os.path.join(project.dirn,out_file)
-    print "QC report: %s" % out_file
+        if not os.path.isabs(out_file):
+            out_file = os.path.join(project.dirn,out_file)
 
     # Run the QC
     announce("Running QC")
     max_jobs = __settings.general.max_concurrent_jobs
-    sched = SimpleScheduler(runner=qc_runner,
-                            max_concurrent=max_jobs)
-    sched.start()
-    for sample in samples:
-        print "Checking/setting up for sample '%s'" % sample.name
-        for fq in sample.fastq:
-            if sample.verify_qc(qc_dir,fq):
-                print "-- %s: QC ok" % fq
-            else:
-                print "-- %s: setting up QC" % fq
-                qc_cmd = Command('illumina_qc.sh',fq)
-                if args.nthreads > 1:
-                    qc_cmd.add_args('--threads',args.nthreads)
-                qc_cmd.add_args('--subset',args.fastq_screen_subset,
-                                '--qc_dir',qc_dir)
-                job = sched.submit(qc_cmd,
-                                   wd=project.dirn,
-                                   name="%s.%s" % (qc_base,
-                                                   os.path.basename(fq)),
-                                   log_dir=log_dir)
-                print "Job: %s" % job
-    # Wait for the scheduler to run all jobs
-    sched.wait()
-    sched.stop()
-
-    # Verify the QC
-    announce("Verifying QC")
-    qc_ok = True
-    for sample in samples:
-        for fq in sample.fastq:
-            if not sample.verify_qc(qc_dir,fq):
-                qc_ok = False
-                logger.warning("-- %s: QC failed" %
-                               os.path.basename(fq))
-                present,missing = check_qc_outputs(fq,qc_dir)
-                for output in missing:
-                    logger.warning("   %s: missing" % output)
-    if not qc_ok:
-        logger.error("QC failed (see warnings above)")
-    else:
-        print "QC ok: generating report"
-        project.qc_report(report_html=out_file,
-                          qc_dir=qc_dir,
-                          force=True)
+    runqc = RunQC(runner=qc_runner,
+                  max_jobs=max_jobs)
+    runqc.add_project(project,
+                      fastq_dir=args.fastq_dir,
+                      sample_pattern=args.sample_pattern,
+                      qc_dir=args.qc_dir,
+                      ungzip_fastqs=False,
+                      run_multiqc=False)
+    status = runqc.run(args.nthreads,args.fastq_screen_subset,
+                       report_html=out_file)
+    if status:
+        logger.critical("QC failed (see warnings above)")
+    sys.exit(status)
 
