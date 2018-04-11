@@ -40,6 +40,7 @@ import icell8_utils
 import tenx_genomics_utils
 import settings
 from .qc.processing import report_processing_qc
+from .qc.runqc import RunQC
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
@@ -2607,129 +2608,19 @@ class AutoProcess:
             qc_runner = fetch_runner(runner)
         else:
             qc_runner = self.settings.runners.qc
-        # Set up a simple scheduler
-        sched = simple_scheduler.SimpleScheduler(runner=qc_runner,
-                                                 max_concurrent=max_jobs)
-        sched.start()
-        # Look for samples with no/invalid QC outputs and populate
-        # pipeline with the associated fastq.gz files
+        # Set up the QC for each project
+        runqc = RunQC(runner=qc_runner,
+                      max_jobs=max_jobs)
         for project in projects:
-            print "*** Setting up QC for %s ***" % project.name
-            # Set up qc directory
-            project_qc_dir = project.setup_qc_dir(qc_dir,fastq_dir=fastq_dir)
-            project.use_qc_dir(project_qc_dir)
-            print "Using QC directory %s" % project.qc_dir
-            # Sort out fastq source
-            fastq_dir = project.qc_info(project_qc_dir).fastq_dir
-            project.use_fastq_dir(fastq_dir)
-            print "Set fastq_dir to %s" % project.fastq_dir
-            # Set up the logs directory
-            log_dir = os.path.join(project_qc_dir,'logs')
-            if not os.path.exists(log_dir):
-                print "Making QC logs directory: %s" % log_dir
-                bcf_utils.mkdir(log_dir,mode=0775)
-            # Loop over samples and queue up those where the QC
-            # isn't validated
-            samples = project.get_samples(sample_pattern)
-            if len(samples) == 0:
-                logging.warning("No samples found for QC analysis in project '%s'" %
-                                project.name)
-            groups = []
-            for sample in samples:
-                group = None
-                print "Examining files in sample %s" % sample.name
-                for fq in sample.fastq:
-                    if utils.AnalysisFastq(fq).is_index_read:
-                        # Reject index read Fastqs
-                        logging.warning("Ignoring index read: %s" %
-                                        os.path.basename(fq))
-                        continue
-                    if sample.verify_qc(project_qc_dir,fq):
-                        logging.debug("\t%s: QC verified" % fq)
-                    else:
-                        print "\t%s: setting up QC run" % os.path.basename(fq)
-                        # Create a group if none exists for this sample
-                        if group is None:
-                            group = sched.group("%s.%s" % (project.name,sample.name),
-                                                log_dir=log_dir)
-                        # Create and submit a QC job
-                        fastq = os.path.join(project.dirn,'fastqs',fq)
-                        label = "illumina_qc.%s.%s" % \
-                                (project.name,str(utils.AnalysisFastq(fq)))
-                        qc_cmd = applications.Command('illumina_qc.sh',fastq)
-                        if ungzip_fastqs:
-                            qc_cmd.add_args('--ungzip-fastqs')
-                        if fastq_screen_subset is None:
-                            fastq_screen_subset = 0
-                        qc_cmd.add_args(
-                            '--threads',nthreads,
-                            '--subset',fastq_screen_subset,
-                            '--qc_dir',project_qc_dir)
-                        job = group.add(qc_cmd,name=label,wd=project.dirn)
-                        print "Job: %s" %  job
-                # Indicate no more jobs to add
-                if group:
-                    group.close()
-                    groups.append(group.name)
-            # Add MultiQC job (if requested)
-            if run_multiqc:
-                multiqc_out = "multi%s_report.html" % \
-                              os.path.basename(project_qc_dir)
-                if (not os.path.exists(multiqc_out)) or groups:
-                    multiqc_cmd = applications.Command(
-                        'multiqc',
-                        '--title','%s/%s' % (self.run_name,project.name),
-                        '--filename','./%s' % multiqc_out,
-                        '--force',
-                        project_qc_dir)
-                    print "Running %s" % multiqc_cmd
-                    label = "multiqc.%s" % project.name
-                    job = sched.submit(multiqc_cmd,
-                                       name=label,
-                                       wd=project.dirn,
-                                       log_dir=log_dir,
-                                       wait_for=groups)
-                else:
-                    print "MultiQC report '%s': already exists" % multiqc_out
-        # Wait for the scheduler to run all jobs
-        sched.wait()
-        sched.stop()
-        # Verify the outputs and generate QC reports
-        failed_projects = []
-        for project in projects:
-            if not project.verify_qc(qc_dir=qc_dir):
-                failed_projects.append(project)
-            else:
-                qc_base = os.path.basename(qc_dir)
-                if report_html is None:
-                    out_file = '%s_report.html' % qc_base
-                else:
-                    out_file = report_html
-                if not os.path.isabs(out_file):
-                    out_file = os.path.join(project.dirn,out_file)
-                title = "%s/%s" % (self.run_name,
-                                   project.name)
-                if fastq_dir is not None:
-                    title = "%s (%s)" % (title,fastq_dir)
-                title = "%s: QC report" % title
-                print "QC okay, generating report for %s" % project.name
-                project.qc_report(qc_dir=qc_dir,
-                                  title=title,
-                                  report_html=out_file)
-            if run_multiqc:
-                multiqc_report = os.path.join(project.dirn,multiqc_out)
-                if not os.path.exists(multiqc_report):
-                    logging.warning("Missing MultiQC report for %s" %
-                                    project.name)
-                    failed_projects.append(project)
-        # Report failed projects
-        if failed_projects:
-            logging.error("QC failed for one or more samples in following projects:")
-            for project in failed_projects:
-                logging.error("- %s" % project.name)
-            return 1
-        # Finish
-        return 0
+            runqc.add_project(project,
+                              fastq_dir=fastq_dir,
+                              sample_pattern=sample_pattern,
+                              qc_dir=qc_dir,
+                              ungzip_fastqs=ungzip_fastqs,
+                              run_multiqc=run_multiqc)
+        # Run the QC
+        status = runqc.run()
+        return status
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
