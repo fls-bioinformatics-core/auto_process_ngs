@@ -134,7 +134,7 @@ class TestSetGroupFunction(FileopsTestCase):
     """Tests for the 'set_group' function
     """
     def test_local_set_group(self):
-        """fileops.set_group: set group ownership on a local file
+        """fileops.set_group: set group ownership on a local directory
         """
         # Get a list of groups
         current_user = pwd.getpwuid(os.getuid()).pw_name
@@ -144,13 +144,19 @@ class TestSetGroupFunction(FileopsTestCase):
         if len(groups) < 2:
             raise unittest.SkipTest("user '%s' must be in at least "
                                     "two groups" % current_user)
-        # Make test file and get group
-        test_file = os.path.join(self.test_dir,'test.txt')
-        with open(test_file,'w') as fp:
-            fp.write("This is a test file")
-        self.assertTrue(os.path.isfile(test_file))
-        gid = os.stat(test_file).st_gid
-        print "File: %s GID: %s" % (test_file,gid)
+        # Make test directory and files
+        test_dir = os.path.join(self.test_dir,'test.dir')
+        os.mkdir(test_dir)
+        test_file1 = os.path.join(test_dir,'test1.txt')
+        test_file2 = os.path.join(test_dir,'test2.txt')
+        test_file3 = os.path.join(test_dir,'test3.txt')
+        for f in (test_file1,test_file2,test_file3):
+            with open(f,'w') as fp:
+                fp.write("This is a test file")
+            self.assertTrue(os.path.isfile(f))
+        # Get initial group from a test file
+        gid = os.stat(test_file1).st_gid
+        print "File: %s GID: %s" % (test_file1,gid)
         # Get a second group
         new_gid = None
         for group in groups:
@@ -158,15 +164,16 @@ class TestSetGroupFunction(FileopsTestCase):
                 new_gid = group
                 break
         print "Selected new GID: %s" % new_gid
-        self.assertNotEqual(os.stat(test_file).st_gid,new_gid)
+        for f in (test_file1,test_file2,test_file3):
+            self.assertNotEqual(os.stat(f).st_gid,new_gid)
         # Change group by name
         new_group = grp.getgrgid(new_gid).gr_name
         print "New group name: %s" % new_group
-        status = set_group(new_group,test_file)
+        status = set_group(new_group,test_dir)
         self.assertEqual(status,0)
-        print "File: %s GID: %s"  % (test_file,
-                                     os.stat(test_file).st_gid)
-        self.assertEqual(os.stat(test_file).st_gid,new_gid)
+        for f in (test_file1,test_file2,test_file3):
+            print "File: %s GID: %s"  % (f,os.stat(f).st_gid)
+            self.assertEqual(os.stat(f).st_gid,new_gid)
 
 class TestUnzip(FileopsTestCase):
     """Tests for the 'unzip' function
@@ -321,7 +328,7 @@ class TestSetGroupCommand(unittest.TestCase):
                           'chgrp',
                           'adm',
                           '{}',
-                          ';'])
+                          '+'])
     def test_set_group_command_local_verbose(self):
         """fileops.set_group_command: set group on local files (verbose)
         """
@@ -336,7 +343,7 @@ class TestSetGroupCommand(unittest.TestCase):
                           '--verbose',
                           'adm',
                           '{}',
-                          ';'])
+                          '+'])
 
     def test_set_group_command_local_safe(self):
         """fileops.set_group_command: set group on local files ('safe' mode)
@@ -353,7 +360,7 @@ class TestSetGroupCommand(unittest.TestCase):
                           'chgrp',
                           'adm',
                           '{}',
-                          ';'])
+                          '+'])
 
     def test_set_group_command_remote(self):
         """fileops.set_group_command: set group on remote files
@@ -369,7 +376,7 @@ class TestSetGroupCommand(unittest.TestCase):
                           'chgrp',
                           'adm',
                           '{}',
-                          ';'])
+                          '+'])
 
 class TestUnzipCommand(unittest.TestCase):
     """Tests for the 'unzip_command' function
