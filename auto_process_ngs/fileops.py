@@ -470,7 +470,7 @@ def set_group_command(group,path,verbose=False,safe=False):
         chmod_cmd.add_args('--verbose')
     chmod_cmd.add_args(group,
                        '{}',
-                       ';')
+                       '\;')
     if path.is_remote:
         # Set group for remote files
         chmod_cmd = applications.general.ssh_command(
