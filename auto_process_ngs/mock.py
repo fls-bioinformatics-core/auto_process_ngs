@@ -36,6 +36,7 @@ the external software required for parts of the pipeline:
 
 - MockBcl2fastq2Exe
 - MockIlluminaQCSh
+- MockMultiQC
 
 """
 
@@ -44,6 +45,7 @@ the external software required for parts of the pipeline:
 #######################################################################
 
 import os
+import sys
 import argparse
 import uuid
 import shutil
@@ -1038,7 +1040,6 @@ sys.exit(MockIlluminaQcSh(version=%s,exit_code=%s).main(sys.argv[1:]))
         # Handle version request
         if args[0] == "--version":
             print "illumina_qc.sh %s" % self._version
-            print header
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -1087,4 +1088,105 @@ fastqc\t/opt/apps/bin/fastqc\t0.11.3
                                               screen_name=screen)
         # Create FastQC outputs
         MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
+        return self._exit_code
+
+class MockMultiQC(object):
+    """
+    Create mock MultiQC executable
+
+    This class can be used to create a mock multiqc
+    executable, which in turn can be used in place of
+    the actual multiqc executable for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockMultiQC.create("/tmpbin/multiqc")
+
+    The resulting executable will generate mock outputs
+    when run on a directory (ignoring its contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,version=None,exit_code=0):
+        """
+        Create a "mock" multiqc executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print "Building mock executable: %s" % path
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockMultiQC
+sys.exit(MockMultiQC(exit_code=%s).main(sys.argv[1:]))
+            """ % exit_code)
+            os.chmod(path,0775)
+        with open(path,'r') as fp:
+            print "multiqc:"
+            print "%s" % fp.read()
+        return path
+
+    def __init__(self,exit_code=0):
+        """
+        Internal: configure the mock multiqc
+        """
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock multiqc functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Handle version request
+        if args[0] == "--version":
+            print "multiqc, version 1.5"
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--title",action="store")
+        p.add_argument("--filename",action="store")
+        p.add_argument("--force",action="store_true")
+        p.add_argument("analysis_directory")
+        args = p.parse_args(args)
+        # Check input directory
+        if not os.path.exists(args.analysis_directory):
+            sys.stderr.write("""Usage: multiqc [OPTIONS] <analysis directory>
+
+Error: Invalid value for "analysis_dir": Path "%s" does not exist.
+
+This is MultiQC v1.5
+
+For more help, run 'multiqc --help' or visit http://multiqc.info
+            """ % args.analysis_directory)
+            return 2
+        # Outputs
+        if args.filename is None:
+            out_file = "multiqc_report.html"
+            out_dir = "multiqc_data"
+        else:
+            out_file = args.filename
+            out_dir = "%s_data" % os.path.splitext(out_file)[0]
+        with open(out_file,'w') as fp:
+            fp.write("MultiQC HTML report")
+        os.mkdir(out_dir)
+        # Exit
         return self._exit_code
