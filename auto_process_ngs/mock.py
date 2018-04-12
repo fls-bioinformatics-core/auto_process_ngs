@@ -34,7 +34,8 @@ quickly make "default" analysis directories for testing:
 It is also possible to make mock executables which mimick some of
 the external software required for parts of the pipeline:
 
-- MockBcl2fastqExe
+- MockBcl2fastq2Exe
+- MockIlluminaQCSh
 
 """
 
@@ -54,6 +55,7 @@ from bcftbx.IlluminaData import SampleSheetPredictor
 from .utils import AnalysisProject
 from .utils import ZipArchive
 from .qc.illumina_qc import expected_qc_outputs
+from .mockqc import MockQCOutputs
 
 #######################################################################
 # Classes for making mock directories
@@ -293,8 +295,8 @@ class MockAnalysisProject(object):
 
     Example usage:
 
-    >>> m = MockAnalysisProject('PJB',('PJB1_S1_R1_001.fasta.gz,
-    ...                                'PJB1_S1_R2_001.fasta.gz))
+    >>> m = MockAnalysisProject('PJB',('PJB1_S1_R1_001.fastq.gz',
+    ...                                'PJB1_S1_R2_001.fastq.gz'))
     >>> m.create()
 
     """
@@ -953,4 +955,136 @@ Copyright (c) 2007-2015 Illumina, Inc.
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
         shutil.rmtree(tmpname)
+        return self._exit_code
+
+class MockIlluminaQcSh(object):
+    """
+    Create mock illumina_qc.sh
+
+    This class can be used to create a mock
+    illumina_qc.sh 'script', which in turn can be used
+    in place of the actual illumina_qc.sh script for
+    testing purposes.
+
+    To create a mock script, use the 'create' static
+    method, e.g.
+
+    >>> MockIlluminaQcSh.create("/tmpbin/illumina_qc.sh")
+
+    The resulting executable will generate mock outputs
+    when run on Fastq files (ignoring their content).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - outputs for specific stages can be removed by
+      specifying their names in the `missing_fastqs`
+      argument
+    """
+
+    @staticmethod
+    def create(path,version=None,exit_code=0):
+        """
+        Create a "mock" illumina.sh "script"
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          version (str): explicit version string
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print "Building mock executable: %s" % path
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockIlluminaQcSh
+sys.exit(MockIlluminaQcSh(version=%s,exit_code=%s).main(sys.argv[1:]))
+            """ % (("\"%s\"" % version
+                    if version is not None
+                    else None),
+                   exit_code))
+            os.chmod(path,0775)
+        with open(path,'r') as fp:
+            print "illumina_qc.sh:"
+            print "%s" % fp.read()
+        return path
+
+    def __init__(self,version=None,
+                 exit_code=0):
+        """
+        Internal: configure the mock illumina_qc.sh
+        """
+        if version is None:
+            version = "1.3.1"
+        self._version = str(version)
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock illumina_qc.sh functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Handle version request
+        if args[0] == "--version":
+            print "illumina_qc.sh %s" % self._version
+            print header
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--ungzip-fastqs",action="store_true")
+        p.add_argument("--no-ungzip",action="store_true")
+        p.add_argument("--threads",action="store")
+        p.add_argument("--subset",action="store")
+        p.add_argument("--qc_dir",action="store")
+        p.add_argument("fastq")
+        args = p.parse_args(args)
+        # Check input file
+        if not os.path.exists(args.fastq):
+            print "%s: fastq file not found" % args.fastq
+            return self._exit_code
+        # Output dir
+        qc_dir = args.qc_dir
+        if qc_dir is None:
+            qc_dir = "qc"
+        if not os.path.isdir(qc_dir):
+            print "Making QC directory %s" % qc_dir
+            os.mkdir(qc_dir)
+        # Fastq base name
+        fastq_base = MockQCOutputs.fastq_basename(args.fastq)
+        # Write program info
+        program_info = os.path.join(qc_dir,
+                                    "%s.illumina_qc.programs" %
+                                    fastq_base)
+        with open(program_info,'w') as fp:
+            fp.write("""# Program versions and paths used for %s:
+fastq_screen\t/opt/apps/bin/fastq_screen\t0.9.2
+fastqc\t/opt/apps/bin/fastqc\t0.11.3
+""")
+        # Ungzipped Fastq
+        if args.ungzip_fastqs:
+            if args.fastq.endswith(".gz"):
+                ungzipped_fastq = os.path.splitext(
+                    os.path.basename(args.fastq))[0]
+                with open(ungzipped_fastq,'w') as fp:
+                    fp.write("uncompressed %s" % args.fastq)
+        # Create FastQScreen outputs
+        for screen in ("model_organisms",
+                       "other_organisms",
+                       "rRNA"):
+            MockQCOutputs.fastq_screen_v0_9_2(args.fastq,
+                                              qc_dir,
+                                              screen_name=screen)
+        # Create FastQC outputs
+        MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
         return self._exit_code
