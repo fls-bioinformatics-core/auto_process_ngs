@@ -43,6 +43,27 @@ class TestRunQC(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_run_qc(self):
+        """RunQC: standard QC run
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          run_multiqc=True)
+        status = runqc.run()
+        self.assertEqual(status,0)
+
+    def test_run_qc_no_multiqc(self):
         """RunQC: standard QC run (no MultiQC)
         """
         # Make mock illumina_qc.sh
@@ -62,12 +83,14 @@ class TestRunQC(unittest.TestCase):
         status = runqc.run()
         self.assertEqual(status,0)
 
-    def test_run_qc_with_multiqc(self):
-        """RunQC: standard QC run with MultiQC
+    def test_run_qc_with_missing_fastq_screen_outputs(self):
+        """RunQC: standard QC fails for missing FastQScreen outputs
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
-                                             "illumina_qc.sh"))
+                                             "illumina_qc.sh"),
+                                fastq_screen=False,
+                                exit_code=1)
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
@@ -81,4 +104,49 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=True)
         status = runqc.run()
-        self.assertEqual(status,0)
+        self.assertEqual(status,1)
+
+    def test_run_qc_with_missing_fastqc_outputs(self):
+        """RunQC: standard QC fails for missing FastQC outputs
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"),
+                                fastqc=False,
+                                exit_code=1)
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          run_multiqc=True)
+        status = runqc.run()
+        self.assertEqual(status,1)
+
+    def test_run_qc_with_missing_multiqc_outputs(self):
+        """RunQC: standard QC fails for missing MultiQC outputs
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"),
+                           no_outputs=True)
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          run_multiqc=True)
+        status = runqc.run()
+        self.assertEqual(status,1)

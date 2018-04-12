@@ -987,7 +987,8 @@ class MockIlluminaQcSh(object):
     """
 
     @staticmethod
-    def create(path,version=None,exit_code=0):
+    def create(path,version=None,fastq_screen=True,
+               fastqc=True,exit_code=0):
         """
         Create a "mock" illumina.sh "script"
 
@@ -997,6 +998,10 @@ class MockIlluminaQcSh(object):
             not exist, however the directory it
             will be created in must.
           version (str): explicit version string
+          fastq_screen (bool): if True then make
+            mock outputs for FastQScreen
+          fastqc (bool): if True then make mock
+            outputs for FastQC
           exit_code (int): exit code that the
             mock executable should complete
             with
@@ -1009,10 +1014,15 @@ class MockIlluminaQcSh(object):
             fp.write("""#!/usr/bin/env python
 import sys
 from auto_process_ngs.mock import MockIlluminaQcSh
-sys.exit(MockIlluminaQcSh(version=%s,exit_code=%s).main(sys.argv[1:]))
+sys.exit(MockIlluminaQcSh(version=%s,
+                          fastq_screen=%s,
+                          fastqc=%s,
+                          exit_code=%s).main(sys.argv[1:]))
             """ % (("\"%s\"" % version
                     if version is not None
                     else None),
+                   fastq_screen,
+                   fastqc,
                    exit_code))
             os.chmod(path,0775)
         with open(path,'r') as fp:
@@ -1020,14 +1030,16 @@ sys.exit(MockIlluminaQcSh(version=%s,exit_code=%s).main(sys.argv[1:]))
             print "%s" % fp.read()
         return path
 
-    def __init__(self,version=None,
-                 exit_code=0):
+    def __init__(self,version=None,fastq_screen=True,
+                 fastqc=True,exit_code=0):
         """
         Internal: configure the mock illumina_qc.sh
         """
         if version is None:
             version = "1.3.1"
         self._version = str(version)
+        self._fastq_screen = fastq_screen
+        self._fastqc = fastqc
         self._exit_code = exit_code
 
     def main(self,args):
@@ -1080,14 +1092,16 @@ fastqc\t/opt/apps/bin/fastqc\t0.11.3
                 with open(ungzipped_fastq,'w') as fp:
                     fp.write("uncompressed %s" % args.fastq)
         # Create FastQScreen outputs
-        for screen in ("model_organisms",
-                       "other_organisms",
-                       "rRNA"):
-            MockQCOutputs.fastq_screen_v0_9_2(args.fastq,
-                                              qc_dir,
-                                              screen_name=screen)
+        if self._fastq_screen:
+            for screen in ("model_organisms",
+                           "other_organisms",
+                           "rRNA"):
+                MockQCOutputs.fastq_screen_v0_9_2(args.fastq,
+                                                  qc_dir,
+                                                  screen_name=screen)
         # Create FastQC outputs
-        MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
+        if self._fastqc:
+            MockQCOutputs.fastqc_v0_11_2(args.fastq,qc_dir)
         return self._exit_code
 
 class MockMultiQC(object):
@@ -1111,10 +1125,12 @@ class MockMultiQC(object):
 
     - the exit code can be set to an arbitrary value
       via the `exit_code` argument
+    - the outputs can be suppressed by setting the
+      `no_output` argument to `True`
     """
 
     @staticmethod
-    def create(path,version=None,exit_code=0):
+    def create(path,no_outputs=False,exit_code=0):
         """
         Create a "mock" multiqc executable
 
@@ -1123,6 +1139,8 @@ class MockMultiQC(object):
             to create. The final executable must
             not exist, however the directory it
             will be created in must.
+          no_outputs (bool): if True then don't
+            create any of the expected outputs
           exit_code (int): exit code that the
             mock executable should complete
             with
@@ -1135,18 +1153,20 @@ class MockMultiQC(object):
             fp.write("""#!/usr/bin/env python
 import sys
 from auto_process_ngs.mock import MockMultiQC
-sys.exit(MockMultiQC(exit_code=%s).main(sys.argv[1:]))
-            """ % exit_code)
+sys.exit(MockMultiQC(no_outputs=%s,
+                     exit_code=%s).main(sys.argv[1:]))
+            """ % (no_outputs,exit_code))
             os.chmod(path,0775)
         with open(path,'r') as fp:
             print "multiqc:"
             print "%s" % fp.read()
         return path
 
-    def __init__(self,exit_code=0):
+    def __init__(self,no_outputs=False,exit_code=0):
         """
         Internal: configure the mock multiqc
         """
+        self._no_outputs = no_outputs
         self._exit_code = exit_code
 
     def main(self,args):
@@ -1185,8 +1205,9 @@ For more help, run 'multiqc --help' or visit http://multiqc.info
         else:
             out_file = args.filename
             out_dir = "%s_data" % os.path.splitext(out_file)[0]
-        with open(out_file,'w') as fp:
-            fp.write("MultiQC HTML report")
-        os.mkdir(out_dir)
+        if not self._no_outputs:
+            with open(out_file,'w') as fp:
+                fp.write("MultiQC HTML report")
+            os.mkdir(out_dir)
         # Exit
         return self._exit_code
