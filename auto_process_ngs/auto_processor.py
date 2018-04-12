@@ -40,7 +40,6 @@ import icell8_utils
 import tenx_genomics_utils
 import settings
 from .qc.processing import report_processing_qc
-from .qc.runqc import RunQC
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
@@ -99,6 +98,7 @@ def add_command(name,f):
 #######################################################################
 
 @add_command("setup_analysis_dirs",commands.setup_analysis_dirs)
+@add_command("run_qc",commands.run_qc)
 @add_command("publish_qc",commands.publish_qc_cmd.publish_qc)
 @add_command("archive",commands.archive_cmd.archive)
 @add_command("report",commands.report_cmd.report)
@@ -2526,101 +2526,6 @@ class AutoProcess:
         if not dry_run:
             self.make_project_metadata_file()
         return 0
-
-    def run_qc(self,projects=None,max_jobs=4,ungzip_fastqs=False,
-               fastq_screen_subset=100000,nthreads=1,
-               runner=None,fastq_dir=None,qc_dir=None,
-               report_html=None,run_multiqc=True):
-        """Run QC pipeline script for projects
-
-        Run the illumina_qc.sh script to perform QC on projects.
-
-        Note that if all QC outputs already exist for a project then
-        the QC will *not* be run for that project.
-
-        A subset of projects can be selected for QC by setting the
-        'projects' argument to a name or pattern, only matching
-        projects will be examined.
-
-        Arguments:
-          projects: specify a pattern to match one or more projects to
-                    run the QC for (default is to run QC for all
-                    projects)
-          max_jobs: maximum number of jobs that will be scheduled
-                    to run at one time (passed to the scheduler;
-                    default is 4, set to zero to remove the limit)
-          ungzip_fastqs: if True then run the QC script with the
-                    '--ungzip-fastqs' option to create decompressed
-                    copies of any fastq.gz inputs (default is False,
-                    don't decompress the input files)
-          fastq_screen_subset: subset of reads to use in fastq_screen
-                    (default is 100000, set to zero or None to use
-                    all reads)
-          nthreads: (optional) specify number of threads to run the
-                    QC pipeline with (default is 1)
-          runner:   (optional) specify a non-default job runner to
-                    use for the QC.
-          fastq_dir: (optional) specify the subdirectory to take the
-                    Fastq files from; will be used for all projects
-                    that are processed (default is 'fastqs')
-          qc_dir:   (optional) specify a non-standard directory to
-                    write the QC outputs to; will be used for all
-                    projects that are processed (default is 'qc')
-          report_html: (optional) specify the name for the output
-                    HTML QC report (default is '<QC_DIR>_report.html')
-          run_multiqc: if True then run MultiQC at the end of the
-                    QC run (default)
-
-        Returns:
-          UNIX-style integer returncode: 0 = successful termination,
-          non-zero indicates an error occurred.
-
-        """
-        # Check QC script version
-        compatible_versions = ('1.3.0','1.3.1')
-        print "Getting QC script information"
-        status,qc_script_info = applications.Command('illumina_qc.sh',
-                                                     '--version').subprocess_check_output()
-        print "Using QC script %s" % qc_script_info.strip()
-        version = qc_script_info.strip().split()[-1]
-        if version not in compatible_versions:
-            logging.error("QC script version is %s, needs %s" %
-                          (version,'/'.join(compatible_versions)))
-            return 1
-        # Process project pattern matching
-        if projects is None:
-            project_pattern = '*'
-            sample_pattern = '*'
-        else:
-            project_pattern = projects.split('/')[0]
-            try:
-                sample_pattern = projects.split('/')[1]
-            except IndexError:
-                sample_pattern = '*'
-        # Get project dir data
-        projects = self.get_analysis_projects(project_pattern)
-        # Check we have projects
-        if len(projects) == 0:
-            logging.warning("No projects found for QC analysis")
-            return 1
-        # Set up runner
-        if runner is not None:
-            qc_runner = fetch_runner(runner)
-        else:
-            qc_runner = self.settings.runners.qc
-        # Set up the QC for each project
-        runqc = RunQC(runner=qc_runner,
-                      max_jobs=max_jobs)
-        for project in projects:
-            runqc.add_project(project,
-                              fastq_dir=fastq_dir,
-                              sample_pattern=sample_pattern,
-                              qc_dir=qc_dir,
-                              ungzip_fastqs=ungzip_fastqs,
-                              run_multiqc=run_multiqc)
-        # Run the QC
-        status = runqc.run()
-        return status
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
