@@ -153,8 +153,8 @@ def main():
     # Examine projects i.e. supplied directories
     retval = 0
     for d in args:
-        project_name = os.path.basename(d)
         dir_path = os.path.abspath(d)
+        project_name = os.path.basename(dir_path)
         p = AnalysisProject(project_name,dir_path,
                             fastq_dir=opts.fastq_dir)
         print "Project: %s" % p.name
@@ -202,7 +202,7 @@ def main():
                                           filename=out_file)
         # Generate ZIP archive
         if opts.zip:
-            report_zip = zip_report(p,qc_dir,report_html)
+            report_zip = zip_report(p,report_html,qc_dir)
             print "ZIP archive: %s" % report_zip
     # Finish with appropriate exit code
     sys.exit(retval)
