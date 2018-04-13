@@ -23,6 +23,7 @@ Contents
    icell8
    10xgenomics
    problems
+   advanced
    developers
 
 Indices and tables

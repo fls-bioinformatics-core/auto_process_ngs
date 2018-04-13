@@ -1,28 +1,53 @@
-Set up and configuration
-========================
+Installation
+============
+
+.. _auto_process_installation:
+
+Installation
+************
+
+The ``auto-process-ngs`` package is available from its GitHub respository at
+
+ * https://github.com/fls-bioinformatics-core/auto_process_ngs
+
+Specific versions can be obtained as ``tar.gz`` archives from:
+
+ * https://github.com/fls-bioinformatics-core/auto_process_ngs/releases
+
+The software is written in Python and works with Python 2.7.
+
+It is recommended to install the package into a Python ``virtualenv``, for
+example::
+
+    virtualenv venv.ap
+    . venv.ap/bin/activate
+
+To install a specific version, first download and unpack the source code,
+e.g.::
+
+    wget https://github.com/fls-bioinformatics-core/auto_process_ngs/archive/0.10.0.tar.gz
+    tar zxf 0.10.0.tar.gz
+
+Then install the requirements and then rest of the packages::
+
+    pip install -r auto_process_ngs-0.10.0/requirements.txt
+    pip install ./auto_process_ngs-0.10.0
+
+In addition a number of external software packages are required for the
+Fastq generation and QC pipelines; these are listed in the section
+:ref:`auto_process_requirements`.
+
+The installation may also require some configuration to tailor it to the
+local environment (for example, if running on a compute cluster); this is
+outlined in more detail in the section :ref:`auto_process_configuration`.
+
+.. _auto_process_requirements:
 
 Requirements
 ************
 
-The autoprocessor is written in Python and should work with Python 2.7.
-
-A number of additional Python packages are explicitly required but these
-should be installed automatically from the Python Package Index (PyPI)
-if the autoprocessor is installed via ``pip``:
-
- * ``pillow``
- * ``matplotlib``
- * ``pandas``
- * ``nebulizer``
-
-In addition it also depends on the ``genomics-bcftbx`` Python module,
-which is not currently available from PyPI; it can be obtained from
-the Github repository at
-https://github.com/fls-bioinformatics-core/genomics or can be installed
-via the ``requirements.txt`` file (see :ref:`auto_process_installation`).
-
-Some of the commands depend on external software packages which must
-also be installed. These include
+Many of the functions of ``auto-process-ngs`` depend on additional external
+software packages which must also be installed. These include:
 
  * Fastq generation: uses Illumina's ``bcl2fastq`` software (nb version
    2.17+ is required for NextSeq data):
@@ -58,47 +83,10 @@ can be used to help manage this.
     at run time then see :ref:`required_bcl2fastq_versions` for how to
     specify which version is used.
 
-.. _auto_process_installation:
-
-Installation
-************
-
-The autoprocessing package can obtained from its Github respository at
-
- * https://github.com/fls-bioinformatics-core/auto_process_ngs
-
-The available versions can be found via
-https://github.com/fls-bioinformatics-core/auto_process_ngs/releases
-
-It is recommended to download one of these versions and unpack locally,
-e.g.::
-
-    wget https://github.com/fls-bioinformatics-core/auto_process_ngs/archive/0.6.4.tar.gz
-    tar zxf 0.6.4.tar.gz
-
-which will download and unpack version 0.6.4 into a new directory
-``auto_process_ngs-0.6.4``.
-
-If the Python dependencies listed above are already available in the
-environment then the scripts and utilities can be run from this
-directory without further installation.
-
-Alternatively the autoprocessor can be installed into a Python
-virtualenv, for example::
-
-    virtualenv venv.auto_process
-    . venv.auto_process/bin/activate
-    pip install -r auto_process_ngs-0.6.4/requirements.txt
-    pip install ./auto_process_ngs
-
-In either case the installation can be configured for local preferences
-by creating a configuration file as outlined in the section
-:ref:`auto_process_configuration`.
-
 .. _auto_process_configuration:
 
-Configuration: settings.ini
-***************************
+Configuration
+*************
 
 The autoprocessor reads its global settings for the local system from a
 ``settings.ini`` file, which it looks for in order in the following
@@ -229,19 +217,5 @@ version will be used.
    If this old method is detected then warnings are issued and the
    software attempts to make an intelligent choice about the versions.
 
-Bash tab completion
-*******************
-
-The ``auto_process-completion.bash`` file (installed into the
-``etc/bash_completion.d`` subdirectory of the installation location)
-can used to enable tab completion of ``auto_process.py`` commands
-within ``bash`` shells.
-
-* For a global installation, copy the file to the system's
-  ``/etc/bash_completion.d/`` directory, to make it available
-  to all users
-* For a local installation, source the file when setting up the
-  environment for the installation (or source it in your ``~/.bashrc``
-  or similar).
 
 
