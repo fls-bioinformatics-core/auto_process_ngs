@@ -10,9 +10,9 @@
 
 import os
 import logging
-import bcftbx.utils as bcf_utils
-import auto_process_ngs.applications as applications
 import auto_process_ngs.utils as utils
+import auto_process_ngs.fileops as fileops
+from auto_process_ngs.applications import Command
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 
@@ -106,7 +106,12 @@ class RunQC(object):
         """
         # Start scheduler
         self._sched.start()
-        # Add each project
+        # Initial QC check for each project
+        for project in self._projects:
+            project.check_qc(self._sched,
+                             name="pre_qc_check")
+        self._sched.wait()
+        # Run QC for each project
         for project in self._projects:
             project.setup_qc(self._sched,
                              nthreads,
@@ -126,7 +131,7 @@ class RunQC(object):
             logger.error("QC failed for one or more samples in the "
                          "following projects:")
             for project in failed_projects:
-                logger.error("- %s" % project.project.name)
+                logger.error("- %s" % project.name)
             return 1
         # Finish
         return 0
@@ -157,15 +162,100 @@ class ProjectQC(object):
           run_multiqc (bool): if True then run MultiQC
             at the end of the QC pipeline
         """
-        self.project = project
-        self.fastq_dir = fastq_dir
+        # Clone the supplied project
+        self.project = utils.AnalysisProject(project.name,
+                                             project.dirn)
+        # Unpick the supplied subdirectories
+        if qc_dir is None:
+            qc_dir = 'qc'
+        self.qc_dir = project.setup_qc_dir(qc_dir,
+                                           fastq_dir=fastq_dir)
+        project.use_qc_dir(self.qc_dir)
+        self.fastq_dir = project.qc_info(project.qc_dir).fastq_dir
+        project.use_fastq_dir(self.fastq_dir)
+        # Log directory
+        self.log_dir = os.path.join(project.qc_dir,'logs')
+        if not os.path.exists(self.log_dir):
+            print "Making QC logs directory: %s" % self.log_dir
+            fileops.mkdir(self.log_dir,recursive=True)
+        # Other parameters
         self.sample_pattern = sample_pattern
         if self.sample_pattern is None:
             self.sample_pattern = '*'
-        self.qc_dir = qc_dir
         self.ungzip_fastqs = ungzip_fastqs
         self.run_multiqc = run_multiqc
+        # Outputs
         self.multiqc_out = None
+        self.fastqs_missing_qc = None
+
+    @property
+    def name(self):
+        """
+        Return project name
+        """
+        return self.project.name
+
+    def check_qc(self,sched,name):
+        """
+        Check for Fastqs with missing/failed QC outputs
+
+        Schedules a job to run the `reportqc` utility,
+        and invokes the `_extract_fastqs` method to
+        parse the output and get a list of Fastqs
+        which have missing or failed QC outputs.
+
+        The Fastq paths are stored in the
+        `fastqs_missing_qc` instance variable.
+
+        Arguments:
+          sched (SimpleScheduler): scheduler instance
+            to use to run the jobs
+          name (str): optional, name for the job
+        """
+        project = self.project
+        print "=== Checking QC for '%s' ===" % project.name
+        name = "%s.%s" % (name,project.name)
+        self.fastqs_missing_qc = None
+        collect_cmd = Command(
+            "reportqc.py",
+            "--fastq_dir",self.fastq_dir,
+            "--qc_dir",self.qc_dir,
+            "--verify",
+            "--list-unverified",
+            project.dirn)
+        job = sched.submit(collect_cmd,
+                           name="%s" % name,
+                           wd=project.dirn,
+                           log_dir=self.log_dir,
+                           callbacks=(self._extract_fastqs,))
+
+    def _extract_fastqs(self,name,jobs,sched):
+        """
+        Internal: callback to get Fastqs from `reportqc`
+
+        Invoked to handle the completion of a job running
+        `reportqc ... --verify --list-unverified` and parse
+        the output to get a list of Fastqs with missing or
+        failed QC.
+
+        The list of Fastqs can be accessed via the
+        `fastqs_missing_qc` instance attribute.
+        """
+        print "Extracting Fastqs with missing/failed QC"
+        check_qc = jobs[0]
+        print "Exit code: %s" % check_qc.exit_code
+        print "Log file: %s" % check_qc.log
+        print "Log file contents:"
+        with open(check_qc.log,'r') as log:
+            print log.read()
+        self.fastqs_missing_qc = list()
+        with open(check_qc.log,'r') as log:
+            for line in log:
+                if line.startswith(self.project.dirn):
+                    self.fastqs_missing_qc.append(line.rstrip())
+        print "Fastqs with missing QC outputs:"
+        for fq in self.fastqs_missing_qc:
+            print fq
 
     def setup_qc(self,sched,nthreads,fastq_screen_subset):
         """
@@ -181,26 +271,11 @@ class ProjectQC(object):
             10000)
         """
         project = self.project
-        print "=== Setting up QC for %s ===" % project.name
-        print "Subdirectories with Fastqs:"
-        for fastq_dir in project.fastq_dirs:
-            print "- %s" % fastq_dir
-        # Set up qc directory
-        project_qc_dir = project.setup_qc_dir(self.qc_dir,
-                                              fastq_dir=self.fastq_dir)
-        project.use_qc_dir(project_qc_dir)
+        print "=== Setting up QC for '%s' ===" % project.name
+        print "Using Fastqs from %s" % project.fastq_dir
         print "Using QC directory %s" % project.qc_dir
-        # Sort out fastq source
-        fastq_dir = project.qc_info(project_qc_dir).fastq_dir
-        project.use_fastq_dir(self.fastq_dir)
-        print "Gathering Fastqs from %s" % project.fastq_dir
-        # Set up the logs directory
-        log_dir = os.path.join(project_qc_dir,'logs')
-        if not os.path.exists(log_dir):
-            print "Making QC logs directory: %s" % log_dir
-            bcf_utils.mkdir(log_dir,mode=0775)
         # Loop over samples and queue up those where the QC
-        # isn't validated
+        # is missing
         samples = project.get_samples(self.sample_pattern)
         if len(samples) == 0:
             logger.warning("No samples found for QC analysis in "
@@ -214,14 +289,15 @@ class ProjectQC(object):
             group = None
             print "Examining files in sample %s" % sample.name
             for fq in sample.fastq:
+                print "%s" % fq
                 if utils.AnalysisFastq(fq).is_index_read:
                     # Reject index read Fastqs
                     logger.warning("Ignoring index read: %s" %
                                    os.path.basename(fq))
                     continue
-                # TODO: - switch to a different way of checking
-                # TODO:   per-sample QC?
-                if sample.verify_qc(project_qc_dir,fq):
+                # Check if Fastq is in list of those with
+                # missing QC outputs
+                if fq not in self.fastqs_missing_qc:
                     logger.debug("\t%s: QC verified" % fq)
                 else:
                     print "\t%s: setting up QC run" % os.path.basename(fq)
@@ -229,12 +305,12 @@ class ProjectQC(object):
                     if group is None:
                         group = sched.group("%s.%s" % (project.name,
                                                        sample.name),
-                                            log_dir=log_dir)
+                                            log_dir=self.log_dir)
                     # Create and submit a QC job
                     fastq = os.path.join(project.dirn,'fastqs',fq)
                     label = "illumina_qc.%s.%s" % \
                             (project.name,str(utils.AnalysisFastq(fq)))
-                    qc_cmd = applications.Command('illumina_qc.sh',fastq)
+                    qc_cmd = Command('illumina_qc.sh',fastq)
                     if self.ungzip_fastqs:
                         qc_cmd.add_args('--ungzip-fastqs')
                     if fastq_screen_subset is None:
@@ -242,7 +318,7 @@ class ProjectQC(object):
                     qc_cmd.add_args(
                         '--threads',nthreads,
                         '--subset',fastq_screen_subset,
-                        '--qc_dir',project_qc_dir)
+                        '--qc_dir',project.qc_dir)
                     job = group.add(qc_cmd,name=label,wd=project.dirn)
                     print "Job: %s" %  job
             # Indicate no more jobs to add
@@ -256,23 +332,23 @@ class ProjectQC(object):
         # Add MultiQC job (if requested)
         if self.run_multiqc:
             self.multiqc_out = "multi%s_report.html" % \
-                               os.path.basename(project_qc_dir)
+                               os.path.basename(project.qc_dir)
             # TODO: - check that multiqc report path is correct
             # TODO:   here (I don't think it is)
             if (not os.path.exists(self.multiqc_out)) or groups:
-                multiqc_cmd = applications.Command(
+                multiqc_cmd = Command(
                     'multiqc',
                     '--title','%s/%s' % (project.info.run,
                                          project.name),
                     '--filename','./%s' % self.multiqc_out,
                     '--force',
-                    project_qc_dir)
+                    project.qc_dir)
                 print "Running %s" % multiqc_cmd
                 label = "multiqc.%s" % project.name
                 job = sched.submit(multiqc_cmd,
                                    name=label,
                                    wd=project.dirn,
-                                   log_dir=log_dir,
+                                   log_dir=self.log_dir,
                                    wait_for=groups)
             else:
                 print "MultiQC report '%s': already exists" % \
