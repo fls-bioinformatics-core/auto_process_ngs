@@ -275,8 +275,8 @@ class SimpleScheduler(threading.Thread):
                 job.terminate()
             print "Finished"
 
-    def submit(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[],
-               callbacks=[]):
+    def submit(self,args,runner=None,name=None,wd=None,log_dir=None,
+               wait_for=None,callbacks=[]):
         """Submit a request to run a job
         
         Arguments:
@@ -311,9 +311,11 @@ class SimpleScheduler(threading.Thread):
             raise Exception,"Name '%s' already assigned" % name
         self.__names.append(name)
         # Check we're not waiting on a non-existent name
-        for job_name in wait_for:
-            if not self.has_name(job_name):
-                raise Exception,"Job depends on a non-existent name '%s'" % job_name
+        if wait_for:
+            for job_name in wait_for:
+                if not self.has_name(job_name):
+                    raise Exception("Job depends on a non-existent name "
+                                    "'%s'" % job_name)
         # Use default runner if none explicitly specified
         if runner is None:
             runner = self.default_runner
@@ -333,7 +335,7 @@ class SimpleScheduler(threading.Thread):
         logging.debug("%s" % job)
         return job
 
-    def group(self,name,log_dir=None,wait_for=[],callbacks=[]):
+    def group(self,name,log_dir=None,wait_for=None,callbacks=[]):
         """Create a group of jobs
         
         Arguments:
@@ -567,7 +569,8 @@ class SchedulerGroup:
     
     """
 
-    def __init__(self,name,group_id,parent_scheduler,log_dir=None,wait_for=[]):
+    def __init__(self,name,group_id,parent_scheduler,log_dir=None,
+                 wait_for=None):
         """Create a new SchedulerGroup instance
 
         Arguments:
@@ -583,7 +586,10 @@ class SchedulerGroup:
         """
         self.group_name = name
         self.group_id = group_id
-        self.waiting_for = list(wait_for)
+        if wait_for:
+            self.waiting_for = list(wait_for)
+        else:
+            self.waiting_for = list()
         self.log_dir = log_dir
         self.__scheduler = parent_scheduler
         self.__closed = False
@@ -653,7 +659,7 @@ class SchedulerGroup:
         else:
             return None
 
-    def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=[]):
+    def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=None):
         """Add a request to run a job
         
         Arguments:
@@ -680,8 +686,11 @@ class SchedulerGroup:
         # Deal with directory for log files
         if log_dir is None:
             log_dir = self.log_dir
-        # Update list of jobs that this one needs to wait for 
-        waiting_for = self.waiting_for + list(wait_for)
+        # Update list of jobs that this one needs to wait for
+        if wait_for:
+            waiting_for = self.waiting_for + list(wait_for)
+        else:
+            waiting_for = self.waiting_for
         # Submit the job to the scheduler and keep a reference
         logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
         job = self.__scheduler.submit(args,runner=runner,name=name,
@@ -732,14 +741,17 @@ class SchedulerJob(Job):
     """
 
     def __init__(self,runner,args,job_number=None,name=None,working_dir=None,
-                 log_dir=None,wait_for=[]):
+                 log_dir=None,wait_for=None):
         """Create a new SchedulerJob instance
 
         """
         self.job_number = job_number
         self.job_name = name
         self.log_dir = log_dir
-        self.waiting_for = list(wait_for)
+        if wait_for:
+            self.waiting_for = list(wait_for)
+        else:
+            self.waiting_for = list()
         self.command = ' '.join([str(arg) for arg in args])
         if name is None:
             name = args[0]
