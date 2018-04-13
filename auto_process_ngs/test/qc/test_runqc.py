@@ -61,7 +61,14 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=True)
         status = runqc.run()
+        # Check output and reports
         self.assertEqual(status,0)
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
 
     def test_run_qc_no_multiqc(self):
         """RunQC: standard QC run (no MultiQC)
@@ -81,7 +88,17 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=False)
         status = runqc.run()
+        # Check output and reports
         self.assertEqual(status,0)
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("multiqc_report.html",):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)
 
     def test_run_qc_with_missing_fastq_screen_outputs(self):
         """RunQC: standard QC fails for missing FastQScreen outputs
@@ -104,7 +121,17 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=True)
         status = runqc.run()
+        # Check output and reports
         self.assertEqual(status,1)
+        for f in ("multiqc_report.html",):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)
 
     def test_run_qc_with_missing_fastqc_outputs(self):
         """RunQC: standard QC fails for missing FastQC outputs
@@ -127,7 +154,17 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=True)
         status = runqc.run()
+        # Check output and reports
         self.assertEqual(status,1)
+        for f in ("multiqc_report.html",):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)
 
     def test_run_qc_with_missing_multiqc_outputs(self):
         """RunQC: standard QC fails for missing MultiQC outputs
@@ -149,4 +186,14 @@ class TestRunQC(unittest.TestCase):
                                           os.path.join(self.wd,"PJB")),
                           run_multiqc=True)
         status = runqc.run()
+        # Check output and reports
         self.assertEqual(status,1)
+        for f in ("multiqc_report.html",):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)

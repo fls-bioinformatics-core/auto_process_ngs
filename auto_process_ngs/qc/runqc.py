@@ -116,16 +116,17 @@ class RunQC(object):
             project.setup_qc(self._sched,
                              nthreads,
                              fastq_screen_subset)
-        # Wait for the scheduler to run all jobs
         self._sched.wait()
-        self._sched.stop()
         # Verify the outputs and generate QC reports
         failed_projects = []
         for project in self._projects:
             if not project.verify():
                 failed_projects.append(project)
             else:
-                project.report(report_html=report_html)
+                project.report_qc(self._sched,
+                                  report_html=report_html)
+        self._sched.wait()
+        self._sched.stop()
         # Report failed projects
         if failed_projects:
             logger.error("QC failed for one or more samples in the "
@@ -195,7 +196,7 @@ class ProjectQC(object):
         """
         return self.project.name
 
-    def check_qc(self,sched,name):
+    def check_qc(self,sched,name,wait_for=None):
         """
         Check for Fastqs with missing/failed QC outputs
 
@@ -210,7 +211,9 @@ class ProjectQC(object):
         Arguments:
           sched (SimpleScheduler): scheduler instance
             to use to run the jobs
-          name (str): optional, name for the job
+          name (str): basename for the job
+          wait_for (list): list of jobs or job groups
+            to wait for before executing the check
         """
         project = self.project
         print "=== Checking QC for '%s' ===" % project.name
@@ -227,7 +230,8 @@ class ProjectQC(object):
                            name="%s" % name,
                            wd=project.dirn,
                            log_dir=self.log_dir,
-                           callbacks=(self._extract_fastqs,))
+                           callbacks=(self._extract_fastqs,),
+                           wait_for=wait_for)
 
     def _extract_fastqs(self,name,jobs,sched):
         """
@@ -325,10 +329,10 @@ class ProjectQC(object):
             if group:
                 group.close()
                 groups.append(group.name)
-        # TODO: - add job to verify/do reporting (see ICELL8
-        # TODO:   pipeline?)
-        # TODO: - set a flag to capture the verification status
-        # TODO:   (e.g. via callback?)
+        # Add verification job
+        verify_job = self.check_qc(sched,
+                                   "verify_qc",
+                                   wait_for=groups)
         # Add MultiQC job (if requested)
         if self.run_multiqc:
             self.multiqc_out = "multi%s_report.html" % \
@@ -354,6 +358,45 @@ class ProjectQC(object):
                 print "MultiQC report '%s': already exists" % \
                     self.multiqc_out
 
+    def report_qc(self,sched,report_html=None,zip_outputs=True):
+        """
+        Generate QC report
+
+        Arguments:
+          report_html (str): optional, path to the name of
+            the QC report.
+        """
+        print "=== Reporting QC for '%s' ===" % self.name
+        project = self.project
+        qc_base = os.path.basename(project.qc_dir)
+        if report_html is None:
+            out_file = '%s_report.html' % qc_base
+        else:
+            out_file = report_html
+        if not os.path.isabs(out_file):
+            out_file = os.path.join(project.dirn,out_file)
+        if project.info.run is None:
+            title = "%s" % project.name
+        else:
+            title = "%s/%s" % (project.info.run,
+                               project.name)
+        if self.fastq_dir is not None:
+            title = "%s (%s)" % (title,self.fastq_dir)
+        title = "%s: QC report" % title
+        report_cmd = Command(
+            "reportqc.py",
+            "--fastq_dir",self.fastq_dir,
+            "--qc_dir",self.qc_dir,
+            "--filename",out_file,
+            "--title",title)
+        if zip_outputs:
+            report_cmd.add_args("--zip")
+        report_cmd.add_args(project.dirn)
+        job = sched.submit(report_cmd,
+                           name="report_qc.%s" % self.name,
+                           wd=project.dirn,
+                           log_dir=self.log_dir)
+
     def verify(self):
         """
         Verify if the QC completed successfully
@@ -362,40 +405,11 @@ class ProjectQC(object):
           Boolean: True if all QC outputs are verified, False
             if there were problems.
         """
-        verified = self.project.verify_qc(qc_dir=self.qc_dir)
+        verified = ((self.fastqs_missing_qc is not None) and
+                    (not self.fastqs_missing_qc))
         if self.run_multiqc:
             multiqc_report = os.path.join(self.project.dirn,
                                           self.multiqc_out)
             if not os.path.exists(multiqc_report):
-                logger.warning("Missing MultiQC report for %s" %
-                               self.project.name)
                 verified = False
         return verified
-
-    def report(self,report_html=None):
-        """
-        Generate QC report
-
-        Arguments:
-          report_html (str): optional, path to the name of
-            the QC report.
-        """
-        qc_base = os.path.basename(self.project.qc_dir)
-        if report_html is None:
-            out_file = '%s_report.html' % qc_base
-        else:
-            out_file = report_html
-        if not os.path.isabs(out_file):
-            out_file = os.path.join(self.project.dirn,out_file)
-        if self.project.info.run is None:
-            title = "%s" % self.project.name
-        else:
-            title = "%s/%s" % (self.project.info.run,
-                               self.project.name)
-        if self.fastq_dir is not None:
-            title = "%s (%s)" % (title,self.fastq_dir)
-        title = "%s: QC report" % title
-        print "QC okay, generating report for %s" % self.project.name
-        self.project.qc_report(qc_dir=self.qc_dir,
-                               title=title,
-                               report_html=out_file)
