@@ -53,7 +53,7 @@ Fastq generation can be performed by running the command::
 
 which fetches the data and runs ``cellranger mkfastq``.
 
-.. info::
+.. note::
 
    This replaces the ``process_10xgenomics.py mkfastq`` command,
    which is now deprecated and likely to be removed in future.
