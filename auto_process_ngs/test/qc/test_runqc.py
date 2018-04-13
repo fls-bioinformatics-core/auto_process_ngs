@@ -188,12 +188,9 @@ class TestRunQC(unittest.TestCase):
         status = runqc.run()
         # Check output and reports
         self.assertEqual(status,1)
-        for f in ("multiqc_report.html",):
-            self.assertTrue(os.path.exists(os.path.join(self.wd,
-                                                        "PJB",f)),
-                            "Missing %s" % f)
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                              "Found %s, shouldn't be present" % f)
