@@ -337,9 +337,11 @@ class ProjectQC(object):
         if self.run_multiqc:
             self.multiqc_out = "multi%s_report.html" % \
                                os.path.basename(project.qc_dir)
-            # TODO: - check that multiqc report path is correct
-            # TODO:   here (I don't think it is)
-            if (not os.path.exists(self.multiqc_out)) or groups:
+            # Only run MultiQC if report doesn't already exist,
+            # or if at least one QC job has been run
+            if (not os.path.exists(os.path.join(project.dirn,
+                                                self.multiqc_out))
+                or groups):
                 multiqc_cmd = Command(
                     'multiqc',
                     '--title','%s/%s' % (project.info.run,
