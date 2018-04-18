@@ -70,7 +70,7 @@ class RunQC(object):
                                         qc_dir=qc_dir,
                                         ungzip_fastqs=ungzip_fastqs))
 
-    def run(self,nthreads=1,fastq_screen_subset=10000,
+    def run(self,nthreads=1,fastq_screen_subset=100000,
             report_html=None,multiqc=False,
             qc_runner=None,verify_runner=None,
             report_runner=None,max_jobs=None):

@@ -175,7 +175,8 @@ if __name__ == "__main__":
                       sample_pattern=args.sample_pattern,
                       qc_dir=args.qc_dir,
                       ungzip_fastqs=False)
-    status = runqc.run(args.nthreads,args.fastq_screen_subset,
+    status = runqc.run(nthreads=args.nthreads,
+                       fastq_screen_subset=args.fastq_screen_subset,
                        report_html=out_file,
                        multiqc=False,
                        qc_runner=qc_runner,
