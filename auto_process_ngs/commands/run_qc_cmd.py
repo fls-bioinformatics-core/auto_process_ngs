@@ -113,8 +113,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                           fastq_dir=fastq_dir,
                           sample_pattern=sample_pattern,
                           qc_dir=qc_dir,
-                          ungzip_fastqs=ungzip_fastqs,
-                          run_multiqc=run_multiqc)
+                          ungzip_fastqs=ungzip_fastqs)
     # Run the QC
-    status = runqc.run()
+    status = runqc.run(multiqc=True)
     return status

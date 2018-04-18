@@ -174,10 +174,10 @@ if __name__ == "__main__":
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
                       qc_dir=args.qc_dir,
-                      ungzip_fastqs=False,
-                      run_multiqc=False)
+                      ungzip_fastqs=False)
     status = runqc.run(args.nthreads,args.fastq_screen_subset,
-                       report_html=out_file)
+                       report_html=out_file,
+                       multiqc=False)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
