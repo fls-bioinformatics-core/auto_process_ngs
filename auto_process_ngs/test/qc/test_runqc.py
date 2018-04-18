@@ -56,10 +56,14 @@ class TestRunQC(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc = RunQC()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")))
-        status = runqc.run(multiqc=True)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc_report.html",
@@ -82,10 +86,14 @@ class TestRunQC(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc = RunQC()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")))
-        status = runqc.run(multiqc=False)
+        status = runqc.run(multiqc=False,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc_report.html",
@@ -114,10 +122,14 @@ class TestRunQC(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc = RunQC()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")))
-        status = runqc.run(multiqc=True)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
         for f in ("qc_report.html",
@@ -143,10 +155,14 @@ class TestRunQC(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc = RunQC()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")))
-        status = runqc.run(multiqc=True)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
         for f in ("qc_report.html",
@@ -171,10 +187,14 @@ class TestRunQC(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = RunQC(runner=SimpleJobRunner(),max_jobs=1)
+        runqc = RunQC()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")))
-        status = runqc.run(multiqc=True)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
         for f in ("qc_report.html",

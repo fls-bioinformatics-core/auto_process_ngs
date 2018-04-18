@@ -37,24 +37,13 @@ class RunQC(object):
     >>> # Execute and get status
     >>> status = runqc.run()
     """
-    def __init__(self,runner=None,max_jobs=None):
+    def __init__(self):
         """
         Create a new RunQC instance
-
-        Arguments:
-          runner (JobRunner): optional, job runner to
-            use
-          max_jobs (int): optional, specify maximum
-            number of jobs to run concurrently
         """
         self._settings = Settings()
-        if max_jobs is None:
-            max_jobs = self._settings.general.max_concurrent_jobs
-        if runner is None:
-            runner = self._settings.runners.qc
         self._projects = []
-        self._sched = SimpleScheduler(runner=runner,
-                                      max_concurrent=max_jobs)
+        self._sched = None
 
     def add_project(self,project,fastq_dir=None,qc_dir=None,
                     sample_pattern=None,ungzip_fastqs=False):
@@ -82,7 +71,9 @@ class RunQC(object):
                                         ungzip_fastqs=ungzip_fastqs))
 
     def run(self,nthreads=1,fastq_screen_subset=10000,
-            report_html=None,multiqc=False):
+            report_html=None,multiqc=False,
+            qc_runner=None,verify_runner=None,
+            report_runner=None,max_jobs=None):
         """
         Schedule and execute QC jobs
 
@@ -96,24 +87,44 @@ class RunQC(object):
             the QC report
           multiqc (bool): if True then also run MultiQC
             when generating reports
+          qc_runner (JobRunner): job runner to use for
+            executing QC
+          verify_runner (JobRunner): job runner to use
+            for QC verification
+          report_runner (JobRunner): job runner to use
+            for QC reporting
+          max_jobs (int): optional, specify maximum
+            number of jobs to run concurrently
 
         Returns:
           Integer: returns 0 if QC ran to completion
             without problems, non-zero if there was
             an error.
         """
-        # Start scheduler
+        # Sort out runners
+        if qc_runner is None:
+            qc_runner = self._settings.runners.qc
+        if verify_runner is None:
+            verify_runner = \
+                self._settings.general.default_runner
+        if report_runner is None:
+            report_runner = verify_runner
+        # Set up and start scheduler
+        self._sched = SimpleScheduler(max_concurrent=max_jobs)
         self._sched.start()
         # Initial QC check for each project
         for project in self._projects:
             project.check_qc(self._sched,
-                             name="pre_qc_check")
+                             name="pre_qc_check",
+                             runner=verify_runner)
         self._sched.wait()
         # Run QC for each project
         for project in self._projects:
             project.setup_qc(self._sched,
                              nthreads,
-                             fastq_screen_subset)
+                             fastq_screen_subset,
+                             qc_runner=qc_runner,
+                             verify_runner=verify_runner)
         self._sched.wait()
         # Verify the outputs and generate QC reports
         failed_projects = []
@@ -123,7 +134,8 @@ class RunQC(object):
             else:
                 project.report_qc(self._sched,
                                   report_html=report_html,
-                                  multiqc=multiqc)
+                                  multiqc=multiqc,
+                                  runner=report_runner)
         self._sched.wait()
         self._sched.stop()
         # Check reporting
@@ -200,7 +212,7 @@ class ProjectQC(object):
         """
         return self.project.name
 
-    def check_qc(self,sched,name,wait_for=None):
+    def check_qc(self,sched,name,wait_for=None,runner=None):
         """
         Check for Fastqs with missing/failed QC outputs
 
@@ -224,6 +236,8 @@ class ProjectQC(object):
           name (str): basename for the job
           wait_for (list): list of jobs or job groups
             to wait for before executing the check
+          runner (JobRunner): job runner to use for
+            QC verification
         """
         project = self.project
         print "=== Checking QC for '%s' ===" % project.name
@@ -242,7 +256,8 @@ class ProjectQC(object):
                            wd=project.dirn,
                            log_dir=self.log_dir,
                            callbacks=(self._extract_fastqs,),
-                           wait_for=wait_for)
+                           wait_for=wait_for,
+                           runner=runner)
 
     def _extract_fastqs(self,name,jobs,sched):
         """
@@ -274,7 +289,8 @@ class ProjectQC(object):
         for fq in self.fastqs_missing_qc:
             print fq
 
-    def setup_qc(self,sched,nthreads,fastq_screen_subset):
+    def setup_qc(self,sched,nthreads,fastq_screen_subset,
+                 qc_runner=None,verify_runner=None):
         """
         Set up the QC for the project
 
@@ -286,6 +302,10 @@ class ProjectQC(object):
           fastq_screen_subset (int): the size of
             subset to use with FastQScreen (default:
             10000)
+          qc_runner (JobRunner): job runner to use for
+            executing QC
+          verify_runner (JobRunner): job runner to use
+            for QC verification
         """
         project = self.project
         print "=== Setting up QC for '%s' ===" % project.name
@@ -336,7 +356,10 @@ class ProjectQC(object):
                         '--threads',nthreads,
                         '--subset',fastq_screen_subset,
                         '--qc_dir',project.qc_dir)
-                    job = group.add(qc_cmd,name=label,wd=project.dirn)
+                    job = group.add(qc_cmd,
+                                    name=label,
+                                    wd=project.dirn,
+                                    runner=qc_runner)
                     print "Job: %s" %  job
             # Indicate no more jobs to add
             if group:
@@ -345,10 +368,11 @@ class ProjectQC(object):
         # Add verification job
         verify_job = self.check_qc(sched,
                                    "verify_qc",
-                                   wait_for=groups)
+                                   wait_for=groups,
+                                   runner=verify_runner)
 
     def report_qc(self,sched,report_html=None,zip_outputs=True,
-                  multiqc=False):
+                  multiqc=False,runner=None):
         """
         Generate QC report
 
@@ -360,6 +384,7 @@ class ProjectQC(object):
             archive with the report and QC outputs
           multiqc (bool): if True then also generate MultiQC
             report
+          runner (JobRunner): job runner to use QC reporting
         """
         print "=== Reporting QC for '%s' ===" % self.name
         project = self.project
@@ -393,7 +418,8 @@ class ProjectQC(object):
                            name="report_qc.%s" % self.name,
                            wd=project.dirn,
                            log_dir=self.log_dir,
-                           callbacks=(self._check_report,))
+                           callbacks=(self._check_report,),
+                           runner=runner)
 
     def _check_report(self,name,jobs,sched):
         """

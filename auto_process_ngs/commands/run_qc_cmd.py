@@ -100,14 +100,14 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
-    # Set up runner
+    # Set up runners
+    default_runner = __settings.general.default_runner
     if runner is not None:
         qc_runner = fetch_runner(runner)
     else:
         qc_runner = __settings.runners.qc
     # Set up the QC for each project
-    runqc = RunQC(runner=qc_runner,
-                  max_jobs=max_jobs)
+    runqc = RunQC()
     for project in projects:
         runqc.add_project(project,
                           fastq_dir=fastq_dir,
@@ -115,5 +115,9 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                           qc_dir=qc_dir,
                           ungzip_fastqs=ungzip_fastqs)
     # Run the QC
-    status = runqc.run(multiqc=True)
+    status = runqc.run(multiqc=True,
+                       qc_runner=qc_runner,
+                       verify_runner=default_runner,
+                       report_runner=default_runner,
+                       max_jobs=max_jobs)
     return status

@@ -149,7 +149,8 @@ if __name__ == "__main__":
         for modulefile in modulefiles.split(','):
             envmod.load(modulefile)
 
-    # Job runner
+    # Job runners
+    default_runner = __settings.general.default_runner
     qc_runner = fetch_runner(args.runner)
 
     # Load the project
@@ -168,8 +169,7 @@ if __name__ == "__main__":
 
     # Run the QC
     announce("Running QC")
-    runqc = RunQC(runner=qc_runner,
-                  max_jobs=args.max_jobs)
+    runqc = RunQC()
     runqc.add_project(project,
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
@@ -177,7 +177,11 @@ if __name__ == "__main__":
                       ungzip_fastqs=False)
     status = runqc.run(args.nthreads,args.fastq_screen_subset,
                        report_html=out_file,
-                       multiqc=False)
+                       multiqc=False,
+                       qc_runner=qc_runner,
+                       verify_runner=default_runner,
+                       report_runner=default_runner,
+                       max_jobs=args.max_jobs)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
