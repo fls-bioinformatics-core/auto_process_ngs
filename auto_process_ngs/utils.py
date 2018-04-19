@@ -66,8 +66,8 @@ from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import IlluminaFastqAttrs
-from qc.illumina_qc import QCReporter
-from qc.illumina_qc import QCSample
+from qc.reporting import QCReporter
+from qc.reporting import QCSample
 from qc.illumina_qc import expected_qc_outputs
 from qc.illumina_qc import check_qc_outputs
 

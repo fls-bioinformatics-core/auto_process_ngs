@@ -17,8 +17,8 @@ from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.illumina_qc import QCReporter
 from auto_process_ngs.qc.illumina_qc import expected_qc_outputs
+from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs import get_version
 
 # Module specific logger

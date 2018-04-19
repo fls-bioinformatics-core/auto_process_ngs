@@ -10,7 +10,7 @@ from ..docwriter import List
 from ..docwriter import Link
 from ..docwriter import Img
 from .. import css_rules
-from .illumina_qc import pretty_print_reads
+from .reporting import pretty_print_reads
 from .plots import ustackedbar
 
 #######################################################################
