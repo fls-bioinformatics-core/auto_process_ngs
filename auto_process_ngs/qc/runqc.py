@@ -271,13 +271,12 @@ class ProjectQC(object):
         The list of Fastqs can be accessed via the
         `fastqs_missing_qc` instance attribute.
         """
-        print "Extracting Fastqs with missing/failed QC"
+        logger.debug("Extracting Fastqs with missing/failed QC")
         check_qc = jobs[0]
-        print "Exit code: %s" % check_qc.exit_code
-        print "Log file: %s" % check_qc.log
-        print "Log file contents:"
-        with open(check_qc.log,'r') as log:
-            print log.read()
+        logger.debug("Exit code: %s" % check_qc.exit_code)
+        logger.debug("Log file: %s" % check_qc.log)
+        logger.debug("Log file contents:")
+        logger.debug("%s" % open(check_qc.log,'r').read())
         self.verification_status = check_qc.exit_code
         self.fastqs_missing_qc = list()
         with open(check_qc.log,'r') as log:
@@ -285,9 +284,9 @@ class ProjectQC(object):
                 if line.startswith(self.project.dirn):
                     self.fastqs_missing_qc.append(line.rstrip())
                     self.verification_status += 1
-        print "Fastqs with missing QC outputs:"
+        logger.debug("Fastqs with missing QC outputs:")
         for fq in self.fastqs_missing_qc:
-            print fq
+            logger.debug("%s" % fq)
 
     def setup_qc(self,sched,nthreads,fastq_screen_subset,
                  qc_runner=None,verify_runner=None):
@@ -326,7 +325,6 @@ class ProjectQC(object):
             group = None
             print "Examining files in sample %s" % sample.name
             for fq in sample.fastq:
-                print "%s" % fq
                 if utils.AnalysisFastq(fq).is_index_read:
                     # Reject index read Fastqs
                     logger.warning("Ignoring index read: %s" %
@@ -431,13 +429,12 @@ class ProjectQC(object):
         otherwise zero indicates that reporting finished
         okay, and non-zero that it failed.
         """
-        print "Checking exit status from reporting"
+        logger.debug("Checking exit status from reporting")
         report_qc = jobs[0]
-        print "Exit code: %s" % report_qc.exit_code
-        print "Log file: %s" % report_qc.log
-        print "Log file contents:"
-        with open(report_qc.log,'r') as log:
-            print log.read()
+        logger.debug("Exit code: %s" % report_qc.exit_code)
+        logger.debug("Log file: %s" % report_qc.log)
+        logger.debug("Log file contents:")
+        logger.debug("%s" % open(report_qc.log,'r').read())
         self.reporting_status = report_qc.exit_code
 
     def verify(self):
