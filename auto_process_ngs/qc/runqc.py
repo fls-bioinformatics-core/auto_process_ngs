@@ -120,11 +120,12 @@ class RunQC(object):
         self._sched.wait()
         # Run QC for each project
         for project in self._projects:
-            project.setup_qc(self._sched,
-                             nthreads,
-                             fastq_screen_subset,
-                             qc_runner=qc_runner,
-                             verify_runner=verify_runner)
+            if not project.verify():
+                project.setup_qc(self._sched,
+                                 nthreads,
+                                 fastq_screen_subset,
+                                 qc_runner=qc_runner,
+                                 verify_runner=verify_runner)
         self._sched.wait()
         # Verify the outputs and generate QC reports
         failed_projects = []
