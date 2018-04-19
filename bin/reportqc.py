@@ -16,6 +16,7 @@ from bcftbx.utils import find_program
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.illumina_qc import QCReporter
 from auto_process_ngs.qc.illumina_qc import expected_qc_outputs
 from auto_process_ngs import get_version
@@ -52,10 +53,12 @@ def verify_qc(project,qc_dir=None):
     """
     if qc_dir is None:
         qc_dir = self.qc_dir
+    illumina_qc = IlluminaQC(qc_dir=qc_dir)
     fastqs = []
     for sample in project.samples:
         for fq in sample.fastq:
-            if not sample.verify_qc(qc_dir,fq):
+            present,missing = illumina_qc.check_outputs(fq)
+            if missing:
                 fastqs.append(fq)
     return fastqs
 

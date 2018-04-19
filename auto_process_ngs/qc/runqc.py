@@ -15,6 +15,7 @@ import auto_process_ngs.fileops as fileops
 from auto_process_ngs.applications import Command
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.simple_scheduler import SimpleScheduler
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -289,7 +290,7 @@ class ProjectQC(object):
         for fq in self.fastqs_missing_qc:
             logger.debug("%s" % fq)
 
-    def setup_qc(self,sched,nthreads,fastq_screen_subset,
+    def setup_qc(self,sched,nthreads,fastq_screen_subset=None,
                  qc_runner=None,verify_runner=None):
         """
         Set up the QC for the project
@@ -301,7 +302,8 @@ class ProjectQC(object):
             threads/cores to use per job (default: 1)
           fastq_screen_subset (int): the size of
             subset to use with FastQScreen (default:
-            10000)
+            subset size will default to that for the
+            QC script)
           qc_runner (JobRunner): job runner to use for
             executing QC
           verify_runner (JobRunner): job runner to use
@@ -311,6 +313,10 @@ class ProjectQC(object):
         print "=== Setting up QC for '%s' ===" % project.name
         print "Using Fastqs from %s" % project.fastq_dir
         print "Using QC directory %s" % project.qc_dir
+        illumina_qc = IlluminaQC(project.qc_dir,
+                                 fastq_screen_subset=fastq_screen_subset,
+                                 nthreads=nthreads,
+                                 ungzip_fastqs=self.ungzip_fastqs)
         # Loop over samples and queue up those where the QC
         # is missing
         samples = project.get_samples(self.sample_pattern)
@@ -346,15 +352,7 @@ class ProjectQC(object):
                     fastq = os.path.join(project.dirn,'fastqs',fq)
                     label = "illumina_qc.%s.%s" % \
                             (project.name,str(utils.AnalysisFastq(fq)))
-                    qc_cmd = Command('illumina_qc.sh',fastq)
-                    if self.ungzip_fastqs:
-                        qc_cmd.add_args('--ungzip-fastqs')
-                    if fastq_screen_subset is None:
-                        fastq_screen_subset = 0
-                    qc_cmd.add_args(
-                        '--threads',nthreads,
-                        '--subset',fastq_screen_subset,
-                        '--qc_dir',project.qc_dir)
+                    qc_cmd = illumina_qc.commands(fastq)[0]
                     job = group.add(qc_cmd,
                                     name=label,
                                     wd=project.dirn,

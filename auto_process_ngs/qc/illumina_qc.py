@@ -12,6 +12,7 @@ from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from ..applications import Command
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Img
@@ -35,6 +36,85 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Classes
 #######################################################################
+
+class IlluminaQC(object):
+    """
+    Utility class for running and checking 'illumina_qc.sh'
+    """
+    def __init__(self,qc_dir,fastq_screen_subset=None,nthreads=1,
+                 ungzip_fastqs=False):
+        """
+        Create a new IlluminaQC instance
+
+        Arguments:
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+          fastq_screen_subset (int): subset of reads
+            to use when running Fastq_screen ('None'
+            uses the script default)
+          nthreads (int): number of cores (threads)
+            to run the QC using (default: 1)
+          ungzip_fastqs (bool): if True then also
+            ungzip the source Fastqs (if gzipped)
+            (default is not to uncompress the Fastqs)
+        """
+        self.qc_dir = qc_dir
+        self.fastq_screen_subset = fastq_screen_subset
+        self.nthreads = nthreads
+        self.ungzip_fastqs = ungzip_fastqs
+
+    def commands(self,*fastqs):
+        """
+        Generate commands for running QC script
+
+        Arguments:
+          fastqs (list): list of paths to Fastq files
+            to run the QC script on
+
+        Returns:
+          List: list of `Command` instances (one per
+            Fastq) for running the `illumina_qc.sh`
+            script on.
+        """
+        cmds = list()
+        for fastq in fastqs:
+            cmd = Command('illumina_qc.sh',fastq)
+            if self.ungzip_fastqs:
+                cmd.add_args('--ungzip-fastqs')
+            cmd.add_args('--threads',self.nthreads)
+            if self.fastq_screen_subset is not None:
+                cmd.add_args('--subset',self.fastq_screen_subset)
+            cmd.add_args('--qc_dir',self.qc_dir)
+            cmds.append(cmd)
+        return cmds
+
+    def expected_outputs(self,fastq):
+        """
+        Generate expected outputs for input Fastq
+
+        Arguments
+          fastq (str): path to a Fastq file
+
+        Returns:
+          List: list of expected output files from
+            the QC for the supplied Fastq.
+        """
+        return expected_qc_outputs(fastq,self.qc_dir)
+
+    def check_outputs(self,fastq):
+        """
+        Check QC outputs for input Fastq
+
+        Arguments:
+          fastq (str): path to a Fastq file
+
+        Returns:
+          Tuple: tuple (present,missing), where
+            'present' is a list of outputs which were
+            found, and 'missing' is a list of those
+            which were not.
+        """
+        return check_qc_outputs(fastq,self.qc_dir)
 
 class QCReporter:
     """
