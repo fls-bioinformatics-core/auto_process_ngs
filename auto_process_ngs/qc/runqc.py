@@ -16,6 +16,7 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -330,35 +331,47 @@ class ProjectQC(object):
             print "-- %s" % sample.name
         groups = []
         for sample in samples:
+            indx = 0
             group = None
             print "Examining files in sample %s" % sample.name
-            for fq in sample.fastq:
-                if utils.AnalysisFastq(fq).is_index_read:
-                    # Reject index read Fastqs
-                    logger.warning("Ignoring index read: %s" %
-                                   os.path.basename(fq))
-                    continue
-                # Check if Fastq is in list of those with
-                # missing QC outputs
-                if fq not in self.fastqs_missing_qc:
-                    logger.debug("\t%s: QC verified" % fq)
-                else:
-                    print "\t%s: setting up QC run" % os.path.basename(fq)
+            pairs = []
+            for fastq_pair in pair_fastqs_by_name(sample.fastq):
+                # Identify pairs with missing QC outputs
+                for fq in fastq_pair:
+                    # Check if Fastq is in list of those with
+                    # missing QC outputs
+                    if fq not in self.fastqs_missing_qc:
+                        logger.debug("\t%s: QC verified" % fq)
+                        continue
+                    else:
+                        pairs.append(fastq_pair)
+                        break
+                # Set up QC for each pair with missing outputs
+                for fastq_pair in pairs:
+                    print "Setting up QC run:"
+                    for fq in fastq_pair:
+                        print "\t%s" % os.path.basename(fq)
                     # Create a group if none exists for this sample
                     if group is None:
                         group = sched.group("%s.%s" % (project.name,
                                                        sample.name),
                                             log_dir=self.log_dir)
-                    # Create and submit a QC job
-                    fastq = os.path.join(project.dirn,'fastqs',fq)
-                    label = "illumina_qc.%s.%s" % \
-                            (project.name,str(utils.AnalysisFastq(fq)))
-                    qc_cmd = illumina_qc.commands(fastq)[0]
-                    job = group.add(qc_cmd,
-                                    name=label,
-                                    wd=project.dirn,
-                                    runner=qc_runner)
-                    print "Job: %s" %  job
+                    # Acquire QC commands for this pair
+                    qc_cmds = illumina_qc.commands(*fastq_pair)
+                    # Create and submit QC job for each command
+                    for qc_cmd in qc_cmds:
+                        indx += 1
+                        command_name = os.path.splitext(
+                            os.path.basename(qc_cmd.command))[0]
+                        label = "%s.%s.%s#%03d" % \
+                                (command_name,
+                                 project.name,
+                                 sample.name,indx)
+                        job = group.add(qc_cmd,
+                                        name=label,
+                                        wd=project.dirn,
+                                        runner=qc_runner)
+                        print "Job: %s" %  job
             # Indicate no more jobs to add
             if group:
                 group.close()
