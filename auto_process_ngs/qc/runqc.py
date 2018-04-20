@@ -183,6 +183,7 @@ class ProjectQC(object):
         # Clone the supplied project
         self.project = utils.AnalysisProject(project.name,
                                              project.dirn)
+        project = self.project
         # Unpick the supplied subdirectories
         if qc_dir is None:
             qc_dir = 'qc'
