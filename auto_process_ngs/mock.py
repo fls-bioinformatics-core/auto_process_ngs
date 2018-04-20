@@ -1065,7 +1065,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
         # Check input file
         if not os.path.exists(args.fastq):
             print "%s: fastq file not found" % args.fastq
-            return self._exit_code
+            return 1
         # Output dir
         qc_dir = args.qc_dir
         if qc_dir is None:
