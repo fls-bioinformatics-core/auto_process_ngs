@@ -324,3 +324,43 @@ class TestRunQC(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+
+    def test_run_qc_multiple_projects(self):
+        """RunQC: standard QC run (multiple projects)
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis projects
+        p = MockAnalysisProject("AB",("AB1_S1_R1_001.fastq.gz",
+                                      "AB1_S1_R2_001.fastq.gz",
+                                      "AB2_S2_R1_001.fastq.gz",
+                                      "AB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        p = MockAnalysisProject("CD",("CD3_S3_R1_001.fastq.gz",
+                                      "CD3_S3_R2_001.fastq.gz",
+                                      "CD4_S4_R1_001.fastq.gz",
+                                      "CD4_S4_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC()
+        for p in ("AB","CD"):
+            runqc.add_project(AnalysisProject(p,
+                                              os.path.join(self.wd,p)))
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,0)
+        for p in ("AB","CD"):
+            for f in ("qc",
+                      "qc_report.html",
+                      "qc_report.%s.%s.zip" % (p,os.path.basename(self.wd)),
+                      "multiqc_report.html"):
+                self.assertTrue(os.path.exists(os.path.join(self.wd,p,f)),
+                                "Missing %s" % f)
