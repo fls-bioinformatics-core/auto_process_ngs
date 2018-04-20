@@ -10,6 +10,7 @@ from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import assign_barcodes_single_end
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.fastq_utils import pair_fastqs
+from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 
 # IlluminaFastqAttrs
 class TestIlluminaFastqAttrs(unittest.TestCase):
@@ -458,6 +459,59 @@ class TestPairFastqs(unittest.TestCase):
                   self.empty_r2]
         self.assertEqual(pair_fastqs(fastqs),
                          ([],[self.empty_r1,self.empty_r2]))
+
+# pair_fastqs_by_name
+class TestPairFastqsByNameFunction(unittest.TestCase):
+    """
+    Tests for the pair_fastqs_by_name function
+    """
+    def test_pair_fastqs_by_name_SE(self):
+        """
+        pair_fastqs_by_name: single-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz")
+        self.assertEqual(pair_fastqs_by_name(fastqs),
+                         [("/data/PJB1_S1_R1_001.fastq.gz",),
+                          ("/data/PJB2_S2_R1_001.fastq.gz",)])
+
+    def test_pair_fastqs_by_name_PE(self):
+        """
+        pair_fastqs_by_name: paired-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(pair_fastqs_by_name(fastqs),
+                         [("/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"),
+                          ("/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz")])
+
+    def test_pair_fastqs_by_name_mixed_SE_and_PE(self):
+        """
+        pair_fastqs_by_name: mixture of single- and paired-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz")
+        self.assertEqual(pair_fastqs_by_name(fastqs),
+                         [("/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"),
+                          ("/data/PJB2_S2_R1_001.fastq.gz",)])
+
+    def test_pair_fastqs_by_name_unpaired_R2(self):
+        """
+        pair_fastqs_by_name: handle unpaired R2 fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(pair_fastqs_by_name(fastqs),
+                         [("/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"),
+                          ("/data/PJB2_S2_R2_001.fastq.gz",)])
 
 # get_read_number
 class TestGetReadNumber(unittest.TestCase):
