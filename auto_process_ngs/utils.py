@@ -584,6 +584,7 @@ class AnalysisProject:
         self.fastq_dirs = []
         self.fastq_format = None
         self.samples = []
+        self._qc_dir = None
         self.info = AnalysisProjectInfo()
         self.info_file = os.path.join(self.dirn,"README.info")
         # Function to use for getting Fastq information
@@ -677,8 +678,9 @@ class AnalysisProject:
         for sample in self.samples:
             paired_end = (paired_end and sample.paired_end)
         self.info['paired_end'] = paired_end
-        # Set the QC output dir
-        self.use_qc_dir('qc')
+        # Set the QC output dir, if not already set
+        if self.qc_dir is None:
+            self.use_qc_dir('qc')
 
     def find_fastqs(self,dirn):
         """
