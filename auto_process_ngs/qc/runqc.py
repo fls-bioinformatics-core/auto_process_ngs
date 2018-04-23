@@ -116,6 +116,7 @@ class RunQC(object):
         self._sched.start()
         # Initial QC check for each project
         for project in self._projects:
+            print "=== Checking QC for '%s' ===" % project.name
             project.check_qc(self._sched,
                              name="pre_qc_check",
                              runner=verify_runner)
@@ -123,6 +124,7 @@ class RunQC(object):
         # Run QC for each project
         for project in self._projects:
             if not project.verify():
+                print "=== Setting up QC for '%s' ===" % project.name
                 project.setup_qc(self._sched,
                                  nthreads,
                                  fastq_screen_subset,
@@ -135,6 +137,7 @@ class RunQC(object):
             if not project.verify():
                 failed_projects.append(project)
             else:
+                print "=== Reporting QC for '%s' ===" % project.name
                 project.report_qc(self._sched,
                                   report_html=report_html,
                                   multiqc=multiqc,
@@ -244,7 +247,6 @@ class ProjectQC(object):
             QC verification
         """
         project = self.project
-        print "=== Checking QC for '%s' ===" % project.name
         name = "%s.%s" % (name,project.name)
         self.verification_status = None
         self.fastqs_missing_qc = None
@@ -312,7 +314,6 @@ class ProjectQC(object):
             for QC verification
         """
         project = self.project
-        print "=== Setting up QC for '%s' ===" % project.name
         print "Using Fastqs from %s" % project.fastq_dir
         print "Using QC directory %s" % project.qc_dir
         illumina_qc = IlluminaQC(project.qc_dir,
@@ -397,7 +398,6 @@ class ProjectQC(object):
             report
           runner (JobRunner): job runner to use QC reporting
         """
-        print "=== Reporting QC for '%s' ===" % self.name
         project = self.project
         qc_base = os.path.basename(project.qc_dir)
         if report_html is None:
