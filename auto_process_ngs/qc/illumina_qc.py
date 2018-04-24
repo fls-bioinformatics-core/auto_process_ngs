@@ -8,29 +8,10 @@
 # Imports
 #######################################################################
 
-import sys
 import os
 import logging
-import time
-from bcftbx.IlluminaData import IlluminaFastq
-from bcftbx.IlluminaData import cmp_sample_names
-from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
-from bcftbx.utils import extract_prefix
-from bcftbx.utils import extract_index
 from ..applications import Command
-from ..docwriter import Document
-from ..docwriter import Table
-from ..docwriter import Img
-from ..docwriter import Link
-from ..docwriter import Target
-from .fastqc import Fastqc
-from .fastq_screen import Fastqscreen
-from .plots import uscreenplot
-from .plots import ufastqcplot
-from .plots import uboxplot
-from .plots import encode_png
-from .. import get_version
 
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
