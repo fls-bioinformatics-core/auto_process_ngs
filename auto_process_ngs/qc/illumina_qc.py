@@ -201,31 +201,3 @@ def fastqc_output(fastq):
     """
     base_name = "%s_fastqc" % strip_ngs_extensions(os.path.basename(fastq))
     return (base_name,base_name+'.html',base_name+'.zip')
-
-def expected_qc_outputs(fastq,qc_dir):
-    """
-    Return list of expected QC products for a FASTQ file
-
-    Arguments:
-      fastq (str): name of FASTQ file
-      qc_dir (str): path to QC directory
-
-    Returns:
-      List: list of paths to the expected associated QC products
-    """
-    return IlluminaQC().expected_outputs(qc_dir,fastq)
-
-def check_qc_outputs(fastq,qc_dir):
-    """
-    Return lists of present and missing QC products for FASTQ file
-
-    Arguments:
-      fastq (str): name of FASTQ file
-      qc_dir (str): path to QC directory
-
-    Returns:
-      Tuple: tuple of the form (present,missing) where present,
-        missing are lists of paths to associated QC products which
-        are present in the QC dir, or are missing.
-    """
-    return IlluminaQC().check_outputs(qc_dir,fastq)

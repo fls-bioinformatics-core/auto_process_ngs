@@ -26,7 +26,7 @@ from ..docwriter import Link
 from ..docwriter import Target
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
-from .illumina_qc import check_qc_outputs
+from .illumina_qc import IlluminaQC
 from .illumina_qc import fastqc_output
 from .illumina_qc import fastq_screen_output
 from .plots import uscreenplot
@@ -564,10 +564,11 @@ class FastqSet(object):
             output directory
 
         """
+        illumina_qc = IlluminaQC()
         for fq in self._fastqs:
             if fq is None:
                 continue
-            present,missing = check_qc_outputs(fq,qc_dir)
+            present,missing = illumina_qc.check_outputs(fq,qc_dir)
             if missing:
                 return False
         return True

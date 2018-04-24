@@ -68,8 +68,7 @@ from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import IlluminaFastqAttrs
 from qc.reporting import QCReporter
 from qc.reporting import QCSample
-from qc.illumina_qc import expected_qc_outputs
-from qc.illumina_qc import check_qc_outputs
+from qc.illumina_qc import IlluminaQC
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -842,11 +841,12 @@ class AnalysisProject:
             # Add the HTML report
             zip_file.add_file(report_html)
             # Add the FastQC and screen files
+            illumina_qc = IlluminaQC()
             for sample in self.qc.samples:
                 for fastqs in sample.fastq_pairs:
                     for fq in fastqs:
                         logger.debug("Adding QC outputs for %s" % fq)
-                        for f in expected_qc_outputs(fq,qc_dir):
+                        for f in illumina_qc.expected_outputs(fq,qc_dir):
                             if f.endswith('.zip'):
                                 # Exclude .zip file
                                 continue
@@ -1065,7 +1065,7 @@ class AnalysisSample:
           True if QC completed correctly, False otherwise.
 
         """
-        present,missing = check_qc_outputs(fastq,qc_dir)
+        present,missing = IlluminaQC().check_outputs(fastq,qc_dir)
         if missing:
             return False
         return True

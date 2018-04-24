@@ -56,7 +56,7 @@ from bcftbx.IlluminaData import IlluminaRunInfo
 from bcftbx.IlluminaData import SampleSheetPredictor
 from .utils import AnalysisProject
 from .utils import ZipArchive
-from .qc.illumina_qc import expected_qc_outputs
+from .qc.illumina_qc import IlluminaQC
 from .mockqc import MockQCOutputs
 
 #######################################################################
@@ -567,9 +567,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self._project.use_qc_dir(qc_dir)
         print "- QC dir: %s" % self._project.qc_dir
         # Generate base QC outputs (one set per fastq)
+        illumina_qc = IlluminaQC()
         for fq in self._project.fastqs:
             print "Adding outputs for %s" % fq
-            for f in expected_qc_outputs(fq,self._project.qc_dir):
+            for f in illumina_qc.expected_outputs(fq,self._project.qc_dir):
                 self.add_file(f)
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
