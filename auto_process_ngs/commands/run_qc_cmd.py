@@ -11,6 +11,7 @@
 
 import logging
 from auto_process_ngs.applications import Command
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 from bcftbx.JobRunner import fetch_runner
 
@@ -73,13 +74,12 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       Integer: UNIX-style integer returncode where 0 = successful
         termination, non-zero indicates an error.
     """
-    # Check QC script version
+    # Set up QC script
     compatible_versions = ('1.3.0','1.3.1')
-    print "Getting QC script information"
-    status,qc_script_info = Command('illumina_qc.sh',
-                                    '--version').subprocess_check_output()
-    print "Using QC script %s" % qc_script_info.strip()
-    version = qc_script_info.strip().split()[-1]
+    illumina_qc = IlluminaQC(nthreads=nthreads,
+                             fastq_screen_subset=fastq_screen_subset,
+                             ungzip_fastqs=ungzip_fastqs)
+    version = illumina_qc.version()
     if version not in compatible_versions:
         logger.error("QC script version is %s, needs %s" %
                      (version,'/'.join(compatible_versions)))
@@ -112,11 +112,9 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         runqc.add_project(project,
                           fastq_dir=fastq_dir,
                           sample_pattern=sample_pattern,
-                          qc_dir=qc_dir,
-                          ungzip_fastqs=ungzip_fastqs)
+                          qc_dir=qc_dir)
     # Run the QC
-    status = runqc.run(nthreads=nthreads,
-                       fastq_screen_subset=fastq_screen_subset,
+    status = runqc.run(illumina_qc,
                        multiqc=True,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,

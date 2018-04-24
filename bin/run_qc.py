@@ -24,6 +24,7 @@ import logging
 from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 import auto_process_ngs
 import auto_process_ngs.settings
@@ -167,16 +168,20 @@ if __name__ == "__main__":
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
 
+    # Set up QC script
+    illumina_qc = IlluminaQC(
+        nthreads=args.nthreads,
+        fastq_screen_subset=args.fastq_screen_subset,
+        ungzip_fastqs=False)
+
     # Run the QC
     announce("Running QC")
     runqc = RunQC()
     runqc.add_project(project,
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
-                      qc_dir=args.qc_dir,
-                      ungzip_fastqs=False)
-    status = runqc.run(nthreads=args.nthreads,
-                       fastq_screen_subset=args.fastq_screen_subset,
+                      qc_dir=args.qc_dir)
+    status = runqc.run(illumina_qc,
                        report_html=out_file,
                        multiqc=False,
                        qc_runner=qc_runner,

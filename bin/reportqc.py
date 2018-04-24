@@ -17,7 +17,6 @@ from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.illumina_qc import expected_qc_outputs
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs import get_version
 
@@ -52,12 +51,12 @@ def verify_qc(project,qc_dir=None):
         don't pass the verification check.
     """
     if qc_dir is None:
-        qc_dir = self.qc_dir
-    illumina_qc = IlluminaQC(qc_dir=qc_dir)
+        qc_dir = project.qc_dir
+    illumina_qc = IlluminaQC()
     fastqs = []
     for sample in project.samples:
         for fq in sample.fastq:
-            present,missing = illumina_qc.check_outputs(fq)
+            present,missing = illumina_qc.check_outputs(fq,qc_dir)
             if missing:
                 fastqs.append(fq)
     return fastqs
@@ -92,15 +91,16 @@ def zip_report(project,report_html,qc_dir=None):
                            analysis_dir))
     # Get QC dir if not set
     if qc_dir is None:
-        qc_dir = self.qc_dir
+        qc_dir = project.qc_dir
     # Add the HTML report
     zip_file.add_file(report_html)
     # Add the FastQC and screen files
+    illumina_qc = IlluminaQC()
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
                 logger.debug("Adding QC outputs for %s" % fq)
-                for f in expected_qc_outputs(fq,qc_dir):
+                for f in illumina_qc.expected_outputs(fq,qc_dir):
                     if f.endswith('.zip'):
                         # Exclude .zip file
                         continue

@@ -45,16 +45,14 @@ logger = logging.getLogger(__name__)
 
 class IlluminaQC(object):
     """
-    Utility class for running and checking 'illumina_qc.sh'
+    Utility class for running 'illumina_qc.sh'
     """
-    def __init__(self,qc_dir,fastq_screen_subset=None,nthreads=1,
+    def __init__(self,fastq_screen_subset=None,nthreads=1,
                  ungzip_fastqs=False):
         """
         Create a new IlluminaQC instance
 
         Arguments:
-          qc_dir (str): path to the directory which
-            will hold the outputs from the QC script
           fastq_screen_subset (int): subset of reads
             to use when running Fastq_screen ('None'
             uses the script default)
@@ -64,18 +62,29 @@ class IlluminaQC(object):
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
         """
-        self.qc_dir = qc_dir
         self.fastq_screen_subset = fastq_screen_subset
         self.nthreads = nthreads
         self.ungzip_fastqs = ungzip_fastqs
 
-    def commands(self,*fastqs):
+    def version(self):
+        """
+        Return version of QC script
+        """
+        status,qc_script_info = Command(
+            'illumina_qc.sh',
+            '--version').subprocess_check_output()
+        if status == 0:
+            return qc_script_info.strip().split()[-1]
+
+    def commands(self,fastqs,qc_dir=None):
         """
         Generate commands for running QC script
 
         Arguments:
           fastqs (list): list of paths to Fastq files
             to run the QC script on
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
 
         Returns:
           List: list of `Command` instances (one per
@@ -90,29 +99,43 @@ class IlluminaQC(object):
             cmd.add_args('--threads',self.nthreads)
             if self.fastq_screen_subset is not None:
                 cmd.add_args('--subset',self.fastq_screen_subset)
-            cmd.add_args('--qc_dir',self.qc_dir)
+            if qc_dir is not None:
+                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
             cmds.append(cmd)
         return cmds
 
-    def expected_outputs(self,fastq):
+    def expected_outputs(self,fastq,qc_dir):
         """
         Generate expected outputs for input Fastq
 
         Arguments
           fastq (str): path to a Fastq file
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
 
         Returns:
           List: list of expected output files from
             the QC for the supplied Fastq.
         """
-        return expected_qc_outputs(fastq,self.qc_dir)
+        qc_dir = os.path.abspath(qc_dir)
+        expected = []
+        # FastQC outputs
+        expected.extend([os.path.join(qc_dir,f)
+                         for f in fastqc_output(fastq)])
+        # Fastq_screen outputs
+        for name in FASTQ_SCREENS:
+            expected.extend([os.path.join(qc_dir,f)
+                             for f in fastq_screen_output(fastq,name)])
+        return expected
 
-    def check_outputs(self,fastq):
+    def check_outputs(self,fastq,qc_dir):
         """
         Check QC outputs for input Fastq
 
         Arguments:
           fastq (str): path to a Fastq file
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
 
         Returns:
           Tuple: tuple (present,missing), where
@@ -120,7 +143,16 @@ class IlluminaQC(object):
             found, and 'missing' is a list of those
             which were not.
         """
-        return check_qc_outputs(fastq,self.qc_dir)
+        qc_dir = os.path.abspath(qc_dir)
+        present = []
+        missing = []
+        # Check that outputs exist
+        for output in self.expected_outputs(fastq,qc_dir):
+            if os.path.exists(output):
+                present.append(output)
+            else:
+                missing.append(output)
+        return (present,missing)
 
 #######################################################################
 # Functions
@@ -180,17 +212,8 @@ def expected_qc_outputs(fastq,qc_dir):
 
     Returns:
       List: list of paths to the expected associated QC products
-
     """
-    expected = []
-    # FastQC outputs
-    expected.extend([os.path.join(qc_dir,f)
-                     for f in fastqc_output(fastq)])
-    # Fastq_screen outputs
-    for name in FASTQ_SCREENS:
-        expected.extend([os.path.join(qc_dir,f)
-                         for f in fastq_screen_output(fastq,name)])
-    return expected
+    return IlluminaQC().expected_outputs(qc_dir,fastq)
 
 def check_qc_outputs(fastq,qc_dir):
     """
@@ -204,14 +227,5 @@ def check_qc_outputs(fastq,qc_dir):
       Tuple: tuple of the form (present,missing) where present,
         missing are lists of paths to associated QC products which
         are present in the QC dir, or are missing.
-
     """
-    present = []
-    missing = []
-    # Check that outputs exist
-    for output in expected_qc_outputs(fastq,qc_dir):
-        if os.path.exists(output):
-            present.append(output)
-        else:
-            missing.append(output)
-    return (present,missing)
+    return IlluminaQC().check_outputs(qc_dir,fastq)
