@@ -34,6 +34,7 @@ import re
 import logging
 import auto_process_ngs.applications as applications
 import auto_process_ngs.utils as utils
+from .samplesheet_utils import barcode_is_10xgenomics
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 
@@ -280,9 +281,13 @@ def get_bases_mask(run_info_xml,sample_sheet_file):
         IlluminaData.SampleSheet(sample_sheet_file).data[0])
     if example_barcode is None:
         example_barcode = ""
-    bases_mask = IlluminaData.fix_bases_mask(bases_mask,example_barcode)
-    print "Bases mask: %s (updated for barcode sequence '%s')" % (bases_mask,
-                                                                  example_barcode)
+    if barcode_is_10xgenomics(example_barcode):
+        print "Bases mask: barcode is 10xGenomics sample set ID"
+    else:
+        bases_mask = IlluminaData.fix_bases_mask(bases_mask,
+                                                 example_barcode)
+        print "Bases mask: %s (updated for barcode sequence '%s')" % \
+            (bases_mask,example_barcode)
     return bases_mask
 
 def bases_mask_is_valid(bases_mask):

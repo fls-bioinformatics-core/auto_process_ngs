@@ -12,6 +12,7 @@ from bcftbx.IlluminaData import SampleSheet
 from auto_process_ngs.samplesheet_utils import SampleSheetLinter
 from auto_process_ngs.samplesheet_utils import has_invalid_characters
 from auto_process_ngs.samplesheet_utils import barcode_is_valid
+from auto_process_ngs.samplesheet_utils import barcode_is_10xgenomics
 from auto_process_ngs.samplesheet_utils import get_close_names
 
 sample_sheet_header = """[Header]
@@ -288,6 +289,19 @@ a non-ASCII character here\x80
 - {}[]
 - \t\n
 """))
+
+class TestBarcodeIs10xGenomics(unittest.TestCase):
+    def test_barcode_is_10xgenomics(self):
+        """barcode_is_10xgenomics: identifies 10xGenomics 'barcodes'
+        """
+        self.assertTrue(barcode_is_10xgenomics("SI-GA-B3"))
+        self.assertTrue(barcode_is_10xgenomics("SI-GA-G1"))
+        self.assertTrue(barcode_is_10xgenomics("SI-GA-H1"))
+        self.assertTrue(barcode_is_10xgenomics("SI-P03-C9"))
+    def test_barcode_is_not_10xgenomics(self):
+        """barcode_is_10xgenomics: identifies non-10xGenomics barcodes
+        """
+        self.assertFalse(barcode_is_10xgenomics("TGACCAAT"))
 
 class TestBarcodeIsValidFunction(unittest.TestCase):
     def test_standard_barcodes(self):
