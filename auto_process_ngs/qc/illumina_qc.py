@@ -12,6 +12,7 @@ import os
 import logging
 from bcftbx.qc.report import strip_ngs_extensions
 from ..applications import Command
+from ..fastq_utils import IlluminaFastqAttrs
 
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
@@ -61,6 +62,9 @@ class IlluminaQC(object):
         """
         Generate commands for running QC script
 
+        Note that index reads (e.g. I1 Fastqs) will
+        not have commands generated for them.
+
         Arguments:
           fastqs (list): list of paths to Fastq files
             to run the QC script on
@@ -74,6 +78,10 @@ class IlluminaQC(object):
         """
         cmds = list()
         for fastq in fastqs:
+            # Skip index reads (i.e. I1)
+            if IlluminaFastqAttrs(fastq).is_index_read:
+                continue
+            # Build command
             cmd = Command('illumina_qc.sh',fastq)
             if self.ungzip_fastqs:
                 cmd.add_args('--ungzip-fastqs')
@@ -100,6 +108,9 @@ class IlluminaQC(object):
         """
         qc_dir = os.path.abspath(qc_dir)
         expected = []
+        # Skip index reads (i.e. I1)
+        if IlluminaFastqAttrs(fastq).is_index_read:
+            return expected
         # FastQC outputs
         expected.extend([os.path.join(qc_dir,f)
                          for f in fastqc_output(fastq)])

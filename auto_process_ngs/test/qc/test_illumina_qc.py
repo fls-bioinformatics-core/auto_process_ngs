@@ -76,6 +76,14 @@ class TestIlluminaQC(unittest.TestCase):
                          "--threads 1 "
                          "--qc_dir /path/to/qc")
 
+    def test_illumina_qc_commands_for_index_read(self):
+        """IlluminaQC: generates empty command list for index read Fastq
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_I1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),0)
+
     def test_illumina_qc_command_with_ungzip_fastqs(self):
         """IlluminaQC: generates command line with --ungzip-fastqs
         """
@@ -118,7 +126,7 @@ class TestIlluminaQC(unittest.TestCase):
                          "--qc_dir /path/to/qc")
 
     def test_illumina_qc_expected_outputs(self):
-        """IlluminaQC: generates list of expected outputs for Fastq
+        """IlluminaQC: generates correct expected outputs for R1 Fastq
         """
         illumina_qc = IlluminaQC()
         expected_outputs = illumina_qc.expected_outputs(
@@ -139,6 +147,15 @@ class TestIlluminaQC(unittest.TestCase):
         for r in reference_outputs:
             self.assertTrue(r in expected_outputs,
                             "'%s' should be predicted" % r)
+
+    def test_illumina_qc_expected_outputs_index_read(self):
+        """IlluminaQC: predicts no outputs for index read Fastq
+        """
+        illumina_qc = IlluminaQC()
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_I1.fastq.gz",
+            "/path/to/qc")
+        self.assertEqual(len(expected_outputs),0)
 
     def test_illumina_qc_check_outputs_all_present(self):
         """IlluminaQC: check expected outputs when all present
