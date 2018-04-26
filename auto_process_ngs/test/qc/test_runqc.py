@@ -364,3 +364,39 @@ class TestRunQC(unittest.TestCase):
                       "multiqc_report.html"):
                 self.assertTrue(os.path.exists(os.path.join(self.wd,p,f)),
                                 "Missing %s" % f)
+
+    def test_run_qc_with_index_reads(self):
+        """RunQC: standard QC run for project with index reads
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB1_S1_I1_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB2_S2_I1_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")))
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
