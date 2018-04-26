@@ -14,6 +14,7 @@ from auto_process_ngs.docwriter import Img
 from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Target
 from auto_process_ngs.docwriter import Para
+from auto_process_ngs.docwriter import sanitize_css_string
 
 # Unit tests
 
@@ -598,3 +599,15 @@ class TestPara(unittest.TestCase):
         self.assertFalse(p)
         p.add("some text")
         self.assertTrue(p)
+
+class TestSanitizeCssStringFunction(unittest.TestCase):
+    """
+    Tests for the sanitize_css_string function
+    """
+    def test_sanitize_css_string(self):
+        self.assertEqual(sanitize_css_string("test"),"test")
+        self.assertEqual(sanitize_css_string("test123"),"test123")
+        self.assertEqual(sanitize_css_string("test 123"),"test_123")
+        self.assertEqual(sanitize_css_string("test\t 123"),"test__123")
+        self.assertEqual(sanitize_css_string("test123.gz"),"test123gz")
+        self.assertEqual(sanitize_css_string("test@123.90.10.3"),"test12390103")

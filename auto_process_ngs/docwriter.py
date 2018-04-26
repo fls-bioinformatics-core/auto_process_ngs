@@ -256,8 +256,7 @@ class Section(object):
         if self._name is not None:
             return self._name
         if self._title is not None:
-            return filter(lambda c: c in VALID_CSS_ID_CHARS,
-                          str(self._title).replace(' ','_').replace('\t','_'))
+            return sanitize_css_string(self._title)
         else:
             return self._title
 
@@ -914,3 +913,22 @@ class Para(object):
         Para instance is True if has content, False otherwise
         """
         return bool(self._content)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def sanitize_css_string(s):
+    """
+    Remove or replace invalid (non-CSS) characters in a string
+
+    Arguments:
+      s (str): string to be sanitized
+
+    Returns:
+      String: version of the original string with whitespace
+        converted to underscores, and all other invalid
+        characters removed.
+    """
+    return filter(lambda c: c in VALID_CSS_ID_CHARS,
+                  str(s).replace(' ','_').replace('\t','_'))
