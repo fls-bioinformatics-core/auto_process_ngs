@@ -448,7 +448,7 @@ def pair_fastqs(fastqs):
     # Return paired and upaired fastqs
     return (fq_pairs,unpaired)
 
-def pair_fastqs_by_name(fastqs,fastq_attrs=AnalysisFastq):
+def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
     """
     Pair Fastq files based on their name
 
@@ -464,7 +464,7 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=AnalysisFastq):
       fastqs (list): list of Fastqs to pair
       fastq_attrs (BaseFastqAttrs): optional, class to use
         for extracting data from the filename (default:
-        AnalysisFastq)
+        IlluminaFastqAttrs)
 
     Returns:
       List: list of tuples (R1,R2) with the R1/R2 pairs,
