@@ -325,6 +325,7 @@ class ProjectQC(object):
             pairs = []
             for fastq_pair in pair_fastqs_by_name(sample.fastq):
                 # Identify pairs with missing QC outputs
+                logging.debug("Checking Fastq pair: %s" % (fastq_pair,))
                 for fq in fastq_pair:
                     # Check if Fastq is in list of those with
                     # missing QC outputs
@@ -332,36 +333,39 @@ class ProjectQC(object):
                         logger.debug("\t%s: QC verified" % fq)
                         continue
                     else:
+                        logger.debug("\t%s: QC not verified, adding "
+                                     "pair" % fq)
                         pairs.append(fastq_pair)
                         break
-                # Set up QC for each pair with missing outputs
-                for fastq_pair in pairs:
-                    print "Setting up QC run:"
-                    for fq in fastq_pair:
-                        print "\t%s" % os.path.basename(fq)
-                    # Create a group if none exists for this sample
-                    if group is None:
-                        group = sched.group("%s.%s" % (project.name,
-                                                       sample.name),
-                                            log_dir=self.log_dir)
-                    # Acquire QC commands for this pair
-                    qc_cmds = illumina_qc.commands(fastq_pair,
-                                                   qc_dir=project.qc_dir)
-                    # Create and submit QC job for each command
-                    for qc_cmd in qc_cmds:
-                        indx += 1
-                        command_name = os.path.splitext(
-                            os.path.basename(qc_cmd.command))[0]
-                        label = "%s.%s.%s#%03d" % \
-                                (command_name,
-                                 project.name,
-                                 sample.name,indx)
-                        job = group.add(qc_cmd,
-                                        name=label,
-                                        wd=project.dirn,
-                                        runner=qc_runner)
-                        print "Job: %s" %  job
-            # Indicate no more jobs to add
+            # Set up QC for each pair with missing outputs
+            for fastq_pair in pairs:
+                # Report the Fastqs in this set
+                print "Setting up QC run:"
+                for fq in fastq_pair:
+                    print "\t%s" % os.path.basename(fq)
+                # Create a group if none exists for this sample
+                if group is None:
+                    group = sched.group("%s.%s" % (project.name,
+                                                   sample.name),
+                                        log_dir=self.log_dir)
+                # Acquire QC commands for this pair
+                qc_cmds = illumina_qc.commands(fastq_pair,
+                                               qc_dir=project.qc_dir)
+                # Create and submit QC job for each command
+                for qc_cmd in qc_cmds:
+                    indx += 1
+                    command_name = os.path.splitext(
+                        os.path.basename(qc_cmd.command))[0]
+                    label = "%s.%s.%s#%03d" % \
+                            (command_name,
+                             project.name,
+                             sample.name,indx)
+                    job = group.add(qc_cmd,
+                                    name=label,
+                                    wd=project.dirn,
+                                    runner=qc_runner)
+                    print "Job: %s" %  job
+            # Indicate no more jobs to add for this sample
             if group:
                 group.close()
                 groups.append(group.name)
