@@ -489,9 +489,12 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=AnalysisFastq):
     # Looking for unpaired R2 files
     for fqr2 in fastqs_r2:
         for pair in pairs:
-            if fqr2 == pair[1]:
-                fqr2 = None
-                break
+            try:
+                if fqr2 == pair[1]:
+                    fqr2 = None
+                    break
+            except IndexError:
+                pass
         if fqr2 is not None:
             pairs.append((fqr2,))
     pairs = sorted(pairs,cmp=lambda x,y: cmp(x[0],y[0]))

@@ -489,6 +489,24 @@ class TestPairFastqsByNameFunction(unittest.TestCase):
                           ("/data/PJB2_S2_R1_001.fastq.gz",
                            "/data/PJB2_S2_R2_001.fastq.gz")])
 
+    def test_pair_fastqs_by_name_PE_with_index_read(self):
+        """
+        pair_fastqs_by_name: paired-end fastqs with index reads
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB1_S1_I1_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz",
+                  "/data/PJB2_S2_I1_001.fastq.gz")
+        self.assertEqual(pair_fastqs_by_name(fastqs),
+                         [("/data/PJB1_S1_I1_001.fastq.gz",),
+                          ("/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"),
+                          ("/data/PJB2_S2_I1_001.fastq.gz",),
+                          ("/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz")])
+
     def test_pair_fastqs_by_name_mixed_SE_and_PE(self):
         """
         pair_fastqs_by_name: mixture of single- and paired-end fastqs
