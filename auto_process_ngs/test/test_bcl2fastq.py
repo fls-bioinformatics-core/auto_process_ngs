@@ -845,6 +845,44 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,i
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y101,nnnnnnnn,nnnnnnnn,y101")
 
+    def test_get_bases_mask_10xgenomics_sample_set(self):
+        """get_bases_mask: handle 10xGenomics sample set IDs
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Make a matching sample sheet
+        sample_sheet_content = """[Header]
+IEMFileVersion,4
+Date,4/24/2018
+Workflow,GenerateFASTQ
+Application,NextSeq FASTQ Only
+Assay,Nextera XT v2 Set A
+Description,
+Chemistry,Default
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+SL1,SL1,,,N701,SI-GA-A2,SL,
+SL2,SL2,,,N702,SI-GA-B2,SL,
+SL3,SL3,,,N703,SI-GA-C2,SL,
+SL4,SL4,,,N704,SI-GA-D2,SL,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(sample_sheet_content)
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
+                         "y76,I6,y76")
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 

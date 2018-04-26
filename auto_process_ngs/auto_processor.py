@@ -1482,14 +1482,15 @@ class AutoProcess:
             if bases_mask is None:
                 bases_mask = self.params.bases_mask
             print "Bases mask setting    : %s" % bases_mask
-            if bases_mask == "auto":
-                print "Determining bases mask from RunInfo.xml"
-                bases_mask = bcl2fastq_utils.get_bases_mask(
-                    illumina_run.runinfo_xml,
-                    sample_sheet)
-            if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
-                raise Exception("Invalid bases mask: '%s'" %
-                                bases_mask)
+            if protocol != '10x_chromium_sc':
+                if bases_mask == "auto":
+                    print "Determining bases mask from RunInfo.xml"
+                    bases_mask = bcl2fastq_utils.get_bases_mask(
+                        illumina_run.runinfo_xml,
+                        sample_sheet)
+                    if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                        raise Exception("Invalid bases mask: '%s'" %
+                                        bases_mask)
             self.params.bases_mask = bases_mask
             # Do fastq generation according to protocol
             if protocol == 'icell8':
@@ -1530,6 +1531,8 @@ class AutoProcess:
                     raise Exception("Bcl2fastq stage failed: '%s'" % ex)
             elif protocol == '10x_chromium_sc':
                 # 10xGenomics Chromium SC
+                if bases_mask == 'auto':
+                    bases_mask = None
                 try:
                     # Check we have cellranger
                     cellranger = bcf_utils.find_program('cellranger')

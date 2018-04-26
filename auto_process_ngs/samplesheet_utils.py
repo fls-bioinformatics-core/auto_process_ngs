@@ -256,8 +256,25 @@ def barcode_is_valid(s):
       Boolean: True if barcode is valid, False if not.
 
     """
-    return bool(re.match(r'^[ATGC]*$',s) or
-                re.match(r'^SI\-[A-Z0-9]+\-[A-Z0-9]+$',s))
+    return (bool(re.match(r'^[ATGC]*$',s))
+            or barcode_is_10xgenomics(s))
+
+def barcode_is_10xgenomics(s):
+    """
+    Check if sample sheet barcode is 10xGenomics sample set ID
+
+    10xGenomics sample set IDs of the form e.g. 'SI-P03-C9' or
+    'SI-GA-B3' are also considered to be valid.
+
+    Arguments:
+      s (str): barcode sequence to validate
+
+    Returns:
+      Boolean: True if barcode is 10xGenomics sample set ID,
+        False if not.
+
+    """
+    return bool(re.match(r'^SI\-[A-Z0-9]+\-[A-Z0-9]+$',s))
 
 def predict_outputs(sample_sheet=None,sample_sheet_file=None):
     """
