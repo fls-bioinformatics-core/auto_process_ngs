@@ -6,10 +6,283 @@ import unittest
 import os
 import tempfile
 import shutil
+from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import assign_barcodes_single_end
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.fastq_utils import pair_fastqs
 
+# IlluminaFastqAttrs
+class TestIlluminaFastqAttrs(unittest.TestCase):
+    """Tests for the IlluminaFastqAttrs class
+    """
+    def test_full_name(self):
+        """IlluminaFastqAttrs: full Illumina-style fastq name
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+
+    def test_full_name_dual_index(self):
+        """IlluminaFastqAttrs: full Illumina-style fastq name with dual index
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG-GTTCAC')
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
+
+    def test_full_name_blc2fastq2(self):
+        """IlluminaFastqAttrs: Illumina fastq name from bcl2fastq2
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_R2_001')
+
+    def test_index_read_blc2fastq2(self):
+        """IlluminaFastqAttrs: Illumina index read fastq name from bcl2fastq2
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,1)
+        self.assertEqual(fq.set_number,1)
+        self.assertTrue(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_L003_I1_001')
+
+    def test_name_no_lane_blc2fastq2(self):
+        """IlluminaFastqAttrs: Illumina fastq name from bcl2fastq2 (without lane)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_S4_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_S4_R2_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,4)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_S4_R2_001')
+
+    def test_name_only(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name only)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1')
+
+    def test_name_only_paired_end(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name only, paired end)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_R2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_R2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_R2')
+
+    def test_name_and_lane(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name and lane)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_L001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,1)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001')
+
+    def test_name_and_lane_paired_end(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name and lane, paired end)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_L001_R2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_L001_R2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,1)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_L001_R2')
+
+    def test_name_and_tag(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name and barcode)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG')
+
+    def test_name_and_tag_paired_end(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name and barcode, paired end)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG_R2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_R2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_R2')
+
+    def test_name_tag_and_lane(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name, barcode and lane)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG_L001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,1)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001')
+
+    def test_name_tag_and_lane_paired_end(self):
+        """IlluminaFastqAttrs: reduced fastq name (sample name, barcode and lane, paired end)
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,1)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2')
+
+    def test_AGTC_sample_names(self):
+        """IlluminaFastqAttrs: sample names consisting of letters 'A', 'G', 'T' and 'C'
+        """
+        for name in ('A','G','T','C','AGCT'):
+            fq = IlluminaFastqAttrs('%s_R1' % name)
+            self.assertEqual(fq.sample_name,name)
+            self.assertEqual(fq.sample_number,None)
+            self.assertEqual(fq.barcode_sequence,None)
+            self.assertEqual(fq.lane_number,None)
+            self.assertEqual(fq.read_number,1)
+            self.assertEqual(fq.set_number,None)
+            self.assertFalse(fq.is_index_read)
+            self.assertEqual(str(fq),'%s_R1' % name)
+
+    def test_non_standard_sample_name(self):
+        """IlluminaFastqAttrs: non-standard Fastq names with sample name only
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq.r2')
+
+    def test_non_standard_sample_name_with_dots(self):
+        """IlluminaFastqAttrs: non-standard Fastq names with sample name containing dots
+        """
+        fq = IlluminaFastqAttrs('NH1.2.r2')
+        self.assertEqual(fq.sample_name,'NH1.2')
+        self.assertEqual(fq.basename,'NH1.2.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,None)
+        self.assertEqual(str(fq),'NH1.2.r2')
+
+    def test_non_standard_sample_name_and_barcode(self):
+        """IlluminaFastqAttrs: non-standard Fastq names with sample name and barcode
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq.ACAGTG.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+
+    def test_input_is_full_path(self):
+        """IlluminaFastqAttrs: input as full path to Fastq file
+        """
+        fq = IlluminaFastqAttrs('/data/Project_NH/Sample_NH1/NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001.fastq.gz')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+        self.assertEqual(fq.extension,'.fastq.gz')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001')
+
+# assign_barcodes_single_end
 fastq_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
 TTTACAACTAGCTTCTCTTTTTCTT
 +
@@ -53,8 +326,6 @@ AGACAGAGTCTTAATTAAAC
 +
 11DFFCFFDGGGB3BF313A
 """
-
-# assign_barcodes_single_end
 class TestAssignBarcodesSingleEnd(unittest.TestCase):
     """Tests for the assign_barcodes_single_end function
     """
