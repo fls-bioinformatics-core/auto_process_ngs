@@ -137,7 +137,7 @@ class QCReporter(object):
         else:
             relpath = None
         # Initialise report
-        report = QCReport(self._project,title=title)
+        report = QCReport(self._project,title=title,qc_dir=qc_dir)
         # Styles
         report.add_css_rule("h1 { background-color: #42AEC2;\n"
                             "     color: white;\n"
