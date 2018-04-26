@@ -92,8 +92,14 @@ class QCReporter(object):
           qc_dir (str): path to the QC output dir
 
         """
+        logger.debug("QCReporter.verify: qc_dir (initial): %s" % qc_dir)
         if qc_dir is None:
             qc_dir = self._project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self._project.dirn,
+                                      qc_dir)
+        logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
         verified = True
         for sample in self._samples:
             if not sample.verify(qc_dir):
@@ -252,6 +258,7 @@ class QCSample(object):
         Returns True if the QC products are present, False
         otherwise.
         """
+        logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
         for fq_pair in self.fastq_pairs:
             if not fq_pair.verify(qc_dir):
                 return False
@@ -317,6 +324,8 @@ class FastqSet(object):
             output directory
 
         """
+        logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
+        logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
         illumina_qc = IlluminaQC()
         for fq in self._fastqs:
             if fq is None:
@@ -329,13 +338,24 @@ class FastqSet(object):
 class QCReport(Document):
     """
     """
-    def __init__(self,project,title=None):
+    def __init__(self,project,title=None,qc_dir=None):
         """
         """
+        logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
         # Store project
         self.project = project
+        # Sort out target QC dir
+        if qc_dir is None:
+            qc_dir = self.project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self.project.dirn,
+                                      qc_dir)
+        self.qc_dir = qc_dir
+        logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
+        # Set up title
         if title is None:
-            title = "QC report: %s" % project.name
+            title = "QC report: %s" % self.project.name
         # Initialise superclass
         Document.__init__(self,title)
         # Initialise tables
@@ -450,7 +470,7 @@ class QCReport(Document):
             # Report Fastq pair
             fastq_pair = QCReportFastqPair(fq_pair.r1,
                                            fq_pair.r2,
-                                           self.project.qc_dir)
+                                           self.qc_dir)
             fastq_pair.report(sample_report)
             # Add line in summary table
             if sample_name is not None:
