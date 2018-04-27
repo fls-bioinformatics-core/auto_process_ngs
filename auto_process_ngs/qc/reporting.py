@@ -181,7 +181,7 @@ class QCReporter(object):
     def samples(self):
         return self._samples
 
-    def verify(self,qc_dir=None):
+    def verify(self,qc_dir=None,illumina_qc=None):
         """
         Check the QC outputs are correct for the project
 
@@ -189,6 +189,8 @@ class QCReporter(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project being checked.
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
 
         Returns:
           Boolean: Returns True if all expected QC products
@@ -204,7 +206,7 @@ class QCReporter(object):
         logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
         verified = True
         for sample in self._samples:
-            if not sample.verify(qc_dir):
+            if not sample.verify(qc_dir,illumina_qc=illumina_qc):
                 verified = False
         return verified
 
@@ -277,7 +279,7 @@ class QCSample(object):
     def fastq_pairs(self):
         return self._fastq_pairs
 
-    def verify(self,qc_dir):
+    def verify(self,qc_dir,illumina_qc=None):
         """
         Check QC products for this sample
 
@@ -288,6 +290,8 @@ class QCSample(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project being checked.
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
 
         Returns:
           Boolean: returns True if the QC products are
@@ -295,7 +299,7 @@ class QCSample(object):
         """
         logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
         for fq_pair in self.fastq_pairs:
-            if not fq_pair.verify(qc_dir):
+            if not fq_pair.verify(qc_dir,illumina_qc=illumina_qc):
                 return False
         return True
 
@@ -351,7 +355,7 @@ class FastqSet(object):
         return filter(lambda fq: fq is not None,
                       self._fastqs)
 
-    def verify(self,qc_dir):
+    def verify(self,qc_dir,illumina_qc=None):
         """
         Check QC products for this Fastq pair
 
@@ -362,6 +366,8 @@ class FastqSet(object):
         Arguments:
           qc_dir (str): path to the location of the QC
             output directory
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
 
         Returns:
           Boolean: returns True if the QC products are
@@ -369,7 +375,8 @@ class FastqSet(object):
         """
         logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
         logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
-        illumina_qc = IlluminaQC()
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
         for fq in self._fastqs:
             if fq is None:
                 continue
