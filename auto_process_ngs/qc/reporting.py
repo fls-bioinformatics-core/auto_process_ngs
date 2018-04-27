@@ -51,14 +51,23 @@ class QCReporter(object):
     """
     Class describing QC results for an AnalysisProject
 
+    Provides the follow properties:
+
+    name: project name
+    paired_end: True if project is paired-end
+    samples: list of QCSample instances
+
+    Provides the follow methods:
+
+    verify: checks the QC outputs for the project
+    report: generate a HTML report for the project
     """
     def __init__(self,project):
         """
         Initialise a new QCReporter instance
 
         Arguments:
-           project (AnalysisProject): project to handle the QC for
-
+           project (AnalysisProject): project to report QC for
         """
         self._project = project
         self._samples = []
@@ -83,14 +92,16 @@ class QCReporter(object):
 
     def verify(self,qc_dir=None):
         """
-        Check that the QC outputs are correct
-
-        Returns True if the QC appears to have run successfully,
-        False if not.
+        Check the QC outputs are correct for the project
 
         Arguments:
-          qc_dir (str): path to the QC output dir
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project being checked.
 
+        Returns:
+          Boolean: Returns True if all expected QC products
+            are present, False if not.
         """
         logger.debug("QCReporter.verify: qc_dir (initial): %s" % qc_dir)
         if qc_dir is None:
@@ -123,8 +134,7 @@ class QCReporter(object):
             (default is to use absolute paths)
 
         Returns:
-          String: filename of the HTML report.
-
+          String: filename of the output HTML report.
         """
         # Set title and output destination
         if title is None:
@@ -230,6 +240,14 @@ class QCSample(object):
     """
     Class describing QC results for an AnalysisSample
 
+    Provides the follow properties:
+
+    name: sample name
+    fastq_pairs: list of FastqSet instances
+
+    Provides the follow methods:
+
+    verify: checks that QC outputs are present
     """
     def __init__(self,sample):
         """
@@ -237,7 +255,6 @@ class QCSample(object):
 
         Arguments:
            sample (AnalysisSample): sample instance
-
         """
         self._sample = sample
         self._fastq_pairs = get_fastq_pairs(sample)
@@ -254,9 +271,17 @@ class QCSample(object):
         """
         Check QC products for this sample
 
-        Checks that fastq_screens and FastQC files were found.
-        Returns True if the QC products are present, False
-        otherwise.
+        Checks that expected QC outputs for the sample
+        are present in the specified QC directory.
+
+        Arguments:
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project being checked.
+
+        Returns:
+          Boolean: returns True if the QC products are
+            present, False otherwise.
         """
         logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
         for fq_pair in self.fastq_pairs:
@@ -270,6 +295,15 @@ class FastqSet(object):
 
     A set can be a single or a pair of fastq files.
 
+    Provides the following properties:
+
+    r1: R1 Fastq in the pair
+    r2: R2 Fastq (will be None if no R2)
+    fastqs: list of Fastq files
+
+    Provides the following methods:
+
+    verify: checks the QC outputs for the set
     """
     def __init__(self,fqr1,fqr2=None):
         """
@@ -279,7 +313,6 @@ class FastqSet(object):
            fqr1 (str): path to R1 Fastq file
            fqr2 (str): path to R2 Fastq file, or
              None if the 'set' is a single Fastq
-
         """
         self._fastqs = list((fqr1,fqr2))
 
@@ -290,7 +323,6 @@ class FastqSet(object):
     def r1(self):
         """
         Return R1 Fastq file from pair
-
         """
         return self._fastqs[0]
 
@@ -298,15 +330,13 @@ class FastqSet(object):
     def r2(self):
         """
         Return R2 Fastq file from pair
-
         """
         return self._fastqs[1]
 
     @property
     def fastqs(self):
         """
-        Return list of Fastq files
-
+        Return list of Fastq files in the set
         """
         return filter(lambda fq: fq is not None,
                       self._fastqs)
@@ -323,6 +353,9 @@ class FastqSet(object):
           qc_dir (str): path to the location of the QC
             output directory
 
+        Returns:
+          Boolean: returns True if the QC products are
+            present, False otherwise.
         """
         logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
         logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
@@ -337,9 +370,24 @@ class FastqSet(object):
 
 class QCReport(Document):
     """
+    Create a QC report document for a project
+
+    Example usage:
+
+    >>> report = QCReport(project)
+    >>> report.write("qc_report.html")
     """
     def __init__(self,project,title=None,qc_dir=None):
         """
+        Create a new QCReport instance
+
+        Arguments:
+          project (AnalysisProject): project to report QC for
+          title (str): title for the report (defaults to
+            "QC report: <PROJECT_NAME")
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project
         """
         logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
         # Store project
@@ -359,26 +407,32 @@ class QCReport(Document):
         # Initialise superclass
         Document.__init__(self,title)
         # Initialise tables
-        self.metadata_table = self.init_metadata_table()
-        self.summary_table = self.init_summary_table()
+        self.metadata_table = self._init_metadata_table()
+        self.summary_table = self._init_summary_table()
         # Initialise report sections
-        self.preamble = self.init_preamble_section()
-        self.summary = self.init_summary_section()
+        self.preamble = self._init_preamble_section()
+        self.summary = self._init_summary_section()
         # Add data
         self.report_metadata()
         for sample in self.project.samples:
             self.report_sample(sample)
 
-    def init_metadata_table(self):
+    def _init_metadata_table(self):
         """
+        Internal: set up a table for project metadata
+
+        Associated CSS class is 'metadata'
         """
         metadata_tbl = Table(('item','value',))
         metadata_tbl.no_header()
         metadata_tbl.add_css_classes('metadata')
         return metadata_tbl
 
-    def init_summary_table(self):
+    def _init_summary_table(self):
         """
+        Internal: set up a table for summarising samples
+
+        Associated CSS classes are 'summary' and 'fastq_summary'
         """
         if self.project.info.paired_end:
             fields = ('sample',
@@ -411,16 +465,20 @@ class QCReport(Document):
         summary_tbl.add_css_classes('summary','fastq_summary')
         return summary_tbl
 
-    def init_preamble_section(self):
+    def _init_preamble_section(self):
         """
+        Internal: set up a "preamble" section
         """
         preamble = self.add_section()
         preamble.add("Report generated by auto_process %s on %s" %
                      (get_version(),time.asctime()))
         return preamble
 
-    def init_summary_section(self):
+    def _init_summary_section(self):
         """
+        Internal: set up a summary section for the report
+
+        Associated name is 'summary'
         """
         summary = self.add_section("Summary",name='summary')
         summary.add(self.metadata_table)
@@ -431,6 +489,10 @@ class QCReport(Document):
 
     def report_metadata(self):
         """
+        Report the project metadata
+
+        Adds entries for the project metadata to the "metadata"
+        table in the report
         """
         metadata_items = ['user','PI','library_type','organism',]
         if self.project.info.single_cell_platform is not None:
@@ -450,6 +512,14 @@ class QCReport(Document):
 
     def report_sample(self,sample):
         """
+        Report the QC for a sample
+
+        Reports the QC for the sample and Fastqs to
+        the summary table and appends a section with
+        detailed reports to the document.
+
+        Arguments:
+          sample (AnalysisSample): sample to report
         """
         sample = QCSample(sample)
         # Create a new section for the sample
@@ -482,9 +552,28 @@ class QCReport(Document):
 
 class QCReportFastqPair(object):
     """
+    Utility class for reporting the QC for a Fastq pair
+
+    Provides the following properties:
+
+    r1: QCReportFastq instance for R1 Fastq
+    r2: QCReportFastq instance for R2 Fastq
+
+    Provides the following methods:
+
+    report: 
     """
     def __init__(self,fastqr1,fastqr2,qc_dir):
         """
+        Create a new QCReportFastqPair
+
+        Arguments:
+          fastqr1 (str): R1 Fastq file
+          fastqr2 (str): R2 Fastq file (None if 'pair' is
+            single-ended)
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project
         """
         self.fastqr1 = fastqr1
         self.fastqr2 = fastqr2
@@ -493,18 +582,21 @@ class QCReportFastqPair(object):
     @property
     def paired_end(self):
         """
+        True if pair consists of R1/R2 files
         """
         return (self.fastqr2 is not None)
 
     @property
     def r1(self):
         """
+        QCReportFastq instance for R1 Fastq
         """
         return QCReportFastq(self.fastqr1,self.qc_dir)
 
     @property
     def r2(self):
         """
+        QCReportFastq instance for R2 Fastq (None if not paired end)
         """
         if self.fastqr2 is not None:
             return QCReportFastq(self.fastqr2,self.qc_dir)
@@ -512,6 +604,26 @@ class QCReportFastqPair(object):
 
     def report(self,sample_report,attrs=None):
         """
+        Add report for Fastq pair to a document section
+
+        Creates a new subsection in 'sample_report' for the
+        Fastq pair, within which are additional subsections
+        for each Fastq file.
+
+        The following 'attributes' can be reported for each
+        Fastq:
+
+        - fastqc
+        - fastq_screen
+        - program versions
+
+        By default all attributes are reported.
+
+        Arguments:
+          sample_report (Section): section to add the report
+            to
+          attrs (list): optional list of custom 'attributes'
+            to report
         """
         # Attributes to report
         if attrs is None:
@@ -546,6 +658,31 @@ class QCReportFastqPair(object):
 
     def update_summary_table(self,summary_table,idx=None,fields=None):
         """
+        Add a line to a summary table reporting a Fastq pair
+
+        Creates a new line in 'summary_table' (or updates an
+        existing line) for the Fastq pair, adding content for
+        each specied field.
+
+        The following fields can be reported for each Fastq
+        pair:
+
+        - fastqs (if paired-end)
+        - fastq (if single-end)
+        - reads
+        - boxplot_r1
+        - boxplot_r2
+        - fastqc_r1
+        - fastqc_r2
+        - screens_r1
+        - screens_r2
+
+        Arguments:
+          summary_table (Table): table to add the summary to
+          idx (int): if supplied then indicates which existing
+            table row to update (if None then a new row is
+            appended)
+          fields (list): list of custom fields to report
         """
         # Fields to report
         if fields is None:
@@ -620,17 +757,35 @@ class QCReportFastq(object):
     """
     Provides interface to QC outputs for Fastq file
 
-    Atributes:
-      name: basename of the Fastq
-      path: path to the Fastq
-      fastqc: Fastqc instance
-      fastq_screen.names: list of FastQScreen names
-      fastq_screen.NAME.description
-      fastq_screen.NAME.png: associated PNG file
-      fastq_screen.NAME.txt: associated TXT file
+    Provides the following attributes:
+
+    name: basename of the Fastq
+    path: path to the Fastq
+    safe_name: name suitable for use in HTML links etc
+    fastqc: Fastqc instance
+    fastq_screen.names: list of FastQScreen names
+    fastq_screen.SCREEN.description: description of SCREEN
+    fastq_screen.SCREEN.png: associated PNG file for SCREEN
+    fastq_screen.SCREEN.txt: associated TXT file for SCREEN
+    fastq_screen.SCREEN.version: associated version for SCREEN
+    program_versions.NAME: version of package NAME
+
+    Provides the following methods:
+
+    report_fastqc
+    report_fastq_screens
+    report_program_versions
+    uboxplot
+    ufastqcplot
+    uscreenplot
     """
     def __init__(self,fastq,qc_dir):
         """
+        Create a new QCReportFastq instance
+
+        Arguments:
+          fastq (str): path to Fastq file
+          qc_dir (str): path to QC directory
         """
         # Source data
         self.name = os.path.basename(fastq)
@@ -673,6 +828,17 @@ class QCReportFastq(object):
 
     def report_fastqc(self,document,relpath=None):
         """
+        Report the FastQC outputs to a document
+
+        Creates a new subsection called "FastQC" with
+        a copy of the FastQC sequence quality boxplot and
+        a summary table of the results from each FastQC
+        module.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         fastqc_report = document.add_subsection("FastQC")
         if self.fastqc:
@@ -705,6 +871,16 @@ class QCReportFastq(object):
 
     def report_fastq_screens(self,document,relpath=None):
         """
+        Report the FastQScreen outputs to a document
+
+        Creates a new subsection called "Screens" with
+        copies of the screen plots for each screen and
+        links to the "raw" text files.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         screens_report = document.add_subsection("Screens",
                                                  name="fastq_screens_%s" %
@@ -743,6 +919,16 @@ class QCReportFastq(object):
 
     def report_program_versions(self,document):
         """
+        Report the program versions to a document
+
+        Creates a new subsection called "Program versions"
+        with a table listing the versions of the QC
+        programs.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         versions = document.add_subsection("Program versions")
         programs = Table(("Program","Version"))
@@ -756,16 +942,31 @@ class QCReportFastq(object):
 
     def uboxplot(self,inline=True):
         """
+        Return a mini-sequence quality boxplot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
         """
         return uboxplot(self.fastqc.data.path,inline=inline)
 
     def ufastqcplot(self,inline=True):
         """
+        Return a mini-FastQC summary plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
         """
         return ufastqcplot(self.fastqc.summary.path,inline=inline)
 
     def uscreenplot(self,inline=True):
         """
+        Return a mini-FastQScreen summary plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
         """
         screen_files = list()
         for name in self.fastq_screen.names:
@@ -785,7 +986,6 @@ def get_fastq_pairs(sample):
 
     Returns:
        list: list of FastqSet instances, sorted by R1 names
-
     """
     pairs = []
     fastqs_r1 = sample.fastq_subset(read_number=1)
@@ -820,7 +1020,6 @@ def pretty_print_reads(n):
 
     Returns:
       String: representation with commas for every thousand.
-
     """
     n = str(int(n))[::-1]
     n0 = []
