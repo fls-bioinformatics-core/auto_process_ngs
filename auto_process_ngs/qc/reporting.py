@@ -37,11 +37,102 @@ from .plots import uboxplot
 from .plots import encode_png
 from .. import get_version
 
-# Data
-from .illumina_qc import FASTQ_SCREENS
-
 # Module specific logger
 logger = logging.getLogger(__name__)
+
+#######################################################################
+# Data
+#######################################################################
+
+from .illumina_qc import FASTQ_SCREENS
+
+QC_REPORT_CSS_STYLES = """/* Headers */
+h1 { background-color: #42AEC2;
+     color: white;\n
+     padding: 5px 10px; }
+h2 { background-color: #8CC63F;
+     color: white;
+     display: inline-block;
+     padding: 5px 15px;
+     margin: 0;
+     border-top-left-radius: 20px;
+     border-bottom-right-radius: 20px; }
+ h3, h4 { background-color: grey;
+          color: white;
+          display: block;
+          padding: 5px 15px;
+          margin: 0;
+          border-top-left-radius: 20px;
+          border-bottom-right-radius: 20px; }
+/* Samples and Fastqs */
+.sample { margin: 10 10;
+          border: solid 2px #8CC63F;
+          padding: 0;
+          background-color: #ffe;
+          border-top-left-radius: 25px;
+          border-bottom-right-radius: 25px; }
+.fastqs { border: 1px solid grey;
+          padding: 5px;
+          margin: 5px 20px; }
+.fastq { border: 2px solid lightgray;
+         padding: 5px;
+         margin: 5px;
+         float: left; }
+.clear { clear: both; }
+/* Metadata table */
+table.metadata {
+          margin: 10 10;
+          border: solid 1px grey;
+          background-color: white;
+         font-size: 90%; }
+table.metadata tr td:first-child {
+          background-color: grey;
+          color: white;
+          padding: 2px 5px;
+          font-weight: bold; }
+/* Summary table */
+table.summary { border: solid 1px grey;
+          background-color: white;
+          font-size: 80%; }
+table.summary th { background-color: grey;
+                   color: white;
+                   padding: 2px 5px; }
+table.summary td { text-align: right;
+                   padding: 2px 5px;
+                   border-bottom: solid 1px lightgray; }
+table.fastq_summary tr td:first-child {
+          background-color: grey;
+          color: white;
+          font-weight: bold; }
+table.fastq_summary tr td:first-child a {
+          color: white;
+          font-weight: bold; }
+/* FastQC summary table */
+table.fastqc_summary span.PASS { font-weight: bold;
+                                 color: green; }
+table.fastqc_summary span.WARN { font-weight: bold;
+                                 color: orange; }
+table.fastqc_summary span.FAIL { font-weight: bold;
+                                 color: red; }
+/* Program versions */
+table.programs th { text-align: left;
+                    background-color: grey;
+                    color: white;
+                    padding: 2px 5px; }
+table.programs td { padding: 2px 5px;
+                    border-bottom: solid 1px lightgray; }
+/* General styles */
+p { font-size: 85%;
+    color: #808080; }
+/* Rules for printing */
+@media print
+{
+a { color: black; text-decoration: none; }
+.sample { page-break-before: always; }
+table th { border-bottom: solid 1px lightgray; }
+.no_print { display: none; }
+}
+"""
 
 #######################################################################
 # Classes
@@ -149,88 +240,7 @@ class QCReporter(object):
         # Initialise report
         report = QCReport(self._project,title=title,qc_dir=qc_dir)
         # Styles
-        report.add_css_rule("h1 { background-color: #42AEC2;\n"
-                            "     color: white;\n"
-                            "     padding: 5px 10px; }")
-        report.add_css_rule("h2 { background-color: #8CC63F;\n"
-                            "     color: white;\n"
-                            "     display: inline-block;\n"
-                            "     padding: 5px 15px;\n"
-                            "     margin: 0;\n"
-                            "     border-top-left-radius: 20px;\n"
-                            "     border-bottom-right-radius: 20px; }")
-        report.add_css_rule("h3, h4 { background-color: grey;\n"
-                            "     color: white;\n"
-                            "     display: block;\n"
-                            "     padding: 5px 15px;\n"
-                            "     margin: 0;\n"
-                            "     border-top-left-radius: 20px;\n"
-                            "     border-bottom-right-radius: 20px; }")
-        report.add_css_rule(".sample { margin: 10 10;\n"
-                            "          border: solid 2px #8CC63F;\n"
-                            "          padding: 0;\n"
-                            "          background-color: #ffe;\n"
-                            "          border-top-left-radius: 25px;\n"
-                            "          border-bottom-right-radius: 25px; }")
-        report.add_css_rule(".fastqs {\n"
-                            " border: 1px solid grey;\n"
-                            " padding: 5px;\n"
-                            " margin: 5px 20px;\n"
-                            "}")
-        report.add_css_rule(".fastq {\n"
-                            " border: 2px solid lightgray;\n"
-                            " padding: 5px;\n"
-                            " margin: 5px;\n"
-                            " float: left;\n"
-                            "}")
-        report.add_css_rule(".clear { clear: both; }")
-        report.add_css_rule("table.metadata { margin: 10 10;\n"
-                            "          border: solid 1px grey;\n"
-                            "          background-color: white;\n"
-                            "          font-size: 90%; }")
-        report.add_css_rule("table.metadata tr td:first-child {\n"
-                            "          background-color: grey;\n"
-                            "          color: white;\n"
-                            "          padding: 2px 5px;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.summary { border: solid 1px grey;\n"
-                            "                background-color: white;\n"
-                            "                font-size: 80% }")
-        report.add_css_rule("table.summary th { background-color: grey;\n"
-                            "                   color: white;\n"
-                            "                   padding: 2px 5px; }")
-        report.add_css_rule("table.summary td { text-align: right; \n"
-                            "                   padding: 2px 5px;\n"
-                            "                   border-bottom: solid 1px lightgray; }")
-        report.add_css_rule("table.fastq_summary tr td:first-child {\n"
-                            "          background-color: grey;\n"
-                            "          color: white;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.fastq_summary tr td:first-child a {\n"
-                            "          color: white;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.fastqc_summary span.PASS { font-weight: bold;\n"
-                            "                                 color: green; }")
-        report.add_css_rule("table.fastqc_summary span.WARN { font-weight: bold;\n"
-                            "                                 color: orange; }")
-        report.add_css_rule("table.fastqc_summary span.FAIL { font-weight: bold;\n"
-                            "                                 color: red; }")
-        report.add_css_rule("table.programs th { text-align: left;\n"
-                            "                    background-color: grey;\n"
-                            "                    color: white;\n"
-                            "                    padding: 2px 5px; }")
-        report.add_css_rule("table.programs td { padding: 2px 5px;\n"
-                            "border-bottom: solid 1px lightgray; }")
-        report.add_css_rule("p { font-size: 85%;\n"
-                            "    color: #808080; }")
-        # Rules for printing
-        report.add_css_rule("@media print\n"
-                            "{\n"
-                            "a { color: black; text-decoration: none; }\n"
-                            ".sample { page-break-before: always; }\n"
-                            "table th { border-bottom: solid 1px lightgray; }\n"
-                            ".no_print { display: none; }\n"
-                            "}")
+        report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
         report.write(filename)
         # Return the output filename
