@@ -189,8 +189,11 @@ def report_processing_qc(analysis_dir,html_file):
                 for l in subset_lanes:
                     data[l] = (pretty_print_reads(line[l])
                                if line[l] != '' else '')
-                barplot = ustackedbar(filter(lambda n: n != '',
-                                             [line[l] for l in subset_lanes]),
+                nreads = filter(lambda n: n != '',
+                                [line[l] for l in subset_lanes])
+                if not nreads:
+                    nreads = [0,]
+                barplot = ustackedbar(nreads,
                                       length=100,height=10,
                                       colors=('grey','lightgrey'),
                                       bbox=True,
