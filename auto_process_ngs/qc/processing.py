@@ -17,12 +17,32 @@ from .plots import ustackedbar
 # Functions
 #######################################################################
 
+def get_absolute_file_path(p,base=None):
+    """
+    Get absolute path for supplied path
+
+    Arguments:
+      p (str): path
+      base (str): optional, base directory to
+        use if p is relative
+
+    Returns:
+      String: absolute path for p.
+    """
+    if not os.path.isabs(p):
+        if base is not None:
+            p = os.path.join(os.path.abspath(base),p)
+        else:
+            p = os.path.abspath(p)
+    return p
+
 def report_processing_qc(analysis_dir,html_file):
     """
     Generate HTML report for processing statistics
 
     Arguments:
-      analysis_dir (AnalysisDir): 
+      analysis_dir (AutoProcess): AutoProcess instance for
+        the directory to report the processing from
       html_file (str): destination path and file name for
         HTML report
     """
@@ -41,6 +61,8 @@ def report_processing_qc(analysis_dir,html_file):
     per_lane_stats_file = analysis_dir.params.per_lane_stats_file
     if per_lane_stats_file is None:
         per_lane_stats_file = "per_lane_statistics.info"
+    per_lane_stats_file = get_absolute_file_path(per_lane_stats_file,
+                                                 base=analysis_dir.analysis_dir)
     if os.path.exists(per_lane_stats_file):
         per_lane_stats = processing_qc.add_section(
             "Per-lane statistics",
@@ -66,7 +88,9 @@ def report_processing_qc(analysis_dir,html_file):
         per_lane_stats.add(tbl)
         toc_list.add_item(Link("Per-lane statistics",per_lane_stats))
     # Per lane by sample statistics
-    per_lane_sample_stats_file = "per_lane_sample_stats.info"
+    per_lane_sample_stats_file = get_absolute_file_path(
+        "per_lane_sample_stats.info",
+        base=analysis_dir.analysis_dir)
     if os.path.exists(per_lane_sample_stats_file):
         per_lane_sample_stats = processing_qc.add_section(
             "Per-lane statistics by sample",
@@ -74,8 +98,8 @@ def report_processing_qc(analysis_dir,html_file):
         lane_toc_list = List()
         per_lane_sample_stats.add(lane_toc_list)
         # Store the data for each lane
-        with open("per_lane_sample_stats.info") as stats:
-            lane_data = []
+        lane_data = list()
+        with open(per_lane_sample_stats_file,'r') as stats:
             for line in stats:
                 if line.startswith("Lane "):
                     lane = int(line.split(' ')[-1])
@@ -98,13 +122,17 @@ def report_processing_qc(analysis_dir,html_file):
         # Create a section and table for each lane
         for data in lane_data:
             lane = data['lane']
-            max_reads = max([d['nreads'] for d in data['samples']])
-            total_reads = data['total_reads']
             s = per_lane_sample_stats.add_subsection(
                 "Lane %d" % lane,
                 name="per_lane_sample_stats_lane%d" % lane
             )
             lane_toc_list.add_item(Link("Lane %d" % lane,s))
+            if not data['samples']:
+                # No samples reported
+                s.add("No samples reported for this lane")
+                continue
+            max_reads = max([d['nreads'] for d in data['samples']])
+            total_reads = data['total_reads']
             current_project = None
             tbl = Table(columns=('pname','sname',
                                  'nreads','percreads',
@@ -141,12 +169,15 @@ def report_processing_qc(analysis_dir,html_file):
                                per_lane_sample_stats),
                           lane_toc_list)
     # Per fastq statistics
-    stats_file = "statistics_full.info"
+    stats_file = get_absolute_file_path("statistics_full.info",
+                                        base=analysis_dir.analysis_dir)
     if not os.path.exists(stats_file):
         if analysis_dir.params.stats_file is not None:
             stats_file = analysis_dir.params.stats_file
         else:
             stats_file = "statistics.info"
+    stats_file = get_absolute_file_path(stats_file,
+                                        base=analysis_dir.analysis_dir)
     if os.path.exists(stats_file):
         per_file_stats = processing_qc.add_section(
             "Per-file statistics by project",
@@ -189,8 +220,11 @@ def report_processing_qc(analysis_dir,html_file):
                 for l in subset_lanes:
                     data[l] = (pretty_print_reads(line[l])
                                if line[l] != '' else '')
-                barplot = ustackedbar(filter(lambda n: n != '',
-                                             [line[l] for l in subset_lanes]),
+                nreads = filter(lambda n: n != '',
+                                [line[l] for l in subset_lanes])
+                if not nreads:
+                    nreads = [0,]
+                barplot = ustackedbar(nreads,
                                       length=100,height=10,
                                       colors=('grey','lightgrey'),
                                       bbox=True,

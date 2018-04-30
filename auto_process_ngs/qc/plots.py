@@ -379,7 +379,11 @@ def ustackedbar(data,outfile=None,inline=False,bbox=True,
     pixels = img.load()
     # Normalise the data
     total = float(sum(data))
-    ndata = [int(float(d)/total*float(length)) for d in data]
+    try:
+        ndata = [int(float(d)/total*float(length)) for d in data]
+    except ZeroDivisionError:
+        # Total was zero
+        ndata = [0 for d in data]
     # Reset the last value
     ndata[-1] = length - sum(ndata[:-1])
     # Create the plot
