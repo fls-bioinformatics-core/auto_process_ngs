@@ -98,8 +98,8 @@ def report_processing_qc(analysis_dir,html_file):
         lane_toc_list = List()
         per_lane_sample_stats.add(lane_toc_list)
         # Store the data for each lane
+        lane_data = list()
         with open(per_lane_sample_stats_file,'r') as stats:
-            lane_data = []
             for line in stats:
                 if line.startswith("Lane "):
                     lane = int(line.split(' ')[-1])
@@ -122,13 +122,17 @@ def report_processing_qc(analysis_dir,html_file):
         # Create a section and table for each lane
         for data in lane_data:
             lane = data['lane']
-            max_reads = max([d['nreads'] for d in data['samples']])
-            total_reads = data['total_reads']
             s = per_lane_sample_stats.add_subsection(
                 "Lane %d" % lane,
                 name="per_lane_sample_stats_lane%d" % lane
             )
             lane_toc_list.add_item(Link("Lane %d" % lane,s))
+            if not data['samples']:
+                # No samples reported
+                s.add("No samples reported for this lane")
+                continue
+            max_reads = max([d['nreads'] for d in data['samples']])
+            total_reads = data['total_reads']
             current_project = None
             tbl = Table(columns=('pname','sname',
                                  'nreads','percreads',
