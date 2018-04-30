@@ -10,7 +10,7 @@ from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.qc.processing import report_processing_qc
 
 # Set to False to keep test output dirs
-REMOVE_TEST_OUTPUTS = False
+REMOVE_TEST_OUTPUTS = True
 
 class TestReportProcessingQC(unittest.TestCase):
     """
