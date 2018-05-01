@@ -10,6 +10,9 @@
 
 import os
 import logging
+import uuid
+import tempfile
+import shutil
 import auto_process_ngs.utils as utils
 import auto_process_ngs.fileops as fileops
 from auto_process_ngs.applications import Command
@@ -74,7 +77,7 @@ class RunQC(object):
 
     def run(self,illumina_qc=None,report_html=None,multiqc=False,
             qc_runner=None,verify_runner=None,report_runner=None,
-            max_jobs=None):
+            max_jobs=None,batch_size=None):
         """
         Schedule and execute QC jobs
 
@@ -93,6 +96,9 @@ class RunQC(object):
             for QC reporting
           max_jobs (int): optional, specify maximum
             number of jobs to run concurrently
+          batch_size (int): if set then run QC commands in
+            batches, with each job running this many
+            commands at a time
 
         Returns:
           Integer: returns 0 if QC ran to completion
@@ -127,7 +133,8 @@ class RunQC(object):
                 project.setup_qc(self._sched,
                                  illumina_qc,
                                  qc_runner=qc_runner,
-                                 verify_runner=verify_runner)
+                                 verify_runner=verify_runner,
+                                 batch_size=batch_size)
         self._sched.wait()
         # Verify the outputs and generate QC reports
         failed_projects = []
@@ -201,6 +208,7 @@ class ProjectQC(object):
         if self.sample_pattern is None:
             self.sample_pattern = '*'
         self.ungzip_fastqs = ungzip_fastqs
+        self.tmp = None
         # Verification
         self.verification_status = None
         self.fastqs_missing_qc = None
@@ -252,13 +260,13 @@ class ProjectQC(object):
             "--verify",
             "--list-unverified",
             project.dirn)
-        job = sched.submit(collect_cmd,
-                           name="%s" % name,
-                           wd=project.dirn,
-                           log_dir=self.log_dir,
-                           callbacks=(self._extract_fastqs,),
-                           wait_for=wait_for,
-                           runner=runner)
+        return sched.submit(collect_cmd,
+                            name="%s" % name,
+                            wd=project.dirn,
+                            log_dir=self.log_dir,
+                            callbacks=(self._extract_fastqs,),
+                            wait_for=wait_for,
+                            runner=runner)
 
     def _extract_fastqs(self,name,jobs,sched):
         """
@@ -290,7 +298,7 @@ class ProjectQC(object):
             logger.debug("%s" % fq)
 
     def setup_qc(self,sched,illumina_qc,qc_runner=None,
-                 verify_runner=None):
+                 verify_runner=None,batch_size=None):
         """
         Set up the QC for the project
 
@@ -303,10 +311,17 @@ class ProjectQC(object):
             executing QC
           verify_runner (JobRunner): job runner to use
             for QC verification
+          batch_size (int): if set then run QC commands
+            in batches, with each job running this many
+            commands at a time
         """
         project = self.project
         print "Using Fastqs from %s" % project.fastq_dir
         print "Using QC directory %s" % project.qc_dir
+        # Temp directory
+        self.tmp = tempfile.mkdtemp(prefix="tmp.",
+                                    dir=project.dirn)
+        print "Made temp directory %s" % self.tmp
         # Loop over samples and queue up those where the QC
         # is missing
         samples = project.get_samples(self.sample_pattern)
@@ -317,6 +332,12 @@ class ProjectQC(object):
         print "%d samples matched:" % len(samples)
         for sample in samples:
             print "-- %s" % sample.name
+        use_batches = (batch_size is not None)
+        if use_batches:
+            print "QC commands will be batched (up to %d commands " \
+                "per batch script)" % batch_size
+            batch_qc_cmds = list()
+            batch_jobs = list()
         groups = []
         for sample in samples:
             indx = 0
@@ -343,14 +364,24 @@ class ProjectQC(object):
                 print "Setting up QC run:"
                 for fq in fastq_pair:
                     print "\t%s" % os.path.basename(fq)
+                # Acquire QC commands for this pair
+                qc_cmds = illumina_qc.commands(fastq_pair,
+                                               qc_dir=project.qc_dir)
+                # Handle batching
+                if use_batches:
+                    batch_qc_cmds.extend(qc_cmds)
+                    while len(batch_qc_cmds) >= batch_size:
+                        job = self._submit_batch(sched,
+                                                 batch_qc_cmds[:batch_size],
+                                                 runner=qc_runner)
+                        batch_jobs.append(job.name)
+                        batch_qc_cmds = batch_qc_cmds[batch_size:]
+                    continue
                 # Create a group if none exists for this sample
                 if group is None:
                     group = sched.group("%s.%s" % (project.name,
                                                    sample.name),
                                         log_dir=self.log_dir)
-                # Acquire QC commands for this pair
-                qc_cmds = illumina_qc.commands(fastq_pair,
-                                               qc_dir=project.qc_dir)
                 # Create and submit QC job for each command
                 for qc_cmd in qc_cmds:
                     indx += 1
@@ -369,11 +400,74 @@ class ProjectQC(object):
             if group:
                 group.close()
                 groups.append(group.name)
+        # Batch any remaining jobs
+        if use_batches:
+            if batch_qc_cmds:
+                job = self._submit_batch(sched,
+                                         batch_qc_cmds,
+                                         runner=qc_runner)
+                batch_jobs.append(job.name)
+            # Verification should wait for these jobs
+            wait_for = batch_jobs
+        else:
+            wait_for = groups
         # Add verification job
         verify_job = self.check_qc(sched,
                                    "verify_qc",
-                                   wait_for=groups,
+                                   wait_for=wait_for,
                                    runner=verify_runner)
+        # Do clean up on QC completion
+        sched.callback("%s.clean_up" % project.name,
+                       self._clean_up,
+                       wait_for=(verify_job.name,))
+
+    def _clean_up(self,name,jobs,sched):
+        """
+        Internal: callback to clean up after QC completion
+        """
+        print "Post-QC clean up for '%s'" % self.project.name
+        # Remove temporary dir
+        if self.tmp is not None:
+            try:
+                shutil.rmtree(self.tmp)
+            except OSError as ex:
+                logger.warning("Failed to remove '%s': %s" %
+                               (self.tmp,ex))
+            self.tmp = None
+
+    def _submit_batch(self,sched,cmds,runner=None):
+        """
+        Run a batch of commands in a single script
+
+        Arguments:
+          sched (SimpleScheduler): scheduler instance
+            to use to run the jobs
+          cmds (list): list of Command instances to be
+            executed
+          runner (JobRunner): job runner to use
+
+        Returns:
+          SchedulerJob: the scheduler job instance
+            created when the batch script was submitted.
+        """
+        print "Creating script to batch %d commands" % len(cmds)
+        uid = uuid.uuid4()
+        script_file = os.path.join(self.tmp,"runqc_batch.%s.%s.sh" %
+                                   (self.project.name,uid))
+        with open(script_file,'w') as script:
+            script.write("#!/bin/bash\n")
+            for cmd in cmds:
+                script.write("%s\n" % cmd.make_wrapper_script())
+            script.write("##\n")
+        print "Submitting %s" % script_file
+        job = sched.submit(Command("sh",script_file),
+                           name="runqc_batch.%s.%s" % (self.project.name,
+                                                       uid),
+                           wd=self.project.dirn,
+                           log_dir=self.log_dir,
+                           runner=runner)
+        print "Job: %s" % job
+        return job
 
     def report_qc(self,sched,report_html=None,zip_outputs=True,
                   multiqc=False,runner=None):
@@ -381,7 +475,8 @@ class ProjectQC(object):
         Generate QC report
 
         Arguments:
-          sched (SimpleScheduler):
+          sched (SimpleScheduler): scheduler instance to use
+            to run the reporting job
           report_html (str): optional, path to the name of
             the QC report
           zip_outputs (bool): if True then also generate ZIP
