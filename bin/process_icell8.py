@@ -40,6 +40,8 @@ from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import normalize_sample_name
+from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
@@ -383,81 +385,6 @@ class ContaminantFilterFastqPair(PipelineCommand):
             cmd.add_args('-a',self._aligner)
         cmd.add_args(*self._fastq_pair)
         return cmd
-
-class IlluminaQC(PipelineCommand):
-    """
-    Run the 'illumina_qc.sh' script on one or more Fastqs
-    """
-    def init(self,fastqs,nthreads=1,working_dir=None,qc_dir=None,
-             fastq_screen_subset=None):
-        """
-        Create a new IlluminaQC instance
-
-        Arguments:
-          fastqs (list): list of Fastqs to run the QC
-            pipeline on
-          nthreads (int): number of cores available to
-            run the pipeline with
-          working_dir (str): path to working directory
-            to run the pipeline in (defaults to cwd if
-            not set)
-          qc_dir (str): path specifying where to write
-            the QC outputs to
-          fastq_screen_subset (int): if set then
-            explicitly specifies the number of reads to
-            use for fastq_screen's --subset option
-        """
-        self.fastqs = fastqs
-        self.nthreads = nthreads
-        if working_dir is None:
-            working_dir = os.getcwd()
-        self.working_dir = os.path.abspath(working_dir)
-        self.qc_dir = qc_dir
-        self.fastq_screen_subset = fastq_screen_subset
-    def cmd(self):
-        """
-        Build the command
-        """
-        cmd = Command('cd',self.working_dir)
-        for fastq in self.fastqs:
-            cmd.add_args('&&','illumina_qc.sh',fastq)
-            if self.nthreads > 1:
-                cmd.add_args('--threads',self.nthreads)
-            if self.qc_dir is not None:
-                cmd.add_args('--qc_dir',self.qc_dir)
-            if self.fastq_screen_subset is not None:
-                cmd.add_args('--subset',
-                             self.fastq_screen_subset)
-        return cmd
-
-class MultiQC(PipelineCommand):
-    """
-    Run the MultiQC program on a set of QC outputs
-    """
-    def init(self,qc_dir,out_file,title):
-        """
-        Create a new MultiQC instance
-
-        Arguments:
-          qc_dir (str): path to the QC outputs to run
-            MultiQC on
-          out_file (str): path and filename for the
-            output HTML report from MultiQC
-          title (str): title to assign to the MultiQC
-            report
-        """
-        self.qc_dir = qc_dir
-        self.out_file = out_file
-        self.title = title
-    def cmd(self):
-        """
-        Build the command
-        """
-        return Command('multiqc',
-                       '--title',self.title,
-                       '--filename',self.out_file,
-                       '--force',
-                       self.qc_dir)
 
 ######################################################################
 # ICell8 pipeline tasks
@@ -1247,215 +1174,6 @@ class MergeSampleFastqs(PipelineTask):
         return AttributeDictionary(
             pattern=pattern,
             fastqs=FileCollector(out_dir,pattern),
-        )
-
-class CollectFastqsForQC(PipelineTask):
-    """
-    Fetch list of Fastq files which fail QC verification
-    """
-    def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
-        """
-        Initialise the CollectFastqsForQC task
-
-        Arguments:
-          project_dir (str): name/path to project directory
-          fastq_dir (str): subdirectory with Fastqs to examine
-          qc_dir (str): subdirectory containing QC outputs
-        """
-        self.project_dir = None
-        self.files = list()
-    def setup(self):
-        self.project_dir = os.path.abspath(self.args.project_dir)
-        self.add_cmd(
-            PipelineCommandWrapper(
-                "Generate QC report for project '%s'" %
-                os.path.basename(self.args.project_dir),
-                "reportqc.py",
-                "--fastq_dir",self.args.fastq_dir,
-                "--qc_dir",self.args.qc_dir,
-                "--verify",
-                "--list-unverified",
-                self.project_dir,
-                ";",
-                "echo","-n"))
-    def finish(self):
-        # Collect Fastqs which failed verification
-        for line in self.stdout.split('\n'):
-            print line
-            if not line.startswith(self.project_dir):
-                continue
-            self.files.append(line)
-        self.files.sort()
-        print "Fastqs: %s" % self.files
-    def output(self):
-        """
-        Return list with Fastqs failing QC verification
-        """
-        return self.files
-
-class RunQC(PipelineTask):
-    """
-    Run ``illumina_qc.sh`` pipeline on a set of Fastqs
-    """
-    def init(self,project_dir,fastqs,
-             fastq_dir='fastqs',qc_dir='qc',
-             nthreads=1,batch_size=25,
-             fastq_screen_subset=None):
-        """
-        Initialise the RunQC task
-
-        Arguments:
-          project_dir (str): path to the project
-            directory to run the QC pipeline on
-          fastqs (list): list of paths to Fastq files
-            to run the QC on
-          fastq_dir (str): name of the subdirectory
-            within the project with the Fastq files
-            to run the pipeline on (default='fastqs')
-          qc_dir (str): path specifying where to write
-            the QC outputs to
-          nthreads (int): number of cores available to
-            run the pipeline with
-          batch_size (int): number of Fastq files to
-            group together into one command for
-            running QC (larger batches = fewer jobs,
-            but each job takes longer) (default=25)
-          fastq_screen_subset (int): if set then
-            explicitly specifies the number of reads to
-            use for fastq_screen's --subset option
-        """
-        self.qc_dir = None
-        self.qc_report = None
-    def setup(self):
-        # Gather Fastqs
-        project = AnalysisProject(
-            os.path.basename(self.args.project_dir),
-            self.args.project_dir,
-            fastq_dir=self.args.fastq_dir)
-        batch_size = self.args.batch_size
-        # Make the output qc directory
-        self.qc_dir = project.setup_qc_dir(self.args.qc_dir)
-        print "QC dir: %s" % self.qc_dir
-        print "%s Fastqs supplied" % len(self.args.fastqs)
-        fastqs = [fq for fq in self.args.fastqs]
-        while fastqs:
-            for fq in fastqs[:batch_size]:
-                print fq
-            self.add_cmd(IlluminaQC(fastqs[:batch_size],
-                                    nthreads=self.args.nthreads,
-                                    working_dir=self.args.project_dir,
-                                    qc_dir=self.qc_dir,
-                                    fastq_screen_subset=
-                                    self.args.fastq_screen_subset))
-            fastqs = fastqs[batch_size:]
-    def output(self):
-        return None
-
-class ReportQC(PipelineTask):
-    """
-    Generate QC report for set of Fastqs in a project
-    """
-    def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
-        """
-        Initialise the ReportQC task
-
-        Arguments:
-          project_dir (str): name/path to project directory
-          fastq_dir (str): subdirectory with Fastqs to examine
-          qc_dir (str): subdirectory containing QC outputs
-        """
-        self.out_file = None
-        self.title = None
-    def setup(self):
-        project = AnalysisProject(
-            os.path.basename(self.args.project_dir),
-            self.args.project_dir,
-            fastq_dir=self.args.fastq_dir)
-        qc_base = os.path.basename(self.args.qc_dir)
-        self.out_file = os.path.join(project.dirn,
-                                     '%s_report.html' % qc_base)
-        if project.info.run is not None:
-            self.title = "%s/%s" % (project.info.run,
-                               project.name)
-        else:
-            self.title = "%s" % project.name
-        if self.args.fastq_dir is not None:
-            self.title = "%s (%s)" % (self.title,
-                                      self.args.fastq_dir)
-        title = "%s: QC report" % self.title
-        print "Title : '%s'" % self.title
-        print "Report: %s" % self.out_file
-        self.add_cmd(
-            PipelineCommandWrapper(
-                "Generate QC report for project '%s'" %
-                os.path.basename(self.args.project_dir),
-                "reportqc.py",
-                "--fastq_dir",self.args.fastq_dir,
-                "--qc_dir",self.args.qc_dir,
-                "--title","'%s'" % self.title,
-                "--filename",self.out_file,
-                "--zip",
-                project.dirn))
-    def output(self):
-        """Returns object pointing to reporting outputs
-
-        The returned object has the following properties:
-
-        - 'qc_dir': path to the directory with the QC outputs
-        - 'report_zip': path to the ZIP file holding the QC
-          report and supporting files
-        """
-        return AttributeDictionary(
-            qc_dir=self.qc_dir,
-            report_zip=self.qc_report,
-        )
-
-class RunMultiQC(PipelineTask):
-    """
-    Run MultiQC on QC outputs from a project
-    """
-    def init(self,project_dir,fastq_dir='fastqs',qc_dir='qc'):
-        """
-        Initialise the RunMultiQC task
-
-        Arguments:
-          project_dir (str): path to the project
-            directory with the QC outputs
-          fastq_dir (str): name of the subdirectory
-            within the project containing the Fastq
-            files associated with the QC outputs of
-            interest (default='fastqs')
-          qc_dir (str): path to subdirectory holding
-            the QC outputs to run MultiQC on
-        """
-        self.multiqc_out = None
-    def setup(self):
-        project = AnalysisProject(
-            os.path.basename(self.args.project_dir),
-            self.args.project_dir,
-            fastq_dir=self.args.fastq_dir)
-        project.use_qc_dir(self.args.qc_dir)
-        multiqc_out = os.path.join(project.dirn,
-                                   "multi%s_report.html" % \
-                                   os.path.basename(project.qc_dir))
-        if project.info.run is not None:
-            title = "%s/%s" % (project.info.run,
-                               project.name)
-        else:
-            title = "%s" % project.name
-        self.add_cmd(MultiQC(project.qc_dir,
-                             multiqc_out,
-                             title))
-        self.multiqc_out = multiqc_out
-    def output(self):        
-        """Returns object pointing to MultiQC outputs
-
-        The returned object has the following properties:
-
-        - 'multiqc_out': path to MultiQC output file
-        """
-        return AttributeDictionary(
-            multiqc_out=self.multiqc_out,
         )
 
 class CheckICell8Barcodes(PipelineTask):
@@ -2324,73 +2042,16 @@ if __name__ == "__main__":
         # Add to list of pipelines
         pipelines.append(ppl)
 
-    # Pipeline for running the QC
-    print "Setting up pipeline for running Illumina QC"
-    ppl = Pipeline(name="ICell8: run Illumina QC")
-    barcode_qc_fastqs = CollectFastqsForQC("Collect Fastqs for QC (barcodes)",
-                                           outdir,
-                                           fastq_dir="fastqs.barcodes",
-                                           qc_dir="qc.barcodes")
-    run_qc_barcodes = RunQC("Run QC for barcodes",
-                            outdir,
-                            barcode_qc_fastqs.output(),
-                            nthreads=nprocessors['qc'],
-                            fastq_dir="fastqs.barcodes",
-                            qc_dir="qc.barcodes",
-                            fastq_screen_subset=
-                            default_fastq_screen_subset)
-    qc_report_barcodes = ReportQC("Report QC for barcodes",
-                                  outdir,
-                                  fastq_dir="fastqs.barcodes",
-                                  qc_dir="qc.barcodes")
-    multiqc_barcodes = RunMultiQC("Run MultiQC for barcodes",
-                                  outdir,
-                                  fastq_dir="fastqs.barcodes",
-                                  qc_dir="qc.barcodes")
-    ppl.add_task(barcode_qc_fastqs)
-    ppl.add_task(run_qc_barcodes,requires=(barcode_qc_fastqs,),
-                 runner=runners['qc'])
-    ppl.add_task(qc_report_barcodes,requires=(run_qc_barcodes,))
-    ppl.add_task(multiqc_barcodes,requires=(run_qc_barcodes,))
-    sample_qc_fastqs = CollectFastqsForQC("Collect Fastqs for QC (samples)",
-                                           outdir,
-                                           fastq_dir="fastqs.samples",
-                                           qc_dir="qc.samples")
-    run_qc_samples = RunQC("Run QC for samples",
-                           outdir,
-                           sample_qc_fastqs.output(),
-                           nthreads=nprocessors['qc'],
-                           fastq_dir="fastqs.samples",
-                           qc_dir="qc.samples",
-                           fastq_screen_subset=
-                           default_fastq_screen_subset)
-    qc_report_samples = ReportQC("Report QC for samples",
-                                 outdir,
-                                 fastq_dir="fastqs.samples",
-                                 qc_dir="qc.samples")
-    multiqc_samples = RunMultiQC("Run MultiQC for samples",
-                                 outdir,
-                                 fastq_dir="fastqs.samples",
-                                 qc_dir="qc.samples")
-    ppl.add_task(sample_qc_fastqs)
-    ppl.add_task(run_qc_samples,requires=(sample_qc_fastqs,),
-                 runner=runners['qc'])
-    ppl.add_task(qc_report_samples,requires=(run_qc_samples,))
-    ppl.add_task(multiqc_samples,requires=(run_qc_samples,))
-
+    # Final reporting
+    print "Setting up a pipeline for final reporting"
+    ppl = Pipeline(name="ICell8: final reporting")
     # Reset primary fastq dir (if working in a project)
     if analysis_project is not None:
         update_project_data = UpdateProjectData(
             "Updating metadata associated with the project",
             icell8_dir,"fastqs.samples")
         ppl.add_task(update_project_data)
-
-    # Add to list of pipelines
-    pipelines.append(ppl)
-
-    # Final reporting
-    print "Setting up a pipeline for final reporting"
-    ppl = Pipeline(name="ICell8: final reporting")
+    # Final report
     final_report = ReportProcessing("Generate processing report",
                                     outdir)
     ppl.add_task(final_report)
@@ -2406,6 +2067,30 @@ if __name__ == "__main__":
             # Finished with error
             logger.critical("Pipeline failed: exit status %s" % exit_status)
             sys.exit(exit_status)
+
+    # Run the QC
+    print "Running the QC"
+    illumina_qc = IlluminaQC(
+        nthreads=nprocessors['qc'],
+        fastq_screen_subset=default_fastq_screen_subset)
+    runqc = RunQC()
+    runqc.add_project(analysis_project,
+                      fastq_dir="fastqs.samples",
+                      qc_dir="qc.samples")
+    runqc.add_project(analysis_project,
+                      fastq_dir="fastqs.barcodes",
+                      qc_dir="qc.barcodes")
+    exit_status = runqc.run(illumina_qc,
+                            multiqc=True,
+                            qc_runner=runners['qc'],
+                            report_runner=default_runner,
+                            max_jobs=max_jobs,
+                            batch_size=25)
+    if exit_status != 0:
+        # Finished with error
+        logger.critical("QC failed: exit status %s" % exit_status)
+        sys.exit(exit_status)
+
     # Finish
     print "All pipelines completed ok"
     sys.exit(0)
