@@ -130,6 +130,10 @@ if __name__ == "__main__":
                    action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument('-b','--batch',metavar='N',action='store',
+                   dest='batch_size',type=int, default=None,
+                   help="batch QC commands with N commands per job "
+                   "(default: no batching)")
     p.add_argument('--modulefiles',action='store',
                    dest='modulefiles',default=None,
                    help="comma-separated list of environment "
@@ -187,7 +191,8 @@ if __name__ == "__main__":
                        qc_runner=qc_runner,
                        verify_runner=default_runner,
                        report_runner=default_runner,
-                       max_jobs=args.max_jobs)
+                       max_jobs=args.max_jobs,
+                       batch_size=args.batch_size)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
