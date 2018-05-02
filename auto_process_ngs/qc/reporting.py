@@ -211,6 +211,7 @@ class QCReporter(object):
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
+               report_attrs=None,summary_fields=None,
                relative_links=False):
         """
         Report the QC for the project
@@ -222,6 +223,10 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
+          report_attrs (list): optional, list of elements to
+            report for each Fastq pair
+          summary_fields (list): optional, list of fields to
+            report for each sample in the summary table
           relative_links (boolean): optional, if set to True
             then use relative paths for links in the report
             (default is to use absolute paths)
@@ -240,7 +245,11 @@ class QCReporter(object):
         else:
             relpath = None
         # Initialise report
-        report = QCReport(self._project,title=title,qc_dir=qc_dir)
+        report = QCReport(self._project,
+                          title=title,
+                          qc_dir=qc_dir,
+                          report_attrs=report_attrs,
+                          summary_fields=summary_fields)
         # Styles
         report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
@@ -393,8 +402,32 @@ class QCReport(Document):
 
     >>> report = QCReport(project)
     >>> report.write("qc_report.html")
+
+    To control the fields written to the summary table, specify
+    a list of field names via the 'summary_fields' argument.
+    Valid field names are:
+
+    - sample: sample name
+    - fastq: Fastq name
+    - fastqs: Fastq R1/R2 names
+    - reads: number of reads
+    - fastqc_r1: FastQC mini-plot for R1
+    - boxplot_r1: FastQC per-base-quality mini-boxplot' for R1
+    - screens_r1: FastQScreen mini-plots for R1
+    - fastqc_r2: FastQC mini-plot for R2
+    - boxplot_r2: FastQC per-base-quality mini-boxplot' for R2
+    - screens_r2: FastQScreen mini-plots for R2
+
+    To control the elements written to the reports for each Fastq
+    pair, specify a list of element names via the 'report_attrs'
+    argument. Valid element names are:
+
+    - fastqc: FastQC report
+    - fastq_screen: FastQCScreen report
+    - program_versions: program versions
     """
-    def __init__(self,project,title=None,qc_dir=None):
+    def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
+                 summary_fields=None):
         """
         Create a new QCReport instance
 
@@ -405,6 +438,10 @@ class QCReport(Document):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          report_attrs (list): list of elements to report for
+            each Fastq pair
+          summary_fields (list): list of fields to report for
+            each sample in the summary table
         """
         logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
         # Store project
@@ -423,13 +460,48 @@ class QCReport(Document):
             title = "QC report: %s" % self.project.name
         # Initialise superclass
         Document.__init__(self,title)
+        # Attributes to report for each sample
+        if report_attrs is None:
+            attrs = ('fastqc','fastq_screen','program_versions')
+        self.report_attrs = report_attrs
+        # Field descriptions for summary table
+        self.field_descriptions = { 'sample': 'Sample',
+                                    'fastq' : 'Fastq',
+                                    'fastqs': 'Fastqs (R1/R2)',
+                                    'reads': '#reads',
+                                    'fastqc_r1': 'FastQC',
+                                    'boxplot_r1': 'Boxplot',
+                                    'screens_r1': 'Screens',
+                                    'fastqc_r2': 'FastQC',
+                                    'boxplot_r2': 'Boxplot',
+                                    'screens_r2': 'Screens' }
+        # Fields to report in summary table
+        if not summary_fields:
+            if self.project.info.paired_end:
+                summary_fields = ('sample',
+                                  'fastqs',
+                                  'reads',
+                                  'fastqc_r1',
+                                  'boxplot_r1',
+                                  'screens_r1',
+                                  'fastqc_r2',
+                                  'boxplot_r2',
+                                  'screens_r2',)
+            else:
+                summary_fields = ('sample',
+                                  'fastq',
+                                  'reads',
+                                  'fastqc_r1',
+                                  'boxplot_r1',
+                                  'screens_r1')
+        self.summary_fields = summary_fields
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
         self.summary_table = self._init_summary_table()
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.summary = self._init_summary_section()
-        # Add data
+        # Build the report
         self.report_metadata()
         for sample in self.project.samples:
             self.report_sample(sample)
@@ -451,34 +523,8 @@ class QCReport(Document):
 
         Associated CSS classes are 'summary' and 'fastq_summary'
         """
-        if self.project.info.paired_end:
-            fields = ('sample',
-                      'fastqs',
-                      'reads',
-                      'fastqc_r1',
-                      'boxplot_r1',
-                      'screens_r1',
-                      'fastqc_r2',
-                      'boxplot_r2',
-                      'screens_r2',)
-        else:
-            fields = ('sample',
-                      'fastq',
-                      'reads',
-                      'fastqc_r1',
-                      'boxplot_r1',
-                      'screens_r1')
-        field_descriptions = { 'sample': 'Sample',
-                               'fastq' : 'Fastq',
-                               'fastqs': 'Fastqs (R1/R2)',
-                               'reads': '#reads',
-                               'fastqc_r1': 'FastQC',
-                               'boxplot_r1': 'Boxplot',
-                               'screens_r1': 'Screens',
-                               'fastqc_r2': 'FastQC',
-                               'boxplot_r2': 'Boxplot',
-                               'screens_r2': 'Screens' }
-        summary_tbl = Table(fields,**field_descriptions)
+        summary_tbl = Table(self.summary_fields,
+                            **self.field_descriptions)
         summary_tbl.add_css_classes('summary','fastq_summary')
         return summary_tbl
 
@@ -558,14 +604,15 @@ class QCReport(Document):
             fastq_pair = QCReportFastqPair(fq_pair.r1,
                                            fq_pair.r2,
                                            self.qc_dir)
-            fastq_pair.report(sample_report)
+            fastq_pair.report(sample_report,attrs=self.report_attrs)
             # Add line in summary table
             if sample_name is not None:
                 idx = self.summary_table.add_row(sample=Link(sample_name,
                                                              sample_report))
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
-            fastq_pair.update_summary_table(self.summary_table,idx=idx)
+            fastq_pair.update_summary_table(self.summary_table,idx=idx,
+                                            fields=self.summary_fields)
 
 class QCReportFastqPair(object):
     """
@@ -720,7 +767,9 @@ class QCReportFastqPair(object):
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
-            if field == "fastq":
+            if field == "sample":
+                logger.debug("'sample' ignored")
+            elif field == "fastq":
                 summary_table.set_value(idx,'fastq',
                                         Link(self.r1.name,
                                              "#%s" % self.r1.safe_name))
