@@ -121,7 +121,7 @@ class RunQC(object):
         self._sched.start()
         # Initial QC check for each project
         for project in self._projects:
-            print "=== Checking QC for '%s' ===" % project.name
+            print "=== Checking QC for '%s' ===" % project.title
             project.check_qc(self._sched,
                              name="pre_qc_check",
                              runner=verify_runner)
@@ -129,7 +129,7 @@ class RunQC(object):
         # Run QC for each project
         for project in self._projects:
             if not project.verify():
-                print "=== Setting up QC for '%s' ===" % project.name
+                print "=== Setting up QC for '%s' ===" % project.title
                 project.setup_qc(self._sched,
                                  illumina_qc,
                                  qc_runner=qc_runner,
@@ -142,7 +142,7 @@ class RunQC(object):
             if not project.verify():
                 failed_projects.append(project)
             else:
-                print "=== Reporting QC for '%s' ===" % project.name
+                print "=== Reporting QC for '%s' ===" % project.title
                 project.report_qc(self._sched,
                                   report_html=report_html,
                                   multiqc=multiqc,
@@ -153,7 +153,7 @@ class RunQC(object):
         for project in self._projects:
             if project not in failed_projects:
                 if project.reporting_status == 0:
-                    print "Generated QC report for '%s'" % project.name
+                    print "Generated QC report for '%s'" % project.title
                 else:
                     failed_projects.append(project)
         # Report failed projects
@@ -222,6 +222,21 @@ class ProjectQC(object):
         """
         return self.project.name
 
+    @property
+    def title(self):
+        """
+        Return project title (to use in logging etc)
+        """
+        primary_fastq_dir = os.path.basename(
+            self.project.info.primary_fastq_dir)
+        fastq_dir = os.path.basename(self.fastq_dir)
+        if fastq_dir == primary_fastq_dir:
+            # Title is project name
+            return self.project.name
+        else:
+            # Title is project name with fastq dir
+            return "%s:%s" % (self.project.name,fastq_dir)
+
     def check_qc(self,sched,name,wait_for=None,runner=None):
         """
         Check for Fastqs with missing/failed QC outputs
@@ -250,7 +265,7 @@ class ProjectQC(object):
             QC verification
         """
         project = self.project
-        name = "%s.%s" % (name,project.name)
+        name = "%s.%s" % (name,self.title)
         self.verification_status = None
         self.fastqs_missing_qc = None
         collect_cmd = Command(
@@ -389,7 +404,7 @@ class ProjectQC(object):
                         os.path.basename(qc_cmd.command))[0]
                     label = "%s.%s.%s#%03d" % \
                             (command_name,
-                             project.name,
+                             self.title,
                              sample.name,indx)
                     job = group.add(qc_cmd,
                                     name=label,
@@ -461,7 +476,7 @@ class ProjectQC(object):
             script.write("##\n")
         print "Submitting %s" % script_file
         job = sched.submit(Command("sh",script_file),
-                           name="runqc_batch.%s.%s" % (self.project.name,
+                           name="runqc_batch.%s.%s" % (self.title,
                                                        uid),
                            wd=self.project.dirn,
                            log_dir=self.log_dir,
@@ -512,8 +527,9 @@ class ProjectQC(object):
         if multiqc:
             report_cmd.add_args("--multiqc")
         report_cmd.add_args(project.dirn)
+        label = "report_qc.%s" % self.title
         job = sched.submit(report_cmd,
-                           name="report_qc.%s" % self.name,
+                           name=label,
                            wd=project.dirn,
                            log_dir=self.log_dir,
                            callbacks=(self._check_report,),
