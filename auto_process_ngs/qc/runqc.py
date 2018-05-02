@@ -470,10 +470,9 @@ class ProjectQC(object):
         script_file = os.path.join(self.tmp,"runqc_batch.%s.%s.sh" %
                                    (self.project.name,uid))
         with open(script_file,'w') as script:
-            script.write("#!/bin/bash\n")
-            for cmd in cmds:
-                script.write("%s\n" % cmd.make_wrapper_script())
-            script.write("##\n")
+            script.write("#!/bin/bash\n\n%s\n##\n" %
+                         " && \\\n".join([cmd.make_wrapper_script()
+                                          for cmd in cmds]))
         print "Submitting %s" % script_file
         job = sched.submit(Command("sh",script_file),
                            name="runqc_batch.%s.%s" % (self.title,
