@@ -2126,7 +2126,7 @@ if __name__ == "__main__":
         collect_filtered_failed_umis = CollectFiles(
             "Collect filtered fastqs (failed UMIs)",
             filter_dir,
-            filter_fastqs.output().patterns.assigned)
+            filter_fastqs.output().patterns.failed_umis)
         for task in (collect_filtered_fastqs,
                      collect_filtered_unassigned,
                      collect_filtered_failed_barcodes,
