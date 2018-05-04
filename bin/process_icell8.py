@@ -40,7 +40,6 @@ from auto_process_ngs.utils import AnalysisFastq
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import normalize_sample_name
-from auto_process_ngs.qc.illumina_qc import check_qc_outputs
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings

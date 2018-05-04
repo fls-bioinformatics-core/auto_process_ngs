@@ -12,14 +12,18 @@ import sys
 import os
 import optparse
 import logging
+from bcftbx.utils import find_program
 from auto_process_ngs.utils import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
-from auto_process_ngs.qc.illumina_qc import QCReporter
-from auto_process_ngs.qc.illumina_qc import expected_qc_outputs
+from auto_process_ngs.applications import Command
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs import get_version
 
 # Module specific logger
 logger = logging.getLogger(__name__)
+
+__version__ = get_version()
 
 """
 reportqc
@@ -47,11 +51,13 @@ def verify_qc(project,qc_dir=None):
         don't pass the verification check.
     """
     if qc_dir is None:
-        qc_dir = self.qc_dir
+        qc_dir = project.qc_dir
+    illumina_qc = IlluminaQC()
     fastqs = []
     for sample in project.samples:
         for fq in sample.fastq:
-            if not sample.verify_qc(qc_dir,fq):
+            present,missing = illumina_qc.check_outputs(fq,qc_dir)
+            if missing:
                 fastqs.append(fq)
     return fastqs
 
@@ -85,15 +91,16 @@ def zip_report(project,report_html,qc_dir=None):
                            analysis_dir))
     # Get QC dir if not set
     if qc_dir is None:
-        qc_dir = self.qc_dir
+        qc_dir = project.qc_dir
     # Add the HTML report
     zip_file.add_file(report_html)
     # Add the FastQC and screen files
+    illumina_qc = IlluminaQC()
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
                 logger.debug("Adding QC outputs for %s" % fq)
-                for f in expected_qc_outputs(fq,qc_dir):
+                for f in illumina_qc.expected_outputs(fq,qc_dir):
                     if f.endswith('.zip'):
                         # Exclude .zip file
                         continue
@@ -109,7 +116,7 @@ def zip_report(project,report_html,qc_dir=None):
 def main():
     # Deal with command line
     p = optparse.OptionParser(usage="%prog DIR [DIR...]",
-                              version="%prog "+get_version(),
+                              version="%prog "+__version__,
                               description="Generate QC report for each directory "
                               "DIR")
     p.add_option('--fastq_dir',
@@ -124,7 +131,7 @@ def main():
     reporting = optparse.OptionGroup(p,'Reporting options')
     reporting.add_option('-t','--title',action='store',dest='title',
                          default=None,
-                         help="title for output QC report")
+                         help="title for output QC reports")
     reporting.add_option('-f','--filename',
                          action='store',dest='filename',default=None,
                  help="file name for output HTML QC report (default: "
@@ -132,6 +139,9 @@ def main():
     reporting.add_option('--zip',action='store_true',
                          dest='zip',default=False,
                          help="make ZIP archive for the QC report")
+    reporting.add_option('--multiqc',action='store_true',
+                         dest='multiqc',default=False,
+                         help="generate MultiQC report")
     reporting.add_option('--force',action='store_true',
                          dest='force',default=False,
                          help="force generation of reports even if "
@@ -150,11 +160,21 @@ def main():
     if len(args) < 1:
         p.error("Need to supply at least one directory")
 
+    # Report name and version
+    print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
+
+    # Check for MultiQC if required
+    if opts.multiqc:
+        if find_program("multiqc") is None:
+            logger.critical("MultiQC report requested but 'multiqc' "
+                            "not available")
+            sys.exit(1)
+
     # Examine projects i.e. supplied directories
     retval = 0
     for d in args:
-        project_name = os.path.basename(d)
         dir_path = os.path.abspath(d)
+        project_name = os.path.basename(dir_path)
         p = AnalysisProject(project_name,dir_path,
                             fastq_dir=opts.fastq_dir)
         print "Project: %s" % p.name
@@ -202,13 +222,28 @@ def main():
                                           filename=out_file)
         # Generate ZIP archive
         if opts.zip:
-            report_zip = zip_report(p,qc_dir,report_html)
+            report_zip = zip_report(p,report_html,qc_dir)
             print "ZIP archive: %s" % report_zip
+        # MultiQC report
+        if opts.multiqc:
+            multiqc_report = os.path.join(p.dirn,
+                                          "multi%s_report.html" %
+                                          qc_base)
+            multiqc_cmd = Command(
+                'multiqc',
+                '--title','%s' % opts.title,
+                '--filename','%s' % multiqc_report,
+                '--force',
+                qc_dir)
+            print "Running %s" % multiqc_cmd
+            multiqc_retval = multiqc_cmd.run_subprocess()
+            if multiqc_retval == 0 and os.path.exists(multiqc_report):
+                print "MultiQC: %s" % multiqc_report
+            else:
+                print "MultiQC: FAILED"
+                retval += 1
     # Finish with appropriate exit code
     sys.exit(retval)
 
 if __name__ == '__main__':
     main()
-    
-            
-        

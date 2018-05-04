@@ -3,184 +3,258 @@
 #######################################################################
 
 import unittest
-import os
 import tempfile
 import shutil
-
-from auto_process_ngs.mock import MockAnalysisProject
-from auto_process_ngs.mockqc import MockQCOutputs
-from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.utils import AnalysisSample
-from auto_process_ngs.qc.illumina_qc import QCReporter
-from auto_process_ngs.qc.illumina_qc import FastqSet
-from auto_process_ngs.qc.illumina_qc import get_fastq_pairs
-
-class TestQCReporter(unittest.TestCase):
-    def setUp(self):
-        # Temporary working dir (if needed)
-        self.wd = None
-    def tearDown(self):
-        # Remove temporary working dir
-        if self.wd is not None and os.path.isdir(self.wd):
-            shutil.rmtree(self.wd)
-    def _make_working_dir(self):
-        # Create a temporary working directory
-        if self.wd is None:
-            self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
-    def _make_analysis_project(self,paired_end=True):
-        # Create a mock Analysis Project directory
-        self._make_working_dir()
-        # Generate names for fastq files to add
-        if paired_end:
-            reads = (1,2)
-        else:
-            reads = (1,)
-        sample_names = ('PJB1','PJB2')
-        fastq_names = []
-        for i,sname in enumerate(sample_names,start=1):
-            for read in reads:
-                fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
-                fastq_names.append(fq)
-        self.analysis_dir = MockAnalysisProject('PJB',fastq_names)
-        # Create the mock directory
-        self.analysis_dir.create(top_dir=self.wd)
-        # Populate with fake QC products
-        qc_dir = os.path.join(self.wd,self.analysis_dir.name,'qc')
-        qc_logs = os.path.join(qc_dir,'logs')
-        os.mkdir(qc_dir)
-        os.mkdir(qc_logs)
-        for fq in fastq_names:
-            # FastQC
-            MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
-            # Fastq_screen
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
-        return os.path.join(self.wd,self.analysis_dir.name)
-    def test_qcreporter_paired_end(self):
-        analysis_dir = self._make_analysis_project(paired_end=True)
-        project = AnalysisProject('PJB',analysis_dir)
-        reporter = QCReporter(project)
-        self.assertEqual(reporter.name,'PJB')
-        self.assertTrue(reporter.paired_end)
-        self.assertTrue(reporter.verify())
-        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
-        self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
-    def test_qcreporter_single_end(self):
-        analysis_dir = self._make_analysis_project(paired_end=False)
-        project = AnalysisProject('PJB',analysis_dir)
-        reporter = QCReporter(project)
-        self.assertEqual(reporter.name,'PJB')
-        self.assertFalse(reporter.paired_end)
-        self.assertTrue(reporter.verify())
-        reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
-        self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.SE.html')))
-
-class TestFastqSet(unittest.TestCase):
-    def test_fastqset_PE(self):
-        fqset = FastqSet('/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
-                         '/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        # r1/r2 properties
-        self.assertEqual(fqset.r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fqset.r2,'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        # __getitem__ method
-        self.assertEqual(fqset[0],'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fqset[1],'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        # fastqs property
-        self.assertEqual(fqset.fastqs,
-                         ['/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
-                         '/data/PB/PB1_ATTAGG_L001_R2_001.fastq'])
-    def test_fastqset_SE(self):
-        fqset = FastqSet('/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        # r1/r2 properties
-        self.assertEqual(fqset.r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fqset.r2,None)
-        # __getitem__ method
-        self.assertEqual(fqset[0],'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        try:
-            fqset[1]
-            self.fail("Attempt to access index 1 should raise IndexError")
-        except IndexError:
-            pass
-        except Exception:
-            self.fail("Attempt to access index 1 should raise IndexError")
-        # fastqs property
-        self.assertEqual(fqset.fastqs,
-                         ['/data/PB/PB1_ATTAGG_L001_R1_001.fastq'])
-
-class TestGetFastqPairsFunction(unittest.TestCase):
-    def test_get_fastq_pairs_paired_end(self):
-        s = AnalysisSample('PB1')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_R2_001.fastq')
-        fq_pair = get_fastq_pairs(s)
-        self.assertEqual(len(fq_pair),2)
-        self.assertEqual(fq_pair[0].r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fq_pair[0].r2,'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        self.assertEqual(fq_pair[1].r1,'/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        self.assertEqual(fq_pair[1].r2,'/data/PB/PB1_GCCAAG_L002_R2_001.fastq')
-    def test_get_fastq_pairs_single_end(self):
-        s = AnalysisSample('PB1')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        fq_pair = get_fastq_pairs(s)
-        self.assertEqual(len(fq_pair),2)
-        self.assertEqual(fq_pair[0].r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fq_pair[0].r2,None)
-        self.assertEqual(fq_pair[1].r1,'/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        self.assertEqual(fq_pair[1].r2,None)
-    def test_get_fastq_pairs_paired_end_with_index_reads(self):
-        s = AnalysisSample('PB1')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        s.add_fastq('/data/PB/PB1_ATTAGG_L001_I1_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_R2_001.fastq')
-        s.add_fastq('/data/PB/PB1_GCCAAG_L002_I1_001.fastq')
-        fq_pair = get_fastq_pairs(s)
-        self.assertEqual(len(fq_pair),2)
-        self.assertEqual(fq_pair[0].r1,'/data/PB/PB1_ATTAGG_L001_R1_001.fastq')
-        self.assertEqual(fq_pair[0].r2,'/data/PB/PB1_ATTAGG_L001_R2_001.fastq')
-        self.assertEqual(fq_pair[1].r1,'/data/PB/PB1_GCCAAG_L002_R1_001.fastq')
-        self.assertEqual(fq_pair[1].r2,'/data/PB/PB1_GCCAAG_L002_R2_001.fastq')
-
+import os
+from auto_process_ngs.mock import MockIlluminaQcSh
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.illumina_qc import fastq_screen_output
+from auto_process_ngs.qc.illumina_qc import fastqc_output
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
+class TestIlluminaQC(unittest.TestCase):
+    """
+    Tests for IlluminaQC class
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestIlluminaQC')
+        # Create a temp 'bin' dir
+        self.bin = os.path.join(self.wd,"bin")
+        os.mkdir(self.bin)
+        # Store original PATH
+        self.path = os.environ['PATH']
+
+    def tearDown(self):
+        # Restore PATH
+        os.environ['PATH'] = self.path
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_illumina_qc_version(self):
+        """IlluminaQC: fetch version for underlying script
+        """
+        # Make mock illumina_qc.sh
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"),
+                                version="1.3.1")
+        illumina_qc = IlluminaQC()
+        self.assertEqual(illumina_qc.version(),"1.3.1")
+
+    def test_illumina_qc_commands_for_single_fastq(self):
+        """IlluminaQC: generates default commands for single Fastq
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),1)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_commands_for_fastq_pair(self):
+        """IlluminaQC: generates default commands for Fastq pair
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
+                                     "/path/to/fastqs/test_S1_R2.fastq.gz"),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),2)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_commands_for_index_read(self):
+        """IlluminaQC: generates empty command list for index read Fastq
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_I1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),0)
+
+    def test_illumina_qc_command_with_ungzip_fastqs(self):
+        """IlluminaQC: generates command line with --ungzip-fastqs
+        """
+        illumina_qc = IlluminaQC(ungzip_fastqs=True)
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),1)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--ungzip-fastqs "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_command_with_non_default_threads(self):
+        """IlluminaQC: generates command line with non-default --threads
+        """
+        illumina_qc = IlluminaQC(nthreads=8)
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),1)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 8 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_command_with_fastq_screen_subset(self):
+        """IlluminaQC: generates command line with --subset
+        """
+        illumina_qc = IlluminaQC(fastq_screen_subset=8000)
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),1)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--subset 8000 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_expected_outputs(self):
+        """IlluminaQC: generates correct expected outputs for R1 Fastq
+        """
+        illumina_qc = IlluminaQC()
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",
+            "/path/to/qc")
+        reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
+                             "/path/to/qc/test_S1_R1_fastqc.html",
+                             "/path/to/qc/test_S1_R1_fastqc.zip",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",)
+        for e in expected_outputs:
+            self.assertTrue(e in reference_outputs,
+                            "'%s' shouldn't be predicted" % e)
+        for r in reference_outputs:
+            self.assertTrue(r in expected_outputs,
+                            "'%s' should be predicted" % r)
+
+    def test_illumina_qc_expected_outputs_index_read(self):
+        """IlluminaQC: predicts no outputs for index read Fastq
+        """
+        illumina_qc = IlluminaQC()
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_I1.fastq.gz",
+            "/path/to/qc")
+        self.assertEqual(len(expected_outputs),0)
+
+    def test_illumina_qc_check_outputs_all_present(self):
+        """IlluminaQC: check expected outputs when all present
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC()
+        present,missing = illumina_qc.check_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
+        self.assertEqual(len(missing),0)
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_some_missing(self):
+        """IlluminaQC: check expected outputs when some are missing
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",)
+        reference_missing = ("test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC()
+        present,missing = illumina_qc.check_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
+        # Check present
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+        # Check missing
+        for m in missing:
+            self.assertTrue(os.path.dirname(m),qc_dir)
+            self.assertTrue(os.path.basename(m) in reference_missing,
+                            "'%s' shouldn't be found" % m)
+        for r in reference_missing:
+            self.assertTrue(os.path.join(qc_dir,r) in missing,
+                            "'%s' should exist" % r)
+
 class TestFastqScreenOutputFunction(unittest.TestCase):
     def test_fastq_screen_output(self):
+        """fastq_screen_output: handles .fastq file
+        """
         self.assertEqual(fastq_screen_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq',
                                              'model_organisms'),
                          ('PB1_ATTAGG_L001_R1_001_model_organisms_screen.png',
                           'PB1_ATTAGG_L001_R1_001_model_organisms_screen.txt'))
     def test_fastq_screen_output_fastqgz(self):
+        """fastq_screen_output: handles fastq.gz file
+        """
         self.assertEqual(fastq_screen_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz',
                                              'model_organisms'),
                          ('PB1_ATTAGG_L001_R1_001_model_organisms_screen.png',
                           'PB1_ATTAGG_L001_R1_001_model_organisms_screen.txt'))
 
-from auto_process_ngs.qc.illumina_qc import fastqc_output
 class TestFastqcOutputFunction(unittest.TestCase):
     def test_fastqc_output(self):
+        """fastqc_output: handles .fastq file
+        """
         self.assertEqual(fastqc_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
                          ('PB1_ATTAGG_L001_R1_001_fastqc',
                           'PB1_ATTAGG_L001_R1_001_fastqc.html',
                           'PB1_ATTAGG_L001_R1_001_fastqc.zip'))
     def test_fastqc_output_fastqgz(self):
+        """fastqc_output: handles fastq.gz file
+        """
         self.assertEqual(fastqc_output('/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
                          ('PB1_ATTAGG_L001_R1_001_fastqc',
                           'PB1_ATTAGG_L001_R1_001_fastqc.html',
                           'PB1_ATTAGG_L001_R1_001_fastqc.zip'))
-    
-from auto_process_ngs.qc.illumina_qc import pretty_print_reads
-class TestPrettyPrintReadsFunction(unittest.TestCase):
-    def test_pretty_print_reads(self):
-        self.assertEqual(pretty_print_reads(1),"1")
-        self.assertEqual(pretty_print_reads(12),"12")
-        self.assertEqual(pretty_print_reads(117),"117")
-        self.assertEqual(pretty_print_reads(1024),"1,024")
-        self.assertEqual(pretty_print_reads(33385500),"33,385,500")
-        self.assertEqual(pretty_print_reads(112839902),"112,839,902")
-        self.assertEqual(pretty_print_reads(10212341927),"10,212,341,927")

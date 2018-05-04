@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_utils.py: utility functions for operating on fastq files
-#     Copyright (C) University of Manchester 2016-17 Peter Briggs
+#     Copyright (C) University of Manchester 2016-18 Peter Briggs
 #
 ########################################################################
 #
@@ -19,6 +19,7 @@ Utility classes and functions for operating on Fastq files:
 - assign_barcodes_single_end: extract and assign inline barcodes
 - get_read_number: get the read number (1 or 2) from a Fastq file
 - pair_fastqs: automagically pair up FASTQ files
+- pair_fastqs_by_name: pair up FASTQ files based on their names
 
 """
 
@@ -446,3 +447,55 @@ def pair_fastqs(fastqs):
     unpaired = sorted(seq_ids.keys() + bad_files)
     # Return paired and upaired fastqs
     return (fq_pairs,unpaired)
+
+def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
+    """
+    Pair Fastq files based on their name
+
+    Pairing is based on the read number for the supplied
+    Fastq files being present in the file names; the file
+    contents are not examined.
+
+    Unpaired Fastqs (i.e. those for which a mate cannot be
+    found) are returned as a "pair" where the equivalent R1
+    or R2 mate is missing.
+
+    Arguments:
+      fastqs (list): list of Fastqs to pair
+      fastq_attrs (BaseFastqAttrs): optional, class to use
+        for extracting data from the filename (default:
+        IlluminaFastqAttrs)
+
+    Returns:
+      List: list of tuples (R1,R2) with the R1/R2 pairs,
+       or (R1,) or (R2,) for unpaired files.
+    """
+    pairs = []
+    fastqs_r1 = filter(lambda f: fastq_attrs(f).read_number != 2,fastqs)
+    fastqs_r2 = filter(lambda f: fastq_attrs(f).read_number == 2,fastqs)
+    for fqr1 in fastqs_r1:
+        # Split up R1 name
+        logging.debug("fqr1 %s" % os.path.basename(fqr1))
+        dir_path = os.path.dirname(fqr1)
+        # Generate equivalent R2 file
+        fqr2 = fastq_attrs(fqr1)
+        fqr2.read_number = 2
+        fqr2 = os.path.join(dir_path,"%s%s" % (fqr2,fqr2.extension))
+        logging.debug("fqr2 %s" % os.path.basename(fqr2))
+        if fqr2 in fastqs_r2:
+            pairs.append((fqr1,fqr2))
+        else:
+            pairs.append((fqr1,))
+    # Looking for unpaired R2 files
+    for fqr2 in fastqs_r2:
+        for pair in pairs:
+            try:
+                if fqr2 == pair[1]:
+                    fqr2 = None
+                    break
+            except IndexError:
+                pass
+        if fqr2 is not None:
+            pairs.append((fqr2,))
+    pairs = sorted(pairs,cmp=lambda x,y: cmp(x[0],y[0]))
+    return pairs
