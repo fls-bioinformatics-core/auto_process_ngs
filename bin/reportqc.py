@@ -219,7 +219,8 @@ def main():
         print "Writing QC report to %s" % out_file
         report_html= QCReporter(p).report(qc_dir=qc_dir,
                                           title=opts.title,
-                                          filename=out_file)
+                                          filename=out_file,
+                                          relative_links=True)
         # Generate ZIP archive
         if opts.zip:
             report_zip = zip_report(p,report_html,qc_dir)
