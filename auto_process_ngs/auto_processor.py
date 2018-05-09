@@ -1417,7 +1417,13 @@ class AutoProcess:
         if invalid_barcodes:
             logging.error("Invalid barcodes detected")
             for line in invalid_barcodes:
-                logging.error("%s" % line)
+                logging.critical("%s" % line)
+        invalid_characters = samplesheet_utils.SampleSheetLinter(
+            sample_sheet_file=sample_sheet).has_invalid_characters()
+        if invalid_characters:
+            logging.critical("Invalid non-printing/non-ASCII characters "
+                             "detected")
+        if invalid_barcodes or invalid_characters:
             raise Exception("Errors detected in generated sample sheet")
         # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
