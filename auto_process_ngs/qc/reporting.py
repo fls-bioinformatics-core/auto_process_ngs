@@ -249,7 +249,8 @@ class QCReporter(object):
                           title=title,
                           qc_dir=qc_dir,
                           report_attrs=report_attrs,
-                          summary_fields=summary_fields)
+                          summary_fields=summary_fields,
+                          relpath=relpath)
         # Styles
         report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
@@ -427,7 +428,7 @@ class QCReport(Document):
     - program_versions: program versions
     """
     def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
-                 summary_fields=None):
+                 summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
 
@@ -442,6 +443,8 @@ class QCReport(Document):
             each Fastq pair
           summary_fields (list): list of fields to report for
             each sample in the summary table
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
         # Store project
@@ -460,6 +463,10 @@ class QCReport(Document):
             title = "QC report: %s" % self.project.name
         # Initialise superclass
         Document.__init__(self,title)
+        # Relative paths
+        if relpath is not None:
+            relpath = os.path.normpath(os.path.abspath(relpath))
+        self.relpath = relpath
         # Attributes to report for each sample
         if report_attrs is None:
             attrs = ('fastqc','fastq_screen','program_versions')
@@ -604,7 +611,9 @@ class QCReport(Document):
             fastq_pair = QCReportFastqPair(fq_pair.r1,
                                            fq_pair.r2,
                                            self.qc_dir)
-            fastq_pair.report(sample_report,attrs=self.report_attrs)
+            fastq_pair.report(sample_report,
+                              attrs=self.report_attrs,
+                              relpath=self.relpath)
             # Add line in summary table
             if sample_name is not None:
                 idx = self.summary_table.add_row(sample=Link(sample_name,
@@ -666,7 +675,7 @@ class QCReportFastqPair(object):
             return QCReportFastq(self.fastqr2,self.qc_dir)
         return None
 
-    def report(self,sample_report,attrs=None):
+    def report(self,sample_report,attrs=None,relpath=None):
         """
         Add report for Fastq pair to a document section
 
@@ -688,6 +697,8 @@ class QCReportFastqPair(object):
             to
           attrs (list): optional list of custom 'attributes'
             to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         # Attributes to report
         if attrs is None:
@@ -706,10 +717,10 @@ class QCReportFastqPair(object):
             for attr in attrs:
                 if attr == "fastqc":
                     # FastQC outputs
-                    fq.report_fastqc(fq_report)
+                    fq.report_fastqc(fq_report,relpath=relpath)
                 elif attr == "fastq_screen":
                     # FastQScreens
-                    fq.report_fastq_screens(fq_report)
+                    fq.report_fastq_screens(fq_report,relpath=relpath)
                 elif attr == "program_versions":
                     # Versions of programs used
                     new_section = fq.report_program_versions(fq_report)
