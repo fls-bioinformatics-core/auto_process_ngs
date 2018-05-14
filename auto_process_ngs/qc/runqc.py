@@ -299,18 +299,26 @@ class ProjectQC(object):
         check_qc = jobs[0]
         logger.debug("Exit code: %s" % check_qc.exit_code)
         logger.debug("Log file: %s" % check_qc.log)
-        logger.debug("Log file contents:")
-        logger.debug("%s" % open(check_qc.log,'r').read())
-        self.verification_status = check_qc.exit_code
+        if check_qc.log is not None:
+            logger.debug("Log file contents:")
+            logger.debug("%s" % open(check_qc.log,'r').read())
+        else:
+            logger.warning("No log file output: can't list Fastqs with "
+                           "missing QC outputs")
+        if check_qc.exit_code is None:
+            self.verification_status = 1
+        else:
+            self.verification_status = check_qc.exit_code
         self.fastqs_missing_qc = list()
-        with open(check_qc.log,'r') as log:
-            for line in log:
-                if line.startswith(self.project.dirn):
-                    self.fastqs_missing_qc.append(line.rstrip())
-                    self.verification_status += 1
-        logger.debug("Fastqs with missing QC outputs:")
-        for fq in self.fastqs_missing_qc:
-            logger.debug("%s" % fq)
+        if check_qc.log is not None:
+            with open(check_qc.log,'r') as log:
+                for line in log:
+                    if line.startswith(self.project.dirn):
+                        self.fastqs_missing_qc.append(line.rstrip())
+                        self.verification_status += 1
+            logger.debug("Fastqs with missing QC outputs:")
+            for fq in self.fastqs_missing_qc:
+                logger.debug("%s" % fq)
 
     def setup_qc(self,sched,illumina_qc,qc_runner=None,
                  verify_runner=None,batch_size=None):
