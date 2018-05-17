@@ -570,8 +570,13 @@ class UpdateAnalysisProject(DirectoryUpdater):
         illumina_qc = IlluminaQC()
         for fq in self._project.fastqs:
             print "Adding outputs for %s" % fq
-            for f in illumina_qc.expected_outputs(fq,self._project.qc_dir):
-                self.add_file(f)
+            MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
+            for screen in ("model_organisms",
+                           "other_organisms",
+                           "rRNA"):
+                MockQCOutputs.fastq_screen_v0_9_2(fq,
+                                                  self._project.qc_dir,
+                                                  screen)
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
         qc_name = "qc%s_report" % fastq_set_name
