@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 # Functions
 #######################################################################
 
-def verify_qc(project,qc_dir=None,runner=None):
+def verify_qc(project,qc_dir=None,runner=None,log_dir=None):
     """
     Verify the QC run for a project
 
@@ -46,6 +46,8 @@ def verify_qc(project,qc_dir=None,runner=None):
         the QC outputs being verified
       runner (JobRunner): optional, job runner to use
         for running the verification
+      log_dir (str): optional, specify a directory to
+        write logs to
 
     Returns:
       Boolean: True if QC passes verification, otherwise
@@ -55,7 +57,8 @@ def verify_qc(project,qc_dir=None,runner=None):
     if runner is None:
         runner = Settings().general.default_runner
     # Set up QC project
-    project = ProjectQC(project,qc_dir=qc_dir)
+    project = ProjectQC(project,qc_dir=qc_dir,
+                        log_dir=log_dir)
     # Set up and start scheduler
     sched = SimpleScheduler()
     sched.start()
@@ -67,7 +70,8 @@ def verify_qc(project,qc_dir=None,runner=None):
     return project.verify()
 
 def report_qc(project,qc_dir=None,report_html=None,
-              zip_outputs=True,multiqc=False,runner=None):
+              zip_outputs=True,multiqc=False,runner=None,
+              log_dir=None):
     """
     Generate report for the QC run for a project
 
@@ -84,6 +88,8 @@ def report_qc(project,qc_dir=None,report_html=None,
         report
       runner (JobRunner): optional, job runner to use
         for running the reporting
+      log_dir (str): optional, specify a directory to
+        write logs to
 
     Returns:
       Integer: exit code from reporting job (zero indicates
@@ -93,7 +99,8 @@ def report_qc(project,qc_dir=None,report_html=None,
     if runner is None:
         runner = Settings().general.default_runner
     # Set up QC project
-    project = ProjectQC(project,qc_dir=qc_dir)
+    project = ProjectQC(project,qc_dir=qc_dir,
+                        log_dir=log_dir)
     # Set up and start scheduler
     sched = SimpleScheduler()
     sched.start()
