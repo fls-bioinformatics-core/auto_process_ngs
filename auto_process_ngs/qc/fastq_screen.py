@@ -62,6 +62,7 @@ class Fastqscreen(TabFile):
         self._version = None
         self._no_hits = None
         # Read in data
+        tabfile = None
         with open(self._screen_file,'r') as fp:
             for line in fp:
                 line = line.strip()
@@ -80,6 +81,10 @@ class Fastqscreen(TabFile):
                    line.startswith('%'):
                     continue
                 tabfile.append(tabdata=line)
+        # Check there is some data
+        if tabfile is None:
+            raise Exception("Unable to extract Fastq_screen data from %s" %
+                            self._screen_file)
         # Handle different terminology for different versions
         if tabfile.header()[0] == 'Library':
             library = 'Library'
