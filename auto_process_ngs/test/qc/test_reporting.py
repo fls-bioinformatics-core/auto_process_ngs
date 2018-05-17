@@ -6,7 +6,6 @@ import unittest
 import os
 import tempfile
 import shutil
-
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.utils import AnalysisProject
@@ -15,19 +14,25 @@ from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.reporting import FastqSet
 from auto_process_ngs.qc.reporting import pretty_print_reads
 
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
 class TestQCReporter(unittest.TestCase):
     def setUp(self):
         # Temporary working dir (if needed)
         self.wd = None
     def tearDown(self):
         # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
         if self.wd is not None and os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
     def _make_working_dir(self):
         # Create a temporary working directory
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
-    def _make_analysis_project(self,paired_end=True):
+    def _make_analysis_project(self,paired_end=True,fastq_dir=None,
+                               qc_dir="qc"):
         # Create a mock Analysis Project directory
         self._make_working_dir()
         # Generate names for fastq files to add
@@ -45,7 +50,7 @@ class TestQCReporter(unittest.TestCase):
         # Create the mock directory
         self.analysis_dir.create(top_dir=self.wd)
         # Populate with fake QC products
-        qc_dir = os.path.join(self.wd,self.analysis_dir.name,'qc')
+        qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
         qc_logs = os.path.join(qc_dir,'logs')
         os.mkdir(qc_dir)
         os.mkdir(qc_logs)
@@ -57,18 +62,6 @@ class TestQCReporter(unittest.TestCase):
             MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
             MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
         return os.path.join(self.wd,self.analysis_dir.name)
-    def test_qcreporter_paired_end(self):
-        """QCReporter: paired-end data
-        """
-        analysis_dir = self._make_analysis_project(paired_end=True)
-        project = AnalysisProject('PJB',analysis_dir)
-        reporter = QCReporter(project)
-        self.assertEqual(reporter.name,'PJB')
-        self.assertTrue(reporter.paired_end)
-        self.assertTrue(reporter.verify())
-        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
-        self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
     def test_qcreporter_single_end(self):
         """QCReporter: single-end data
         """
@@ -81,6 +74,45 @@ class TestQCReporter(unittest.TestCase):
         reporter.report(filename=os.path.join(self.wd,'report.SE.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,'report.SE.html')))
+    def test_qcreporter_paired_end(self):
+        """QCReporter: paired-end data
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertTrue(reporter.paired_end)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_with_non_default_fastq_dir(self):
+        """QCReporter: paired-end data with non-default fastq dir
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   fastq_dir="fastqs.non_default")
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertTrue(reporter.paired_end)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
+    def test_qcreporter_paired_end_with_non_default_qc_dir(self):
+        """QCReporter: paired-end data with non-default QC dir
+        """
+        analysis_dir = self._make_analysis_project(paired_end=True,
+                                                   qc_dir="qc.non_default")
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertTrue(reporter.paired_end)
+        self.assertTrue(reporter.verify(qc_dir="qc.non_default"))
+        reporter.report(filename=os.path.join(self.wd,'report.PE.html'),
+                        qc_dir="qc.non_default")
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'report.PE.html')))
 
 class TestFastqSet(unittest.TestCase):
     def test_fastqset_PE(self):

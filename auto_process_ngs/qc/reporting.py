@@ -16,10 +16,12 @@ from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import cmp_sample_names
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
+from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
 from ..applications import Command
 from ..docwriter import Document
+from ..docwriter import Section
 from ..docwriter import Table
 from ..docwriter import Img
 from ..docwriter import Link
@@ -35,11 +37,102 @@ from .plots import uboxplot
 from .plots import encode_png
 from .. import get_version
 
-# Data
-from .illumina_qc import FASTQ_SCREENS
-
 # Module specific logger
 logger = logging.getLogger(__name__)
+
+#######################################################################
+# Data
+#######################################################################
+
+from .illumina_qc import FASTQ_SCREENS
+
+QC_REPORT_CSS_STYLES = """/* Headers */
+h1 { background-color: #42AEC2;
+     color: white;\n
+     padding: 5px 10px; }
+h2 { background-color: #8CC63F;
+     color: white;
+     display: inline-block;
+     padding: 5px 15px;
+     margin: 0;
+     border-top-left-radius: 20px;
+     border-bottom-right-radius: 20px; }
+ h3, h4 { background-color: grey;
+          color: white;
+          display: block;
+          padding: 5px 15px;
+          margin: 0;
+          border-top-left-radius: 20px;
+          border-bottom-right-radius: 20px; }
+/* Samples and Fastqs */
+.sample { margin: 10 10;
+          border: solid 2px #8CC63F;
+          padding: 0;
+          background-color: #ffe;
+          border-top-left-radius: 25px;
+          border-bottom-right-radius: 25px; }
+.fastqs { border: 1px solid grey;
+          padding: 5px;
+          margin: 5px 20px; }
+.fastq { border: 2px solid lightgray;
+         padding: 5px;
+         margin: 5px;
+         float: left; }
+.clear { clear: both; }
+/* Metadata table */
+table.metadata {
+          margin: 10 10;
+          border: solid 1px grey;
+          background-color: white;
+         font-size: 90%; }
+table.metadata tr td:first-child {
+          background-color: grey;
+          color: white;
+          padding: 2px 5px;
+          font-weight: bold; }
+/* Summary table */
+table.summary { border: solid 1px grey;
+          background-color: white;
+          font-size: 80%; }
+table.summary th { background-color: grey;
+                   color: white;
+                   padding: 2px 5px; }
+table.summary td { text-align: right;
+                   padding: 2px 5px;
+                   border-bottom: solid 1px lightgray; }
+table.fastq_summary tr td:first-child {
+          background-color: grey;
+          color: white;
+          font-weight: bold; }
+table.fastq_summary tr td:first-child a {
+          color: white;
+          font-weight: bold; }
+/* FastQC summary table */
+table.fastqc_summary span.PASS { font-weight: bold;
+                                 color: green; }
+table.fastqc_summary span.WARN { font-weight: bold;
+                                 color: orange; }
+table.fastqc_summary span.FAIL { font-weight: bold;
+                                 color: red; }
+/* Program versions */
+table.programs th { text-align: left;
+                    background-color: grey;
+                    color: white;
+                    padding: 2px 5px; }
+table.programs td { padding: 2px 5px;
+                    border-bottom: solid 1px lightgray; }
+/* General styles */
+p { font-size: 85%;
+    color: #808080; }
+/* Rules for printing */
+@media print
+{
+a { color: black; text-decoration: none; }
+.sample { page-break-before: always; }
+table th { border-bottom: solid 1px lightgray; }
+.no_print { display: none; }
+}
+"""
 
 #######################################################################
 # Classes
@@ -49,14 +142,23 @@ class QCReporter(object):
     """
     Class describing QC results for an AnalysisProject
 
+    Provides the follow properties:
+
+    name: project name
+    paired_end: True if project is paired-end
+    samples: list of QCSample instances
+
+    Provides the follow methods:
+
+    verify: checks the QC outputs for the project
+    report: generate a HTML report for the project
     """
     def __init__(self,project):
         """
         Initialise a new QCReporter instance
 
         Arguments:
-           project (AnalysisProject): project to handle the QC for
-
+           project (AnalysisProject): project to report QC for
         """
         self._project = project
         self._samples = []
@@ -79,26 +181,37 @@ class QCReporter(object):
     def samples(self):
         return self._samples
 
-    def verify(self,qc_dir=None):
+    def verify(self,qc_dir=None,illumina_qc=None):
         """
-        Check that the QC outputs are correct
-
-        Returns True if the QC appears to have run successfully,
-        False if not.
+        Check the QC outputs are correct for the project
 
         Arguments:
-          qc_dir (str): path to the QC output dir
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project being checked.
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
 
+        Returns:
+          Boolean: Returns True if all expected QC products
+            are present, False if not.
         """
+        logger.debug("QCReporter.verify: qc_dir (initial): %s" % qc_dir)
         if qc_dir is None:
             qc_dir = self._project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self._project.dirn,
+                                      qc_dir)
+        logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
         verified = True
         for sample in self._samples:
-            if not sample.verify(qc_dir):
+            if not sample.verify(qc_dir,illumina_qc=illumina_qc):
                 verified = False
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
+               report_attrs=None,summary_fields=None,
                relative_links=False):
         """
         Report the QC for the project
@@ -110,13 +223,16 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
+          report_attrs (list): optional, list of elements to
+            report for each Fastq pair
+          summary_fields (list): optional, list of fields to
+            report for each sample in the summary table
           relative_links (boolean): optional, if set to True
             then use relative paths for links in the report
             (default is to use absolute paths)
 
         Returns:
-          String: filename of the HTML report.
-
+          String: filename of the output HTML report.
         """
         # Set title and output destination
         if title is None:
@@ -129,348 +245,31 @@ class QCReporter(object):
         else:
             relpath = None
         # Initialise report
-        report = Document(title=title)
+        report = QCReport(self._project,
+                          title=title,
+                          qc_dir=qc_dir,
+                          report_attrs=report_attrs,
+                          summary_fields=summary_fields,
+                          relpath=relpath)
         # Styles
-        report.add_css_rule("h1 { background-color: #42AEC2;\n"
-                            "     color: white;\n"
-                            "     padding: 5px 10px; }")
-        report.add_css_rule("h2 { background-color: #8CC63F;\n"
-                            "     color: white;\n"
-                            "     display: inline-block;\n"
-                            "     padding: 5px 15px;\n"
-                            "     margin: 0;\n"
-                            "     border-top-left-radius: 20px;\n"
-                            "     border-bottom-right-radius: 20px; }")
-        report.add_css_rule("h3, h4 { background-color: grey;\n"
-                            "     color: white;\n"
-                            "     display: block;\n"
-                            "     padding: 5px 15px;\n"
-                            "     margin: 0;\n"
-                            "     border-top-left-radius: 20px;\n"
-                            "     border-bottom-right-radius: 20px; }")
-        report.add_css_rule(".sample { margin: 10 10;\n"
-                            "          border: solid 2px #8CC63F;\n"
-                            "          padding: 0;\n"
-                            "          background-color: #ffe;\n"
-                            "          border-top-left-radius: 25px;\n"
-                            "          border-bottom-right-radius: 25px; }")
-        report.add_css_rule(".fastqs {\n"
-                            " border: 1px solid grey;\n"
-                            " padding: 5px;\n"
-                            " margin: 5px 20px;\n"
-                            "}")
-        report.add_css_rule(".fastq_r1, .fastq_r2 {\n"
-                            " border: 2px solid lightgray;\n"
-                            " padding: 5px;\n"
-                            " margin: 5px;\n"
-                            " float: left;\n"
-                            "}")
-        report.add_css_rule(".clear { clear: both; }")
-        report.add_css_rule("table.metadata { margin: 10 10;\n"
-                            "          border: solid 1px grey;\n"
-                            "          background-color: white;\n"
-                            "          font-size: 90%; }")
-        report.add_css_rule("table.metadata tr td:first-child {\n"
-                            "          background-color: grey;\n"
-                            "          color: white;\n"
-                            "          padding: 2px 5px;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.summary { border: solid 1px grey;\n"
-                            "                background-color: white;\n"
-                            "                font-size: 80% }")
-        report.add_css_rule("table.summary th { background-color: grey;\n"
-                            "                   color: white;\n"
-                            "                   padding: 2px 5px; }")
-        report.add_css_rule("table.summary td { text-align: right; \n"
-                            "                   padding: 2px 5px;\n"
-                            "                   border-bottom: solid 1px lightgray; }")
-        report.add_css_rule("table.fastq_summary tr td:first-child {\n"
-                            "          background-color: grey;\n"
-                            "          color: white;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.fastq_summary tr td:first-child a {\n"
-                            "          color: white;\n"
-                            "          font-weight: bold; }")
-        report.add_css_rule("table.fastqc_summary span.PASS { font-weight: bold;\n"
-                            "                                 color: green; }")
-        report.add_css_rule("table.fastqc_summary span.WARN { font-weight: bold;\n"
-                            "                                 color: orange; }")
-        report.add_css_rule("table.fastqc_summary span.FAIL { font-weight: bold;\n"
-                            "                                 color: red; }")
-        report.add_css_rule("table.programs th { text-align: left;\n"
-                            "                    background-color: grey;\n"
-                            "                    color: white;\n"
-                            "                    padding: 2px 5px; }")
-        report.add_css_rule("table.programs td { padding: 2px 5px;\n"
-                            "border-bottom: solid 1px lightgray; }")
-        report.add_css_rule("p { font-size: 85%;\n"
-                            "    color: #808080; }")
-        # Rules for printing
-        report.add_css_rule("@media print\n"
-                            "{\n"
-                            "a { color: black; text-decoration: none; }\n"
-                            ".sample { page-break-before: always; }\n"
-                            "table th { border-bottom: solid 1px lightgray; }\n"
-                            ".no_print { display: none; }\n"
-                            "}")
-        # Preamble
-        preamble = report.add_section()
-        preamble.add("Report generated by auto_process %s on %s" %
-                     (get_version(),time.asctime()))
-        # Set up summary section & metadata
-        summary = report.add_section("Summary",name='summary')
-        metadata_tbl = Table(('item','value',))
-        metadata_items = ['user','PI','library_type','organism',]
-        if self._project.info.single_cell_platform is not None:
-            metadata_items.insert(3,'single_cell_platform')
-        metadata_titles = {
-            'user': 'User',
-            'PI': 'PI',
-            'library_type': 'Library type',
-            'single_cell_platform': 'Single cell preparation platform',
-            'organism': 'Organism',
-        }
-        for item in metadata_items:
-            if self._project.info[item]:
-                metadata_tbl.add_row(item=metadata_titles[item],
-                                     value=self._project.info[item])
-        if metadata_tbl.nrows > 0:
-            metadata_tbl.no_header()
-            metadata_tbl.add_css_classes('metadata')
-            summary.add(metadata_tbl)
-        # Add summary table for samples, fastqs and microplots
-        summary.add("%d samples | %d fastqs" % (len(self._samples),
-                                                len(self._project.fastqs)))
-        summary_tbl = Table(('sample',),sample='Sample')
-        summary_tbl.add_css_classes('summary','fastq_summary')
-        summary.add(summary_tbl)
-        if self.paired_end:
-            summary_tbl.append_columns('fastqs',fastqs='Fastqs (R1/R2)')
-        else:
-            summary_tbl.append_columns('fastq',fastq='Fastq')
-        summary_tbl.append_columns('reads','fastqc_r1','boxplot_r1','screens_r1',
-                                   reads='#reads',fastqc_r1='FastQC',boxplot_r1='Boxplot',
-                                   screens_r1='Screens')
-        if self.paired_end:
-            summary_tbl.append_columns('fastqc_r2','boxplot_r2','screens_r2',
-                                   fastqc_r2='FastQC',boxplot_r2='Boxplot',
-                                   screens_r2='Screens')
-        # Write entries for samples, fastqs etc
-        current_sample = None
-        for i,sample in enumerate(self._samples):
-            logger.debug("Reporting sample #%3d: %s " % (i+1,sample.name))
-            sample_name = sample.name
-            sample_report = report.add_section("Sample: %s" % sample_name,
-                                               name="sample_%s" % sample_name)
-            sample_report.add_css_classes('sample')
-            if self.paired_end:
-                sample_report.add("%d fastq R1/R2 pairs" %
-                                  len(sample.fastq_pairs))
-            else:
-                sample_report.add("%d fastqs" % len(sample.fastq_pairs))
-            for fq_pair in sample.fastq_pairs:
-                # Sample name for first pair only
-                if sample_name is not None:
-                    idx = summary_tbl.add_row(sample=Link(sample_name,
-                                                          sample_report))
-                else:
-                    idx = summary_tbl.add_row(sample="&nbsp;")
-                # Container for fastqs
-                fqs_report = sample_report.add_subsection()
-                fqs_report.add_css_classes('fastqs')
-                # Fastq name(s)
-                fq_r1 = os.path.basename(fq_pair.r1)
-                if self.paired_end:
-                    fq_r2 = os.path.basename(fq_pair.r2)
-                else:
-                    fq_r2 = None
-                if self.paired_end:
-                    # Create subsections for R1 and R2
-                    fqr1_report = fqs_report.add_subsection(fq_r1)
-                    fqr2_report = fqs_report.add_subsection(fq_r2)
-                    # Add classes
-                    fqr1_report.add_css_classes('fastq_r1')
-                    fqr2_report.add_css_classes('fastq_r2')
-                    # Add entries to summary table
-                    summary_tbl.set_value(idx,'fastqs',
-                                          "%s<br />%s" %
-                                          (Link(fq_r1,fqr1_report),
-                                           Link(fq_r2,fqr2_report)))
-                else:
-                    # Create subsection for R1 only
-                    fqr1_report = fqs_report.add_subsection(fq_r1)
-                    # Add classes
-                    fqr1_report.add_css_classes('fastq_r1')
-                    # Add entry to summary table
-                    summary_tbl.set_value(idx,'fastq',Link(fq_r1,
-                                                           fqr1_report))
-                self._report_fastq(fq_r1,'r1',summary_tbl,idx,
-                                   fqr1_report,qc_dir=qc_dir,
-                                   relpath=relpath)
-                if self.paired_end:
-                    self._report_fastq(fq_r2,'r2',summary_tbl,idx,
-                                       fqr2_report,qc_dir=qc_dir,
-                                       relpath=relpath)
-                # Reset sample name for remaining pairs
-                sample_name = None
-                # Add an empty section to clear HTML floats
-                clear = fqs_report.add_subsection()
-                clear.add_css_classes("clear")
+        report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
         report.write(filename)
         # Return the output filename
         return filename
 
-    def _report_fastq(self,fq,read_id,summary,idx,report,
-                      qc_dir=None,relpath=None):
-        """
-        Generate report section for a Fastq file
-
-        Arguments:
-          fq (str): Fastq file that is being reported
-          read_id (str): either 'r1' or 'r2'
-          summary (Table): summary table object
-          idx (integer): row index for summary table
-          report (Section): container for the report
-          qc_dir (str): path to the QC output dir
-
-        """
-        # Report FastQC results
-        fastqc_report = report.add_subsection("FastQC")
-        if qc_dir is None:
-            qc_dir = self._project.qc_dir
-        try:
-            # Locate FastQC outputs
-            fastqc = Fastqc(os.path.join(qc_dir,fastqc_output(fq)[0]))
-            # FastQC quality boxplot
-            fastqc_report.add("Per base sequence quality boxplot:")
-            boxplot = Img(fastqc.quality_boxplot(inline=True),
-                          height=250,
-                          width=480,
-                          href=fastqc.summary.link_to_module(
-                              'Per base sequence quality',
-                              relpath=relpath),
-                          name="boxplot_%s" % fq)
-            fastqc_report.add(boxplot)
-            try:
-                summary.set_value(idx,'boxplot_%s' % read_id,
-                                  Img(uboxplot(fastqc.data.path,inline=True),
-                                      href=boxplot))
-            except Exception,ex:
-                logger.error("Failed to generate boxplot for %s: %s"
-                             % (fq,ex))
-            # FastQC summary table
-            fastqc_report.add("FastQC summary:")
-            fastqc_tbl = Target("fastqc_%s" % fq)
-            fastqc_report.add(fastqc_tbl,
-                              fastqc.summary.html_table(relpath=relpath))
-            if relpath:
-                fastqc_html_report = os.path.relpath(fastqc.html_report,relpath)
-            else:
-                fastqc_html_report = fastqc.html_report
-            fastqc_report.add("%s for %s" % (Link("Full FastQC report",
-                                                  fastqc_html_report),
-                                             fq))
-            # Populate line in main Fastqs summary table
-            if read_id == 'r1':
-                nreads = fastqc.data.basic_statistics('Total Sequences')
-                summary.set_value(idx,'reads',pretty_print_reads(nreads))
-            try:
-                summary.set_value(idx,'fastqc_%s' % read_id,
-                                  Img(ufastqcplot(
-                                      fastqc.summary.path,inline=True),
-                                      href=fastqc_tbl))
-            except Exception,ex:
-                logger.error("Failed to generate Fastqc microplot for %s: %s"
-                             % (fq,ex))
-        except Exception,ex:
-            # Unable to get the FastQC data
-            logger.warning("Unable to load FastQC data for %s: %s" %
-                           (fq,ex))
-            # Add placeholders for missing data
-            if read_id == 'r1':
-                summary.set_value(idx,'reads','-')
-            fastqc_report.add("!!!No FastQC data available!!!")
-        # Report fastq_screen outputs
-        screens_report = report.add_subsection("Screens")
-        fastq_screens = Target("fastq_screens_%s" % fq)
-        screens_report.add(fastq_screens)
-        screen_files = []
-        fastq_screen_txt = []
-        for name in FASTQ_SCREENS:
-            description = name.replace('_',' ').title()
-            png,txt = fastq_screen_output(fq,name)
-            png = os.path.join(qc_dir,png)
-            txt = os.path.join(qc_dir,txt)
-            if relpath:
-                png_href = os.path.relpath(png,relpath)
-                txt_href = os.path.relpath(txt,relpath)
-            else:
-                png_href = png
-                txt_href = txt
-            screens_report.add(description)
-            if os.path.exists(png):
-                screens_report.add(Img(encode_png(png),
-                                       height=250,
-                                       href=png_href))
-            else:
-                logger.warning("Unable to find screen PNG: %s" % png)
-                screens_report.add("!!!No FastqScreen plot available!!!")
-            if os.path.exists(txt):
-                screen_files.append(txt)
-                fastq_screen_txt.append(
-                    Link(description,txt_href).html())
-            else:
-                logger.warning("Unable to find raw screen data: %s" % txt)
-                screens_report.add("!!!No FastqScreen data available!!!")
-        screens_report.add("Raw screen data: " +
-                           " | ".join(fastq_screen_txt))
-        try:
-            summary.set_value(idx,'screens_%s' % read_id,
-                              Img(uscreenplot(screen_files,inline=True),
-                                  href=fastq_screens))
-        except Exception,ex:
-            logger.error("Failed to generate microscreen plots for %s: %s"
-                         % (fq,ex))
-        # Program versions
-        versions = report.add_subsection("Program versions")
-        versions.add(self._program_versions(fq,qc_dir=qc_dir))
-
-    def _program_versions(self,fastq,qc_dir=None):
-        """
-        """
-        # Program versions table
-        tbl = Table(("Program","Version"))
-        tbl.add_css_classes("programs","summary")
-        if qc_dir is None:
-            qc_dir = self._project.qc_dir
-        # Fetch the version info
-        try:
-            fastqc_version = Fastqc(
-                os.path.join(qc_dir,
-                             fastqc_output(fastq)[0])).version
-        except Exception,ex:
-            logger.error("Unable to get Fastqc version for %s: %s"
-                         % (fastq,ex))
-            fastqc_version = "?"
-        try:
-            fastq_screen_version = Fastqscreen(
-                os.path.join(qc_dir,
-                             fastq_screen_output(fastq,
-                                                 FASTQ_SCREENS[0])[1])).version
-        except Exception,ex:
-            logger.error("Unable to get Fastq_screen version for %s: %s"
-                         % (fastq,ex))
-            fastq_screen_version = "?"
-        # Add to table
-        tbl.add_row(Program='fastqc',Version=fastqc_version)
-        tbl.add_row(Program='fastq_screen',Version=fastq_screen_version)
-        return tbl
-
 class QCSample(object):
     """
     Class describing QC results for an AnalysisSample
 
+    Provides the follow properties:
+
+    name: sample name
+    fastq_pairs: list of FastqSet instances
+
+    Provides the follow methods:
+
+    verify: checks that QC outputs are present
     """
     def __init__(self,sample):
         """
@@ -478,7 +277,6 @@ class QCSample(object):
 
         Arguments:
            sample (AnalysisSample): sample instance
-
         """
         self._sample = sample
         self._fastq_pairs = get_fastq_pairs(sample)
@@ -491,16 +289,27 @@ class QCSample(object):
     def fastq_pairs(self):
         return self._fastq_pairs
 
-    def verify(self,qc_dir):
+    def verify(self,qc_dir,illumina_qc=None):
         """
         Check QC products for this sample
 
-        Checks that fastq_screens and FastQC files were found.
-        Returns True if the QC products are present, False
-        otherwise.
+        Checks that expected QC outputs for the sample
+        are present in the specified QC directory.
+
+        Arguments:
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project being checked.
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
+
+        Returns:
+          Boolean: returns True if the QC products are
+            present, False otherwise.
         """
+        logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
         for fq_pair in self.fastq_pairs:
-            if not fq_pair.verify(qc_dir):
+            if not fq_pair.verify(qc_dir,illumina_qc=illumina_qc):
                 return False
         return True
 
@@ -510,6 +319,15 @@ class FastqSet(object):
 
     A set can be a single or a pair of fastq files.
 
+    Provides the following properties:
+
+    r1: R1 Fastq in the pair
+    r2: R2 Fastq (will be None if no R2)
+    fastqs: list of Fastq files
+
+    Provides the following methods:
+
+    verify: checks the QC outputs for the set
     """
     def __init__(self,fqr1,fqr2=None):
         """
@@ -519,7 +337,6 @@ class FastqSet(object):
            fqr1 (str): path to R1 Fastq file
            fqr2 (str): path to R2 Fastq file, or
              None if the 'set' is a single Fastq
-
         """
         self._fastqs = list((fqr1,fqr2))
 
@@ -530,7 +347,6 @@ class FastqSet(object):
     def r1(self):
         """
         Return R1 Fastq file from pair
-
         """
         return self._fastqs[0]
 
@@ -538,20 +354,18 @@ class FastqSet(object):
     def r2(self):
         """
         Return R2 Fastq file from pair
-
         """
         return self._fastqs[1]
 
     @property
     def fastqs(self):
         """
-        Return list of Fastq files
-
+        Return list of Fastq files in the set
         """
         return filter(lambda fq: fq is not None,
                       self._fastqs)
 
-    def verify(self,qc_dir):
+    def verify(self,qc_dir,illumina_qc=None):
         """
         Check QC products for this Fastq pair
 
@@ -562,9 +376,17 @@ class FastqSet(object):
         Arguments:
           qc_dir (str): path to the location of the QC
             output directory
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for verification (optional)
 
+        Returns:
+          Boolean: returns True if the QC products are
+            present, False otherwise.
         """
-        illumina_qc = IlluminaQC()
+        logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
+        logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
         for fq in self._fastqs:
             if fq is None:
                 continue
@@ -572,6 +394,661 @@ class FastqSet(object):
             if missing:
                 return False
         return True
+
+class QCReport(Document):
+    """
+    Create a QC report document for a project
+
+    Example usage:
+
+    >>> report = QCReport(project)
+    >>> report.write("qc_report.html")
+
+    To control the fields written to the summary table, specify
+    a list of field names via the 'summary_fields' argument.
+    Valid field names are:
+
+    - sample: sample name
+    - fastq: Fastq name
+    - fastqs: Fastq R1/R2 names
+    - reads: number of reads
+    - fastqc_r1: FastQC mini-plot for R1
+    - boxplot_r1: FastQC per-base-quality mini-boxplot' for R1
+    - screens_r1: FastQScreen mini-plots for R1
+    - fastqc_r2: FastQC mini-plot for R2
+    - boxplot_r2: FastQC per-base-quality mini-boxplot' for R2
+    - screens_r2: FastQScreen mini-plots for R2
+
+    To control the elements written to the reports for each Fastq
+    pair, specify a list of element names via the 'report_attrs'
+    argument. Valid element names are:
+
+    - fastqc: FastQC report
+    - fastq_screen: FastQCScreen report
+    - program_versions: program versions
+    """
+    def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
+                 summary_fields=None,relpath=None):
+        """
+        Create a new QCReport instance
+
+        Arguments:
+          project (AnalysisProject): project to report QC for
+          title (str): title for the report (defaults to
+            "QC report: <PROJECT_NAME")
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project
+          report_attrs (list): list of elements to report for
+            each Fastq pair
+          summary_fields (list): list of fields to report for
+            each sample in the summary table
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
+        # Store project
+        self.project = project
+        # Sort out target QC dir
+        if qc_dir is None:
+            qc_dir = self.project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self.project.dirn,
+                                      qc_dir)
+        self.qc_dir = qc_dir
+        logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
+        # Set up title
+        if title is None:
+            title = "QC report: %s" % self.project.name
+        # Initialise superclass
+        Document.__init__(self,title)
+        # Relative paths
+        if relpath is not None:
+            relpath = os.path.normpath(os.path.abspath(relpath))
+        self.relpath = relpath
+        # Attributes to report for each sample
+        if report_attrs is None:
+            attrs = ('fastqc','fastq_screen','program_versions')
+        self.report_attrs = report_attrs
+        # Field descriptions for summary table
+        self.field_descriptions = { 'sample': 'Sample',
+                                    'fastq' : 'Fastq',
+                                    'fastqs': 'Fastqs (R1/R2)',
+                                    'reads': '#reads',
+                                    'fastqc_r1': 'FastQC',
+                                    'boxplot_r1': 'Boxplot',
+                                    'screens_r1': 'Screens',
+                                    'fastqc_r2': 'FastQC',
+                                    'boxplot_r2': 'Boxplot',
+                                    'screens_r2': 'Screens' }
+        # Fields to report in summary table
+        if not summary_fields:
+            if self.project.info.paired_end:
+                summary_fields = ('sample',
+                                  'fastqs',
+                                  'reads',
+                                  'fastqc_r1',
+                                  'boxplot_r1',
+                                  'screens_r1',
+                                  'fastqc_r2',
+                                  'boxplot_r2',
+                                  'screens_r2',)
+            else:
+                summary_fields = ('sample',
+                                  'fastq',
+                                  'reads',
+                                  'fastqc_r1',
+                                  'boxplot_r1',
+                                  'screens_r1')
+        self.summary_fields = summary_fields
+        # Initialise tables
+        self.metadata_table = self._init_metadata_table()
+        self.summary_table = self._init_summary_table()
+        # Initialise report sections
+        self.preamble = self._init_preamble_section()
+        self.summary = self._init_summary_section()
+        # Build the report
+        self.report_metadata()
+        for sample in self.project.samples:
+            self.report_sample(sample)
+
+    def _init_metadata_table(self):
+        """
+        Internal: set up a table for project metadata
+
+        Associated CSS class is 'metadata'
+        """
+        metadata_tbl = Table(('item','value',))
+        metadata_tbl.no_header()
+        metadata_tbl.add_css_classes('metadata')
+        return metadata_tbl
+
+    def _init_summary_table(self):
+        """
+        Internal: set up a table for summarising samples
+
+        Associated CSS classes are 'summary' and 'fastq_summary'
+        """
+        summary_tbl = Table(self.summary_fields,
+                            **self.field_descriptions)
+        summary_tbl.add_css_classes('summary','fastq_summary')
+        return summary_tbl
+
+    def _init_preamble_section(self):
+        """
+        Internal: set up a "preamble" section
+        """
+        preamble = self.add_section()
+        preamble.add("Report generated by auto_process %s on %s" %
+                     (get_version(),time.asctime()))
+        return preamble
+
+    def _init_summary_section(self):
+        """
+        Internal: set up a summary section for the report
+
+        Associated name is 'summary'
+        """
+        summary = self.add_section("Summary",name='summary')
+        summary.add(self.metadata_table)
+        summary.add("%d samples | %d fastqs" % (len(self.project.samples),
+                                                len(self.project.fastqs)))
+        summary.add(self.summary_table)
+        return summary
+
+    def report_metadata(self):
+        """
+        Report the project metadata
+
+        Adds entries for the project metadata to the "metadata"
+        table in the report
+        """
+        metadata_items = ['user','PI','library_type','organism',]
+        if self.project.info.single_cell_platform is not None:
+            metadata_items.insert(3,'single_cell_platform')
+        metadata_titles = {
+            'user': 'User',
+            'PI': 'PI',
+            'library_type': 'Library type',
+            'single_cell_platform': 'Single cell preparation platform',
+            'organism': 'Organism',
+        }
+        for item in metadata_items:
+            if self.project.info[item]:
+                self.metadata_table.add_row(
+                    item=metadata_titles[item],
+                    value=self.project.info[item])
+
+    def report_sample(self,sample):
+        """
+        Report the QC for a sample
+
+        Reports the QC for the sample and Fastqs to
+        the summary table and appends a section with
+        detailed reports to the document.
+
+        Arguments:
+          sample (AnalysisSample): sample to report
+        """
+        sample = QCSample(sample)
+        # Create a new section for the sample
+        sample_report = self.add_section(
+            "Sample: %s" % sample.name,
+            name="sample_%s" % sample.name)
+        sample_report.add_css_classes('sample')
+        # Number of fastqs
+        if self.project.info.paired_end:
+            sample_report.add("%d fastq R1/R2 pairs" %
+                              len(sample.fastq_pairs))
+        else:
+            sample_report.add("%d fastqs" %
+                              len(sample.fastq_pairs))
+        # Report each Fastq/Fastq pair
+        sample_name = sample.name
+        for fq_pair in sample.fastq_pairs:
+            # Report Fastq pair
+            fastq_pair = QCReportFastqPair(fq_pair.r1,
+                                           fq_pair.r2,
+                                           self.qc_dir)
+            fastq_pair.report(sample_report,
+                              attrs=self.report_attrs,
+                              relpath=self.relpath)
+            # Add line in summary table
+            if sample_name is not None:
+                idx = self.summary_table.add_row(sample=Link(sample_name,
+                                                             sample_report))
+            else:
+                idx = self.summary_table.add_row(sample="&nbsp;")
+            fastq_pair.update_summary_table(self.summary_table,idx=idx,
+                                            fields=self.summary_fields)
+
+class QCReportFastqPair(object):
+    """
+    Utility class for reporting the QC for a Fastq pair
+
+    Provides the following properties:
+
+    r1: QCReportFastq instance for R1 Fastq
+    r2: QCReportFastq instance for R2 Fastq
+
+    Provides the following methods:
+
+    report: 
+    """
+    def __init__(self,fastqr1,fastqr2,qc_dir):
+        """
+        Create a new QCReportFastqPair
+
+        Arguments:
+          fastqr1 (str): R1 Fastq file
+          fastqr2 (str): R2 Fastq file (None if 'pair' is
+            single-ended)
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project
+        """
+        self.fastqr1 = fastqr1
+        self.fastqr2 = fastqr2
+        self.qc_dir = qc_dir
+
+    @property
+    def paired_end(self):
+        """
+        True if pair consists of R1/R2 files
+        """
+        return (self.fastqr2 is not None)
+
+    @property
+    def r1(self):
+        """
+        QCReportFastq instance for R1 Fastq
+        """
+        return QCReportFastq(self.fastqr1,self.qc_dir)
+
+    @property
+    def r2(self):
+        """
+        QCReportFastq instance for R2 Fastq (None if not paired end)
+        """
+        if self.fastqr2 is not None:
+            return QCReportFastq(self.fastqr2,self.qc_dir)
+        return None
+
+    def report(self,sample_report,attrs=None,relpath=None):
+        """
+        Add report for Fastq pair to a document section
+
+        Creates a new subsection in 'sample_report' for the
+        Fastq pair, within which are additional subsections
+        for each Fastq file.
+
+        The following 'attributes' can be reported for each
+        Fastq:
+
+        - fastqc
+        - fastq_screen
+        - program versions
+
+        By default all attributes are reported.
+
+        Arguments:
+          sample_report (Section): section to add the report
+            to
+          attrs (list): optional list of custom 'attributes'
+            to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        # Attributes to report
+        if attrs is None:
+            attrs = ('fastqc','fastq_screen','program_versions')
+        # Add container section for Fastq pair
+        fastqs_report = sample_report.add_subsection()
+        fastqs_report.add_css_classes('fastqs')
+        # Create sections for individual Fastqs
+        for fq in (self.r1,self.r2):
+            if fq is None:
+                continue
+            fq_report = fastqs_report.add_subsection(fq.name,
+                                                     name=fq.safe_name)
+            fq_report.add_css_classes('fastq')
+            # Add reports for each requested 'attribute'
+            for attr in attrs:
+                if attr == "fastqc":
+                    # FastQC outputs
+                    fq.report_fastqc(fq_report,relpath=relpath)
+                elif attr == "fastq_screen":
+                    # FastQScreens
+                    fq.report_fastq_screens(fq_report,relpath=relpath)
+                elif attr == "program_versions":
+                    # Versions of programs used
+                    new_section = fq.report_program_versions(fq_report)
+                else:
+                    raise KeyError("'%s': unrecognised reporting element "
+                                   % attr)
+        # Add an empty section to clear HTML floats
+        clear = fastqs_report.add_subsection()
+        clear.add_css_classes("clear")
+
+    def update_summary_table(self,summary_table,idx=None,fields=None):
+        """
+        Add a line to a summary table reporting a Fastq pair
+
+        Creates a new line in 'summary_table' (or updates an
+        existing line) for the Fastq pair, adding content for
+        each specied field.
+
+        The following fields can be reported for each Fastq
+        pair:
+
+        - fastqs (if paired-end)
+        - fastq (if single-end)
+        - reads
+        - boxplot_r1
+        - boxplot_r2
+        - fastqc_r1
+        - fastqc_r2
+        - screens_r1
+        - screens_r2
+
+        Arguments:
+          summary_table (Table): table to add the summary to
+          idx (int): if supplied then indicates which existing
+            table row to update (if None then a new row is
+            appended)
+          fields (list): list of custom fields to report
+        """
+        # Fields to report
+        if fields is None:
+            if self.paired_end:
+                fields = ('fastqs',
+                          'reads',
+                          'boxplot_r1','boxplot_r2',
+                          'fastqc_r1','fastqc_r2',
+                          'screens_r1','screens_r2')
+            else:
+                fields = ('fastq',
+                          'reads',
+                          'boxplot_r1',
+                          'fastqc_r1',
+                          'screens_r1')
+        # Add row to summary table
+        if idx is None:
+            idx = summary_table.add_row()
+        # Populate with data
+        for field in fields:
+            if field == "sample":
+                logger.debug("'sample' ignored")
+            elif field == "fastq":
+                summary_table.set_value(idx,'fastq',
+                                        Link(self.r1.name,
+                                             "#%s" % self.r1.safe_name))
+            elif field == "fastqs":
+                summary_table.set_value(idx,'fastqs',
+                                        "%s<br />%s" %
+                                        (Link(self.r1.name,
+                                              "#%s" % self.r1.safe_name),
+                                         Link(self.r2.name,
+                                              "#%s" % self.r2.safe_name)))
+            elif field == "reads":
+                summary_table.set_value(idx,'reads',
+                                        pretty_print_reads(
+                                            self.r1.fastqc.data.basic_statistics(
+                                                'Total Sequences')))
+            elif field == "boxplot_r1":
+                summary_table.set_value(idx,'boxplot_r1',
+                                        Img(self.r1.uboxplot(),
+                                            href="#boxplot_%s" %
+                                            self.r1.safe_name))
+            elif field == "boxplot_r2":
+                summary_table.set_value(idx,'boxplot_r2',
+                                        Img(self.r2.uboxplot(),
+                                            href="#boxplot_%s" %
+                                            self.r2.safe_name))
+            elif field == "fastqc_r1":
+                summary_table.set_value(idx,'fastqc_r1',
+                                        Img(self.r1.ufastqcplot(),
+                                            href="#fastqc_%s" %
+                                            self.r1.safe_name))
+            elif field == "fastqc_r2":
+                summary_table.set_value(idx,'fastqc_r2',
+                                        Img(self.r2.ufastqcplot(),
+                                            href="#fastqc_%s" %
+                                            self.r2.safe_name))
+            elif field == "screens_r1":
+                summary_table.set_value(idx,'screens_r1',
+                                        Img(self.r1.uscreenplot(),
+                                            href="#fastq_screens_%s" %
+                                            self.r1.safe_name))
+            elif field == "screens_r2":
+                summary_table.set_value(idx,'screens_r2',
+                                        Img(self.r2.uscreenplot(),
+                                            href="#fastq_screens_%s" %
+                                            self.r2.safe_name))
+            else:
+                raise KeyError("'%s': unrecognised field for summary "
+                               "table" % field)
+
+class QCReportFastq(object):
+    """
+    Provides interface to QC outputs for Fastq file
+
+    Provides the following attributes:
+
+    name: basename of the Fastq
+    path: path to the Fastq
+    safe_name: name suitable for use in HTML links etc
+    fastqc: Fastqc instance
+    fastq_screen.names: list of FastQScreen names
+    fastq_screen.SCREEN.description: description of SCREEN
+    fastq_screen.SCREEN.png: associated PNG file for SCREEN
+    fastq_screen.SCREEN.txt: associated TXT file for SCREEN
+    fastq_screen.SCREEN.version: associated version for SCREEN
+    program_versions.NAME: version of package NAME
+
+    Provides the following methods:
+
+    report_fastqc
+    report_fastq_screens
+    report_program_versions
+    uboxplot
+    ufastqcplot
+    uscreenplot
+    """
+    def __init__(self,fastq,qc_dir):
+        """
+        Create a new QCReportFastq instance
+
+        Arguments:
+          fastq (str): path to Fastq file
+          qc_dir (str): path to QC directory
+        """
+        # Source data
+        self.name = os.path.basename(fastq)
+        self.path = os.path.abspath(fastq)
+        self.safe_name = strip_ngs_extensions(self.name)
+        # FastQC
+        try:
+            self.fastqc = Fastqc(os.path.join(
+                qc_dir,fastqc_output(fastq)[0]))
+        except Exception as ex:
+            self.fastqc = None
+        # Fastqscreen
+        self.fastq_screen = AttributeDictionary()
+        self.fastq_screen['names'] = list()
+        for name in FASTQ_SCREENS:
+            png,txt = fastq_screen_output(fastq,name)
+            png = os.path.join(qc_dir,png)
+            txt = os.path.join(qc_dir,txt)
+            self.fastq_screen['names'].append(name)
+            self.fastq_screen[name] = AttributeDictionary()
+            self.fastq_screen[name]["description"] = name.replace('_',' ').title()
+            self.fastq_screen[name]["png"] = png
+            self.fastq_screen[name]["txt"] = txt
+            self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+        # Program versions
+        self.program_versions = AttributeDictionary()
+        if self.fastqc is not None:
+            fastqc_version = self.fastqc.version
+        else:
+            fastqc_version = '?'
+        self.program_versions['fastqc'] = fastqc_version
+        fastq_screen_versions = list(
+            set([self.fastq_screen[s].version
+                 for s in self.fastq_screen.names]))
+        if fastq_screen_versions:
+            fastq_screen_versions = ','.join(sorted(fastq_screen_versions))
+        else:
+            fastq_screen_versions = '?'
+        self.program_versions['fastq_screen'] = fastq_screen_versions
+
+    def report_fastqc(self,document,relpath=None):
+        """
+        Report the FastQC outputs to a document
+
+        Creates a new subsection called "FastQC" with
+        a copy of the FastQC sequence quality boxplot and
+        a summary table of the results from each FastQC
+        module.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        fastqc_report = document.add_subsection("FastQC")
+        if self.fastqc:
+            # FastQC quality boxplot
+            fastqc_report.add("Per base sequence quality boxplot:")
+            boxplot = Img(self.fastqc.quality_boxplot(inline=True),
+                          height=250,
+                          width=480,
+                          href=self.fastqc.summary.link_to_module(
+                              'Per base sequence quality',
+                              relpath=relpath),
+                          name="boxplot_%s" % self.safe_name)
+            fastqc_report.add(boxplot)
+            # FastQC summary table
+            fastqc_report.add("FastQC summary:")
+            fastqc_tbl = Target("fastqc_%s" % self.safe_name)
+            fastqc_report.add(fastqc_tbl,
+                              self.fastqc.summary.html_table(relpath=relpath))
+            if relpath:
+                fastqc_html_report = os.path.relpath(self.fastqc.html_report,
+                                                     relpath)
+            else:
+                fastqc_html_report = self.fastqc.html_report
+            fastqc_report.add("%s for %s" % (Link("Full FastQC report",
+                                                  fastqc_html_report),
+                                             self.name))
+        else:
+            fastqc_report.add("!!!No FastQC data available!!!")
+        return fastqc_report
+
+    def report_fastq_screens(self,document,relpath=None):
+        """
+        Report the FastQScreen outputs to a document
+
+        Creates a new subsection called "Screens" with
+        copies of the screen plots for each screen and
+        links to the "raw" text files.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        screens_report = document.add_subsection("Screens",
+                                                 name="fastq_screens_%s" %
+                                                 self.safe_name)
+        raw_data = list()
+        for name in self.fastq_screen.names:
+            # Title for the screen
+            screens_report.add(self.fastq_screen[name].description)
+            # Gather data for screen
+            png = self.fastq_screen[name].png
+            txt = self.fastq_screen[name].txt
+            if relpath:
+                png_href = os.path.relpath(png,relpath)
+                txt_href = os.path.relpath(txt,relpath)
+            else:
+                png_href = png
+                txt_href = txt
+            # Screen plot (PNG)
+            if os.path.exists(png):
+                screens_report.add(Img(encode_png(png),
+                                       height=250,
+                                       href=png_href))
+            else:
+                screens_report.add("!!!No FastqScreen plot available!!!")
+            # Link to raw data (TXT)
+            if os.path.exists(txt):
+                raw_data.append(
+                    Link(self.fastq_screen[name].description,
+                         txt_href).html())
+            else:
+                screens_report.add("!!!No FastqScreen data available!!!")
+        # Add links to raw data (TXT files)
+        screens_report.add("Raw screen data: " +
+                           "| ".join(raw_data))
+        return screens_report
+
+    def report_program_versions(self,document):
+        """
+        Report the program versions to a document
+
+        Creates a new subsection called "Program versions"
+        with a table listing the versions of the QC
+        programs.
+
+        Arguments:
+          document (Section): section to add report to
+          relpath (str): if set then make link paths
+            relative to 'relpath'
+        """
+        versions = document.add_subsection("Program versions")
+        programs = Table(("Program","Version"))
+        programs.add_css_classes("programs","summary")
+        programs.add_row(Program='fastqc',
+                         Version=self.program_versions.fastqc)
+        programs.add_row(Program='fastq_screen',
+                         Version=self.program_versions.fastq_screen)
+        versions.add(programs)
+        return versions
+
+    def uboxplot(self,inline=True):
+        """
+        Return a mini-sequence quality boxplot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return uboxplot(self.fastqc.data.path,inline=inline)
+
+    def ufastqcplot(self,inline=True):
+        """
+        Return a mini-FastQC summary plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        return ufastqcplot(self.fastqc.summary.path,inline=inline)
+
+    def uscreenplot(self,inline=True):
+        """
+        Return a mini-FastQScreen summary plot
+
+        Arguments:
+          inline (bool): if True then return plot in format for
+            inlining in HTML document
+        """
+        screen_files = list()
+        for name in self.fastq_screen.names:
+            screen_files.append(self.fastq_screen[name].txt)
+        return uscreenplot(screen_files,inline=inline)
 
 #######################################################################
 # Functions
@@ -586,7 +1063,6 @@ def get_fastq_pairs(sample):
 
     Returns:
        list: list of FastqSet instances, sorted by R1 names
-
     """
     pairs = []
     fastqs_r1 = sample.fastq_subset(read_number=1)
@@ -621,7 +1097,6 @@ def pretty_print_reads(n):
 
     Returns:
       String: representation with commas for every thousand.
-
     """
     n = str(int(n))[::-1]
     n0 = []
