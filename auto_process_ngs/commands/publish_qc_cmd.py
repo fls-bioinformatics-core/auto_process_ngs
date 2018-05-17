@@ -226,7 +226,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 os.path.basename(fastq_dir)
             # Verify the QC and check for report
             verified = verify_qc(project,
-                qc_dir=os.path.join(project.dirn,qc_dir))
+                qc_dir=os.path.join(project.dirn,qc_dir),
+                                 log_dir=ap.log_dir)
             if verified:
                 print "...%s: verified QC" % qc_dir
                 # Check for an existing report
@@ -238,7 +239,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 # Check if we need to (re)generate report
                 if (regenerate_reports or
                     not os.path.exists(qc_zip)):
-                    if report_qc(qc_dir=qc_dir) is not None:
+                    report_status = report_qc(qc_dir=qc_dir,
+                                              log_dir=ap.log_dir)
+                    if report_status is not None:
                         print "...%s: (re)generated report" % qc_dir
                     else:
                         print "...%s: failed to (re)generate " \
