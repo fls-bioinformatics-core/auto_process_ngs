@@ -61,7 +61,7 @@ def verify_qc(project,qc_dir=None,runner=None):
     sched.start()
     # QC check for project
     project.check_qc(sched,
-                     name="verify_qc.%s" % project.title,
+                     name="verify_qc",
                      runner=runner)
     sched.wait()
     return project.verify()
