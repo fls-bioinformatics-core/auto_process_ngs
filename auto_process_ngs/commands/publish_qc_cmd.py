@@ -239,7 +239,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 # Check if we need to (re)generate report
                 if (regenerate_reports or
                     not os.path.exists(qc_zip)):
-                    report_status = report_qc(qc_dir=qc_dir,
+                    report_status = report_qc(project,
+                                              qc_dir=qc_dir,
+                                              multiqc=True,
                                               log_dir=ap.log_dir)
                     if report_status is not None:
                         print "...%s: (re)generated report" % qc_dir
