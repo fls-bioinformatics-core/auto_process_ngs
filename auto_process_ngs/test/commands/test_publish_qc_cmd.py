@@ -10,6 +10,7 @@ from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisDir
 from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.commands.publish_qc_cmd import publish_qc
 
 class TestAutoProcessPublishQc(unittest.TestCase):
@@ -19,8 +20,13 @@ class TestAutoProcessPublishQc(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessPublishQc')
+        # Create a temp 'bin' dir
+        self.bin = os.path.join(self.dirn,"bin")
+        os.mkdir(self.bin)
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
+        # Store original PATH
+        self.path = os.environ['PATH']
         # Move to working dir
         os.chdir(self.dirn)
         # Placeholders for test objects
@@ -231,6 +237,10 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             qc_reports.append("multiqc_report.html")
             for f in qc_reports:
                 os.remove(os.path.join(project.dirn,f))
+        # Make a mock multiqc
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
