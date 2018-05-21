@@ -115,6 +115,45 @@ class TestRunQC(unittest.TestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    def test_run_qc_with_missing_strandedness(self):
+        """RunQC: standard QC fails with missing strandedness outputs
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"),
+                                 no_outputs=True)
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")))
+        illumina_qc=IlluminaQC(fastq_strand_conf="fastq_strand.conf")
+        status = runqc.run(illumina_qc=illumina_qc,
+                           multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,1)
+        self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
+                        "Missing 'qc'")
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)
+
     def test_run_qc_no_multiqc(self):
         """RunQC: standard QC run (no MultiQC)
         """
