@@ -37,6 +37,7 @@ the external software required for parts of the pipeline:
 - MockBcl2fastq2Exe
 - MockIlluminaQCSh
 - MockMultiQC
+- MockFastqStrandPy
 
 """
 
@@ -1215,5 +1216,113 @@ For more help, run 'multiqc --help' or visit http://multiqc.info
             with open(out_file,'w') as fp:
                 fp.write("MultiQC HTML report")
             os.mkdir(out_dir)
+        # Exit
+        return self._exit_code
+
+class MockFastqStrandPy(object):
+    """
+    Create mock fastq_strand.py executable
+
+    This class can be used to create a mock fastq_strand.py
+    executable, which in turn can be used in place of
+    the actual fastq_strand.py executable for testing
+    purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockFastqStrandPy.create("/tmpbin/fastq_strand.py")
+
+    The resulting executable will generate mock outputs
+    when run on a pair of Fastq files (ignoring their
+    contents).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    - the outputs can be suppressed by setting the
+      `no_output` argument to `True`
+    """
+
+    @staticmethod
+    def create(path,no_outputs=False,exit_code=0):
+        """
+        Create a "mock" fastq_strand.py executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          no_outputs (bool): if True then don't
+            create any of the expected outputs
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+        """
+        path = os.path.abspath(path)
+        print "Building mock executable: %s" % path
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockFastqStrandPy
+sys.exit(MockFastqStrandPy(no_outputs=%s,
+                     exit_code=%s).main(sys.argv[1:]))
+            """ % (no_outputs,exit_code))
+            os.chmod(path,0775)
+        with open(path,'r') as fp:
+            print "fastq_strand.py:"
+            print "%s" % fp.read()
+        return path
+
+    def __init__(self,no_outputs=False,exit_code=0):
+        """
+        Internal: configure the mock fastq_strand.py
+        """
+        self._version = "0.0.1"
+        self._no_outputs = no_outputs
+        self._exit_code = exit_code
+
+    def main(self,args):
+        """
+        Internal: provides mock fastq_strand.py functionality
+        """
+        # No args
+        if not args:
+            return self._exit_code
+        # Handle version request
+        if args[0] == "--version":
+            print "%s" % self._version
+            return self._exit_code
+        # Deal with arguments
+        p = argparse.ArgumentParser()
+        p.add_argument("--subset",action="store")
+        p.add_argument("-o","--outdir",action="store")
+        p.add_argument("-c","--conf",action="store")
+        p.add_argument("-n",action="store")
+        p.add_argument("--counts",action="store_true")
+        p.add_argument("--keep-star-output",action="store_true")
+        p.add_argument("fastqr1")
+        p.add_argument("fastqr2")
+        args = p.parse_args(args)
+        # Outputs
+        if self._no_outputs:
+            return self._exit_code
+        # Create fake output file
+        basename = os.path.splitext(os.path.basename(args.fastqr1))[0]
+        if args.outdir is not None:
+            outfile = os.path.join(args.outdir,"%s.txt" % basename)
+        else:
+            outfile = os.path.join(os.getcwd(),"%s.txt" % basename)
+        with open(outfile,'w') as fp:
+            fp.write("""#fastq_strand version: %s	#Aligner: STAR	#Reads in subset: 1000
+#Genome	1st forward	2nd reverse
+hg38	13.13	93.21
+mm10	13.13	93.21
+""" % self._version)
         # Exit
         return self._exit_code
