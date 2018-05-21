@@ -100,6 +100,9 @@ if __name__ == "__main__":
                    "for fastq_screen (i.e. --subset option); (default "
                    "%d, set to 0 to use all reads)" %
                    __settings.qc.fastq_screen_subset)
+    p.add_argument('--multiqc',action='store_true',dest='run_multiqc',
+                   default=False,
+                   help="also generate MultiQC report")
     p.add_argument('-t','--threads',action='store',dest="nthreads",
                    type=int,default=__settings.qc.nprocessors,
                    help="number of threads to use for QC script "
@@ -187,7 +190,7 @@ if __name__ == "__main__":
                       qc_dir=args.qc_dir)
     status = runqc.run(illumina_qc,
                        report_html=out_file,
-                       multiqc=False,
+                       multiqc=args.run_multiqc,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,
                        report_runner=default_runner,
