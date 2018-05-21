@@ -12,7 +12,7 @@
 import os
 import logging
 import bcftbx.IlluminaData as IlluminaData
-import auto_process_ngs.utils as utils
+import auto_process_ngs.analysis as analysis
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -111,17 +111,18 @@ def setup_analysis_dirs(ap,
             logger.warning("Skipping '%s'" % project_name)
             continue
         # Create the project
-        project = utils.AnalysisProject(project_name,
-                                        os.path.join(ap.analysis_dir,
-                                                     project_name),
-                                        user=user,
-                                        PI=PI,
-                                        organism=organism,
-                                        library_type=library_type,
-                                        single_cell_platform=single_cell_platform,
-                                        run=run_name,
-                                        comments=comments,
-                                        platform=ap.metadata.platform)
+        project = analysis.AnalysisProject(
+            project_name,
+            os.path.join(ap.analysis_dir,
+                         project_name),
+            user=user,
+            PI=PI,
+            organism=organism,
+            library_type=library_type,
+            single_cell_platform=single_cell_platform,
+            run=run_name,
+            comments=comments,
+            platform=ap.metadata.platform)
         if project.exists:
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
@@ -143,14 +144,15 @@ def setup_analysis_dirs(ap,
         undetermined_project = 'undetermined'
     undetermined = illumina_data.undetermined
     if illumina_data.undetermined is not None:
-        undetermined = utils.AnalysisProject(undetermined_project,
-                                             os.path.join(
-                                                 ap.analysis_dir,
-                                                 undetermined_project),
-                                             run=run_name,
-                                             comments="Analysis of reads "
-                                             "with undetermined indices",
-                                             platform=ap.metadata.platform)
+        undetermined = analysis.AnalysisProject(
+            undetermined_project,
+            os.path.join(
+                ap.analysis_dir,
+                undetermined_project),
+            run=run_name,
+            comments="Analysis of reads "
+            "with undetermined indices",
+            platform=ap.metadata.platform)
         if not undetermined.exists:
             print "Creating directory '%s' for analysing reads " \
                 "with undetermined indices" % undetermined.name

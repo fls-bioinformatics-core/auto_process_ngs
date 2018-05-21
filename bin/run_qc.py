@@ -23,7 +23,7 @@ import argparse
 import logging
 from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 import auto_process_ngs

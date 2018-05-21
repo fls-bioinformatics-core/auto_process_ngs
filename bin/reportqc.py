@@ -13,7 +13,7 @@ import os
 import optparse
 import logging
 from bcftbx.utils import find_program
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC

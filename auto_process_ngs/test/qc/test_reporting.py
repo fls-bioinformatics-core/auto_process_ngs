@@ -8,8 +8,8 @@ import tempfile
 import shutil
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mockqc import MockQCOutputs
-from auto_process_ngs.utils import AnalysisProject
-from auto_process_ngs.utils import AnalysisSample
+from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.analysis import AnalysisSample
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.reporting import FastqSet
 from auto_process_ngs.qc.reporting import pretty_print_reads
