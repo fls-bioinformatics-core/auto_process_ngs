@@ -7,6 +7,24 @@ import tempfile
 
 from auto_process_ngs.qc.fastq_screen import Fastqscreen
 
+class TestFastqscreen(unittest.TestCase):
+    def setUp(self):
+        screen_text = ""
+        with tempfile.NamedTemporaryFile(delete=False) as fp:
+            self.fastq_screen_txt = fp.name
+            fp.write(screen_text)
+    def tearDown(self):
+        try:
+            os.remove(self.fastq_screen_txt)
+        except Exception:
+            pass
+    def test_fastq_screen_handle_empty_output_file(self):
+        """FastqScreen handles empty output file
+        """
+        self.assertRaises(Exception,
+                          Fastqscreen,
+                          self.fastq_screen_txt)
+
 class TestFastqscreen_v0_4_1(unittest.TestCase):
     def setUp(self):
         screen_text = """#Fastq_screen version: 0.4.1
