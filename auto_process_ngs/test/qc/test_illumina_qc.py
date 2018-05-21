@@ -76,6 +76,33 @@ class TestIlluminaQC(unittest.TestCase):
                          "--threads 1 "
                          "--qc_dir /path/to/qc")
 
+    def test_illumina_qc_commands_for_fastq_pair_with_strandedness(self):
+        """IlluminaQC: generates commands for Fastq pair with strandedness
+        """
+        illumina_qc = IlluminaQC(
+            fastq_strand_conf="/path/to/fastq_strand.conf")
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
+                                     "/path/to/fastqs/test_S1_R2.fastq.gz"),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),3)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[2]),
+                         "fastq_strand.py "
+                         "-n 1 "
+                         "--conf /path/to/fastq_strand.conf "
+                         "--outdir /path/to/qc "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz")
+
     def test_illumina_qc_commands_for_index_read(self):
         """IlluminaQC: generates empty command list for index read Fastq
         """

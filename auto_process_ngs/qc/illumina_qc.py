@@ -13,6 +13,7 @@ import logging
 from bcftbx.qc.report import strip_ngs_extensions
 from ..applications import Command
 from ..fastq_utils import IlluminaFastqAttrs
+from ..fastq_utils import pair_fastqs_by_name
 
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
@@ -30,7 +31,7 @@ class IlluminaQC(object):
     Utility class for running 'illumina_qc.sh'
     """
     def __init__(self,fastq_screen_subset=None,nthreads=1,
-                 ungzip_fastqs=False):
+                 fastq_strand_conf=None,ungzip_fastqs=False):
         """
         Create a new IlluminaQC instance
 
@@ -40,12 +41,16 @@ class IlluminaQC(object):
             uses the script default)
           nthreads (int): number of cores (threads)
             to run the QC using (default: 1)
+          fastq_strand_conf (str): path to a config
+            file with STAR indexes to use for strand
+            determination
           ungzip_fastqs (bool): if True then also
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
         """
         self.fastq_screen_subset = fastq_screen_subset
         self.nthreads = nthreads
+        self.fastq_strand_conf = fastq_strand_conf
         self.ungzip_fastqs = ungzip_fastqs
 
     def version(self):
@@ -77,6 +82,11 @@ class IlluminaQC(object):
             script on.
         """
         cmds = list()
+        # Filter out index reads
+        fastqs = filter(lambda fq:
+                        not IlluminaFastqAttrs(fq).is_index_read,
+                        fastqs)
+        # Generate QC commands for individual Fastqs
         for fastq in fastqs:
             # Skip index reads (i.e. I1)
             if IlluminaFastqAttrs(fastq).is_index_read:
@@ -91,6 +101,18 @@ class IlluminaQC(object):
             if qc_dir is not None:
                 cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
             cmds.append(cmd)
+        # Generate pair-wise QC commands
+        for fq_pair in pair_fastqs_by_name(fastqs):
+            if len(fq_pair) != 2:
+                continue
+            # Strandedness for this pair
+            if self.fastq_strand_conf is not None:
+                cmd = Command('fastq_strand.py',
+                              '-n',self.nthreads,
+                              '--conf',self.fastq_strand_conf,
+                              '--outdir',os.path.abspath(qc_dir),
+                              *fq_pair)
+                cmds.append(cmd)
         return cmds
 
     def expected_outputs(self,fastq,qc_dir):
