@@ -473,3 +473,47 @@ class TestRunQC(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                              "Found %s, shouldn't be present" % f)
+
+    def test_run_qc_non_default_log_dir(self):
+        """RunQC: standard QC run using non-default log dir
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Non-default log dir
+        log_dir = os.path.join(self.wd,"logs")
+        self.assertFalse(os.path.exists(log_dir),
+                         "Log dir '%s' already exists" % log_dir)
+        # Set up and run the QC
+        runqc = RunQC()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          log_dir=log_dir)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,0)
+        self.assertTrue(os.path.isdir(os.path.join(self.wd,
+                                                   "PJB",
+                                                   "qc")),
+                         "'qc' directory doesn't exist, but should")
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" %
+                  os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+        # Check log directory
+        self.assertTrue(os.path.exists(log_dir),
+                        "Log dir '%s' not found" % log_dir)

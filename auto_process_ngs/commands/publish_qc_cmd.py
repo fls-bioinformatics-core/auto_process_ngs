@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 #########################################################################
 
@@ -15,6 +15,8 @@ import string
 import ast
 import auto_process_ngs.fileops as fileops
 import auto_process_ngs.simple_scheduler as simple_scheduler
+from auto_process_ngs.qc.utils import verify_qc
+from auto_process_ngs.qc.utils import report_qc
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
@@ -223,8 +225,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             print "...associated Fastq set '%s'" % \
                 os.path.basename(fastq_dir)
             # Verify the QC and check for report
-            verified = project.verify_qc(
-                qc_dir=os.path.join(project.dirn,qc_dir))
+            verified = verify_qc(project,
+                qc_dir=os.path.join(project.dirn,qc_dir),
+                                 log_dir=ap.log_dir)
             if verified:
                 print "...%s: verified QC" % qc_dir
                 # Check for an existing report
@@ -236,14 +239,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 # Check if we need to (re)generate report
                 if (regenerate_reports or
                     not os.path.exists(qc_zip)):
-                    try:
-                        project.qc_report(qc_dir=qc_dir,
-                                          force=force)
+                    report_status = report_qc(project,
+                                              qc_dir=qc_dir,
+                                              multiqc=True,
+                                              log_dir=ap.log_dir)
+                    if report_status is not None:
                         print "...%s: (re)generated report" % qc_dir
-                    except Exception as ex:
+                    else:
                         print "...%s: failed to (re)generate " \
-                            "QC report: %s" \
-                            % (qc_dir,ex)
+                            "QC report" % qc_dir
                 # Add to the list of verified QC dirs
                 if os.path.exists(qc_zip):
                     qc_artefacts['qc_zip'] = qc_zip

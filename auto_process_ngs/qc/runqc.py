@@ -63,7 +63,8 @@ class RunQC(object):
         self._sched = None
 
     def add_project(self,project,fastq_dir=None,qc_dir=None,
-                    sample_pattern=None,ungzip_fastqs=False):
+                    log_dir=None,sample_pattern=None,
+                    ungzip_fastqs=False):
         """
         Add a project to run the QC for
 
@@ -72,11 +73,14 @@ class RunQC(object):
             to run the QC for
           fastq_dir (str): optional, specify the subdir
             with the Fastqs to be be used
+          qc_dir (str): optional, specify the subdir to
+            write the QC outputs to
+          log_dir (str): optional, specify a directory to
+            write logs to (default is to put logs in the
+            'logs' subdir of the QC directory)
           sample_pattern (str): optional, specify a
             glob-style pattern to use to select a subset
             of samples
-          qc_dir (str): optional, specify the subdir to
-            write the QC outputs to
           ungzip_fastqs (bool): if True then uncompress
             source Fastqs (default: False i.e. don't
             uncompress the Fastqs)
@@ -85,6 +89,7 @@ class RunQC(object):
                                         fastq_dir=fastq_dir,
                                         sample_pattern=sample_pattern,
                                         qc_dir=qc_dir,
+                                        log_dir=log_dir,
                                         ungzip_fastqs=ungzip_fastqs))
 
     def run(self,illumina_qc=None,report_html=None,multiqc=False,
@@ -183,7 +188,7 @@ class ProjectQC(object):
     Class for setting up QC jobs for a project
     """
     def __init__(self,project,fastq_dir=None,sample_pattern=None,
-                 qc_dir=None,ungzip_fastqs=False):
+                 qc_dir=None,log_dir=None,ungzip_fastqs=False):
         """
         Create a new ProjectQC instance
 
@@ -197,6 +202,9 @@ class ProjectQC(object):
             of samples
           qc_dir (str): optional, specify the subdir to
             write the QC outputs to
+          log_dir (str): optional, specify a directory to
+            write logs to (default is to put logs in the
+            'logs' subdir of the QC directory)
         """
         # Clone the supplied project
         self.project = utils.AnalysisProject(project.name,
@@ -211,7 +219,10 @@ class ProjectQC(object):
         self.fastq_dir = project.qc_info(project.qc_dir).fastq_dir
         project.use_fastq_dir(self.fastq_dir)
         # Log directory
-        self.log_dir = os.path.join(project.qc_dir,'logs')
+        if log_dir is not None:
+            self.log_dir = os.path.abspath(log_dir)
+        else:
+            self.log_dir = os.path.join(project.qc_dir,'logs')
         if not os.path.exists(self.log_dir):
             print "Making QC logs directory: %s" % self.log_dir
             fileops.mkdir(self.log_dir,recursive=True)

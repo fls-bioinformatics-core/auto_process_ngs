@@ -10,6 +10,7 @@ from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisDir
 from auto_process_ngs.mock import UpdateAnalysisProject
+from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.commands.publish_qc_cmd import publish_qc
 
 class TestAutoProcessPublishQc(unittest.TestCase):
@@ -19,8 +20,13 @@ class TestAutoProcessPublishQc(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessPublishQc')
+        # Create a temp 'bin' dir
+        self.bin = os.path.join(self.dirn,"bin")
+        os.mkdir(self.bin)
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
+        # Store original PATH
+        self.path = os.environ['PATH']
         # Move to working dir
         os.chdir(self.dirn)
         # Placeholders for test objects
@@ -179,6 +185,62 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
             UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_with_projects_no_reports(self):
+        """publish_qc: projects with all QC outputs but no reports
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Remove the QC reports
+        for project in ap.get_analysis_projects():
+            qc_reports = []
+            qc_reports.append("qc_report.%s.%s.zip" %
+                              (project.name,
+                               os.path.basename(ap.analysis_dir)))
+            qc_reports.append("qc_report.html")
+            qc_reports.append("multiqc_report.html")
+            for f in qc_reports:
+                os.remove(os.path.join(project.dirn,f))
+        # Make a mock multiqc
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
