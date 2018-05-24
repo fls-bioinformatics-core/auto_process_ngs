@@ -10,6 +10,7 @@ from auto_process_ngs.mock import MockIlluminaQcSh
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.illumina_qc import fastq_screen_output
 from auto_process_ngs.qc.illumina_qc import fastqc_output
+from auto_process_ngs.qc.illumina_qc import fastq_strand_output
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -285,3 +286,17 @@ class TestFastqcOutputFunction(unittest.TestCase):
                          ('PB1_ATTAGG_L001_R1_001_fastqc',
                           'PB1_ATTAGG_L001_R1_001_fastqc.html',
                           'PB1_ATTAGG_L001_R1_001_fastqc.zip'))
+
+class TestFastqStrandOutputFunction(unittest.TestCase):
+    def test_fastq_strand_output(self):
+        """fastq_strand_output: handles .fastq file
+        """
+        self.assertEqual(fastq_strand_output(
+            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq'),
+                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
+    def test_fastq_strand_output_fastqgz(self):
+        """fastq_strand_output: handles fastq.gz file
+        """
+        self.assertEqual(fastq_strand_output(
+            '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
+                         'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
