@@ -1315,9 +1315,9 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         # Create fake output file
         basename = os.path.splitext(os.path.basename(args.fastqr1))[0]
         if args.outdir is not None:
-            outfile = os.path.join(args.outdir,"%s.txt" % basename)
+            outfile = os.path.join(args.outdir,"%s_fastq_strand.txt" % basename)
         else:
-            outfile = os.path.join(os.getcwd(),"%s.txt" % basename)
+            outfile = os.path.join(os.getcwd(),"%s_fastq_strand.txt" % basename)
         with open(outfile,'w') as fp:
             fp.write("""#fastq_strand version: %s	#Aligner: STAR	#Reads in subset: 1000
 #Genome	1st forward	2nd reverse
