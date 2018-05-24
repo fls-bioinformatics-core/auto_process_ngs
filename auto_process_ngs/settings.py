@@ -122,6 +122,7 @@ class Settings(object):
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
+        self.qc['fastq_strand_conf'] = config.get('qc','fastq_strand_conf')
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),

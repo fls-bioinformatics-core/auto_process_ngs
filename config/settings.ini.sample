@@ -23,6 +23,7 @@ create_empty_fastqs = True
 [qc]
 nprocessors = 1
 fastq_screen_subset = 100000
+fastq_strand_conf = None
 
 # icell8 settings
 [icell8]
