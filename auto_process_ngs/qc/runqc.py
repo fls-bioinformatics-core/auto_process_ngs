@@ -140,6 +140,7 @@ class RunQC(object):
         for project in self._projects:
             print "=== Checking QC for '%s' ===" % project.title
             project.check_qc(self._sched,
+                             illumina_qc=illumina_qc,
                              name="pre_qc_check",
                              runner=verify_runner)
         self._sched.wait()
@@ -161,6 +162,7 @@ class RunQC(object):
             else:
                 print "=== Reporting QC for '%s' ===" % project.title
                 project.report_qc(self._sched,
+                                  illumina_qc=illumina_qc,
                                   report_html=report_html,
                                   multiqc=multiqc,
                                   runner=report_runner)
@@ -260,7 +262,8 @@ class ProjectQC(object):
             # Title is project name with fastq dir
             return "%s:%s" % (self.project.name,fastq_dir)
 
-    def check_qc(self,sched,name,wait_for=None,runner=None):
+    def check_qc(self,sched,name,illumina_qc=None,
+                 wait_for=None,runner=None):
         """
         Check for Fastqs with missing/failed QC outputs
 
@@ -282,6 +285,8 @@ class ProjectQC(object):
           sched (SimpleScheduler): scheduler instance
             to use to run the jobs
           name (str): basename for the job
+          illumina_qc (IlluminaQC): object to use for
+            QC script command generation
           wait_for (list): list of jobs or job groups
             to wait for before executing the check
           runner (JobRunner): job runner to use for
@@ -289,6 +294,8 @@ class ProjectQC(object):
         """
         project = self.project
         name = "%s.%s" % (name,self.title)
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
         self.verification_status = None
         self.fastqs_missing_qc = None
         collect_cmd = Command(
@@ -296,8 +303,10 @@ class ProjectQC(object):
             "--fastq_dir",self.fastq_dir,
             "--qc_dir",self.qc_dir,
             "--verify",
-            "--list-unverified",
-            project.dirn)
+            "--list-unverified")
+        if illumina_qc.fastq_strand_conf:
+            collect_cmd.add_args("--strand_stats")
+        collect_cmd.add_args(project.dirn)
         return sched.submit(collect_cmd,
                             name="%s" % name,
                             wd=project.dirn,
@@ -460,6 +469,7 @@ class ProjectQC(object):
         # Add verification job
         verify_job = self.check_qc(sched,
                                    "verify_qc",
+                                   illumina_qc=illumina_qc,
                                    wait_for=wait_for,
                                    runner=verify_runner)
         # Do clean up on QC completion
@@ -514,14 +524,16 @@ class ProjectQC(object):
         print "Job: %s" % job
         return job
 
-    def report_qc(self,sched,report_html=None,zip_outputs=True,
-                  multiqc=False,runner=None):
+    def report_qc(self,sched,illumina_qc=None,report_html=None,
+                  zip_outputs=True,multiqc=False,runner=None):
         """
         Generate QC report
 
         Arguments:
           sched (SimpleScheduler): scheduler instance to use
             to run the reporting job
+          illumina_qc (IlluminaQC): object to use for
+            QC script command generation
           report_html (str): optional, path to the name of
             the QC report
           zip_outputs (bool): if True then also generate ZIP
@@ -531,6 +543,8 @@ class ProjectQC(object):
           runner (JobRunner): job runner to use QC reporting
         """
         project = self.project
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
         qc_base = os.path.basename(project.qc_dir)
         if report_html is None:
             out_file = '%s_report.html' % qc_base
@@ -552,6 +566,8 @@ class ProjectQC(object):
             "--qc_dir",self.qc_dir,
             "--filename",out_file,
             "--title",title)
+        if illumina_qc.fastq_strand_conf:
+            report_cmd.add_args("--strand_stats")
         if zip_outputs:
             report_cmd.add_args("--zip")
         if multiqc:
