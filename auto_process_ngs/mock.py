@@ -55,6 +55,7 @@ from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
 from bcftbx.IlluminaData import SampleSheetPredictor
+from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .utils import ZipArchive
 from .qc.illumina_qc import IlluminaQC
@@ -1313,7 +1314,7 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         if self._no_outputs:
             return self._exit_code
         # Create fake output file
-        basename = os.path.splitext(os.path.basename(args.fastqr1))[0]
+        basename = strip_ngs_extensions(os.path.basename(args.fastqr1))
         if args.outdir is not None:
             outfile = os.path.join(args.outdir,"%s_fastq_strand.txt" % basename)
         else:
