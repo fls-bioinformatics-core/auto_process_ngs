@@ -82,15 +82,10 @@ class IlluminaQC(object):
             script on.
         """
         cmds = list()
-        # Filter out index reads
-        fastqs = filter(lambda fq:
-                        not IlluminaFastqAttrs(fq).is_index_read,
-                        fastqs)
+        # Convert to list and filter out index reads
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
         # Generate QC commands for individual Fastqs
         for fastq in fastqs:
-            # Skip index reads (i.e. I1)
-            if IlluminaFastqAttrs(fastq).is_index_read:
-                continue
             # Build command
             cmd = Command('illumina_qc.sh',fastq)
             if self.ungzip_fastqs:
@@ -102,9 +97,7 @@ class IlluminaQC(object):
                 cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
             cmds.append(cmd)
         # Generate pair-wise QC commands
-        for fq_pair in pair_fastqs_by_name(fastqs):
-            if len(fq_pair) != 2:
-                continue
+        for fq_pair in self._fastq_pairs(fastqs):
             # Strandedness for this pair
             if self.fastq_strand_conf is not None:
                 cmd = Command('fastq_strand.py',
@@ -115,12 +108,14 @@ class IlluminaQC(object):
                 cmds.append(cmd)
         return cmds
 
-    def expected_outputs(self,fastq,qc_dir):
+    def expected_outputs(self,fastqs,qc_dir):
         """
         Generate expected outputs for input Fastq
 
-        Arguments
-          fastq (str): path to a Fastq file
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
@@ -129,25 +124,33 @@ class IlluminaQC(object):
             the QC for the supplied Fastq.
         """
         qc_dir = os.path.abspath(qc_dir)
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
         expected = []
-        # Skip index reads (i.e. I1)
-        if IlluminaFastqAttrs(fastq).is_index_read:
-            return expected
-        # FastQC outputs
-        expected.extend([os.path.join(qc_dir,f)
-                         for f in fastqc_output(fastq)])
-        # Fastq_screen outputs
-        for name in FASTQ_SCREENS:
+        # Expected outputs for single Fastqs
+        for fastq in fastqs:
+            # FastQC outputs
             expected.extend([os.path.join(qc_dir,f)
-                             for f in fastq_screen_output(fastq,name)])
+                             for f in fastqc_output(fastq)])
+            # Fastq_screen outputs
+            for name in FASTQ_SCREENS:
+                expected.extend([os.path.join(qc_dir,f)
+                                 for f in fastq_screen_output(fastq,name)])
+        # Pair-wise outputs
+        for fq_pair in self._fastq_pairs(fastqs):
+            # Strand stats output
+            if self.fastq_strand_conf:
+                expected.append(os.path.join(
+                    qc_dir,fastq_strand_output(fq_pair[0])))
         return expected
 
-    def check_outputs(self,fastq,qc_dir):
+    def check_outputs(self,fastqs,qc_dir):
         """
         Check QC outputs for input Fastq
 
         Arguments:
-          fastq (str): path to a Fastq file
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
@@ -161,12 +164,38 @@ class IlluminaQC(object):
         present = []
         missing = []
         # Check that outputs exist
-        for output in self.expected_outputs(fastq,qc_dir):
+        for output in self.expected_outputs(fastqs,qc_dir):
             if os.path.exists(output):
                 present.append(output)
             else:
                 missing.append(output)
         return (present,missing)
+
+    def _remove_index_reads(self,fastqs):
+        """
+        Internal: remove index (I1/I2) Fastqs from list
+        """
+        return filter(lambda fq:
+                      not IlluminaFastqAttrs(fq).is_index_read,
+                      fastqs)
+
+    def _fastq_pairs(self,fastqs):
+        """
+        Internal: remove singletons and return paired Fastqs
+        """
+        return filter(lambda p: len(p) == 2,
+                      pair_fastqs_by_name(fastqs))
+
+    def _to_list(self,args):
+        """
+        Internal: convert arg to appropriate list
+        """
+        try:
+            if len(args[0]) == 1:
+                return (args,)
+        except IndexError:
+            pass
+        return args
 
 #######################################################################
 # Functions
