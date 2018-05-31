@@ -179,6 +179,7 @@ if __name__ == "__main__":
     illumina_qc = IlluminaQC(
         nthreads=args.nthreads,
         fastq_screen_subset=args.fastq_screen_subset,
+        fastq_strand_conf=__settings.qc.fastq_strand_conf,
         ungzip_fastqs=False)
 
     # Run the QC
