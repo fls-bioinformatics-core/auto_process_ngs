@@ -21,9 +21,6 @@ from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs import get_version
 
-# Module specific logger
-logger = logging.getLogger(__name__)
-
 __version__ = get_version()
 
 """
@@ -107,7 +104,7 @@ def zip_report(project,report_html,qc_dir=None):
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
-                logger.debug("Adding QC outputs for %s" % fq)
+                logging.debug("Adding QC outputs for %s" % fq)
                 for f in illumina_qc.expected_outputs(fq,qc_dir):
                     if f.endswith('.zip'):
                         # Exclude .zip file
@@ -177,8 +174,8 @@ def main():
     # Check for MultiQC if required
     if opts.multiqc:
         if find_program("multiqc") is None:
-            logger.critical("MultiQC report requested but 'multiqc' "
-                            "not available")
+            logging.critical("MultiQC report requested but 'multiqc' "
+                             "not available")
             sys.exit(1)
 
     # Examine projects i.e. supplied directories
@@ -200,8 +197,8 @@ def main():
         qc_info = p.qc_info(qc_dir)
         if qc_info.fastq_dir is not None and \
            os.path.join(p.dirn,qc_info.fastq_dir) != p.fastq_dir:
-            logger.warning("Stored fastq dir mismatch (%s != %s)" %
-                           (p.fastq_dir,qc_info.fastq_dir))
+            logging.warning("Stored fastq dir mismatch (%s != %s)" %
+                            (p.fastq_dir,qc_info.fastq_dir))
         print "QC output dir: %s" % qc_dir
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
