@@ -10,6 +10,7 @@ max_concurrent_jobs = 12
 [modulefiles]
 make_fastqs = None
 run_qc = None
+publish_qc = None
 process_icell8 = None
 
 # bcl2fastq settings

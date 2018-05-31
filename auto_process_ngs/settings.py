@@ -112,6 +112,7 @@ class Settings(object):
         self.add_section('modulefiles')
         self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
+        self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
         self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
         # bcl2fastq
         self.add_section('bcl2fastq')
