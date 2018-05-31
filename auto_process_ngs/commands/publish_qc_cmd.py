@@ -241,7 +241,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               log_dir=ap.log_dir)
-                    if report_status is not None:
+                    if report_status == 0:
                         print "...%s: (re)generated report" % qc_dir
                     else:
                         print "...%s: failed to (re)generate " \
