@@ -232,6 +232,7 @@ def main():
             out_file = os.path.join(p.dirn,out_file)
         print "Writing QC report to %s" % out_file
         report_html= QCReporter(p).report(qc_dir=qc_dir,
+                                          illumina_qc=illumina_qc,
                                           title=opts.title,
                                           filename=out_file,
                                           relative_links=True)

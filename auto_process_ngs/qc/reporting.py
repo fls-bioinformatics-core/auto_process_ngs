@@ -28,9 +28,11 @@ from ..docwriter import Link
 from ..docwriter import Target
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
+from .fastq_strand import Fastqstrand
 from .illumina_qc import IlluminaQC
 from .illumina_qc import fastqc_output
 from .illumina_qc import fastq_screen_output
+from .illumina_qc import fastq_strand_output
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
@@ -211,8 +213,8 @@ class QCReporter(object):
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
-               report_attrs=None,summary_fields=None,
-               relative_links=False):
+               illumina_qc=None,report_attrs=None,
+               summary_fields=None,relative_links=False):
         """
         Report the QC for the project
 
@@ -223,6 +225,8 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for reporting (optional)
           report_attrs (list): optional, list of elements to
             report for each Fastq pair
           summary_fields (list): optional, list of fields to
@@ -248,6 +252,7 @@ class QCReporter(object):
         report = QCReport(self._project,
                           title=title,
                           qc_dir=qc_dir,
+                          illumina_qc=illumina_qc,
                           report_attrs=report_attrs,
                           summary_fields=summary_fields,
                           relpath=relpath)
@@ -427,8 +432,8 @@ class QCReport(Document):
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
     """
-    def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
-                 summary_fields=None,relpath=None):
+    def __init__(self,project,title=None,qc_dir=None,illumina_qc=None,
+                 report_attrs=None,summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
 
@@ -439,6 +444,8 @@ class QCReport(Document):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for reporting (optional)
           report_attrs (list): list of elements to report for
             each Fastq pair
           summary_fields (list): list of fields to report for
@@ -458,6 +465,8 @@ class QCReport(Document):
                                       qc_dir)
         self.qc_dir = qc_dir
         logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
         # Set up title
         if title is None:
             title = "QC report: %s" % self.project.name
@@ -481,11 +490,12 @@ class QCReport(Document):
                                     'screens_r1': 'Screens',
                                     'fastqc_r2': 'FastQC',
                                     'boxplot_r2': 'Boxplot',
-                                    'screens_r2': 'Screens' }
+                                    'screens_r2': 'Screens',
+                                    'strandedness': 'Strandedness'}
         # Fields to report in summary table
         if not summary_fields:
             if self.project.info.paired_end:
-                summary_fields = ('sample',
+                summary_fields = ['sample',
                                   'fastqs',
                                   'reads',
                                   'fastqc_r1',
@@ -493,14 +503,16 @@ class QCReport(Document):
                                   'screens_r1',
                                   'fastqc_r2',
                                   'boxplot_r2',
-                                  'screens_r2',)
+                                  'screens_r2',]
+                if illumina_qc.fastq_strand_conf:
+                    summary_fields.append('strandedness')
             else:
-                summary_fields = ('sample',
+                summary_fields = ['sample',
                                   'fastq',
                                   'reads',
                                   'fastqc_r1',
                                   'boxplot_r1',
-                                  'screens_r1')
+                                  'screens_r1']
         self.summary_fields = summary_fields
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
@@ -675,6 +687,22 @@ class QCReportFastqPair(object):
             return QCReportFastq(self.fastqr2,self.qc_dir)
         return None
 
+    @property
+    def strandedness(self):
+        """
+        Return summary of strandedness data from fastq_strand.py
+        """
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        strandedness = Fastqstrand(txt)
+        output = []
+        for genome in strandedness.genomes:
+            output.append("<b>%s:</b> F%s%%|R%s%%" %
+                          (genome,
+                           strandedness.stats[genome].forward,
+                           strandedness.stats[genome].reverse))
+        return "<br />".join(output)
+
     def report(self,sample_report,attrs=None,relpath=None):
         """
         Add report for Fastq pair to a document section
@@ -751,6 +779,7 @@ class QCReportFastqPair(object):
         - fastqc_r2
         - screens_r1
         - screens_r2
+        - strandedness
 
         Arguments:
           summary_table (Table): table to add the summary to
@@ -826,6 +855,9 @@ class QCReportFastqPair(object):
                                         Img(self.r2.uscreenplot(),
                                             href="#fastq_screens_%s" %
                                             self.r2.safe_name))
+            elif field == "strandedness":
+                summary_table.set_value(idx,'strandedness',
+                                        self.strandedness)
             else:
                 raise KeyError("'%s': unrecognised field for summary "
                                "table" % field)
