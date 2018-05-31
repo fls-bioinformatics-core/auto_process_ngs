@@ -35,7 +35,8 @@ logger = logging.getLogger(__name__)
 # Functions
 #######################################################################
 
-def verify_qc(project,qc_dir=None,runner=None,log_dir=None):
+def verify_qc(project,qc_dir=None,illumina_qc=None,runner=None,
+              log_dir=None):
     """
     Verify the QC run for a project
 
@@ -44,6 +45,8 @@ def verify_qc(project,qc_dir=None,runner=None,log_dir=None):
         to verify the QC for
       qc_dir (str): optional, specify the subdir with
         the QC outputs being verified
+      illumina_qc (IlluminaQC): optional, configured
+        IlluminaQC object to use for QC verification
       runner (JobRunner): optional, job runner to use
         for running the verification
       log_dir (str): optional, specify a directory to
@@ -65,13 +68,14 @@ def verify_qc(project,qc_dir=None,runner=None,log_dir=None):
     # QC check for project
     project.check_qc(sched,
                      name="verify_qc",
+                     illumina_qc=illumina_qc,
                      runner=runner)
     sched.wait()
     return project.verify()
 
-def report_qc(project,qc_dir=None,report_html=None,
-              zip_outputs=True,multiqc=False,runner=None,
-              log_dir=None):
+def report_qc(project,qc_dir=None,illumina_qc=None,
+              report_html=None,zip_outputs=True,multiqc=False,
+              runner=None,log_dir=None):
     """
     Generate report for the QC run for a project
 
@@ -80,6 +84,8 @@ def report_qc(project,qc_dir=None,report_html=None,
         to report the QC for
       qc_dir (str): optional, specify the subdir with
         the QC outputs being reported
+      illumina_qc (IlluminaQC): optional, configured
+        IlluminaQC object to use for QC reporting
       report_html (str): optional, path to the name of
         the output QC report
       zip_outputs (bool): if True then also generate ZIP
@@ -106,6 +112,7 @@ def report_qc(project,qc_dir=None,report_html=None,
     sched.start()
     # Generate QC for project
     project.report_qc(sched,
+                      illumina_qc=illumina_qc,
                       report_html=report_html,
                       multiqc=multiqc,
                       zip_outputs=zip_outputs,
