@@ -23,8 +23,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
-           fastq_screen_subset=100000,nthreads=1,
-           runner=None,fastq_dir=None,qc_dir=None,
+           fastq_screen_subset=100000,fastq_strand_conf=None,
+           nthreads=1,runner=None,fastq_dir=None,qc_dir=None,
            report_html=None,run_multiqc=True):
     """Run QC pipeline script for projects
 
@@ -51,6 +51,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       fastq_screen_subset (int): subset of reads to use in
         FastQScreen, set to zero or None to use all reads
         (default: 100000)
+      fastq_strand_conf (str): path to configuration file for
+        running fastq_strand.py for strand determination
       nthreads (int): specify number of threads to run the QC jobs
         with (default: 1)
       runner (str): specify a non-default job runner to use for
@@ -74,6 +76,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     compatible_versions = ('1.3.0','1.3.1')
     illumina_qc = IlluminaQC(nthreads=nthreads,
                              fastq_screen_subset=fastq_screen_subset,
+                             fastq_strand_conf=fastq_strand_conf,
                              ungzip_fastqs=ungzip_fastqs)
     version = illumina_qc.version()
     if version not in compatible_versions:
