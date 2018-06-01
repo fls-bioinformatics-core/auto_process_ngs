@@ -38,7 +38,7 @@ import utils
 import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
-import icell8_utils
+from icell8.utils import get_icell8_bases_mask
 import tenx_genomics_utils
 from .settings import Settings
 from .qc.processing import report_processing_qc
@@ -1529,7 +1529,7 @@ class AutoProcess:
                 # Reset the default bases mask
                 bases_mask = IlluminaData.IlluminaRunInfo(
                     illumina_run.runinfo_xml).bases_mask
-                bases_mask = icell8_utils.get_icell8_bases_mask(
+                bases_mask = get_icell8_bases_mask(
                     bases_mask,
                     sample_sheet=sample_sheet)
                 if not bcl2fastq_utils.bases_mask_is_valid(bases_mask):

@@ -22,8 +22,8 @@ import argparse
 import time
 import gzip
 from bcftbx.utils import mkdir
-from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import ICell8WellList
+from auto_process_ngs.icell8.utils import ICell8FastqIterator
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import OutputFiles
 

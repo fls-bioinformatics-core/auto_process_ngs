@@ -26,8 +26,8 @@ from auto_process_ngs.stats import FastqReadCounter
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.applications import Command
-from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8Stats
+from auto_process_ngs.icell8.utils import ICell8WellList
+from auto_process_ngs.icell8.utils import ICell8Stats
 
 # Module specific logger
 logger = logging.getLogger("icell8_stats")
