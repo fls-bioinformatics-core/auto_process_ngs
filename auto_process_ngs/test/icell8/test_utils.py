@@ -1,5 +1,5 @@
 #######################################################################
-# Tests for icell8_utils.py module
+# Tests for icell8.utils.py module
 #######################################################################
 
 import unittest
@@ -7,14 +7,14 @@ import os
 import tempfile
 import shutil
 from bcftbx.FASTQFile import FastqRead
-from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8Read1
-from auto_process_ngs.icell8_utils import ICell8ReadPair
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
-from auto_process_ngs.icell8_utils import ICell8StatsCollector
-from auto_process_ngs.icell8_utils import ICell8Stats
-from auto_process_ngs.icell8_utils import normalize_sample_name
-from auto_process_ngs.icell8_utils import get_icell8_bases_mask
+from auto_process_ngs.icell8.utils import ICell8WellList
+from auto_process_ngs.icell8.utils import ICell8Read1
+from auto_process_ngs.icell8.utils import ICell8ReadPair
+from auto_process_ngs.icell8.utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import ICell8StatsCollector
+from auto_process_ngs.icell8.utils import ICell8Stats
+from auto_process_ngs.icell8.utils import normalize_sample_name
+from auto_process_ngs.icell8.utils import get_icell8_bases_mask
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif

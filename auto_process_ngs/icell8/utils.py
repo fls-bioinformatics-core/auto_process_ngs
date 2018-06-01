@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 #
-#     icell8_utils.py: utility functions for handling Wafergen iCell8 data
+#     icell8.utils.py: utility functions for handling Wafergen iCell8 data
 #     Copyright (C) University of Manchester 2017 Peter Briggs
 #
 
 """
-icell8_utils.py
+icell8.utils.py
 
 Utility classes and functions for processing the outputs from Wafergen's
 iCell8 platform.
@@ -40,9 +40,9 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
-from .fastq_utils import pair_fastqs
-from .stats import FastqReadCounter
-from .utils import ProgressChecker
+from ..fastq_utils import pair_fastqs
+from ..stats import FastqReadCounter
+from ..utils import ProgressChecker
 
 # Initialise logging
 import logging
