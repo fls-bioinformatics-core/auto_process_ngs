@@ -37,6 +37,11 @@ Pipeline task classes:
 - ReportProcessing
 - UpdateProjectData
 - CleanupDirectory
+
+Functions:
+
+- tmp_dir
+- convert_to_xlsx
 """
 ######################################################################
 # Imports
@@ -49,6 +54,7 @@ from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import strip_ext
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.TabFile import TabFile
+from bcftbx.simple_xls import XLSWorkBook
 from ..applications import Command
 from ..analysis import AnalysisFastq
 from ..analysis import AnalysisProject
@@ -1396,3 +1402,45 @@ class CleanupDirectory(PipelineTask):
                     "rm","-f","%s" % os.path.join(dirn,'*'),
                     "&&",
                     "rmdir","%s" % dirn))
+
+######################################################################
+# Functions
+######################################################################
+
+def tmp_dir(d):
+    """
+    Create a temp dir for directory 'd'
+    """
+    # Make temp directory for outputs
+    tmp = "%s.tmp" % d
+    if os.path.exists(tmp):
+        print "Removing existing tmp dir '%s'" % tmp
+        shutil.rmtree(tmp)
+    print "Creating tmp dir '%s'" % tmp
+    mkdir(tmp)
+    return tmp
+
+def convert_to_xlsx(tsv_file,xlsx_file,title=None,freeze_header=False):
+    """
+    Convert a tab-delimited file to an XLSX file
+
+    Arguments:
+      tsv_file (str): path to the input TSV file
+      xlsx_file (str): path to the output XLSX file
+      title (str): optional, name to give the worksheet in
+        the output XLSX file (defaults to the input file name)
+      freeze_header (bool): optional, if True then 'freezes'
+        the first line of the XLSX file (default is not to
+        freeze the first line)
+    """
+    if title is None:
+        title = os.path.basename(tsv_file)
+    wb = XLSWorkBook(title)
+    ws = wb.add_work_sheet(title)
+    with open(tsv_file,'r') as stats:
+        for line in stats:
+            ws.append_row(data=line.rstrip('\n').split('\t'))
+    # Freeze the top row
+    if freeze_header:
+        ws.freeze_panes = 'A2'
+    wb.save_as_xlsx(xlsx_file)
