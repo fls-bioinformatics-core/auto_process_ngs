@@ -9,6 +9,7 @@ import shutil
 from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
 from auto_process_ngs.fastq_utils import assign_barcodes_single_end
 from auto_process_ngs.fastq_utils import get_read_number
+from auto_process_ngs.fastq_utils import get_read_count
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 
@@ -558,3 +559,63 @@ class TestGetReadNumber(unittest.TestCase):
         """get_read_number: check read number for R2 Fastq file
         """
         self.assertEqual(get_read_number(self.fastq_r2),2)
+
+# get_read_number
+class TestGetReadNumber(unittest.TestCase):
+    """
+    Tests for the get_read_number function
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_get_read_number')
+        # Test files
+        self.fastq_r1 = os.path.join(self.wd,'test.r1.fq')
+        with open(self.fastq_r1,'w') as fp:
+            fp.write(fastq1_r1)
+        self.fastq_r2 = os.path.join(self.wd,'test.r2.fq')
+        with open(self.fastq_r2,'w') as fp:
+            fp.write(fastq1_r2)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_get_read_number_r1(self):
+        """get_read_number: check read number for R1 Fastq file
+        """
+        self.assertEqual(get_read_number(self.fastq_r1),1)
+    def test_get_read_number_r2(self):
+        """get_read_number: check read number for R2 Fastq file
+        """
+        self.assertEqual(get_read_number(self.fastq_r2),2)
+
+# get_read_count
+class TestGetReadCount(unittest.TestCase):
+    """
+    Tests for the get_read_count function
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_get_read_number')
+        # Test files
+        self.fastq1 = os.path.join(self.wd,'test1.r1.fq')
+        with open(self.fastq1,'w') as fp:
+            fp.write(fastq1_r1)
+        self.fastq2 = os.path.join(self.wd,'test2.r1.fq')
+        with open(self.fastq2,'w') as fp:
+            fp.write(fastq2_r1)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_get_read_count_single_fastq(self):
+        """get_read_count: check read count for a single Fastq
+        """
+        self.assertEqual(get_read_count((self.fastq1,)),3)
+    def test_get_read_count_multiple_fastqs(self):
+        """get_read_count: check read count for multiple Fastqs
+        """
+        self.assertEqual(get_read_count((self.fastq1,self.fastq2)),5)
+    def test_get_read_count_no_fastqs(self):
+        """get_read_count: check read count for no Fastqs
+        """
+        self.assertEqual(get_read_count(list()),0)

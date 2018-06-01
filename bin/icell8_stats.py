@@ -22,9 +22,9 @@ import tempfile
 import shutil
 import time
 from bcftbx.TabFile import TabFile
-from auto_process_ngs.stats import FastqReadCounter
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
+from auto_process_ngs.fastq_utils import get_read_count
 from auto_process_ngs.applications import Command
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.utils import ICell8Stats
@@ -41,20 +41,6 @@ MAXIMUM_BATCH_SIZE = 100000000
 ######################################################################
 # Functions
 ######################################################################
-
-def get_read_count(fastqs):
-    """
-    Get the total count of reads across multiple Fastqs
-
-    Arguments:
-      fastqs (list): lpaths to one or more Fastq files
-    """
-    nreads = 0
-    for fq in fastqs:
-        n = FastqReadCounter.zcat_wc(fq)
-        print "%s:\t%d" % (os.path.basename(fq),n)
-        nreads += n
-    return nreads
 
 def get_batch_size(fastqs,min_batches=1,
                    max_batch_size=MAXIMUM_BATCH_SIZE,

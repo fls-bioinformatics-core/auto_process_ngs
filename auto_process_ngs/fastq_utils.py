@@ -18,6 +18,7 @@ Utility classes and functions for operating on Fastq files:
 - IlluminaFastqAttrs: class for extracting info from Illumina Fastqs
 - assign_barcodes_single_end: extract and assign inline barcodes
 - get_read_number: get the read number (1 or 2) from a Fastq file
+- get_read_count: count total reads across one or more Fastqs
 - pair_fastqs: automagically pair up FASTQ files
 - pair_fastqs_by_name: pair up FASTQ files based on their names
 
@@ -32,6 +33,7 @@ import gzip
 import logging
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.qc.report import strip_ngs_extensions
+from .stats import FastqReadCounter
 
 #######################################################################
 # Classes
@@ -392,6 +394,23 @@ def get_read_number(fastq):
         seq_id = r.seqid
         break
     return int(seq_id.pair_id)
+
+def get_read_count(fastqs):
+    """
+    Get the total count of reads across multiple Fastqs
+
+    Arguments:
+      fastqs (list): lpaths to one or more Fastq files
+
+    Returns:
+      Integer: total number of reads across all files.
+    """
+    nreads = 0
+    for fq in fastqs:
+        n = FastqReadCounter.zcat_wc(fq)
+        print "%s:\t%d" % (os.path.basename(fq),n)
+        nreads += n
+    return nreads
 
 def pair_fastqs(fastqs):
     """
