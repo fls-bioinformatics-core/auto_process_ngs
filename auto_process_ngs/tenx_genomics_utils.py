@@ -44,8 +44,8 @@ from .docwriter import Document
 from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
+from .analysis import AnalysisProject
 from .utils import get_numbered_subdir
-from .utils import AnalysisProject
 from .utils import ZipArchive
 import css_rules
 

@@ -31,6 +31,8 @@ from bcftbx.JobRunner import fetch_runner
 import config
 import commands
 import applications
+import analysis
+import metadata
 import fileops
 import utils
 import simple_scheduler
@@ -126,8 +128,8 @@ class AutoProcess:
         # Load configuration settings
         self.settings = settings.Settings()
         # Create empty parameter and metadata set
-        self.params = utils.AnalysisDirParameters()
-        self.metadata = utils.AnalysisDirMetadata()
+        self.params = metadata.AnalysisDirParameters()
+        self.metadata = metadata.AnalysisDirMetadata()
         # Set flags to indicate whether it's okay to save parameters
         self._save_params = False
         self._save_metadata = False
@@ -389,11 +391,11 @@ class AutoProcess:
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
-            project_metadata = utils.ProjectMetadataFile(filen)
+            project_metadata = metadata.ProjectMetadataFile(filen)
         else:
             # First try to populate basic metadata from existing projects
             logging.debug("Metadata file not found, guessing basic data")
-            project_metadata = utils.ProjectMetadataFile()
+            project_metadata = metadata.ProjectMetadataFile()
             projects = projects_from_dirs
             if not projects:
                 # Get information from fastq files
@@ -425,7 +427,7 @@ class AutoProcess:
             bad_projects = []
             for line in project_metadata:
                 pname = line['Project']
-                test_project = utils.AnalysisProject(
+                test_project = analysis.AnalysisProject(
                     pname,os.path.join(self.analysis_dir,pname))
                 if not test_project.is_analysis_dir:
                     # Project doesn't exist
@@ -489,11 +491,11 @@ class AutoProcess:
         if os.path.exists(filen):
             # Load data from existing file
             print "Loading project metadata from existing file: %s" % filen
-            project_metadata = utils.ProjectMetadataFile(filen)
+            project_metadata = metadata.ProjectMetadataFile(filen)
         else:
             # New (empty) metadata file
             print "Creating new project metadata file: %s" % filen
-            project_metadata = utils.ProjectMetadataFile()
+            project_metadata = metadata.ProjectMetadataFile()
         # Populate/update
         for project in illumina_data.projects:
             project_name = project.name
@@ -1023,7 +1025,7 @@ class AutoProcess:
             for project in self.get_analysis_projects():
                 print "-- %s" % project.name
                 fastqs = project.fastqs
-                new_project = utils.AnalysisProject(
+                new_project = analysis.AnalysisProject(
                     project.name,
                     os.path.join(clone_dir,project.name),
                     user=project.info.user,
@@ -1197,7 +1199,7 @@ class AutoProcess:
                                 "'%s'" % name)
             # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
-            projects.append(utils.AnalysisProject(name,project_dir))
+            projects.append(analysis.AnalysisProject(name,project_dir))
         # Add undetermined reads directory
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
@@ -1249,7 +1251,7 @@ class AutoProcess:
                               "subdir '%s' as CASAVA/bcl2fastq output "
                               "(ignored): %s" % (dirn,ex))
             # Try loading as a project
-            test_project = utils.AnalysisProject(
+            test_project = analysis.AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
                 logging.debug("* %s: analysis directory" % dirn)
@@ -1272,7 +1274,7 @@ class AutoProcess:
                 % ' '.join(dirs)
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
-        return utils.AnalysisProject(dirs[0],undetermined_dir)
+        return analysis.AnalysisProject(dirs[0],undetermined_dir)
         
     def make_fastqs(self,protocol='standard',platform=None,
                     unaligned_dir=None,sample_sheet=None,lanes=None,
@@ -2552,13 +2554,13 @@ class AutoProcess:
         project_name = os.path.basename(project_dir)
         project_metadata = self.load_project_metadata()
         if project_name in [p['Project'] for p in project_metadata] or \
-           utils.AnalysisProject(project_name,
-                                 os.path.join(self.analysis_dir,
-                                              project_name)).exists:
+           analysis.AnalysisProject(project_name,
+                                    os.path.join(self.analysis_dir,
+                                                 project_name)).exists:
             raise Exception("Project called '%s' already exists" %
                             project_name)
         # Load target as a project
-        project = utils.AnalysisProject(project_name,project_dir)
+        project = analysis.AnalysisProject(project_name,project_dir)
         # Rsync the project directory
         print "Importing project directory contents for '%s'" % project_name
         try:

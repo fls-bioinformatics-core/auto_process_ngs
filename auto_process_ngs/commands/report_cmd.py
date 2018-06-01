@@ -14,6 +14,7 @@ import ast
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
+import auto_process_ngs.analysis as analysis
 import auto_process_ngs.utils as utils
 
 # Module specific logger
@@ -137,7 +138,7 @@ def report_concise(ap):
       String with the report text.
     """
     report = []
-    analysis_dir = utils.AnalysisDir(ap.analysis_dir)
+    analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     for p in analysis_dir.projects:
         samples = "%d sample%s" % (len(p.samples),
                                    's' if len(p.samples) != 1
@@ -198,7 +199,7 @@ def report_summary(ap):
       String with the report text.
     """
     # Gather information
-    analysis_dir = utils.AnalysisDir(ap.analysis_dir)
+    analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     datestamp = None
     instrument = None
     run_number = None
@@ -328,7 +329,7 @@ def report_projects(ap):
       String with the report text.
     """
     # Acquire data
-    analysis_dir = utils.AnalysisDir(ap.analysis_dir)
+    analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # General information
     run_name = ap.run_name
     try:

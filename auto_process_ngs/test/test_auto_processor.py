@@ -8,7 +8,7 @@ import shutil
 import os
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.auto_processor import AutoProcess
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
 
 # Unit tests

@@ -20,7 +20,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 from bcftbx.utils import AttributeDictionary
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.docwriter import Document
 from auto_process_ngs.docwriter import Table
 from auto_process_ngs.docwriter import List

@@ -54,7 +54,7 @@ from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
 from bcftbx.IlluminaData import SampleSheetPredictor
-from .utils import AnalysisProject
+from .analysis import AnalysisProject
 from .utils import ZipArchive
 from .qc.illumina_qc import IlluminaQC
 from .mockqc import MockQCOutputs

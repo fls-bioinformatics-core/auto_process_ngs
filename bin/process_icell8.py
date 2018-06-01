@@ -36,8 +36,8 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import get_read_number
-from auto_process_ngs.utils import AnalysisFastq
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisFastq
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import normalize_sample_name
 from auto_process_ngs.qc.runqc import RunQC

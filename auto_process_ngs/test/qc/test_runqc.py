@@ -10,7 +10,7 @@ from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.mock import MockIlluminaQcSh
 from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import MockAnalysisProject
-from auto_process_ngs.utils import AnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.runqc import RunQC
 
 # Set to False to keep test output dirs

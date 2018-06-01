@@ -25,7 +25,7 @@ import logging
 import uuid
 import tempfile
 import shutil
-import auto_process_ngs.utils as utils
+import auto_process_ngs.analysis as analysis
 import auto_process_ngs.fileops as fileops
 from auto_process_ngs.applications import Command
 from auto_process_ngs.settings import Settings
@@ -207,8 +207,8 @@ class ProjectQC(object):
             'logs' subdir of the QC directory)
         """
         # Clone the supplied project
-        self.project = utils.AnalysisProject(project.name,
-                                             project.dirn)
+        self.project = analysis.AnalysisProject(project.name,
+                                                project.dirn)
         project = self.project
         # Unpick the supplied subdirectories
         if qc_dir is None:
