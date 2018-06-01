@@ -16,6 +16,8 @@ Utility classes and functions for operating on Fastq files:
 
 - BaseFastqAttrs: base class for extracting info from Fastq file
 - IlluminaFastqAttrs: class for extracting info from Illumina Fastqs
+- FastqReadCounter: implements various methods for counting reads
+  in FASTQ files
 - assign_barcodes_single_end: extract and assign inline barcodes
 - get_read_number: get the read number (1 or 2) from a Fastq file
 - get_read_count: count total reads across one or more Fastqs
@@ -30,10 +32,11 @@ Utility classes and functions for operating on Fastq files:
 
 import os
 import gzip
+import subprocess
 import logging
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.FASTQFile import nreads
 from bcftbx.qc.report import strip_ngs_extensions
-from .stats import FastqReadCounter
 
 #######################################################################
 # Classes
@@ -332,6 +335,111 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
         if self.set_number is not None:
             fq.append("%03d" % self.set_number)
         return self.delimiter.join(fq)
+
+class FastqReadCounter(object):
+    """
+    Implements various methods for counting reads in FASTQ file
+
+    The methods are:
+
+    - simple: a wrapper for the FASTQFile.nreads() function
+    - fastqiterator: counts reads using FASTQFile.FastqIterator
+    - zcat_wc: runs 'zcat | wc -l' in the shell
+    - reads_per_lane: counts reads by lane using FastqIterator
+
+    """
+    @staticmethod
+    def simple(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses the FASTQFile.nreads function to do the counting.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        return nreads(fastq=fastq,fp=fp)
+    @staticmethod
+    def fastqiterator(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses the FASTQFile.FastqIterator class to do the
+        counting.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        nreads = 0
+        for r in FastqIterator(fastq_file=fastq,fp=fp):
+            nreads += 1
+        return nreads
+    @staticmethod
+    def zcat_wc(fastq=None,fp=None):
+        """
+        Return number of reads in a FASTQ file
+
+        Uses a system call to run 'zcat FASTQ | wc -l' to do
+        the counting (or just 'wc -l' if not a gzipped FASTQ).
+
+        Note that this can only operate on fastq files (not
+        on streams provided via the 'fp' argument; this will
+        raise an exception).
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Number of reads
+
+        """
+        if fastq is None:
+            raise Exception("zcat_wc: can only operate on a file")
+        if fastq.endswith(".gz"):
+            cmd = "zcat %s | wc -l" % fastq
+        else:
+            cmd = "wc -l %s | cut -d' ' -f1" % fastq
+        output = subprocess.check_output(cmd,shell=True)
+        try:
+            return int(output)/4
+        except Exception,ex:
+            raise Exception("zcat_wc returned: %s" % output)
+    @staticmethod
+    def reads_per_lane(fastq=None,fp=None):
+        """
+        Return counts of reads in each lane of FASTQ file
+
+        Uses the FASTQFile.FastqIterator class to do the
+        counting, with counts split by lane.
+
+        Arguments:
+          fastq: fastq(.gz) file
+          fp: open file descriptor for fastq file
+
+        Returns:
+          Dictionary where keys are lane numbers (as integers)
+            and values are number of reads in that lane.
+
+        """
+        nreads = {}
+        for r in FastqIterator(fastq_file=fastq,fp=fp):
+            lane = int(r.seqid.flowcell_lane)
+            try:
+                nreads[lane] += 1
+            except KeyError:
+                nreads[lane] = 1
+        return nreads
 
 #######################################################################
 # Functions

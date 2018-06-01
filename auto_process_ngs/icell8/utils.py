@@ -40,8 +40,8 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
+from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
-from ..stats import FastqReadCounter
 from ..utils import ProgressChecker
 
 # Initialise logging
