@@ -42,6 +42,7 @@ from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
 from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
+from ..fastq_utils import get_read_count
 from ..utils import ProgressChecker
 
 # Initialise logging
@@ -54,6 +55,7 @@ logger = logging.getLogger(__name__)
 
 INLINE_BARCODE_LENGTH = 11
 UMI_LENGTH = 14
+MAXIMUM_BATCH_SIZE = 100000000
 
 ######################################################################
 # Other constants
@@ -64,6 +66,64 @@ SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
 ######################################################################
 # Functions
 ######################################################################
+
+def get_batch_size(fastqs,min_batches=1,
+                   max_batch_size=MAXIMUM_BATCH_SIZE,
+                   incr_function=None):
+    """
+    Determine number of reads per batch
+
+    Given a maximum batch size (i.e. number of reads per
+    batch), determine the number of batches and actual
+    batch size.
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      min_batches (int): initial minimum number of batches
+        to try
+      max_batch_size (int): the maxiumum batch size
+      incr_function (Function): optional function to use
+        to generate new number of batches to try
+
+    Returns:
+      Tuple: tuple of (batch_size,nbatches).
+    """
+    # Count the total number of reads
+    print "Fetching read counts"
+    nreads = get_read_count(fastqs)
+    print "Total reads: %d" % nreads
+
+    # Default incrementer function: add the initial
+    # number of batches on to get new number
+    if incr_function is None:
+        incr_function = lambda n: n + min_batches
+
+    # Determine batch size
+    batch_size = nreads/min_batches
+    nbatches = min_batches
+    print "Initial batch size: %d" % batch_size
+    print "Maximum batch size: %d" % max_batch_size
+    if max_batch_size > 0:
+        while batch_size > max_batch_size or batch_size*nbatches < nreads:
+            # Reset the number of batches
+            nbatches = incr_function(nbatches)
+            # Set the new batch size
+            batch_size = nreads/nbatches
+            if nreads%nbatches:
+                batch_size += 1
+            print "Trying %d batches: %d reads" % (nbatches,batch_size)
+        logger.warning("Maximum batch size exceeded (%d), "
+                       "increasing number of batches to %d"
+                       % (max_batch_size,nbatches))
+        logger.warning("New batch size: %d" % batch_size)
+    print "Final batch size: %d" % batch_size
+
+    # Assert that all reads are covered with none left over
+    # with no remainder
+    assert(batch_size*nbatches >= nreads)
+    assert(batch_size*(nbatches-1) < nreads)
+    return (batch_size,nbatches)
 
 def normalize_sample_name(s):
     """

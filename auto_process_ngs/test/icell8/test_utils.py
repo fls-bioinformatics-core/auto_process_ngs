@@ -13,6 +13,7 @@ from auto_process_ngs.icell8.utils import ICell8ReadPair
 from auto_process_ngs.icell8.utils import ICell8FastqIterator
 from auto_process_ngs.icell8.utils import ICell8StatsCollector
 from auto_process_ngs.icell8.utils import ICell8Stats
+from auto_process_ngs.icell8.utils import get_batch_size
 from auto_process_ngs.icell8.utils import normalize_sample_name
 from auto_process_ngs.icell8.utils import get_icell8_bases_mask
 from auto_process_ngs.icell8.utils import pass_quality_filter
@@ -343,6 +344,46 @@ class TestICell8Stats(unittest.TestCase):
                          ['TGGAAAATGTTGGC'])
         self.assertEqual(stats.distinct_umis('GTCTGCAACGC'),
                          ['GGAGGCCGGATCGC'])
+
+class TestGetBatchSizeFunction(unittest.TestCase):
+    """
+    Tests for the get_batch_size function
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.ICell8FastqIterator')
+        # Test files
+        self.r1 = os.path.join(self.wd,'icell8.r1.fq')
+        with open(self.r1,'w') as fp:
+            fp.write(icell8_fastq_r1)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_get_batch_size_single_batch(self):
+        """get_batch_size: check for a single Fastq, single batch
+        """
+        self.assertEqual(get_batch_size([self.r1,]),(3,1))
+    def test_get_batch_size_multiple_batches_single_batch(self):
+        """get_batch_size: check for a single Fastq, multiple batches
+        """
+        self.assertEqual(get_batch_size([self.r1,],
+                                        max_batch_size=2),(2,2))
+    def test_get_batch_size_single_batch_multi_fastqs(self):
+        """get_batch_size: check for a multiple Fastqs, single batch
+        """
+        self.assertEqual(get_batch_size([self.r1,
+                                         self.r1,
+                                         self.r1,
+                                         self.r1]),(12,1))
+    def test_get_batch_size_multiple_batches_multi_fastqs(self):
+        """get_batch_size: check for a multiple Fastqs, multiple batches
+        """
+        self.assertEqual(get_batch_size([self.r1,
+                                         self.r1,
+                                         self.r1,
+                                         self.r1],
+                                        max_batch_size=2),(2,6))
 
 class TestNormalizeSampleNameFunction(unittest.TestCase):
     """

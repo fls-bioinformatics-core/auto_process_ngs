@@ -28,72 +28,15 @@ from auto_process_ngs.fastq_utils import get_read_count
 from auto_process_ngs.applications import Command
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.utils import ICell8Stats
+from auto_process_ngs.icell8.utils import get_batch_size
+from auto_process_ngs.icell8.utils import MAXIMUM_BATCH_SIZE
 
 # Module specific logger
 logger = logging.getLogger("icell8_stats")
 
 ######################################################################
-# Magic numbers
-######################################################################
-
-MAXIMUM_BATCH_SIZE = 100000000
-
-######################################################################
 # Functions
 ######################################################################
-
-def get_batch_size(fastqs,min_batches=1,
-                   max_batch_size=MAXIMUM_BATCH_SIZE,
-                   incr_function=None):
-    """
-    Determine number of reads per batch
-
-    Arguments:
-      fastqs (list): list of paths to one or more Fastq
-        files to take reads from
-      min_batches (int): initial minimum number of batches
-        to try
-      max_batch_size (int): the maxiumum batch size
-      incr_function (Function): optional function to use
-        to generate new number of batches to try
-
-    Returns:
-      Tuple: tuple of (batch_size,nbatches).
-    """
-    # Count the total number of reads
-    print "Fetching read counts"
-    nreads = get_read_count(fastqs)
-    print "Total reads: %d" % nreads
-
-    # Default incrementer function: add the initial
-    # number of batches on to get new number
-    if incr_function is None:
-        incr_function = lambda n: n + min_batches
-
-    # Determine batch size
-    batch_size = nreads/min_batches
-    nbatches = min_batches
-    print  "Initial batch size: %d" % batch_size
-    if max_batch_size > 0:
-        while batch_size > max_batch_size:
-            # Reset the number of batches
-            nbatches = incr_function(nbatches)
-            batch_size = nreads/nbatches
-            print "Trying %d: %d" % (nbatches,batch_size)
-        logger.warning("Maximum batch size exceeded (%d), "
-                       "increasing number of batches to %d"
-                       % (max_batch_size,nbatches))
-        logger.warning("New batch size: %d" % batch_size)
-
-    # Adjust to ensure that all reads are covered
-    # with no remainder
-    if nreads%batch_size:
-        # Round up batch size
-        logger.warning("Rounding up batch size to cover all reads")
-        batch_size += 1
-    print "Final batch size: %d" % batch_size
-    assert(batch_size*nbatches >= nreads)
-    return (batch_size,nbatches)
 
 def batch_fastqs(fastqs,batch_size,basename="batched",
                  out_dir=None):
