@@ -20,7 +20,8 @@ Classes:
 
 Functions:
 
-- collect_fastq_stats: get barcode and distinct UMI counts for Fastq
+- get_batch_size: get optimal size for batches of reads
+- batch_fastqs: split reads into batches
 - normalize_sample_name: replace special characters in well list sample names
 - get_icell8_bases_mask: generate bases mask for ICELL8 run
 """
@@ -40,9 +41,11 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
+from ..applications import Command
 from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
 from ..fastq_utils import get_read_count
+from ..fastq_utils import get_read_number
 from ..utils import ProgressChecker
 
 # Initialise logging
@@ -124,6 +127,74 @@ def get_batch_size(fastqs,min_batches=1,
     assert(batch_size*nbatches >= nreads)
     assert(batch_size*(nbatches-1) < nreads)
     return (batch_size,nbatches)
+
+def batch_fastqs(fastqs,batch_size,basename="batched",
+                 out_dir=None):
+    """
+    Splits reads from one or more Fastqs into batches
+
+    Concatenates input Fastq files and then splits
+    reads into smaller Fastqs using the external 'batch'
+    utility.
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      batch_size (int): number of reads to allocate to
+        each batch
+      basename (str): optional basename to use for the
+        output Fastq files (default: 'batched')
+      out_dir (str): optional path to a directory where
+        the batched Fastqs will be written
+    """
+    # Determine number of batches
+    nreads = get_read_count(fastqs)
+    nbatches = nreads/batch_size
+    if nbatches*batch_size < nreads:
+        nbatches += 1
+    print "Creating %d batches of %d reads" % (nbatches,
+                                               batch_size)
+    assert(batch_size*nbatches >= nreads)
+
+    # Check if fastqs are compressed
+    gzipped = fastqs[0].endswith('.gz')
+    if gzipped:
+        batch_cmd = Command('zcat')
+    else:
+        batch_cmd = Command('cat')
+
+    # Get the read number
+    read_number = get_read_number(fastqs[0])
+    suffix = ".r%s.fastq" % read_number
+
+    # Build and run the batching command
+    batch_cmd.add_args(*fastqs)
+    batch_cmd.add_args('|',
+                       'split',
+                       '-l',batch_size*4,
+                       '-d',
+                       '-a',3,
+                       '--additional-suffix=%s' % suffix,
+                       '-',
+                       os.path.join(out_dir,"%s.B" % basename))
+    batch_script = os.path.join(out_dir,"batch.sh")
+    batch_cmd.make_wrapper_script("/bin/bash",
+                                  batch_script)
+
+    # Check for successful exit code
+    retcode = Command("/bin/bash",
+                      batch_script).run_subprocess(
+                          working_dir=out_dir)
+    if retcode != 0:
+        raise Exception("Batching failed: exit code %s" % retcode)
+    print "Batching completed"
+
+    # Collect and return the batched Fastq names
+    batched_fastqs = [os.path.join(out_dir,
+                                   "%s.B%03d%s"
+                                   % (basename,i,suffix))
+                      for i in xrange(0,nbatches)]
+    return batched_fastqs
 
 def normalize_sample_name(s):
     """

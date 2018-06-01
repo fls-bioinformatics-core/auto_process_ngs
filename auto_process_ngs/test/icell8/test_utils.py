@@ -14,6 +14,7 @@ from auto_process_ngs.icell8.utils import ICell8FastqIterator
 from auto_process_ngs.icell8.utils import ICell8StatsCollector
 from auto_process_ngs.icell8.utils import ICell8Stats
 from auto_process_ngs.icell8.utils import get_batch_size
+from auto_process_ngs.icell8.utils import batch_fastqs
 from auto_process_ngs.icell8.utils import normalize_sample_name
 from auto_process_ngs.icell8.utils import get_icell8_bases_mask
 from auto_process_ngs.icell8.utils import pass_quality_filter
@@ -351,7 +352,7 @@ class TestGetBatchSizeFunction(unittest.TestCase):
     """
     def setUp(self):
         # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='.ICell8FastqIterator')
+        self.wd = tempfile.mkdtemp(suffix='.GetBatchSize')
         # Test files
         self.r1 = os.path.join(self.wd,'icell8.r1.fq')
         with open(self.r1,'w') as fp:
@@ -384,6 +385,72 @@ class TestGetBatchSizeFunction(unittest.TestCase):
                                          self.r1,
                                          self.r1],
                                         max_batch_size=2),(2,6))
+
+class TestBatchFastqsFunction(unittest.TestCase):
+    """
+    Tests for the batch_fastqs function
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.BatchFastqs')
+        # Test files
+        self.r1 = os.path.join(self.wd,'icell8.r1.fq')
+        with open(self.r1,'w') as fp:
+            fp.write(icell8_fastq_r1)
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_batch_fastqs_single_batch(self):
+        """batch_fastqs: single Fastq, single batch
+        """
+        fqs = batch_fastqs([self.r1,],
+                           batch_size=4,
+                           out_dir=self.wd)
+        self.assertEqual(fqs,
+                         [os.path.join(self.wd,
+                                       "batched.B000.r1.fastq"),])
+        for fq in fqs:
+            self.assertTrue(os.path.exists(fq))
+    def test_batch_fastqs_multiple_batches(self):
+        """batch_fastqs: single Fastq, multiple batches
+        """
+        fqs = batch_fastqs([self.r1,],
+                           batch_size=2,
+                           out_dir=self.wd)
+        self.assertEqual(fqs,
+                         [os.path.join(self.wd,
+                                       "batched.B000.r1.fastq"),
+                         os.path.join(self.wd,
+                                       "batched.B001.r1.fastq"),])
+        for fq in fqs:
+            self.assertTrue(os.path.exists(fq))
+    def test_batch_fastqs_multiple_fastqs_single_batch(self):
+        """batch_fastqs: multiple Fastqs, single batch
+        """
+        fqs = batch_fastqs([self.r1,self.r1,self.r1,self.r1],
+                           batch_size=12,
+                           out_dir=self.wd)
+        self.assertEqual(fqs,
+                         [os.path.join(self.wd,
+                                       "batched.B000.r1.fastq"),])
+        for fq in fqs:
+            self.assertTrue(os.path.exists(fq))
+    def test_batch_fastqs_multiple_fastqs_multiple_batches(self):
+        """batch_fastqs: multiple Fastqs, multiple batches
+        """
+        fqs = batch_fastqs([self.r1,self.r1,self.r1,self.r1],
+                           batch_size=4,
+                           out_dir=self.wd)
+        self.assertEqual(fqs,
+                         [os.path.join(self.wd,
+                                       "batched.B000.r1.fastq"),
+                         os.path.join(self.wd,
+                                       "batched.B001.r1.fastq"),
+                         os.path.join(self.wd,
+                                       "batched.B002.r1.fastq"),])
+        for fq in fqs:
+            self.assertTrue(os.path.exists(fq))
 
 class TestNormalizeSampleNameFunction(unittest.TestCase):
     """
