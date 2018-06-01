@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 #
-#     icell8.utils.py: utility functions for handling Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     icell8.utils.py: utility functions for handling ICELL8 data
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 
 """
 icell8.utils.py
 
-Utility classes and functions for processing the outputs from Wafergen's
-iCell8 platform.
+Utility classes and functions for processing the outputs from the ICELL8
+single-cell platform.
 
 Classes:
 
-- ICell8WellList: class representing iCell8 well list file
-- ICell8Read1: class representing an iCell8 R1 read
-- ICell8ReadPair: class representing an iCell8 R1/R2 read-pair
-- ICell8FastqIterator: class for iterating over iCell8 R1/R2 FASTQ-pair
-- ICell8Stats: class for gathering stats from iCell8 FASTQ pairs
+- ICell8WellList: class representing ICELL8 well list file
+- ICell8Read1: class representing an ICELL8 R1 read
+- ICell8ReadPair: class representing an ICELL8 R1/R2 read-pair
+- ICell8FastqIterator: class for iterating over ICELL8 R1/R2 FASTQ-pair
+- ICell8Stats: class for gathering stats from ICELL8 FASTQ pairs
 
 Functions:
 
-- collect_fastq_stats: get barcode and distince UMI counts for Fastq
+- collect_fastq_stats: get barcode and distinct UMI counts for Fastq
 - normalize_sample_name: replace special characters in well list sample names
-- get_icell8_bases_mask: generate bases mask for iCell8 run
+- get_icell8_bases_mask: generate bases mask for ICELL8 run
 """
 
 #######################################################################
@@ -133,7 +133,7 @@ def get_icell8_bases_mask(bases_mask,sample_sheet=None):
 
 class ICell8WellList(object):
     """
-    Class representing an iCell8 well list file
+    Class representing an ICELL8 well list file
 
     The file is tab-delimited and consists of an uncommented header
     line which lists the fields ('Row','Col','Candidate',...),
@@ -177,7 +177,7 @@ class ICell8WellList(object):
 
 class ICell8Read1(object):
     """
-    Class representing an iCell8 R1 read
+    Class representing an ICELL8 R1 read
     """
     def __init__(self,fastq_read):
         """
@@ -238,7 +238,7 @@ class ICell8Read1(object):
 
 class ICell8ReadPair(ICell8Read1):
     """
-    Class representing an iCell8 R1/R2 read-pair
+    Class representing an ICELL8 R1/R2 read-pair
     """
     def __init__(self,r1,r2):
         """
@@ -269,7 +269,7 @@ class ICell8ReadPair(ICell8Read1):
 
 class ICell8FastqIterator(Iterator):
     """
-    Class for iterating over an iCell8 R1/R2 FASTQ-pair
+    Class for iterating over an ICELL8 R1/R2 FASTQ-pair
 
     The iterator returns a set of ICell8ReadPair
     instances, for example:
@@ -305,10 +305,10 @@ class ICell8FastqIterator(Iterator):
 
 class ICell8StatsCollector(object):
     """
-    Class to collect ICell8 barcode and UMI counts
+    Class to collect ICELL8 barcode and UMI counts
 
     This class essentially wraps a single function
-    which gets ICell8 barcodes and distinct UMI
+    which gets ICELL8 barcodes and distinct UMI
     counts from a Fastq file. It is used by the
     `Icell8Stats` class to collect counts for each
     file supplied.
@@ -408,7 +408,7 @@ class ICell8StatsCollector(object):
 
 class ICell8Stats(object):
     """
-    Class for gathering statistics on iCell8 FASTQ R1 files
+    Class for gathering statistics on ICELL8 FASTQ R1 files
 
     Given a set of paths to FASTQ R1 files (from Icell8
     Fastq file pairs), collects statistics on the number of
@@ -424,7 +424,7 @@ class ICell8Stats(object):
         Create a new ICell8Stats instance
 
         Arguments:
-          fastqs: set of paths to ICell8 R1/R2 FASTQ
+          fastqs: set of paths to ICELL8 R1/R2 FASTQ
             file pairs to be processed
           nprocs (int): number of cores to use for
             statistics generation (default: 1)
