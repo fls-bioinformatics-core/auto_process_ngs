@@ -24,6 +24,7 @@ import gzip
 from bcftbx.utils import mkdir
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import pass_quality_filter
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.utils import OutputFiles
 
@@ -147,12 +148,6 @@ class BufferedOutputFiles(OutputFiles):
 # Functions
 ######################################################################
 
-def pass_quality_filter(seq,cutoff):
-    for c in seq:
-        if c < cutoff:
-            return False
-    return True
-
 def main():
     # Handle the command line
     p = argparse.ArgumentParser()
@@ -195,10 +190,6 @@ def main():
                    action='store_true',
                    help="output compressed .gz FASTQ files")
     args = p.parse_args()
-
-    # Convert quality cutoffs to character encoding
-    barcode_quality_cutoff = chr(INLINE_BARCODE_QUALITY_CUTOFF + 33)
-    umi_quality_cutoff = chr(UMI_QUALITY_CUTOFF + 33)
 
     # Get well list and expected barcodes
     well_list_file = args.well_list_file
@@ -265,10 +256,10 @@ def main():
             # Apply quality filtering
             if do_quality_filter:
                 if not pass_quality_filter(read_pair.barcode_quality,
-                                           barcode_quality_cutoff):
+                                           INLINE_BARCODE_QUALITY_CUTOFF):
                     assign_to = "failed_barcode"
                 elif not pass_quality_filter(read_pair.umi_quality,
-                                             umi_quality_cutoff):
+                                             UMI_QUALITY_CUTOFF):
                     assign_to = "failed_umi"
                 else:
                     filtered += 1

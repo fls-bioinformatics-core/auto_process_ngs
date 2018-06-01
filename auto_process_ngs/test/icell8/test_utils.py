@@ -15,6 +15,7 @@ from auto_process_ngs.icell8.utils import ICell8StatsCollector
 from auto_process_ngs.icell8.utils import ICell8Stats
 from auto_process_ngs.icell8.utils import normalize_sample_name
 from auto_process_ngs.icell8.utils import get_icell8_bases_mask
+from auto_process_ngs.icell8.utils import pass_quality_filter
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
 0	4	True	True	ESC2	AACCTTCCTTA	Good	1	0	444		55		24420		0.9805677		1	1	1	1	4	5	A1	Pos0_Hoechst_A01.tif	Pos0_TexasRed_A01.tif
@@ -460,3 +461,16 @@ AB1,AB1,,,,,AB,
             get_icell8_bases_mask("y250,I8,I8,y250",
                                   sample_sheet=sample_sheet),
             "y25n225,nnnnnnnn,nnnnnnnn,y250")
+
+class TestPassQualityFilterFunction(unittest.TestCase):
+    """
+    Tests for the pass_quality_filter function
+    """
+    def test_pass_quality_filter(self):
+        """
+        pass_quality_filter: check quality scores pass/fail
+        """
+        self.assertTrue(pass_quality_filter(
+            "?????BBB@BBBB?BBFFFF66EA",10))
+        self.assertFalse(pass_quality_filter(
+            "?????BBB@BBBB?BBFFFF66EA",35))

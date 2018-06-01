@@ -127,6 +127,26 @@ def get_icell8_bases_mask(bases_mask,sample_sheet=None):
         bases_mask = fix_bases_mask(bases_mask,index_seq)
     return bases_mask
 
+def pass_quality_filter(s,cutoff):
+    """
+    Check if sequence passes quality filter cutoff
+
+    Arguments:
+      s (str): sequence quality scores (PHRED+33)
+      cutoff (int): minimum quality value; all
+        quality scores must be equal to or greater
+        than this value for the filter to pass
+
+    Returns:
+      Boolean: True if the quality scores pass the
+        filter cutoff, False if not.
+    """
+    cutoff = chr(cutoff + 33)
+    for c in s:
+        if c < cutoff:
+            return False
+    return True
+
 ######################################################################
 # Classes
 ######################################################################
