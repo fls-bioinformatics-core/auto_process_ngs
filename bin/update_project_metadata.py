@@ -18,7 +18,7 @@ import os
 import sys
 import bcftbx.utils as utils
 import bcftbx.platforms as platforms
-from auto_process_ngs.utils import AnalysisDir
+from auto_process_ngs.analysis import AnalysisDir
 
 #######################################################################
 # Main program

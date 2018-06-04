@@ -27,6 +27,7 @@ import bcftbx.utils as bcf_utils
 from bcftbx.cmdparse import CommandParser
 from bcftbx.cmdparse import add_debug_option,add_dry_run_option
 import auto_process_ngs.utils as utils
+import auto_process_ngs.analysis as analysis
 import auto_process_ngs.applications as applications
 from auto_process_ngs import get_version
 
@@ -150,7 +151,7 @@ if __name__ == "__main__":
     # Acquire data for putative analysis directory
     dirn = os.path.abspath(args[0])
     print "Examining %s" % dirn
-    analysis_dir = utils.AnalysisDir(dirn)
+    analysis_dir = analysis.AnalysisDir(dirn)
     if not (analysis_dir.n_projects and analysis_dir.n_sequencing_data):
         logging.warning("Not an analysis directory")
         sys.exit()

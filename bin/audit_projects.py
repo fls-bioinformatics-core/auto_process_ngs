@@ -17,7 +17,7 @@ import fnmatch
 import os
 import sys
 import bcftbx.utils as utils
-from auto_process_ngs.utils import AnalysisDir
+from auto_process_ngs.analysis import AnalysisDir
 
 #######################################################################
 # Functions
