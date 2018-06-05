@@ -17,7 +17,7 @@ import sys
 import optparse
 import logging
 from bcftbx.IlluminaData import split_run_name
-from auto_process_ngs.utils import AnalysisDir
+from auto_process_ngs.analysis import AnalysisDir
 from auto_process_ngs.galaxy import build_library_directory
 from auto_process_ngs.galaxy import create_data_library
 

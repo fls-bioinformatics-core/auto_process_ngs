@@ -36,6 +36,7 @@ import bcftbx.utils as bcf_utils
 import bcftbx.Md5sum as md5sum
 import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
+from auto_process_ngs.analysis import AnalysisDir
 from auto_process_ngs import get_version
 
 #######################################################################
@@ -176,7 +177,7 @@ if __name__ == "__main__":
     except IndexError:
         p.error("Need to supply the path to an analysis dir")
         sys.exit(1)
-    analysis_dir = utils.AnalysisDir(dirn)
+    analysis_dir = AnalysisDir(dirn)
     # Get specified project
     try:
         project_name = args[1]
