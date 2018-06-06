@@ -188,9 +188,9 @@ if __name__ == "__main__":
     runqc.add_project(project,
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
-                      qc_dir=args.qc_dir)
-    status = runqc.run(illumina_qc,
-                       report_html=out_file,
+                      qc_dir=args.qc_dir,
+                      illumina_qc=illumina_qc)
+    status = runqc.run(report_html=out_file,
                        multiqc=args.run_multiqc,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,

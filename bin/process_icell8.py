@@ -2076,12 +2076,13 @@ if __name__ == "__main__":
     runqc = RunQC()
     runqc.add_project(analysis_project,
                       fastq_dir="fastqs.samples",
-                      qc_dir="qc.samples")
+                      qc_dir="qc.samples",
+                      illumina_qc=illumina_qc)
     runqc.add_project(analysis_project,
                       fastq_dir="fastqs.barcodes",
-                      qc_dir="qc.barcodes")
-    exit_status = runqc.run(illumina_qc,
-                            multiqc=True,
+                      qc_dir="qc.barcodes"
+                      illumina_qc=illumina_qc)
+    exit_status = runqc.run(multiqc=True,
                             qc_runner=runners['qc'],
                             report_runner=default_runner,
                             max_jobs=max_jobs,
