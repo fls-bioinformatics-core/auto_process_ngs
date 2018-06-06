@@ -467,6 +467,14 @@ class QCReport(Document):
         logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
         if illumina_qc is None:
             illumina_qc = IlluminaQC()
+        # Detect outputs
+        self._detect_outputs()
+        if self.outputs:
+            print "Available QC outputs:"
+            for output in self.outputs:
+                print "\t- %s" % output
+        else:
+            logger.warning("No QC outputs found")
         # Set up title
         if title is None:
             title = "QC report: %s" % self.project.name
@@ -485,34 +493,33 @@ class QCReport(Document):
                                     'fastq' : 'Fastq',
                                     'fastqs': 'Fastqs (R1/R2)',
                                     'reads': '#reads',
-                                    'fastqc_r1': 'FastQC',
-                                    'boxplot_r1': 'Boxplot',
-                                    'screens_r1': 'Screens',
-                                    'fastqc_r2': 'FastQC',
-                                    'boxplot_r2': 'Boxplot',
-                                    'screens_r2': 'Screens',
+                                    'fastqc_r1': 'FastQC[R1]',
+                                    'boxplot_r1': 'Boxplot[R1]',
+                                    'screens_r1': 'Screens[R1]',
+                                    'fastqc_r2': 'FastQC[R2]',
+                                    'boxplot_r2': 'Boxplot[R2]',
+                                    'screens_r2': 'Screens[R2]',
                                     'strandedness': 'Strandedness'}
         # Fields to report in summary table
         if not summary_fields:
             if self.project.info.paired_end:
+                reads = ('r1','r2')
                 summary_fields = ['sample',
                                   'fastqs',
-                                  'reads',
-                                  'fastqc_r1',
-                                  'boxplot_r1',
-                                  'screens_r1',
-                                  'fastqc_r2',
-                                  'boxplot_r2',
-                                  'screens_r2',]
-                if illumina_qc.fastq_strand_conf:
-                    summary_fields.append('strandedness')
+                                  'reads']
             else:
+                reads = ('r1',)
                 summary_fields = ['sample',
                                   'fastq',
-                                  'reads',
-                                  'fastqc_r1',
-                                  'boxplot_r1',
-                                  'screens_r1']
+                                  'reads']
+            for read in reads:
+                if ('fastqc_%s' % read) in self.outputs:
+                    summary_fields.append('fastqc_%s' % read)
+                    summary_fields.append('boxplot_%s' % read)
+                if ('screens_%s' % read) in self.outputs:
+                    summary_fields.append('screens_%s' % read)
+            if 'strandedness' in self.outputs:
+                summary_fields.append('strandedness')
         self.summary_fields = summary_fields
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
@@ -568,6 +575,60 @@ class QCReport(Document):
                                                 len(self.project.fastqs)))
         summary.add(self.summary_table)
         return summary
+
+    def _detect_outputs(self):
+        """
+        Internal: determine which QC outputs are present
+        """
+        outputs = []
+        print "Scanning contents of %s" % self.qc_dir
+        files = os.listdir(self.qc_dir)
+        fastqs = [strip_ngs_extensions(os.path.basename(fq))
+                  for fq in self.project.fastqs]
+        fastqs_r1 = filter(lambda f:
+                           self.project.fastq_attrs(f).read_number == 1,
+                           fastqs)
+        fastqs_r2 = filter(lambda f:
+                           self.project.fastq_attrs(f).read_number == 2,
+                           fastqs)
+        logger.debug("files: %s" % files)
+        logger.debug("fastqs: %s" % fastqs)
+        logger.debug("fastqs R1: %s" % fastqs_r1)
+        logger.debug("fastqs R2: %s" % fastqs_r2)
+        # Look for screen files
+        screens = filter(lambda f:
+                         f.endswith("_screen.txt") or
+                         f.endswith("_screen.png"),
+                         files)
+        logger.debug("Screens: %s" % screens)
+        if screens:
+            for fq in fastqs_r1:
+                if filter(lambda s: s.startswith(fq),screens):
+                    outputs.append("screens_r1")
+                    break
+            for fq in fastqs_r2:
+                if filter(lambda s: s.startswith(fq),screens):
+                    outputs.append("screens_r2")
+                    break
+        # Look for fastqc outputs
+        fastqc = filter(lambda f: f.endswith("_fastqc.html"),files)
+        logger.debug("Fastqc: %s" % fastqc)
+        if fastqc:
+            for fq in fastqs_r1:
+                if filter(lambda f: f.startswith(fq),fastqc):
+                    outputs.append("fastqc_r1")
+                    break
+            for fq in fastqs_r2:
+                if filter(lambda f: f.startswith(fq),fastqc):
+                    outputs.append("fastqc_r2")
+                    break
+        # Look for fastq_strand outputs
+        fastq_strand = filter(lambda f: f.endswith("_fastq_strand.txt"),files)
+        logger.debug("fastq_strand: %s" % fastq_strand)
+        if fastq_strand:
+            outputs.append("strandedness")
+        self.outputs = outputs
+        return self.outputs
 
     def report_metadata(self):
         """
