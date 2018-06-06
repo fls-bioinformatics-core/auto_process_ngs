@@ -79,6 +79,9 @@ h2 { background-color: #8CC63F;
          padding: 5px;
          margin: 5px;
          float: left; }
+.strandedness { border: 2px solid lightgray;
+                padding: 5px;
+                margin: 5px;float: left; }
 .clear { clear: both; }
 /* Metadata table */
 table.metadata {
@@ -757,11 +760,59 @@ class QCReportFastqPair(object):
         strandedness = Fastqstrand(txt)
         output = []
         for genome in strandedness.genomes:
-            output.append("<b>%s:</b> F%s%%|R%s%%" %
+            output.append("<b>%s:</b> %s (%.2f)" %
                           (genome,
-                           strandedness.stats[genome].forward,
-                           strandedness.stats[genome].reverse))
+                           strandedness.stats[genome].strandedness,
+                           strandedness.stats[genome].ratio))
         return "<br />".join(output)
+
+    def report_strandedness(self,document):
+        """
+        Report the strandedness outputs to a document
+
+        Creates a new subsection called "Strandedness"
+        with a table of the strandedness determination
+        outputs.
+
+        Arguments:
+          document (Section): section to add report to
+        """
+        strandedness_report = document.add_subsection(
+            "Strandedness",
+            name="strandedness_%s" % self.r1.safe_name)
+        strandedness_report.add_css_classes("strandedness")
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        if not os.path.exists(txt):
+            strandedness_report.add("!!!No strandedness data available!!!")
+        else:
+            strandedness = Fastqstrand(txt)
+            strandedness_report.add("Strandedness statistics from "
+                                    "<tt>fastq_strand %s</tt>:"
+                                    % strandedness.version)
+            strandedness_tbl = Table(("genome",
+                                      "forward",
+                                      "reverse",
+                                      "ratio",
+                                      "strand"),
+                                     genome="Genome",
+                                     forward="Forward %",
+                                     reverse="Reverse %",
+                                     ratio="Ratio (forward/reverse)",
+                                     strand="Strandedness *")
+            strandedness_tbl.add_css_classes("summary")
+            for genome in strandedness.genomes:
+                strandedness_tbl.add_row(
+                    genome=genome,
+                    forward=strandedness.stats[genome].forward,
+                    reverse=strandedness.stats[genome].reverse,
+                    ratio=("%.2f" % strandedness.stats[genome].ratio),
+                    strand=strandedness.stats[genome].strandedness)
+            strandedness_report.add(strandedness_tbl)
+            strandedness_report.add("* Strandedness is 'reverse' if "
+                                    "ratio &lt;0.1, 'forward' if ratio "
+                                    "is &gt;10, 'unstranded' otherwise")
+        return strandedness_report
 
     def report(self,sample_report,attrs=None,relpath=None):
         """
@@ -790,7 +841,10 @@ class QCReportFastqPair(object):
         """
         # Attributes to report
         if attrs is None:
-            attrs = ('fastqc','fastq_screen','program_versions')
+            attrs = ('fastqc',
+                     'fastq_screen',
+                     'program_versions',
+                     'strandedness')
         # Add container section for Fastq pair
         fastqs_report = sample_report.add_subsection()
         fastqs_report.add_css_classes('fastqs')
@@ -811,10 +865,18 @@ class QCReportFastqPair(object):
                     fq.report_fastq_screens(fq_report,relpath=relpath)
                 elif attr == "program_versions":
                     # Versions of programs used
-                    new_section = fq.report_program_versions(fq_report)
+                    fq.report_program_versions(fq_report)
+                elif attr == "strandedness":
+                    # Strandedness - handle separately
+                    pass
                 else:
                     raise KeyError("'%s': unrecognised reporting element "
                                    % attr)
+                    fq.report_program_versions(fq_report)
+        # Sections for pairwise data
+        if "strandedness" in attrs:
+            # Strandedness
+            self.report_strandedness(fastqs_report)
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection()
         clear.add_css_classes("clear")
@@ -917,7 +979,9 @@ class QCReportFastqPair(object):
                                             self.r2.safe_name))
             elif field == "strandedness":
                 summary_table.set_value(idx,'strandedness',
-                                        self.strandedness)
+                                        (Link(self.strandedness,
+                                              "#strandedness_%s" %
+                                              self.r1.safe_name)))
             else:
                 raise KeyError("'%s': unrecognised field for summary "
                                "table" % field)
