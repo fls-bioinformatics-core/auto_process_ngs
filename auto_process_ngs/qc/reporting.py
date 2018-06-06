@@ -974,12 +974,14 @@ class QCReportFastq(object):
             png,txt = fastq_screen_output(fastq,name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
-            self.fastq_screen['names'].append(name)
-            self.fastq_screen[name] = AttributeDictionary()
-            self.fastq_screen[name]["description"] = name.replace('_',' ').title()
-            self.fastq_screen[name]["png"] = png
-            self.fastq_screen[name]["txt"] = txt
-            self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+            if os.path.exists(png) and os.path.exists(txt):
+                self.fastq_screen['names'].append(name)
+                self.fastq_screen[name] = AttributeDictionary()
+                self.fastq_screen[name]["description"] = \
+                                        name.replace('_',' ').title()
+                self.fastq_screen[name]["png"] = png
+                self.fastq_screen[name]["txt"] = txt
+                self.fastq_screen[name]["version"] = Fastqscreen(txt).version
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
@@ -1055,6 +1057,9 @@ class QCReportFastq(object):
         screens_report = document.add_subsection("Screens",
                                                  name="fastq_screens_%s" %
                                                  self.safe_name)
+        if not self.fastq_screen.names:
+            screens_report.add("No screens found")
+            return screens_report
         raw_data = list()
         for name in self.fastq_screen.names:
             # Title for the screen
