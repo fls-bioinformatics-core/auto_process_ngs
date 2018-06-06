@@ -19,7 +19,6 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
-from ..applications import Command
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
