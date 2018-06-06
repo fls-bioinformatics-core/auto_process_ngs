@@ -51,9 +51,21 @@ class Fastqstrand(object):
                             self._fastq_strand_out)
         # Copy data to main object
         for line in tabfile:
-            self._genomes[line['Genome']] = AttributeDictionary()
-            self._genomes[line['Genome']]['forward'] = line['1st forward']
-            self._genomes[line['Genome']]['reverse'] = line['2nd reverse']
+            # Store the data
+            data = AttributeDictionary()
+            self._genomes[line['Genome']] = data
+            data['forward'] = line['1st forward']
+            data['reverse'] = line['2nd reverse']
+            # Additional processing
+            ratio = float(data.forward)/float(data.reverse)
+            if ratio < 0.1:
+                strandedness = "reverse"
+            elif ratio > 10:
+                strandedness = "forward"
+            else:
+                strandedness = "unstranded"
+            data['ratio'] = ratio
+            data['strandedness'] = strandedness
 
     @property
     def txt(self):
