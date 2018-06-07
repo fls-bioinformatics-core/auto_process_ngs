@@ -1017,8 +1017,6 @@ if __name__ == "__main__":
                                max_jobs=options.max_jobs,
                                ungzip_fastqs=options.ungzip_fastqs,
                                fastq_screen_subset=options.subset,
-                               fastq_strand_conf=
-                               __settings.qc.fastq_strand_conf,
                                nthreads=options.nthreads,
                                fastq_dir=options.fastq_dir,
                                qc_dir=options.qc_dir,

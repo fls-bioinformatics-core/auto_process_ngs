@@ -59,7 +59,7 @@ def announce(title):
     >>> announce("Hello!")
     ... ======
     ... Hello!
-    .... ======
+    ... ======
 
     Arguments:
       title (str): string to print
@@ -175,11 +175,29 @@ if __name__ == "__main__":
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
 
+    # Handle strand stats
+    fastq_strand_conf = None
+    if project.info.organism:
+        print "Organisms: %s" % project.info.organism
+        fastq_strand_indexes = build_fastq_strand_conf(
+            project.info.organism.lower().split(','),
+            __settings.fastq_strand_indexes)
+        if fastq_strand_indexes:
+            print "Setting up conf file for strandedness determination"
+            fastq_strand_conf = os.path.join(project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("%s\n" % fastq_strand_indexes)
+        else:
+            print "No matching indexes for strandedness determination"
+    else:
+        print "No organisms specified"
+
     # Set up QC script
     illumina_qc = IlluminaQC(
         nthreads=args.nthreads,
         fastq_screen_subset=args.fastq_screen_subset,
-        fastq_strand_conf=__settings.qc.fastq_strand_conf,
+        fastq_strand_conf=fastq_strand_conf,
         ungzip_fastqs=False)
 
     # Run the QC

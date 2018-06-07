@@ -9,10 +9,12 @@
 # Imports
 #######################################################################
 
+import os
 import logging
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger
@@ -23,8 +25,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
-           fastq_screen_subset=100000,fastq_strand_conf=None,
-           nthreads=1,runner=None,fastq_dir=None,qc_dir=None,
+           fastq_screen_subset=100000,nthreads=1,
+           runner=None,fastq_dir=None,qc_dir=None,
            report_html=None,run_multiqc=True):
     """Run QC pipeline script for projects
 
@@ -51,8 +53,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       fastq_screen_subset (int): subset of reads to use in
         FastQScreen, set to zero or None to use all reads
         (default: 100000)
-      fastq_strand_conf (str): path to configuration file for
-        running fastq_strand.py for strand determination
       nthreads (int): specify number of threads to run the QC jobs
         with (default: 1)
       runner (str): specify a non-default job runner to use for
@@ -104,6 +104,21 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     # Set up the QC for each project
     runqc = RunQC()
     for project in projects:
+        # Set up conf file for strandedness determination
+        try:
+            organisms = project.info.organism.lower().split(',')
+        except AttributeError:
+            organisms = None
+        fastq_strand_indexes = build_fastq_strand_conf(
+            organisms,
+            ap.settings.fastq_strand_indexes)
+        if fastq_strand_indexes:
+            fastq_strand_conf = os.path.join(project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("%s\n" % fastq_strand_indexes)
+        else:
+            fastq_strand_conf = None
         # Set up the QC command generator
         illumina_qc = IlluminaQC(nthreads=nthreads,
                                  fastq_screen_subset=fastq_screen_subset,
