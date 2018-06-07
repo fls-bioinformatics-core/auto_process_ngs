@@ -60,6 +60,7 @@ import logging
 import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
 from config import Config
+from config import NoSectionError
 
 #######################################################################
 # Classes
@@ -123,7 +124,13 @@ class Settings(object):
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
-        self.qc['fastq_strand_conf'] = config.get('qc','fastq_strand_conf')
+        # fastq_strand indexes
+        self.add_section('fastq_strand_indexes')
+        try:
+            for genome,conf_file in config.items('fastq_strand_indexes'):
+                self.fastq_strand_indexes[genome] = conf_file
+        except NoSectionError:
+            logging.warning("No strand stats conf files defined")
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
