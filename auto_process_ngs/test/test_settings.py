@@ -3,14 +3,29 @@
 #######################################################################
 
 import unittest
-import cStringIO
+import tempfile
+import shutil
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.settings import *
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
 
 class TestSettings(unittest.TestCase):
     """Tests for the Settings class
     """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessRunQc')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
     def test_sample_settings_file(self):
+        """Settings: load from sample file
+        """
         sample_settings_file = os.path.join(get_config_dir(),
                                             'settings.ini.sample')
         self.assertTrue(os.path.isfile(sample_settings_file),
@@ -42,7 +57,30 @@ class TestSettings(unittest.TestCase):
         # QC reporting
         self.assertEqual(s.qc_web_server.dirn,None)
         self.assertEqual(s.qc_web_server.url,None)
+
+    def test_partial_settings_file(self):
+        """Settings: load a partial settings.ini file
+        """
+        # Partial file
+        partial_settings_file = os.path.join(self.dirn,
+                                             "settings.ini")
+        with open(partial_settings_file,'w') as s:
+            s.write("""[fastq_stats]
+nprocessors = 8
+""")
+        # Load settings
+        s = Settings(partial_settings_file)
+        # General settings
+        self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
+        self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.modulefiles.make_fastqs,None)
+        self.assertEqual(s.modulefiles.run_qc,None)
+        # Fastq_stats
+        self.assertEqual(s.fastq_stats.nprocessors,8)
+
     def test_get_item(self):
+        """Settings: get_item fetches a value
+        """
         sample_settings_file = os.path.join(get_config_dir(),
                                             'settings.ini.sample')
         s = Settings(sample_settings_file)
