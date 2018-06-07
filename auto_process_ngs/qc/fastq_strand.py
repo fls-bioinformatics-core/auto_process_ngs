@@ -94,3 +94,30 @@ class Fastqstrand(object):
         Data associated with the genomes
         """
         return self._genomes
+
+def build_fastq_strand_conf(organisms,indexes):
+    """
+    Construct a conf file for input into fastq_strand
+
+    Arguments:
+      organisms (list): list of organism names to
+        include
+      indexes (dict): mapping of organism names to
+        paths to STAR indexes
+
+    Returns:
+      String: contents of a fastq_strand conf file,
+        or None if there were no matching indexes.
+    """
+    if not organisms:
+        return None
+    conf = list()
+    for organism in organisms:
+        try:
+            conf.append('\t'.join([organism,indexes[organism]]))
+        except KeyError:
+            pass
+    if conf:
+        return '\n'.join(conf)
+    else:
+        return None
