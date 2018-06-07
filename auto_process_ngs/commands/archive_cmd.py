@@ -18,10 +18,6 @@ import auto_process_ngs.simple_scheduler as simple_scheduler
 import auto_process_ngs.tenx_genomics_utils as tenx_genomics_utils
 from bcftbx.JobRunner import fetch_runner
 
-# Fetch configuration settings
-import auto_process_ngs.settings
-__settings = auto_process_ngs.settings.Settings()
-
 # Module specific logger
 logger = logging.getLogger(__name__)
 

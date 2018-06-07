@@ -15,10 +15,6 @@ from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 from bcftbx.JobRunner import fetch_runner
 
-# Fetch configuration settings
-import auto_process_ngs.settings
-__settings = auto_process_ngs.settings.Settings()
-
 # Module specific logger
 logger = logging.getLogger(__name__)
 
@@ -101,11 +97,11 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         logger.warning("No projects found for QC analysis")
         return 1
     # Set up runners
-    default_runner = __settings.general.default_runner
+    default_runner = ap.settings.general.default_runner
     if runner is not None:
         qc_runner = fetch_runner(runner)
     else:
-        qc_runner = __settings.runners.qc
+        qc_runner = ap.settings.runners.qc
     # Set up the QC for each project
     runqc = RunQC()
     for project in projects:
