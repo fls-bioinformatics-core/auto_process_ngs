@@ -96,11 +96,11 @@ class TestRunQC(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = RunQC()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")))
         illumina_qc=IlluminaQC(fastq_strand_conf="fastq_strand.conf")
-        status = runqc.run(illumina_qc=illumina_qc,
-                           multiqc=True,
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          illumina_qc=illumina_qc)
+        status = runqc.run(multiqc=True,
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
@@ -134,11 +134,11 @@ class TestRunQC(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = RunQC()
-        runqc.add_project(AnalysisProject("PJB",
-                                          os.path.join(self.wd,"PJB")))
         illumina_qc=IlluminaQC(fastq_strand_conf="fastq_strand.conf")
-        status = runqc.run(illumina_qc=illumina_qc,
-                           multiqc=True,
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          illumina_qc=illumina_qc)
+        status = runqc.run(multiqc=True,
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
