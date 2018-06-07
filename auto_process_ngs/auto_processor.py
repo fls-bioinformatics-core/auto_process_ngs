@@ -40,7 +40,7 @@ import bcl2fastq_utils
 import samplesheet_utils
 import icell8_utils
 import tenx_genomics_utils
-import settings
+from .settings import Settings
 from .qc.processing import report_processing_qc
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
@@ -110,13 +110,18 @@ class AutoProcess:
     processing procedure for Illumina sequencing data
 
     """
-    def __init__(self,analysis_dir=None,allow_save_params=True):
+    def __init__(self,analysis_dir=None,settings=None,
+                 allow_save_params=True):
         """
         Create a new AutoProcess instance
 
         Arguments:
           analysis_dir (str): name/path for existing analysis
             directory
+          settings (Settings): optional, if supplied then should
+            be a Settings instance; otherwise use a default
+            instance populated from the installation-specific
+            'settings.ini' file
           allow_save_params (bool): if True then allow updates
             to parameters to be saved back to the parameter file
             (this is the default)
@@ -126,7 +131,9 @@ class AutoProcess:
         self._master_log_dir = "logs"
         self._log_dir = self._master_log_dir
         # Load configuration settings
-        self.settings = settings.Settings()
+        if settings is None:
+            settings = Settings()
+        self.settings = settings
         # Create empty parameter and metadata set
         self.params = metadata.AnalysisDirParameters()
         self.metadata = metadata.AnalysisDirMetadata()
