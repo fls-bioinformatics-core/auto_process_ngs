@@ -24,10 +24,6 @@ from ..docwriter import Para
 import bcftbx.utils as bcf_utils
 from auto_process_ngs import get_version
 
-# Fetch configuration settings
-import auto_process_ngs.settings
-__settings = auto_process_ngs.settings.Settings()
-
 # Module specific logger
 import logging
 logger = logging.getLogger(__name__)
@@ -134,7 +130,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         project_pattern = projects
     # Get location to publish qc reports to
     if location is None:
-        location = fileops.Location(__settings.qc_web_server.dirn)
+        location = fileops.Location(ap.settings.qc_web_server.dirn)
     else:
         location = fileops.Location(location)
     if use_hierarchy:
@@ -315,7 +311,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         # Make log directory and set up scheduler
         # to farm out the intensive operations to
         ap.set_log_dir(ap.get_log_subdir('publish_qc'))
-        runner = __settings.general.default_runner
+        runner = ap.settings.general.default_runner
         runner.set_log_dir(ap.log_dir)
         sched = simple_scheduler.SimpleScheduler(runner=runner)
         sched.start()
@@ -598,8 +594,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if sched is not None:
         sched.stop()
     # Print the URL if given
-    if __settings.qc_web_server.url is not None:
-        url = __settings.qc_web_server.url
+    if ap.settings.qc_web_server.url is not None:
+        url = ap.settings.qc_web_server.url
         if use_hierarchy:
             url = os.path.join(url,
                                year,
