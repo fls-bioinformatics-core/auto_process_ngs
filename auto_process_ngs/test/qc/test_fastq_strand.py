@@ -50,8 +50,16 @@ mm10	15.02	91.18
         self.assertEqual(fastq_strand.genomes,['hg38','mm10'])
         self.assertEqual(fastq_strand.stats['hg38'].forward,13.13)
         self.assertEqual(fastq_strand.stats['hg38'].reverse,93.21)
+        self.assertEqual("%.4f" % fastq_strand.stats['hg38'].ratio,
+                         "%.4f" % 0.140864714)
+        self.assertEqual(fastq_strand.stats['hg38'].strandedness,
+                         "reverse")
         self.assertEqual(fastq_strand.stats['mm10'].forward,15.02)
         self.assertEqual(fastq_strand.stats['mm10'].reverse,91.18)
+        self.assertEqual("%.4f" % fastq_strand.stats['mm10'].ratio,
+                         "%.4f" % 0.164729107)
+        self.assertEqual(fastq_strand.stats['mm10'].strandedness,
+                         "reverse")
 
 class TestBuildFastqStrandConfFunction(unittest.TestCase):
     indexes = dict(human="/data/to/hg38/STAR",

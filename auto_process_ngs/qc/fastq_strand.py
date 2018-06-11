@@ -58,12 +58,12 @@ class Fastqstrand(object):
             data['reverse'] = line['2nd reverse']
             # Additional processing
             ratio = float(data.forward)/float(data.reverse)
-            if ratio < 0.1:
+            if ratio < 0.2:
                 strandedness = "reverse"
-            elif ratio > 10:
+            elif ratio > 5:
                 strandedness = "forward"
             else:
-                strandedness = "unstranded"
+                strandedness = "unstranded?"
             data['ratio'] = ratio
             data['strandedness'] = strandedness
 
