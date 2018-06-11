@@ -425,6 +425,7 @@ class QCReport(Document):
     - fastqc_r2: FastQC mini-plot for R2
     - boxplot_r2: FastQC per-base-quality mini-boxplot' for R2
     - screens_r2: FastQScreen mini-plots for R2
+    - strandedness: 'forward', 'reverse' or 'unstranded' for pair
 
     To control the elements written to the reports for each Fastq
     pair, specify a list of element names via the 'report_attrs'
@@ -501,7 +502,7 @@ class QCReport(Document):
                                     'fastqc_r2': 'FastQC[R2]',
                                     'boxplot_r2': 'Boxplot[R2]',
                                     'screens_r2': 'Screens[R2]',
-                                    'strandedness': 'Strandedness'}
+                                    'strandedness': 'Strand', }
         # Fields to report in summary table
         if not summary_fields:
             if self.project.info.paired_end:
@@ -753,17 +754,24 @@ class QCReportFastqPair(object):
     @property
     def strandedness(self):
         """
-        Return summary of strandedness data from fastq_strand.py
+        Return strandedness from fastq_strand.py
         """
         txt = os.path.join(self.qc_dir,
                            fastq_strand_output(self.fastqr1))
         strandedness = Fastqstrand(txt)
         output = []
         for genome in strandedness.genomes:
-            output.append("<b>%s:</b> %s (%.2f)" %
+            output.append("<span title='%s: F%.2f%% | R%.2f%% (%.2f)'>"
+                          "%s%s"
+                          "</span>" %
                           (genome,
-                           strandedness.stats[genome].strandedness,
-                           strandedness.stats[genome].ratio))
+                           strandedness.stats[genome].forward,
+                           strandedness.stats[genome].reverse,
+                           strandedness.stats[genome].ratio,
+                           ("<b>%s:</b> " % genome)
+                           if len(strandedness.genomes) > 1
+                           else "",
+                           strandedness.stats[genome].strandedness))
         return "<br />".join(output)
 
     def report_strandedness(self,document):
@@ -810,8 +818,8 @@ class QCReportFastqPair(object):
                     strand=strandedness.stats[genome].strandedness)
             strandedness_report.add(strandedness_tbl)
             strandedness_report.add("* Strandedness is 'reverse' if "
-                                    "ratio &lt;0.1, 'forward' if ratio "
-                                    "is &gt;10, 'unstranded' otherwise")
+                                    "ratio &lt;0.2, 'forward' if ratio "
+                                    "is &gt;5, 'unstranded' otherwise")
         return strandedness_report
 
     def report(self,sample_report,attrs=None,relpath=None):
