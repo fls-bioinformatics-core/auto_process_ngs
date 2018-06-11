@@ -26,6 +26,7 @@ from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -93,6 +94,11 @@ if __name__ == "__main__":
                    "subset of samples to run the QC on. If specified "
                    "then only FASTQs with sample names matching "
                    "PATTERN will be examined.")
+    p.add_argument('--organism',metavar='ORGANISM',
+                   action='store',dest='organism',default=None,
+                   help="explicitly specify organism (e.g. 'human', "
+                   "'mouse'). Multiple organisms should be separated "
+                   "by commas (e.g. 'human,mouse')")
     p.add_argument('--fastq_screen_subset',metavar='SUBSET',
                    action='store',dest='fastq_screen_subset',
                    default=__settings.qc.fastq_screen_subset,type=int,
@@ -177,10 +183,14 @@ if __name__ == "__main__":
 
     # Handle strand stats
     fastq_strand_conf = None
-    if project.info.organism:
-        print "Organisms: %s" % project.info.organism
+    if args.organism:
+        organism = args.organism
+    else:
+        organism = project.info.organism
+    if organism:
+        print "Organisms: %s" % organism
         fastq_strand_indexes = build_fastq_strand_conf(
-            project.info.organism.lower().split(','),
+            organism.lower().split(','),
             __settings.fastq_strand_indexes)
         if fastq_strand_indexes:
             print "Setting up conf file for strandedness determination"
