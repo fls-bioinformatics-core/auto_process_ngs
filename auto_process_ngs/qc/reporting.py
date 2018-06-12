@@ -971,12 +971,14 @@ class QCReportFastqPair(object):
                 summary_table.set_value(idx,'fastqc_r1',
                                         Img(self.r1.ufastqcplot(),
                                             href="#fastqc_%s" %
-                                            self.r1.safe_name))
+                                            self.r1.safe_name,
+                                            title=self.r1.fastqc_summary()))
             elif field == "fastqc_r2":
                 summary_table.set_value(idx,'fastqc_r2',
                                         Img(self.r2.ufastqcplot(),
                                             href="#fastqc_%s" %
-                                            self.r2.safe_name))
+                                            self.r2.safe_name,
+                                            title=self.r2.fastqc_summary()))
             elif field == "screens_r1":
                 summary_table.set_value(idx,'screens_r1',
                                         Img(self.r1.uscreenplot(),
@@ -1188,6 +1190,16 @@ class QCReportFastq(object):
                          Version=self.program_versions.fastq_screen)
         versions.add(programs)
         return versions
+
+    def fastqc_summary(self):
+        """
+        Return plaintext version of the FastQC summary
+        """
+        output = []
+        for m in self.fastqc.summary.modules:
+            output.append("%s: %s" %
+                          (self.fastqc.summary.status(m),m))
+        return "\n".join(output)
 
     def uboxplot(self,inline=True):
         """
