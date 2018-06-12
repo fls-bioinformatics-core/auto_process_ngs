@@ -35,6 +35,7 @@ from .illumina_qc import fastq_strand_output
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
+from .plots import ustrandplot
 from .plots import encode_png
 from .. import get_version
 
@@ -515,14 +516,14 @@ class QCReport(Document):
                 summary_fields = ['sample',
                                   'fastq',
                                   'reads']
+            if 'strandedness' in self.outputs:
+                summary_fields.append('strandedness')
             for read in reads:
                 if ('fastqc_%s' % read) in self.outputs:
                     summary_fields.append('fastqc_%s' % read)
                     summary_fields.append('boxplot_%s' % read)
                 if ('screens_%s' % read) in self.outputs:
                     summary_fields.append('screens_%s' % read)
-            if 'strandedness' in self.outputs:
-                summary_fields.append('strandedness')
         self.summary_fields = summary_fields
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
@@ -751,7 +752,6 @@ class QCReportFastqPair(object):
             return QCReportFastq(self.fastqr2,self.qc_dir)
         return None
 
-    @property
     def strandedness(self):
         """
         Return strandedness from fastq_strand.py
@@ -761,18 +761,20 @@ class QCReportFastqPair(object):
         strandedness = Fastqstrand(txt)
         output = []
         for genome in strandedness.genomes:
-            output.append("<span title='%s: F%.2f%% | R%.2f%% (%.2f)'>"
-                          "%s%s"
-                          "</span>" %
+            output.append("%s: F%.2f%% | R%.2f%% (%.2f)" %
                           (genome,
                            strandedness.stats[genome].forward,
                            strandedness.stats[genome].reverse,
-                           strandedness.stats[genome].ratio,
-                           ("<b>%s:</b> " % genome)
-                           if len(strandedness.genomes) > 1
-                           else "",
-                           strandedness.stats[genome].strandedness))
-        return "<br />".join(output)
+                           strandedness.stats[genome].ratio))
+        return "\n".join(output)
+
+    def ustrandplot(self):
+        """
+        Return a mini-strand stats summary plot
+        """
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        return ustrandplot(txt,inline=True,dynamic=True)
 
     def report_strandedness(self,document):
         """
@@ -987,9 +989,10 @@ class QCReportFastqPair(object):
                                             self.r2.safe_name))
             elif field == "strandedness":
                 summary_table.set_value(idx,'strandedness',
-                                        (Link(self.strandedness,
-                                              "#strandedness_%s" %
-                                              self.r1.safe_name)))
+                                        Img(self.ustrandplot(),
+                                            href="#strandedness_%s" %
+                                            self.r1.safe_name,
+                                            title=self.strandedness()))
             else:
                 raise KeyError("'%s': unrecognised field for summary "
                                "table" % field)
