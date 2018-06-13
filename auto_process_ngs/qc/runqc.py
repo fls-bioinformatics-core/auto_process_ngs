@@ -64,7 +64,7 @@ class RunQC(object):
 
     def add_project(self,project,fastq_dir=None,qc_dir=None,
                     log_dir=None,sample_pattern=None,
-                    ungzip_fastqs=False):
+                    illumina_qc=None,ungzip_fastqs=False):
         """
         Add a project to run the QC for
 
@@ -81,6 +81,8 @@ class RunQC(object):
           sample_pattern (str): optional, specify a
             glob-style pattern to use to select a subset
             of samples
+          illumina_qc (IlluminaQC): object to use for
+            QC script command generation
           ungzip_fastqs (bool): if True then uncompress
             source Fastqs (default: False i.e. don't
             uncompress the Fastqs)
@@ -90,17 +92,16 @@ class RunQC(object):
                                         sample_pattern=sample_pattern,
                                         qc_dir=qc_dir,
                                         log_dir=log_dir,
+                                        illumina_qc=illumina_qc,
                                         ungzip_fastqs=ungzip_fastqs))
 
-    def run(self,illumina_qc=None,report_html=None,multiqc=False,
-            qc_runner=None,verify_runner=None,report_runner=None,
-            max_jobs=None,batch_size=None):
+    def run(self,report_html=None,multiqc=False,qc_runner=None,
+            verify_runner=None,report_runner=None,max_jobs=None,
+            batch_size=None):
         """
         Schedule and execute QC jobs
 
         Arguments:
-          illumina_qc (IlluminaQC): object to use for
-            QC script command generation
           report_html (str): optional, path to the name of
             the QC report
           multiqc (bool): if True then also run MultiQC
@@ -122,9 +123,6 @@ class RunQC(object):
             without problems, non-zero if there was
             an error.
         """
-        # QC script
-        if illumina_qc is None:
-            illumina_qc = IlluminaQC()
         # Sort out runners
         if qc_runner is None:
             qc_runner = self._settings.runners.qc
@@ -148,7 +146,6 @@ class RunQC(object):
             if not project.verify():
                 print "=== Setting up QC for '%s' ===" % project.title
                 project.setup_qc(self._sched,
-                                 illumina_qc,
                                  qc_runner=qc_runner,
                                  verify_runner=verify_runner,
                                  batch_size=batch_size)
@@ -188,7 +185,8 @@ class ProjectQC(object):
     Class for setting up QC jobs for a project
     """
     def __init__(self,project,fastq_dir=None,sample_pattern=None,
-                 qc_dir=None,log_dir=None,ungzip_fastqs=False):
+                 qc_dir=None,log_dir=None,illumina_qc=None,
+                 ungzip_fastqs=False):
         """
         Create a new ProjectQC instance
 
@@ -202,6 +200,8 @@ class ProjectQC(object):
             of samples
           qc_dir (str): optional, specify the subdir to
             write the QC outputs to
+          illumina_qc (IlluminaQC): optional, object to
+            use for QC script command generation
           log_dir (str): optional, specify a directory to
             write logs to (default is to put logs in the
             'logs' subdir of the QC directory)
@@ -218,6 +218,10 @@ class ProjectQC(object):
         project.use_qc_dir(self.qc_dir)
         self.fastq_dir = project.qc_info(project.qc_dir).fastq_dir
         project.use_fastq_dir(self.fastq_dir)
+        # QC script generator
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
+        self.illumina_qc = illumina_qc
         # Log directory
         if log_dir is not None:
             self.log_dir = os.path.abspath(log_dir)
@@ -296,8 +300,10 @@ class ProjectQC(object):
             "--fastq_dir",self.fastq_dir,
             "--qc_dir",self.qc_dir,
             "--verify",
-            "--list-unverified",
-            project.dirn)
+            "--list-unverified")
+        if self.illumina_qc.fastq_strand_conf:
+            collect_cmd.add_args("--strand_stats")
+        collect_cmd.add_args(project.dirn)
         return sched.submit(collect_cmd,
                             name="%s" % name,
                             wd=project.dirn,
@@ -343,16 +349,14 @@ class ProjectQC(object):
             for fq in self.fastqs_missing_qc:
                 logger.debug("%s" % fq)
 
-    def setup_qc(self,sched,illumina_qc,qc_runner=None,
-                 verify_runner=None,batch_size=None):
+    def setup_qc(self,sched,qc_runner=None,verify_runner=None,
+                 batch_size=None):
         """
         Set up the QC for the project
 
         Arguments:
           sched (SimpleScheduler): scheduler instance
             to use to run the jobs
-          illumina_qc (IlluminaQC): object to use for
-            QC script command generation
           qc_runner (JobRunner): job runner to use for
             executing QC
           verify_runner (JobRunner): job runner to use
@@ -411,8 +415,8 @@ class ProjectQC(object):
                 for fq in fastq_pair:
                     print "\t%s" % os.path.basename(fq)
                 # Acquire QC commands for this pair
-                qc_cmds = illumina_qc.commands(fastq_pair,
-                                               qc_dir=project.qc_dir)
+                qc_cmds = self.illumina_qc.commands(fastq_pair,
+                                                    qc_dir=project.qc_dir)
                 # Handle batching
                 if use_batches:
                     batch_qc_cmds.extend(qc_cmds)
@@ -552,6 +556,8 @@ class ProjectQC(object):
             "--qc_dir",self.qc_dir,
             "--filename",out_file,
             "--title",title)
+        if self.illumina_qc.fastq_strand_conf:
+            report_cmd.add_args("--strand_stats")
         if zip_outputs:
             report_cmd.add_args("--zip")
         if multiqc:

@@ -2,6 +2,7 @@
 #
 # QC plot generation
 import os
+import shutil
 import tempfile
 import logging
 from math import ceil
@@ -12,6 +13,7 @@ from .fastqc import FastqcData
 from .fastqc import FastqcSummary
 from .fastq_screen import Fastqscreen
 from .fastq_stats import FastqQualityStats
+from .fastq_strand import Fastqstrand
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -415,6 +417,102 @@ def ustackedbar(data,outfile=None,inline=False,bbox=True,
     if outfile is not None:
         os.rename(tmp_plot,outfile)
     os.remove(tmp_plot)
+    if inline:
+        return encoded_plot
+    else:
+        return outfile
+
+def ustrandplot(fastq_strand_out,outfile=None,inline=False,
+                height=25,width=50,dynamic=False):
+    """
+    Make a 'micro' chart for strandedness
+
+
+    This micro plot is a small PNG which summarises the
+    results from fastq_strand.py as two horizontal bars
+    (one for forward, one for reverse) with the lengths
+    representing the psuedo-percentages of each.
+
+    For example (in text form):
+
+    =
+    ==========
+
+    If the fastq_strand results included multiple genomes
+    then there will be one pair of bars for each genome.
+
+    Arguments:
+      fastq_strand_out (str): path to a fastq_strand
+        output file
+      outfile (str): path for the output PNG
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
+      height (int): height of the plot in pixels
+      width (int): width of the plot in pixels
+      dynamic (boolean): if True then the height of the
+        plot will be increased for each additional
+        genome in the output fastq_strand file
+    """
+    # Get the raw data
+    data = Fastqstrand(fastq_strand_out)
+    # Adjust the plot height for "dynamic" mode
+    ngenomes = len(data.genomes)
+    if dynamic and ngenomes:
+        height *= ngenomes
+    # Set the largest percentage from the data
+    max_percent = 100
+    for genome in data.genomes:
+        for p in ('forward','reverse'):
+            max_percent = max(max_percent,data.stats[genome][p])
+    # Set the spacing between bars in the plot
+    spacing = 3
+    # Set the width of the bars
+    if ngenomes:
+        bar_width = int(float(float(height)/ngenomes - 3*spacing)/2.0)
+    # Create the image
+    img = Image.new('RGB',(width,height),RGB_COLORS['white'])
+    pixels = img.load()
+    # Plot bars for the forward and reverse percentages
+    # for each genome
+    for ii,genome in enumerate(data.genomes):
+        # Forward strand
+        bar_length = int(data.stats[genome].forward/
+                         max_percent*(width-4))
+        for i in xrange(2,bar_length+2):
+            start = int(ii*float(height)/ngenomes) + spacing
+            end = start + bar_width
+            for j in xrange(start,end):
+                pixels[i,j] = RGB_COLORS['black']
+        # Pad the remainder of the bar
+        for i in xrange(bar_length+2,width-2):
+            start = int(ii*float(height)/ngenomes) + spacing
+            end = start + bar_width
+            for j in xrange(start,end):
+                pixels[i,j] = RGB_COLORS['lightgrey']
+        # Reverse strand
+        bar_length = max(int(data.stats[genome].reverse/
+                         max_percent*(width-4)),1)
+        for i in xrange(2,bar_length+2):
+            start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
+            end = start + bar_width
+            for j in xrange(start,end):
+                pixels[i,j] = RGB_COLORS['black']
+        # Pad the remainder of the bar
+        for i in xrange(bar_length+2,width-2):
+            start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
+            end = start + bar_width
+            for j in xrange(start,end):
+                pixels[i,j] = RGB_COLORS['lightgrey']
+    # Output the plot to file
+    fp,tmp_plot = tempfile.mkstemp(".ustrand.png")
+    img.save(tmp_plot)
+    os.fdopen(fp).close()
+    if inline:
+        encoded_plot = encode_png(tmp_plot)
+    if outfile is not None:
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
     if inline:
         return encoded_plot
     else:

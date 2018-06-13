@@ -200,6 +200,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     # Collect QC for project directories
     print "Checking project directories"
     projects = ap.get_analysis_projects_from_dirs(pattern=project_pattern)
+    if projects:
+        ap.set_log_dir(ap.get_log_subdir('publish_qc'))
     project_qc = {}
     for project in projects:
         # Check qc subdirectories
@@ -239,7 +241,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               log_dir=ap.log_dir)
-                    if report_status is not None:
+                    if report_status == 0:
                         print "...%s: (re)generated report" % qc_dir
                     else:
                         print "...%s: failed to (re)generate " \

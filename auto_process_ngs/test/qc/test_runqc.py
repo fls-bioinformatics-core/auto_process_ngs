@@ -9,9 +9,11 @@ import os
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.mock import MockIlluminaQcSh
 from auto_process_ngs.mock import MockMultiQC
+from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -75,6 +77,82 @@ class TestRunQC(unittest.TestCase):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
+
+    def test_run_qc_with_strandedness(self):
+        """RunQC: standard QC run with strandedness determination
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC()
+        illumina_qc=IlluminaQC(fastq_strand_conf="fastq_strand.conf")
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          illumina_qc=illumina_qc)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_run_qc_with_missing_strandedness(self):
+        """RunQC: standard QC fails with missing strandedness outputs
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"),
+                                 no_outputs=True)
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = RunQC()
+        illumina_qc=IlluminaQC(fastq_strand_conf="fastq_strand.conf")
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          illumina_qc=illumina_qc)
+        status = runqc.run(multiqc=True,
+                           qc_runner=SimpleJobRunner(),
+                           verify_runner=SimpleJobRunner(),
+                           report_runner=SimpleJobRunner(),
+                           max_jobs=1)
+        # Check output and reports
+        self.assertEqual(status,1)
+        self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
+                        "Missing 'qc'")
+        for f in ("qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertFalse(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                             "Found %s, shouldn't be present" % f)
 
     def test_run_qc_no_multiqc(self):
         """RunQC: standard QC run (no MultiQC)

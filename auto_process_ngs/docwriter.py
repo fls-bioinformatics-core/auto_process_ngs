@@ -687,7 +687,7 @@ class Img(object):
 
     """
     def __init__(self,src,name=None,height=None,width=None,href=None,
-                 alt=None):
+                 alt=None,title=None):
         """
         Create a new Img instance
 
@@ -704,6 +704,8 @@ class Img(object):
           alt (str): if specified then used as the
             'alternative text' ('alt' attribute
             for <img.../> tag
+          title (str): if specified then assigned
+            to the <img../> tag's 'title' attribute
 
         """
         self._src = src
@@ -712,6 +714,7 @@ class Img(object):
         self._name = name
         self._target = href
         self._alt = alt
+        self._title = title
 
     @property
     def name(self):
@@ -738,6 +741,9 @@ class Img(object):
         # Optional alt text
         if self._alt:
             html.append("alt='%s'" % self._alt)
+        # Optional title
+        if self._title:
+            html.append("title='%s'" % self._title)
         # Close the tag
         html.append("/>")
         # Wrap in a hef

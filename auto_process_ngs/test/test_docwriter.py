@@ -526,6 +526,12 @@ class TestImg(unittest.TestCase):
         self.assertEqual(img.html(),
                          "<a href='http://awesome.pix.com/'>"
                          "<img src='picture.png' /></a>")
+
+    def test_img_with_title(self):
+        img = Img('picture.png',title="An awesome picture")
+        self.assertEqual(img.html(),
+                         "<img src='picture.png' "
+                         "title='An awesome picture' />")
         
 class TestLink(unittest.TestCase):
     """

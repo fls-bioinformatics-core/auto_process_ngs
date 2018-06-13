@@ -26,6 +26,7 @@ from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -59,7 +60,7 @@ def announce(title):
     >>> announce("Hello!")
     ... ======
     ... Hello!
-    .... ======
+    ... ======
 
     Arguments:
       title (str): string to print
@@ -93,6 +94,11 @@ if __name__ == "__main__":
                    "subset of samples to run the QC on. If specified "
                    "then only FASTQs with sample names matching "
                    "PATTERN will be examined.")
+    p.add_argument('--organism',metavar='ORGANISM',
+                   action='store',dest='organism',default=None,
+                   help="explicitly specify organism (e.g. 'human', "
+                   "'mouse'). Multiple organisms should be separated "
+                   "by commas (e.g. 'human,mouse')")
     p.add_argument('--fastq_screen_subset',metavar='SUBSET',
                    action='store',dest='fastq_screen_subset',
                    default=__settings.qc.fastq_screen_subset,type=int,
@@ -175,10 +181,33 @@ if __name__ == "__main__":
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
 
+    # Handle strand stats
+    fastq_strand_conf = None
+    if args.organism:
+        organism = args.organism
+    else:
+        organism = project.info.organism
+    if organism:
+        print "Organisms: %s" % organism
+        fastq_strand_indexes = build_fastq_strand_conf(
+            organism.lower().split(','),
+            __settings.fastq_strand_indexes)
+        if fastq_strand_indexes:
+            print "Setting up conf file for strandedness determination"
+            fastq_strand_conf = os.path.join(project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("%s\n" % fastq_strand_indexes)
+        else:
+            print "No matching indexes for strandedness determination"
+    else:
+        print "No organisms specified"
+
     # Set up QC script
     illumina_qc = IlluminaQC(
         nthreads=args.nthreads,
         fastq_screen_subset=args.fastq_screen_subset,
+        fastq_strand_conf=fastq_strand_conf,
         ungzip_fastqs=False)
 
     # Run the QC
@@ -187,9 +216,9 @@ if __name__ == "__main__":
     runqc.add_project(project,
                       fastq_dir=args.fastq_dir,
                       sample_pattern=args.sample_pattern,
-                      qc_dir=args.qc_dir)
-    status = runqc.run(illumina_qc,
-                       report_html=out_file,
+                      qc_dir=args.qc_dir,
+                      illumina_qc=illumina_qc)
+    status = runqc.run(report_html=out_file,
                        multiqc=args.run_multiqc,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,

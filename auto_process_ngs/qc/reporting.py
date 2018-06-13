@@ -19,7 +19,6 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
-from ..applications import Command
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
@@ -28,12 +27,15 @@ from ..docwriter import Link
 from ..docwriter import Target
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
+from .fastq_strand import Fastqstrand
 from .illumina_qc import IlluminaQC
 from .illumina_qc import fastqc_output
 from .illumina_qc import fastq_screen_output
+from .illumina_qc import fastq_strand_output
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
+from .plots import ustrandplot
 from .plots import encode_png
 from .. import get_version
 
@@ -78,6 +80,9 @@ h2 { background-color: #8CC63F;
          padding: 5px;
          margin: 5px;
          float: left; }
+.strandedness { border: 2px solid lightgray;
+                padding: 5px;
+                margin: 5px;float: left; }
 .clear { clear: both; }
 /* Metadata table */
 table.metadata {
@@ -211,8 +216,8 @@ class QCReporter(object):
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
-               report_attrs=None,summary_fields=None,
-               relative_links=False):
+               illumina_qc=None,report_attrs=None,
+               summary_fields=None,relative_links=False):
         """
         Report the QC for the project
 
@@ -223,6 +228,8 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for reporting (optional)
           report_attrs (list): optional, list of elements to
             report for each Fastq pair
           summary_fields (list): optional, list of fields to
@@ -248,6 +255,7 @@ class QCReporter(object):
         report = QCReport(self._project,
                           title=title,
                           qc_dir=qc_dir,
+                          illumina_qc=illumina_qc,
                           report_attrs=report_attrs,
                           summary_fields=summary_fields,
                           relpath=relpath)
@@ -418,6 +426,7 @@ class QCReport(Document):
     - fastqc_r2: FastQC mini-plot for R2
     - boxplot_r2: FastQC per-base-quality mini-boxplot' for R2
     - screens_r2: FastQScreen mini-plots for R2
+    - strandedness: 'forward', 'reverse' or 'unstranded' for pair
 
     To control the elements written to the reports for each Fastq
     pair, specify a list of element names via the 'report_attrs'
@@ -427,8 +436,8 @@ class QCReport(Document):
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
     """
-    def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
-                 summary_fields=None,relpath=None):
+    def __init__(self,project,title=None,qc_dir=None,illumina_qc=None,
+                 report_attrs=None,summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
 
@@ -439,6 +448,8 @@ class QCReport(Document):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          illumina_qc (IlluminaQC): configured IlluminaQC
+            instance to use for reporting (optional)
           report_attrs (list): list of elements to report for
             each Fastq pair
           summary_fields (list): list of fields to report for
@@ -458,6 +469,16 @@ class QCReport(Document):
                                       qc_dir)
         self.qc_dir = qc_dir
         logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
+        # Detect outputs
+        self._detect_outputs()
+        if self.outputs:
+            print "Available QC outputs:"
+            for output in self.outputs:
+                print "\t- %s" % output
+        else:
+            logger.warning("No QC outputs found")
         # Set up title
         if title is None:
             title = "QC report: %s" % self.project.name
@@ -476,31 +497,33 @@ class QCReport(Document):
                                     'fastq' : 'Fastq',
                                     'fastqs': 'Fastqs (R1/R2)',
                                     'reads': '#reads',
-                                    'fastqc_r1': 'FastQC',
-                                    'boxplot_r1': 'Boxplot',
-                                    'screens_r1': 'Screens',
-                                    'fastqc_r2': 'FastQC',
-                                    'boxplot_r2': 'Boxplot',
-                                    'screens_r2': 'Screens' }
+                                    'fastqc_r1': 'FastQC[R1]',
+                                    'boxplot_r1': 'Boxplot[R1]',
+                                    'screens_r1': 'Screens[R1]',
+                                    'fastqc_r2': 'FastQC[R2]',
+                                    'boxplot_r2': 'Boxplot[R2]',
+                                    'screens_r2': 'Screens[R2]',
+                                    'strandedness': 'Strand', }
         # Fields to report in summary table
         if not summary_fields:
             if self.project.info.paired_end:
-                summary_fields = ('sample',
+                reads = ('r1','r2')
+                summary_fields = ['sample',
                                   'fastqs',
-                                  'reads',
-                                  'fastqc_r1',
-                                  'boxplot_r1',
-                                  'screens_r1',
-                                  'fastqc_r2',
-                                  'boxplot_r2',
-                                  'screens_r2',)
+                                  'reads']
             else:
-                summary_fields = ('sample',
+                reads = ('r1',)
+                summary_fields = ['sample',
                                   'fastq',
-                                  'reads',
-                                  'fastqc_r1',
-                                  'boxplot_r1',
-                                  'screens_r1')
+                                  'reads']
+            if 'strandedness' in self.outputs:
+                summary_fields.append('strandedness')
+            for read in reads:
+                if ('fastqc_%s' % read) in self.outputs:
+                    summary_fields.append('fastqc_%s' % read)
+                    summary_fields.append('boxplot_%s' % read)
+                if ('screens_%s' % read) in self.outputs:
+                    summary_fields.append('screens_%s' % read)
         self.summary_fields = summary_fields
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
@@ -556,6 +579,60 @@ class QCReport(Document):
                                                 len(self.project.fastqs)))
         summary.add(self.summary_table)
         return summary
+
+    def _detect_outputs(self):
+        """
+        Internal: determine which QC outputs are present
+        """
+        outputs = []
+        print "Scanning contents of %s" % self.qc_dir
+        files = os.listdir(self.qc_dir)
+        fastqs = [strip_ngs_extensions(os.path.basename(fq))
+                  for fq in self.project.fastqs]
+        fastqs_r1 = filter(lambda f:
+                           self.project.fastq_attrs(f).read_number == 1,
+                           fastqs)
+        fastqs_r2 = filter(lambda f:
+                           self.project.fastq_attrs(f).read_number == 2,
+                           fastqs)
+        logger.debug("files: %s" % files)
+        logger.debug("fastqs: %s" % fastqs)
+        logger.debug("fastqs R1: %s" % fastqs_r1)
+        logger.debug("fastqs R2: %s" % fastqs_r2)
+        # Look for screen files
+        screens = filter(lambda f:
+                         f.endswith("_screen.txt") or
+                         f.endswith("_screen.png"),
+                         files)
+        logger.debug("Screens: %s" % screens)
+        if screens:
+            for fq in fastqs_r1:
+                if filter(lambda s: s.startswith(fq),screens):
+                    outputs.append("screens_r1")
+                    break
+            for fq in fastqs_r2:
+                if filter(lambda s: s.startswith(fq),screens):
+                    outputs.append("screens_r2")
+                    break
+        # Look for fastqc outputs
+        fastqc = filter(lambda f: f.endswith("_fastqc.html"),files)
+        logger.debug("Fastqc: %s" % fastqc)
+        if fastqc:
+            for fq in fastqs_r1:
+                if filter(lambda f: f.startswith(fq),fastqc):
+                    outputs.append("fastqc_r1")
+                    break
+            for fq in fastqs_r2:
+                if filter(lambda f: f.startswith(fq),fastqc):
+                    outputs.append("fastqc_r2")
+                    break
+        # Look for fastq_strand outputs
+        fastq_strand = filter(lambda f: f.endswith("_fastq_strand.txt"),files)
+        logger.debug("fastq_strand: %s" % fastq_strand)
+        if fastq_strand:
+            outputs.append("strandedness")
+        self.outputs = outputs
+        return self.outputs
 
     def report_metadata(self):
         """
@@ -675,6 +752,78 @@ class QCReportFastqPair(object):
             return QCReportFastq(self.fastqr2,self.qc_dir)
         return None
 
+    def strandedness(self):
+        """
+        Return strandedness from fastq_strand.py
+        """
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        strandedness = Fastqstrand(txt)
+        output = []
+        for genome in strandedness.genomes:
+            output.append("%s: F%.2f%% | R%.2f%% (%.2f)" %
+                          (genome,
+                           strandedness.stats[genome].forward,
+                           strandedness.stats[genome].reverse,
+                           strandedness.stats[genome].ratio))
+        return "\n".join(output)
+
+    def ustrandplot(self):
+        """
+        Return a mini-strand stats summary plot
+        """
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        return ustrandplot(txt,inline=True,dynamic=True)
+
+    def report_strandedness(self,document):
+        """
+        Report the strandedness outputs to a document
+
+        Creates a new subsection called "Strandedness"
+        with a table of the strandedness determination
+        outputs.
+
+        Arguments:
+          document (Section): section to add report to
+        """
+        strandedness_report = document.add_subsection(
+            "Strandedness",
+            name="strandedness_%s" % self.r1.safe_name)
+        strandedness_report.add_css_classes("strandedness")
+        txt = os.path.join(self.qc_dir,
+                           fastq_strand_output(self.fastqr1))
+        if not os.path.exists(txt):
+            strandedness_report.add("!!!No strandedness data available!!!")
+        else:
+            strandedness = Fastqstrand(txt)
+            strandedness_report.add("Strandedness statistics from "
+                                    "<tt>fastq_strand %s</tt>:"
+                                    % strandedness.version)
+            strandedness_tbl = Table(("genome",
+                                      "forward",
+                                      "reverse",
+                                      "ratio",
+                                      "strand"),
+                                     genome="Genome",
+                                     forward="Forward %",
+                                     reverse="Reverse %",
+                                     ratio="Ratio (forward/reverse)",
+                                     strand="Strandedness *")
+            strandedness_tbl.add_css_classes("summary")
+            for genome in strandedness.genomes:
+                strandedness_tbl.add_row(
+                    genome=genome,
+                    forward=strandedness.stats[genome].forward,
+                    reverse=strandedness.stats[genome].reverse,
+                    ratio=("%.2f" % strandedness.stats[genome].ratio),
+                    strand=strandedness.stats[genome].strandedness)
+            strandedness_report.add(strandedness_tbl)
+            strandedness_report.add("* Strandedness is 'reverse' if "
+                                    "ratio &lt;0.2, 'forward' if ratio "
+                                    "is &gt;5, 'unstranded' otherwise")
+        return strandedness_report
+
     def report(self,sample_report,attrs=None,relpath=None):
         """
         Add report for Fastq pair to a document section
@@ -702,7 +851,10 @@ class QCReportFastqPair(object):
         """
         # Attributes to report
         if attrs is None:
-            attrs = ('fastqc','fastq_screen','program_versions')
+            attrs = ('fastqc',
+                     'fastq_screen',
+                     'program_versions',
+                     'strandedness')
         # Add container section for Fastq pair
         fastqs_report = sample_report.add_subsection()
         fastqs_report.add_css_classes('fastqs')
@@ -723,10 +875,18 @@ class QCReportFastqPair(object):
                     fq.report_fastq_screens(fq_report,relpath=relpath)
                 elif attr == "program_versions":
                     # Versions of programs used
-                    new_section = fq.report_program_versions(fq_report)
+                    fq.report_program_versions(fq_report)
+                elif attr == "strandedness":
+                    # Strandedness - handle separately
+                    pass
                 else:
                     raise KeyError("'%s': unrecognised reporting element "
                                    % attr)
+                    fq.report_program_versions(fq_report)
+        # Sections for pairwise data
+        if "strandedness" in attrs:
+            # Strandedness
+            self.report_strandedness(fastqs_report)
         # Add an empty section to clear HTML floats
         clear = fastqs_report.add_subsection()
         clear.add_css_classes("clear")
@@ -751,6 +911,7 @@ class QCReportFastqPair(object):
         - fastqc_r2
         - screens_r1
         - screens_r2
+        - strandedness
 
         Arguments:
           summary_table (Table): table to add the summary to
@@ -810,12 +971,14 @@ class QCReportFastqPair(object):
                 summary_table.set_value(idx,'fastqc_r1',
                                         Img(self.r1.ufastqcplot(),
                                             href="#fastqc_%s" %
-                                            self.r1.safe_name))
+                                            self.r1.safe_name,
+                                            title=self.r1.fastqc_summary()))
             elif field == "fastqc_r2":
                 summary_table.set_value(idx,'fastqc_r2',
                                         Img(self.r2.ufastqcplot(),
                                             href="#fastqc_%s" %
-                                            self.r2.safe_name))
+                                            self.r2.safe_name,
+                                            title=self.r2.fastqc_summary()))
             elif field == "screens_r1":
                 summary_table.set_value(idx,'screens_r1',
                                         Img(self.r1.uscreenplot(),
@@ -826,6 +989,12 @@ class QCReportFastqPair(object):
                                         Img(self.r2.uscreenplot(),
                                             href="#fastq_screens_%s" %
                                             self.r2.safe_name))
+            elif field == "strandedness":
+                summary_table.set_value(idx,'strandedness',
+                                        Img(self.ustrandplot(),
+                                            href="#strandedness_%s" %
+                                            self.r1.safe_name,
+                                            title=self.strandedness()))
             else:
                 raise KeyError("'%s': unrecognised field for summary "
                                "table" % field)
@@ -881,12 +1050,14 @@ class QCReportFastq(object):
             png,txt = fastq_screen_output(fastq,name)
             png = os.path.join(qc_dir,png)
             txt = os.path.join(qc_dir,txt)
-            self.fastq_screen['names'].append(name)
-            self.fastq_screen[name] = AttributeDictionary()
-            self.fastq_screen[name]["description"] = name.replace('_',' ').title()
-            self.fastq_screen[name]["png"] = png
-            self.fastq_screen[name]["txt"] = txt
-            self.fastq_screen[name]["version"] = Fastqscreen(txt).version
+            if os.path.exists(png) and os.path.exists(txt):
+                self.fastq_screen['names'].append(name)
+                self.fastq_screen[name] = AttributeDictionary()
+                self.fastq_screen[name]["description"] = \
+                                        name.replace('_',' ').title()
+                self.fastq_screen[name]["png"] = png
+                self.fastq_screen[name]["txt"] = txt
+                self.fastq_screen[name]["version"] = Fastqscreen(txt).version
         # Program versions
         self.program_versions = AttributeDictionary()
         if self.fastqc is not None:
@@ -962,6 +1133,9 @@ class QCReportFastq(object):
         screens_report = document.add_subsection("Screens",
                                                  name="fastq_screens_%s" %
                                                  self.safe_name)
+        if not self.fastq_screen.names:
+            screens_report.add("No screens found")
+            return screens_report
         raw_data = list()
         for name in self.fastq_screen.names:
             # Title for the screen
@@ -1016,6 +1190,16 @@ class QCReportFastq(object):
                          Version=self.program_versions.fastq_screen)
         versions.add(programs)
         return versions
+
+    def fastqc_summary(self):
+        """
+        Return plaintext version of the FastQC summary
+        """
+        output = []
+        for m in self.fastqc.summary.modules:
+            output.append("%s: %s" %
+                          (self.fastqc.summary.status(m),m))
+        return "\n".join(output)
 
     def uboxplot(self,inline=True):
         """

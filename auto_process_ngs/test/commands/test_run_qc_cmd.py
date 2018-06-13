@@ -10,7 +10,9 @@ from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockIlluminaQcSh
+from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockMultiQC
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.commands.run_qc_cmd import run_qc
 
 # Set to False to keep test output dirs
@@ -67,6 +69,64 @@ class TestAutoProcessRunQc(unittest.TestCase):
                         run_multiqc=True,
                         max_jobs=1)
         self.assertEqual(status,0)
+        # Check output and reports
+        for p in ("AB","CDE","undetermined"):
+            for f in ("qc",
+                      "qc_report.html",
+                      "qc_report.%s.%s_analysis.zip" % (
+                          p,
+                          '170901_M00879_0087_000000000-AGEW9'),
+                      "multiqc_report.html"):
+                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
+                                                            p,f)),
+                                "Missing %s in project '%s'" % (f,p))
+
+    def test_run_qc_with_strandedness(self):
+        """run_qc: standard QC run with strandedness determination
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockFastqStrandPy.create(os.path.join(self.bin,
+                                              "fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            project_metadata={ "AB": { "Organism": "human", },
+                               "CDE": { "Organism": "mouse", } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Settings file with fastq_strand indexes
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[fastq_strand_indexes]
+human = /data/genomeIndexes/hg38/STAR
+mouse = /data/genomeIndexes/mm10/STAR
+""")
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(settings_ini))
+        # Run the QC
+        status = run_qc(ap,
+                        run_multiqc=True,
+                        max_jobs=1)
+        self.assertEqual(status,0)
+        # Check the fastq_strand_conf files were created
+        for p in ("AB","CDE"):
+            self.assertTrue(os.path.exists(
+                os.path.join(mockdir.dirn,p,"fastq_strand.conf")))
+        # Check fastq_strand outputs are present
+        for p in ("AB","CDE"):
+            fastq_strand_outputs = filter(lambda f:
+                                          f.endswith("fastq_strand.txt"),
+                                          os.listdir(os.path.join(
+                                              mockdir.dirn,p,"qc")))
+            self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",

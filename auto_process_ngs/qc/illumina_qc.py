@@ -13,6 +13,7 @@ import logging
 from bcftbx.qc.report import strip_ngs_extensions
 from ..applications import Command
 from ..fastq_utils import IlluminaFastqAttrs
+from ..fastq_utils import pair_fastqs_by_name
 
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
@@ -30,7 +31,7 @@ class IlluminaQC(object):
     Utility class for running 'illumina_qc.sh'
     """
     def __init__(self,fastq_screen_subset=None,nthreads=1,
-                 ungzip_fastqs=False):
+                 fastq_strand_conf=None,ungzip_fastqs=False):
         """
         Create a new IlluminaQC instance
 
@@ -40,12 +41,16 @@ class IlluminaQC(object):
             uses the script default)
           nthreads (int): number of cores (threads)
             to run the QC using (default: 1)
+          fastq_strand_conf (str): path to a config
+            file with STAR indexes to use for strand
+            determination
           ungzip_fastqs (bool): if True then also
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
         """
         self.fastq_screen_subset = fastq_screen_subset
         self.nthreads = nthreads
+        self.fastq_strand_conf = fastq_strand_conf
         self.ungzip_fastqs = ungzip_fastqs
 
     def version(self):
@@ -77,10 +82,10 @@ class IlluminaQC(object):
             script on.
         """
         cmds = list()
+        # Convert to list and filter out index reads
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
+        # Generate QC commands for individual Fastqs
         for fastq in fastqs:
-            # Skip index reads (i.e. I1)
-            if IlluminaFastqAttrs(fastq).is_index_read:
-                continue
             # Build command
             cmd = Command('illumina_qc.sh',fastq)
             if self.ungzip_fastqs:
@@ -91,14 +96,26 @@ class IlluminaQC(object):
             if qc_dir is not None:
                 cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
             cmds.append(cmd)
+        # Generate pair-wise QC commands
+        for fq_pair in self._fastq_pairs(fastqs):
+            # Strandedness for this pair
+            if self.fastq_strand_conf is not None:
+                cmd = Command('fastq_strand.py',
+                              '-n',self.nthreads,
+                              '--conf',self.fastq_strand_conf,
+                              '--outdir',os.path.abspath(qc_dir),
+                              *fq_pair)
+                cmds.append(cmd)
         return cmds
 
-    def expected_outputs(self,fastq,qc_dir):
+    def expected_outputs(self,fastqs,qc_dir):
         """
         Generate expected outputs for input Fastq
 
-        Arguments
-          fastq (str): path to a Fastq file
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
@@ -107,25 +124,33 @@ class IlluminaQC(object):
             the QC for the supplied Fastq.
         """
         qc_dir = os.path.abspath(qc_dir)
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
         expected = []
-        # Skip index reads (i.e. I1)
-        if IlluminaFastqAttrs(fastq).is_index_read:
-            return expected
-        # FastQC outputs
-        expected.extend([os.path.join(qc_dir,f)
-                         for f in fastqc_output(fastq)])
-        # Fastq_screen outputs
-        for name in FASTQ_SCREENS:
+        # Expected outputs for single Fastqs
+        for fastq in fastqs:
+            # FastQC outputs
             expected.extend([os.path.join(qc_dir,f)
-                             for f in fastq_screen_output(fastq,name)])
+                             for f in fastqc_output(fastq)])
+            # Fastq_screen outputs
+            for name in FASTQ_SCREENS:
+                expected.extend([os.path.join(qc_dir,f)
+                                 for f in fastq_screen_output(fastq,name)])
+        # Pair-wise outputs
+        for fq_pair in self._fastq_pairs(fastqs):
+            # Strand stats output
+            if self.fastq_strand_conf:
+                expected.append(os.path.join(
+                    qc_dir,fastq_strand_output(fq_pair[0])))
         return expected
 
-    def check_outputs(self,fastq,qc_dir):
+    def check_outputs(self,fastqs,qc_dir):
         """
         Check QC outputs for input Fastq
 
         Arguments:
-          fastq (str): path to a Fastq file
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
@@ -139,12 +164,38 @@ class IlluminaQC(object):
         present = []
         missing = []
         # Check that outputs exist
-        for output in self.expected_outputs(fastq,qc_dir):
+        for output in self.expected_outputs(fastqs,qc_dir):
             if os.path.exists(output):
                 present.append(output)
             else:
                 missing.append(output)
         return (present,missing)
+
+    def _remove_index_reads(self,fastqs):
+        """
+        Internal: remove index (I1/I2) Fastqs from list
+        """
+        return filter(lambda fq:
+                      not IlluminaFastqAttrs(fq).is_index_read,
+                      fastqs)
+
+    def _fastq_pairs(self,fastqs):
+        """
+        Internal: remove singletons and return paired Fastqs
+        """
+        return filter(lambda p: len(p) == 2,
+                      pair_fastqs_by_name(fastqs))
+
+    def _to_list(self,args):
+        """
+        Internal: convert arg to appropriate list
+        """
+        try:
+            if len(args[0]) == 1:
+                return (args,)
+        except IndexError:
+            pass
+        return args
 
 #######################################################################
 # Functions
@@ -193,3 +244,22 @@ def fastqc_output(fastq):
     """
     base_name = "%s_fastqc" % strip_ngs_extensions(os.path.basename(fastq))
     return (base_name,base_name+'.html',base_name+'.zip')
+
+def fastq_strand_output(fastq):
+    """
+    Generate name for fastq_strand.py output
+
+    Given a Fastq file name, the output from fastq_strand.py
+    will look like:
+
+    - {FASTQ}_fastq_strand.txt
+
+    Arguments:
+       fastq (str): name of Fastq file
+
+    Returns:
+       tuple: fastq_strand.py output (without leading paths)
+
+    """
+    return "%s_fastq_strand.txt" % strip_ngs_extensions(
+        os.path.basename(fastq))

@@ -9,10 +9,12 @@
 # Imports
 #######################################################################
 
+import os
 import logging
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
+from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger
@@ -72,10 +74,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     """
     # Set up QC script
     compatible_versions = ('1.3.0','1.3.1')
-    illumina_qc = IlluminaQC(nthreads=nthreads,
-                             fastq_screen_subset=fastq_screen_subset,
-                             ungzip_fastqs=ungzip_fastqs)
-    version = illumina_qc.version()
+    version = IlluminaQC().version()
     if version not in compatible_versions:
         logger.error("QC script version is %s, needs %s" %
                      (version,'/'.join(compatible_versions)))
@@ -105,13 +104,34 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     # Set up the QC for each project
     runqc = RunQC()
     for project in projects:
+        # Set up conf file for strandedness determination
+        try:
+            organisms = project.info.organism.lower().split(',')
+        except AttributeError:
+            organisms = None
+        fastq_strand_indexes = build_fastq_strand_conf(
+            organisms,
+            ap.settings.fastq_strand_indexes)
+        if fastq_strand_indexes:
+            fastq_strand_conf = os.path.join(project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("%s\n" % fastq_strand_indexes)
+        else:
+            fastq_strand_conf = None
+        # Set up the QC command generator
+        illumina_qc = IlluminaQC(nthreads=nthreads,
+                                 fastq_screen_subset=fastq_screen_subset,
+                                 fastq_strand_conf=fastq_strand_conf,
+                                 ungzip_fastqs=ungzip_fastqs)
+        # Add the project
         runqc.add_project(project,
                           fastq_dir=fastq_dir,
                           sample_pattern=sample_pattern,
-                          qc_dir=qc_dir)
+                          qc_dir=qc_dir,
+                          illumina_qc=illumina_qc)
     # Run the QC
-    status = runqc.run(illumina_qc,
-                       multiqc=True,
+    status = runqc.run(multiqc=True,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,
                        report_runner=default_runner,

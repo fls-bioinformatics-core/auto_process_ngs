@@ -18,10 +18,8 @@ from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.reporting import QCReporter
+from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs import get_version
-
-# Module specific logger
-logger = logging.getLogger(__name__)
 
 __version__ = get_version()
 
@@ -36,7 +34,7 @@ auto_process pipeline.
 # Functions
 #######################################################################
 
-def verify_qc(project,qc_dir=None):
+def verify_qc(project,qc_dir=None,illumina_qc=None):
     """
     Get list of fastqs in project failing verification
 
@@ -45,6 +43,8 @@ def verify_qc(project,qc_dir=None):
       qc_dir (str): optional name of subdirectory
         containing QC outputs (defaults to default
         QC subdir from the project)
+      illumina_qc (IlluminaQC): object to use for
+        QC output validation
 
     Returns:
       List: list of Fastqs (including path) which
@@ -52,14 +52,19 @@ def verify_qc(project,qc_dir=None):
     """
     if qc_dir is None:
         qc_dir = project.qc_dir
-    illumina_qc = IlluminaQC()
+    if illumina_qc is None:
+        illumina_qc = IlluminaQC()
     fastqs = []
     for sample in project.samples:
         for fq in sample.fastq:
             present,missing = illumina_qc.check_outputs(fq,qc_dir)
             if missing:
                 fastqs.append(fq)
-    return fastqs
+        for fq_pair in pair_fastqs_by_name(sample.fastq):
+            present,missing = illumina_qc.check_outputs(fq_pair,qc_dir)
+            if missing:
+                fastqs.extend(fq_pair)
+    return sorted(list(set(fastqs)))
 
 def zip_report(project,report_html,qc_dir=None):
     """
@@ -99,7 +104,7 @@ def zip_report(project,report_html,qc_dir=None):
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
-                logger.debug("Adding QC outputs for %s" % fq)
+                logging.debug("Adding QC outputs for %s" % fq)
                 for f in illumina_qc.expected_outputs(fq,qc_dir):
                     if f.endswith('.zip'):
                         # Exclude .zip file
@@ -139,6 +144,9 @@ def main():
     reporting.add_option('--zip',action='store_true',
                          dest='zip',default=False,
                          help="make ZIP archive for the QC report")
+    reporting.add_option('--strand_stats',action='store_true',
+                         dest='fastq_strand',default=False,
+                         help="include strand stats from fastq_strand")
     reporting.add_option('--multiqc',action='store_true',
                          dest='multiqc',default=False,
                          help="generate MultiQC report")
@@ -166,8 +174,8 @@ def main():
     # Check for MultiQC if required
     if opts.multiqc:
         if find_program("multiqc") is None:
-            logger.critical("MultiQC report requested but 'multiqc' "
-                            "not available")
+            logging.critical("MultiQC report requested but 'multiqc' "
+                             "not available")
             sys.exit(1)
 
     # Examine projects i.e. supplied directories
@@ -189,13 +197,19 @@ def main():
         qc_info = p.qc_info(qc_dir)
         if qc_info.fastq_dir is not None and \
            os.path.join(p.dirn,qc_info.fastq_dir) != p.fastq_dir:
-            logger.warning("Stored fastq dir mismatch (%s != %s)" %
-                           (p.fastq_dir,qc_info.fastq_dir))
+            logging.warning("Stored fastq dir mismatch (%s != %s)" %
+                            (p.fastq_dir,qc_info.fastq_dir))
         print "QC output dir: %s" % qc_dir
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
+        # Create QC object for verification
+        illumina_qc = IlluminaQC(fastq_strand_conf=opts.fastq_strand)
         # Verification step
-        unverified = verify_qc(p,qc_dir)
+        try:
+            unverified = verify_qc(p,qc_dir,illumina_qc)
+        except Exception as ex:
+            print "Verification failed: %s" % ex
+            sys.exit(1)
         if unverified:
             if opts.list_unverified:
                 for fq in unverified:
@@ -218,6 +232,7 @@ def main():
             out_file = os.path.join(p.dirn,out_file)
         print "Writing QC report to %s" % out_file
         report_html= QCReporter(p).report(qc_dir=qc_dir,
+                                          illumina_qc=illumina_qc,
                                           title=opts.title,
                                           filename=out_file,
                                           relative_links=True)

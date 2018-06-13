@@ -2070,18 +2070,38 @@ if __name__ == "__main__":
 
     # Run the QC
     print "Running the QC"
+    # Set up conf file for strandedness determination
+    fastq_strand_conf = None
+    if analysis_project.info.organism:
+        print "Organisms: %s" % analysis_project.info.organism
+        fastq_strand_indexes = build_fastq_strand_conf(
+            analysis_project.info.organism.lower().split(','),
+            __settings.fastq_strand_indexes)
+        if fastq_strand_indexes:
+            print "Setting up conf file for strandedness determination"
+            fastq_strand_conf = os.path.join(analysis_project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("%s\n" % fastq_strand_indexes)
+        else:
+            print "No matching indexes for strandedness determination"
+    else:
+        print "No organisms specified"
+    # Set up the QC
     illumina_qc = IlluminaQC(
         nthreads=nprocessors['qc'],
-        fastq_screen_subset=default_fastq_screen_subset)
+        fastq_screen_subset=default_fastq_screen_subset,
+        fastq_strand_conf=fastq_strand_conf)
     runqc = RunQC()
     runqc.add_project(analysis_project,
                       fastq_dir="fastqs.samples",
-                      qc_dir="qc.samples")
+                      qc_dir="qc.samples",
+                      illumina_qc=illumina_qc)
     runqc.add_project(analysis_project,
                       fastq_dir="fastqs.barcodes",
-                      qc_dir="qc.barcodes")
-    exit_status = runqc.run(illumina_qc,
-                            multiqc=True,
+                      qc_dir="qc.barcodes"
+                      illumina_qc=illumina_qc)
+    exit_status = runqc.run(multiqc=True,
                             qc_runner=runners['qc'],
                             report_runner=default_runner,
                             max_jobs=max_jobs,
