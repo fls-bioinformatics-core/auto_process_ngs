@@ -48,53 +48,6 @@ def encode_png(png_file):
     """
     return "data:image/png;base64," + \
         PNGBase64Encoder().encodePNG(png_file)
-
-def screenplot(screen_files,outfile,threshold=None):
-    """
-    Generate plot of FastqScreen outputs
-
-    Arguments:
-      screen_files (list): list of paths to one or more
-        ...screen.txt files from FastqScreen
-      outfile (str): path to output file,outfile
-      threshold (float): minimum percentage of mapped
-        reads (below which library is excluded)
-    """
-    # Read in the screen data
-    screens = []
-    for screen_file in screen_files:
-        screens.append(Fastqscreen(screen_file))
-    nscreens = len(screens)
-    # Plot the data
-    plt.figure(1)
-    for i,screen_data in enumerate(screens):
-        # Create a sub-plot
-        plt.subplot(nscreens,1,i+1)
-        # Filter on threshold
-        if threshold:
-            screen_data = filter(lambda x: float(x['%Unmapped'])
-                                 <= (100.0-threshold),
-                                 screen_data)
-        # Make a stacked bar chart
-        plt.grid(True)
-        x = xrange(len(screen_data))
-        for mapping,color in (('%Multiple_hits_multiple_libraries','#800000'),
-                              ('%One_hit_multiple_libraries','#000099'),
-                              ('%Multiple_hits_one_library','r'),
-                              ('%One_hit_one_library','b'),):
-            data = [r[mapping] for r in screen_data]
-            plt.barh(x,data,color=color,label=mapping)
-        # Add the library names
-        plt.yticks([x+0.5 for x in xrange(len(screen_data))],
-                   [r['Library'] for r in screen_data])
-        # Set axis limits on current plot
-        plt.gca().set_xlim([0,100])
-        plt.gca().set_ylim([0,len(screen_data)])
-        # Only set legend for last plot
-        if i == 0:
-            plt.legend(loc=4)
-    # Write out plot
-    plt.savefig(outfile)
     
 def uscreenplot(screen_files,outfile=None,inline=None):
     """
