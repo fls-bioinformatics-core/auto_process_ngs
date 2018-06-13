@@ -233,7 +233,7 @@ class TestUStackedBar(unittest.TestCase):
         self.assertEqual(encode_png(outfile),self.png_base64_data)
 
     def test_ustackedbar_to_base64(self):
-        """ustackedbar: : write PNG as Base64 encoded string
+        """ustackedbar: write PNG as Base64 encoded string
         """
         self.assertEqual(ustackedbar((3,4,2),
                                      inline=True,
