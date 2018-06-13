@@ -93,7 +93,7 @@ ecoli	99859	99836	99.98	4	0.00	18	0.02	0	0.00	1	0.00
         self.assertEqual(encode_png(outfile),self.png_base64_data)
 
     def test_uscreenplot_to_base64(self):
-        """uboxplot: write PNG as Base64 encoded string
+        """uscreenplot: write PNG as Base64 encoded string
         """
         self.assertEqual(uscreenplot(self.screens,
                                      inline=True),
