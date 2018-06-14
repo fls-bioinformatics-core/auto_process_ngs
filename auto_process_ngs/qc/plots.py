@@ -48,54 +48,6 @@ def encode_png(png_file):
     """
     return "data:image/png;base64," + \
         PNGBase64Encoder().encodePNG(png_file)
-
-def screenplot(screen_files,outfile,threshold=None):
-    """
-    Generate plot of FastqScreen outputs
-
-    Arguments:
-      screen_files (list): list of paths to one or more
-        ...screen.txt files from FastqScreen
-      outfile (str): path to output file,outfile
-      threshold (float): minimum percentage of mapped
-        reads (below which library is excluded)
-
-    """
-    # Read in the screen data
-    screens = []
-    for screen_file in screen_files:
-        screens.append(Fastqscreen(screen_file))
-    nscreens = len(screens)
-    # Plot the data
-    plt.figure(1)
-    for i,screen_data in enumerate(screens):
-        # Create a sub-plot
-        plt.subplot(nscreens,1,i+1)
-        # Filter on threshold
-        if threshold:
-            screen_data = filter(lambda x: float(x['%Unmapped'])
-                                 <= (100.0-threshold),
-                                 screen_data)
-        # Make a stacked bar chart
-        plt.grid(True)
-        x = xrange(len(screen_data))
-        for mapping,color in (('%Multiple_hits_multiple_libraries','#800000'),
-                              ('%One_hit_multiple_libraries','#000099'),
-                              ('%Multiple_hits_one_library','r'),
-                              ('%One_hit_one_library','b'),):
-            data = [r[mapping] for r in screen_data]
-            plt.barh(x,data,color=color,label=mapping)
-        # Add the library names
-        plt.yticks([x+0.5 for x in xrange(len(screen_data))],
-                   [r['Library'] for r in screen_data])
-        # Set axis limits on current plot
-        plt.gca().set_xlim([0,100])
-        plt.gca().set_ylim([0,len(screen_data)])
-        # Only set legend for last plot
-        if i == 0:
-            plt.legend(loc=4)
-    # Write out plot
-    plt.savefig(outfile)
     
 def uscreenplot(screen_files,outfile=None,inline=None):
     """
@@ -148,6 +100,8 @@ def uscreenplot(screen_files,outfile=None,inline=None):
             x = xorigin
             y = n*(barwidth+1) + 1
             # Get the total percentage for the stack
+            for m in mappings:
+                print "%s: %s" % (m,data[m])
             total_percent = sum([data[m] for m in mappings])
             if total_percent > 2.0:
                 # Plot the stack as-is
@@ -182,8 +136,9 @@ def uscreenplot(screen_files,outfile=None,inline=None):
     if inline:
         encoded_plot = encode_png(tmp_plot)
     if outfile is not None:
-        os.rename(tmp_plot,outfile)
-    os.remove(tmp_plot)
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
     if inline:
         return encoded_plot
     else:
@@ -201,10 +156,11 @@ def uboxplot(fastqc_data=None,fastq=None,
        fastqc_data (str): path to a ``fastqc_data.txt``
         file
        outfile (str): path to output file
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
 
     Returns:
        String: path to output PNG file
-
     """
     # Boxplots need: mean, median, 25/75th and 10/90th quantiles
     # for each base
@@ -273,8 +229,9 @@ def uboxplot(fastqc_data=None,fastq=None,
     if inline:
         encoded_plot = encode_png(tmp_plot)
     if outfile is not None:
-        os.rename(tmp_plot,outfile)
-    os.remove(tmp_plot)
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
     if inline:
         return encoded_plot
     else:
@@ -298,7 +255,7 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
        ==
     ==
 
-    indictaes that the status of the first module is
+    indicates that the status of the first module is
     'FAIL', the 2nd, 3rd and 5th are 'PASS', and the
     4th is 'WARN'.
 
@@ -306,7 +263,8 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
       summary_file (str): path to a FastQC
         'summary.txt' output file
       outfile (str): path for the output PNG
-
+      inline (boolean): if True then returns the PNG
+        as base64 encoded string rather than as a file
     """
     status_codes = {
         'PASS' : { 'index': 0,
@@ -345,8 +303,9 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
     if inline:
         encoded_plot = encode_png(tmp_plot)
     if outfile is not None:
-        os.rename(tmp_plot,outfile)
-    os.remove(tmp_plot)
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
     if inline:
         return encoded_plot
     else:
@@ -415,15 +374,16 @@ def ustackedbar(data,outfile=None,inline=False,bbox=True,
     if inline:
         encoded_plot = encode_png(tmp_plot)
     if outfile is not None:
-        os.rename(tmp_plot,outfile)
-    os.remove(tmp_plot)
+        shutil.move(tmp_plot,outfile)
+    else:
+        os.remove(tmp_plot)
     if inline:
         return encoded_plot
     else:
         return outfile
 
 def ustrandplot(fastq_strand_out,outfile=None,inline=False,
-                height=25,width=50,dynamic=False):
+                height=25,width=50,fg_color=None,dynamic=False):
     """
     Make a 'micro' chart for strandedness
 
@@ -449,6 +409,8 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
         as base64 encoded string rather than as a file
       height (int): height of the plot in pixels
       width (int): width of the plot in pixels
+      fg_color (tuple): tuple of RGB values to use for
+        the foreground colour of the bars
       dynamic (boolean): if True then the height of the
         plot will be increased for each additional
         genome in the output fastq_strand file
@@ -469,6 +431,9 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
     # Set the width of the bars
     if ngenomes:
         bar_width = int(float(float(height)/ngenomes - 3*spacing)/2.0)
+    # Colour
+    if fg_color is None:
+        fg_color = RGB_COLORS['black']
     # Create the image
     img = Image.new('RGB',(width,height),RGB_COLORS['white'])
     pixels = img.load()
@@ -482,7 +447,7 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
             start = int(ii*float(height)/ngenomes) + spacing
             end = start + bar_width
             for j in xrange(start,end):
-                pixels[i,j] = RGB_COLORS['black']
+                pixels[i,j] = fg_color
         # Pad the remainder of the bar
         for i in xrange(bar_length+2,width-2):
             start = int(ii*float(height)/ngenomes) + spacing
@@ -496,7 +461,7 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
             start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
             end = start + bar_width
             for j in xrange(start,end):
-                pixels[i,j] = RGB_COLORS['black']
+                pixels[i,j] = fg_color
         # Pad the remainder of the bar
         for i in xrange(bar_length+2,width-2):
             start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
@@ -517,3 +482,23 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
         return encoded_plot
     else:
         return outfile
+
+def _tiny_png(outfile,width=4,height=4,
+             bg_color=RGB_COLORS['white'],
+             fg_color=RGB_COLORS['blue']):
+    """
+    Create a small checkered PNG for testing
+    """
+    img = Image.new('RGB',(width,height),bg_color)
+    pixels = img.load()
+    for i in xrange(int(width/2)):
+        for j in xrange(int(height/2)):
+            pixels[i,j] = fg_color
+    for i in xrange(int(width/2),width):
+        for j in xrange(int(height/2),height):
+            pixels[i,j] = fg_color
+    fp,tmp_plot = tempfile.mkstemp(".tiny.png")
+    img.save(tmp_plot)
+    os.fdopen(fp).close()
+    shutil.move(tmp_plot,outfile)
+    return outfile
