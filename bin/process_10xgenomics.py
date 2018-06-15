@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_10xgenomics.py: processing of 10xGenomics Chromium SC data
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 """
 process_10genomics.py
@@ -22,6 +22,7 @@ from bcftbx.utils import mkdirs
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from auto_process_ngs.utils import get_numbered_subdir
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.analysis import ProjectMetadataFile
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_mkfastq
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_count
@@ -317,10 +318,39 @@ if __name__ == "__main__":
         # Run cellranger count over the samples
         if args.projects:
             for project in args.projects:
+                # Fetch transcriptome for project
                 print "Project: %s" % project
+                transcriptome = args.transcriptome
+                if transcriptome is None:
+                    try:
+                        organisms = AnalysisProject(
+                            os.path.basename(project),
+                            project).\
+                            info.organism.lower().split(',')
+                    except AttributeError:
+                        organisms = None
+                    if not organisms:
+                        raise Exception("%s: can't look up transcriptome "
+                                        " (no organism specified); use "
+                                        " -t/--transcriptome option" %
+                                        project)
+                    elif len(organisms) > 1:
+                        raise Exception("%s: can't look up transcriptome "
+                                        " (multiple organisms); use "
+                                        " -t/--transcriptome option" %
+                                        project)
+                    try:
+                        transcriptome = __settings['10xgenomics_transcriptomes']\
+                                        [organisms[0]]
+                    except KeyError:
+                        raise Exception("%s: no transcriptome found for "
+                                        "organism '%s'; use -t/--transcriptome"
+                                        "option" % (project,organism[0]))
+                print "Transcriptome: %s" % transcriptome
+                # Run single library analysis
                 run_cellranger_count_for_project(
                     project,
-                    args.transcriptome,
+                    transcriptome,
                     cellranger_jobmode=args.job_mode,
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
