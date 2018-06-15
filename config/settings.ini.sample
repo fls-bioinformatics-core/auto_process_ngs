@@ -48,6 +48,14 @@ cellranger_jobmode = sge
 cellranger_mempercore = 5
 cellranger_jobinterval = 100
 
+# 10xGenomics transcriptomes
+# Assign organism name to path to cellranger
+# transcriptome reference data to use for that
+# organism in single library analysis
+[10xgenomics_transcriptomes]
+#human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
+#mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
+
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
 # override the default bcl2fastq settings (i.e. number of

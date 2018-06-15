@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-15 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2018 Peter Briggs
 #
 #########################################################################
 #
@@ -172,6 +172,13 @@ class Settings(object):
                                                                'sge')
         self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
+        # 10xgenomics transcriptomes
+        self.add_section('10xgenomics_transcriptomes')
+        try:
+            for genome,transcriptome in config.items('10xgenomics_transcriptomes'):
+                self['10xgenomics_transcriptomes'][genome] = transcriptome
+        except NoSectionError:
+            logging.warning("No 10xgenomics transcriptomes defined")
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
