@@ -12,6 +12,7 @@ make_fastqs = None
 run_qc = None
 publish_qc = None
 process_icell8 = None
+process_10xgenomics = None
 
 # bcl2fastq settings
 [bcl2fastq]

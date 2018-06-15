@@ -272,11 +272,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print "command: %s" % args.command
 
-    # Deal with module files
+    # Deal with environment modules
     if args.command in ("mkfastq","count"):
-        if args.modulefiles is not None:
-            modulefiles = args.modulefiles.split(',')
-            for modulefile in modulefiles:
+        modulefiles = args.modulefiles
+        if modulefiles is None:
+            try:
+                modulefiles = __settings.modulefiles['process_10xgenomics']
+            except KeyError:
+                # No environment modules specified
+                pass
+        if modulefiles is not None:
+            for modulefile in modulefiles.split(','):
                 envmod.load(modulefile)
 
     # Check for underlying programs
