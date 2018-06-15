@@ -22,7 +22,7 @@ from bcftbx.utils import mkdirs
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from auto_process_ngs.utils import get_numbered_subdir
-from auto_process_ngs.utils import ProjectMetadataFile
+from auto_process_ngs.analysis import ProjectMetadataFile
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_mkfastq
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_count
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_count_for_project
