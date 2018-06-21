@@ -30,12 +30,16 @@ class IlluminaQC(object):
     """
     Utility class for running 'illumina_qc.sh'
     """
-    def __init__(self,fastq_screen_subset=None,nthreads=1,
-                 fastq_strand_conf=None,ungzip_fastqs=False):
+    def __init__(self,protocol=None,fastq_screen_subset=None,
+                 nthreads=1,fastq_strand_conf=None,
+                 ungzip_fastqs=False):
         """
         Create a new IlluminaQC instance
 
         Arguments:
+          protocol (str): QC protocol, one of
+            "standard", "single_end", "single_cell".
+            If 'None' then defaults to "standard"
           fastq_screen_subset (int): subset of reads
             to use when running Fastq_screen ('None'
             uses the script default)
@@ -48,6 +52,12 @@ class IlluminaQC(object):
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
         """
+        if protocol is None:
+            protocol = "standard"
+        if protocol not in ("standard","single_end","single_cell"):
+            raise Exception("IlluminaQC: unrecognised protocol '%s'" %
+                            protocol)
+        self.protocol = protocol
         self.fastq_screen_subset = fastq_screen_subset
         self.nthreads = nthreads
         self.fastq_strand_conf = fastq_strand_conf
@@ -65,7 +75,33 @@ class IlluminaQC(object):
 
     def commands(self,fastqs,qc_dir=None):
         """
-        Generate commands for running QC script
+        Generate commands for running QC scripts
+
+        Note that index reads (e.g. I1 Fastqs) will
+        not have commands generated for them.
+
+        Arguments:
+          fastqs (list): list of paths to Fastq files
+            to run the QC script on
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of `Command` instances (one per
+            Fastq) for running the `illumina_qc.sh`
+            script on.
+        """
+        if self.protocol == "standard":
+            commands = self._commands_for_paired_end
+        elif self.protocol == "single_end":
+            commands = self._commands_for_single_end
+        elif self.protocol == "single_cell":
+            commands = self._commands_for_single_cell
+        return commands(fastqs,qc_dir=qc_dir)
+
+    def _commands_for_paired_end(self,fastqs,qc_dir=None):
+        """
+        Generate commands for running paired-end QC scripts
 
         Note that index reads (e.g. I1 Fastqs) will
         not have commands generated for them.
@@ -108,9 +144,119 @@ class IlluminaQC(object):
                 cmds.append(cmd)
         return cmds
 
+    def _commands_for_single_end(self,fastqs,qc_dir=None):
+        """
+        Generate commands for running single-end QC scripts
+
+        Note that index reads (e.g. I1 Fastqs) will
+        not have commands generated for them.
+
+        Arguments:
+          fastqs (list): list of paths to Fastq files
+            to run the QC script on
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of `Command` instances (one per
+            Fastq) for running the `illumina_qc.sh`
+            script on.
+        """
+        cmds = list()
+        # Convert to list and filter out index reads
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
+        # Generate QC commands for individual Fastqs
+        for fastq in fastqs:
+            # Build command
+            cmd = Command('illumina_qc.sh',fastq)
+            if self.ungzip_fastqs:
+                cmd.add_args('--ungzip-fastqs')
+            cmd.add_args('--threads',self.nthreads)
+            if self.fastq_screen_subset is not None:
+                cmd.add_args('--subset',self.fastq_screen_subset)
+            if qc_dir is not None:
+                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+            cmds.append(cmd)
+            # Strandedness
+            if self.fastq_strand_conf is not None:
+                cmd = Command('fastq_strand.py',
+                              '-n',self.nthreads,
+                              '--conf',self.fastq_strand_conf,
+                              '--outdir',os.path.abspath(qc_dir),
+                              fastq)
+                cmds.append(cmd)
+        return cmds
+
+    def _commands_for_single_cell(self,fastqs,qc_dir=None):
+        """
+        Generate commands for running single cell QC scripts
+
+        Note that index reads (e.g. I1 Fastqs) will
+        not have commands generated for them.
+
+        Arguments:
+          fastqs (list): list of paths to Fastq files
+            to run the QC script on
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of `Command` instances (one per
+            Fastq) for running the `illumina_qc.sh`
+            script on.
+        """
+        cmds = list()
+        # Convert to list and filter out index reads
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
+        # Generate QC commands for individual Fastqs
+        for fastq in fastqs:
+            # Build command
+            cmd = Command('illumina_qc.sh',fastq)
+            if self.ungzip_fastqs:
+                cmd.add_args('--ungzip-fastqs')
+            cmd.add_args('--threads',self.nthreads)
+            if self.fastq_screen_subset is not None:
+                cmd.add_args('--subset',self.fastq_screen_subset)
+            if qc_dir is not None:
+                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+            cmds.append(cmd)
+            # Strandedness (R2 only)
+            if self.fastq_strand_conf is not None:
+                if IlluminaFastqAttrs(fastq).read_number == 2:
+                    cmd = Command('fastq_strand.py',
+                                  '-n',self.nthreads,
+                                  '--conf',self.fastq_strand_conf,
+                                  '--outdir',os.path.abspath(qc_dir),
+                                  fastq)
+                    cmds.append(cmd)
+        return cmds
+
     def expected_outputs(self,fastqs,qc_dir):
         """
         Generate expected outputs for input Fastq
+
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of expected output files from
+            the QC for the supplied Fastq.
+        """
+        if self.protocol == "standard":
+            outputs = self._outputs_for_paired_end
+        elif self.protocol == "single_end":
+            outputs = self._outputs_for_single_end
+        elif self.protocol == "single_cell":
+            outputs = self._outputs_for_single_cell
+        return outputs(fastqs,qc_dir)
+
+    def _outputs_for_paired_end(self,fastqs,qc_dir):
+        """
+        Generate expected outputs for standard PE protocol
 
         Arguments:
           fastqs (str/list): either path to a single
@@ -141,6 +287,73 @@ class IlluminaQC(object):
             if self.fastq_strand_conf:
                 expected.append(os.path.join(
                     qc_dir,fastq_strand_output(fq_pair[0])))
+        return expected
+
+    def _outputs_for_single_end(self,fastqs,qc_dir):
+        """
+        Generate expected outputs for standard SE protocol
+
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of expected output files from
+            the QC for the supplied Fastq.
+        """
+        qc_dir = os.path.abspath(qc_dir)
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
+        expected = []
+        # Expected outputs for single Fastqs
+        for fastq in fastqs:
+            # FastQC outputs
+            expected.extend([os.path.join(qc_dir,f)
+                             for f in fastqc_output(fastq)])
+            # Fastq_screen outputs
+            for name in FASTQ_SCREENS:
+                expected.extend([os.path.join(qc_dir,f)
+                                 for f in fastq_screen_output(fastq,name)])
+            # Strand stats output
+            if self.fastq_strand_conf:
+                expected.append(os.path.join(
+                    qc_dir,fastq_strand_output(fastq)))
+        return expected
+
+    def _outputs_for_single_cell(self,fastqs,qc_dir):
+        """
+        Generate expected outputs for single-cell protocol
+
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          List: list of expected output files from
+            the QC for the supplied Fastq.
+        """
+        qc_dir = os.path.abspath(qc_dir)
+        fastqs = self._remove_index_reads(self._to_list(fastqs))
+        expected = []
+        # Expected outputs for single Fastqs
+        for fastq in fastqs:
+            # FastQC outputs
+            expected.extend([os.path.join(qc_dir,f)
+                             for f in fastqc_output(fastq)])
+            # Fastq_screen outputs
+            for name in FASTQ_SCREENS:
+                expected.extend([os.path.join(qc_dir,f)
+                                 for f in fastq_screen_output(fastq,name)])
+            # Strand stats output (R2 only)
+            if self.fastq_strand_conf:
+                if IlluminaFastqAttrs(fastq).read_number == 2:
+                    expected.append(os.path.join(
+                        qc_dir,fastq_strand_output(fastq)))
         return expected
 
     def check_outputs(self,fastqs,qc_dir):

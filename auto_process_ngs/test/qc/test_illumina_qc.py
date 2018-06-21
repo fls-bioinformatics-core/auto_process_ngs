@@ -45,6 +45,25 @@ class TestIlluminaQC(unittest.TestCase):
         illumina_qc = IlluminaQC()
         self.assertEqual(illumina_qc.version(),"1.3.1")
 
+    def test_illumina_qc_check_protocols(self):
+        """IlluminaQC: check 'protocol' argument
+        """
+        # No protocol specified
+        self.assertEqual(IlluminaQC().protocol,"standard")
+        # Standard protocol explicitly specified
+        self.assertEqual(IlluminaQC(protocol="standard").protocol,
+                         "standard")
+        # Single end
+        self.assertEqual(IlluminaQC(protocol="single_end").protocol,
+                         "single_end")
+        # Single cell
+        self.assertEqual(IlluminaQC(protocol="single_cell").protocol,
+                         "single_cell")
+        # Unrecognised
+        self.assertRaises(Exception,
+                          IlluminaQC,
+                          protocol="unknown_protocol")
+
     def test_illumina_qc_commands_for_single_fastq(self):
         """IlluminaQC: generates default commands for single Fastq
         """
@@ -153,6 +172,105 @@ class TestIlluminaQC(unittest.TestCase):
                          "--subset 8000 "
                          "--qc_dir /path/to/qc")
 
+    def test_illumina_qc_commands_for_single_fastq_SE(self):
+        """IlluminaQC: generates default commands for single Fastq (SE)
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),1)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_commands_for_fastq_pair(self):
+        """IlluminaQC: generates default commands for Fastq pair
+        """
+        illumina_qc = IlluminaQC()
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
+                                     "/path/to/fastqs/test_S1_R2.fastq.gz"),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),2)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_commands_for_SE_with_strandedness(self):
+        """IlluminaQC: generates commands for Fastq with strandedness (SE)
+        """
+        illumina_qc = IlluminaQC(
+            protocol="single_end",
+            fastq_strand_conf="/path/to/fastq_strand.conf")
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),2)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "fastq_strand.py "
+                         "-n 1 "
+                         "--conf /path/to/fastq_strand.conf "
+                         "--outdir /path/to/qc "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz")
+
+    def test_illumina_qc_commands_for_fastq_pair_single_cell(self):
+        """IlluminaQC: generates default commands for Fastq pair (single cell)
+        """
+        illumina_qc = IlluminaQC(protocol="single_cell")
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
+                                     "/path/to/fastqs/test_S1_R2.fastq.gz"),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),2)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+
+    def test_illumina_qc_commands_for_single_cell_with_strandedness(self):
+        """IlluminaQC: generates commands for Fastq pair (single cell, with strand)
+        """
+        illumina_qc = IlluminaQC(
+            protocol="single_cell",
+            fastq_strand_conf="/path/to/fastq_strand.conf")
+        cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
+                                     "/path/to/fastqs/test_S1_R2.fastq.gz",),
+                                    "/path/to/qc")
+        self.assertEqual(len(cmds),3)
+        self.assertEqual(str(cmds[0]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R1.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[1]),
+                         "illumina_qc.sh "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz "
+                         "--threads 1 "
+                         "--qc_dir /path/to/qc")
+        self.assertEqual(str(cmds[2]),
+                         "fastq_strand.py "
+                         "-n 1 "
+                         "--conf /path/to/fastq_strand.conf "
+                         "--outdir /path/to/qc "
+                         "/path/to/fastqs/test_S1_R2.fastq.gz")
+
     def test_illumina_qc_expected_outputs(self):
         """IlluminaQC: generates correct expected outputs for R1 Fastq
         """
@@ -243,10 +361,144 @@ class TestIlluminaQC(unittest.TestCase):
             self.assertTrue(r in expected_outputs,
                             "'%s' should be predicted" % r)
 
+    def test_illumina_qc_expected_outputs_SE(self):
+        """IlluminaQC: generates correct expected outputs for R1 Fastq (SE)
+        """
+        illumina_qc = IlluminaQC(protocol="single_end")
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",
+            "/path/to/qc")
+        reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
+                             "/path/to/qc/test_S1_R1_fastqc.html",
+                             "/path/to/qc/test_S1_R1_fastqc.zip",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",)
+        for e in expected_outputs:
+            self.assertTrue(e in reference_outputs,
+                            "'%s' shouldn't be predicted" % e)
+        for r in reference_outputs:
+            self.assertTrue(r in expected_outputs,
+                            "'%s' should be predicted" % r)
+
+    def test_illumina_qc_expected_outputs_SE_incl_strand(self):
+        """IlluminaQC: generates correct expected outputs (SE, with strand)
+        """
+        illumina_qc = IlluminaQC(protocol="single_end",
+                                 fastq_strand_conf=True)
+        expected_outputs = illumina_qc.expected_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",),
+            "/path/to/qc")
+        reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
+                             "/path/to/qc/test_S1_R1_fastqc.html",
+                             "/path/to/qc/test_S1_R1_fastqc.zip",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",
+                             "/path/to/qc/test_S1_R1_fastq_strand.txt",)
+        for e in expected_outputs:
+            self.assertTrue(e in reference_outputs,
+                            "'%s' shouldn't be predicted" % e)
+        for r in reference_outputs:
+            self.assertTrue(r in expected_outputs,
+                            "'%s' should be predicted" % r)
+
+    def test_illumina_qc_expected_outputs_for_input_pair_single_cell(self):
+        """IlluminaQC: generates correct expected outputs for Fastq R1/R2 pair (single cell)
+        """
+        illumina_qc = IlluminaQC(protocol="single_cell")
+        expected_outputs = illumina_qc.expected_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",
+             "/path/to/fastqs/test_S1_R2.fastq.gz"),
+            "/path/to/qc")
+        reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
+                             "/path/to/qc/test_S1_R1_fastqc.html",
+                             "/path/to/qc/test_S1_R1_fastqc.zip",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",
+                             "/path/to/qc/test_S1_R2_fastqc",
+                             "/path/to/qc/test_S1_R2_fastqc.html",
+                             "/path/to/qc/test_S1_R2_fastqc.zip",
+                             "/path/to/qc/test_S1_R2_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R2_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R2_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R2_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R2_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R2_rRNA_screen.txt",)
+        for e in expected_outputs:
+            self.assertTrue(e in reference_outputs,
+                            "'%s' shouldn't be predicted" % e)
+        for r in reference_outputs:
+            self.assertTrue(r in expected_outputs,
+                            "'%s' should be predicted" % r)
+
+    def test_illumina_qc_expected_outputs_for_input_pair_incl_strand_single_cell(self):
+        """IlluminaQC: generates correct expected outputs for Fastq R1/R2 pair (single cell, with strand)
+        """
+        illumina_qc = IlluminaQC(protocol="single_cell",
+                                 fastq_strand_conf=True)
+        expected_outputs = illumina_qc.expected_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",
+             "/path/to/fastqs/test_S1_R2.fastq.gz"),
+            "/path/to/qc")
+        reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
+                             "/path/to/qc/test_S1_R1_fastqc.html",
+                             "/path/to/qc/test_S1_R1_fastqc.zip",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",
+                             "/path/to/qc/test_S1_R2_fastqc",
+                             "/path/to/qc/test_S1_R2_fastqc.html",
+                             "/path/to/qc/test_S1_R2_fastqc.zip",
+                             "/path/to/qc/test_S1_R2_model_organisms_screen.png",
+                             "/path/to/qc/test_S1_R2_model_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R2_other_organisms_screen.png",
+                             "/path/to/qc/test_S1_R2_other_organisms_screen.txt",
+                             "/path/to/qc/test_S1_R2_rRNA_screen.png",
+                             "/path/to/qc/test_S1_R2_rRNA_screen.txt",
+                             "/path/to/qc/test_S1_R2_fastq_strand.txt",)
+        for e in expected_outputs:
+            self.assertTrue(e in reference_outputs,
+                            "'%s' shouldn't be predicted" % e)
+        for r in reference_outputs:
+            self.assertTrue(r in expected_outputs,
+                            "'%s' should be predicted" % r)
+
     def test_illumina_qc_expected_outputs_index_read(self):
         """IlluminaQC: predicts no outputs for index read Fastq
         """
         illumina_qc = IlluminaQC()
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_I1.fastq.gz",
+            "/path/to/qc")
+        self.assertEqual(len(expected_outputs),0)
+
+    def test_illumina_qc_expected_outputs_index_read_SE(self):
+        """IlluminaQC: predicts no outputs for index read Fastq (SE)
+        """
+        illumina_qc = IlluminaQC(protocol="single_end")
+        expected_outputs = illumina_qc.expected_outputs(
+            "/path/to/fastqs/test_S1_I1.fastq.gz",
+            "/path/to/qc")
+        self.assertEqual(len(expected_outputs),0)
+
+    def test_illumina_qc_expected_outputs_index_read_single_cell(self):
+        """IlluminaQC: predicts no outputs for index read Fastq (single cell)
+        """
+        illumina_qc = IlluminaQC(protocol="single_cell")
         expected_outputs = illumina_qc.expected_outputs(
             "/path/to/fastqs/test_S1_I1.fastq.gz",
             "/path/to/qc")
@@ -436,6 +688,246 @@ class TestIlluminaQC(unittest.TestCase):
                 fp.write("test")
         # Get lists of present and missing files
         illumina_qc = IlluminaQC()
+        present,missing = illumina_qc.check_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",
+             "/path/to/fastqs/test_S1_R2.fastq.gz"),
+            qc_dir)
+        # Check present
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+        # Check missing
+        for m in missing:
+            self.assertTrue(os.path.dirname(m),qc_dir)
+            self.assertTrue(os.path.basename(m) in reference_missing,
+                            "'%s' shouldn't be found" % m)
+        for r in reference_missing:
+            self.assertTrue(os.path.join(qc_dir,r) in missing,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_all_present_SE(self):
+        """IlluminaQC: check expected outputs when all present (SE)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_end")
+        present,missing = illumina_qc.check_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
+        self.assertEqual(len(missing),0)
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_some_missing_SE(self):
+        """IlluminaQC: check expected outputs when some are missing (SE)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",)
+        reference_missing = ("test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_end")
+        present,missing = illumina_qc.check_outputs(
+            "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
+        # Check present
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+        # Check missing
+        for m in missing:
+            self.assertTrue(os.path.dirname(m),qc_dir)
+            self.assertTrue(os.path.basename(m) in reference_missing,
+                            "'%s' shouldn't be found" % m)
+        for r in reference_missing:
+            self.assertTrue(os.path.join(qc_dir,r) in missing,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_all_present_SE_with_strand(self):
+        """IlluminaQC: check expected outputs when all for (SE, with strand)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",
+                             "test_S1_R1_fastq_strand.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_end",
+                                 fastq_strand_conf=True)
+        present,missing = illumina_qc.check_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",),qc_dir)
+        print missing
+        self.assertEqual(len(missing),0)
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_all_present_for_pair_single_cell(self):
+        """IlluminaQC: check expected outputs when all present for R1/R2 pair (single cell)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",
+                             "test_S1_R2_fastqc",
+                             "test_S1_R2_fastqc.html",
+                             "test_S1_R2_fastqc.zip",
+                             "test_S1_R2_model_organisms_screen.png",
+                             "test_S1_R2_model_organisms_screen.txt",
+                             "test_S1_R2_other_organisms_screen.png",
+                             "test_S1_R2_other_organisms_screen.txt",
+                             "test_S1_R2_rRNA_screen.png",
+                             "test_S1_R2_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_cell")
+        present,missing = illumina_qc.check_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",
+             "/path/to/fastqs/test_S1_R2.fastq.gz"),qc_dir)
+        print missing
+        self.assertEqual(len(missing),0)
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_all_present_pair_with_strand_single_cell(self):
+        """IlluminaQC: check expected outputs when all present for R1/R2 pair (single cell, with strand)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",
+                             "test_S1_R2_fastqc",
+                             "test_S1_R2_fastqc.html",
+                             "test_S1_R2_fastqc.zip",
+                             "test_S1_R2_model_organisms_screen.png",
+                             "test_S1_R2_model_organisms_screen.txt",
+                             "test_S1_R2_other_organisms_screen.png",
+                             "test_S1_R2_other_organisms_screen.txt",
+                             "test_S1_R2_rRNA_screen.png",
+                             "test_S1_R2_rRNA_screen.txt",
+                             "test_S1_R2_fastq_strand.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_cell",
+                                 fastq_strand_conf=True)
+        present,missing = illumina_qc.check_outputs(
+            ("/path/to/fastqs/test_S1_R1.fastq.gz",
+             "/path/to/fastqs/test_S1_R2.fastq.gz"),qc_dir)
+        print missing
+        self.assertEqual(len(missing),0)
+        for p in present:
+            self.assertTrue(os.path.dirname(p),qc_dir)
+            self.assertTrue(os.path.basename(p) in reference_outputs,
+                            "'%s' shouldn't be found" % p)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(qc_dir,r) in present,
+                            "'%s' should exist" % r)
+
+    def test_illumina_qc_check_outputs_for_pair_some_missing_single_cell(self):
+        """IlluminaQC: check expected outputs for R1/R2 pair when some are missing (single cell)
+        """
+        # Make QC dir and (empty) reference files
+        qc_dir = os.path.join(self.wd,"qc")
+        os.mkdir(qc_dir)
+        reference_outputs = ("test_S1_R1_fastqc",
+                             "test_S1_R1_fastqc.html",
+                             "test_S1_R1_fastqc.zip",
+                             "test_S1_R1_model_organisms_screen.png",
+                             "test_S1_R1_model_organisms_screen.txt",
+                             "test_S1_R1_other_organisms_screen.png",
+                             "test_S1_R1_other_organisms_screen.txt",
+                             "test_S1_R2_fastqc",
+                             "test_S1_R2_fastqc.html",
+                             "test_S1_R2_fastqc.zip",
+                             "test_S1_R2_model_organisms_screen.png",
+                             "test_S1_R2_model_organisms_screen.txt",
+                             "test_S1_R2_other_organisms_screen.png",
+                             "test_S1_R2_other_organisms_screen.txt",
+                             "test_S1_R2_rRNA_screen.png",
+                             "test_S1_R2_rRNA_screen.txt",)
+        reference_missing = ("test_S1_R1_rRNA_screen.png",
+                             "test_S1_R1_rRNA_screen.txt",)
+        for r in reference_outputs:
+            with open(os.path.join(qc_dir,r),'w') as fp:
+                fp.write("test")
+        # Get lists of present and missing files
+        illumina_qc = IlluminaQC(protocol="single_cell")
         present,missing = illumina_qc.check_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
              "/path/to/fastqs/test_S1_R2.fastq.gz"),
