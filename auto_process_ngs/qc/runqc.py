@@ -222,6 +222,20 @@ class ProjectQC(object):
         if illumina_qc is None:
             illumina_qc = IlluminaQC()
         self.illumina_qc = illumina_qc
+        # Check the QC protocol
+        protocol = project.qc_info(project.qc_dir).protocol
+        if protocol is None:
+            protocol = "standard"
+        if protocol != illumina_qc.protocol:
+            logger.warning("QC protocol mismatch for %s: "
+                           "'%s' stored, '%s' specified"
+                           % (project.name,
+                              protocol,
+                              illumina_qc.protocol))
+        # Store QC protocol
+        qc_info = project.qc_info(project.qc_dir)
+        qc_info['protocol'] = illumina_qc.protocol
+        qc_info.save()
         # Log directory
         if log_dir is not None:
             self.log_dir = os.path.abspath(log_dir)

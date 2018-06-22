@@ -583,6 +583,7 @@ class AnalysisProjectQCDirInfo(MetadataDict):
     The data items are:
 
     fastq_dir: the name of the associated Fastq subdirectory
+    protocol: the QC protocol used
     """
     def __init__(self,filen=None):
         """Create a new AnalysisProjectQCDirInfo instance
@@ -594,8 +595,10 @@ class AnalysisProjectQCDirInfo(MetadataDict):
         MetadataDict.__init__(self,
                               attributes = {
                                   'fastq_dir':'Fastq dir',
+                                  'protocol':'QC protocol',
                               },
                               order = (
                                   'fastq_dir',
+                                  'protocol',
                               ),
                               filen=filen)
