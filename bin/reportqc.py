@@ -66,7 +66,7 @@ def verify_qc(project,qc_dir=None,illumina_qc=None):
                 fastqs.extend(fq_pair)
     return sorted(list(set(fastqs)))
 
-def zip_report(project,report_html,qc_dir=None):
+def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     """
     Create ZIP archive for a QC report
 
@@ -76,6 +76,8 @@ def zip_report(project,report_html,qc_dir=None):
       qc_dir (str): optional name of subdirectory
         containing QC outputs (defaults to default
         QC subdir from the project)
+      illumina_qc (IlluminaQC): object to use for
+        QC output validation
 
     Returns:
       String: path to the output ZIP file.
@@ -99,8 +101,9 @@ def zip_report(project,report_html,qc_dir=None):
         qc_dir = project.qc_dir
     # Add the HTML report
     zip_file.add_file(report_html)
-    # Add the FastQC and screen files
-    illumina_qc = IlluminaQC()
+    # Add the QC outputs
+    if illumina_qc is None:
+        illumina_qc = IlluminaQC()
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
@@ -238,7 +241,8 @@ def main():
                                           relative_links=True)
         # Generate ZIP archive
         if opts.zip:
-            report_zip = zip_report(p,report_html,qc_dir)
+            report_zip = zip_report(p,report_html,qc_dir,
+                                    illumina_qc=illumina_qc)
             print "ZIP archive: %s" % report_zip
         # MultiQC report
         if opts.multiqc:
