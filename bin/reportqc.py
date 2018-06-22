@@ -205,8 +205,16 @@ def main():
         print "QC output dir: %s" % qc_dir
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
+        # Determine QC protocol
+        protocol = "standard"
+        if not p.info.paired_end:
+            protocol = "single_end"
+        elif p.info.single_cell_platform is not None:
+            protocol = "single_cell"
+        print "QC protocol: %s" % protocol
         # Create QC object for verification
-        illumina_qc = IlluminaQC(fastq_strand_conf=opts.fastq_strand)
+        illumina_qc = IlluminaQC(protocol=protocol,
+                                 fastq_strand_conf=opts.fastq_strand)
         # Verification step
         try:
             unverified = verify_qc(p,qc_dir,illumina_qc)

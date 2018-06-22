@@ -104,6 +104,12 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     # Set up the QC for each project
     runqc = RunQC()
     for project in projects:
+        # Determine the QC protocol
+        protocol = "standard"
+        if not project.info.paired_end:
+            protocol = "single_end"
+        elif project.info.single_cell_platform is not None:
+            protocol = "single_cell"
         # Set up conf file for strandedness determination
         try:
             organisms = project.info.organism.lower().split(',')
@@ -120,7 +126,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         else:
             fastq_strand_conf = None
         # Set up the QC command generator
-        illumina_qc = IlluminaQC(nthreads=nthreads,
+        illumina_qc = IlluminaQC(protocol=protocol,
+                                 nthreads=nthreads,
                                  fastq_screen_subset=fastq_screen_subset,
                                  fastq_strand_conf=fastq_strand_conf,
                                  ungzip_fastqs=ungzip_fastqs)
