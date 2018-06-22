@@ -1284,7 +1284,7 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         """
         Internal: configure the mock fastq_strand.py
         """
-        self._version = "0.0.1"
+        self._version = "0.0.2"
         self._no_outputs = no_outputs
         self._exit_code = exit_code
 
@@ -1308,7 +1308,7 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         p.add_argument("--counts",action="store_true")
         p.add_argument("--keep-star-output",action="store_true")
         p.add_argument("fastqr1")
-        p.add_argument("fastqr2")
+        p.add_argument("fastqr2",nargs="?")
         args = p.parse_args(args)
         # Outputs
         if self._no_outputs:
@@ -1322,8 +1322,12 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
         with open(outfile,'w') as fp:
             fp.write("""#fastq_strand version: %s	#Aligner: STAR	#Reads in subset: 1000
 #Genome	1st forward	2nd reverse
-hg38	13.13	93.21
-mm10	13.13	93.21
 """ % self._version)
+            with open(args.conf,'r') as conf:
+                for line in conf:
+                    if not line or line.startswith("#"):
+                        continue
+                    genome = line.split('\t')[0]
+                    fp.write("%s	13.13	93.21\n" % genome)
         # Exit
         return self._exit_code
