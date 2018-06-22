@@ -100,8 +100,6 @@ def uscreenplot(screen_files,outfile=None,inline=None):
             x = xorigin
             y = n*(barwidth+1) + 1
             # Get the total percentage for the stack
-            for m in mappings:
-                print "%s: %s" % (m,data[m])
             total_percent = sum([data[m] for m in mappings])
             if total_percent > 2.0:
                 # Plot the stack as-is
