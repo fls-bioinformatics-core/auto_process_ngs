@@ -488,10 +488,6 @@ class QCReport(Document):
         if relpath is not None:
             relpath = os.path.normpath(os.path.abspath(relpath))
         self.relpath = relpath
-        # Attributes to report for each sample
-        if report_attrs is None:
-            attrs = ('fastqc','fastq_screen','program_versions')
-        self.report_attrs = report_attrs
         # Field descriptions for summary table
         self.field_descriptions = { 'sample': 'Sample',
                                     'fastq' : 'Fastq',
@@ -525,6 +521,14 @@ class QCReport(Document):
                 if ('screens_%s' % read) in self.outputs:
                     summary_fields.append('screens_%s' % read)
         self.summary_fields = summary_fields
+        # Attributes to report for each sample
+        if report_attrs is None:
+            report_attrs = ['fastqc',
+                            'fastq_screen',
+                            'program_versions']
+            if 'strandedness' in self.outputs:
+                report_attrs.append('strandedness')
+        self.report_attrs = report_attrs
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
         self.summary_table = self._init_summary_table()
