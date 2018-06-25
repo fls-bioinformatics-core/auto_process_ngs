@@ -656,6 +656,9 @@ class QCReport(Document):
                 self.metadata_table.add_row(
                     item=metadata_titles[item],
                     value=self.project.info[item])
+        self.metadata_table.add_row(
+            item='QC protocol',
+            value=self.project.qc_info(self.qc_dir).protocol)
 
     def report_sample(self,sample):
         """
