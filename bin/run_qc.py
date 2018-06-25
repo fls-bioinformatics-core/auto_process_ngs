@@ -89,6 +89,11 @@ if __name__ == "__main__":
     p.add_argument("project_dir",metavar="DIR",
                    help="directory with Fastq files to run the "
                    "QC on")
+    p.add_argument('-p','--protocol',metavar='PROTOCOL',
+                   action='store',dest='qc_protocol',default=None,
+                   help="explicitly specify the QC protocol to use. "
+                   "(If not set then will be determined "
+                   "automatically based on directory contents.)")
     p.add_argument('--samples',metavar='PATTERN',
                    action='store',dest='sample_pattern',default=None,
                    help="simple wildcard-based pattern specifying a "
@@ -205,7 +210,10 @@ if __name__ == "__main__":
         print "No organisms specified"
 
     # Determine QC protocol
-    qc_protocol = determine_qc_protocol(project)
+    qc_protocol = args.qc_protocol
+    if qc_protocol is None:
+        qc_protocol = determine_qc_protocol(project)
+        print "QC protocol set to '%s'" % qc_protocol
 
     # Set up QC script
     illumina_qc = IlluminaQC(
