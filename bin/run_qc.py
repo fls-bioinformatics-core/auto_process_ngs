@@ -27,6 +27,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.qc.utils import determine_qc_protocol
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -203,8 +204,12 @@ if __name__ == "__main__":
     else:
         print "No organisms specified"
 
+    # Determine QC protocol
+    qc_protocol = determine_qc_protocol(project)
+
     # Set up QC script
     illumina_qc = IlluminaQC(
+        protocol=qc_protocol,
         nthreads=args.nthreads,
         fastq_screen_subset=args.fastq_screen_subset,
         fastq_strand_conf=fastq_strand_conf,
