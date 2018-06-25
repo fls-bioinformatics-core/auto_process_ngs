@@ -15,6 +15,7 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.runqc import RunQC
 from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from ..qc.utils import determine_qc_protocol
 from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger
@@ -105,11 +106,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     runqc = RunQC()
     for project in projects:
         # Determine the QC protocol
-        protocol = "standard"
-        if not project.info.paired_end:
-            protocol = "single_end"
-        elif project.info.single_cell_platform is not None:
-            protocol = "single_cell"
+        protocol = determine_qc_protocol(project)
         # Set up conf file for strandedness determination
         try:
             organisms = project.info.organism.lower().split(',')

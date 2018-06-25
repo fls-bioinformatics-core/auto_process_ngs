@@ -12,6 +12,7 @@ from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
+from auto_process_ngs.qc.utils import determine_qc_protocol
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -190,3 +191,74 @@ class TestReportQCFunction(unittest.TestCase):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Found %s (should be missing)" % f)
+
+class TestDetermineQCProtocolFunction(unittest.TestCase):
+    """
+    Tests for determine_qc_protocol function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestDetermineQCProtocolFunction')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_determine_qc_protocol_standardPE(self):
+        """determine_qc_protocol: standard paired-end run
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "standard")
+
+    def test_determine_qc_protocol_standardSE(self):
+        """determine_qc_protocol: standard single-end run
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",))
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_end")
+
+    def test_determine_qc_protocol_icell8(self):
+        """determine_qc_protocol: single-cell run (ICELL8)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "ICELL8"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_cell")
+
+    def test_determine_qc_protocol_10xchromium3v2(self):
+        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v2)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'v2"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_cell")

@@ -121,3 +121,21 @@ def report_qc(project,qc_dir=None,illumina_qc=None,
                       runner=runner)
     sched.wait()
     return project.reporting_status
+
+def determine_qc_protocol(project):
+    """
+    Determine the QC protocol for a project
+
+    Arguments:
+      project (AnalysisProject): project instance
+
+    Return:
+      String: QC protocol for the project
+    """
+    if project.info.paired_end:
+        protocol = "standard"
+    else:
+        protocol = "single_end"
+    if project.info.single_cell_platform is not None:
+        protocol = "single_cell"
+    return protocol
