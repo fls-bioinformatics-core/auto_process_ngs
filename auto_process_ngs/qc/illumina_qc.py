@@ -3,6 +3,29 @@
 #     illumina_qc: running and validating QC
 #     Copyright (C) University of Manchester 2018 Peter Briggs
 #
+"""
+illumina_qc.py
+==============
+
+Provides utility classes and functions for generating QC commands
+and checking outputs from them.
+
+Provides the following core class:
+
+- IlluminaQC: QC command generator
+
+Provides the following supporting functions:
+
+- determine_qc_protocol: get QC protocol for a project
+- fastq_screen_output: get names for fastq_screen outputs
+- fastqc_output: get names for FastQC outputs
+- fastq_strand_output: get name for fastq_strand.py output
+
+Provides the following constants:
+
+- FASTQ_SCREENS: tuple of screen names
+- PROTOCOLS: tuple of QC protocol names
+"""
 
 #######################################################################
 # Imports
@@ -18,6 +41,10 @@ from ..fastq_utils import pair_fastqs_by_name
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
                  'rRNA',)
+
+PROTOCOLS = ('standard',
+             'single_end',
+             'single_cell')
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -37,9 +64,9 @@ class IlluminaQC(object):
         Create a new IlluminaQC instance
 
         Arguments:
-          protocol (str): QC protocol, one of
-            "standard", "single_end", "single_cell".
-            If 'None' then defaults to "standard"
+          protocol (str): QC protocol, must one of
+            those listed in PROTOCOLS. If 'None' then
+            defaults to "standard"
           fastq_screen_subset (int): subset of reads
             to use when running Fastq_screen ('None'
             uses the script default)
@@ -54,7 +81,7 @@ class IlluminaQC(object):
         """
         if protocol is None:
             protocol = "standard"
-        if protocol not in ("standard","single_end","single_cell"):
+        if protocol not in PROTOCOLS:
             raise Exception("IlluminaQC: unrecognised protocol '%s'" %
                             protocol)
         self.protocol = protocol
@@ -413,6 +440,24 @@ class IlluminaQC(object):
 #######################################################################
 # Functions
 #######################################################################
+
+def determine_qc_protocol(project):
+    """
+    Determine the QC protocol for a project
+
+    Arguments:
+      project (AnalysisProject): project instance
+
+    Return:
+      String: QC protocol for the project
+    """
+    if project.info.paired_end:
+        protocol = "standard"
+    else:
+        protocol = "single_end"
+    if project.info.single_cell_platform is not None:
+        protocol = "single_cell"
+    return protocol
 
 def fastq_screen_output(fastq,screen_name):
     """

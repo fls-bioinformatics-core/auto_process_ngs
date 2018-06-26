@@ -11,11 +11,11 @@
 
 import os
 import logging
-from auto_process_ngs.applications import Command
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.runqc import RunQC
-from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
-from ..qc.utils import determine_qc_protocol
+from ..applications import Command
+from ..qc.illumina_qc import IlluminaQC
+from ..qc.illumina_qc import determine_qc_protocol
+from ..qc.runqc import RunQC
+from ..qc.fastq_strand import build_fastq_strand_conf
 from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger

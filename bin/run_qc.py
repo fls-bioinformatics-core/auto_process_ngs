@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 #########################################################################
 #
@@ -25,12 +25,15 @@ from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
 from auto_process_ngs.qc.runqc import RunQC
 from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
-from auto_process_ngs.qc.utils import determine_qc_protocol
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
+
+# QC protocols
+from auto_process_ngs.qc.illumina_qc import PROTOCOLS
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -91,9 +94,12 @@ if __name__ == "__main__":
                    "QC on")
     p.add_argument('-p','--protocol',metavar='PROTOCOL',
                    action='store',dest='qc_protocol',default=None,
-                   help="explicitly specify the QC protocol to use. "
-                   "(If not set then will be determined "
-                   "automatically based on directory contents.)")
+                   choices=PROTOCOLS,
+                   help="explicitly specify the QC protocol to use; "
+                   "can be one of %s. If not set then protocol will "
+                   "be determined automatically based on directory "
+                   "contents." %
+                   ", ".join(["'%s'" % x for x in PROTOCOLS]))
     p.add_argument('--samples',metavar='PATTERN',
                    action='store',dest='sample_pattern',default=None,
                    help="simple wildcard-based pattern specifying a "

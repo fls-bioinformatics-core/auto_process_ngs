@@ -7,10 +7,13 @@ import tempfile
 import shutil
 import os
 from auto_process_ngs.mock import MockIlluminaQcSh
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.illumina_qc import fastq_screen_output
 from auto_process_ngs.qc.illumina_qc import fastqc_output
 from auto_process_ngs.qc.illumina_qc import fastq_strand_output
+from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -948,6 +951,77 @@ class TestIlluminaQC(unittest.TestCase):
         for r in reference_missing:
             self.assertTrue(os.path.join(qc_dir,r) in missing,
                             "'%s' should exist" % r)
+
+class TestDetermineQCProtocolFunction(unittest.TestCase):
+    """
+    Tests for determine_qc_protocol function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestDetermineQCProtocolFunction')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_determine_qc_protocol_standardPE(self):
+        """determine_qc_protocol: standard paired-end run
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "standard")
+
+    def test_determine_qc_protocol_standardSE(self):
+        """determine_qc_protocol: standard single-end run
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",))
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_end")
+
+    def test_determine_qc_protocol_icell8(self):
+        """determine_qc_protocol: single-cell run (ICELL8)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "ICELL8"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_cell")
+
+    def test_determine_qc_protocol_10xchromium3v2(self):
+        """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v2)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Chromium 3'v2"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "single_cell")
 
 class TestFastqScreenOutputFunction(unittest.TestCase):
     def test_fastq_screen_output(self):
