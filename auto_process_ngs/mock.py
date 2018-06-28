@@ -548,6 +548,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
         self._reload_project()
 
     def add_qc_outputs(self,fastq_set=None,qc_dir=None,
+                       protocol="standardPE",
                        include_multiqc=True):
         """
         Add mock QC outputs
@@ -555,6 +556,12 @@ class UpdateAnalysisProject(DirectoryUpdater):
         Arguments:
           fastq_set (str): specify non-default Fastq
             set to make QC outputs
+          qc_dir (str): specify non-default QC output
+            directory
+          protocol (str): specify non-default QC
+            protocol to use
+          include_multiqc (bool): if True then add
+            mock MultiQC outputs
         """
         print("Adding mock QC outputs to %s" %
               self._project.dirn)
@@ -569,7 +576,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self._project.use_qc_dir(qc_dir)
         print "- QC dir: %s" % self._project.qc_dir
         # Generate base QC outputs (one set per fastq)
-        illumina_qc = IlluminaQC()
+        illumina_qc = IlluminaQC(protocol=protocol)
         for fq in self._project.fastqs:
             print "Adding outputs for %s" % fq
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
@@ -579,6 +586,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
                                                   screen)
+        # Update protocol in qc.info
+        qc_info = self._project.qc_info(self._project.qc_dir)
+        qc_info['protocol'] = illumina_qc.protocol
+        qc_info.save()
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
         qc_name = "qc%s_report" % fastq_set_name
