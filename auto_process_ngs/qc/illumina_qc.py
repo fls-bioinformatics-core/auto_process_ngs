@@ -42,9 +42,9 @@ FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
                  'rRNA',)
 
-PROTOCOLS = ('standard',
-             'single_end',
-             'single_cell')
+PROTOCOLS = ('standardPE',
+             'standardSE',
+             'singlecell')
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -57,8 +57,9 @@ class IlluminaQC(object):
     """
     Utility class for running 'illumina_qc.sh'
     """
-    def __init__(self,protocol=None,fastq_screen_subset=None,
-                 nthreads=1,fastq_strand_conf=None,
+    def __init__(self,protocol="standardPE",
+                 fastq_screen_subset=None,nthreads=1,
+                 fastq_strand_conf=None,
                  ungzip_fastqs=False):
         """
         Create a new IlluminaQC instance
@@ -66,7 +67,7 @@ class IlluminaQC(object):
         Arguments:
           protocol (str): QC protocol, must one of
             those listed in PROTOCOLS. If 'None' then
-            defaults to "standard"
+            defaults to "standardPE"
           fastq_screen_subset (int): subset of reads
             to use when running Fastq_screen ('None'
             uses the script default)
@@ -79,8 +80,6 @@ class IlluminaQC(object):
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
         """
-        if protocol is None:
-            protocol = "standard"
         if protocol not in PROTOCOLS:
             raise Exception("IlluminaQC: unrecognised protocol '%s'" %
                             protocol)
@@ -118,11 +117,11 @@ class IlluminaQC(object):
             Fastq) for running the `illumina_qc.sh`
             script on.
         """
-        if self.protocol == "standard":
-            commands = self._commands_for_paired_end
-        elif self.protocol == "single_end":
+        if self.protocol == "standardSE":
             commands = self._commands_for_single_end
-        elif self.protocol == "single_cell":
+        elif self.protocol == "standardPE":
+            commands = self._commands_for_paired_end
+        elif self.protocol == "singlecell":
             commands = self._commands_for_single_cell
         return commands(fastqs,qc_dir=qc_dir)
 
@@ -273,11 +272,11 @@ class IlluminaQC(object):
           List: list of expected output files from
             the QC for the supplied Fastq.
         """
-        if self.protocol == "standard":
-            outputs = self._outputs_for_paired_end
-        elif self.protocol == "single_end":
+        if self.protocol == "standardSE":
             outputs = self._outputs_for_single_end
-        elif self.protocol == "single_cell":
+        elif self.protocol == "standardPE":
+            outputs = self._outputs_for_paired_end
+        elif self.protocol == "singlecell":
             outputs = self._outputs_for_single_cell
         return outputs(fastqs,qc_dir)
 
@@ -452,11 +451,11 @@ def determine_qc_protocol(project):
       String: QC protocol for the project
     """
     if project.info.paired_end:
-        protocol = "standard"
+        protocol = "standardPE"
     else:
-        protocol = "single_end"
+        protocol = "standardSE"
     if project.info.single_cell_platform is not None:
-        protocol = "single_cell"
+        protocol = "singlecell"
     return protocol
 
 def fastq_screen_output(fastq,screen_name):

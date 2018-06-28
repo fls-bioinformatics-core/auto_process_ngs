@@ -52,16 +52,16 @@ class TestIlluminaQC(unittest.TestCase):
         """IlluminaQC: check 'protocol' argument
         """
         # No protocol specified
-        self.assertEqual(IlluminaQC().protocol,"standard")
+        self.assertEqual(IlluminaQC().protocol,"standardPE")
         # Standard protocol explicitly specified
-        self.assertEqual(IlluminaQC(protocol="standard").protocol,
-                         "standard")
+        self.assertEqual(IlluminaQC(protocol="standardPE").protocol,
+                         "standardPE")
         # Single end
-        self.assertEqual(IlluminaQC(protocol="single_end").protocol,
-                         "single_end")
+        self.assertEqual(IlluminaQC(protocol="standardSE").protocol,
+                         "standardSE")
         # Single cell
-        self.assertEqual(IlluminaQC(protocol="single_cell").protocol,
-                         "single_cell")
+        self.assertEqual(IlluminaQC(protocol="singlecell").protocol,
+                         "singlecell")
         # Unrecognised
         self.assertRaises(Exception,
                           IlluminaQC,
@@ -211,7 +211,7 @@ class TestIlluminaQC(unittest.TestCase):
         """IlluminaQC: generates commands for Fastq with strandedness (SE)
         """
         illumina_qc = IlluminaQC(
-            protocol="single_end",
+            protocol="standardSE",
             fastq_strand_conf="/path/to/fastq_strand.conf")
         cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",),
                                     "/path/to/qc")
@@ -231,7 +231,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_commands_for_fastq_pair_single_cell(self):
         """IlluminaQC: generates default commands for Fastq pair (single cell)
         """
-        illumina_qc = IlluminaQC(protocol="single_cell")
+        illumina_qc = IlluminaQC(protocol="singlecell")
         cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
                                      "/path/to/fastqs/test_S1_R2.fastq.gz"),
                                     "/path/to/qc")
@@ -251,7 +251,7 @@ class TestIlluminaQC(unittest.TestCase):
         """IlluminaQC: generates commands for Fastq pair (single cell, with strand)
         """
         illumina_qc = IlluminaQC(
-            protocol="single_cell",
+            protocol="singlecell",
             fastq_strand_conf="/path/to/fastq_strand.conf")
         cmds = illumina_qc.commands(("/path/to/fastqs/test_S1_R1.fastq.gz",
                                      "/path/to/fastqs/test_S1_R2.fastq.gz",),
@@ -367,7 +367,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_SE(self):
         """IlluminaQC: generates correct expected outputs for R1 Fastq (SE)
         """
-        illumina_qc = IlluminaQC(protocol="single_end")
+        illumina_qc = IlluminaQC(protocol="standardSE")
         expected_outputs = illumina_qc.expected_outputs(
             "/path/to/fastqs/test_S1_R1.fastq.gz",
             "/path/to/qc")
@@ -390,7 +390,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_SE_incl_strand(self):
         """IlluminaQC: generates correct expected outputs (SE, with strand)
         """
-        illumina_qc = IlluminaQC(protocol="single_end",
+        illumina_qc = IlluminaQC(protocol="standardSE",
                                  fastq_strand_conf=True)
         expected_outputs = illumina_qc.expected_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",),
@@ -415,7 +415,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_for_input_pair_single_cell(self):
         """IlluminaQC: generates correct expected outputs for Fastq R1/R2 pair (single cell)
         """
-        illumina_qc = IlluminaQC(protocol="single_cell")
+        illumina_qc = IlluminaQC(protocol="singlecell")
         expected_outputs = illumina_qc.expected_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
              "/path/to/fastqs/test_S1_R2.fastq.gz"),
@@ -448,7 +448,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_for_input_pair_incl_strand_single_cell(self):
         """IlluminaQC: generates correct expected outputs for Fastq R1/R2 pair (single cell, with strand)
         """
-        illumina_qc = IlluminaQC(protocol="single_cell",
+        illumina_qc = IlluminaQC(protocol="singlecell",
                                  fastq_strand_conf=True)
         expected_outputs = illumina_qc.expected_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
@@ -492,7 +492,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_index_read_SE(self):
         """IlluminaQC: predicts no outputs for index read Fastq (SE)
         """
-        illumina_qc = IlluminaQC(protocol="single_end")
+        illumina_qc = IlluminaQC(protocol="standardSE")
         expected_outputs = illumina_qc.expected_outputs(
             "/path/to/fastqs/test_S1_I1.fastq.gz",
             "/path/to/qc")
@@ -501,7 +501,7 @@ class TestIlluminaQC(unittest.TestCase):
     def test_illumina_qc_expected_outputs_index_read_single_cell(self):
         """IlluminaQC: predicts no outputs for index read Fastq (single cell)
         """
-        illumina_qc = IlluminaQC(protocol="single_cell")
+        illumina_qc = IlluminaQC(protocol="singlecell")
         expected_outputs = illumina_qc.expected_outputs(
             "/path/to/fastqs/test_S1_I1.fastq.gz",
             "/path/to/qc")
@@ -731,7 +731,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_end")
+        illumina_qc = IlluminaQC(protocol="standardSE")
         present,missing = illumina_qc.check_outputs(
             "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
         self.assertEqual(len(missing),0)
@@ -762,7 +762,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_end")
+        illumina_qc = IlluminaQC(protocol="standardSE")
         present,missing = illumina_qc.check_outputs(
             "/path/to/fastqs/test_S1_R1.fastq.gz",qc_dir)
         # Check present
@@ -802,7 +802,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_end",
+        illumina_qc = IlluminaQC(protocol="standardSE",
                                  fastq_strand_conf=True)
         present,missing = illumina_qc.check_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",),qc_dir)
@@ -844,7 +844,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_cell")
+        illumina_qc = IlluminaQC(protocol="singlecell")
         present,missing = illumina_qc.check_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
              "/path/to/fastqs/test_S1_R2.fastq.gz"),qc_dir)
@@ -887,7 +887,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_cell",
+        illumina_qc = IlluminaQC(protocol="singlecell",
                                  fastq_strand_conf=True)
         present,missing = illumina_qc.check_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
@@ -930,7 +930,7 @@ class TestIlluminaQC(unittest.TestCase):
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")
         # Get lists of present and missing files
-        illumina_qc = IlluminaQC(protocol="single_cell")
+        illumina_qc = IlluminaQC(protocol="singlecell")
         present,missing = illumina_qc.check_outputs(
             ("/path/to/fastqs/test_S1_R1.fastq.gz",
              "/path/to/fastqs/test_S1_R2.fastq.gz"),
@@ -977,7 +977,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "standard")
+                         "standardPE")
 
     def test_determine_qc_protocol_standardSE(self):
         """determine_qc_protocol: standard single-end run
@@ -989,7 +989,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "single_end")
+                         "standardSE")
 
     def test_determine_qc_protocol_icell8(self):
         """determine_qc_protocol: single-cell run (ICELL8)
@@ -1005,7 +1005,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "single_cell")
+                         "singlecell")
 
     def test_determine_qc_protocol_10xchromium3v2(self):
         """determine_qc_protocol: single-cell run (10xGenomics Chromium 3'v2)
@@ -1021,7 +1021,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "single_cell")
+                         "singlecell")
 
 class TestFastqScreenOutputFunction(unittest.TestCase):
     def test_fastq_screen_output(self):
