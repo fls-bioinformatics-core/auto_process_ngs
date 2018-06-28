@@ -225,6 +225,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 os.path.basename(fastq_dir)
             qc_protocol = project.qc_info(qc_dir).protocol
             print "...associated QC protocol '%s'" % qc_protocol
+            if qc_protocol is None:
+                qc_protocol = "standardPE"
+                print "...assuming QC protocol '%s'" % qc_protocol
             # Set up IlluminaQC instance
             illumina_qc = IlluminaQC(protocol=qc_protocol)
             # Verify the QC and check for report
