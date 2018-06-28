@@ -17,6 +17,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs import get_version
@@ -206,11 +207,12 @@ def main():
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
         # Determine QC protocol
-        protocol = "standard"
-        if not p.info.paired_end:
-            protocol = "single_end"
-        elif p.info.single_cell_platform is not None:
-            protocol = "single_cell"
+        protocol = qc_info.protocol
+        if protocol is None:
+            print "No stored QC protocol"
+            protocol = determine_qc_protocol(p)
+        else:
+            print "Stored QC protocol: %s" % protocol
         print "QC protocol: %s" % protocol
         # Create QC object for verification
         illumina_qc = IlluminaQC(protocol=protocol,
