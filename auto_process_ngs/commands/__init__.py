@@ -8,6 +8,7 @@
 #######################################################################
 
 from setup_analysis_dirs_cmd import setup_analysis_dirs
+from make_fastqs_cmd import make_fastqs
 from run_qc_cmd import run_qc
 from publish_qc_cmd import publish_qc
 from archive_cmd import archive
