@@ -1224,7 +1224,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             print "Output dir: %s" % output_dir
             # Lanes
             s = SampleSheet(sample_sheet)
-            if s.has_lanes:
+            if args.lanes:
+                lanes = [int(l) for l in args.lanes.split(',')]
+            elif s.has_lanes:
                 lanes = [line['Lane'] for line in s.data]
             else:
                 lanes = IlluminaRun(runfolder).lanes
