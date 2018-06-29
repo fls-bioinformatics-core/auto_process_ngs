@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2016 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2018 Peter Briggs
 #
 ########################################################################
 
@@ -35,6 +35,7 @@ It is also possible to make mock executables which mimick some of
 the external software required for parts of the pipeline:
 
 - MockBcl2fastq2Exe
+- MockCellrangerExe
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
@@ -58,6 +59,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
+from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .tenx_genomics_utils import flow_cell_id
 from .qc.illumina_qc import IlluminaQC
@@ -1064,6 +1066,109 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+
+    def _write_qc_summary_json(self,path,run_dir,out_dir,
+                               sample_sheet,samples,lanes):
+        """
+        Internal: write qc_summary.json file
+        """
+        with open(path,'w') as fp:
+            fp.write("""{
+    "10x_software_version": "cellranger %s", 
+    "PhiX_aligned": null, 
+    "PhiX_error_worst_tile": null, 
+""" % self._version)
+            fp.write("""    "bcl2fastq_args": "bcl2fastq --minimum-trimmed-read-length 8 --mask-short-adapter-reads 8 --create-fastq-for-index-reads --ignore-missing-positions --ignore-missing-filter --ignore-missing-bcls --use-bases-mask=Y76,I8,Y76 -R %s --output-dir=%s --interop-dir=%s/HJCY7BBXX_56/MAKE_FASTQS_CS/MAKE_FASTQS/BCL2FASTQ_WITH_SAMPLESHEET/fork0/chnk0/files/interop_path --sample-sheet=%s/HJCY7BBXX_56/MAKE_FASTQS_CS/MAKE_FASTQS/PREPARE_SAMPLESHEET/fork0/files/samplesheet.csv --tiles s_[56] -p 6 -d 6 -r 6 -w 6", 
+""" % (run_dir,
+       out_dir,
+       os.getcwd(),
+       os.getcwd()))
+            fp.write("""    "bcl2fastq_version": "2.17.1.14", 
+    "experiment_name": "Example run", 
+    "fwhm_A": null, 
+    "fwhm_C": null, 
+    "fwhm_G": null, 
+    "fwhm_T": null, 
+    "index1_PhiX_error_by_cycle": null, 
+    "index1_mean_phasing": null, 
+    "index1_mean_prephasing": null, 
+    "index1_q20_fraction": null, 
+    "index1_q20_fraction_by_cycle": null, 
+    "index1_q30_fraction": null, 
+    "index1_q30_fraction_by_cycle": null, 
+    "index2_PhiX_error_by_cycle": null, 
+    "index2_mean_phasing": null, 
+    "index2_mean_prephasing": null, 
+    "index2_q20_fraction": null, 
+    "index2_q20_fraction_by_cycle": null, 
+    "index2_q30_fraction": null, 
+    "index2_q30_fraction_by_cycle": null, 
+    "intensity_A": null, 
+    "intensity_C": null, 
+    "intensity_G": null, 
+    "intensity_T": null, 
+    "lanecount": 8, 
+    "mean_cluster_density": null, 
+    "mean_cluster_density_pf": null, 
+    "num_clusters": null, 
+    "percent_pf_clusters": null, 
+    "read1_PhiX_error_by_cycle": null, 
+    "read1_mean_phasing": null, 
+    "read1_mean_prephasing": null, 
+    "read1_q20_fraction": null, 
+    "read1_q20_fraction_by_cycle": null, 
+    "read1_q30_fraction": null, 
+    "read1_q30_fraction_by_cycle": null, 
+    "read2_PhiX_error_by_cycle": null, 
+    "read2_mean_phasing": null, 
+    "read2_mean_prephasing": null, 
+    "read2_q20_fraction": null, 
+    "read2_q20_fraction_by_cycle": null, 
+    "read2_q30_fraction": null, 
+    "read2_q30_fraction_by_cycle": null, 
+    "rta_version": "2.7.6", 
+    "run_id": "170426_K00311_0033_AHJCY7BBXX", 
+    "sample_qc": {
+""")
+            for sample in samples:
+                fp.write("""        "%s": {\n""" % sample)
+                for lane in lanes:
+                    fp.write("""            "%s": {
+                "barcode_exact_match_ratio": 0.9716234673603158, 
+                "barcode_q30_base_ratio": 0.9857481459248205, 
+                "bc_on_whitelist": 0.9814401918935765, 
+                "gem_count_estimate": 84073, 
+                "mean_barcode_qscore": 38.592230237502555, 
+                "number_reads": 22220650, 
+                "read1_q30_base_ratio": 0.4826826169702818, 
+                "read2_q30_base_ratio": 0.8117288414214294
+            }, 
+""" % lane)
+                fp.write("""            "all": {
+                "barcode_exact_match_ratio": 0.9693936169422027, 
+                "barcode_q30_base_ratio": 0.9842256841986534, 
+                "bc_on_whitelist": 0.9803349567432192, 
+                "gem_count_estimate": 88278, 
+                "mean_barcode_qscore": 38.547743820121745, 
+                "number_reads": 42378905, 
+                "read1_q30_base_ratio": 0.4825840484250696, 
+                "read2_q30_base_ratio": 0.8140753810050518
+            }
+        }%s 
+""" % ((',' if sample != samples[-1] else '',)))
+            fp.write("""    },
+    "signoise_ratio": null, 
+    "start_datetime": "2017-04-26 00:00:00", 
+    "surfacecount": 2, 
+    "swathcount": 2, 
+    "tilecount": 28, 
+    "total_cluster_density": null, 
+    "total_cluster_density_pf": null, 
+    "yield": null, 
+    "yield_pf": null, 
+    "yield_pf_q30": null
+}
+""")
 
     def main(self,args):
         """
