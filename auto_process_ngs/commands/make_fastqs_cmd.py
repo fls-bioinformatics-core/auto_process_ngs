@@ -32,6 +32,7 @@ from ..applications import general as general_apps
 from ..simple_scheduler import SchedulerJob
 from bcftbx import IlluminaData
 from bcftbx.utils import mkdirs
+from bcftbx.utils import find_program
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -341,13 +342,13 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 bases_mask = None
             try:
                 # Check we have cellranger
-                cellranger = bcf_utils.find_program('cellranger')
+                cellranger = find_program('cellranger')
                 if not cellranger:
                     raise Exception("No cellranger package found")
                 print "Using cellranger %s: %s" % (
                     cellranger_info(cellranger)[-1],cellranger)
                 # Check we have bcl2fastq
-                bcl2fastq = bcf_utils.find_program('bcl2fastq')
+                bcl2fastq = find_program('bcl2fastq')
                 if not bcl2fastq:
                     raise Exception("No bcl2fastq package found")
                 bcl2fastq = available_bcl2fastq_versions(
@@ -378,6 +379,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                     cellranger_jobinterval=cellranger_jobinterval,
                     cellranger_localcores=cellranger_localcores,
                     cellranger_localmem=cellranger_localmem,
+                    working_dir=ap.analysis_dir,
                     log_dir=ap.log_dir)
             except Exception as ex:
                 raise Exception("'cellranger mkfastq' stage failed: "

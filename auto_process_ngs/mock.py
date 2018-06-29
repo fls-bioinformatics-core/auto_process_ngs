@@ -1270,14 +1270,18 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                       output_dir)
             shutil.rmtree(tmpname)
             # Create cellranger-specific outputs
-            flow_cell_dir = flow_cell_id(run)
+            if args.lanes:
+                lanes_ext = "_%s" % ''.join([str(l) for l in lanes])
+            else:
+                lanes_ext = ''
+            flow_cell_dir = flow_cell_id(run) + lanes_ext
             os.mkdir(flow_cell_dir)
             outs_dir = os.path.join(flow_cell_dir,"outs")
             os.mkdir(outs_dir)
             # Add qc metric files
             if args.qc:
                 json_file = os.path.join(outs_dir,"qc_summary.json")
-                html_file = "cellranger_qc_summary.html"
+                html_file = "cellranger_qc_summary%s.html" % lanes_ext
                 with open(json_file,'w') as fp:
                     fp.write(mock10xdata.QC_SUMMARY_JSON)
                 with open(html_file,'w') as fp:

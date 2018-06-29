@@ -304,7 +304,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="10x_chromium_sc")
+        make_fastqs(ap,protocol="10x_chromium_sc")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
@@ -804,7 +804,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                           make_fastqs,
                           ap)
 
-    @unittest.skip("Not implemented")
+    #@unittest.skip("Not implemented")
     def test_make_fastqs_10x_chromium_sc_protocol(self):
         """make_fastqs: 10x_chromium_sc protocol
         """
@@ -814,11 +814,9 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
             "hiseq",
             top_dir=self.wd)
         illumina_run.create()
-        # Create mock bcl2fastq
-        # Check that bases mask is as expected
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 assert_bases_mask="y25n76,I8,I8,y101")
+        # Create mock bcl2fastq and cellranger executables
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -830,7 +828,6 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertTrue(ap.params.primary_data_dir is None)
         make_fastqs(ap,protocol="10x_chromium_sc")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y25n76,I8,I8,y101")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
@@ -843,7 +840,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "HGXXXX"):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -852,7 +850,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
                       "projects.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary.html"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)

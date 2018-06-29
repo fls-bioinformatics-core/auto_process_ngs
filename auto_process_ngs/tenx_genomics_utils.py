@@ -419,7 +419,8 @@ def run_cellranger_mkfastq(sample_sheet,
                            cellranger_localcores=None,
                            cellranger_localmem=None,
                            log_dir=None,
-                           dry_run=False):
+                           dry_run=False,
+                           working_dir=None):
     """
     Wrapper for running 'cellranger mkfastq'
 
@@ -462,6 +463,8 @@ def run_cellranger_mkfastq(sample_sheet,
         (default: current working directory)
       dry_run (bool): if True then only report actions
         that would be performed but don't run anything
+      working_dir (str): path to a directory to run
+        cellranger in (default: current working directory)
 
     Returns:
       Integer: exit code from the cellranger command.
@@ -485,6 +488,9 @@ def run_cellranger_mkfastq(sample_sheet,
                         jobinterval=cellranger_jobinterval,
                         localcores=cellranger_localcores,
                         localmem=cellranger_localmem)
+    # Working directory
+    if working_dir is None:
+        working_dir = os.getcwd()
     # Run the command
     print "Running %s" % cmd
     if not dry_run:
@@ -498,7 +504,7 @@ def run_cellranger_mkfastq(sample_sheet,
             SimpleJobRunner(join_logs=True),
             cmd.command_line,
             name='cellranger_mkfastq',
-            working_dir=os.getcwd(),
+            working_dir=working_dir,
             log_dir=log_dir)
         cellranger_mkfastq_job.start()
         try:
@@ -513,7 +519,8 @@ def run_cellranger_mkfastq(sample_sheet,
             logger.error("cellranger mkfastq exited with an error")
             return exit_code
         # Deal with the QC summary report
-        flow_cell_dir = flow_cell_id(primary_data_dir)
+        flow_cell_dir = os.path.join(working_dir,
+                                     flow_cell_id(primary_data_dir))
         if lanes is not None:
             lanes_suffix = "_%s" % lanes.replace(',','')
         else:
@@ -530,8 +537,10 @@ def run_cellranger_mkfastq(sample_sheet,
                          "JSON QC summary file (%s not found)"
                          % json_file)
             return -1
-        html_file = "cellranger_qc_summary%s.html" % lanes_suffix
-        if not os.path.exists(json_file):
+        html_file = os.path.join(working_dir,
+                                 "cellranger_qc_summary%s.html" %
+                                 lanes_suffix)
+        if not os.path.exists(html_file):
             logger.error("cellranger mkfastq failed to make "
                          "HTML QC summary file (%s not found)"
                          % html_file)
