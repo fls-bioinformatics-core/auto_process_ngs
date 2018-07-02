@@ -1078,7 +1078,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
         p.add_argument("--no-ungzip",action="store_true")
         p.add_argument("--threads",action="store")
         p.add_argument("--subset",action="store")
-        p.add_argument("--no-screens",action="store")
+        p.add_argument("--no-screens",action="store_true")
         p.add_argument("--qc_dir",action="store")
         p.add_argument("fastq")
         args = p.parse_args(args)
