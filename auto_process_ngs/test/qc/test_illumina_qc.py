@@ -240,7 +240,8 @@ class TestIlluminaQC(unittest.TestCase):
                          "illumina_qc.sh "
                          "/path/to/fastqs/test_S1_R1.fastq.gz "
                          "--threads 1 "
-                         "--qc_dir /path/to/qc")
+                         "--qc_dir /path/to/qc "
+                         "--no-screens")
         self.assertEqual(str(cmds[1]),
                          "illumina_qc.sh "
                          "/path/to/fastqs/test_S1_R2.fastq.gz "
@@ -261,7 +262,8 @@ class TestIlluminaQC(unittest.TestCase):
                          "illumina_qc.sh "
                          "/path/to/fastqs/test_S1_R1.fastq.gz "
                          "--threads 1 "
-                         "--qc_dir /path/to/qc")
+                         "--qc_dir /path/to/qc "
+                         "--no-screens")
         self.assertEqual(str(cmds[1]),
                          "illumina_qc.sh "
                          "/path/to/fastqs/test_S1_R2.fastq.gz "
@@ -423,12 +425,6 @@ class TestIlluminaQC(unittest.TestCase):
         reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
                              "/path/to/qc/test_S1_R1_fastqc.html",
                              "/path/to/qc/test_S1_R1_fastqc.zip",
-                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
-                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
-                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
-                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
-                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
-                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",
                              "/path/to/qc/test_S1_R2_fastqc",
                              "/path/to/qc/test_S1_R2_fastqc.html",
                              "/path/to/qc/test_S1_R2_fastqc.zip",
@@ -457,12 +453,6 @@ class TestIlluminaQC(unittest.TestCase):
         reference_outputs = ("/path/to/qc/test_S1_R1_fastqc",
                              "/path/to/qc/test_S1_R1_fastqc.html",
                              "/path/to/qc/test_S1_R1_fastqc.zip",
-                             "/path/to/qc/test_S1_R1_model_organisms_screen.png",
-                             "/path/to/qc/test_S1_R1_model_organisms_screen.txt",
-                             "/path/to/qc/test_S1_R1_other_organisms_screen.png",
-                             "/path/to/qc/test_S1_R1_other_organisms_screen.txt",
-                             "/path/to/qc/test_S1_R1_rRNA_screen.png",
-                             "/path/to/qc/test_S1_R1_rRNA_screen.txt",
                              "/path/to/qc/test_S1_R2_fastqc",
                              "/path/to/qc/test_S1_R2_fastqc.html",
                              "/path/to/qc/test_S1_R2_fastqc.zip",
@@ -825,12 +815,6 @@ class TestIlluminaQC(unittest.TestCase):
         reference_outputs = ("test_S1_R1_fastqc",
                              "test_S1_R1_fastqc.html",
                              "test_S1_R1_fastqc.zip",
-                             "test_S1_R1_model_organisms_screen.png",
-                             "test_S1_R1_model_organisms_screen.txt",
-                             "test_S1_R1_other_organisms_screen.png",
-                             "test_S1_R1_other_organisms_screen.txt",
-                             "test_S1_R1_rRNA_screen.png",
-                             "test_S1_R1_rRNA_screen.txt",
                              "test_S1_R2_fastqc",
                              "test_S1_R2_fastqc.html",
                              "test_S1_R2_fastqc.zip",
@@ -867,12 +851,6 @@ class TestIlluminaQC(unittest.TestCase):
         reference_outputs = ("test_S1_R1_fastqc",
                              "test_S1_R1_fastqc.html",
                              "test_S1_R1_fastqc.zip",
-                             "test_S1_R1_model_organisms_screen.png",
-                             "test_S1_R1_model_organisms_screen.txt",
-                             "test_S1_R1_other_organisms_screen.png",
-                             "test_S1_R1_other_organisms_screen.txt",
-                             "test_S1_R1_rRNA_screen.png",
-                             "test_S1_R1_rRNA_screen.txt",
                              "test_S1_R2_fastqc",
                              "test_S1_R2_fastqc.html",
                              "test_S1_R2_fastqc.zip",
@@ -911,21 +889,15 @@ class TestIlluminaQC(unittest.TestCase):
         reference_outputs = ("test_S1_R1_fastqc",
                              "test_S1_R1_fastqc.html",
                              "test_S1_R1_fastqc.zip",
-                             "test_S1_R1_model_organisms_screen.png",
-                             "test_S1_R1_model_organisms_screen.txt",
-                             "test_S1_R1_other_organisms_screen.png",
-                             "test_S1_R1_other_organisms_screen.txt",
                              "test_S1_R2_fastqc",
                              "test_S1_R2_fastqc.html",
                              "test_S1_R2_fastqc.zip",
                              "test_S1_R2_model_organisms_screen.png",
                              "test_S1_R2_model_organisms_screen.txt",
                              "test_S1_R2_other_organisms_screen.png",
-                             "test_S1_R2_other_organisms_screen.txt",
-                             "test_S1_R2_rRNA_screen.png",
+                             "test_S1_R2_other_organisms_screen.txt",)
+        reference_missing = ("test_S1_R2_rRNA_screen.png",
                              "test_S1_R2_rRNA_screen.txt",)
-        reference_missing = ("test_S1_R1_rRNA_screen.png",
-                             "test_S1_R1_rRNA_screen.txt",)
         for r in reference_outputs:
             with open(os.path.join(qc_dir,r),'w') as fp:
                 fp.write("test")

@@ -245,6 +245,9 @@ class IlluminaQC(object):
                 cmd.add_args('--subset',self.fastq_screen_subset)
             if qc_dir is not None:
                 cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+            if IlluminaFastqAttrs(fastq).read_number == 1:
+                # Screens for R2 only
+                cmd.add_args('--no-screens')
             cmds.append(cmd)
             # Strandedness (R2 only)
             if self.fastq_strand_conf is not None:
@@ -371,10 +374,11 @@ class IlluminaQC(object):
             # FastQC outputs
             expected.extend([os.path.join(qc_dir,f)
                              for f in fastqc_output(fastq)])
-            # Fastq_screen outputs
-            for name in FASTQ_SCREENS:
-                expected.extend([os.path.join(qc_dir,f)
-                                 for f in fastq_screen_output(fastq,name)])
+            # Fastq_screen outputs (R2 only)
+            if IlluminaFastqAttrs(fastq).read_number == 2:
+                for name in FASTQ_SCREENS:
+                    expected.extend([os.path.join(qc_dir,f)
+                                     for f in fastq_screen_output(fastq,name)])
             # Strand stats output (R2 only)
             if self.fastq_strand_conf:
                 if IlluminaFastqAttrs(fastq).read_number == 2:
