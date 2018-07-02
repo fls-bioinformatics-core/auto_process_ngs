@@ -420,6 +420,7 @@ class QCReport(Document):
     - fastq: Fastq name
     - fastqs: Fastq R1/R2 names
     - reads: number of reads
+    - read_lengths: length of reads
     - fastqc_r1: FastQC mini-plot for R1
     - boxplot_r1: FastQC per-base-quality mini-boxplot' for R1
     - screens_r1: FastQScreen mini-plots for R1
@@ -493,6 +494,7 @@ class QCReport(Document):
                                     'fastq' : 'Fastq',
                                     'fastqs': 'Fastqs (R1/R2)',
                                     'reads': '#reads',
+                                    'read_lengths': 'Length',
                                     'fastqc_r1': 'FastQC[R1]',
                                     'boxplot_r1': 'Boxplot[R1]',
                                     'screens_r1': 'Screens[R1]',
@@ -506,12 +508,14 @@ class QCReport(Document):
                 reads = ('r1','r2')
                 summary_fields = ['sample',
                                   'fastqs',
-                                  'reads']
+                                  'reads',
+                                  'read_lengths',]
             else:
                 reads = ('r1',)
                 summary_fields = ['sample',
                                   'fastq',
-                                  'reads']
+                                  'reads',
+                                  'read_lengths',]
             if 'strandedness' in self.outputs:
                 summary_fields.append('strandedness')
             for read in reads:
@@ -931,6 +935,7 @@ class QCReportFastqPair(object):
         - fastqs (if paired-end)
         - fastq (if single-end)
         - reads
+        - read_lengths
         - boxplot_r1
         - boxplot_r2
         - fastqc_r1
@@ -951,12 +956,14 @@ class QCReportFastqPair(object):
             if self.paired_end:
                 fields = ('fastqs',
                           'reads',
+                          'read_lengths',
                           'boxplot_r1','boxplot_r2',
                           'fastqc_r1','fastqc_r2',
                           'screens_r1','screens_r2')
             else:
                 fields = ('fastq',
                           'reads',
+                          'read_lengths',
                           'boxplot_r1',
                           'fastqc_r1',
                           'screens_r1')
@@ -983,6 +990,18 @@ class QCReportFastqPair(object):
                                         pretty_print_reads(
                                             self.r1.fastqc.data.basic_statistics(
                                                 'Total Sequences')))
+            elif field == "read_lengths":
+                if self.paired_end:
+                    read_lengths = "%s<br />%s" % \
+                                   (self.r1.fastqc.data.basic_statistics(
+                                       'Sequence length'),
+                                    self.r2.fastqc.data.basic_statistics(
+                                       'Sequence length'))
+                else:
+                    read_lengths = "%s" % \
+                                   self.r1.fastqc.data.basic_statistics(
+                                       'Sequence length')
+                summary_table.set_value(idx,'read_lengths',read_lengths)
             elif field == "boxplot_r1":
                 summary_table.set_value(idx,'boxplot_r1',
                                         Img(self.r1.uboxplot(),
