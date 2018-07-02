@@ -15,6 +15,7 @@ import string
 import ast
 import auto_process_ngs.fileops as fileops
 import auto_process_ngs.simple_scheduler as simple_scheduler
+from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
 from ..docwriter import Document
@@ -222,10 +223,19 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             project.use_fastq_dir(fastq_dir)
             print "...associated Fastq set '%s'" % \
                 os.path.basename(fastq_dir)
+            qc_protocol = project.qc_info(qc_dir).protocol
+            print "...associated QC protocol '%s'" % qc_protocol
+            if qc_protocol is None:
+                qc_protocol = "standardPE"
+                print "...assuming QC protocol '%s'" % qc_protocol
+            # Set up IlluminaQC instance
+            illumina_qc = IlluminaQC(protocol=qc_protocol)
             # Verify the QC and check for report
-            verified = verify_qc(project,
+            verified = verify_qc(
+                project,
                 qc_dir=os.path.join(project.dirn,qc_dir),
-                                 log_dir=ap.log_dir)
+                illumina_qc=illumina_qc,
+                log_dir=ap.log_dir)
             if verified:
                 print "...%s: verified QC" % qc_dir
                 # Check for an existing report

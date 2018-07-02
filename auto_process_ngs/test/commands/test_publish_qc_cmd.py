@@ -483,7 +483,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         UpdateAnalysisDir(ap).add_processing_report()
         projects = ap.get_analysis_projects()
         for project in projects:
-            UpdateAnalysisProject(project).add_qc_outputs()
+            UpdateAnalysisProject(project).add_qc_outputs(
+                protocol="singlecell")
         # Add ICell8 report for one project
         icell8_project = projects[0]
         UpdateAnalysisProject(icell8_project).add_icell8_outputs()
@@ -639,7 +640,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         # Add QC outputs
         projects = ap.get_analysis_projects()
         for project in projects:
-            UpdateAnalysisProject(project).add_qc_outputs()
+            UpdateAnalysisProject(project).add_qc_outputs(
+                protocol="singlecell")
         # Add cellranger count output for one project
         tenxgenomics_project = projects[0]
         UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs()

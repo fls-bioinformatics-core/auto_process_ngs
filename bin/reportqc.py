@@ -17,6 +17,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs import get_version
@@ -66,7 +67,7 @@ def verify_qc(project,qc_dir=None,illumina_qc=None):
                 fastqs.extend(fq_pair)
     return sorted(list(set(fastqs)))
 
-def zip_report(project,report_html,qc_dir=None):
+def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     """
     Create ZIP archive for a QC report
 
@@ -76,6 +77,8 @@ def zip_report(project,report_html,qc_dir=None):
       qc_dir (str): optional name of subdirectory
         containing QC outputs (defaults to default
         QC subdir from the project)
+      illumina_qc (IlluminaQC): object to use for
+        QC output validation
 
     Returns:
       String: path to the output ZIP file.
@@ -99,8 +102,9 @@ def zip_report(project,report_html,qc_dir=None):
         qc_dir = project.qc_dir
     # Add the HTML report
     zip_file.add_file(report_html)
-    # Add the FastQC and screen files
-    illumina_qc = IlluminaQC()
+    # Add the QC outputs
+    if illumina_qc is None:
+        illumina_qc = IlluminaQC()
     for sample in project.qc.samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
@@ -202,8 +206,17 @@ def main():
         print "QC output dir: %s" % qc_dir
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
+        # Determine QC protocol
+        protocol = qc_info.protocol
+        if protocol is None:
+            print "No stored QC protocol"
+            protocol = determine_qc_protocol(p)
+        else:
+            print "Stored QC protocol: %s" % protocol
+        print "QC protocol: %s" % protocol
         # Create QC object for verification
-        illumina_qc = IlluminaQC(fastq_strand_conf=opts.fastq_strand)
+        illumina_qc = IlluminaQC(protocol=protocol,
+                                 fastq_strand_conf=opts.fastq_strand)
         # Verification step
         try:
             unverified = verify_qc(p,qc_dir,illumina_qc)
@@ -238,7 +251,8 @@ def main():
                                           relative_links=True)
         # Generate ZIP archive
         if opts.zip:
-            report_zip = zip_report(p,report_html,qc_dir)
+            report_zip = zip_report(p,report_html,qc_dir,
+                                    illumina_qc=illumina_qc)
             print "ZIP archive: %s" % report_zip
         # MultiQC report
         if opts.multiqc:

@@ -656,6 +656,9 @@ class QCReport(Document):
                 self.metadata_table.add_row(
                     item=metadata_titles[item],
                     value=self.project.info[item])
+        self.metadata_table.add_row(
+            item='QC protocol',
+            value=self.project.qc_info(self.qc_dir).protocol)
 
     def report_sample(self,sample):
         """
@@ -752,12 +755,31 @@ class QCReportFastqPair(object):
             return QCReportFastq(self.fastqr2,self.qc_dir)
         return None
 
+    @property
+    def fastq_strand_txt(self):
+        """
+        Locate output from fastq_strand (None if not found)
+        """
+        fastq_strand_txt = None
+        for fq in (self.fastqr1,self.fastqr2):
+            if fq is not None:
+                fastq_strand_txt = os.path.join(
+                    self.qc_dir,
+                    fastq_strand_output(fq))
+                if os.path.isfile(fastq_strand_txt):
+                    return fastq_strand_txt
+        return None
+
     def strandedness(self):
         """
         Return strandedness from fastq_strand.py
         """
-        txt = os.path.join(self.qc_dir,
-                           fastq_strand_output(self.fastqr1))
+        # Locate strandedness data
+        txt = self.fastq_strand_txt
+        # No file found
+        if txt is None:
+            return "!!!No strandedness data!!!"
+        # Return stats
         strandedness = Fastqstrand(txt)
         output = []
         for genome in strandedness.genomes:
@@ -772,8 +794,7 @@ class QCReportFastqPair(object):
         """
         Return a mini-strand stats summary plot
         """
-        txt = os.path.join(self.qc_dir,
-                           fastq_strand_output(self.fastqr1))
+        txt = self.fastq_strand_txt
         return ustrandplot(txt,inline=True,dynamic=True)
 
     def report_strandedness(self,document):
@@ -791,9 +812,10 @@ class QCReportFastqPair(object):
             "Strandedness",
             name="strandedness_%s" % self.r1.safe_name)
         strandedness_report.add_css_classes("strandedness")
-        txt = os.path.join(self.qc_dir,
-                           fastq_strand_output(self.fastqr1))
-        if not os.path.exists(txt):
+        # Locate strandedness
+        txt = self.fastq_strand_txt
+        # No file found
+        if txt is None:
             strandedness_report.add("!!!No strandedness data available!!!")
         else:
             strandedness = Fastqstrand(txt)
