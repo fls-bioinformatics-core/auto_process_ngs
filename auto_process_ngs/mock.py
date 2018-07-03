@@ -1055,7 +1055,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
         Internal: configure the mock illumina_qc.sh
         """
         if version is None:
-            version = "1.3.1"
+            version = "1.3.2"
         self._version = str(version)
         self._fastq_screen = fastq_screen
         self._fastqc = fastqc
@@ -1078,6 +1078,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
         p.add_argument("--no-ungzip",action="store_true")
         p.add_argument("--threads",action="store")
         p.add_argument("--subset",action="store")
+        p.add_argument("--no-screens",action="store_true")
         p.add_argument("--qc_dir",action="store")
         p.add_argument("fastq")
         args = p.parse_args(args)
@@ -1111,7 +1112,7 @@ fastqc\t/opt/apps/bin/fastqc\t0.11.3
                 with open(ungzipped_fastq,'w') as fp:
                     fp.write("uncompressed %s" % args.fastq)
         # Create FastQScreen outputs
-        if self._fastq_screen:
+        if self._fastq_screen and not args.no_screens:
             for screen in ("model_organisms",
                            "other_organisms",
                            "rRNA"):

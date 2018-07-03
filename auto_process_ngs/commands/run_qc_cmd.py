@@ -74,7 +74,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         termination, non-zero indicates an error.
     """
     # Set up QC script
-    compatible_versions = ('1.3.0','1.3.1')
+    compatible_versions = ('1.3.2',)
     version = IlluminaQC().version()
     if version not in compatible_versions:
         logger.error("QC script version is %s, needs %s" %
