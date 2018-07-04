@@ -30,6 +30,10 @@ class TestIlluminaQC(unittest.TestCase):
         os.mkdir(self.bin)
         # Store original PATH
         self.path = os.environ['PATH']
+        # Update PATH
+        os.environ['PATH'] = self.bin + \
+                             os.pathsep + \
+                             os.environ['PATH']
 
     def tearDown(self):
         # Restore PATH
