@@ -365,11 +365,16 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 ap.metadata['bcl2fastq_software'] = bcl2fastq_info
                 # Put a copy of sample sheet in the log directory
                 shutil.copy(sample_sheet,ap.log_dir)
+                # Determine output directory absolute path
+                output_dir = ap.params.unaligned_dir
+                if not os.path.isabs(output_dir):
+                    output_dir = os.path.join(ap.analysis_dir,
+                                              output_dir)
                 # Run cellranger mkfastq
                 exit_code = run_cellranger_mkfastq(
                     sample_sheet=sample_sheet,
                     primary_data_dir=primary_data_dir,
-                    output_dir=ap.params.unaligned_dir,
+                    output_dir=output_dir,
                     lanes=(None if lanes is None
                            else ','.join([str(l) for l in lanes])),
                     bases_mask=bases_mask,

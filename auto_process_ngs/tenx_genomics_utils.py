@@ -418,9 +418,9 @@ def run_cellranger_mkfastq(sample_sheet,
                            cellranger_jobinterval=None,
                            cellranger_localcores=None,
                            cellranger_localmem=None,
+                           working_dir=None,
                            log_dir=None,
-                           dry_run=False,
-                           working_dir=None):
+                           dry_run=False):
     """
     Wrapper for running 'cellranger mkfastq'
 
@@ -459,12 +459,13 @@ def run_cellranger_mkfastq(sample_sheet,
         (default: None)
       cellranger_localmem (int): maximum memory cellranger
         can request in jobmode 'local' (default: None)
+      working_dir (str): path to a directory to use as
+        as the working directory (default: current
+        working directory)
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
         that would be performed but don't run anything
-      working_dir (str): path to a directory to run
-        cellranger in (default: current working directory)
 
     Returns:
       Integer: exit code from the cellranger command.
@@ -494,6 +495,11 @@ def run_cellranger_mkfastq(sample_sheet,
     # Run the command
     print "Running %s" % cmd
     if not dry_run:
+        # Sort out the working directory
+        if working_dir is None:
+            working_dir = os.getcwd()
+        else:
+            working_dir = os.path.abspath(working_dir)
         # Make a log directory
         if log_dir is None:
             log_dir = os.getcwd()
