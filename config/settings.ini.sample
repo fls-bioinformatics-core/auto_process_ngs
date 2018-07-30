@@ -43,8 +43,10 @@ nprocessors_contaminant_filter = 1
 nprocessors_statistics = 1
 
 # 10xGenomics settings
+# Set cellranger_jobmode to 'sge' to use SGE jobmanager
+# See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/cluster-mode
 [10xgenomics]
-cellranger_jobmode = sge
+cellranger_jobmode = None
 cellranger_mempercore = 5
 cellranger_jobinterval = 100
 
