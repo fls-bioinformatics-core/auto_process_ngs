@@ -395,10 +395,12 @@ def run_cellranger_mkfastq(sample_sheet,
                            output_dir,
                            lanes=None,
                            bases_mask=None,
-                           cellranger_jobmode=None,
+                           cellranger_jobmode="local",
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
                            cellranger_jobinterval=None,
+                           cellranger_localcores=None,
+                           cellranger_localmem=None,
                            log_dir=None,
                            dry_run=False):
     """
@@ -452,7 +454,9 @@ def run_cellranger_mkfastq(sample_sheet,
                         jobmode=cellranger_jobmode,
                         mempercore=cellranger_mempercore,
                         maxjobs=cellranger_maxjobs,
-                        jobinterval=cellranger_jobinterval)
+                        jobinterval=cellranger_jobinterval,
+                        localcores=cellranger_localcores,
+                        localmem=cellranger_localmem)
     # Run the command
     print "Running %s" % cmd
     if not dry_run:
@@ -803,6 +807,8 @@ def add_cellranger_args(cellranger_cmd,
                         maxjobs=None,
                         mempercore=None,
                         jobinterval=None,
+                        localcores=None,
+                        localmem=None,
                         disable_ui=False):
     """
     Configure options for cellranger
@@ -819,9 +825,16 @@ def add_cellranger_args(cellranger_cmd,
       maxjobs (int): if specified, will be passed to the
         --mempercore option
       mempercore (int): if specified, will be passed to
-        the --maxjobs option
+        the --maxjobs option (only if jobmode is not
+        "local")
       jobinterval (int):  if specified, will be passed to
         the --jobinterval option
+      localcores (int): if specified, will be passed to
+        the --localcores option (only if jobmode is
+        "local")
+      localmem (int): if specified, will be passed to the
+        the --localmem option (only if jobmode is
+        "local")
       disable_ui (bool): if True, add the --disable-ui
         option (default is not to add it)
 
@@ -831,8 +844,17 @@ def add_cellranger_args(cellranger_cmd,
     """
     if jobmode is not None:
         cellranger_cmd.add_args("--jobmode=%s" % jobmode)
-    if mempercore is not None:
-        cellranger_cmd.add_args("--mempercore=%s" % mempercore)
+    if jobmode == "local":
+        if localcores is not None:
+            cellranger_cmd.add_args("--localcores=%s" %
+                                    localcores)
+        if localmem is not None:
+            cellranger_cmd.add_args("--localmem=%s" %
+                                    localmem)
+    else:
+        if mempercore is not None:
+            cellranger_cmd.add_args("--mempercore=%s" %
+                                    mempercore)
     if maxjobs is not None:
         cellranger_cmd.add_args("--maxjobs=%s" % maxjobs)
     if jobinterval is not None:

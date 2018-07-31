@@ -411,9 +411,23 @@ def add_make_fastqs_command(cmdparser):
     cellranger.add_option("--mempercore",
                           dest="mem_per_core",
                           default=__settings['10xgenomics'].cellranger_mempercore,
-                          help="memory assumed per core (in Gbs; "
-                          "default: %s)" %
+                          help="memory assumed per core (in Gbs; default: "
+                          "%s); NB only used if jobmode is not 'local'" %
                           __settings['10xgenomics'].cellranger_mempercore)
+    cellranger.add_option("--localcores",
+                          dest="local_cores",
+                          default=__settings['10xgenomics'].cellranger_localcores,
+                          help="maximum cores cellranger can request at one"
+                          "time for jobmode 'local' (ignored for other "
+                          "jobmodes) (default: %s)" %
+                          __settings['10xgenomics'].cellranger_localcores)
+    cellranger.add_option("--localmem",
+                          dest="local_mem",
+                          default=__settings['10xgenomics'].cellranger_localmem,
+                          help="maximum total memory cellranger can request "
+                          "at one time for jobmode 'local' (ignored for other "
+                          "jobmodes) (in Gbs; default: %s)" %
+                          __settings['10xgenomics'].cellranger_localmem)
     cellranger.add_option("--maxjobs",type=int,
                           dest="max_jobs",
                           default=__settings.general.max_concurrent_jobs,
@@ -975,7 +989,9 @@ if __name__ == "__main__":
                     cellranger_jobmode=options.job_mode,
                     cellranger_mempercore=options.mem_per_core,
                     cellranger_maxjobs=options.max_jobs,
-                    cellranger_jobinterval=options.job_interval)
+                    cellranger_jobinterval=options.job_interval,
+                    cellranger_localcores=options.local_cores,
+                    cellranger_localmem=options.local_mem)
             except Exception as ex:
                 logging.fatal("make_fastqs: %s" % ex)
                 sys.exit(1)

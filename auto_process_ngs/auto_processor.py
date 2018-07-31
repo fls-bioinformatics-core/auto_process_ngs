@@ -1296,10 +1296,12 @@ class AutoProcess:
                     skip_fastq_generation=False,
                     only_fetch_primary_data=False,
                     create_empty_fastqs=None,runner=None,
-                    cellranger_jobmode=None,
+                    cellranger_jobmode="local",
                     cellranger_mempercore=None,
                     cellranger_maxjobs=None,
-                    cellranger_jobinterval=None):
+                    cellranger_jobinterval=None,
+                    cellranger_localcores=None,
+                    cellranger_localmem=None,):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1362,15 +1364,20 @@ class AutoProcess:
                                 (must have completed with zero exit status)
           runner              : (optional) specify a non-default job runner to use for
                                 fastq generation
-          cellranger_jobmode  : (optional) job mode to run cellranger in
-                                (10xGenomics Chromium SC data only)
+          cellranger_jobmode  : (optional) job mode to run cellranger in; defaults
+                                to "local" (10xGenomics Chromium SC data only)
           cellranger_mempercore: (optional) memory assumed per core (in Gbs)
                                 (10xGenomics Chromium SC data only)
           cellranger_maxjobs  : (optional) maxiumum number of concurrent jobs
                                 to run (10xGenomics Chromium SC data only)
           cellranger_jobinterval: (optional) how often jobs are submitted (in
                                 ms) (10xGenomics Chromium SC data only)
-
+          cellranger_localcores: (optional) maximum number of cores cellranger
+                                can request in jobmode 'local' (10xGenomics Chromium
+                                SC data only)
+          cellranger_localmem : (optional) maximum memory cellranger can request in
+                                jobmode 'local' (10xGenomics Chromium SC data
+                                only)
         """
         # Report protocol
         print "Protocol              : %s" % protocol
@@ -1588,6 +1595,8 @@ class AutoProcess:
                         cellranger_maxjobs=cellranger_maxjobs,
                         cellranger_mempercore=cellranger_mempercore,
                         cellranger_jobinterval=cellranger_jobinterval,
+                        cellranger_localcores=cellranger_localcores,
+                        cellranger_localmem=cellranger_localmem,
                         log_dir=self.log_dir)
                 except Exception,ex:
                     raise Exception("'cellranger mkfastq' stage failed: "
