@@ -45,10 +45,12 @@ def cellranger_mkfastq(samplesheet,
                        primary_data_dir,
                        output_dir,
                        lanes=None,
-                       cellranger_jobmode='sge',
+                       cellranger_jobmode='local',
                        cellranger_maxjobs=None,
                        cellranger_mempercore=None,
                        cellranger_jobinterval=None,
+                       cellranger_localcores=None,
+                       cellranger_localmem=None,
                        log_dir=None,
                        dry_run=False,
                        project_metadata_file='projects.info'):
@@ -69,7 +71,7 @@ def cellranger_mkfastq(samplesheet,
         to process (default is to process all lanes
         in the run)
       cellranger_jobmode (str): specify the job mode to
-        pass to cellranger (default: None)
+        pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
         number of jobs to pass to cellranger (default:
         None)
@@ -79,6 +81,10 @@ def cellranger_mkfastq(samplesheet,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores
+        cellranger can request in jobmode 'local'
+      cellranger_localmem (int): maximum memory cellranger
+        can request in jobmode 'local'
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
@@ -260,6 +266,20 @@ if __name__ == "__main__":
                        help="how often jobs are submitted (in ms; "
                        "default: %d)"
                        % __settings['10xgenomics'].cellranger_jobinterval)
+        p.add_argument("--localcores",type=int,
+                       dest="local_cores",
+                       default=__settings['10xgenomics'].cellranger_localcores,
+                       help="maximum cores cellranger can request at one"
+                       "time for jobmode 'local' (ignored for other "
+                       "jobmodes) (default: %s)" %
+                       __settings['10xgenomics'].cellranger_localcores)
+        p.add_argument("--localmem",type=int,
+                       dest="local_mem",
+                       default=__settings['10xgenomics'].cellranger_localmem,
+                       help="maximum total memory cellranger can request "
+                       "at one time for jobmode 'local' (ignored for other "
+                       "jobmodes) (in Gbs; default: %s)" %
+                       __settings['10xgenomics'].cellranger_localmem)
         p.add_argument('--modulefiles',action='store',
                        dest='modulefiles',default=None,
                        help="comma-separated list of environment "
@@ -311,6 +331,8 @@ if __name__ == "__main__":
                            cellranger_maxjobs=args.max_jobs,
                            cellranger_mempercore=args.mem_per_core,
                            cellranger_jobinterval=args.job_interval,
+                           cellranger_localcores=args.local_cores,
+                           cellranger_localmem=args.local_mem,
                            dry_run=args.dry_run,
                            log_dir='logs',
                            project_metadata_file='projects.info')
@@ -355,6 +377,8 @@ if __name__ == "__main__":
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
                     cellranger_jobinterval=args.job_interval,
+                    cellranger_localcores=args.local_cores,
+                    cellranger_localmem=args.local_mem,
                     max_jobs=args.max_jobs,
                     dry_run=args.dry_run,
                     log_dir='logs')
@@ -365,6 +389,8 @@ if __name__ == "__main__":
                                  cellranger_maxjobs=args.max_jobs,
                                  cellranger_mempercore=args.mem_per_core,
                                  cellranger_jobinterval=args.job_interval,
+                                 cellranger_localcores=args.local_cores,
+                                 cellranger_localmem=args.local_mem,
                                  max_jobs=args.max_jobs,
                                  dry_run=args.dry_run,
                                  log_dir='logs')
