@@ -208,6 +208,10 @@ if __name__ == "__main__":
                                 dest="lanes",default=None,
                                 help="comma-separated list of lanes "
                                 "(optional)")
+    mkfastq_parser.add_argument("--ignore-dual-index",
+                                help="on a dual-indexed flowcell where "
+                                "the second index was not used for the "
+                                "10x sample, ignore it (optional)")
     # 'count' parser
     count_parser = subparsers.add_parser("count",
                                          help="run 'cellranger count'")
@@ -339,6 +343,7 @@ if __name__ == "__main__":
                            args.run_dir,
                            args.output_dir,
                            lanes=args.lanes,
+                           ignore_dual_index=args.ignore_dual_index,
                            cellranger_jobmode=args.job_mode,
                            cellranger_maxjobs=args.max_jobs,
                            cellranger_mempercore=args.mem_per_core,

@@ -411,6 +411,7 @@ def run_cellranger_mkfastq(sample_sheet,
                            output_dir,
                            lanes=None,
                            bases_mask=None,
+                           ignore_dual_index=False,
                            cellranger_jobmode='local',
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
@@ -438,6 +439,9 @@ def run_cellranger_mkfastq(sample_sheet,
       bases_mask (str): optional, specify an alternative
         bases mask setting (default is to let cellranger
         determine the bases mask automatically)
+      ignore_dual_index (bool): optional, on a dual-indexed
+        flowcell where the second index was not used for
+        the 10x sample, ignore it
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -471,6 +475,8 @@ def run_cellranger_mkfastq(sample_sheet,
         cmd.add_args("--lanes=%s" % lanes)
     if bases_mask is not None:
         cmd.add_args("--use-bases-mask=%s" % bases_mask)
+    if ignore_dual_index:
+        cmd.add_args("--ignore-dual-index")
     add_cellranger_args(cmd,
                         jobmode=cellranger_jobmode,
                         mempercore=cellranger_mempercore,

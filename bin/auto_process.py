@@ -440,6 +440,11 @@ def add_make_fastqs_command(cmdparser):
                           help="how often jobs are submitted (in ms; "
                           "default: %d)" %
                           __settings['10xgenomics'].cellranger_jobinterval)
+    cellranger.add_option("--ignore-dual-index",
+                          action="store_true",
+                          dest="ignore_dual_index",
+                          help="on a dual-indexed flowcell where the second "
+                          "index was not used for the 10x sample, ignore it")
     p.add_option_group(cellranger)
     # Statistics
     statistics = optparse.OptionGroup(p,'Statistics generation')
@@ -991,7 +996,8 @@ if __name__ == "__main__":
                     cellranger_maxjobs=options.max_jobs,
                     cellranger_jobinterval=options.job_interval,
                     cellranger_localcores=options.local_cores,
-                    cellranger_localmem=options.local_mem)
+                    cellranger_localmem=options.local_mem,
+                    cellranger_ignore_dual_index=options.ignore_dual_index)
             except Exception as ex:
                 logging.fatal("make_fastqs: %s" % ex)
                 sys.exit(1)

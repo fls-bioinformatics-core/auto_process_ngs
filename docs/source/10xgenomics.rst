@@ -247,6 +247,17 @@ The directory will also contain:
 Appendix: known issues
 ----------------------
 
+Fastq generation fails for single-indexed 10x data produced in dual-index flowcell
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the 10x data is single-indexed but has been produced in a dual-index
+flowcell (for example, if the samples were run in a subset of lanes on a
+HISeq instrument alongside standard libraries in other lanes), then
+``cellranger mkfastq`` will fail.
+
+Use the ``--ignore-dual-index`` option to force ``cellranger`` to process
+the data in this case.
+
 Single-library analyses fail for low read counts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -290,6 +301,9 @@ The ``mkfastq`` command supports the following options::
     -r : specify the location of the primary data for the run
     -l : optionally, specify the lane numbers
     -o : specify the output directory
+    --ignore-dual-index:
+         force cellranger to ignore dual indexing on runs
+         which have it
 
 See also :ref:`10xgenomics-additional-options`.
 

@@ -1301,7 +1301,8 @@ class AutoProcess:
                     cellranger_maxjobs=None,
                     cellranger_jobinterval=None,
                     cellranger_localcores=None,
-                    cellranger_localmem=None,):
+                    cellranger_localmem=None,
+                    cellranger_ignore_dual_index=False):
         """Create and summarise FASTQ files
 
         Wrapper for operations related to FASTQ file generation and analysis.
@@ -1378,6 +1379,9 @@ class AutoProcess:
           cellranger_localmem : (optional) maximum memory cellranger can request in
                                 jobmode 'local' (10xGenomics Chromium SC data
                                 only)
+          cellranger_ignore_dual_index: (optional) on a dual-indexed flowcell where
+                                the second index was not used for the 10x sample,
+                                ignore it (10xGenomics Chromium SC data only)
         """
         # Report protocol
         print "Protocol              : %s" % protocol
@@ -1591,6 +1595,7 @@ class AutoProcess:
                         lanes=(None if lanes is None
                                else ','.join([str(l) for l in lanes])),
                         bases_mask=bases_mask,
+                        ignore_dual_index=cellranger_ignore_dual_index,
                         cellranger_jobmode=cellranger_jobmode,
                         cellranger_maxjobs=cellranger_maxjobs,
                         cellranger_mempercore=cellranger_mempercore,
