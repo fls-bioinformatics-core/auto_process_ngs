@@ -218,6 +218,11 @@ if __name__ == "__main__":
                               dest="transcriptome",default=None,
                               help="directory with reference data for "
                               "transcriptome of interest")
+    count_parser.add_argument("-c","--chemistry",
+                              dest="chemistry",default="auto",
+                              help="assay configuration; if set to "
+                              "'auto' then cellranger will attempt to "
+                              "determine this automatically")
     count_parser.add_argument("-a","--all-outputs",
                               action="store_true",
                               help="collect all outputs from 'cellranger "
@@ -373,6 +378,7 @@ if __name__ == "__main__":
                 run_cellranger_count_for_project(
                     project,
                     transcriptome,
+                    chemistry=args.chemistry,
                     cellranger_jobmode=args.job_mode,
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
@@ -385,6 +391,7 @@ if __name__ == "__main__":
         else:
             run_cellranger_count(args.unaligned_dir,
                                  args.transcriptome,
+                                 chemistry=args.chemistry,
                                  cellranger_jobmode=args.job_mode,
                                  cellranger_maxjobs=args.max_jobs,
                                  cellranger_mempercore=args.mem_per_core,

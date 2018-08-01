@@ -508,6 +508,7 @@ def run_cellranger_mkfastq(sample_sheet,
 
 def run_cellranger_count(fastq_dir,
                          transcriptome,
+                         chemistry='auto',
                          cellranger_jobmode='local',
                          cellranger_maxjobs=None,
                          cellranger_mempercore=None,
@@ -537,6 +538,9 @@ def run_cellranger_count(fastq_dir,
       transcriptome (str): path to the cellranger
         compatible transcriptome reference data
         directory
+      chemistry (str): assay configuration (set to
+        'auto' to let cellranger determine this
+        automatically)
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -630,7 +634,8 @@ def run_cellranger_count(fastq_dir,
                           "--id",sample,
                           "--fastqs",os.path.abspath(fastq_dir),
                           "--sample",sample,
-                          "--transcriptome",transcriptome)
+                          "--transcriptome",transcriptome,
+                          "--chemistry",chemistry)
             add_cellranger_args(cmd,
                                 jobmode=cellranger_jobmode,
                                 mempercore=cellranger_mempercore,
@@ -747,6 +752,7 @@ def run_cellranger_count(fastq_dir,
 
 def run_cellranger_count_for_project(project_dir,
                                      transcriptome,
+                                     chemistry='auto',
                                      cellranger_jobmode='local',
                                      cellranger_maxjobs=None,
                                      cellranger_mempercore=None,
@@ -771,6 +777,9 @@ def run_cellranger_count_for_project(project_dir,
       transcriptome (str): path to the cellranger
         compatible transcriptome reference data
         directory
+      chemistry (str): assay configuration (set to
+        'auto' to let cellranger determine this
+        automatically)
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -809,6 +818,7 @@ def run_cellranger_count_for_project(project_dir,
     retval = run_cellranger_count(
         fastq_dir,
         transcriptome,
+        chemistry=chemistry,
         cellranger_jobmode=cellranger_jobmode,
         cellranger_maxjobs=cellranger_maxjobs,
         cellranger_mempercore=cellranger_mempercore,
