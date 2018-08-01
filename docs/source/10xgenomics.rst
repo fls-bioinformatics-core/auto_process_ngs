@@ -247,6 +247,9 @@ The directory will also contain:
 Appendix: known issues
 ----------------------
 
+Single-library analyses fail for low read counts
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 It has been observed that when the Fastq files produced by the ``mkfastq``
 command have very low read counts then the single-library analyses may
 fail, with ``cellranger count`` reporting an error of the form e.g.::
@@ -256,6 +259,22 @@ fail, with ``cellranger count`` reporting an error of the form e.g.::
     one of the chemistries.
 
 There is currently no workaround for this issue.
+
+Single-library analyses fail to detect chemistry automatically
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+By default ``cellranger count`` attempts to determine the chemistry used
+automatically, however this may fail if a low number of reads map to the
+reference genome and give an error of the form::
+
+    The chemistry was unable to be automatically determined. This can
+    happen if not enough reads originate from the given reference. Please
+    verify your choice of reference or explicitly specify the chemistry
+    via the --chemistry argument.
+
+If the reference data being used is correct then use the ``--chemistry``
+option to specify the appropriate assay configuration - see
+https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
 
 Appendix: options for 'process_10xgenomics.py'
 ----------------------------------------------
@@ -284,6 +303,7 @@ See also :ref:`10xgenomics-additional-options`.
     -u : specify the name of the output directory from 'mkfastq'
     -t : specify the path to the directory with the appropriate
          10xGenomics transcriptome data
+    -c : specify the assay configuration (aka chemistry)
 
 See also :ref:`10xgenomics-additional-options`.
 
@@ -296,13 +316,27 @@ The ``process_10xgenomics.py`` has a number of additional options for
 controlling how the ``cellranger`` pipeline is run::
 
     --jobmode JOB_MODE : job mode to run cellranger in
-    --mempercore MEM_PER_CORE : memory assumed per core (in Gbs)
-    --maxjobs MAX_JOBS : maxiumum number of concurrent jobs to run
     --jobinterval JOB_INTERVAL : how often jobs are submitted (in ms)
+    --maxjobs MAX_JOBS : maxiumum number of concurrent jobs to run
 
-These map onto the equivalent ``cellranger`` options.
+The default ``JOB_MODE`` is ``local``, which runs the ``cellranger``
+pipelines on the local system. In this case the following additional
+options can be used to control the resources used by the pipeline::
 
-There are also the following general options::
+    --localcores LOCAL_CORES : maximum number of cores the pipeline
+                               can request
+    --localmem LOCAL_MEM     : maximum memory the pipeline can
+                               request (in Gbs)
+
+If ``cellranger`` is configured to use additional job submission
+systems (e.g. Grid Engine) then ``JOB_MODE`` can specify one of these
+(e.g. ``sge``). In this case the following additional options can
+be used::
+
+    --mempercore MEM_PER_CORE : memory assumed per core (in Gbs)
+
+Note that all the above options  map onto the equivalent ``cellranger``
+options; there are also the following general non-``cellranger`` options::
 
    --modulefiles MODULEFILES : comma-separated list of environment
                                modules to load before executing commands
