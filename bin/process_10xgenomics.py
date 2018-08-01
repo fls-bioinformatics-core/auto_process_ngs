@@ -38,6 +38,12 @@ import auto_process_ngs.settings
 __settings = auto_process_ngs.settings.Settings()
 
 ######################################################################
+# Data
+######################################################################
+
+from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
+
+######################################################################
 # Functions
 ######################################################################
 
@@ -220,9 +226,10 @@ if __name__ == "__main__":
                               "transcriptome of interest")
     count_parser.add_argument("-c","--chemistry",
                               dest="chemistry",default="auto",
-                              help="assay configuration; if set to "
-                              "'auto' then cellranger will attempt to "
-                              "determine this automatically")
+                              choices=CELLRANGER_ASSAY_CONFIGS.keys(),
+                              help="assay configuration; if set to 'auto' "
+                              "(the default) then cellranger will attempt "
+                              "to determine this automatically")
     count_parser.add_argument("-a","--all-outputs",
                               action="store_true",
                               help="collect all outputs from 'cellranger "
