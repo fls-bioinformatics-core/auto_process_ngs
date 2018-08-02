@@ -537,7 +537,10 @@ def run_cellranger_count(fastq_dir,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
-      max_jobs (int):
+      max_jobs (int): maxiumum number of concurrent
+        count jobs to run; also used for maximum number
+        of jobs each count pipeline can run at once
+        (default: 4)
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
@@ -759,7 +762,10 @@ def run_cellranger_count_for_project(project_dir,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
-      max_jobs (int):
+      max_jobs (int): maxiumum number of concurrent
+        count jobs to run; also used for maximum number
+        of jobs each count pipeline can run at once
+        (default: 4)
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
