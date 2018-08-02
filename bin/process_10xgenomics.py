@@ -355,7 +355,7 @@ if __name__ == "__main__":
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
                     cellranger_jobinterval=args.job_interval,
-                    max_jobs=4,
+                    max_jobs=args.max_jobs,
                     dry_run=args.dry_run,
                     log_dir='logs')
         else:
@@ -365,7 +365,7 @@ if __name__ == "__main__":
                                  cellranger_maxjobs=args.max_jobs,
                                  cellranger_mempercore=args.mem_per_core,
                                  cellranger_jobinterval=args.job_interval,
-                                 max_jobs=4,
+                                 max_jobs=args.max_jobs,
                                  dry_run=args.dry_run,
                                  log_dir='logs')
     elif args.command == "update_projects":
