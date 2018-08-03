@@ -2099,7 +2099,7 @@ if __name__ == "__main__":
                       illumina_qc=illumina_qc)
     runqc.add_project(analysis_project,
                       fastq_dir="fastqs.barcodes",
-                      qc_dir="qc.barcodes"
+                      qc_dir="qc.barcodes",
                       illumina_qc=illumina_qc)
     exit_status = runqc.run(multiqc=True,
                             qc_runner=runners['qc'],
