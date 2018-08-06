@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
@@ -187,7 +188,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             excludes.append('--exclude=%s' % ap.params.unaligned_dir)
         # 10xgenomics products to exclude
         excludes.append('--exclude=*.mro')
-        excludes.append('--exclude="%s*"' %
+        excludes.append('--exclude=%s*' %
                         tenx_genomics_utils.flow_cell_id(ap.run_name))
         # Log dir
         log_dir = 'archive%s' % ('_final' if final else '_staging')
