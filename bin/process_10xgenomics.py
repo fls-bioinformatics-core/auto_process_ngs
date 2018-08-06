@@ -384,7 +384,7 @@ if __name__ == "__main__":
                     except KeyError:
                         raise Exception("%s: no transcriptome found for "
                                         "organism '%s'; use -t/--transcriptome"
-                                        "option" % (project,organism[0]))
+                                        "option" % (project,organisms[0]))
                 print "Transcriptome: %s" % transcriptome
                 # Run single library analysis
                 run_cellranger_count_for_project(
