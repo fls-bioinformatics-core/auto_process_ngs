@@ -122,6 +122,10 @@ class SimpleScheduler(threading.Thread):
         self.__groups = dict()
         # Handle callbacks
         self.__callbacks = []
+        # Error checking for jobs
+        self.__enable_error_check = True
+        self.__last_error_check_time = 0.0
+        self.__error_check_interval = 60.0
         # Flag controlling whether scheduler is active
         self.__active = False
         # Default reporter
@@ -425,42 +429,50 @@ class SimpleScheduler(threading.Thread):
         while self.__active:
             # Flag to indicate status should be reported
             report_status = False
+            # Flag to indicate whether to error check jobs
+            if self.__enable_error_check \
+               and ((time.time() - self.__last_error_check_time) >
+                    self.__error_check_interval):
+                self.__last_error_check_time = time.time()
+                do_error_check = True
             # Check for completed jobs
             updated_running_list = []
             for job in self.__running:
                 if job.is_running:
-                    if not job.in_error_state:
-                        logging.debug("Job #%s (id %s) still running \"%s\""
+                    # Check if job is error
+                    if (not do_error_check) or (not job.in_error_state):
+                        logging.debug("Job #%s (id %s) running \"%s\""
                                       % (job.job_number,
                                          job.job_id,
                                          job))
                         updated_running_list.append(job)
-                    else:
-                        logging.debug("Job #%s (id %s) in error state \"%s\""
-                                      % (job.job_number,
-                                         job.job_id,
-                                         job))
-                        logging.warning("Job #%s (id %s) in error state"
+                        continue
+                    # Handle job in error state
+                    logging.debug("Job #%s (id %s) in error state \"%s\""
+                                  % (job.job_number,
+                                     job.job_id,
+                                     job))
+                    logging.warning("Job #%s (id %s) in error state"
+                                    % (job.job_number,
+                                       job.job_id))
+                    if not self.__max_restarts:
+                        job.terminate()
+                        logging.warning("Job #%s (id %s) terminated"
                                         % (job.job_number,
                                            job.job_id))
-                        if not self.__max_restarts:
-                            job.terminate()
-                            logging.warning("Job #%s (id %s) terminated"
-                                            % (job.job_number,
-                                               job.job_id))
-                        elif job.restart(max_tries=self.__max_restarts):
-                            logging.warning("Job #%s (id %s) restarted"
-                                            % (job.job_number,
-                                               job.job_id))
-                            self.__reporter.job_start(job)
-                            updated_running_list.append(job)
-                        else:
-                            logging.warning("Job #%s (id %s) failed to "
-                                            "restart" % (job.job_number,
-                                                         job.job_id))
-                            self.__reporter.job_end(job)
-                            self.__finished_names.append(job.job_name)
-                        report_status = True
+                    elif job.restart(max_tries=self.__max_restarts):
+                        logging.warning("Job #%s (id %s) restarted"
+                                        % (job.job_number,
+                                           job.job_id))
+                        self.__reporter.job_start(job)
+                        updated_running_list.append(job)
+                    else:
+                        logging.warning("Job #%s (id %s) failed to "
+                                        "restart" % (job.job_number,
+                                                     job.job_id))
+                        self.__reporter.job_end(job)
+                        self.__finished_names.append(job.job_name)
+                    report_status = True
                 else:
                     self.__reporter.job_end(job)
                     logging.debug("Job #%s (id %s) completed \"%s\"" % (job.job_number,
