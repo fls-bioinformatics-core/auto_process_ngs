@@ -2320,7 +2320,9 @@ class AutoProcess:
             self.set_log_dir(self.get_log_subdir('merge_fastq_dirs'))
             runner = self.settings.general.default_runner
             runner.set_log_dir(self.log_dir)
-            sched = simple_scheduler.SimpleScheduler(runner=runner)
+            sched = simple_scheduler.SimpleScheduler(
+                runner=runner,
+                max_concurrent=self.settings.general.max_concurrent_jobs)
             sched.start()
             jobs = []
         # Top-level for undetermined reads
