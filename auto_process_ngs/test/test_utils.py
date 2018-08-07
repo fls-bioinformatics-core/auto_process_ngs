@@ -250,6 +250,32 @@ class TestBasesMaskIsPairedEnd(unittest.TestCase):
         self.assertTrue(bases_mask_is_paired_end('y101,I6n,y101'))
         self.assertTrue(bases_mask_is_paired_end('y101,I6,I6,y101'))
 
+class TestGetOrganismList(unittest.TestCase):
+    """Tests for the get_organism_list function
+    """
+
+    def test_get_organism_list(self):
+        """get_organism_list: handle standard names
+        """
+        self.assertEqual(get_organism_list("Human"),["human"])
+        self.assertEqual(get_organism_list("mouse"),["mouse"])
+        self.assertEqual(get_organism_list("Human,Mouse"),
+                         ["human","mouse"])
+
+    def test_get_organism_list_handle_names_with_spaces(self):
+        """get_organism_list: handle names with spaces
+        """
+        self.assertEqual(get_organism_list("Xenopus tropicalis"),
+                         ["xenopus_tropicalis"])
+        self.assertEqual(get_organism_list("Homo sapiens,Mus musculus"),
+                         ["homo_sapiens","mus_musculus"])
+
+    def test_get_organism_list_handle_extra_whitespace(self):
+        """get_organism_list: handle names with extra whitespace
+        """
+        self.assertEqual(get_organism_list("Homo sapiens, Mus  musculus "),
+                         ["homo_sapiens","mus_musculus"])
+
 class TestSplitUserHostDir(unittest.TestCase):
     """Tests for the split_user_host_dir function
 
