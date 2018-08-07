@@ -22,6 +22,7 @@ from bcftbx.utils import mkdirs
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from auto_process_ngs.utils import get_numbered_subdir
+from auto_process_ngs.utils import get_organism_list
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.analysis import ProjectMetadataFile
 from auto_process_ngs.tenx_genomics_utils import run_cellranger_mkfastq
@@ -323,10 +324,10 @@ if __name__ == "__main__":
                 transcriptome = args.transcriptome
                 if transcriptome is None:
                     try:
-                        organisms = AnalysisProject(
-                            os.path.basename(project),
-                            project).\
-                            info.organism.lower().split(',')
+                        organisms = get_organism_list(
+                            AnalysisProject(
+                                os.path.basename(project),
+                                project).info.organism)
                     except AttributeError:
                         organisms = None
                     if not organisms:
