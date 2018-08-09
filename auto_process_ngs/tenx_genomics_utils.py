@@ -54,6 +54,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 #######################################################################
+# Data
+#######################################################################
+
+# Permissible values for cellranger count --chemistry option
+# See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
+CELLRANGER_ASSAY_CONFIGS = {
+    'auto': 'autodetection',
+    'threeprime': 'Single Cell 3\'',
+    'fiveprime': 'Single Cell 5\'',
+    'SC3Pv1': 'Single Cell 3\' v1',
+    'SC3Pv2': 'Single Cell 3\' v2',
+    'SC5P-PE': 'Single Cell 5\' paired-end (both R1 and R2 are used for alignment)',
+    'SC5P-R2': 'Single Cell 5\' R2-only (where only R2 is used for alignment)',
+}
+
+#######################################################################
 # Classes
 #######################################################################
 
@@ -395,10 +411,13 @@ def run_cellranger_mkfastq(sample_sheet,
                            output_dir,
                            lanes=None,
                            bases_mask=None,
-                           cellranger_jobmode=None,
+                           ignore_dual_index=False,
+                           cellranger_jobmode='local',
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
                            cellranger_jobinterval=None,
+                           cellranger_localcores=None,
+                           cellranger_localmem=None,
                            log_dir=None,
                            dry_run=False):
     """
@@ -420,8 +439,11 @@ def run_cellranger_mkfastq(sample_sheet,
       bases_mask (str): optional, specify an alternative
         bases mask setting (default is to let cellranger
         determine the bases mask automatically)
+      ignore_dual_index (bool): optional, on a dual-indexed
+        flowcell where the second index was not used for
+        the 10x sample, ignore it
       cellranger_jobmode (str): specify the job mode to
-        pass to cellranger (default: None)
+        pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
         number of jobs to pass to cellranger (default:
         None)
@@ -431,6 +453,11 @@ def run_cellranger_mkfastq(sample_sheet,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores
+        cellranger can request in jobmode 'local'
+        (default: None)
+      cellranger_localmem (int): maximum memory cellranger
+        can request in jobmode 'local' (default: None)
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
@@ -448,11 +475,15 @@ def run_cellranger_mkfastq(sample_sheet,
         cmd.add_args("--lanes=%s" % lanes)
     if bases_mask is not None:
         cmd.add_args("--use-bases-mask=%s" % bases_mask)
+    if ignore_dual_index:
+        cmd.add_args("--ignore-dual-index")
     add_cellranger_args(cmd,
                         jobmode=cellranger_jobmode,
                         mempercore=cellranger_mempercore,
                         maxjobs=cellranger_maxjobs,
-                        jobinterval=cellranger_jobinterval)
+                        jobinterval=cellranger_jobinterval,
+                        localcores=cellranger_localcores,
+                        localmem=cellranger_localmem)
     # Run the command
     print "Running %s" % cmd
     if not dry_run:
@@ -499,10 +530,13 @@ def run_cellranger_mkfastq(sample_sheet,
 
 def run_cellranger_count(fastq_dir,
                          transcriptome,
-                         cellranger_jobmode='sge',
+                         chemistry='auto',
+                         cellranger_jobmode='local',
                          cellranger_maxjobs=None,
                          cellranger_mempercore=None,
                          cellranger_jobinterval=None,
+                         cellranger_localcores=None,
+                         cellranger_localmem=None,
                          max_jobs=4,
                          log_dir=None,
                          dry_run=False,
@@ -526,8 +560,11 @@ def run_cellranger_count(fastq_dir,
       transcriptome (str): path to the cellranger
         compatible transcriptome reference data
         directory
+      chemistry (str): assay configuration (set to
+        'auto' to let cellranger determine this
+        automatically)
       cellranger_jobmode (str): specify the job mode to
-        pass to cellranger (default: None)
+        pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
         number of jobs to pass to cellranger (default:
         None)
@@ -537,6 +574,11 @@ def run_cellranger_count(fastq_dir,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores
+        cellranger can request in jobmode 'local'
+        (default: None)
+      cellranger_localmem (int): maximum memory cellranger
+        can request in jobmode 'local' (default: None)
       max_jobs (int): maxiumum number of concurrent
         count jobs to run; also used for maximum number
         of jobs each count pipeline can run at once
@@ -614,12 +656,15 @@ def run_cellranger_count(fastq_dir,
                           "--id",sample,
                           "--fastqs",os.path.abspath(fastq_dir),
                           "--sample",sample,
-                          "--transcriptome",transcriptome)
+                          "--transcriptome",transcriptome,
+                          "--chemistry",chemistry)
             add_cellranger_args(cmd,
                                 jobmode=cellranger_jobmode,
                                 mempercore=cellranger_mempercore,
                                 maxjobs=cellranger_maxjobs,
-                                jobinterval=cellranger_jobinterval)
+                                jobinterval=cellranger_jobinterval,
+                                localcores=cellranger_localcores,
+                                localmem=cellranger_localmem)
             print "Running: %s" % cmd
             if not dry_run:
                 job = sched.submit(cmd,
@@ -729,10 +774,13 @@ def run_cellranger_count(fastq_dir,
 
 def run_cellranger_count_for_project(project_dir,
                                      transcriptome,
-                                     cellranger_jobmode='sge',
+                                     chemistry='auto',
+                                     cellranger_jobmode='local',
                                      cellranger_maxjobs=None,
                                      cellranger_mempercore=None,
                                      cellranger_jobinterval=None,
+                                     cellranger_localcores=None,
+                                     cellranger_localmem=None,
                                      max_jobs=4,
                                      log_dir=None,
                                      dry_run=False,
@@ -751,8 +799,11 @@ def run_cellranger_count_for_project(project_dir,
       transcriptome (str): path to the cellranger
         compatible transcriptome reference data
         directory
+      chemistry (str): assay configuration (set to
+        'auto' to let cellranger determine this
+        automatically)
       cellranger_jobmode (str): specify the job mode to
-        pass to cellranger (default: None)
+        pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
         number of jobs to pass to cellranger (default:
         None)
@@ -762,6 +813,11 @@ def run_cellranger_count_for_project(project_dir,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores
+        cellranger can request in jobmode 'local'
+        (default: None)
+      cellranger_localmem (int): maximum memory cellranger
+        can request in jobmode 'local' (default: None)
       max_jobs (int): maxiumum number of concurrent
         count jobs to run; also used for maximum number
         of jobs each count pipeline can run at once
@@ -784,10 +840,13 @@ def run_cellranger_count_for_project(project_dir,
     retval = run_cellranger_count(
         fastq_dir,
         transcriptome,
+        chemistry=chemistry,
         cellranger_jobmode=cellranger_jobmode,
         cellranger_maxjobs=cellranger_maxjobs,
         cellranger_mempercore=cellranger_mempercore,
         cellranger_jobinterval=cellranger_jobinterval,
+        cellranger_localcores=cellranger_localcores,
+        cellranger_localmem=cellranger_localmem,
         max_jobs=max_jobs,
         log_dir=log_dir,
         dry_run=dry_run,
@@ -803,6 +862,8 @@ def add_cellranger_args(cellranger_cmd,
                         maxjobs=None,
                         mempercore=None,
                         jobinterval=None,
+                        localcores=None,
+                        localmem=None,
                         disable_ui=False):
     """
     Configure options for cellranger
@@ -819,9 +880,16 @@ def add_cellranger_args(cellranger_cmd,
       maxjobs (int): if specified, will be passed to the
         --mempercore option
       mempercore (int): if specified, will be passed to
-        the --maxjobs option
+        the --maxjobs option (only if jobmode is not
+        "local")
       jobinterval (int):  if specified, will be passed to
         the --jobinterval option
+      localcores (int): if specified, will be passed to
+        the --localcores option (only if jobmode is
+        "local")
+      localmem (int): if specified, will be passed to the
+        the --localmem option (only if jobmode is
+        "local")
       disable_ui (bool): if True, add the --disable-ui
         option (default is not to add it)
 
@@ -831,8 +899,17 @@ def add_cellranger_args(cellranger_cmd,
     """
     if jobmode is not None:
         cellranger_cmd.add_args("--jobmode=%s" % jobmode)
-    if mempercore is not None:
-        cellranger_cmd.add_args("--mempercore=%s" % mempercore)
+    if jobmode == "local":
+        if localcores is not None:
+            cellranger_cmd.add_args("--localcores=%s" %
+                                    localcores)
+        if localmem is not None:
+            cellranger_cmd.add_args("--localmem=%s" %
+                                    localmem)
+    else:
+        if mempercore is not None:
+            cellranger_cmd.add_args("--mempercore=%s" %
+                                    mempercore)
     if maxjobs is not None:
         cellranger_cmd.add_args("--maxjobs=%s" % maxjobs)
     if jobinterval is not None:

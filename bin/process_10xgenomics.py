@@ -38,6 +38,12 @@ import auto_process_ngs.settings
 __settings = auto_process_ngs.settings.Settings()
 
 ######################################################################
+# Data
+######################################################################
+
+from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
+
+######################################################################
 # Functions
 ######################################################################
 
@@ -45,10 +51,12 @@ def cellranger_mkfastq(samplesheet,
                        primary_data_dir,
                        output_dir,
                        lanes=None,
-                       cellranger_jobmode='sge',
+                       cellranger_jobmode='local',
                        cellranger_maxjobs=None,
                        cellranger_mempercore=None,
                        cellranger_jobinterval=None,
+                       cellranger_localcores=None,
+                       cellranger_localmem=None,
                        log_dir=None,
                        dry_run=False,
                        project_metadata_file='projects.info'):
@@ -69,7 +77,7 @@ def cellranger_mkfastq(samplesheet,
         to process (default is to process all lanes
         in the run)
       cellranger_jobmode (str): specify the job mode to
-        pass to cellranger (default: None)
+        pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
         number of jobs to pass to cellranger (default:
         None)
@@ -79,6 +87,10 @@ def cellranger_mkfastq(samplesheet,
       cellranger_jobinterval (int): specify the interval
         between launching jobs (in ms) to pass to
         cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores
+        cellranger can request in jobmode 'local'
+      cellranger_localmem (int): maximum memory cellranger
+        can request in jobmode 'local'
       log_dir (str): path to a directory to write logs
         (default: current working directory)
       dry_run (bool): if True then only report actions
@@ -196,6 +208,10 @@ if __name__ == "__main__":
                                 dest="lanes",default=None,
                                 help="comma-separated list of lanes "
                                 "(optional)")
+    mkfastq_parser.add_argument("--ignore-dual-index",
+                                help="on a dual-indexed flowcell where "
+                                "the second index was not used for the "
+                                "10x sample, ignore it (optional)")
     # 'count' parser
     count_parser = subparsers.add_parser("count",
                                          help="run 'cellranger count'")
@@ -212,6 +228,12 @@ if __name__ == "__main__":
                               dest="transcriptome",default=None,
                               help="directory with reference data for "
                               "transcriptome of interest")
+    count_parser.add_argument("-c","--chemistry",
+                              dest="chemistry",default="auto",
+                              choices=CELLRANGER_ASSAY_CONFIGS.keys(),
+                              help="assay configuration; if set to 'auto' "
+                              "(the default) then cellranger will attempt "
+                              "to determine this automatically")
     count_parser.add_argument("-a","--all-outputs",
                               action="store_true",
                               help="collect all outputs from 'cellranger "
@@ -260,6 +282,20 @@ if __name__ == "__main__":
                        help="how often jobs are submitted (in ms; "
                        "default: %d)"
                        % __settings['10xgenomics'].cellranger_jobinterval)
+        p.add_argument("--localcores",type=int,
+                       dest="local_cores",
+                       default=__settings['10xgenomics'].cellranger_localcores,
+                       help="maximum cores cellranger can request at one"
+                       "time for jobmode 'local' (ignored for other "
+                       "jobmodes) (default: %s)" %
+                       __settings['10xgenomics'].cellranger_localcores)
+        p.add_argument("--localmem",type=int,
+                       dest="local_mem",
+                       default=__settings['10xgenomics'].cellranger_localmem,
+                       help="maximum total memory cellranger can request "
+                       "at one time for jobmode 'local' (ignored for other "
+                       "jobmodes) (in Gbs; default: %s)" %
+                       __settings['10xgenomics'].cellranger_localmem)
         p.add_argument('--modulefiles',action='store',
                        dest='modulefiles',default=None,
                        help="comma-separated list of environment "
@@ -307,10 +343,13 @@ if __name__ == "__main__":
                            args.run_dir,
                            args.output_dir,
                            lanes=args.lanes,
+                           ignore_dual_index=args.ignore_dual_index,
                            cellranger_jobmode=args.job_mode,
                            cellranger_maxjobs=args.max_jobs,
                            cellranger_mempercore=args.mem_per_core,
                            cellranger_jobinterval=args.job_interval,
+                           cellranger_localcores=args.local_cores,
+                           cellranger_localmem=args.local_mem,
                            dry_run=args.dry_run,
                            log_dir='logs',
                            project_metadata_file='projects.info')
@@ -345,26 +384,32 @@ if __name__ == "__main__":
                     except KeyError:
                         raise Exception("%s: no transcriptome found for "
                                         "organism '%s'; use -t/--transcriptome"
-                                        "option" % (project,organism[0]))
+                                        "option" % (project,organisms[0]))
                 print "Transcriptome: %s" % transcriptome
                 # Run single library analysis
                 run_cellranger_count_for_project(
                     project,
                     transcriptome,
+                    chemistry=args.chemistry,
                     cellranger_jobmode=args.job_mode,
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
                     cellranger_jobinterval=args.job_interval,
+                    cellranger_localcores=args.local_cores,
+                    cellranger_localmem=args.local_mem,
                     max_jobs=args.max_jobs,
                     dry_run=args.dry_run,
                     log_dir='logs')
         else:
             run_cellranger_count(args.unaligned_dir,
                                  args.transcriptome,
+                                 chemistry=args.chemistry,
                                  cellranger_jobmode=args.job_mode,
                                  cellranger_maxjobs=args.max_jobs,
                                  cellranger_mempercore=args.mem_per_core,
                                  cellranger_jobinterval=args.job_interval,
+                                 cellranger_localcores=args.local_cores,
+                                 cellranger_localmem=args.local_mem,
                                  max_jobs=args.max_jobs,
                                  dry_run=args.dry_run,
                                  log_dir='logs')

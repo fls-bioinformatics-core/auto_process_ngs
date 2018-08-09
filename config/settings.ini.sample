@@ -43,10 +43,16 @@ nprocessors_contaminant_filter = 1
 nprocessors_statistics = 1
 
 # 10xGenomics settings
+# cellranger_jobmode defaults to 'local': set to 'sge' to use SGE jobmanager
+# See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/cluster-mode
 [10xgenomics]
-cellranger_jobmode = sge
+cellranger_jobmode = local
+# cellranger_mempercore only used if jobmode is not 'local'
 cellranger_mempercore = 5
 cellranger_jobinterval = 100
+# cellranger_localmem and cellranger_localcores only used if jobmode is 'local'
+cellranger_localmem = 5
+cellranger_localcores = 1
 
 # 10xGenomics transcriptomes
 # Assign organism name to path to cellranger
