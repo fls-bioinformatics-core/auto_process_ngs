@@ -22,6 +22,7 @@ Classes:
 Functions:
 
 - bases_mask_is_paired_end:
+- get_organism_list:
 - split_user_host_dir:
 - get_numbered_subdir:
 - find_executables:
@@ -39,6 +40,7 @@ Functions:
 
 import sys
 import os
+import re
 import logging
 import zipfile
 import pydoc
@@ -352,6 +354,33 @@ def bases_mask_is_paired_end(bases_mask):
     else:
         # An error?
         raise Exception, "Bad bases mask '%s'?" % bases_mask
+
+def get_organism_list(organisms):
+    """
+    Return a list of normalised organism names
+
+    Normalisation consists of converting names to
+    lower case and spaces to underscores.
+
+    E.g.
+
+    "Human,Mouse" -> ['human','mouse']
+    "Xenopus tropicalis" -> ['xenopus_tropicalis']
+
+    Arguments:
+      organisms (str): string with organism names
+        separated by commas
+
+    Returns:
+      List: list of normalised organism names
+    """
+    if not organisms:
+        return []
+    # Make lowercase, split on commas and replace whitespace
+    # with single underscore, then strip leading/trailing
+    # underscores
+    return [re.sub(r'\s+','_',x).strip('_')
+            for x in str(organisms).lower().split(',')]
 
 def split_user_host_dir(location):
     # Split a location of the form [[user@]host:]dir into its

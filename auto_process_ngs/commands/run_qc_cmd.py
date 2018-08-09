@@ -16,6 +16,7 @@ from ..qc.illumina_qc import IlluminaQC
 from ..qc.illumina_qc import determine_qc_protocol
 from ..qc.runqc import RunQC
 from ..qc.fastq_strand import build_fastq_strand_conf
+from ..utils import get_organism_list
 from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger
@@ -109,7 +110,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         protocol = determine_qc_protocol(project)
         # Set up conf file for strandedness determination
         try:
-            organisms = project.info.organism.lower().split(',')
+            organisms = get_organism_list(project.info.organism)
         except AttributeError:
             organisms = None
         fastq_strand_indexes = build_fastq_strand_conf(

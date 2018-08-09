@@ -28,6 +28,7 @@ from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
 from auto_process_ngs.qc.runqc import RunQC
 from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.utils import get_organism_list
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -202,7 +203,7 @@ if __name__ == "__main__":
     if organism:
         print "Organisms: %s" % organism
         fastq_strand_indexes = build_fastq_strand_conf(
-            organism.lower().split(','),
+            get_organism_list(organism),
             __settings.fastq_strand_indexes)
         if fastq_strand_indexes:
             print "Setting up conf file for strandedness determination"
