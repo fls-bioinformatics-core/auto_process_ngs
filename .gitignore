@@ -5,3 +5,5 @@
 *.bak
 auto_process_settings_local.py
 settings.ini
+docs/build
+docs/source/developers
