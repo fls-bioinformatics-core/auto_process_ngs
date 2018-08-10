@@ -23,7 +23,6 @@ auto-process-ngs: automatic processing of NGS sequencing data
    Publishing QC <using/publish_qc>
    Archiving analyses <using/archive>
    commands
-   barcode_analysis
    metadata
    utilities
    managing_data
