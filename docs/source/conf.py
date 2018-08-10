@@ -245,3 +245,53 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+# -- Make developers reference documents ---------------------------------------
+
+# Fetch a list of modules
+# See https://stackoverflow.com/a/1708706/579925
+from pkgutil import walk_packages
+def get_modules(pkg):
+    modlist = []
+    for importer,modname,ispkg in walk_packages(path=pkg.__path__,
+                                                prefix=pkg.__name__+'.',
+                                                onerror=lambda x: None):
+        modname = '.'.join(modname.split('.')[1:])
+        modlist.append(modname)
+    return modlist
+
+import auto_process_ngs
+modlist = get_modules(auto_process_ngs)
+
+# Generate documents for each module
+for modname in modlist:
+    docname = modname.replace('.','_')
+    docfile = os.path.join(os.getcwd(),
+                           "developers",
+                           "%s.rst" % docname)
+    print "Generating %s" % docfile
+    with open(docfile,'w') as doc:
+         title = "``auto_process_ngs.%s``" % modname
+         doc.write("""%s
+%s
+
+.. automodule:: auto_process_ngs.%s
+   :members:
+""" % (title,'='*len(title),modname))
+
+# Generate an index
+devindex = os.path.join(os.getcwd(),"developers","index.rst")
+print "Writing %s" % devindex
+with open(devindex,'w') as doc:
+    doc.write("""=====================
+Developers' reference
+=====================
+
+.. toctree::
+   :maxdepth: 2
+
+""")
+    for modname in modlist:
+        doc.write("   %s\n" % modname.replace('.','_'))
+
+
