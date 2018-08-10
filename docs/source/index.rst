@@ -4,18 +4,52 @@ auto-process-ngs: automatic processing of NGS sequencing data
 
 .. toctree::
    :maxdepth: 2
+   :caption: Getting started
 
    requirements
    install
+
+.. _running-pipelines:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Running Pipelines
+
+   Analysis setup <using/setup>
+   Fastq generation <using/make_fastqs>
+   Analysing barcodes <using/analyse_barcodes>
+   Setting up projects <using/setup_analysis_dirs>
+   Running QC <using/run_qc>
+   Publishing QC <using/publish_qc>
+   Archiving analyses <using/archive>
    commands
    barcode_analysis
-   analysis_dirs
    metadata
    utilities
    managing_data
+   problems
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Outputs
+	     
+   analysis_dirs
+
+.. _single-cell-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Single-cell Platforms
+
    icell8
    10xgenomics
-   problems
+
+.. _developers-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation
+
    advanced
    developers/index
 
