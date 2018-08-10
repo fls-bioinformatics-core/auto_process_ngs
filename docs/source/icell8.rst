@@ -4,7 +4,7 @@ Processing Takara Bio ICELL8 single-cell data
 Background
 ----------
 
-The Wafergen ICell8 system prepares single cell (SC) samples which
+The Takara Bio ICELL8 system prepares single-cell (SC) samples which
 are then sequenced as part of an Illumina sequencing run.
 
 Initial processing of the sequencing data produces a single FASTQ file
@@ -34,7 +34,7 @@ corresponding to the cell and UMI referenced by its R1 partner.
 
 .. _icell8_processing_protocol:
 
-Processing protocol for ICell8 data
+Processing protocol for ICELL8 data
 -----------------------------------
 
 The recommended steps are:
@@ -52,8 +52,8 @@ The recommended steps are:
 
 ..  _icell8_qc_and_filtering_protocol:
 
-QC and filtering protocol
--------------------------
+ICELL8 QC and filtering protocol
+--------------------------------
 
 The ``process_icell8.py`` utility script performs initial filtering
 and QC according to the protocol described below. The utility also splits
@@ -61,7 +61,7 @@ the read pairs into FASTQs by both barcode and by sample.
 
 In addition to the FASTQS produced from the  :ref:`icell8_fastq_generation`
 step, the processing also requires an input :ref:`icell8_well_list_file`.
-This lists the valid ICell8 barcodes and maps those barcodes to their
+This lists the valid ICELL8 barcodes and maps those barcodes to their
 parent sample.
 
 The following steps are performed:
@@ -156,11 +156,11 @@ directories:
  **Directory**              **Description and contents**
  -------------------------- -----------------------------------------------
  ``fastqs``                 Initial FASTQs from ``bcl2fastq``
- ``fastqs.barcodes``        FASTQs with reads sorted by ICell8 barcode
+ ``fastqs.barcodes``        FASTQs with reads sorted by ICELL8 barcode
                             (i.e. cell), plus QC outputs.
                             The FASTQs will be named according to the
                             convention ``NAME.BARCODE.r[1|2].fastq.gz``.
- ``fastqs.samples``         FASTQs with reads sorted by ICell8 sample
+ ``fastqs.samples``         FASTQs with reads sorted by ICELL8 sample
                             name (as defined in the input well list file),
                             plus QC outputs.
                             The FASTQs will be named according to the
@@ -198,8 +198,8 @@ The final report summarises information on the following:
 Well list file
 --------------
 
-The well list file is a tab-delimited file output from the ICell8 which
-amongst other things lists the valid ICell8 barcodes for the experiment
+The well list file is a tab-delimited file output from the ICELL8 which
+amongst other things lists the valid ICELL8 barcodes for the experiment
 and the mapping of barcodes to samples.
 
 (As noted elsewhere, each barcode corresponds to a well which in turn
@@ -207,7 +207,7 @@ corresponds to a single cell.)
 
 .. _icell8_pipeline_configuration:
 
-Appendix: configuring the ICell8 processing pipeline
+Appendix: configuring the ICELL8 processing pipeline
 ----------------------------------------------------
 
 The running of the pipeline can be configured via command line options,
