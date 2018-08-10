@@ -4,9 +4,6 @@
 #     Copyright (C) University of Manchester 2018 Peter Briggs
 #
 """
-runqc.py
-========
-
 Provides core functionality for running, verification and reporting
 of QC for analysis projects.
 
