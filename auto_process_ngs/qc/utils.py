@@ -4,9 +4,6 @@
 #     Copyright (C) University of Manchester 2018 Peter Briggs
 #
 """
-utils.py
-========
-
 Provides utility classes and functions for analysis project QC.
 
 Provides the following functions:
