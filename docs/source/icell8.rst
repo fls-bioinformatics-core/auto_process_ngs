@@ -50,35 +50,6 @@ The recommended steps are:
    and ``README.info`` files as described in
    :ref:`icell8_updating_sample_lists`
 
-.. _icell8_fastq_generation:
-
-Fastq generation
-----------------
-
-FASTQs can be generated using the command::
-
-    auto_process.py make_fastqs --protocol=icell8 ...
-
-Subsequently the read pairs can be processed using the
-``process_icell8.py`` utility described in the
-:ref:`icell8_qc_and_filtering_protocol` section below
-
-.. note::
-
-   ``--protocol=icell8`` runs the standard bcl-to-fastq commands with
-   with the following settings:
-
-   * Disable adapter trimming and masking by setting
-     ``--minimum-trimmed-read-length=21`` and
-     ``--mask-short-adapter-reads=0`` (recommended by Wafergen
-     specifically for NextSeq data)
-   * Updating the bases mask setting so that only the first 21 bases
-     of the R1 read are kept.
-
-   This is recommended to stop unintentional trimming of UMI sequences
-   (which are mostly random) from the R1, should they happen to match
-   part of an adapter sequence.
-
 ..  _icell8_qc_and_filtering_protocol:
 
 QC and filtering protocol
