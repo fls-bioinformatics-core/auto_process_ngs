@@ -1,4 +1,0 @@
-Fastq generation
-================
-
-TBA
