@@ -1,5 +1,5 @@
-Processing Wafergen ICell8 single-cell data
-===========================================
+Processing Takara Bio ICELL8 single-cell data
+=============================================
 
 Background
 ----------

@@ -41,8 +41,8 @@ auto-process-ngs: automatic processing of NGS sequencing data
    :maxdepth: 2
    :caption: Single-cell Platforms
 
-   icell8
-   10xgenomics
+   Takara Bio ICELL8 data <icell8>
+   10xGenomics Chromium data  <10xgenomics>
 
 .. _developers-docs:
 
