@@ -1,10 +1,12 @@
-Installation
-============
+******************************
+Installation and configuration
+******************************
 
 .. _auto_process_installation:
 
+============
 Installation
-************
+============
 
 The ``auto-process-ngs`` package is available from its GitHub respository at
 
@@ -41,59 +43,18 @@ The installation may also require some configuration to tailor it to the
 local environment (for example, if running on a compute cluster); this is
 outlined in more detail in the section :ref:`auto_process_configuration`.
 
-.. _auto_process_requirements:
-
-Requirements
-************
-
-Many of the functions of ``auto-process-ngs`` depend on additional external
-software packages which must also be installed. These include:
-
- * Fastq generation: uses Illumina's ``bcl2fastq`` software (nb version
-   2.17+ is required for NextSeq data):
-
-   - ``bcl2fastq`` 2.17: https://support.illumina.com/downloads/bcl2fastq-conversion-software-v217.html
-   - ``bcl2fastq`` 1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
-
- * QC pipeline:
-
-   - ``bowtie`` http://bowtie-bio.sourceforge.net/index.shtml
-   - ``fastq_screen`` http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
-   - ``fastqc`` http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
-   - ``multiqc`` http://multiqc.info/
-
- * ICell8 processing pipeline:
-
-   - ``cutadapt`` http://cutadapt.readthedocs.io
-   - ``bowtie2`` (optional, required if using Bowtie2 genome indexes
-     for contaminant filtering - see :ref:`icell8`)
-     http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
-   - Plus software required for the QC pipeline
-
-Some of this software can be obtained from ``bioconda`` - see
-https://bioconda.github.io/ from more details.
-
-The programs provided by these packages must be found on the ``PATH`` when
-the appropriate autoprocessor commands are issued. :ref:`environment-modules`
-can be used to help manage this.
-
-..  note::
-
-    If there are multiple ``bcl2fastq`` packages available on the path
-    at run time then see :ref:`required_bcl2fastq_versions` for how to
-    specify which version is used.
-
 .. _auto_process_configuration:
 
+=============
 Configuration
-*************
+=============
 
 The autoprocessor reads its global settings for the local system from a
 ``settings.ini`` file, which it looks for in order in the following
 locations:
 
-1. The current directory;
-2. The ``config`` subdirectory of the installation directory;
+1. The current directory
+2. The ``config`` subdirectory of the installation directory
 3. The installation directory (for legacy installations only)
 
 If no ``settings.ini`` file is found then one can be created using the
