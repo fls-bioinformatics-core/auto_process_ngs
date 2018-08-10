@@ -4,13 +4,10 @@ auto-process-ngs: automatic processing of NGS sequencing data
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
 
-   index
+   requirements
    install
-   standard_protocol
    commands
-   using
    barcode_analysis
    analysis_dirs
    metadata
@@ -22,9 +19,9 @@ auto-process-ngs: automatic processing of NGS sequencing data
    advanced
    developers
 
-========
-Overview
-========
+============
+What it does
+============
 
 ``auto_process_ngs`` provides a set of utilities which automate
 the generation and QC of Fastqs from the sequencing output of
