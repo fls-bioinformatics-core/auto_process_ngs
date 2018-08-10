@@ -17,7 +17,7 @@ auto-process-ngs: automatic processing of NGS sequencing data
    10xgenomics
    problems
    advanced
-   developers
+   developers/index
 
 ============
 What it does
