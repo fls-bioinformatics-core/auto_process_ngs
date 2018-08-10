@@ -8,11 +8,16 @@ Infrastructure
 
 Conceptually the infrastructure consists of:
 
-* **Data source**: where the sequencing data is located
+* **Data source**: where the sequencing data are located
 * **Working area**: where the processing will is performed
 * **QC server**: where QC reports are published to
 * **Archive storage**: where the final outputs are copied
   and stored once processing is completed
+
+These can all be on the same filesystem on a single machine;
+or one or more parts can be NFS filesystems, or even
+filesystems mounted on other machines which are accessed
+using ``ssh``.
 
 *********************
 Software dependencies
