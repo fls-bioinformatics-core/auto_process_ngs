@@ -263,6 +263,12 @@ def get_modules(pkg):
 import auto_process_ngs
 modlist = get_modules(auto_process_ngs)
 
+# Ensure the 'developers' subdir exists
+devdocdir = os.path.join(os.getcwd(),"developers")
+if not os.path.exists(devdocdir):
+    print "Making %s" % devdocdir
+    os.mkdir(devdocdir)
+
 # Generate documents for each module
 for modname in modlist:
     docname = modname.replace('.','_')
