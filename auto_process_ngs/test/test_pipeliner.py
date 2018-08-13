@@ -16,6 +16,8 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import FileCollector
+from auto_process_ngs.pipeliner import Dispatcher
+from bcftbx.JobRunner import SimpleJobRunner
 
 # Unit tests
 
@@ -575,3 +577,52 @@ class TestFileCollector(unittest.TestCase):
         self.assertEqual(list(txt_files),
                          [os.path.join(self.working_dir,"test1.txt")])
 
+class TestDispatcher(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestDispatcher')
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_dispatcher_subprocess(self):
+        """
+        Dispatcher: runs a function via subprocess module
+        """
+        dispatcher_wd = os.path.join(self.working_dir,
+                                     "test_dispatcher")
+        d = Dispatcher(working_dir=dispatcher_wd)
+        def hello(name):
+            return "Hello %s!" % name
+        cmd = d.dispatch_function(hello,"World")
+        exit_code = cmd.run_subprocess(log=os.path.join(self.working_dir,
+                                                        "dispatcher.log"))
+        self.assertEqual(exit_code,0)
+        result = d.get_result()
+        self.assertEqual(result,"Hello World!")
+
+    def test_dispatcher_simplejobrunner(self):
+        """
+        Dispatcher: runs a function via SimpleJobRunner
+        """
+        dispatcher_wd = os.path.join(self.working_dir,
+                                     "test_dispatcher")
+        d = Dispatcher(working_dir=dispatcher_wd)
+        def hello(name):
+            return "Hello %s!" % name
+        cmd = d.dispatch_function(hello,"World")
+        runner = SimpleJobRunner(log_dir=self.working_dir)
+        job_id = runner.run("Hello world",
+                            self.working_dir,
+                            cmd.command,
+                            cmd.args)
+        while runner.isRunning(job_id):
+            time.sleep(0.1)
+        exit_code = cmd.run_subprocess()
+        self.assertEqual(exit_code,0)
+        result = d.get_result()
+        self.assertEqual(result,"Hello World!")

@@ -1292,8 +1292,8 @@ class Dispatcher(object):
         # Generate command to run the function
         return Command("python",
                        "-c",
-                       "'from auto_process_ngs.pipeliner import Dispatcher ; "
-                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\",\"%s\")'" %
+                       "from auto_process_ngs.pipeliner import Dispatcher ; "
+                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\",\"%s\")" %
                        (pkl_func_file,
                         pkl_args_file,
                         pkl_kwds_file,
