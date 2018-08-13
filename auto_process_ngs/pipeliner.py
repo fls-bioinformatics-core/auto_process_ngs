@@ -1077,7 +1077,8 @@ class PipelineCommand(object):
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell,
                                        prologue='\n'.join(prologue),
-                                       epilogue='\n'.join(epilogue))
+                                       epilogue='\n'.join(epilogue),
+                                       quote_spaces=True)
         return script_file
 
     def init(self):

@@ -522,7 +522,7 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### HOSTNAME $HOSTNAME\"\n"
                          "echo \"#### USER $USER\"\n"
                          "echo \"#### START $(date)\"\n"
-                         "echo hello there\n"
+                         "echo 'hello there'\n"
                          "exit_code=$?\n"
                          "echo \"#### END $(date)\"\n"
                          "echo \"#### EXIT_CODE $exit_code\"\n"
