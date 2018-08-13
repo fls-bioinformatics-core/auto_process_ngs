@@ -17,6 +17,7 @@ for pattern in ('bin/*.py','bin/*.sh',):
 install_requires = ['pillow',
                     'matplotlib',
                     'pandas',
+                    'cloudpickle',
                     'genomics-bcftbx',
                     'nebulizer']
 # If we're on ReadTheDocs then we can reduce this

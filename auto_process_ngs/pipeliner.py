@@ -382,7 +382,7 @@ import inspect
 import traceback
 import string
 ##import importlib
-import pickle
+import cloudpickle
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -1167,12 +1167,16 @@ class Dispatcher(object):
     >>> cmd.run_subprocess()
 
     """
-    def __init__(self,working_dir=None):
+    def __init__(self,working_dir=None,pickler=None):
         """
         """
         if not working_dir:
             working_dir = str(uuid.uuid4())
         self._working_dir = os.path.abspath(working_dir)
+        if pickler is None:
+            self._pickler = cloudpickle
+        else:
+            self._picker = pickler
         # TO-DO: remove working dir using atexit
 
     @property
@@ -1249,14 +1253,14 @@ class Dispatcher(object):
         pickle_file = os.path.join(self.working_dir,
                                    str(uuid.uuid4()))
         with open(pickle_file,'wb') as fp:
-            fp.write(pickle.dumps(obj))
+            fp.write(self._pickler.dumps(obj))
         return pickle_file
 
     def _unpickle_object(self,pickle_file):
         """
         """
         with open(pickle_file,'rb') as fp:
-            return pickle.loads(fp.read())
+            return self._pickler.loads(fp.read())
 
 ######################################################################
 # Generic pipeline functions
