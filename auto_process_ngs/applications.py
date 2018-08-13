@@ -237,7 +237,8 @@ class Command:
         return (status,output)
 
     def make_wrapper_script(self,shell=None,filen=None,fp=None,
-                            prologue=None,epilogue=None):
+                            prologue=None,epilogue=None,
+                            quote_spaces=False):
         """Wrap the command in a script
 
         Returns a string which can be injected into a file and
@@ -255,19 +256,33 @@ class Command:
             into the script before the command
           epilogue (str): optional, if set then will be written
             into the script after the command
+          quote_spaces (str): if True then arguments containing
+            whitespace will be wrapped in quotes
 
         Returns:
           String: the wrapper script contents.
         """
+        # Handle quoting of spaces
+        if quote_spaces:
+            args = []
+            for arg in self.command_line:
+                if (' ' in str(arg)):
+                    args.append("'%s'" % arg)
+                else:
+                    args.append(str(arg))
+        else:
+            args = [str(arg) for arg in self.command_line]
+        # Build script
         script = []
         if shell is not None:
             script.append("#!%s" % shell)
         if prologue is not None:
             script.append("%s" % prologue)
-        script.append(str(self))
+        script.append(' '.join(args))
         if epilogue is not None:
             script.append("%s" % epilogue)
         script = '\n'.join(script)
+        # Write to file
         if fp is not None:
             fp.write(script)
         if filen is not None:
