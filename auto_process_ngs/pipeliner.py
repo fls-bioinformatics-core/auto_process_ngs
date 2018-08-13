@@ -383,6 +383,7 @@ import traceback
 import string
 ##import importlib
 import cloudpickle
+import atexit
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -1160,50 +1161,82 @@ class PipelineCommandWrapper(PipelineCommand):
 
 class Dispatcher(object):
     """
-    Usage:
+    Class to invoke Python functions in external processes
+
+    Enables a Python function to be run in a separate process
+    and collect the results.
+
+    Example usage:
 
     >>> d = Dispatcher()
     >>> cmd = d.dispatch_function(bcftbx.utils.list_dirs,os.get_cwd())
     >>> cmd.run_subprocess()
+    >>> result = d.get_result()
 
+    The Dispatcher works by pickling the function, arguments
+    and keywords to files, and then creating a command which
+    can be run as an external process; this unpickles the
+    function etc, executes it, and makes the result available
+    to the dispatcher on successful completion.
+
+    Currently uses cloudpickle as the pickling module:
+    https://pypi.org/project/cloudpickle/
     """
-    def __init__(self,working_dir=None,pickler=None):
+    def __init__(self,working_dir=None,cleanup=True):
         """
+        Create a new Dispatcher instance
+
+        Arguments:
+          working_dir (str): optional, explicitly specify the
+            directory where pickled files and other
+            intermediates will be stored
+          cleanup (bool): if True then remove the working
+            directory on exit
         """
+        self._id = str(uuid.uuid4())
         if not working_dir:
-            working_dir = str(uuid.uuid4())
+            working_dir = "dispatcher.%s" % self._id
         self._working_dir = os.path.abspath(working_dir)
-        if pickler is None:
-            self._pickler = cloudpickle
-        else:
-            self._picker = pickler
-        # TO-DO: remove working dir using atexit
+        self._pickled_result_file = None
+        self._pickler = cloudpickle
+        if cleanup:
+            atexit.register(self._cleanup)
 
     @property
     def working_dir(self):
         """
+        Return the working directory path
         """
         if not os.path.exists(self._working_dir):
-            print "Making directory: %s" % self._working_dir
+            logger.debug("Dispatcher: making working directory: "
+                         "%s" % self._working_dir)
             os.mkdir(self._working_dir)
         return self._working_dir
 
-    ##def import_function_by_name(self,func_name):
-    ##    """
-    ##    Import a function given its name
-    ##    """
-    ##    # Get function and module names
-    ##    func_name = func_name.split('.')
-    ##    module_ = '.'.join(func_name[:-1])
-    ##    func = func_name[-1]
-    ##    print "Importing '%s'" % module_
-    ##    module_ = importlib.import_module(module_)
-    ##    print "Running function '%s'" % func
-    ##    print "Arguments: %s" % args
-    ##    return getattr(module_,func)
-
-    def execute(self,pkl_func_file,pkl_args_file,pkl_kwds_file):
+    def _cleanup(self):
         """
+        Internal: remove the working directory and its contents
+        """
+        if os.path.exists(self._working_dir):
+            logger.debug("Dispatcher: cleaning up dir %s" %
+                         self._working_dir)
+            shutil.rmtree(self._working_dir)
+
+    def execute(self,pkl_func_file,pkl_args_file,pkl_kwds_file,
+                pkl_result_file=None):
+        """
+        Internal: execute the function
+
+        Arguments:
+          pkl_func_file (str): path to the file with the pickled
+            version of the function to be invoked
+          pkl_args_file (str): path to the file with the pickled
+            version of the function arguments
+          pkl_args_file (str): path to the file with the pickled
+            version of the keyword arguments
+          pkl_result_file (str): optional path to the file where
+            the pickled version of the function result will be
+            written
         """
         # Unpickle the components
         print "Unpickling..."
@@ -1224,10 +1257,24 @@ class Dispatcher(object):
         # Execute the function
         result = func(*args,**kwds)
         print "Result: %s" % result
+        # Pickle the result
+        if pkl_result_file:
+            self._pickle_object(result,pkl_result_file)
         return 0
 
     def dispatch_function(self,func,*args,**kwds):
         """
+        Generate a command to execute the function externally
+
+        Arguments:
+          func (function): function to be executed
+          args (list): arguments to invoke the function with
+          kwds (mapping): keyword arguments to invoke the
+            function with
+
+        Returns:
+          Command: a Command instance that can be used to
+            execute the function.
         """
         print "Dispatching function:"
         print "-- function: %s" % func
@@ -1238,26 +1285,62 @@ class Dispatcher(object):
         pkl_func_file = self._pickle_object(func)
         pkl_args_file = self._pickle_object(args)
         pkl_kwds_file = self._pickle_object(kwds)
+        # Filename for results
+        self._pickled_result_file = os.path.join(self.working_dir,
+                                                 str(uuid.uuid4()))
         # Generate command to run the function
         return Command("python",
                        "-c",
-                       "from auto_process_ngs.pipeliner import Dispatcher ; "
-                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\")" %
+                       "'from auto_process_ngs.pipeliner import Dispatcher ; "
+                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\",\"%s\")'" %
                        (pkl_func_file,
                         pkl_args_file,
-                        pkl_kwds_file))
+                        pkl_kwds_file,
+                        self._pickled_result_file))
 
-    def _pickle_object(self,obj):
+    def get_result(self):
+        """Return the result from the function invocation
+
+        Returns:
+          Object: the object returned by the function, or None
+            if no result was found.
         """
+        if os.path.exists(self._pickled_result_file):
+            result = self._unpickle_object(self._pickled_result_file)
+        else:
+            result = None
+        return result
+
+    def _pickle_object(self,obj,pickle_file=None):
         """
-        pickle_file = os.path.join(self.working_dir,
-                                   str(uuid.uuid4()))
+        Internal: pickle an object and write to file
+
+        Arguments:
+          obj (object): object to be pickled
+          pickle_file (str): specified path to output
+            file (optional)
+
+        Returns:
+          String: path to the file containing the
+            pickled object.
+        """
+        if not pickle_file:
+            pickle_file = os.path.join(self.working_dir,
+                                       str(uuid.uuid4()))
         with open(pickle_file,'wb') as fp:
             fp.write(self._pickler.dumps(obj))
         return pickle_file
 
     def _unpickle_object(self,pickle_file):
         """
+        Internal: unpickle an object from a file
+
+        Arguments:
+          pickle_file (str): path to output file
+            with pickled data
+
+        Returns:
+          Object: the unpickled object.
         """
         with open(pickle_file,'rb') as fp:
             return self._pickler.loads(fp.read())
