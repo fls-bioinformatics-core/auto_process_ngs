@@ -622,7 +622,7 @@ class TestDispatcher(unittest.TestCase):
                             cmd.args)
         while runner.isRunning(job_id):
             time.sleep(0.1)
-        exit_code = cmd.run_subprocess()
+        exit_code = runner.exit_status(job_id)
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
