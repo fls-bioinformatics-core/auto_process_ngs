@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 """
 pipeliner.py
@@ -381,6 +381,8 @@ import uuid
 import inspect
 import traceback
 import string
+##import importlib
+import pickle
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -1151,6 +1153,110 @@ class PipelineCommandWrapper(PipelineCommand):
         Internal: implement the 'cmd' method
         """
         return self._cmd
+
+######################################################################
+# Dispatching Python functions as separate processes
+######################################################################
+
+class Dispatcher(object):
+    """
+    Usage:
+
+    >>> d = Dispatcher()
+    >>> cmd = d.dispatch_function(bcftbx.utils.list_dirs,os.get_cwd())
+    >>> cmd.run_subprocess()
+
+    """
+    def __init__(self,working_dir=None):
+        """
+        """
+        if not working_dir:
+            working_dir = str(uuid.uuid4())
+        self._working_dir = os.path.abspath(working_dir)
+        # TO-DO: remove working dir using atexit
+
+    @property
+    def working_dir(self):
+        """
+        """
+        if not os.path.exists(self._working_dir):
+            print "Making directory: %s" % self._working_dir
+            os.mkdir(self._working_dir)
+        return self._working_dir
+
+    ##def import_function_by_name(self,func_name):
+    ##    """
+    ##    Import a function given its name
+    ##    """
+    ##    # Get function and module names
+    ##    func_name = func_name.split('.')
+    ##    module_ = '.'.join(func_name[:-1])
+    ##    func = func_name[-1]
+    ##    print "Importing '%s'" % module_
+    ##    module_ = importlib.import_module(module_)
+    ##    print "Running function '%s'" % func
+    ##    print "Arguments: %s" % args
+    ##    return getattr(module_,func)
+
+    def execute(self,pkl_func_file,pkl_args_file,pkl_kwds_file):
+        """
+        """
+        # Unpickle the components
+        print "Unpickling..."
+        try:
+            func = self._unpickle_object(pkl_func_file)
+        except AttributeError as ex:
+            # Note that functions are pickled by 'fully qualified'
+            # name reference, not by value i.e. only the function
+            # name and the name of the parent module are pickled
+            print "Failed to load unpickled function: %s" % ex
+            return 1
+        args = self._unpickle_object(pkl_args_file)
+        kwds = self._unpickle_object(pkl_kwds_file)
+        print "Executing:"
+        print "-- function: %s" % func
+        print "-- args    : %s" % (args,)
+        print "-- kwds    : %s" % (kwds,)
+        # Execute the function
+        result = func(*args,**kwds)
+        print "Result: %s" % result
+        return 0
+
+    def dispatch_function(self,func,*args,**kwds):
+        """
+        """
+        print "Dispatching function:"
+        print "-- function: %s" % func
+        print "-- args    : %s" % (args,)
+        print "-- kwds    : %s" % (kwds,)
+        # Pickle the components
+        print "Pickling..."
+        pkl_func_file = self._pickle_object(func)
+        pkl_args_file = self._pickle_object(args)
+        pkl_kwds_file = self._pickle_object(kwds)
+        # Generate command to run the function
+        return Command("python",
+                       "-c",
+                       "from auto_process_ngs.pipeliner import Dispatcher ; "
+                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\")" %
+                       (pkl_func_file,
+                        pkl_args_file,
+                        pkl_kwds_file))
+
+    def _pickle_object(self,obj):
+        """
+        """
+        pickle_file = os.path.join(self.working_dir,
+                                   str(uuid.uuid4()))
+        with open(pickle_file,'wb') as fp:
+            fp.write(pickle.dumps(obj))
+        return pickle_file
+
+    def _unpickle_object(self,pickle_file):
+        """
+        """
+        with open(pickle_file,'rb') as fp:
+            return pickle.loads(fp.read())
 
 ######################################################################
 # Generic pipeline functions
