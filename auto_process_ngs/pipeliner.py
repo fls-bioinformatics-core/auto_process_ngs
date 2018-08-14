@@ -694,7 +694,7 @@ class PipelineTask(object):
     'setup', 'finish' (optionally) and 'output' methods.
 
     The 'add_cmd' method can be used within 'setup' to add one
-    or 'PipelineCommand' instances.
+    or more 'PipelineCommand' instances.
 
     """
     def __init__(self,_name,*args,**kws):
@@ -702,7 +702,7 @@ class PipelineTask(object):
         Create a new PipelineTask instance
 
         Arguments:
-          name (str): an arbitrary user-friendly name for the
+          _name (str): an arbitrary user-friendly name for the
             task instance
           args (List): list of arguments to be supplied to
             the subclass (must match those defined in the
@@ -817,6 +817,7 @@ class PipelineTask(object):
         """
         print "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
                                     self._name,s)
+
     def invoke(self,f,args=None,kws=None):
         """
         Internal: invoke arbitrary method on the task
