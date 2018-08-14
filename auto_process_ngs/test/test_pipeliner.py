@@ -13,6 +13,7 @@ from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineTask
+from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import FileCollector
@@ -484,6 +485,91 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.exit_code,123)
         self.assertEqual(task.output(),None)
         self.assertEqual(task.stdout,"")
+
+class TestPipelineFunctionTask(unittest.TestCase):
+
+    def setUp(self):
+        # Set up a scheduler
+        self.sched = SimpleScheduler(poll_interval=0.5)
+        self.sched.start()
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipeline')
+
+    def tearDown(self):
+        # Stop the scheduler
+        if self.sched is not None:
+            self.sched.stop()
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_pipelinefunctiontask(self):
+        """
+        PipelineFunctionTask: run task wrapping function call
+        """
+        # Define a task with a function call
+        class Hello(PipelineFunctionTask):
+            def init(self,name):
+                pass
+            def setup(self):
+                self.add_call("Emit greeting",
+                              self.hello,
+                              self.args.name)
+            def hello(self,name):
+                return "Hello %s!" % name
+            def output(self):
+                return None
+        # Make a task instance
+        task = Hello("Hello world","World")
+        # Check initial state
+        self.assertEqual(task.args.name,"World")
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.result(),["Hello World!"])
+        self.assertEqual(task.output(),None)
+
+    def test_pipelinefunctiontask_with_failing_call(self):
+        """
+        PipelineFunctionTask: run task with failing function call
+        """
+        # Define a task with a function call
+        # that raises an exception
+        class RaisesException(PipelineFunctionTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.add_call("Raises an exception",
+                              self.raises_exception)
+            def raises_exception(self):
+                raise Exception("Exception is raised")
+            def output(self):
+                return None
+        # Make a task instance
+        task = RaisesException("Will raise exception")
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertNotEqual(task.exit_code,0)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
 
 class TestPipelineCommand(unittest.TestCase):
 

@@ -20,6 +20,8 @@ The core classes are:
 
 Additional supporting classes:
 
+- PipelineFunctionTask: subclass of PipelineTask which enables Python
+  functions to be run as external processes
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
 - FileCollector: returning collections of files based on glob patterns
 
@@ -234,6 +236,52 @@ be used as an alternative where appropriate. For example::
                     fp.write()
         def output():
             return FileCollector(self.args.d,"*")
+
+Running Python functions as tasks
+---------------------------------
+
+The PipelineFunctionTask class enables a Python function to be run
+as an external process, for example reimplementing the earlier
+``CountReads`` example::
+
+    from bcftbx.FASTQFile import nreads
+    class CountReads(PipelineTask):
+        def init(self,fastqs):
+            self.counts = dict()
+        def setup(self):
+            self.add_call(self.count_reads,
+                          self.args.fastqs)
+        def count_reads(self,fastqs):
+            # Count reads in each Fastq
+            counts = dict()
+            for fq in fastqs:
+                counts[fq] = nreads(fq)
+            return counts
+        def finish(self):
+            for fq in self.result():
+                for fq in result[fq]:
+                    self.counts[fq] = result[fq]
+        def output(self):
+            return self.counts
+
+The main differences between this and the PipelineTask class are:
+
+1. The class includes a method (in this case ``make_files``) which
+   implements the Python function to be executed.
+
+2. The ``add_call`` method is used in the ``setup`` method to define
+   calls to the function to run (analogous to the ``add_cmd`` method
+   for normal tasks). ``add_call`` can be used multiple times, e.g.
+   to break a task into several separate processes (again analogous
+   to ``add_cmd``).
+
+3. The return values from the invoked function are collected and
+   made available via the ``result`` method. This returns a list
+   of results (one for each ``add_call`` was used). The ``finish``
+   method contains code to post-process these results.
+
+The advantage of this approach is that intensive operations (e.g.
+processing large numbers of file
 
 Building and running a pipeline
 -------------------------------
@@ -1014,6 +1062,80 @@ class PipelineTask(object):
         raise NotImplementedError("Subclass must implement 'finish' method")
     def output(self):
         raise NotImplementedError("Subclass must implement 'output' method")
+
+class PipelineFunctionTask(PipelineTask):
+    """
+    Class enabling a Python function to be run as a task
+
+    A 'function task' enables one or more instances of a
+    Python function or class method to be run concurrently
+    as external programs, and for the return values of the
+    to recovered on task completion.
+
+    This class should be subclassed to implement the 'init',
+    'setup', 'finish' (optionally) and 'output' methods.
+
+    The 'add_call' method can be used within 'setup' to add
+    one or more function calls to be invoked.
+    """
+
+    def __init__(self,_name,*args,**kws):
+        """
+        Create a new PipelineFunctionTask instance
+
+        Arguments:
+          _name (str): an arbitrary user-friendly name for the
+            task instance
+          args (List): list of arguments to be supplied to
+            the subclass (must match those defined in the
+            'init' method)
+          kws (Dictionary): dictionary of keyword-value pairs
+            to be supplied to the subclass (must match those
+            defined in the 'init' method)
+        """
+        PipelineTask.__init__(self,_name,*args,**kws)
+        self._dispatchers = []
+        self._result = None
+
+    def add_call(self,name,f,*args,**kwds):
+        """
+        Add a function call to the task
+
+        Arguments:
+           name (str): a user friendly name for the call
+           f (function): the function or instance method
+             to be invoked in the task
+           args (list): arguments to be passed to the
+             function when invoked
+           kwds (mapping): keyword=value mapping to be
+             passed to the function when invoked
+        """
+        d = Dispatcher()
+        cmd = d.dispatch_function(f,*args,**kwds)
+        self.add_cmd(PipelineCommandWrapper(name,
+                                            *cmd.command_line))
+        self._dispatchers.append(d)
+
+    def finish_task(self):
+        """
+        Internal: perform actions to finish the task
+        """
+        result = list()
+        try:
+            for d in self._dispatchers:
+                result.append(d.get_result())
+        except Exception:
+            self._completed = True
+            self._exit_code = 1
+            result = None
+        self._result = result
+        PipelineTask.finish_task(self)
+
+    def result(self):
+        """
+        Return the results of the function invocations
+        """
+        return self._result
 
 class PipelineCommand(object):
     """
