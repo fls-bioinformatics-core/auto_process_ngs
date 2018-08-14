@@ -5,7 +5,9 @@
 
 import os
 import argparse
+from bcftbx.FASTQFile import nreads
 from auto_process_ngs.pipeliner import PipelineTask
+from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import Pipeline
 
@@ -40,45 +42,24 @@ class RunFastqc(PipelineTask):
         # Returns a list of Fastqc HTML files
         return self.out_files
 
-class CountReads(PipelineTask):
-    # Count reads in Fastq files
-    def init(self,fastqs):
-        # fastqs: list of input Fastq files
-        self.counts = dict()
-    def setup(self):
-        for fq in self.args.fastqs:
-            print fq
-            if os.path.splitext(fq)[1] == ".gz":
-                cat = "zcat"
-            else:
-                cat = "cat"
-            self.add_cmd(
-                PipelineCommandWrapper("Count reads",
-                                       "echo","-n",fq,"' '","&&",
-                                       cat,fq,"|",
-                                       "wc","-l"))
-    def finish(self):
-        for line in self.stdout.split('\n'):
-            if not line or line.startswith("#### "):
-                # Reject blank lines or lines
-                # starting with pipeline comment
-                continue
-            fq = line.split()[0]
-            read_count = int(line.split()[1])/4
-            self.counts[fq] = read_count
-    def output(self):
-        # Returns a dictionary with file paths as
-        # keys mapping to read counts
-        return self.counts
-
-class FilterEmptyFastqs(PipelineTask):
+class FilterEmptyFastqs(PipelineFunctionTask):
     # Filter Fastq files based on read count
-    def init(self,read_counts):
-        # read_counts: dictionary of read counts
+    def init(self,fastqs):
         self.filtered_fastqs = list()
     def setup(self):
-        for fq in self.args.read_counts:
-            if self.args.read_counts[fq] > 0:
+        for fq in self.args.fastqs:
+            self.add_call("Filter out empty fastqs",
+                          self.filter_empty_fastqs,fq)
+    def filter_empty_fastqs(self,*fastqs):
+        filtered_fastqs = list()
+        for fq in fastqs:
+            if nreads(fq) > 0:
+                print "%s" % fq
+                filtered_fastqs.append(fq)
+        return filtered_fastqs
+    def finish(self):
+        for result in self.result():
+            for fq in result:
                 self.filtered_fastqs.append(fq)
     def output(self):
         # Returns a list of Fastq files
@@ -92,16 +73,12 @@ if __name__ == "__main__":
 
     # Make and run a pipeline
     ppl = Pipeline()
-    read_counts = CountReads("Count the reads",args.fastqs)
-    print read_counts.output()
     filter_empty_fastqs = FilterEmptyFastqs("Filter empty Fastqs",
-                                            read_counts.output())
+                                            args.fastqs)
     run_fastqc = RunFastqc("Run Fastqc",
                            filter_empty_fastqs.output(),
                            os.getcwd())
-    ppl.add_task(read_counts)
-    ppl.add_task(filter_empty_fastqs,requires=(read_counts,))
+    ppl.add_task(filter_empty_fastqs)
     ppl.add_task(run_fastqc,requires=(filter_empty_fastqs,))
     ppl.run()
-    sched.stop()
     print run_fastqc.output()
