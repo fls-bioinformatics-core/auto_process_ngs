@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-17 Peter Briggs
+Copyright (C) University of Manchester 2013-18 Peter Briggs
 
 """
 
