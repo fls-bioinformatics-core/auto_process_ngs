@@ -42,6 +42,7 @@ from auto_process_ngs.icell8_utils import ICell8WellList
 from auto_process_ngs.icell8_utils import normalize_sample_name
 from auto_process_ngs.qc.runqc import RunQC
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
+from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
