@@ -27,6 +27,7 @@ There are some underlying classes and functions that are intended for
 internal use:
 
 - Capturing: capture stdout from a Python function
+- Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
 
@@ -1200,6 +1201,9 @@ class Dispatcher(object):
         self._working_dir = os.path.abspath(working_dir)
         self._pickled_result_file = None
         self._pickler = cloudpickle
+        # Use the current Python interpreter when
+        # running the function
+        self._python = sys.executable
         if cleanup:
             atexit.register(self._cleanup)
 
@@ -1290,7 +1294,7 @@ class Dispatcher(object):
         self._pickled_result_file = os.path.join(self.working_dir,
                                                  str(uuid.uuid4()))
         # Generate command to run the function
-        return Command("python",
+        return Command(self._python,
                        "-c",
                        "from auto_process_ngs.pipeliner import Dispatcher ; "
                        "Dispatcher().execute(\"%s\",\"%s\",\"%s\",\"%s\")" %
@@ -1307,10 +1311,9 @@ class Dispatcher(object):
             if no result was found.
         """
         if os.path.exists(self._pickled_result_file):
-            result = self._unpickle_object(self._pickled_result_file)
+            return self._unpickle_object(self._pickled_result_file)
         else:
-            result = None
-        return result
+            raise Exception("Pickled output not found")
 
     def _pickle_object(self,obj,pickle_file=None):
         """
