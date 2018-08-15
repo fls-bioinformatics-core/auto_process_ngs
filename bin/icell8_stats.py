@@ -27,7 +27,7 @@ from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.utils import ICell8Stats
 from auto_process_ngs.icell8.utils import get_batch_size
 from auto_process_ngs.icell8.utils import batch_fastqs
-from auto_process_ngs.icell8.utils import MAXIMUM_BATCH_SIZE
+from auto_process_ngs.icell8.constants import MAXIMUM_BATCH_SIZE
 
 # Module specific logger
 logger = logging.getLogger("icell8_stats")
