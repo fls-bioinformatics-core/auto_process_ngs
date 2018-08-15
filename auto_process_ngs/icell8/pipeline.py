@@ -67,6 +67,14 @@ from ..pipeliner import FileCollector
 from .utils import ICell8WellList
 from .utils import normalize_sample_name
 
+#######################################################################
+# Constants
+#######################################################################
+
+import constants
+MAXIMUM_BATCH_SIZE = constants.MAXIMUM_BATCH_SIZE
+DEFAULT_BATCH_SIZE = 5000000
+
 ######################################################################
 # ICELL8 pipeline command classes
 ######################################################################

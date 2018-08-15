@@ -52,19 +52,15 @@ from ..utils import ProgressChecker
 import logging
 logger = logging.getLogger(__name__)
 
-######################################################################
-# Magic numbers
-######################################################################
+#######################################################################
+# Constants
+#######################################################################
 
-INLINE_BARCODE_LENGTH = 11
-UMI_LENGTH = 14
-MAXIMUM_BATCH_SIZE = 100000000
-
-######################################################################
-# Other constants
-######################################################################
-
-SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
+import constants
+INLINE_BARCODE_LENGTH = constants.INLINE_BARCODE_LENGTH
+UMI_LENGTH = constants.UMI_LENGTH
+MAXIMUM_BATCH_SIZE = constants.MAXIMUM_BATCH_SIZE
+SAMPLENAME_ILLEGAL_CHARS = constants.SAMPLENAME_ILLEGAL_CHARS
 
 ######################################################################
 # Functions
