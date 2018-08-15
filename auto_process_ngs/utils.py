@@ -44,6 +44,7 @@ import os
 import re
 import logging
 import zipfile
+import gzip
 import pydoc
 import tempfile
 import operator

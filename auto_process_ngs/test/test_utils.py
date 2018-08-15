@@ -5,6 +5,7 @@
 import unittest
 import tempfile
 import shutil
+import gzip
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
@@ -209,6 +210,21 @@ class TestBufferedOutputFiles(unittest.TestCase):
         self.assertEqual(open(out.file_name('test1'),'r').read(),
                          "Some test text\n")
         self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_bufferedoutputfiles_with_gzip(self):
+        out = BufferedOutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt.gz'))
+        out.open('test2',os.path.join(self.wd,'test2.txt.gz'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt.gz'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt.gz'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(gzip.open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(gzip.open(out.file_name('test2'),'r').read(),
                          "Some more\ntest text\n")
     def test_bufferedoutputfiles_with_basedir(self):
         out = BufferedOutputFiles(self.wd)
