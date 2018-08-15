@@ -182,6 +182,9 @@ class ICell8QCFilter(Pipeline):
             sample_fastqs_dir = os.path.join(outdir,
                                              sample_fastqs_dir)
 
+        # Temporary dir
+        tmp_dir = os.path.join(outdir,"tmp.%s" % self._id)
+
         # Only build pipeline if the final fastqs don't exist
         if (os.path.exists(barcode_fastqs_dir) and
             os.path.exists(sample_fastqs_dir)):
@@ -194,10 +197,11 @@ class ICell8QCFilter(Pipeline):
         # Build the pipeline
         ####################
 
-        # Create directory structure etc
+        # Create directory structure
         setup_dirs = SetupDirectories("Setup output directories",
                                       (outdir,
-                                       stats_dir))
+                                       stats_dir,
+                                       tmp_dir))
         self.add_task(setup_dirs)
 
         # Initial stats
@@ -207,7 +211,8 @@ class ICell8QCFilter(Pipeline):
                                                     "icell8_stats.tsv"),
                                        well_list_file,
                                        unassigned=True,
-                                       nprocs=nprocessors['statistics'])
+                                       nprocs=nprocessors['statistics'],
+                                       temp_dir=tmp_dir)
         self.add_task(initial_stats,runner=runners['statistics'],
                       requires=(setup_dirs,))
 
@@ -261,7 +266,8 @@ class ICell8QCFilter(Pipeline):
                                       initial_stats.output(),
                                       suffix="_filtered",
                                       append=True,
-                                      nprocs=nprocessors['statistics'])
+                                      nprocs=nprocessors['statistics'],
+                                      temp_dir=tmp_dir)
         self.add_task(filter_stats,requires=(initial_stats,
                                             collect_filtered_fastqs),
                      runner=runners['statistics'])
@@ -282,7 +288,8 @@ class ICell8QCFilter(Pipeline):
                                            initial_stats.output(),
                                            suffix="_poly_g",
                                            append=True,
-                                           nprocs=nprocessors['statistics'])
+                                           nprocs=nprocessors['statistics'],
+                                           temp_dir=tmp_dir)
         self.add_task(poly_g_stats,
                       requires=(collect_poly_g_fastqs,filter_stats),
                       runner=runners['statistics'])
@@ -304,7 +311,8 @@ class ICell8QCFilter(Pipeline):
                                     initial_stats.output(),
                                     suffix="_trimmed",
                                     append=True,
-                                    nprocs=nprocessors['statistics'])
+                                    nprocs=nprocessors['statistics'],
+                                    temp_dir=tmp_dir)
         self.add_task(trim_stats,requires=(collect_trimmed_fastqs,
                                            poly_g_stats),
                       runner=runners['statistics'])
@@ -339,7 +347,8 @@ class ICell8QCFilter(Pipeline):
                 initial_stats.output(),
                 suffix="_contaminant_filtered",
                 append=True,
-                nprocs=nprocessors['statistics'])
+                nprocs=nprocessors['statistics'],
+                temp_dir=tmp_dir)
             self.add_task(final_stats,
                           requires=(collect_contaminant_filtered,
                                     trim_stats),
@@ -392,7 +401,8 @@ class ICell8QCFilter(Pipeline):
             initial_stats.output(),
             suffix="_final",
             append=True,
-            nprocs=nprocessors['statistics'])
+            nprocs=nprocessors['statistics'],
+            temp_dir=tmp_dir)
         if do_contaminant_filter:
             final_barcode_stats_requires = (collect_barcode_fastqs,
                                             final_stats,)
@@ -428,6 +438,8 @@ class ICell8QCFilter(Pipeline):
                                               trim_dir))
         cleanup_tasks.append(CleanupDirectory("remove barcode split Fastqs",
                                               split_barcoded_fastqs_dir))
+        cleanup_tasks.append(CleanupDirectory("remove tmp directory",
+                                              tmp_dir))
         if do_contaminant_filter:
             cleanup_tasks.append(CleanupDirectory("Remove contaminant "
                                                   "filtered Fastqs",
@@ -489,7 +501,7 @@ class ICell8Statistics(PipelineCommand):
     """
     def init(self,fastqs,stats_file,well_list=None,
              suffix=None,unassigned=False,append=False,
-             nprocs=1):
+             nprocs=1,temp_dir=None):
         """
         Create new ICell8Statistics instance
 
@@ -517,6 +529,9 @@ class ICell8Statistics(PipelineCommand):
         self._unassigned = unassigned
         self._suffix = suffix
         self._nprocs = nprocs
+        self._temp_dir = temp_dir
+        if self._temp_dir is not None:
+            self._temp_dir = os.path.abspath(self._temp_dir)
     def cmd(self):
         # Build command
         cmd = Command('icell8_stats.py',
@@ -530,6 +545,9 @@ class ICell8Statistics(PipelineCommand):
             cmd.add_args('--append')
         if self._unassigned:
             cmd.add_args('--unassigned')
+        if self._temp_dir:
+            cmd.add_args('--temporary-dir',
+                         self._temp_dir)
         cmd.add_args(*self._fastqs)
         return cmd
 
@@ -923,7 +941,7 @@ class GetICell8Stats(PipelineTask):
     """
     def init(self,fastqs,stats_file,well_list=None,
              suffix=None,unassigned=False,append=False,
-             nprocs=1):
+             nprocs=1,temp_dir=None):
         """
         Initialise the GetICell8Stats task
 
@@ -969,7 +987,8 @@ class GetICell8Stats(PipelineTask):
                                       suffix=self.args.suffix,
                                       append=self.args.append,
                                       unassigned=self.args.unassigned,
-                                      nprocs=self.args.nprocs))
+                                      nprocs=self.args.nprocs,
+                                      temp_dir=self.args.temp_dir))
     def output(self):
         """
         Returns the path to the output statistics file
