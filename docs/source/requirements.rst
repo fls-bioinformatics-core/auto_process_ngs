@@ -2,23 +2,6 @@
 Requirements
 ============
 
-**************
-Infrastructure
-**************
-
-Conceptually the infrastructure consists of:
-
-* **Data source**: where the sequencing data are located
-* **Working area**: where the processing will is performed
-* **QC server**: where QC reports are published to
-* **Archive storage**: where the final outputs are copied
-  and stored once processing is completed
-
-These can all be on the same filesystem on a single machine;
-or one or more parts can be NFS filesystems, or even
-filesystems mounted on other machines which are accessed
-using ``ssh``.
-
 *********************
 Software dependencies
 *********************
@@ -84,3 +67,27 @@ The ICELL8 processing pipeline requires the following software
 * ``bowtie2`` (optional, required if using Bowtie2 genome indexes
   for contaminant filtering - see :doc:`icell8`)
   http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+
+*****************************
+Supported sequencer platforms
+*****************************
+
+The pipeline is currently used for output from the following
+Illumina sequencers:
+
+* HISeq 4000
+* MISeq
+* NextSeq
+* MiniSeq
+
+Earlier versions have been used on GAIIx and HISeq 2000/2500.
+
+*******************************
+Supported single-cell platforms
+*******************************
+
+The pipeline supports handling data from the Takara Bio SMARTer
+ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
+
+* :doc:`Handling ICELL8 scRNA-seq data <icell8>`
+* :doc:`Handling 10xGenomics Chromium scRNA-seq data <10xgenomics>`

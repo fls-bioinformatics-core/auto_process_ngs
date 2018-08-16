@@ -43,17 +43,20 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Running QC <using/run_qc>
    Publishing QC <using/publish_qc>
    Archiving analyses <using/archive>
-   commands
-   metadata
-   utilities
-   managing_data
    problems
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Post-processing
+   Reporting analyses <using/report>
+   managing_data
 
 .. toctree::
    :maxdepth: 2
    :caption: Outputs
 	     
    analysis_dirs
+   metadata
 
 .. _single-cell-docs:
 
@@ -63,6 +66,15 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
    Takara Bio ICELL8 data <icell8>
    10xGenomics Chromium data  <10xgenomics>
+
+.. _reference-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Reference Documentation
+
+   commands
+   utilities
 
 .. _developers-docs:
 
