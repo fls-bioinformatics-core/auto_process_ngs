@@ -48,6 +48,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 .. toctree::
    :maxdepth: 2
    :caption: Post-processing
+
    Reporting analyses <using/report>
    managing_data
 
