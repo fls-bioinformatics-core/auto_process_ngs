@@ -29,6 +29,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    overview
    requirements
    install
+   configure
 
 .. _running-pipelines:
 
