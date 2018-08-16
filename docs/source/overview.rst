@@ -18,6 +18,11 @@ like:
   functionality to fetch data, detect errors, generate
   statistics, and handle special cases.
 
+* :doc:`auto_process.py analyse_barcodes <using/analyse_barcodes>`
+  analyses the barcode sequences in the Fastqs produced
+  by ``make_fastqs``. This can help for example if
+  demultiplexing has failed due to mislabeling of samples.
+
 * :doc:`auto_process.py setup_analysis_dirs <using/setup_analysis_dirs>`
   sets up individual project directories for each of the
   projects within the sequencing run.
@@ -34,35 +39,52 @@ like:
 
 * :doc:`auto_process.py archive <using/archive>` copies
   the analysis directory and contents from the working
-  area to the archive storage area.
+  area to the archive storage area, for subsequent
+  bioinformatics analysis.
 
-Additional commands are available for special cases:
+Additional commands are available for reporting:
 
-* :doc:`auto_process.py analyse_barcodes <using/analyse_barcodes>`
-  analyses the barcode sequences in the Fastqs produced
-  by ``make_fastqs``. This can help for example if
-  demultiplexing has failed due to mislabeling of samples.
+* :doc:`auto_process.py report <using/report>` generates
+  reports on analysis directories in various formats.
 
-=============================
-Supported sequencer platforms
-=============================
+===========
+Terminology
+===========
 
-The pipeline is currently used for output from the following
-Illumina sequencers:
+This documentation refers to various concepts such as
+*analysis directories*, *analysis projects*,
+*sequencing runs* and so on. We define these as
+follows:
 
-* HISeq 4000
-* MISeq
-* NextSeq
-* MiniSeq
+* **(Sequencing) run**: the primary sequencing data (i.e.
+  Bcl files) produced by a run of a sequencer
+* **Analysis directory**: the top-level directory which
+  holds the outputs from ``auto_process`` when processing
+  data from a sequencing run
+* **Analysis project**: a subdirectory of an analysis
+  directory which holds the FASTQs and QC outputs for
+  a set of samples (aka a *project*) from the sequencing
+  run; there can be multiple analysis projects within a
+  single analysis directory
 
-Earlier versions have been used on GAIIx and HISeq 2000/2500.
+Additionally the terms *data source*, *working area*,
+*QC server* and *archive storage* refer to components of
+the compute infrastructure where the processing takes
+place:
 
-===============================
-Supported single-cell platforms
-===============================
+* **Data source**: location where the data from the
+  sequencing run are located
+* **Working area**: location where the processing is
+  performed, and which holds the analysis directory
+  and contents during the processing
+* **QC server**: location where QC reports are published
+  to, and which can be accessed via a web server
+* **Archive storage**: location where the final outputs
+  (i.e. the analysis directory and projects) are copied
+  to and stored once processing is completed, for
+  subsequent analysis by the bioinformaticians
 
-The pipeline supports handling data from the Takara Bio SMARTer
-ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
-
-* :doc:`Handling ICELL8 scRNA-seq data <icell8>`
-* :doc:`Handling 10xGenomics Chromium scRNA-seq data <10xgenomics>`
+These can all be on the same filesystem on a single machine;
+or one or more parts can be NFS filesystems, or even
+filesystems mounted on other machines which are accessed
+using ``ssh``.
