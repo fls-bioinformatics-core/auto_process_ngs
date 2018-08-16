@@ -6,7 +6,7 @@ Requirements
 Software dependencies
 *********************
 
-Many of the functions of ``auto_process`` depend on additional
+The following ``auto_process`` subcommands depend on additional
 third-party software packages which must be installed separately:
 
 =================== ================= ===================
@@ -50,6 +50,92 @@ Alternatively many of these packages can be obtained from the
     multiple ``bcl2fastq`` packages available on the path at run
     time then see :ref:`required_bcl2fastq_versions` for how to
     specify which version is used.
+
+**************
+Reference data
+**************
+
+The following ``auto_process`` stages require additional reference
+data:
+
+* :ref:`auto_process_reference_data_run_qc`
+* :ref:`auto_process_reference_data_icell8`
+* :ref:`auto_process_reference_data_10xgenomics`
+  
+.. _auto_process_reference_data_run_qc:
+
+------
+run_qc
+------
+
+The QC pipeline uses the ``illumina_qc.sh`` script from
+`genomics-bcftbx <https://genomics-bcftbx.readthedocs.io/>`_,
+which requires a set of ``fastq_screen`` conf files and
+underlying ``bowtie`` indexes to be created - these are
+described here:
+
+* https://genomics-bcftbx.readthedocs.io/en/latest/config.html#set-up-reference-data
+
+In addition the strandedness determination requires ``STAR``
+indexes for each organism of interest. These can then be
+defined in the ``fastq_strand_indexes`` section of the
+``settings.ini`` file, for example::
+
+  [fastq_strand_indexes]
+  human = /data/genomeIndexes/hg38/STAR/
+  mouse = /data/genomeIndexes/mm10/STAR/
+  
+.. _auto_process_reference_data_icell8:
+
+--------------------------------------
+process_icell8 (contaminant filtering)
+--------------------------------------
+
+The contaminant filtering stage of ``process_icell8`` needs
+two ``fastq_screen`` conf files to be set up, one containing
+``bowtie`` indexes for "mammalian" genomes (typically human
+and mouse) and another containing indexes for "contaminant"
+genomes (yeast, E.coli, UniVec7, PhiX, mycoplasma, and
+adapter sequences).
+
+These can be defined in the ``icell8`` section of the
+``settings.ini`` file, for example::
+
+  [icell8]
+  mammalian_conf_file = /data/icell8/mammalian_genomes.conf
+  contaminants_conf_file = /data/icell8/contaminant_genomes.conf
+
+or else must be specified using the relevant command line
+options.
+  
+.. _auto_process_reference_data_10xgenomics:
+
+---------------------------------------------
+process_10xgenomics (single library analysis)
+---------------------------------------------
+
+The single library analysis step of ``process_10xgenomics``
+wraps ``cellranger count`` and requires a compatible ``cellranger``
+transcriptome reference data set for the organism in question
+to be provided.
+
+10xGenomics provide a number of reference data sets which can
+be downloaded via:
+
+* https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/installation
+
+(There are also instructions for constructing reference data
+for novel organisms that are not supported.)
+
+These can be defined in the ``10xgenomics_transcriptomes``
+section of the ``settings.ini`` file, for example::
+
+  [10xgenomics_transcriptomes]
+  human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
+  mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
+
+or else must be specified using the relevant command line
+option.
 
 *****************************
 Supported sequencer platforms
