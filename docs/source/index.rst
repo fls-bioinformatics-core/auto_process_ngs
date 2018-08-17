@@ -57,9 +57,8 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Outputs
 	     
-   analysis_dirs
-   output/qc_reports
-   metadata
+   Analysis directories <output/analysis_dirs>
+   QC reports <output/qc_reports>
 
 .. _single-cell-docs:
 
