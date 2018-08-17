@@ -28,9 +28,9 @@ like:
   projects within the sequencing run.
 
 * :doc:`auto_process.py run_qc <using/run_qc>` runs the
-  QC on the project directories. This runs a set of
-  utilities including ``fastqc`` and ``fastq_screen`` to
-  and generates a report for each project.
+  QC pipeline (including ``fastqc`` and ``fastq_screen``)
+  on each of the project directories and generates a report
+  for each one.
 
 * :doc:`auto_process.py publish_qc <using/publish_qc>`
   publishes the QC reports from make_fastqs and run_qc
@@ -88,3 +88,27 @@ These can all be on the same filesystem on a single machine;
 or one or more parts can be NFS filesystems, or even
 filesystems mounted on other machines which are accessed
 using ``ssh``.
+
+=============================
+Supported sequencer platforms
+=============================
+
+The pipeline is currently used for output from the following
+Illumina sequencers:
+
+* HISeq 4000
+* MISeq
+* NextSeq
+* MiniSeq
+
+Earlier versions have been used on GAIIx and HISeq 2000/2500.
+
+===============================
+Supported single-cell platforms
+===============================
+
+The pipeline supports handling data from the Takara Bio SMARTer
+ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
+
+* :doc:`Handling ICELL8 scRNA-seq data <icell8>`
+* :doc:`Handling 10xGenomics Chromium scRNA-seq data <10xgenomics>`

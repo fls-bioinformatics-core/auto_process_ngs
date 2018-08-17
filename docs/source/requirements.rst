@@ -136,27 +136,3 @@ section of the ``settings.ini`` file, for example::
 
 or else must be specified using the relevant command line
 option.
-
-*****************************
-Supported sequencer platforms
-*****************************
-
-The pipeline is currently used for output from the following
-Illumina sequencers:
-
-* HISeq 4000
-* MISeq
-* NextSeq
-* MiniSeq
-
-Earlier versions have been used on GAIIx and HISeq 2000/2500.
-
-*******************************
-Supported single-cell platforms
-*******************************
-
-The pipeline supports handling data from the Takara Bio SMARTer
-ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
-
-* :doc:`Handling ICELL8 scRNA-seq data <icell8>`
-* :doc:`Handling 10xGenomics Chromium scRNA-seq data <10xgenomics>`
