@@ -58,7 +58,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :caption: Outputs
 	     
    analysis_dirs
-   qc_pipeline
+   output/qc_reports
    metadata
 
 .. _single-cell-docs:
