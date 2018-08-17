@@ -1,6 +1,6 @@
-**************************************************
-auto-process-ngs: automatic processing of NGS data
-**************************************************
+*************************************************
+auto-process-ngs: automate processing of NGS data
+*************************************************
 
 ``auto_process_ngs`` provides a set of utilities which automate
 the processing of sequencing data from Illumina Next Generation
