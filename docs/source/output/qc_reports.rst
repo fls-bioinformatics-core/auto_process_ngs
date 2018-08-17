@@ -3,24 +3,67 @@ QC Reports
 
 The :doc:`auto_process run_qc <../using/run_qc>` command outputs an
 HTML report for the QC for each of the projects in the analysis
-directory. 
+directory.
 
 An example of the top of a QC report index page is shown below:
 
 .. image:: ../images/qc/qc_report_full.png
+   :align: center
 
-The first part consists of two tables: the first summarises any metadata
-associated with the project, and the second attempts to summarise the
-key QC results for each Fastq, each Fastq pair (for paired end data),
-and each sample.
+The report consists of:
+
+* :ref:`qc_report_project_metadata`
+* :ref:`qc_report_qc_summary_table`
+* :ref:`qc_report_qc_outputs_per_fastq`
+
+.. _qc_report_project_metadata:
+
+************************
+Project metadata summary
+************************
+
+The project metadata table summarises information associated with the
+project, including the user, PI, library type, organisms and QC
+protocol.
+
+.. _qc_report_qc_summary_table:
+
+****************
+QC summary table
+****************
+
+The QC summary table summarises the key QC results for each sample
+and Fastq or Fastq pair (for paired end data).
 
 For example:
 
 .. image:: ../images/qc/qc_report_summary.png
+   :align: center
 
-The purpose of this table is to help pick up on trends and identify any
-outliers within the dataset as a whole; hence it uses small plots to
-convey a general sense of the data.
+The summary includes numbers of reads or read pairs and the sequence
+length ranges for each Fastq; other metrics are represented by small
+plots:
+
+The following data are shown:
+
+* :ref:`qc_report_quality_boxplots`
+* :ref:`qc_report_fastqc_summary_plots`
+* :ref:`qc_report_fastq_screen_summary_plots`
+* :ref:`qc_report_strandedness`
+
+One purpose of this table is to help pick up on trends and identify
+any outliers within the dataset as a whole; hence the main function
+of these plots are to convey a general sense of the data.
+
+Note that not all outputs might appear, depending on the
+:doc:`QC protocol <../using/run_qc>` that was used.
+
+The sample and Fastq names in the table link through to the
+full QC outputs for the sample or Fastqs in question; other items
+(e.g. the quality boxplots) link to the relevant parts of the full
+QC outputs section (see :ref:`qc_report_qc_outputs_per_fastq`).
+
+.. _qc_report_quality_boxplots:
 
 Quality boxplots
 ----------------
@@ -29,6 +72,9 @@ The summary table includes a small version of the sequence quality
 boxplot from ``fastqc``, for example:
 
 .. image:: ../images/qc/uboxplot.png
+   :align: center
+
+.. _qc_report_fastqc_summary_plots:
 
 Fastqc summary plots
 --------------------
@@ -41,14 +87,23 @@ The summary table includes a small plot which gives an impression of
 the overall state of the metrics for each Fastq file, for example:
 
 .. image:: ../images/qc/fastqc_uplot.png
+   :align: center
+
+.. _qc_report_fastq_screen_summary_plots:
 
 Fastq_screen summary plots
 --------------------------
 
-The summary table includes a small plot which summarises the
+The summary table includes a small plot which represents the
 outputs from ``fastq_screen``, for example:
 
 .. image:: ../images/qc/fastq_screen_uplot.png
+   :align: center
+
+The three boxes represent (from left to right) the model organisms,
+other organisms and rRNA plots produced by ``fastq_screen``.
+
+.. _qc_report_strandedness:
 
 Strandedness
 ------------
@@ -64,16 +119,25 @@ pseudo-percentage and the bottom bar the reverse value.
 
 Some examples:
 
-Likely forward strand:
+.. table:: Example strandedness plots
+   :widths: auto
 
-.. image:: ../images/qc/strandedness_forward.png
+   ======================= ===============
+   Strandedness            Example
+   ======================= ===============
+   Likely forward stranded .. image:: ../images/qc/strandedness_forward.png
+   Likely reverse stranded .. image:: ../images/qc/strandedness_reverse.png
+   Likely unstranded       .. image:: ../images/qc/strandedness_no_strand.png
+   ======================= ===============
 
+.. _qc_report_qc_outputs_per_fastq:
 
-Likely reverse strand:
+*************************
+Full QC outputs per Fastq
+*************************
 
-.. image:: ../images/qc/strandedness_reverse.png
+After the summary table, the full QC outputs for each Fastq or
+Fastq pair are grouped by sample, for example:
 
-
-Likely unstranded:
-
-.. image:: ../images/qc/strandedness_no_strand.png
+.. image:: ../images/qc/qc_outputs_per_fastq.png
+   :align: center
