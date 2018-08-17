@@ -105,6 +105,13 @@ This will generate the Fastqs in the specified output directory
 (e.g. ``bcl2fastq``) along with an HTML report derived from the
 ``cellranger`` JSON QC summary file, statistics for the Fastqs.
 
+Specifying the platform
+-----------------------
+
+``make_fastqs`` will try to identify the sequencer platform based on
+the instrument name. If the instrument name is not recognised then
+it can be explicitly specified using the ``--platform`` option.
+
 Handling runs with mixed data: splitting lanes
 ----------------------------------------------
 
