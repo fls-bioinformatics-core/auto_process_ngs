@@ -1829,7 +1829,7 @@ class UpdateProjectData(PipelineTask):
         print "Primary fastq dir: %s" % project.info.primary_fastq_dir
         print "Number of cells  : %s" % project.info.number_of_cells
 
-class CleanupDirectory(PipelineTask):
+class CleanupDirectory(PipelineFunctionTask):
     """
     Remove a directory and all its contents
     """
@@ -1847,12 +1847,12 @@ class CleanupDirectory(PipelineTask):
         if not os.path.isdir(dirn):
             self.report("No directory '%s'" % self.args.dirn)
         else:
-            self.add_cmd(
-                PipelineCommandWrapper(
-                    "Clean up directory '%s'" % dirn,
-                    "rm","-f","%s" % os.path.join(dirn,'*'),
-                    "&&",
-                    "rmdir","%s" % dirn))
+            self.add_call("Clean up directory '%s'" % dirn,
+                          self.cleanup_directory,
+                          dirn)
+    def cleanup_directory(self,dirn):
+        # Remove a directory and all its contents
+        shutil.rmtree(dirn)
 
 ######################################################################
 # Functions
