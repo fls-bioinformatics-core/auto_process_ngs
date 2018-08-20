@@ -37,6 +37,7 @@ Pipeline task classes:
 - GetReadsWithPolyGRegions
 - FilterContaminatedReads
 - SplitByBarcodes
+- GroupFastqsByBarcode
 - MergeBarcodeFastqs
 - MergeSampleFastqs
 - CheckICell8Barcodes
@@ -411,15 +412,21 @@ class ICell8QCFilter(Pipeline):
                                               split_barcodes.output().pattern)
         self.add_task(collect_split_barcodes,requires=(split_barcodes,))
         # Merge (concat) fastqs into single pairs per barcode
+        group_fastqs_by_barcode = GroupFastqsByBarcode(
+            "Group fastqs by barcode",
+            collect_split_barcodes.output())
+        self.add_task(group_fastqs_by_barcode,
+                      requires=(collect_split_barcodes,))
         barcode_fastqs = MergeBarcodeFastqs(
             "Assemble reads by barcode",
-            collect_split_barcodes.output(),
+            group_fastqs_by_barcode.output().fastq_groups,
             collect_filtered_unassigned.output(),
             collect_filtered_failed_barcodes.output(),
             collect_filtered_failed_umis.output(),
             barcode_fastqs_dir,
             basename)
-        self.add_task(barcode_fastqs,requires=(collect_split_barcodes,))
+        self.add_task(barcode_fastqs,
+                      requires=(group_fastqs_by_barcode,))
         collect_barcode_fastqs = CollectFiles(
             "Collect final barcoded fastqs",
             barcode_fastqs_dir,
@@ -1504,6 +1511,53 @@ class SplitByBarcodes(PipelineTask):
             fastqs=FileCollector(out_dir,pattern)
         )
 
+class GroupFastqsByBarcode(PipelineFunctionTask):
+    """
+    Group a list of Fastqs by associated barcode
+    Given a set of Fastqs, groups them into lists
+    where each list belongs to the same barcode.
+    """
+    def init(self,fastqs):
+        """
+        Initialise the GroupFastqsByBarcode task
+        Arguments:
+          fastqs (list): input Fastq files
+        """
+        self.fastq_groups = dict()
+    def setup(self):
+        self.add_call("Group fastqs by barcode",
+                      self.group_fastqs_by_barcode,
+                      self.args.fastqs)
+    def group_fastqs_by_barcode(self,fastqs):
+        # Extract the barcodes from the fastq names
+        barcodes = set()
+        for fq in fastqs:
+            barcode = os.path.basename(fq).split('.')[-3]
+            barcodes.add(barcode)
+        barcodes = sorted(list(barcodes))
+        # Group files by barcode
+        fastq_groups = dict()
+        for barcode in barcodes:
+            fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
+                                     fq.endswith("%s.r2.fastq" % barcode)),
+                         fastqs)
+            fastq_groups[barcode] = fqs
+        return fastq_groups
+    def finish(self):
+        for group in self.result()[0]:
+            self.fastq_groups[group] = self.result()[0][group]
+    def output(self):
+        """
+        Returns object pointing to grouped Fastqs
+        Returned object has the following properties:
+        - fastq_groups: dictionary where keys are
+            barcodes and values are lists of associated
+            Fastqs
+        """
+        return AttributeDictionary(
+            fastq_groups=self.fastq_groups
+        )
+
 class MergeBarcodeFastqs(PipelineTask):
     """
     Given a set of Fastq files with filtered reads,
@@ -1513,14 +1567,15 @@ class MergeBarcodeFastqs(PipelineTask):
     Also concatenate R1/R2 Fastq pairs for unassigned
     reads, 
     """
-    def init(self,fastqs,unassigned_fastqs,
+    def init(self,fastq_groups,unassigned_fastqs,
              failed_barcode_fastqs,failed_umi_fastqs,
              merge_dir,basename,batch_size=25):
         """
         Initialise the MergeBarcodeFastqs task
 
         Arguments:
-          fastqs (list): input Fastq files
+          fastq_groups (dict): input groups of Fastq
+            files (grouped by barcode)
           unassigned_fastqs (list): Fastq files with
             reads not assigned to ICell8 barcodes
           failed_barcode_fastqs (list): Fastq files
@@ -1548,19 +1603,8 @@ class MergeBarcodeFastqs(PipelineTask):
             print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
-        # Extract the barcodes from the fastq names
-        barcodes = set()
-        for fq in self.args.fastqs:
-            barcode = os.path.basename(fq).split('.')[-3]
-            barcodes.add(barcode)
-        barcodes = sorted(list(barcodes))
-        # Group files by barcode
-        fastq_groups = dict()
-        for barcode in barcodes:
-            fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
-                                     fq.endswith("%s.r2.fastq" % barcode)),
-                         self.args.fastqs)
-            fastq_groups[barcode] = fqs
+        # Extract the barcodes from the fastq groups dict
+        barcodes = self.args.fastq_groups.keys()
         # Group barcodes into batches
         barcode_batches = [barcodes[i:i+self.args.batch_size]
                            for i in xrange(0,len(barcodes),
@@ -1572,7 +1616,7 @@ class MergeBarcodeFastqs(PipelineTask):
             fastq_pairs = []
             for barcode in barcode_batch:
                 print "-- %s" % barcode
-                fastq_pairs.extend(fastq_groups[barcode])
+                fastq_pairs.extend(self.args.fastq_groups[barcode])
             self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
                                                  self.tmp_merge_dir,
                                                  basename=self.args.basename,
