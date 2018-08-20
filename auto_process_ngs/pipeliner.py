@@ -249,7 +249,8 @@ as an external process, for example reimplementing the earlier
         def init(self,fastqs):
             self.counts = dict()
         def setup(self):
-            self.add_call(self.count_reads,
+            self.add_call("Count reads in Fastq",
+                          self.count_reads,
                           self.args.fastqs)
         def count_reads(self,fastqs):
             # Count reads in each Fastq
