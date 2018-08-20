@@ -28,6 +28,7 @@ Pipeline task classes:
 
 - SetupDirectories
 - CollectFiles
+- PairFastqs
 - GetICell8Stats
 - GetICell8PolyGStats
 - SplitFastqsIntoBatches
@@ -220,26 +221,39 @@ class ICell8QCFilter(Pipeline):
                       requires=(setup_dirs,))
 
         # Split fastqs into batches
+        pair_fastqs_for_batching = PairFastqs(
+            "Pair Fastqs for batching",fastqs)
+        self.add_task(pair_fastqs_for_batching,requires=(setup_dirs,))
         batch_dir = os.path.join(outdir,"_fastqs.batched")
-        batch_fastqs = SplitFastqsIntoBatches("Batch Fastqs",fastqs,
-                                              batch_dir,basename,
-                                              batch_size=batch_size)
-        self.add_task(batch_fastqs,requires=(setup_dirs,))
+        batch_fastqs = SplitFastqsIntoBatches(
+            "Batch Fastqs",
+            pair_fastqs_for_batching.output().fastq_pairs,
+            batch_dir,
+            basename,
+            batch_size=batch_size)
+        self.add_task(batch_fastqs,
+                      requires=(pair_fastqs_for_batching,))
         collect_batch_fastqs = CollectFiles("Collect batched files",
                                             batch_dir,
                                             batch_fastqs.output().pattern)
         self.add_task(collect_batch_fastqs,requires=(batch_fastqs,))
 
         # Setup the filtering jobs as a group
+        pair_fastqs_for_filtering = PairFastqs(
+            "Pair Fastqs for filtering",
+            collect_batch_fastqs.output())
+        self.add_task(pair_fastqs_for_filtering,
+                      requires=(collect_batch_fastqs,))
         filter_dir = os.path.join(outdir,"_fastqs.quality_filter")
-        filter_fastqs = FilterICell8Fastqs("Filter Fastqs",
-                                           collect_batch_fastqs.output(),
-                                           filter_dir,
-                                           well_list=well_list_file,
-                                           mode='none',
-                                           discard_unknown_barcodes=True,
-                                           quality_filter=do_quality_filter)
-        self.add_task(filter_fastqs,requires=(collect_batch_fastqs,))
+        filter_fastqs = FilterICell8Fastqs(
+            "Filter Fastqs",
+            pair_fastqs_for_filtering.output().fastq_pairs,
+            filter_dir,
+            well_list=well_list_file,
+            mode='none',
+            discard_unknown_barcodes=True,
+            quality_filter=do_quality_filter)
+        self.add_task(filter_fastqs,requires=(pair_fastqs_for_filtering,))
         # Collect the files from the filtering jobs
         collect_filtered_fastqs = CollectFiles(
             "Collect filtered fastqs",
@@ -276,12 +290,18 @@ class ICell8QCFilter(Pipeline):
                      runner=runners['statistics'])
 
         # Use cutadapt to find reads with poly-G regions
+        pair_fastqs_for_poly_g = PairFastqs(
+            "Pair Fastqs for poly-G region detection",
+            collect_filtered_fastqs.output())
+        self.add_task(pair_fastqs_for_poly_g,
+                      requires=(collect_filtered_fastqs,))
         poly_g_dir = os.path.join(outdir,"_fastqs.poly_g")
         get_poly_g_reads = GetReadsWithPolyGRegions(
             "Find reads with poly-G regions",
-            collect_filtered_fastqs.output(),
+            pair_fastqs_for_poly_g.output().fastq_pairs,
             poly_g_dir)
-        self.add_task(get_poly_g_reads,requires=(collect_filtered_fastqs,))
+        self.add_task(get_poly_g_reads,
+                      requires=(pair_fastqs_for_poly_g,))
         collect_poly_g_fastqs = CollectFiles("Collect poly-G fastqs",
                                              poly_g_dir,
                                              get_poly_g_reads.output().pattern)
@@ -298,11 +318,16 @@ class ICell8QCFilter(Pipeline):
                       runner=runners['statistics'])
 
         # Set up the cutadapt jobs as a group
+        pair_fastqs_for_trimming = PairFastqs(
+            "Pair Fastqs for trimming",
+            collect_filtered_fastqs.output())
+        self.add_task(pair_fastqs_for_trimming,
+                      requires=(collect_filtered_fastqs,))
         trim_dir = os.path.join(outdir,"_fastqs.trim_reads")
         trim_reads = TrimReads("Read trimming",
-                               collect_filtered_fastqs.output(),
+                               pair_fastqs_for_trimming.output().fastq_pairs,
                                trim_dir)
-        self.add_task(trim_reads,requires=(collect_filtered_fastqs,))
+        self.add_task(trim_reads,requires=(pair_fastqs_for_trimming,))
         collect_trimmed_fastqs = CollectFiles("Collect trimmed fastqs",
                                               trim_dir,
                                               trim_reads.output().pattern)
@@ -322,19 +347,24 @@ class ICell8QCFilter(Pipeline):
 
         # Set up the contaminant filter jobs as a group
         if do_contaminant_filter:
+            pair_fastqs_for_contaminant_filtering = PairFastqs(
+                "Pair Fastqs for contaminant filtering",
+                collect_trimmed_fastqs.output())
+            self.add_task(pair_fastqs_for_contaminant_filtering,
+                          requires=(collect_trimmed_fastqs,))
             contaminant_filter_dir = os.path.join(
                 outdir,
                 "_fastqs.contaminant_filter")
             contaminant_filter = FilterContaminatedReads(
                 "Contaminant filtering",
-                collect_trimmed_fastqs.output(),
+                pair_fastqs_for_contaminant_filtering.output().fastq_pairs,
                 contaminant_filter_dir,
                 mammalian_conf,
                 contaminants_conf,
                 aligner=aligner,
                 threads=nprocessors['contaminant_filter'])
             self.add_task(contaminant_filter,
-                          requires=(collect_trimmed_fastqs,),
+                          requires=(pair_fastqs_for_contaminant_filtering,),
                           runner=runners['contaminant_filter'])
             collect_contaminant_filtered = CollectFiles(
                 "Collect contaminant-filtered fastqs",
@@ -364,12 +394,18 @@ class ICell8QCFilter(Pipeline):
 
         # Prepare for rebatching reads by barcode and sample by splitting
         # each batch by barcode
+        pair_fastqs_for_barcode_splitting = PairFastqs(
+            "Pair Fastqs for barcode splitting",fastqs_in)
+        self.add_task(pair_fastqs_for_barcode_splitting,
+                      requires=split_barcodes_requires)
         split_barcoded_fastqs_dir = os.path.join(outdir,
                                                  "_fastqs.split_barcodes")
-        split_barcodes = SplitByBarcodes("Split batches by barcode",
-                                         fastqs_in,
-                                         split_barcoded_fastqs_dir)
-        self.add_task(split_barcodes,requires=split_barcodes_requires)
+        split_barcodes = SplitByBarcodes(
+            "Split batches by barcode",
+            pair_fastqs_for_barcode_splitting.output().fastq_pairs,
+            split_barcoded_fastqs_dir)
+        self.add_task(split_barcodes,
+                      requires=(pair_fastqs_for_barcode_splitting,))
         collect_split_barcodes = CollectFiles("Collect barcode-split fastqs",
                                               split_barcoded_fastqs_dir,
                                               split_barcodes.output().pattern)
@@ -903,6 +939,57 @@ class CollectFiles(PipelineFunctionTask):
     def output(self):
         return self.files
 
+class PairFastqs(PipelineFunctionTask):
+    """
+    Arrange Fastqs into R1/R2 pairs
+
+    This is a utility task that can be used
+    to arrange a list of Fastq files into
+    R1/R2 pairs according to their contents.
+    Essentially it is a wrapper for the
+    'pair_fastqs' function.
+    """
+    def init(self,fastqs):
+        """
+        Initialise the PairFastqs task
+
+        Arguments:
+          fastqs (list): list of paths to
+            the Fastq files to be paired
+        """
+        self.fastq_pairs = list()
+        self.unpaired = list()
+    def setup(self):
+        self.add_call("Pair Fastq files",
+                      self.pair_fastqs,
+                      self.args.fastqs)
+    def pair_fastqs(self,fastqs):
+        # Run the 'pair_fastqs' function
+        return pair_fastqs(fastqs)
+    def finish(self):
+        # 'pair_fastqs' returns a tuple
+        # of (paired_fqs,unpaired_fqs)
+        for pairs,unpaired in self.result():
+            for fq_pair in pairs:
+                self.fastq_pairs.append(fq_pair)
+            for fq_unpaired in unpaired:
+                self.unpaired.append(fq_unpaired)
+    def output(self):
+        """
+        Returns object pointing to outputs
+
+        Returned object has the following properties:
+
+        - fastq_pairs: list of Fastq pairs as (r1,r2)
+            tuples
+        - unpaired: list of files which couldn't be
+            paired
+        """
+        return AttributeDictionary(
+            fastq_pairs=self.fastq_pairs,
+            unpaired=self.unpaired
+        )
+
 class GetICell8Stats(PipelineTask):
     """
     Generate statistics for ICell8 processing stage
@@ -1026,22 +1113,23 @@ class SplitFastqsIntoBatches(PipelineTask):
     """
     Split reads from Fastq pairs into batches
 
-    Sorts the input Fastq files into R1/R2 pairs,
-    pools read pairs and divides into new Fastq
-    pairs consisting of "batches" of specified
+    Divides reads from supplied Fastq R1/R2 file
+    pairs and divides into new Fastq pairs
+    consisting of "batches", each with a specified
     number of read pairs.
 
     The output Fastqs will be named
     ``<BASENAME>.B###.r[1|2].fastq`` (where
     ``###`` is the batch number)
     """
-    def init(self,fastqs,batch_dir,basename,
+    def init(self,fastq_pairs,batch_dir,basename,
              batch_size=DEFAULT_BATCH_SIZE):
         """
         Initialise the SplitFastqsIntoBatches task
 
         Arguments:
-          fastqs (list): list of input Fastq files
+          fastq_pairs (list): list of input Fastq
+            R1/R2 file pairs
           batch_dir (str): destination directory to
             write output files to
           basename (str): basename for output Fastqs
@@ -1057,13 +1145,12 @@ class SplitFastqsIntoBatches(PipelineTask):
         # Make temp directory for outputs
         self.tmp_batch_dir = tmp_dir(self.args.batch_dir)
         # Set up the commands
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        fastqs_r1 = [p[0] for p in fastq_pairs]
+        fastqs_r1 = [p[0] for p in self.args.fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r1,
                                  self.tmp_batch_dir,
                                  self.args.basename,
                                  batch_size=self.args.batch_size))
-        fastqs_r2 = [p[1] for p in fastq_pairs]
+        fastqs_r2 = [p[1] for p in self.args.fastq_pairs]
         self.add_cmd(BatchFastqs(fastqs_r2,
                                  self.tmp_batch_dir,
                                  self.args.basename,
@@ -1103,14 +1190,15 @@ class FilterICell8Fastqs(PipelineTask):
       meet the minimum quality standard across all
       bases
     """
-    def init(self,fastqs,filter_dir,well_list=None,
+    def init(self,fastq_pairs,filter_dir,well_list=None,
               mode='none',discard_unknown_barcodes=False,
               quality_filter=False):
         """
         Initialise the FilterICell8Fastqs task
 
         Arguments:
-          fastqs (list): input FASTQ files
+          fastq_pairs (list): input FASTQ R1/R2 file
+            pairs
           filter_dir (str): destination directory to
             write output files to
           well_list (str): 'well list' file to use
@@ -1133,8 +1221,7 @@ class FilterICell8Fastqs(PipelineTask):
             print "%s already exists" % self.args.filter_dir
             return
         self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
+        for fastq_pair in self.args.fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")]
             self.add_cmd(SplitAndFilterFastqPair(
                 fastq_pair,
@@ -1201,9 +1288,8 @@ class TrimReads(PipelineTask):
     """
     Run 'cutadapt' with ICell8 settings
 
-    Given a set of Fastqs, arranges into R1/R2 pairs
-    and performs following operations on the R2
-    reads:
+    Given a set of Fastq R1/R2 file pairs, performs the
+    following operations on the R2 reads:
 
     - Remove sequencing primers
     - Remove poly-A/T and poly-N sequences
@@ -1216,12 +1302,12 @@ class TrimReads(PipelineTask):
     Output Fastqs contain the filtered and trimmed reads
     only.
     """
-    def init(self,fastqs,trim_dir):
+    def init(self,fastq_pairs,trim_dir):
         """
         Initialise the TrimReads task
 
         Arguments:
-          fastqs (list): input Fastqs
+          fastq_pairs (list): input Fastq R1/R2 pairs
           trim_dir (str): destination directory to
             write output files to
         """
@@ -1231,8 +1317,7 @@ class TrimReads(PipelineTask):
             print "%s already exists" % self.args.trim_dir
             return
         self.tmp_trim_dir = tmp_dir(self.args.trim_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
+        for fastq_pair in self.args.fastq_pairs:
             self.add_cmd(TrimFastqPair(fastq_pair,
                                        self.tmp_trim_dir))
     def finish(self):
@@ -1259,17 +1344,16 @@ class GetReadsWithPolyGRegions(PipelineTask):
     """
     Run 'cutadapt' to identify reads with poly-G regions
 
-    Given a set of Fastqs, arranges into R1/R2 pairs
-    and identifies read pairs for which R2 appears to
-    contain poly-G regions (all other read pairs are
-    discarded).
+    Given a set of Fastq R1/R2 pairs, identifies read pairs
+    for which R2 appears to contain poly-G regions (all other
+    read pairs are discarded).
     """
-    def init(self,fastqs,poly_g_regions_dir):
+    def init(self,fastq_pairs,poly_g_regions_dir):
         """
         Initialise the GetReadsWithPolyGRegions task
 
         Arguments:
-          fastqs (list): input Fastq files
+          fastqs (list): input Fastq R1/R2 pairs
           out_dir (str): destination directory to
             write output files to
         """
@@ -1279,8 +1363,7 @@ class GetReadsWithPolyGRegions(PipelineTask):
             print "%s already exists" % self.args.poly_g_regions_dir
             return
         self.tmp_poly_g_regions_dir = tmp_dir(self.args.poly_g_regions_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
+        for fastq_pair in self.args.fastq_pairs:
             self.add_cmd(FilterPolyGReads(fastq_pair,
                                           self.tmp_poly_g_regions_dir))
     def finish(self):
@@ -1316,13 +1399,13 @@ class FilterContaminatedReads(PipelineTask):
     the contaminants (i.e. without any match to the
     mammalian genomes) are excluded.
     """
-    def init(self,fastqs,filter_dir,mammalian_conf,
+    def init(self,fastq_pairs,filter_dir,mammalian_conf,
              contaminants_conf,aligner=None,threads=None):
         """
         Initialise the FilterContaminatedReads task
 
         Arguments:
-          fastqs (list): input Fastqs
+          fastq_pairs (list): input Fastq R1/R2 pairs
           filter_dir (str): destination directory to
             write output files to
           mammalian_conf (str): path to FastqScreen
@@ -1342,8 +1425,7 @@ class FilterContaminatedReads(PipelineTask):
             print "%s already exists" % self.args.filter_dir
             return
         self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
+        for fastq_pair in self.args.fastq_pairs:
             self.add_cmd(ContaminantFilterFastqPair(
                 fastq_pair,
                 self.tmp_filter_dir,
@@ -1373,19 +1455,19 @@ class FilterContaminatedReads(PipelineTask):
 
 class SplitByBarcodes(PipelineTask):
     """
-    Given a set of Fastq files, arrange into
-    R1/R2 pairs then pool read pairs and group
-    into new Fastq file pairs by ICell8 barcode.
+    Given a set of Fastq R1/R2 file pairs, group
+    reads into new Fastq file pairs by ICell8
+    barcode.
 
     Output Fastqs are named:
     ``<BASENAME>.<BARCODE>.r[1|2].fastq``.
     """
-    def init(self,fastqs,barcodes_dir):
+    def init(self,fastq_pairs,barcodes_dir):
         """
         Initialise the SplitByBarcodes task
 
         Arguments:
-          fastqs (list): input Fastq files
+          fastq_pairs (list): input Fastq R1/R2 pairs
           barcodes_dir (str): destination directory
             to write output files to
         """
@@ -1395,8 +1477,7 @@ class SplitByBarcodes(PipelineTask):
             print "%s already exists" % self.args.barcodes_dir
             return
         self.tmp_barcodes_dir = tmp_dir(self.args.barcodes_dir)
-        fastq_pairs = pair_fastqs(self.args.fastqs)[0]
-        for fastq_pair in fastq_pairs:
+        for fastq_pair in self.args.fastq_pairs:
             basename = os.path.basename(fastq_pair[0])[:-len(".r1.fastq")+1]
             self.add_cmd(SplitAndFilterFastqPair(
                 fastq_pair,
