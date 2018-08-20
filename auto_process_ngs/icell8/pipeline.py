@@ -55,6 +55,7 @@ Functions:
 
 import os
 import shutil
+import glob
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import strip_ext
@@ -71,6 +72,7 @@ from ..pipeliner import Pipeline
 from ..pipeliner import PipelineCommand
 from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineTask
+from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import FileCollector
 from .utils import ICell8WellList
 from .utils import normalize_sample_name
@@ -857,7 +859,7 @@ class SetupDirectories(PipelineTask):
     def output(self):
         return None
 
-class CollectFiles(PipelineTask):
+class CollectFiles(PipelineFunctionTask):
     """
     Collect list of files matching glob pattern
 
@@ -883,28 +885,19 @@ class CollectFiles(PipelineTask):
         """
         self.files = list()
     def setup(self):
-        # Run 'ls' command and return one file per line
-        # Follow with a null command (echo -n) to mask the
-        # non-zero exit code from 'ls' when there are no
-        # matching files
-        self.add_cmd(
-            PipelineCommandWrapper(
-                "List contents of dir '%s' matching pattern '%s"
-                % (self.args.dirn,self.args.pattern),
-                "ls","-1",
-                "%s" % (os.path.join(self.args.dirn,
-                                     self.args.pattern)),
-                "2>&1",
-                ";","echo","-n"))
+        self.add_call("Collect files from %s matching '%s'"
+                      % (self.args.dirn,self.args.pattern),
+                      self.collect_files,
+                      self.args.dirn,
+                      self.args.pattern)
+    def collect_files(self,dirn,pattern):
+        # Collect the files matching glob pattern
+        pattern = os.path.join(dirn,pattern)
+        return glob.glob(pattern)
     def finish(self):
-        # Process the output from the 'ls' command which
-        # was written to stdout
-        # Only keep lines that start with the supplied
-        # directory path
-        for line in self.stdout.split('\n'):
-            if not line.startswith(self.args.dirn):
-                continue
-            self.files.append(line)
+        # Copy the results into the output file list
+        for fn in self.result()[0]:
+            self.files.append(fn)
         self.files.sort()
     def output(self):
         return self.files
