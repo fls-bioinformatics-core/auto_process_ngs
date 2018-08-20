@@ -1366,7 +1366,7 @@ class Dispatcher(object):
             written
         """
         # Unpickle the components
-        print "Unpickling..."
+        print "Dispatcher: running 'execute'..."
         try:
             func = self._unpickle_object(pkl_func_file)
         except AttributeError as ex:
@@ -1377,13 +1377,13 @@ class Dispatcher(object):
             return 1
         args = self._unpickle_object(pkl_args_file)
         kwds = self._unpickle_object(pkl_kwds_file)
-        print "Executing:"
+        print "Dispatcher: executing:"
         print "-- function: %s" % func
         print "-- args    : %s" % (args,)
         print "-- kwds    : %s" % (kwds,)
         # Execute the function
         result = func(*args,**kwds)
-        print "Result: %s" % result
+        print "Dispatcher: result: %s" % (result,)
         # Pickle the result
         if pkl_result_file:
             self._pickle_object(result,pkl_result_file)
