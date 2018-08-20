@@ -16,6 +16,7 @@ Utility classes and functions to support auto_process_ngs module.
 Classes:
 
 - OutputFiles:
+- BufferedOutputFiles:
 - ZipArchive:
 - ProgressChecker:
 
@@ -43,6 +44,7 @@ import os
 import re
 import logging
 import zipfile
+import gzip
 import pydoc
 import tempfile
 import operator
@@ -53,11 +55,18 @@ from bcftbx.Md5sum import md5sum
 # Module specific logger
 logger = logging.getLogger(__name__)
 
+######################################################################
+# Magic numbers
+######################################################################
+
+MAX_OPEN_FILES = 100
+DEFAULT_BUFFER_SIZE = 8192
+
 #######################################################################
 # Classes
 #######################################################################
 
-class OutputFiles:
+class OutputFiles(object):
     """Class for managing multiple output files
 
     Usage:
@@ -182,6 +191,121 @@ class OutputFiles:
 
     def __len__(self):
         return len(self._fp.keys())
+
+class BufferedOutputFiles(OutputFiles):
+    """
+    Class for managing multiple output files with buffering
+
+    Version of the 'OutputFiles' class which buffers
+    writing of data, to reduce number of underlying write
+    operations.
+
+    Usage is similar to OutputFiles, with additional
+    'bufsize' argument which can be used to set the
+    buffer size to use.
+    """
+    def __init__(self,base_dir=None,bufsize=DEFAULT_BUFFER_SIZE):
+        """Create a new OutputFiles instance
+
+        Arguments:
+          base_dir (str): optional 'base' directory
+            which files will be created relative to
+          bufsize (int): optional buffer size; when
+            data exceeds this size then it will be
+            written to disk
+
+        """
+        OutputFiles.__init__(self,base_dir=base_dir)
+        self._bufsize = bufsize
+        self._buffer = dict()
+        self._mode = dict()
+
+    def open(self,name,filen=None,append=False):
+        """Open a new output file
+
+        'name' is the handle used to reference the
+        file when using the 'write' and 'close' methods.
+
+        'filen' is the name of the file, and is unrelated
+        to the handle. If not supplied then 'name' must
+        be associated with a previously closed file (which
+        will be reopened).
+
+        If the filename ends with '.gz' then the
+        associated file will automatically be written as
+        a gzip-compressed file.
+
+        If 'append' is True then append to an existing
+        file rather than overwriting (i.e. use mode 'a'
+        instead of 'w').
+
+        """
+        if append:
+            mode = 'a'
+        else:
+            mode = 'w'
+        if filen is None:
+            filen = self.file_name(name)
+        elif self._base_dir is not None:
+            filen = os.path.join(self._base_dir,filen)
+        else:
+            filen = os.path.abspath(filen)
+        self._file[name] = filen
+        self._mode[name] = mode
+        if not name in self._buffer:
+            self._buffer[name] = ""
+
+    def fp(self,name):
+        try:
+            return self._fp[name]
+        except KeyError:
+            # Close a file we have too many open at once
+            # (to avoid IOError [Errno 24])
+            if len(self._fp) == MAX_OPEN_FILES:
+                self.close(self._fp.keys()[0])
+            if self._file[name].endswith('.gz'):
+                open_func = gzip.open
+            else:
+                open_func = open
+            fp = open_func(self._file[name],self._mode[name])
+            self._fp[name] = fp
+            return fp
+
+    def write(self,name,s):
+        """Write content to file (newline-terminated)
+
+        Writes 's' as a newline-terminated string to the
+        file that is referenced with the handle 'name'.
+
+        """
+        self._buffer[name] += "%s\n" % s
+        if len(self._buffer[name]) >= self._bufsize:
+            self.dump_buffer(name)
+
+    def dump_buffer(self,name):
+        self.fp(name).write(self._buffer[name])
+        self._buffer[name] = ""
+
+    def close(self,name=None):
+        """Close one or all open files
+
+        If a 'name' is specified then only the file matching
+        that handle will be closed; with no arguments all
+        open files will be closed.
+
+        """
+        if name is not None:
+            if self._buffer[name]:
+                self.dump_buffer(name)
+            try:
+                self._fp[name].close()
+                del(self._fp[name])
+            except KeyError:
+                pass
+        else:
+            names = self._file.keys()
+            for name in names:
+                self.close(name)
 
 class ZipArchive(object):
     """

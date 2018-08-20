@@ -1,28 +1,29 @@
 #!/usr/bin/env python
 #
-#     icell8_utils.py: utility functions for handling Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     icell8.utils.py: utility functions for handling ICELL8 data
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 
 """
-icell8_utils.py
+icell8.utils.py
 
-Utility classes and functions for processing the outputs from Wafergen's
-iCell8 platform.
+Utility classes and functions for processing the outputs from the ICELL8
+single-cell platform.
 
 Classes:
 
-- ICell8WellList: class representing iCell8 well list file
-- ICell8Read1: class representing an iCell8 R1 read
-- ICell8ReadPair: class representing an iCell8 R1/R2 read-pair
-- ICell8FastqIterator: class for iterating over iCell8 R1/R2 FASTQ-pair
-- ICell8Stats: class for gathering stats from iCell8 FASTQ pairs
+- ICell8WellList: class representing ICELL8 well list file
+- ICell8Read1: class representing an ICELL8 R1 read
+- ICell8ReadPair: class representing an ICELL8 R1/R2 read-pair
+- ICell8FastqIterator: class for iterating over ICELL8 R1/R2 FASTQ-pair
+- ICell8Stats: class for gathering stats from ICELL8 FASTQ pairs
 
 Functions:
 
-- collect_fastq_stats: get barcode and distince UMI counts for Fastq
+- get_batch_size: get optimal size for batches of reads
+- batch_fastqs: split reads into batches
 - normalize_sample_name: replace special characters in well list sample names
-- get_icell8_bases_mask: generate bases mask for iCell8 run
+- get_icell8_bases_mask: generate bases mask for ICELL8 run
 """
 
 #######################################################################
@@ -40,30 +41,155 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
-from .fastq_utils import pair_fastqs
-from .stats import FastqReadCounter
-from .utils import ProgressChecker
+from ..applications import Command
+from ..fastq_utils import FastqReadCounter
+from ..fastq_utils import pair_fastqs
+from ..fastq_utils import get_read_count
+from ..fastq_utils import get_read_number
+from ..utils import ProgressChecker
 
 # Initialise logging
 import logging
 logger = logging.getLogger(__name__)
 
-######################################################################
-# Magic numbers
-######################################################################
+#######################################################################
+# Constants
+#######################################################################
 
-INLINE_BARCODE_LENGTH = 11
-UMI_LENGTH = 14
-
-######################################################################
-# Other constants
-######################################################################
-
-SAMPLENAME_ILLEGAL_CHARS = "?()[]/\=+<>:;\"',*^|& \t"
+import constants
+INLINE_BARCODE_LENGTH = constants.INLINE_BARCODE_LENGTH
+UMI_LENGTH = constants.UMI_LENGTH
+MAXIMUM_BATCH_SIZE = constants.MAXIMUM_BATCH_SIZE
+SAMPLENAME_ILLEGAL_CHARS = constants.SAMPLENAME_ILLEGAL_CHARS
 
 ######################################################################
 # Functions
 ######################################################################
+
+def get_batch_size(fastqs,min_batches=1,
+                   max_batch_size=MAXIMUM_BATCH_SIZE,
+                   incr_function=None):
+    """
+    Determine number of reads per batch
+
+    Given a maximum batch size (i.e. number of reads per
+    batch), determine the number of batches and actual
+    batch size.
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      min_batches (int): initial minimum number of batches
+        to try
+      max_batch_size (int): the maxiumum batch size
+      incr_function (Function): optional function to use
+        to generate new number of batches to try
+
+    Returns:
+      Tuple: tuple of (batch_size,nbatches).
+    """
+    # Count the total number of reads
+    print "Fetching read counts"
+    nreads = get_read_count(fastqs)
+    print "Total reads: %d" % nreads
+
+    # Default incrementer function: add the initial
+    # number of batches on to get new number
+    if incr_function is None:
+        incr_function = lambda n: n + min_batches
+
+    # Determine batch size
+    batch_size = nreads/min_batches
+    nbatches = min_batches
+    print "Initial batch size: %d" % batch_size
+    print "Maximum batch size: %d" % max_batch_size
+    if max_batch_size > 0:
+        while batch_size > max_batch_size or batch_size*nbatches < nreads:
+            # Reset the number of batches
+            nbatches = incr_function(nbatches)
+            # Set the new batch size
+            batch_size = nreads/nbatches
+            if nreads%nbatches:
+                batch_size += 1
+            print "Trying %d batches: %d reads" % (nbatches,batch_size)
+        logger.warning("Maximum batch size exceeded (%d), "
+                       "increasing number of batches to %d"
+                       % (max_batch_size,nbatches))
+        logger.warning("New batch size: %d" % batch_size)
+    print "Final batch size: %d" % batch_size
+
+    # Assert that all reads are covered with none left over
+    # with no remainder
+    assert(batch_size*nbatches >= nreads,"Batches won't cover all reads")
+    return (batch_size,nbatches)
+
+def batch_fastqs(fastqs,batch_size,basename="batched",
+                 out_dir=None):
+    """
+    Splits reads from one or more Fastqs into batches
+
+    Concatenates input Fastq files and then splits
+    reads into smaller Fastqs using the external 'batch'
+    utility.
+
+    Arguments:
+      fastqs (list): list of paths to one or more Fastq
+        files to take reads from
+      batch_size (int): number of reads to allocate to
+        each batch
+      basename (str): optional basename to use for the
+        output Fastq files (default: 'batched')
+      out_dir (str): optional path to a directory where
+        the batched Fastqs will be written
+    """
+    # Determine number of batches
+    nreads = get_read_count(fastqs)
+    nbatches = nreads/batch_size
+    if nbatches*batch_size < nreads:
+        nbatches += 1
+    print "Creating %d batches of %d reads" % (nbatches,
+                                               batch_size)
+    assert(batch_size*nbatches >= nreads)
+
+    # Check if fastqs are compressed
+    gzipped = fastqs[0].endswith('.gz')
+    if gzipped:
+        batch_cmd = Command('zcat')
+    else:
+        batch_cmd = Command('cat')
+
+    # Get the read number
+    read_number = get_read_number(fastqs[0])
+    suffix = ".r%s.fastq" % read_number
+
+    # Build and run the batching command
+    batch_cmd.add_args(*fastqs)
+    batch_cmd.add_args('|',
+                       'split',
+                       '-l',batch_size*4,
+                       '-d',
+                       '-a',3,
+                       '--additional-suffix=%s' % suffix,
+                       '-',
+                       os.path.join(out_dir,"%s.B" % basename))
+    batch_script = os.path.join(out_dir,"batch.sh")
+    batch_cmd.make_wrapper_script("/bin/bash",
+                                  batch_script)
+
+    # Check for successful exit code
+    retcode = Command("/bin/bash",
+                      batch_script).run_subprocess(
+                          working_dir=out_dir)
+    if retcode != 0:
+        raise Exception("Batching failed: exit code %s" % retcode)
+    print "Batching completed"
+
+    # Collect and return the batched Fastq names
+    batched_fastqs = [os.path.join(out_dir,
+                                   "%s.B%03d%s"
+                                   % (basename,i,suffix))
+                      for i in xrange(0,nbatches)]
+    return batched_fastqs
 
 def normalize_sample_name(s):
     """
@@ -127,13 +253,33 @@ def get_icell8_bases_mask(bases_mask,sample_sheet=None):
         bases_mask = fix_bases_mask(bases_mask,index_seq)
     return bases_mask
 
+def pass_quality_filter(s,cutoff):
+    """
+    Check if sequence passes quality filter cutoff
+
+    Arguments:
+      s (str): sequence quality scores (PHRED+33)
+      cutoff (int): minimum quality value; all
+        quality scores must be equal to or greater
+        than this value for the filter to pass
+
+    Returns:
+      Boolean: True if the quality scores pass the
+        filter cutoff, False if not.
+    """
+    cutoff = chr(cutoff + 33)
+    for c in s:
+        if c < cutoff:
+            return False
+    return True
+
 ######################################################################
 # Classes
 ######################################################################
 
 class ICell8WellList(object):
     """
-    Class representing an iCell8 well list file
+    Class representing an ICELL8 well list file
 
     The file is tab-delimited and consists of an uncommented header
     line which lists the fields ('Row','Col','Candidate',...),
@@ -177,7 +323,7 @@ class ICell8WellList(object):
 
 class ICell8Read1(object):
     """
-    Class representing an iCell8 R1 read
+    Class representing an ICELL8 R1 read
     """
     def __init__(self,fastq_read):
         """
@@ -238,7 +384,7 @@ class ICell8Read1(object):
 
 class ICell8ReadPair(ICell8Read1):
     """
-    Class representing an iCell8 R1/R2 read-pair
+    Class representing an ICELL8 R1/R2 read-pair
     """
     def __init__(self,r1,r2):
         """
@@ -269,7 +415,7 @@ class ICell8ReadPair(ICell8Read1):
 
 class ICell8FastqIterator(Iterator):
     """
-    Class for iterating over an iCell8 R1/R2 FASTQ-pair
+    Class for iterating over an ICELL8 R1/R2 FASTQ-pair
 
     The iterator returns a set of ICell8ReadPair
     instances, for example:
@@ -305,10 +451,10 @@ class ICell8FastqIterator(Iterator):
 
 class ICell8StatsCollector(object):
     """
-    Class to collect ICell8 barcode and UMI counts
+    Class to collect ICELL8 barcode and UMI counts
 
     This class essentially wraps a single function
-    which gets ICell8 barcodes and distinct UMI
+    which gets ICELL8 barcodes and distinct UMI
     counts from a Fastq file. It is used by the
     `Icell8Stats` class to collect counts for each
     file supplied.
@@ -408,7 +554,7 @@ class ICell8StatsCollector(object):
 
 class ICell8Stats(object):
     """
-    Class for gathering statistics on iCell8 FASTQ R1 files
+    Class for gathering statistics on ICELL8 FASTQ R1 files
 
     Given a set of paths to FASTQ R1 files (from Icell8
     Fastq file pairs), collects statistics on the number of
@@ -424,7 +570,7 @@ class ICell8Stats(object):
         Create a new ICell8Stats instance
 
         Arguments:
-          fastqs: set of paths to ICell8 R1/R2 FASTQ
+          fastqs: set of paths to ICELL8 R1/R2 FASTQ
             file pairs to be processed
           nprocs (int): number of cores to use for
             statistics generation (default: 1)

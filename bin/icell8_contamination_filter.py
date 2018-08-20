@@ -34,7 +34,7 @@ from bcftbx.utils import strip_ext
 from bcftbx.utils import find_program
 from auto_process_ngs.applications import Command
 from auto_process_ngs.utils import OutputFiles
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import ICell8FastqIterator
 
 import logging
 logging.basicConfig(format='%(levelname) 8s: %(message)s')

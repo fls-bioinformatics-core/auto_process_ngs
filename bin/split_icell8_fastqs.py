@@ -22,136 +22,23 @@ import argparse
 import time
 import gzip
 from bcftbx.utils import mkdir
-from auto_process_ngs.icell8_utils import ICell8WellList
-from auto_process_ngs.icell8_utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import ICell8WellList
+from auto_process_ngs.icell8.utils import ICell8FastqIterator
+from auto_process_ngs.icell8.utils import pass_quality_filter
 from auto_process_ngs.fastq_utils import pair_fastqs
-from auto_process_ngs.utils import OutputFiles
+from auto_process_ngs.utils import BufferedOutputFiles
 
 ######################################################################
 # Magic numbers
 ######################################################################
 
-MAX_OPEN_FILES = 100
 INLINE_BARCODE_QUALITY_CUTOFF = 10
 UMI_QUALITY_CUTOFF = 30
 DEFAULT_BATCH_SIZE = 5000000
-READ_BUFFER_SIZE = 1000
-BUFSIZE = 8192
-
-######################################################################
-# Classes
-######################################################################
-
-class BufferedOutputFiles(OutputFiles):
-    def __init__(self,base_dir=None,bufsize=BUFSIZE):
-        """Create a new OutputFiles instance
-
-        Arguments:
-          base_dir (str): optional 'base' directory
-            which files will be created relative to
-
-        """
-        OutputFiles.__init__(self,base_dir=base_dir)
-        self._bufsize = bufsize
-        self._buffer = dict()
-        self._mode = dict()
-
-    def open(self,name,filen=None,append=False):
-        """Open a new output file
-
-        'name' is the handle used to reference the
-        file when using the 'write' and 'close' methods.
-
-        'filen' is the name of the file, and is unrelated
-        to the handle. If not supplied then 'name' must
-        be associated with a previously closed file (which
-        will be reopened).
-
-        If the filename ends with '.gz' then the
-        associated file will automatically be written as
-        a gzip-compressed file.
-
-        If 'append' is True then append to an existing
-        file rather than overwriting (i.e. use mode 'a'
-        instead of 'w').
-
-        """
-        if append:
-            mode = 'a'
-        else:
-            mode = 'w'
-        if filen is None:
-            filen = self.file_name(name)
-        elif self._base_dir is not None:
-            filen = os.path.join(self._base_dir,filen)
-        else:
-            filen = os.path.abspath(filen)
-        self._file[name] = filen
-        self._mode[name] = mode
-        if not name in self._buffer:
-            self._buffer[name] = ""
-
-    def fp(self,name):
-        try:
-            return self._fp[name]
-        except KeyError:
-            # Close a file we have too many open at once
-            # (to avoid IOError [Errno 24])
-            if len(self._fp) == MAX_OPEN_FILES:
-                self.close(self._fp.keys()[0])
-            if self._file[name].endswith('.gz'):
-                open_func = gzip.open
-            else:
-                open_func = open
-            fp = open_func(self._file[name],self._mode[name])
-            self._fp[name] = fp
-            return fp
-
-    def write(self,name,s):
-        """Write content to file (newline-terminated)
-
-        Writes 's' as a newline-terminated string to the
-        file that is referenced with the handle 'name'.
-
-        """
-        self._buffer[name] += "%s\n" % s
-        if len(self._buffer[name]) >= self._bufsize:
-            self.dump_buffer(name)
-
-    def dump_buffer(self,name):
-        self.fp(name).write(self._buffer[name])
-        self._buffer[name] = ""
-
-    def close(self,name=None):
-        """Close one or all open files
-
-        If a 'name' is specified then only the file matching
-        that handle will be closed; with no arguments all
-        open files will be closed.
-
-        """
-        if name is not None:
-            if self._buffer[name]:
-                self.dump_buffer(name)
-            try:
-                self._fp[name].close()
-                del(self._fp[name])
-            except KeyError:
-                pass
-        else:
-            names = self._file.keys()
-            for name in names:
-                self.close(name)
 
 ######################################################################
 # Functions
 ######################################################################
-
-def pass_quality_filter(seq,cutoff):
-    for c in seq:
-        if c < cutoff:
-            return False
-    return True
 
 def main():
     # Handle the command line
@@ -195,10 +82,6 @@ def main():
                    action='store_true',
                    help="output compressed .gz FASTQ files")
     args = p.parse_args()
-
-    # Convert quality cutoffs to character encoding
-    barcode_quality_cutoff = chr(INLINE_BARCODE_QUALITY_CUTOFF + 33)
-    umi_quality_cutoff = chr(UMI_QUALITY_CUTOFF + 33)
 
     # Get well list and expected barcodes
     well_list_file = args.well_list_file
@@ -265,10 +148,10 @@ def main():
             # Apply quality filtering
             if do_quality_filter:
                 if not pass_quality_filter(read_pair.barcode_quality,
-                                           barcode_quality_cutoff):
+                                           INLINE_BARCODE_QUALITY_CUTOFF):
                     assign_to = "failed_barcode"
                 elif not pass_quality_filter(read_pair.umi_quality,
-                                             umi_quality_cutoff):
+                                             UMI_QUALITY_CUTOFF):
                     assign_to = "failed_umi"
                 else:
                     filtered += 1

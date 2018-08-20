@@ -5,6 +5,7 @@
 import unittest
 import tempfile
 import shutil
+import gzip
 import zipfile
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
@@ -183,6 +184,104 @@ class TestOutputFiles(unittest.TestCase):
         self.assertEqual(len(out),0)
         out.open('test2',append=True)
         self.assertEqual(len(out),1)
+
+class TestBufferedOutputFiles(unittest.TestCase):
+    """
+    Tests for the BufferedOutputFiles class
+    """
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.test_bufferedoutputfiles')
+    def tearDown(self):
+        # Remove temporary working dir
+        if os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_bufferedoutputfiles(self):
+        out = BufferedOutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt'))
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_bufferedoutputfiles_with_gzip(self):
+        out = BufferedOutputFiles()
+        out.open('test1',os.path.join(self.wd,'test1.txt.gz'))
+        out.open('test2',os.path.join(self.wd,'test2.txt.gz'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt.gz'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt.gz'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(gzip.open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(gzip.open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_bufferedoutputfiles_with_basedir(self):
+        out = BufferedOutputFiles(self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+    def test_bufferedoutputfiles_append(self):
+        out = BufferedOutputFiles()
+        with open(os.path.join(self.wd,'test1.txt'),'w') as fp:
+            fp.write("test1 already exists\n")
+        with open(os.path.join(self.wd,'test2.txt'),'w') as fp:
+            fp.write("test2 already exists\n")
+        out.open('test1',os.path.join(self.wd,'test1.txt'),append=True)
+        out.open('test2',os.path.join(self.wd,'test2.txt'))
+        self.assertEqual(
+            out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(
+            out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "test1 already exists\nSome test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+    def test_bufferedoutputfiles_reopen(self):
+        out = BufferedOutputFiles(base_dir=self.wd)
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some test text')
+        out.write('test2','Some more\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some more\ntest text\n")
+        # Reopen files
+        out.open('test1',append=True)
+        out.open('test2')
+        self.assertEqual(out.file_name('test1'),
+                         os.path.join(self.wd,'test1.txt'))
+        self.assertEqual(out.file_name('test2'),
+                         os.path.join(self.wd,'test2.txt'))
+        out.write('test1','Some extra test text')
+        out.write('test2','Some different\ntest text')
+        out.close()
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "Some test text\nSome extra test text\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "Some different\ntest text\n")
 
 class TestShowProgressChecker(unittest.TestCase):
     """
