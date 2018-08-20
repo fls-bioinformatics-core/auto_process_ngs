@@ -1714,7 +1714,7 @@ class CheckICell8Barcodes(PipelineTask):
             bad_barcodes=self.bad_barcodes
         )
 
-class ConvertStatsToXLSX(PipelineTask):
+class ConvertStatsToXLSX(PipelineFunctionTask):
     """
     Convert the stats file to XLSX format
     """
@@ -1728,10 +1728,17 @@ class ConvertStatsToXLSX(PipelineTask):
         """
         pass
     def setup(self):
-        convert_to_xlsx(self.args.stats_file,
-                        self.args.xlsx_file,
-                        title="ICell8 stats",
-                        freeze_header=True)
+        self.add_call("Convert stats file to XLSX",
+                      self.convert_stats_to_xlsx,
+                      self.args.stats_file,
+                      self.args.xlsx_file,
+                      title="ICELL8 stats",
+                      freeze_header=True)
+    def convert_stats_to_xlsx(self,stats_file,xlsx_file,
+                              title=None,freeze_header=False):
+        # Convert the TSV stats file to XLSX format
+        convert_to_xlsx(stats_file,xlsx_file,title=title,
+                        freeze_header=freeze_header)
     def output(self):
         """Returns object pointing to output files
 
