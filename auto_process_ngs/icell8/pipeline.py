@@ -75,6 +75,7 @@ from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import FileCollector
 from .utils import ICell8WellList
+from .utils import ICell8Read1
 from .utils import normalize_sample_name
 
 #######################################################################
@@ -1637,7 +1638,7 @@ class MergeSampleFastqs(PipelineTask):
             fastqs=FileCollector(out_dir,pattern),
         )
 
-class CheckICell8Barcodes(PipelineTask):
+class CheckICell8Barcodes(PipelineFunctionTask):
     """
     Check the barcodes are consistent
 
@@ -1652,67 +1653,40 @@ class CheckICell8Barcodes(PipelineTask):
         Arguments:
           fastqs (list): Fastq files to check
         """
-        self.bad_barcodes = None
+        pass
     def setup(self):
-        batch_size = 25
-        # Reduce fastq list to just R1 files
-        fastqs = filter(lambda fq:
-                        AnalysisFastq(fq).read_number == 1,
-                        self.args.fastqs)
-        # Set up verification on batches of fastqs
+        # Batch up the Fastqs and run the checks
+        # for each batch in parallel
+        fastqs = self.args.fastqs
+        batch_size=50
         while fastqs:
-            cmd = PipelineCommandWrapper("Check ICell8 barcodes")
-            for fq in fastqs[:batch_size]:
-                if AnalysisFastq(fq).extension.endswith('.gz'):
-                    cat = 'zcat'
-                else:
-                    cat = 'cat'
-                barcode = AnalysisFastq(fq).barcode_sequence
-                if cmd.cmd() is not None:
-                    cmd.add_args("&&")
-                cmd.add_args(
-                    "echo","-n","%s:" % barcode,"&&",
-                    "%s" % cat,fq,"|",
-                    "sed","-n","'2~4p'","|",
-                    "grep","-v","^%s" % barcode,"|",
-                    "wc","-l"
-                )
-            self.add_cmd(cmd)
+            self.add_call("Check ICELL8 barcodes",
+                          self.check_icell8_barcodes,
+                          fastqs[:batch_size])
             fastqs = fastqs[batch_size:]
+    def check_icell8_barcodes(self,fastqs):
+        # Check that the inline barcodes for all reads in each
+        # R1 Fastq matches the assigned barcode in the filename
+        failed_barcodes = list()
+        # Reduce fastq list to just R1 files
+        for fq in filter(lambda fq:
+                         AnalysisFastq(fq).read_number == 1,
+                         fastqs):
+            # Get the assigned barcode from the name
+            assigned_barcode = AnalysisFastq(fq).barcode_sequence
+            print "%s: %s" % (fq,assigned_barcode)
+            # Iterate through the Fastq
+            for r in FastqIterator(fq):
+                barcode = ICell8Read1(r).barcode
+                if barcode != assigned_barcode:
+                    failed_barcode.append(assigned_barcode)
+                    break
+        # Raise an exception if bad barcodes were found
+        if failed_barcodes:
+            raise Exception("Found Fastqs with inconsistent "
+                            "barcodes")
     def finish(self):
-        # Read the stdout looking for barcodes
-        # with non-zero counts
-        print self.stdout
-        self.bad_barcodes = []
-        for line in self.stdout.split('\n'):
-            try:
-                if line.startswith("#### "):
-                    # Ignore lines from pipeline wrapper scripts
-                    # which start with "#### ..."
-                    pass
-                barcode,count = line.split(':')
-                count = int(count)
-                if count > 0:
-                    self.bad_barcodes.append((barcode,count))
-            except ValueError:
-                pass
-        # If there are bad barcodes then fail
-        if self.bad_barcodes:
-            for barcode in self.bad_barcodes:
-                print "ERROR %s: %d non-matching reads" % (barcode[0],
-                                                           barcode[1])
-            self.fail()
-    def output(self):
-        """Returns object pointing to bad barcodes outputs
-
-        The returned object has the following properties:
-
-        - 'bad_barcodes': list of tuples with 'bad' barcode
-          and count of times it is not correct
-        """
-        return AttributeDictionary(
-            bad_barcodes=self.bad_barcodes
-        )
+        print "All okay"
 
 class ConvertStatsToXLSX(PipelineFunctionTask):
     """
