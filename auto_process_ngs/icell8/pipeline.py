@@ -38,6 +38,7 @@ Pipeline task classes:
 - FilterContaminatedReads
 - SplitByBarcodes
 - GroupFastqsByBarcode
+- GroupFastqsBySample
 - MergeBarcodeFastqs
 - MergeSampleFastqs
 - CheckICell8Barcodes
@@ -432,13 +433,19 @@ class ICell8QCFilter(Pipeline):
             barcode_fastqs_dir,
             barcode_fastqs.output().patterns.assigned)
         self.add_task(collect_barcode_fastqs,requires=(barcode_fastqs,))
-        # Merge (concat) fastqs into single pairs per barcode
+        # Merge (concat) fastqs into single pairs per sample
+        group_fastqs_by_sample = GroupFastqsBySample(
+            "Group fastqs by sample",
+            collect_split_barcodes.output(),
+            well_list_file)
+        self.add_task(group_fastqs_by_sample,
+                      requires=(collect_split_barcodes,))
         sample_fastqs_dir = os.path.join(outdir,"fastqs.samples")
-        sample_fastqs = MergeSampleFastqs("Assemble reads by sample",
-                                          collect_split_barcodes.output(),
-                                          well_list_file,
-                                          sample_fastqs_dir)
-        self.add_task(sample_fastqs,requires=(collect_split_barcodes,))
+        sample_fastqs = MergeSampleFastqs(
+            "Assemble reads by sample",
+            group_fastqs_by_sample.output().fastq_groups,
+            sample_fastqs_dir)
+        self.add_task(sample_fastqs,requires=(group_fastqs_by_sample,))
 
         # Final stats for verification
         final_barcode_stats = GetICell8Stats(
@@ -1514,12 +1521,14 @@ class SplitByBarcodes(PipelineTask):
 class GroupFastqsByBarcode(PipelineFunctionTask):
     """
     Group a list of Fastqs by associated barcode
+
     Given a set of Fastqs, groups them into lists
     where each list belongs to the same barcode.
     """
     def init(self,fastqs):
         """
         Initialise the GroupFastqsByBarcode task
+
         Arguments:
           fastqs (list): input Fastq files
         """
@@ -1553,6 +1562,61 @@ class GroupFastqsByBarcode(PipelineFunctionTask):
         - fastq_groups: dictionary where keys are
             barcodes and values are lists of associated
             Fastqs
+        """
+        return AttributeDictionary(
+            fastq_groups=self.fastq_groups
+        )
+
+class GroupFastqsBySample(PipelineFunctionTask):
+    """
+    Group a list of Fastqs by associated sample
+
+    Given a set of Fastqs, groups them into lists
+    where each list belongs to the same sample.
+    """
+    def init(self,fastqs,well_list_file):
+        """
+        Initialise the GroupFastqsBySample task
+
+        Arguments:
+          fastqs (list): input Fastq files
+          well_list_file (str): 'well list' file to
+            get sample names and barcodes from
+        """
+        self.fastq_groups = dict()
+    def setup(self):
+        self.add_call("Group fastqs by sample",
+                      self.group_fastqs_by_sample,
+                      self.args.fastqs,
+                      self.args.well_list_file)
+    def group_fastqs_by_sample(self,fastqs,well_list_file):
+        # Handle well list
+        well_list = ICell8WellList(well_list_file)
+        # Group fastqs by sample
+        unpaired_groups = dict()
+        for fq in fastqs:
+            barcode = os.path.basename(fq).split('.')[-3]
+            sample = normalize_sample_name(well_list.sample(barcode))
+            try:
+                unpaired_groups[sample].append(fq)
+            except KeyError:
+                unpaired_groups[sample] = [fq,]
+        # Pair the fastqs within each group
+        fastq_groups = dict()
+        for sample in unpaired_groups:
+            fastq_pairs = pair_fastqs(unpaired_groups[sample])[0]
+            fastq_groups[sample] = fastq_pairs
+        return fastq_groups
+    def finish(self):
+        for group in self.result()[0]:
+            self.fastq_groups[group] = self.result()[0][group]
+    def output(self):
+        """
+        Returns object pointing to grouped Fastqs
+        Returned object has the following properties:
+        - fastq_groups: dictionary where keys are
+            samples and values are lists of associated
+            Fastqs pairs as (R1,R2) tuples
         """
         return AttributeDictionary(
             fastq_groups=self.fastq_groups
@@ -1691,20 +1755,18 @@ class MergeBarcodeFastqs(PipelineTask):
 
 class MergeSampleFastqs(PipelineTask):
     """
-    Given a set of Fastq files with ICell8 barcodes
-    in the names, arrange into R1/R2 file pairs
-    and pool reads into new Fastq files according
-    to the sample names associated with each barcode
-    in the well list file.
+    Given a set of Fastq files grouped by ICELL8
+    sample and arranged into R1/R2 file pairs,
+    pool reads into new Fastq files according to the
+    sample names.
     """
-    def init(self,fastqs,well_list,merge_dir):
+    def init(self,fastq_groups,merge_dir):
         """
         Initialise the MergeSampleFastqs task
 
         Arguments:
-          fastqs (list): input Fastq files
-          well_list (str): 'well list' file to get
-            sample names and barcodes from
+          fastq_groups (dict): input groups of Fastq
+            R1/R2 file pairs (grouped by sample)
           merge_dir (str): destination directory to
             write output files to
         """
@@ -1720,19 +1782,11 @@ class MergeSampleFastqs(PipelineTask):
             print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
-        # Group fastqs by sample
-        well_list = ICell8WellList(self.args.well_list)
-        fastq_groups = dict()
-        for fq in self.args.fastqs:
-            barcode = os.path.basename(fq).split('.')[-3]
-            sample = normalize_sample_name(well_list.sample(barcode))
-            try:
-                fastq_groups[sample].append(fq)
-            except KeyError:
-                fastq_groups[sample] = [fq,]
+        # Extract the samples from the fastq groups dict
+        samples = self.args.fastq_groups.keys()
         # Set up merge for fastq pairs in each sample
-        for sample in fastq_groups:
-            fastq_pairs = pair_fastqs(fastq_groups[sample])[0]
+        for sample in self.args.fastq_groups:
+            fastq_pairs = self.args.fastq_groups[sample]
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
                                       self.tmp_merge_dir,
