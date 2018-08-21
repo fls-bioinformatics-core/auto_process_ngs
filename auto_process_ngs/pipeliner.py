@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 """
 pipeliner.py
@@ -20,6 +20,8 @@ The core classes are:
 
 Additional supporting classes:
 
+- PipelineFunctionTask: subclass of PipelineTask which enables Python
+  functions to be run as external processes
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
 - FileCollector: returning collections of files based on glob patterns
 
@@ -27,6 +29,7 @@ There are some underlying classes and functions that are intended for
 internal use:
 
 - Capturing: capture stdout from a Python function
+- Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
 
@@ -234,6 +237,53 @@ be used as an alternative where appropriate. For example::
         def output():
             return FileCollector(self.args.d,"*")
 
+Running Python functions as tasks
+---------------------------------
+
+The PipelineFunctionTask class enables a Python function to be run
+as an external process, for example reimplementing the earlier
+``CountReads`` example::
+
+    from bcftbx.FASTQFile import nreads
+    class CountReads(PipelineTask):
+        def init(self,fastqs):
+            self.counts = dict()
+        def setup(self):
+            self.add_call("Count reads in Fastq",
+                          self.count_reads,
+                          self.args.fastqs)
+        def count_reads(self,fastqs):
+            # Count reads in each Fastq
+            counts = dict()
+            for fq in fastqs:
+                counts[fq] = nreads(fq)
+            return counts
+        def finish(self):
+            for fq in self.result():
+                for fq in result[fq]:
+                    self.counts[fq] = result[fq]
+        def output(self):
+            return self.counts
+
+The main differences between this and the PipelineTask class are:
+
+1. The class includes a method (in this case ``make_files``) which
+   implements the Python function to be executed.
+
+2. The ``add_call`` method is used in the ``setup`` method to define
+   calls to the function to run (analogous to the ``add_cmd`` method
+   for normal tasks). ``add_call`` can be used multiple times, e.g.
+   to break a task into several separate processes (again analogous
+   to ``add_cmd``).
+
+3. The return values from the invoked function are collected and
+   made available via the ``result`` method. This returns a list
+   of results (one for each ``add_call`` was used). The ``finish``
+   method contains code to post-process these results.
+
+The advantage of this approach is that intensive operations (e.g.
+processing large numbers of file
+
 Building and running a pipeline
 -------------------------------
 
@@ -381,6 +431,8 @@ import uuid
 import inspect
 import traceback
 import string
+import cloudpickle
+import atexit
 from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
@@ -1011,6 +1063,80 @@ class PipelineTask(object):
     def output(self):
         raise NotImplementedError("Subclass must implement 'output' method")
 
+class PipelineFunctionTask(PipelineTask):
+    """
+    Class enabling a Python function to be run as a task
+
+    A 'function task' enables one or more instances of a
+    Python function or class method to be run concurrently
+    as external programs, and for the return values of the
+    to recovered on task completion.
+
+    This class should be subclassed to implement the 'init',
+    'setup', 'finish' (optionally) and 'output' methods.
+
+    The 'add_call' method can be used within 'setup' to add
+    one or more function calls to be invoked.
+    """
+
+    def __init__(self,_name,*args,**kws):
+        """
+        Create a new PipelineFunctionTask instance
+
+        Arguments:
+          _name (str): an arbitrary user-friendly name for the
+            task instance
+          args (List): list of arguments to be supplied to
+            the subclass (must match those defined in the
+            'init' method)
+          kws (Dictionary): dictionary of keyword-value pairs
+            to be supplied to the subclass (must match those
+            defined in the 'init' method)
+        """
+        PipelineTask.__init__(self,_name,*args,**kws)
+        self._dispatchers = []
+        self._result = None
+
+    def add_call(self,name,f,*args,**kwds):
+        """
+        Add a function call to the task
+
+        Arguments:
+           name (str): a user friendly name for the call
+           f (function): the function or instance method
+             to be invoked in the task
+           args (list): arguments to be passed to the
+             function when invoked
+           kwds (mapping): keyword=value mapping to be
+             passed to the function when invoked
+        """
+        d = Dispatcher()
+        cmd = d.dispatch_function(f,*args,**kwds)
+        self.add_cmd(PipelineCommandWrapper(name,
+                                            *cmd.command_line))
+        self._dispatchers.append(d)
+
+    def finish_task(self):
+        """
+        Internal: perform actions to finish the task
+        """
+        result = list()
+        try:
+            for d in self._dispatchers:
+                result.append(d.get_result())
+        except Exception:
+            self._completed = True
+            self._exit_code = 1
+            result = None
+        self._result = result
+        PipelineTask.finish_task(self)
+
+    def result(self):
+        """
+        Return the results of the function invocations
+        """
+        return self._result
+
 class PipelineCommand(object):
     """
     Base class for constructing program command lines
@@ -1074,7 +1200,8 @@ class PipelineCommand(object):
         self.cmd().make_wrapper_script(filen=script_file,
                                        shell=shell,
                                        prologue='\n'.join(prologue),
-                                       epilogue='\n'.join(epilogue))
+                                       epilogue='\n'.join(epilogue),
+                                       quote_spaces=True)
         return script_file
 
     def init(self):
@@ -1151,6 +1278,198 @@ class PipelineCommandWrapper(PipelineCommand):
         Internal: implement the 'cmd' method
         """
         return self._cmd
+
+######################################################################
+# Dispatching Python functions as separate processes
+######################################################################
+
+class Dispatcher(object):
+    """
+    Class to invoke Python functions in external processes
+
+    Enables a Python function to be run in a separate process
+    and collect the results.
+
+    Example usage:
+
+    >>> d = Dispatcher()
+    >>> cmd = d.dispatch_function(bcftbx.utils.list_dirs,os.get_cwd())
+    >>> cmd.run_subprocess()
+    >>> result = d.get_result()
+
+    The Dispatcher works by pickling the function, arguments
+    and keywords to files, and then creating a command which
+    can be run as an external process; this unpickles the
+    function etc, executes it, and makes the result available
+    to the dispatcher on successful completion.
+
+    Currently uses cloudpickle as the pickling module:
+    https://pypi.org/project/cloudpickle/
+    """
+    def __init__(self,working_dir=None,cleanup=True):
+        """
+        Create a new Dispatcher instance
+
+        Arguments:
+          working_dir (str): optional, explicitly specify the
+            directory where pickled files and other
+            intermediates will be stored
+          cleanup (bool): if True then remove the working
+            directory on exit
+        """
+        self._id = str(uuid.uuid4())
+        if not working_dir:
+            working_dir = "dispatcher.%s" % self._id
+        self._working_dir = os.path.abspath(working_dir)
+        self._pickled_result_file = None
+        self._pickler = cloudpickle
+        # Use the current Python interpreter when
+        # running the function
+        self._python = sys.executable
+        if cleanup:
+            atexit.register(self._cleanup)
+
+    @property
+    def working_dir(self):
+        """
+        Return the working directory path
+        """
+        if not os.path.exists(self._working_dir):
+            logger.debug("Dispatcher: making working directory: "
+                         "%s" % self._working_dir)
+            os.mkdir(self._working_dir)
+        return self._working_dir
+
+    def _cleanup(self):
+        """
+        Internal: remove the working directory and its contents
+        """
+        if os.path.exists(self._working_dir):
+            logger.debug("Dispatcher: cleaning up dir %s" %
+                         self._working_dir)
+            shutil.rmtree(self._working_dir)
+
+    def execute(self,pkl_func_file,pkl_args_file,pkl_kwds_file,
+                pkl_result_file=None):
+        """
+        Internal: execute the function
+
+        Arguments:
+          pkl_func_file (str): path to the file with the pickled
+            version of the function to be invoked
+          pkl_args_file (str): path to the file with the pickled
+            version of the function arguments
+          pkl_args_file (str): path to the file with the pickled
+            version of the keyword arguments
+          pkl_result_file (str): optional path to the file where
+            the pickled version of the function result will be
+            written
+        """
+        # Unpickle the components
+        print "Dispatcher: running 'execute'..."
+        try:
+            func = self._unpickle_object(pkl_func_file)
+        except AttributeError as ex:
+            # Note that functions are pickled by 'fully qualified'
+            # name reference, not by value i.e. only the function
+            # name and the name of the parent module are pickled
+            print "Failed to load unpickled function: %s" % ex
+            return 1
+        args = self._unpickle_object(pkl_args_file)
+        kwds = self._unpickle_object(pkl_kwds_file)
+        print "Dispatcher: executing:"
+        print "-- function: %s" % func
+        print "-- args    : %s" % (args,)
+        print "-- kwds    : %s" % (kwds,)
+        # Execute the function
+        result = func(*args,**kwds)
+        print "Dispatcher: result: %s" % (result,)
+        # Pickle the result
+        if pkl_result_file:
+            self._pickle_object(result,pkl_result_file)
+        return 0
+
+    def dispatch_function(self,func,*args,**kwds):
+        """
+        Generate a command to execute the function externally
+
+        Arguments:
+          func (function): function to be executed
+          args (list): arguments to invoke the function with
+          kwds (mapping): keyword arguments to invoke the
+            function with
+
+        Returns:
+          Command: a Command instance that can be used to
+            execute the function.
+        """
+        print "Dispatching function:"
+        print "-- function: %s" % func
+        print "-- args    : %s" % (args,)
+        print "-- kwds    : %s" % (kwds,)
+        # Pickle the components
+        print "Pickling..."
+        pkl_func_file = self._pickle_object(func)
+        pkl_args_file = self._pickle_object(args)
+        pkl_kwds_file = self._pickle_object(kwds)
+        # Filename for results
+        self._pickled_result_file = os.path.join(self.working_dir,
+                                                 str(uuid.uuid4()))
+        # Generate command to run the function
+        return Command(self._python,
+                       "-c",
+                       "from auto_process_ngs.pipeliner import Dispatcher ; "
+                       "Dispatcher().execute(\"%s\",\"%s\",\"%s\",\"%s\")" %
+                       (pkl_func_file,
+                        pkl_args_file,
+                        pkl_kwds_file,
+                        self._pickled_result_file))
+
+    def get_result(self):
+        """Return the result from the function invocation
+
+        Returns:
+          Object: the object returned by the function, or None
+            if no result was found.
+        """
+        if os.path.exists(self._pickled_result_file):
+            return self._unpickle_object(self._pickled_result_file)
+        else:
+            raise Exception("Pickled output not found")
+
+    def _pickle_object(self,obj,pickle_file=None):
+        """
+        Internal: pickle an object and write to file
+
+        Arguments:
+          obj (object): object to be pickled
+          pickle_file (str): specified path to output
+            file (optional)
+
+        Returns:
+          String: path to the file containing the
+            pickled object.
+        """
+        if not pickle_file:
+            pickle_file = os.path.join(self.working_dir,
+                                       str(uuid.uuid4()))
+        with open(pickle_file,'wb') as fp:
+            fp.write(self._pickler.dumps(obj))
+        return pickle_file
+
+    def _unpickle_object(self,pickle_file):
+        """
+        Internal: unpickle an object from a file
+
+        Arguments:
+          pickle_file (str): path to output file
+            with pickled data
+
+        Returns:
+          Object: the unpickled object.
+        """
+        with open(pickle_file,'rb') as fp:
+            return self._pickler.loads(fp.read())
 
 ######################################################################
 # Generic pipeline functions

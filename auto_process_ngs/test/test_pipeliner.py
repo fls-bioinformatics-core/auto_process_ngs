@@ -13,9 +13,12 @@ from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
 from auto_process_ngs.pipeliner import PipelineTask
+from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
 from auto_process_ngs.pipeliner import FileCollector
+from auto_process_ngs.pipeliner import Dispatcher
+from bcftbx.JobRunner import SimpleJobRunner
 
 # Unit tests
 
@@ -483,6 +486,91 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.output(),None)
         self.assertEqual(task.stdout,"")
 
+class TestPipelineFunctionTask(unittest.TestCase):
+
+    def setUp(self):
+        # Set up a scheduler
+        self.sched = SimpleScheduler(poll_interval=0.5)
+        self.sched.start()
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestPipeline')
+
+    def tearDown(self):
+        # Stop the scheduler
+        if self.sched is not None:
+            self.sched.stop()
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_pipelinefunctiontask(self):
+        """
+        PipelineFunctionTask: run task wrapping function call
+        """
+        # Define a task with a function call
+        class Hello(PipelineFunctionTask):
+            def init(self,name):
+                pass
+            def setup(self):
+                self.add_call("Emit greeting",
+                              self.hello,
+                              self.args.name)
+            def hello(self,name):
+                return "Hello %s!" % name
+            def output(self):
+                return None
+        # Make a task instance
+        task = Hello("Hello world","World")
+        # Check initial state
+        self.assertEqual(task.args.name,"World")
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.result(),["Hello World!"])
+        self.assertEqual(task.output(),None)
+
+    def test_pipelinefunctiontask_with_failing_call(self):
+        """
+        PipelineFunctionTask: run task with failing function call
+        """
+        # Define a task with a function call
+        # that raises an exception
+        class RaisesException(PipelineFunctionTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.add_call("Raises an exception",
+                              self.raises_exception)
+            def raises_exception(self):
+                raise Exception("Exception is raised")
+            def output(self):
+                return None
+        # Make a task instance
+        task = RaisesException("Will raise exception")
+        # Check initial state
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertNotEqual(task.exit_code,0)
+        self.assertEqual(task.result(),None)
+        self.assertEqual(task.output(),None)
+
 class TestPipelineCommand(unittest.TestCase):
 
     def setUp(self):
@@ -522,7 +610,7 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### HOSTNAME $HOSTNAME\"\n"
                          "echo \"#### USER $USER\"\n"
                          "echo \"#### START $(date)\"\n"
-                         "echo hello there\n"
+                         "echo 'hello there'\n"
                          "exit_code=$?\n"
                          "echo \"#### END $(date)\"\n"
                          "echo \"#### EXIT_CODE $exit_code\"\n"
@@ -575,3 +663,52 @@ class TestFileCollector(unittest.TestCase):
         self.assertEqual(list(txt_files),
                          [os.path.join(self.working_dir,"test1.txt")])
 
+class TestDispatcher(unittest.TestCase):
+
+    def setUp(self):
+        # Make a temporary working dir
+        self.working_dir = tempfile.mkdtemp(
+            suffix='TestDispatcher')
+
+    def tearDown(self):
+        # Remove temp dir
+        if os.path.exists(self.working_dir):
+            shutil.rmtree(self.working_dir)
+
+    def test_dispatcher_subprocess(self):
+        """
+        Dispatcher: runs a function via subprocess module
+        """
+        dispatcher_wd = os.path.join(self.working_dir,
+                                     "test_dispatcher")
+        d = Dispatcher(working_dir=dispatcher_wd)
+        def hello(name):
+            return "Hello %s!" % name
+        cmd = d.dispatch_function(hello,"World")
+        exit_code = cmd.run_subprocess(log=os.path.join(self.working_dir,
+                                                        "dispatcher.log"))
+        self.assertEqual(exit_code,0)
+        result = d.get_result()
+        self.assertEqual(result,"Hello World!")
+
+    def test_dispatcher_simplejobrunner(self):
+        """
+        Dispatcher: runs a function via SimpleJobRunner
+        """
+        dispatcher_wd = os.path.join(self.working_dir,
+                                     "test_dispatcher")
+        d = Dispatcher(working_dir=dispatcher_wd)
+        def hello(name):
+            return "Hello %s!" % name
+        cmd = d.dispatch_function(hello,"World")
+        runner = SimpleJobRunner(log_dir=self.working_dir)
+        job_id = runner.run("Hello world",
+                            self.working_dir,
+                            cmd.command,
+                            cmd.args)
+        while runner.isRunning(job_id):
+            time.sleep(0.1)
+        exit_code = runner.exit_status(job_id)
+        self.assertEqual(exit_code,0)
+        result = d.get_result()
+        self.assertEqual(result,"Hello World!")

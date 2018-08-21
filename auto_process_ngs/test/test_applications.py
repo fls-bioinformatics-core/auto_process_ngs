@@ -83,6 +83,15 @@ class TestCommand(unittest.TestCase):
         cmd.make_wrapper_script(fp=fp)
         self.assertEqual(fp.getvalue(),"echo hello")
 
+    def test_make_wrapper_script_handle_args_with_spaces(self):
+        """Check 'make_wrapper_script' method handles arguments with spaces
+        """
+        cmd = Command('echo','hello world')
+        self.assertEqual(cmd.make_wrapper_script(),
+                         "echo hello world")
+        self.assertEqual(cmd.make_wrapper_script(quote_spaces=True),
+                         "echo 'hello world'")
+
 class TestBcl2Fastq(unittest.TestCase):
 
     def test_configure_bcl_to_fastq(self):
