@@ -412,6 +412,22 @@ class ICell8QCFilter(Pipeline):
                                               split_barcoded_fastqs_dir,
                                               split_barcodes.output().pattern)
         self.add_task(collect_split_barcodes,requires=(split_barcodes,))
+        # Pair up the unassigned and failed quality check fastqs
+        pair_unassigned_fastqs = PairFastqs(
+            "Pair Fastqs with unassigned reads",
+            collect_filtered_unassigned.output())
+        self.add_task(pair_unassigned_fastqs,
+                      requires=(collect_filtered_unassigned,))
+        pair_failed_barcode_fastqs = PairFastqs(
+            "Pair Fastqs with reads failing barcode quality checks",
+            collect_filtered_failed_barcodes.output())
+        self.add_task(pair_failed_barcode_fastqs,
+                      requires=(collect_filtered_failed_barcodes,))
+        pair_failed_umi_fastqs = PairFastqs(
+            "Pair Fastqs with reads failing UMI quality checks",
+            collect_filtered_failed_umis.output())
+        self.add_task(pair_failed_umi_fastqs,
+                      requires=(collect_filtered_failed_umis,))
         # Merge (concat) fastqs into single pairs per barcode
         group_fastqs_by_barcode = GroupFastqsByBarcode(
             "Group fastqs by barcode",
@@ -421,9 +437,9 @@ class ICell8QCFilter(Pipeline):
         barcode_fastqs = MergeBarcodeFastqs(
             "Assemble reads by barcode",
             group_fastqs_by_barcode.output().fastq_groups,
-            collect_filtered_unassigned.output(),
-            collect_filtered_failed_barcodes.output(),
-            collect_filtered_failed_umis.output(),
+            pair_unassigned_fastqs.output().fastq_pairs,
+            pair_failed_barcode_fastqs.output().fastq_pairs,
+            pair_failed_umi_fastqs.output().fastq_pairs,
             barcode_fastqs_dir,
             basename)
         self.add_task(barcode_fastqs,
@@ -1629,10 +1645,12 @@ class MergeBarcodeFastqs(PipelineTask):
     belonging to the same ICell8 barcode.
 
     Also concatenate R1/R2 Fastq pairs for unassigned
-    reads, 
+    read pairs, and read pairs which failed the
+    barcode and UMI quality filters.
     """
-    def init(self,fastq_groups,unassigned_fastqs,
-             failed_barcode_fastqs,failed_umi_fastqs,
+    def init(self,fastq_groups,unassigned_fastq_pairs,
+             failed_barcode_fastq_pairs,
+             failed_umi_fastq_pairs,
              merge_dir,basename,batch_size=25):
         """
         Initialise the MergeBarcodeFastqs task
@@ -1640,12 +1658,14 @@ class MergeBarcodeFastqs(PipelineTask):
         Arguments:
           fastq_groups (dict): input groups of Fastq
             files (grouped by barcode)
-          unassigned_fastqs (list): Fastq files with
-            reads not assigned to ICell8 barcodes
-          failed_barcode_fastqs (list): Fastq files
-            with reads failing barcode quality check
-          failed_umi_fastqs (list): Fastq files
-            with reads failing UMI quality check
+          unassigned_fastq_pairs (list): Fastq R1/R2
+            pairs with reads not assigned to ICELL8
+            barcodes
+          failed_barcode_fastq_pairs (list): Fastq
+            R1/R2 pairs with reads failing barcode
+            quality check
+          failed_umi_fastq_pairs (list): Fastq R1/R2
+            pairs with reads failing UMI quality check
           merge_dir (str): destination directory to
             write output files to
           basename (str): basename to use for output
@@ -1687,12 +1707,12 @@ class MergeBarcodeFastqs(PipelineTask):
                                                  mode="barcodes",
                                                  compress=True))
         # Handle unassigned and failed quality reads
-        for name,fqs in (('unassigned',self.args.unassigned_fastqs),
-                         ('failed_barcodes',self.args.failed_barcode_fastqs),
-                         ('failed_umis',self.args.failed_umi_fastqs)):
-            if not fqs:
+        for name,fastq_pairs in \
+            (('unassigned',self.args.unassigned_fastq_pairs),
+             ('failed_barcodes',self.args.failed_barcode_fastq_pairs),
+             ('failed_umis',self.args.failed_umi_fastq_pairs)):
+            if not fastq_pairs:
                 continue
-            fastq_pairs = pair_fastqs(fqs)[0]
             fqs_r1 = [p[0] for p in fastq_pairs]
             self.add_cmd(ConcatFastqs(fqs_r1,
                                       self.tmp_merge_dir,
