@@ -53,24 +53,22 @@ class TestPipeline(unittest.TestCase):
         # Appends item to a list
         class Append(PipelineTask):
             def init(self,l,s):
-                self.l = list()
+                self.add_output('list',list())
             def setup(self):
                 for item in self.args.l:
-                    self.l.append(item)
-                self.l.append(self.args.s)
-            def output(self):
-                return self.l
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
         # Build the pipeline
         ppl = Pipeline()
         task1 = Append("Append 1",(),"item1")
-        task2 = Append("Append 2",task1.output(),"item2")
+        task2 = Append("Append 2",task1.output.list,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,0)
-        self.assertEqual(task1.output(),["item1"])
-        self.assertEqual(task2.output(),["item1","item2"])
+        self.assertEqual(task1.output.list,["item1"])
+        self.assertEqual(task2.output.list,["item1","item2"])
 
     def test_pipeline_with_commands(self):
         """
@@ -80,19 +78,17 @@ class TestPipeline(unittest.TestCase):
         # Echoes/appends text to a file
         class Echo(PipelineTask):
             def init(self,f,s):
-                pass
+                self.add_output('file',f)
             def setup(self):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Echo text to file",
                         "echo",self.args.s,
                         ">>",self.args.f))
-            def output(self):
-                return self.args.f
         # Build the pipeline
         ppl = Pipeline()
         task1 = Echo("Write item1","out.txt","item1")
-        task2 = Echo("Write item2",task1.output(),"item2")
+        task2 = Echo("Write item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir)
@@ -111,19 +107,17 @@ class TestPipeline(unittest.TestCase):
         # Echoes/appends text to a file
         class Echo(PipelineTask):
             def init(self,f,s):
-                pass
+                self.add_output('file',f)
             def setup(self):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Echo text to file",
                         "echo",self.args.s,
                         ">>",self.args.f))
-            def output(self):
-                return self.args.f
         # Build the pipeline
         ppl = Pipeline()
         task1 = Echo("Write item1","out.txt","item1")
-        task2 = Echo("Write item2",task1.output(),"item2")
+        task2 = Echo("Write item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Get a scheduler
         self._get_scheduler()
@@ -145,28 +139,24 @@ class TestPipeline(unittest.TestCase):
         # Echoes/appends text to a file via shell command
         class Echo(PipelineTask):
             def init(self,f,s):
-                pass
+                self.add_output('file',f)
             def setup(self):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Echo text to file",
                         "echo",self.args.s,
                         ">>",self.args.f))
-            def output(self):
-                return self.args.f
         # Writes text to a file via Python
         class Print(PipelineTask):
             def init(self,f,s):
-                pass
+                self.add_output('file',f)
             def setup(self):
                 with open(self.args.f,'a') as fp:
                     fp.write("%s\n" % self.args.s)
-            def output(self):
-                return self.args.f
         # Build the pipeline
         ppl = Pipeline()
         task1 = Echo("Echo item1","out.txt","item1")
-        task2 = Print("Print item2",task1.output(),"item2")
+        task2 = Print("Print item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir)
@@ -185,35 +175,31 @@ class TestPipeline(unittest.TestCase):
         # Appends item to a list
         class Append(PipelineTask):
             def init(self,l,s):
-                self.l = list()
+                self.add_output('list',list())
             def setup(self):
                 for item in self.args.l:
-                    self.l.append(item)
-                self.l.append(self.args.s)
-            def output(self):
-                return self.l
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
         # Define a task that always fails
         class Failure(PipelineTask):
             def init(self):
                 pass
             def setup(self):
                 self.fail(message="Automatic fail")
-            def output(self):
-                return None
         # Build the pipeline
         ppl = Pipeline()
         task1 = Append("Append 1",(),"item1")
         task2 = Failure("Failing task")
-        task3 = Append("Append 3",task1.output(),"item3")
+        task3 = Append("Append 3",task1.output.list,"item3")
         ppl.add_task(task2,requires=(task1,))
         ppl.add_task(task3,requires=(task2,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir)
         # Check the outputs
         self.assertEqual(exit_status,1)
-        self.assertEqual(task1.output(),["item1"])
+        self.assertEqual(task1.output.list,["item1"])
         self.assertEqual(task2.exit_code,1)
-        self.assertEqual(task3.output(),[])
+        self.assertEqual(task3.output.list,[])
 
 class TestPipelineTask(unittest.TestCase):
 
@@ -254,20 +240,19 @@ class TestPipelineTask(unittest.TestCase):
         # Define a simplistic task which does nothing
         class CheckInvocations(PipelineTask):
             def init(self):
-                self.invocations = list()
-                self.invocations.append("init")
+                self.add_output('invocations',list())
+                self.output.invocations.append("init")
             def setup(self):
-                self.invocations.append("setup")
+                self.output.invocations.append("setup")
             def finish(self):
-                self.invocations.append("finish")
-            def output(self):
-                return self.invocations
+                self.output.invocations.append("finish")
         # Make a task instance
         task = CheckInvocations("Check method invocations")
         # Check initial state
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),["init"])
+        self.assertEqual(task.output.invocations,
+                         ["init"])
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -275,7 +260,8 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
-        self.assertEqual(task.output(),["init","setup","finish"])
+        self.assertEqual(task.output.invocations,
+                         ["init","setup","finish"])
 
     def test_pipelinetask_no_commands(self):
         """
@@ -284,11 +270,9 @@ class TestPipelineTask(unittest.TestCase):
         # Define a task with no commands
         class Add(PipelineTask):
             def init(self,x,y):
-                self.result = list()
+                self.add_output('result',list())
             def setup(self):
-                self.result.append(self.args.x+self.args.y)
-            def output(self):
-                return self.result
+                self.output.result.append(self.args.x+self.args.y)
         # Make a task instance
         task = Add("Add two numbers",1,2)
         # Check initial state
@@ -296,7 +280,7 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.args.y,2)
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),[])
+        self.assertEqual(task.output.result,[])
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -304,7 +288,7 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
-        self.assertEqual(task.output(),[3])
+        self.assertEqual(task.output.result,[3])
         self.assertEqual(task.stdout,"")
 
     def test_pipelinetask_with_commands(self):
@@ -320,15 +304,13 @@ class TestPipelineTask(unittest.TestCase):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Echo text","echo",self.args.s))
-            def output(self):
-                return None
         # Make a task instance
         task = Echo("Echo string","Hello!")
         # Check initial state
         self.assertEqual(task.args.s,"Hello!")
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -336,7 +318,7 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Check stdout
         # Should look like:
         # #### COMMAND Echo text
@@ -369,14 +351,12 @@ class TestPipelineTask(unittest.TestCase):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Nonexistant","./non_existant --help"))
-            def output(self):
-                return None
         # Make a task instance
         task = Nonexistant("Will fail")
         # Check initial state
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -384,7 +364,7 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertNotEqual(task.exit_code,0)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Check stdout
         # Should look like:
         # #### COMMAND Nonexistant
@@ -416,14 +396,12 @@ class TestPipelineTask(unittest.TestCase):
                     self.add_cmd(
                         PipelineCommandWrapper(
                             "Echo text","echo",self.args.s))
-            def output(self):
-                return None
         # Make a task instance
         task = MultipleEcho("Echo string 3 times","Hello!",3)
         # Check initial state
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -431,7 +409,7 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Check stdout
         # Should look like:
         # #### COMMAND Echo text
@@ -468,14 +446,12 @@ class TestPipelineTask(unittest.TestCase):
                 self.add_cmd(
                     PipelineCommandWrapper(
                         "Echo message","echo","should not execute"))
-            def output(self):
-                return None
         # Make a task instance
         task = FailingTask("This will fail")
         # Check initial state
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -483,7 +459,7 @@ class TestPipelineTask(unittest.TestCase):
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,123)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         self.assertEqual(task.stdout,"")
 
 class TestPipelineFunctionTask(unittest.TestCase):
@@ -518,8 +494,6 @@ class TestPipelineFunctionTask(unittest.TestCase):
                               self.args.name)
             def hello(self,name):
                 return "Hello %s!" % name
-            def output(self):
-                return None
         # Make a task instance
         task = Hello("Hello world","World")
         # Check initial state
@@ -527,7 +501,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
         self.assertEqual(task.result(),None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -536,7 +510,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
         self.assertEqual(task.result(),["Hello World!"])
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
 
     def test_pipelinefunctiontask_with_failing_call(self):
         """
@@ -552,15 +526,13 @@ class TestPipelineFunctionTask(unittest.TestCase):
                               self.raises_exception)
             def raises_exception(self):
                 raise Exception("Exception is raised")
-            def output(self):
-                return None
         # Make a task instance
         task = RaisesException("Will raise exception")
         # Check initial state
         self.assertFalse(task.completed)
         self.assertEqual(task.exit_code,None)
         self.assertEqual(task.result(),None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
@@ -569,7 +541,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         self.assertTrue(task.completed)
         self.assertNotEqual(task.exit_code,0)
         self.assertEqual(task.result(),None)
-        self.assertEqual(task.output(),None)
+        self.assertFalse(task.output)
 
 class TestPipelineCommand(unittest.TestCase):
 

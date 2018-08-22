@@ -60,7 +60,7 @@ on a collection of Fastq files one at a time::
 
     class RunFastqc(PipelineTask):
         def init(self,fastqs,out_dir):
-            self.out_files = list()
+            self.add_output('out_files',list())
         def setup(self):
             if not os.path.exists(self.args.out_dir):
                 os.mkdir(self.args.out_dir)
@@ -81,9 +81,7 @@ on a collection of Fastq files one at a time::
                 if not os.path.exists(out_file):
                     self.fail(message="Missing output file: %s" % out_file)
                 else:
-                    self.out_files.append(out_file)
-        def output(self):
-            return self.out_files
+                    self.output.out_files.append(out_file)
 
 The key features are:
 
@@ -91,8 +89,9 @@ The key features are:
    set of parameters which are made available to the other methods
    via the ``self.args`` object.
 
-   The ``init`` method also creates an attribute that is used to
-   store the outputs of the task.
+   The ``init`` method also adds an output called ``out_files``
+   which will be used to store the outputs of the task; it can be
+   accessed via the ``output`` method.
 
 2. The ``setup`` method creates the output directory if it doesn't
    already exist, and then calls the ``add_cmd`` method to add a
@@ -118,14 +117,12 @@ The key features are:
    method, as in the ``finish`` method above. Raising an exception
    will also implicitly indicate a failure.
 
-7. The ``output`` method returns the ``out_files`` list object.
-
 Another example is a task which does a simple-minded read count on
 a set of Fastq files::
 
     class CountReads(PipelineTask):
         def init(self,fastqs):
-            self.counts = dict()
+            self.add_output('counts',dict())
         def setup(self):
             for fq in self.args.fastqs:
                 if os.path.splitext(fq)[1] == ".gz":
@@ -143,14 +140,13 @@ a set of Fastq files::
                     continue
                 fq = line.split()[0]
                 read_count = int(line.split()[1])/4
-                self.counts[fq] = read_count
-        def output(self):
-            return self.counts
+                self.outputs.counts[fq] = read_count
 
 The key features are:
 
-1. The ``init`` method initialises an internal task-specific variable
-   which is used in other methods.
+1. The ``init`` method initialises the ``counts`` output which will
+   be populated in the ``finish`` method, and accessed via the
+   ``output`` method.
 
 2. The standard output from the task is available via the ``stdout``
    property of the instance.
@@ -164,28 +160,47 @@ non-zero read counts::
 
     class FilterEmptyFastqs(PipelineTask):
         def init(self,read_counts):
-            self.filtered_fastqs = list()
+            self.add_output('filtered_fastqs',list())
         def setup(self):
             for fq in self.args.read_counts:
                 if self.args.read_counts[fq] > 0:
-                     self.filtered_fastqs.append(fq)
-        def output(self):
-            return self.filtered_fastqs
+                     self.output.filtered_fastqs.append(fq)
 
 In this case all the processing is performed by the ``setup`` method;
 no commands are defined.
 
-Task outputs
-------------
+Defining task outputs
+---------------------
 
-Each task subclass needs to implement its own ``output`` method, which
-is used to pass the outputs of the task to other tasks in the pipeline.
+Outputs should be defined within the ``init`` method, using the
+``add_output`` method of the task, for example::
 
-In principle the ``output`` method can return anything.
+    self.add_output('fastqs',dict())
 
-It is important to note that when building a pipeline, the objects
-returned by ``output`` are likely to be passed to other tasks before
-the task has completed. There are a number of implications:
+The outputs can be accessed via the task's `output` property,
+which returns an ``AttributeDictionary`` object where the
+keys/attributes are those defined by the ``add_output`` calls,
+for example::
+
+    task = FilterEmptyFastqs(counts)
+    ...
+    filtered_fastqs = task.output.fastqs
+
+Typically the values of the outputs are not known before the
+task has been run, so the ``setup`` and ``finish`` methods can
+be used to populate the outputs when the task completes (as in
+the ``FilterEmptyFastqs`` example above).
+
+Using task output as input to another task
+------------------------------------------
+
+The key feature of a pipeline is that the outputs from an
+upstream task can be used as input to one or more downstream
+tasks.
+
+In this case the objects returned by ``output`` are likely to
+be passed to other tasks before the task has completed. There
+are a number of implications:
 
 1. Tasks that receive output from a preceeding task cannot assume that
    those outputs are ready or complete at the point of initialisation.
@@ -202,24 +217,20 @@ a list of items::
 
     class ReverseList(PipelineTask):
         def init(self,items):
-            # Create a list to use as output
-            self.reversed = list()
+            self.add_output('reversed_list',list())
         def setup(self):
             # Generate the reversed list
             for item in self.args.items[::-1]:
-                self.reversed.append(item)
-        def output(self):
-            # Return the list
-            return self.reversed
+                self.output.reversed_list.append(item)
 
 This might be used as follows::
 
-    reverse_list = ReverseList("Reverse order of list",[1,2,3])
+    reverse = ReverseList("Reverse order of list",[1,2,3])
 
-Subsequently ``reverse_list.output()`` will return the reference to
-the output list, which can then be passed to another task. The list
-will be populated when the reverse task runs, at which point the
-output will be available to the following tasks.
+Subsequently ``reverse.output.reversed_list`` will return the
+reference to the output list, which can then be passed to another task.
+The list will be populated when the reverse task runs, at which point
+the output will be available to the following tasks.
 
 The ``FileCollector`` class is a specialised class which enables
 the collection of files matching a glob-type pattern, and which can
@@ -227,15 +238,14 @@ be used as an alternative where appropriate. For example::
 
     class MakeFiles(PipelineTask):
         def init(self,d,filenames):
-            pass
+            self.add_output('files',
+                            FileCollector(self.args.d,"*"))
         def setup(self):
             # Create a directory and "touch" the files
             os.mkdir(self.args.d)
             for f in self.args.filenames:
                 with open(os.path.join(self.args.d,f) as fp:
                     fp.write()
-        def output():
-            return FileCollector(self.args.d,"*")
 
 Running Python functions as tasks
 ---------------------------------
@@ -245,9 +255,9 @@ as an external process, for example reimplementing the earlier
 ``CountReads`` example::
 
     from bcftbx.FASTQFile import nreads
-    class CountReads(PipelineTask):
+    class CountReads(PipelineFunctionTask):
         def init(self,fastqs):
-            self.counts = dict()
+            self.add_output('counts',dict())
         def setup(self):
             self.add_call("Count reads in Fastq",
                           self.count_reads,
@@ -261,9 +271,7 @@ as an external process, for example reimplementing the earlier
         def finish(self):
             for fq in self.result():
                 for fq in result[fq]:
-                    self.counts[fq] = result[fq]
-        def output(self):
-            return self.counts
+                    self.output.counts[fq] = result[fq]
 
 The main differences between this and the PipelineTask class are:
 
@@ -296,9 +304,9 @@ for example using the tasks defined previously::
 
     read_counts = CountReads("Count the reads",fastqs)
     filter_empty_fastqs = FilterEmptyFastqs("Filter empty Fastqs",
-                                            read_counts.output())
+                                            read_counts.output.filtered_fastqs)
     run_fastqc = RunFastqc("Run Fastqc",
-                           filter_empty_fastqs.output())
+                           filter_empty_fastqs.output.filtered_fastqs)
 
 Note that when instantiating a task, it must be given a name; this
 can be any arbitrary text and is intended to help the end user
@@ -777,6 +785,8 @@ class PipelineTask(object):
         # Running jobs
         self._jobs = []
         self._groups = []
+        # Output
+        self._output = AttributeDictionary()
         # Deal with subclass arguments
         try:
             self._callargs = inspect.getcallargs(self.init,*args,**kws)
@@ -955,6 +965,23 @@ class PipelineTask(object):
         """
         self._commands.append(pipeline_job)
 
+    def add_output(self,name,value):
+        """
+        Add an output to the task
+
+        Arguments:
+          name (str): name for the output
+          value (object): associated object
+        """
+        self._output[name] = value
+
+    @property
+    def output(self):
+        """
+        Return the output object
+        """
+        return self._output
+
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,wait_for=(),async=True):
         """
@@ -1060,8 +1087,6 @@ class PipelineTask(object):
         raise NotImplementedError("Subclass must implement 'setup' method")
     def finish(self):
         raise NotImplementedError("Subclass must implement 'finish' method")
-    def output(self):
-        raise NotImplementedError("Subclass must implement 'output' method")
 
 class PipelineFunctionTask(PipelineTask):
     """
