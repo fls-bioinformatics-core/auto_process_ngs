@@ -1149,7 +1149,7 @@ class PipelineFunctionTask(PipelineTask):
              passed to the function when invoked
         """
         d = Dispatcher()
-        cmd = d.dispatch_function(f,*args,**kwds)
+        cmd = d.dispatch_function_cmd(f,*args,**kwds)
         self.add_cmd(PipelineCommandWrapper(name,
                                             *cmd.command_line))
         self._dispatchers.append(d)
@@ -1331,7 +1331,7 @@ class Dispatcher(object):
     Example usage:
 
     >>> d = Dispatcher()
-    >>> cmd = d.dispatch_function(bcftbx.utils.list_dirs,os.get_cwd())
+    >>> cmd = d.dispatch_function_cmd(bcftbx.utils.list_dirs,os.get_cwd())
     >>> cmd.run_subprocess()
     >>> result = d.get_result()
 
@@ -1427,7 +1427,7 @@ class Dispatcher(object):
             self._pickle_object(result,pkl_result_file)
         return 0
 
-    def dispatch_function(self,func,*args,**kwds):
+    def dispatch_function_cmd(self,func,*args,**kwds):
         """
         Generate a command to execute the function externally
 
@@ -1446,7 +1446,6 @@ class Dispatcher(object):
         print "-- args    : %s" % (args,)
         print "-- kwds    : %s" % (kwds,)
         # Pickle the components
-        print "Pickling..."
         pkl_func_file = self._pickle_object(func)
         pkl_args_file = self._pickle_object(args)
         pkl_kwds_file = self._pickle_object(kwds)
