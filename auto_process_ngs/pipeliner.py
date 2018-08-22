@@ -563,7 +563,7 @@ class Pipeline(object):
         if self._running:
             self.report("Stopping running tasks:")
             for task in self._running:
-                self.report("- %s" % task.name())
+                self.report("- %s" % task.id())
                 task.terminate()
         # Stop the scheduler
         self.stop_scheduler()
@@ -605,11 +605,13 @@ class Pipeline(object):
             PipelineTask for valid options)
         """
         self._pending.append((task,requires,kws))
-        self.report("Adding task '%s'" % task.name())
+        self.report("Adding task '%s' (%s)" % (task.name(),
+                                               task.id()))
         if requires:
             for req in requires:
-                if req.name() not in [t[0].name() for t in self._pending]:
-                    self.report("-> Adding requirement '%s'" % req.name())
+                if req.id() not in [t[0].id() for t in self._pending]:
+                    self.report("-> Adding requirement '%s' (%s)" %
+                                (req.name(),req.id))
                     self.add_task(req)
         return task
 
@@ -683,7 +685,7 @@ class Pipeline(object):
             failed = []
             for task in self._running:
                 if task.completed:
-                    self.report("finished %s"
+                    self.report("finished '%s'"
                                 % task.name())
                     self._finished.append(task)
                     update = True
@@ -707,7 +709,8 @@ class Pipeline(object):
                                       and y.exit_code == 0,
                                       requirements,True)
                 if run_task:
-                    self.report("started %s" % task.name())
+                    self.report("started '%s' (%s)" % (task.name(),
+                                                       task.id()))
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
@@ -719,9 +722,9 @@ class Pipeline(object):
                                  **kws)
                     except Exception as ex:
                         self.report("Failed to start task '%s': %s" %
-                                    (task.name(),ex))
+                                    (task.id(),ex))
                         logger.critical("Failed to start task '%s': %s" %
-                                        (task.name(),ex))
+                                        (task.id(),ex))
                         failed.append(task)
                     self._running.append(task)
                     update = True
@@ -732,7 +735,8 @@ class Pipeline(object):
             if failed:
                 self.report("Following tasks failed:")
                 for task in failed:
-                    self.report("- %s" % task.name())
+                    self.report("- '%s' (%s)" % (task.name(),
+                                                 task.id()))
                 return self.terminate()
             # Pause before checking again
             if not update:
@@ -844,6 +848,15 @@ class PipelineTask(object):
 
     def name(self):
         """
+        Get the name of the task
+
+        Returns:
+          String: the name supplied when the task was created
+        """
+        return self._name
+
+    def id(self):
+        """
         Get the name of the task within the pipeline
 
         Returns:
@@ -945,14 +958,14 @@ class PipelineTask(object):
         Internal: perform actions to finish the task
         """
         if self._exit_code != 0:
-            logger.critical("%s failed: exit code %s"
-                            % (self._name,self._exit_code))
+            logger.critical("'%s' failed: exit code %s"
+                            % (self.name(),self._exit_code))
         else:
             # Execute 'finish', if implemented
             self.invoke(self.finish)
         # Flag job as completed
         self._completed = True
-        self.report("%s completed" % self._name)
+        self.report("completed")
 
     def add_cmd(self,pipeline_job):
         """
@@ -1029,9 +1042,9 @@ class PipelineTask(object):
             use_group = (len(cmds)!=1)
             if use_group:
                 # Run as a group
-                group = sched.group(self.name())
+                group = sched.group(self.id())
                 for j,cmd in enumerate(cmds):
-                    name = "%s#%s" % (self.name(),j)
+                    name = "%s#%s" % (self.id(),j)
                     group.add(cmd,
                               wd=self._working_dir,
                               name=name,
@@ -1045,7 +1058,7 @@ class PipelineTask(object):
             else:
                 # Run a single job
                 cmd = cmds[0]
-                name = self.name()
+                name = self.id()
                 job = sched.submit(cmd,
                                    wd=self._working_dir,
                                    name=name,
