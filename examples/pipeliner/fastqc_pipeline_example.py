@@ -14,9 +14,12 @@ from auto_process_ngs.pipeliner import Pipeline
 class RunFastqc(PipelineTask):
     # Run Fastqc on multiple files
     def init(self,fastqs,out_dir):
-        # fastqs: list of input Fastq files
-        # out_dir: where to put the Fastqc outputs
-        self.out_files = list()
+        # Inputs:
+        # - fastqs: list of input Fastq files
+        # - out_dir: where to put the Fastqc outputs
+        # Outputs:
+        # - files: list of output Fastqc HTML files
+        self.add_output('files',list())
     def setup(self):
         if not os.path.exists(self.args.out_dir):
             os.mkdir(self.args.out_dir)
@@ -37,15 +40,12 @@ class RunFastqc(PipelineTask):
             if not os.path.exists(out_file):
                 self.fail(message="Missing output file: %s" % out_file)
             else:
-                self.out_files.append(out_file)
-    def output(self):
-        # Returns a list of Fastqc HTML files
-        return self.out_files
+                self.output.files.append(out_file)
 
 class FilterEmptyFastqs(PipelineFunctionTask):
     # Filter Fastq files based on read count
     def init(self,fastqs):
-        self.filtered_fastqs = list()
+        self.add_output('fastqs',list())
     def setup(self):
         for fq in self.args.fastqs:
             self.add_call("Filter out empty fastqs",
@@ -60,10 +60,7 @@ class FilterEmptyFastqs(PipelineFunctionTask):
     def finish(self):
         for result in self.result():
             for fq in result:
-                self.filtered_fastqs.append(fq)
-    def output(self):
-        # Returns a list of Fastq files
-        return self.filtered_fastqs
+                self.output.fastqs.append(fq)
 
 if __name__ == "__main__":
     # Command line
@@ -76,7 +73,7 @@ if __name__ == "__main__":
     filter_empty_fastqs = FilterEmptyFastqs("Filter empty Fastqs",
                                             args.fastqs)
     run_fastqc = RunFastqc("Run Fastqc",
-                           filter_empty_fastqs.output(),
+                           filter_empty_fastqs.output.fastqs,
                            os.getcwd())
     ppl.add_task(filter_empty_fastqs)
     ppl.add_task(run_fastqc,requires=(filter_empty_fastqs,))
