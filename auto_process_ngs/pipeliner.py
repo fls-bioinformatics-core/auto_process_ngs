@@ -673,7 +673,10 @@ class Pipeline(object):
                     self.report("%d running tasks:"
                                 % len(self._running))
                     for t in self._running:
-                        self.report("- %s" % t.name())
+                        njobs,ncompleted = t.njobs()
+                        self.report("- %s (%d/%d)" % (t.name(),
+                                                      ncompleted,
+                                                      njobs))
                 if self._pending:
                     self.report("%d pending tasks:"
                                 % len(self._pending))
@@ -1081,6 +1084,27 @@ class PipelineTask(object):
             # No commands to execute
             self.finish_task()
         return self
+
+    def njobs(self):
+        """
+        Get number of jobs associated with the task
+
+        Returns the total number of jobs and the
+        number of completed jobs associated with a
+        running task, as a tuple: (njobs,ncompleted)
+        """
+        njobs = 0
+        ncompleted = 0
+        for group in self._groups:
+            for job in group.jobs:
+                njobs += 1
+                if job.completed:
+                    ncompleted += 1
+        for job in self._jobs:
+            njobs += 1
+            if job.completed:
+                ncompleted += 1
+        return (njobs,ncompleted)
 
     def terminate(self):
         """
