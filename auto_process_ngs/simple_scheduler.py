@@ -671,7 +671,8 @@ class SchedulerGroup:
         else:
             return None
 
-    def add(self,args,runner=None,name=None,wd=None,log_dir=None,wait_for=None):
+    def add(self,args,runner=None,name=None,wd=None,log_dir=None,
+            wait_for=None,callbacks=[]):
         """Add a request to run a job
         
         Arguments:
@@ -686,6 +687,8 @@ class SchedulerGroup:
           log_dir: (optional) explicitly specify directory for log files
           wait_for: (optional) a list or tuple of job and/or group
                 names which must finish before this job can start
+          callbacks: (optional) a list or tuple of functions that will
+                be executed when the job completes.
 
         Returns:
           SchedulerJob instance for the added job.
@@ -706,7 +709,9 @@ class SchedulerGroup:
         # Submit the job to the scheduler and keep a reference
         logging.debug("Group '%s' #%s: adding job" % (self.group_name,self.group_id))
         job = self.__scheduler.submit(args,runner=runner,name=name,
-                                      wd=wd,log_dir=log_dir,wait_for=waiting_for)
+                                      wd=wd,log_dir=log_dir,
+                                      wait_for=waiting_for,
+                                      callbacks=callbacks)
         self.__jobs.append(job)
         return job
 
