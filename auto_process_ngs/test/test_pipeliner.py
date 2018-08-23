@@ -656,7 +656,7 @@ class TestDispatcher(unittest.TestCase):
         d = Dispatcher(working_dir=dispatcher_wd)
         def hello(name):
             return "Hello %s!" % name
-        cmd = d.dispatch_function(hello,"World")
+        cmd = d.dispatch_function_cmd(hello,"World")
         exit_code = cmd.run_subprocess(log=os.path.join(self.working_dir,
                                                         "dispatcher.log"))
         self.assertEqual(exit_code,0)
@@ -672,7 +672,7 @@ class TestDispatcher(unittest.TestCase):
         d = Dispatcher(working_dir=dispatcher_wd)
         def hello(name):
             return "Hello %s!" % name
-        cmd = d.dispatch_function(hello,"World")
+        cmd = d.dispatch_function_cmd(hello,"World")
         runner = SimpleJobRunner(log_dir=self.working_dir)
         job_id = runner.run("Hello world",
                             self.working_dir,
