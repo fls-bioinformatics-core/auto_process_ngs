@@ -451,6 +451,7 @@ from auto_process_ngs.simple_scheduler import SchedulerReporter
 
 # Module specific logger
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 ######################################################################
 # Pipeline infrastructure constants
