@@ -557,7 +557,7 @@ class Pipeline(object):
         """
         Internal: terminate a running pipeline
         """
-        self.report("Terminating pipeline")
+        self.report("Terminating pipeline: failed")
         # Dump all pending tasks
         self._pending = []
         # Stop all running tasks
@@ -754,7 +754,7 @@ class Pipeline(object):
             if not update:
                 time.sleep(5)
         # Finished
-        self.report("Completed")
+        self.report("Completed: ok")
         return 0
 
 class PipelineTask(object):
