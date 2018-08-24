@@ -13,30 +13,35 @@ The simplest invocation of the command is:
 
    auto_process.py setup DATA_DIR
 
-where ``DATA_DIR`` specifies the location of the top-level
-directory containing the output (i.e. Bcl files) from the
-sequencer run to be processed. ``DATA_DIR`` can be a local
-or a remote directory (see :ref:`setup_remote_data_dir`).
-
-By default the name of the new analysis directory will consist
-of the basename of ``DATA_DIR`` with the suffix ``_analysis``
-appended. For example:
+where ``DATA_DIR`` specifies the location of the data source
+(i.e. the top-level directory containing the output from the
+sequencer run which is to be processed). For example:
 
 ::
 
    auto_process.py setup /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
 
-will produce an analysis directory called
-``180817_M00123_0001_000000000-BV1X2_analysis``; to create
-an analysis directory with a different name, specify it
-using the ``--analysis-dir`` option:
+``DATA_DIR`` can be a local or a remote directory; see
+:ref:`setup_remote_data_dir`.
+
+By default the name of the new analysis directory will consist
+of the basename of ``DATA_DIR`` with the suffix ``_analysis``
+appended, for example the command above will produce an analysis
+directory called
+
+::
+
+   180817_M00123_0001_000000000-BV1X2_analysis
+
+To create an analysis directory with a different name, specify
+it using the ``--analysis-dir`` option:
 
 ::
 
    auto_process.py setup DATA_DIR --analysis-dir ANALYSIS_DIR
 
-(See :doc:`Analysis Directories <../output/analysis_dirs>` for
-details of the analysis directory structure.)
+See :doc:`Analysis Directories <../output/analysis_dirs>` for
+details of the analysis directory structure.
 
 The ``setup`` command will also report the expected outputs
 based on the sample sheet associated with the sequencing run,
@@ -70,10 +75,22 @@ a typo in a project name in the sample sheet).
    The output prediction can also be generated using
    ``auto_process samplesheet`` command.
 
-If the sequencing run doesn't include a sample sheet file
-(for example, NextSeq runs) then one must be explicitly
-specified using the ``--sample-sheet`` option, for
-example:
+.. _setup_specifying_sample_sheet:
+
+********************************
+Specifying the sample sheet file
+********************************
+
+The ``setup`` command will try to locate the sample sheet
+within the source data and will use this by default.
+
+However if the sequencing run doesn't include a sample
+sheet file (for example, NextSeq runs), or if you want to
+use an alternative sample sheet, then the ``--sample-sheet``
+option can be used to explicitly specify the sample sheet
+file.
+
+For example:
 
 ::
 
