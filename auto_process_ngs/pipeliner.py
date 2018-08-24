@@ -696,7 +696,15 @@ class Pipeline(object):
                     if task.exit_code != 0:
                         failed.append(task)
                 else:
+                    # Still running
                     running.append(task)
+                    # Report if status has changed
+                    if task.updated:
+                        njobs,ncompleted = task.njobs()
+                        self.report("'%s' updated (%d/%d)" %
+                                    (task.name(),
+                                     ncompleted,
+                                     njobs))
             self._running = running
             # Check for pending tasks that can start
             pending = []
@@ -792,6 +800,8 @@ class PipelineTask(object):
         # Running jobs
         self._jobs = []
         self._groups = []
+        # Monitoring
+        self._updated_jobs = False
         # Output
         self._output = AttributeDictionary()
         # Deal with subclass arguments
@@ -821,6 +831,15 @@ class PipelineTask(object):
         Check if the task has completed
         """
         return self._completed
+
+    @property
+    def updated(self):
+        """
+        Check if the task has been updated since the last check
+        """
+        updated = self._updated_jobs
+        self._updated_jobs = False
+        return updated
 
     @property
     def exit_code(self):
@@ -931,6 +950,23 @@ class PipelineTask(object):
         if self._working_dir is not None:
             os.chdir(current_dir)
 
+    def job_completed(self,name,jobs,sched):
+        """
+        Internal: callback method
+
+        This is a callback method which is invoked when
+        a single scheduled job in the task finishes
+
+        Arguments:
+          name (str): name for the callback
+          jobs (list): list of SchedulerJob instances
+          sched (SimpleScheduler): scheduler instance
+        """
+        #njobs,ncompleted = self.njobs()
+        self._updated_jobs = True
+        #self.report("Job completed (%d/%d)" % (ncompleted,
+        #                                       njobs))
+
     def task_completed(self,name,jobs,sched):
         """
         Internal: callback method
@@ -968,7 +1004,9 @@ class PipelineTask(object):
             self.invoke(self.finish)
         # Flag job as completed
         self._completed = True
-        self.report("completed")
+        # Report completion
+        njobs,ncompleted = self.njobs()
+        self.report("completed (%d/%d)" % (ncompleted,njobs))
 
     def add_cmd(self,pipeline_job):
         """
@@ -1053,7 +1091,8 @@ class PipelineTask(object):
                               name=name,
                               runner=runner,
                               log_dir=log_dir,
-                              wait_for=wait_for)
+                              wait_for=wait_for,
+                              callbacks=[self.job_completed,])
                 group.close()
                 callback_name = group.name
                 callback_function = self.task_completed
