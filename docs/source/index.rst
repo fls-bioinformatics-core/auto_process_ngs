@@ -1,6 +1,6 @@
-*************************************************
-auto-process-ngs: automate processing of NGS data
-*************************************************
+**************************************************
+auto-process-ngs: automated processing of NGS data
+**************************************************
 
 ``auto_process_ngs`` provides a set of utilities which automate
 the processing of sequencing data from Illumina Next Generation
@@ -37,7 +37,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Pipeline stages
 
-   Analysis setup <using/setup>
+   Starting an analysis <using/setup>
    Fastq generation <using/make_fastqs>
    Analysing barcodes <using/analyse_barcodes>
    Setting up projects <using/setup_analysis_dirs>

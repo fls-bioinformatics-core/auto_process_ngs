@@ -1,10 +1,11 @@
-Setting up analysis directories using ``auto_process setup``
-============================================================
+Starting an analysis using ``auto_process setup``
+=================================================
 
-The ``setup`` command is used to initialise a new analysis
-directory for processing a sequencing run. Most subsequent
-``auto_process`` commands (for example ``make_fastqs``)
-are normally issued from within the analysis directory.
+The ``setup`` command is used to start a new analysis: it
+initialises a new analysis directory for processing a
+sequencing run. Most subsequent ``auto_process`` commands
+(for example ``make_fastqs``) are normally issued from within
+the analysis directory.
 
 The simplest invocation of the command is:
 
