@@ -541,12 +541,6 @@ class Pipeline(object):
         self._scheduler = None
         self._log_file = None
 
-    def __del__(self):
-        """
-        Internal: handle instance deletion
-        """
-        self.terminate()
-
     def report(self,s):
         """
         Internal: report messages from the pipeline
