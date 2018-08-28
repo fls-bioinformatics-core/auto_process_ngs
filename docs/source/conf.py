@@ -246,6 +246,49 @@ texinfo_documents = [
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
 
+# -- Make command reference documents ------------------------------------------
+
+commandref = os.path.join(os.getcwd(),"commands.rst")
+with open(commandref,'w') as commands:
+    commands.write("""
+``auto_process`` commands
+=========================
+
+""")
+
+import subprocess
+for subcmd in ("setup",
+               "make_fastqs",
+               "analyse_barcodes",
+               "setup_analysis_dirs",
+               "run_qc",
+               "publish_qc",
+               "archive",
+               "report",
+               "merge_fastq_dirs",
+               "update_fastq_stats",
+               "import_project",
+               "params",
+               "metadata",
+               "readme"
+               "config",
+               "params",
+               "metadata",
+               "readme",
+               "clone"):
+    # Capture the output
+    help_text_file = "%s.help" % subcmd
+    with open(help_text_file,'w') as fp:
+        subprocess.call(['auto_process.py',subcmd,'--help'],stdout=fp)
+    # Write into the document
+    with open(commandref,'a') as fp:
+        help_text = open(help_text_file,'r').read()
+        title = "%s" % subcmd
+        fp.write("%s\n%s\n%s" % (title,
+                                 "*"*len(title),
+                                 help_text))
+        os.remove(help_text_file)
+
 # -- Make developers reference documents ---------------------------------------
 
 # Fetch a list of modules
