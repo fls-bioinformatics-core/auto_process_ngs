@@ -58,6 +58,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :caption: Outputs
 	     
    Analysis directories <output/analysis_dirs>
+   Processing QC <output/processing_qc>
    QC reports <output/qc_reports>
 
 .. _single-cell-docs:
