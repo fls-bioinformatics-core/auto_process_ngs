@@ -122,7 +122,10 @@ On completion the ``make_fastqs`` command will produce:
 * A set of tab-delimited files with statistics on each of the
   Fastq files
 * An HTML report on the processing QC (see the section on
-  :doc:`Processing QC reports<../output/processing_qc>`.)
+  :doc:`Processing QC reports <../output/processing_qc>`)
+* A ``projects.info`` metadata file which is used for setting up
+  analysis project directories (see
+  :doc:`Setting up project directories <setup_analysis_dirs>`)
 
 Handling runs with mixed data: splitting lanes
 ----------------------------------------------
