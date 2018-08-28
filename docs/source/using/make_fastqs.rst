@@ -127,6 +127,11 @@ On completion the ``make_fastqs`` command will produce:
   analysis project directories (see
   :doc:`Setting up project directories <setup_analysis_dirs>`)
 
+.. note::
+
+   The processing QC report can be copied to the QC server using
+   the :doc:`publish_qc command <publish_qc>`.
+
 Handling runs with mixed data: splitting lanes
 ----------------------------------------------
 

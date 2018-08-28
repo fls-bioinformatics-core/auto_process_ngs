@@ -54,6 +54,8 @@ project.
 
 On successful completion of the pipeline for an HTML report is
 generated for each project; these are described in
-:doc:`QC reports <../output/qc_reports>`.
+:doc:`QC reports <../output/qc_reports>`. If a QC server has been
+specified in the configuration then the reports can be copied
+there for sharing using the :doc:`publish_qc command <publish_qc>`.
 
 .. _multiqc: http://multiqc.info/
