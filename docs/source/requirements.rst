@@ -2,6 +2,8 @@
 Requirements
 ============
 
+.. _software_dependencies:
+
 *********************
 Software dependencies
 *********************
@@ -50,6 +52,8 @@ Alternatively many of these packages can be obtained from the
     multiple ``bcl2fastq`` packages available on the path at run
     time then see :ref:`required_bcl2fastq_versions` for how to
     specify which version is used.
+
+.. _reference_data:
 
 **************
 Reference data

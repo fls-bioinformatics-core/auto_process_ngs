@@ -38,4 +38,5 @@ Fastq generation and QC pipelines; these are listed in the section
 
 The installation may also require some configuration to tailor it to the
 local environment (for example, if running on a compute cluster); this is
-outlined in more detail in the section :ref:`auto_process_configuration`.
+outlined in more detail in the
+:doc:`configuration documentation <configuration>`.

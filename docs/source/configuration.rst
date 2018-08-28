@@ -5,6 +5,10 @@
 Configuration
 *************
 
+--------
+Overview
+--------
+
 The autoprocessor reads its global settings for the local system from a
 ``settings.ini`` file, which it looks for in order in the following
 locations:
@@ -13,41 +17,93 @@ locations:
 2. The ``config`` subdirectory of the installation directory
 3. The installation directory (for legacy installations only)
 
-If no ``settings.ini`` file is found then one can be created using the
-command::
+To create a ``settings.ini`` file for a new installation, use the command
+
+::
 
     auto_process.py config --init
 
-otherwise the autoprocessor will run using the built-in default values.
+To see the current settings, do
 
-To see the current settings, do::
+::
 
     auto_process.py config
 
-To update the settings use the ``--set`` options, for example::
+
+To change the settings, either use the ``--set`` options, for example
+
+::
 
     auto_process.py config --set bcl2fastq.nprocessors=4
 
-The most important settings are the :ref:`job-runners` and for any
-:ref:`environment-modules` that you wish to specify for a particular
-processing stage.
+or simply edit the ``settings.ini`` file by hand using a text editor.
 
-.. _job-runners:
 
-Job runner specification
-------------------------
+.. note::
 
-Job runners tell the autoprocessor how to run programs. There are
-currently only two available:
+   If no ``settings.ini`` file exists then ``auto_process`` will run
+   using the built-in default values.
 
-* ``SimpleJobRunner``: runs programs as a subprocess of the current process
-* ``GEJobRunner``: runs programs using Grid Engine (GE)
+.. note::
 
-The ``GEJobRunner`` is recommended when using the autoprocessor on cluster
-systems. To specify additional Grid Engine-specific options to use with
-the runner, enclose them in parentheses e.g.::
+   Many of the configuration options can be over-ridden at run time
+   using command line options for the specific ``auto_process``
+   subcommands.
 
-    [runners]
+.. _basic_configuration:
+
+-------------------
+Basic configuration
+-------------------
+
+Using the basic ``auto_process`` Fastq generation requires minimal
+configuration when running locally; provided that the required
+``bcl2fastq`` software is available on the system (see
+:ref:`software_dependencies`) it should run without further setup.
+
+Running the QC pipeline requires additional software plus reference data
+which are described in more detail in :ref:`reference_data`.
+
+.. _running_on_compute_cluster:
+
+----------------------------
+Running on a compute cluster
+----------------------------
+
+Within ``auto_process``, "job runners" are used to tell the pipelines
+how to run their jobs. There are currently two types of runner available:
+
+* ``SimpleJobRunner`` runs jobs as a subprocess of the current process,
+  so they run locally (i.e. on the same hardware that the ``auto_process``
+  command was started on)
+* ``GEJobRunner`` submits jobs to Grid Engine (GE), which enables it to
+  exploit additional resources available on a compute cluster.
+
+By default ``auto_process`` is configured to use ``SimpleJobRunner``
+for all jobs; to switch to using ``GEJobRunner``, set the default runner
+in the settings:
+
+::
+
+   [general]
+   default_runner = GEJobRunner
+
+Additional options for Grid Engine submission can be specified by
+enclosing when defining the runner, for example sending all jobs to a
+particular queue might use:
+
+::
+
+   default_runner = GEJobRunner(-q ngs.queue)
+
+This default runer can further be over-ridden for specific pipeline
+stages by the settings in the ``runners`` section of the configuration
+file. For example, to run ``bcl2fastq`` jobs in parallel environment
+with 8 cores might look like:
+
+::
+
+   [runners]
     bcl2fastq = GEJobRunner(-pe smp.pe 8)
 
 .. note::
@@ -56,17 +112,24 @@ the runner, enclose them in parentheses e.g.::
    using ``GEJobRunner`` then you should ensure that the job runner requests
    a suitable number of cores when submitting jobs.
 
+.. note::
+
+   When running on a cluster the ``auto_process`` driver process should
+   run on the cluster login node; it has a small CPU and memory footprint
+   which should impact minimally on other users of the system.
+
 .. _environment-modules:
 
-Environment modules
--------------------
+-------------------------
+Using environment modules
+-------------------------
 
 `Environment modules <http://modules.sourceforge.net/>`_ provide a way to
 dynamic modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
-The ``[modulefiles]`` directive in ``settings.ini`` allows specific module
+The ``[modulefiles]`` section in ``settings.ini`` allows specific module
 files to be loaded before a specific step, for example::
 
     [modulefiles]
@@ -79,8 +142,9 @@ files to be loaded before a specific step, for example::
 
 .. _required_bcl2fastq_versions:
 
-Required bcl2fastq versions and other settings
-----------------------------------------------
+---------------------------
+Required bcl2fastq versions
+---------------------------
 
 Different versions of Illumina's ``bcl2fastq`` software can be specified
 both as a default and dependent on the sequencer platform, by setting the
@@ -118,18 +182,3 @@ version will be used.
 
    This mechanism allows multiple ``bcl2fastq`` versions to be present
    in the environment simultaneously.
-
-.. warning::
-
-   Previously the ``[bcl2fastq]`` directive allowed the versions to be
-   set using platform names specified within that section, for example::
-
-        [bcl2fastq]
-        ...
-        hiseq = 1.8.4
-
-   This method is now deprecated in favour of the ``[platform:NAME]``
-   mechanism.
-
-   If this old method is detected then warnings are issued and the
-   software attempts to make an intelligent choice about the versions.
