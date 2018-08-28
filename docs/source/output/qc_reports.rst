@@ -3,7 +3,9 @@ QC Reports
 
 The :doc:`auto_process run_qc <../using/run_qc>` command outputs an
 HTML report for the QC for each of the projects in the analysis
-directory.
+directory, which enables an assessment of the quality of the Fastq
+files for each sample in the project and tries to highlight aspects
+which might pose problems with the data in subsequent analyses.
 
 An example of the top of a QC report index page is shown below:
 
@@ -74,6 +76,9 @@ boxplot from ``fastqc``, for example:
 .. image:: ../images/qc/uboxplot.png
    :align: center
 
+A larger version of the plot is presented in the
+:ref:`qc_report_qc_outputs_per_fastq` section.
+
 .. _qc_report_fastqc_summary_plots:
 
 Fastqc summary plots
@@ -89,6 +94,15 @@ the overall state of the metrics for each Fastq file, for example:
 .. image:: ../images/qc/fastqc_uplot.png
    :align: center
 
+Each bar in the plot represents one of the ``fastqc`` metrics,
+(for example "Basic statistics", "Per base sequence quality", and
+so on); the colour (red, amber, green) and position (left, centre,
+right) indicate the status of the metric as determined by
+``fastqc``.
+
+The data are presented in more detail in a table in the
+:ref:`qc_report_qc_outputs_per_fastq` section.
+
 .. _qc_report_fastq_screen_summary_plots:
 
 Fastq_screen summary plots
@@ -101,7 +115,9 @@ outputs from ``fastq_screen``, for example:
    :align: center
 
 The three boxes represent (from left to right) the model organisms,
-other organisms and rRNA plots produced by ``fastq_screen``.
+other organisms and rRNA plots produced by ``fastq_screen``. The
+full plots and links to the raw data for each screen can be found
+in the :ref:`qc_report_qc_outputs_per_fastq` section.
 
 .. _qc_report_strandedness:
 
@@ -130,6 +146,9 @@ Some examples:
    Likely unstranded       .. image:: ../images/qc/strandedness_no_strand.png
    ======================= ===============
 
+More detailed information about the strandedness statistics
+is given in the :ref:`qc_report_qc_outputs_per_fastq` section.
+   
 .. _qc_report_qc_outputs_per_fastq:
 
 *************************
@@ -141,3 +160,19 @@ Fastq pair are grouped by sample, for example:
 
 .. image:: ../images/qc/qc_outputs_per_fastq.png
    :align: center
+
+For each Fastq the subsections consist of:
+
+* ``fastqc`` outputs including the sequence quality boxplot
+  and a table of the quality metrics with links to the full
+  report:
+
+  .. image:: ../images/qc/fastqc_full.png
+
+* ``fastq_screen`` outputs for each screen, for example:
+
+  .. image:: ../images/qc/fastq_screen_full.png
+
+* ``fastq_strand`` data:
+  
+  .. image:: ../images/qc/strandedness_full.png
