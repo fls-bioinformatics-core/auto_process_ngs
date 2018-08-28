@@ -112,6 +112,18 @@ Specifying the platform
 the instrument name. If the instrument name is not recognised then
 it can be explicitly specified using the ``--platform`` option.
 
+Outputs
+-------
+
+On completion the ``make_fastqs`` command will produce:
+
+* An output directory called ``bcl2fastq`` with the demultiplexed
+  Fastq files
+* A set of tab-delimited files with statistics on each of the
+  Fastq files
+* An HTML report on the processing QC (see the section on
+  :doc:`Processing QC reports<../output/processing_qc>`.)
+
 Handling runs with mixed data: splitting lanes
 ----------------------------------------------
 
