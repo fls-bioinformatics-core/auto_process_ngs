@@ -566,6 +566,34 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertTrue(sched.is_empty())
         sched.stop()
 
+    def test_callback_from_job_in_group(self):
+        """Add callback function to a job in a group
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
+        sched.start()
+        # Add a group with a callback
+        cb = CallbackTester()
+        group = sched.group("grp_1")
+        job1 = group.add(['sleep','10'],callbacks=(cb.call_me,))
+        job2 = group.add(['sleep','20'])
+        group.close()
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertFalse(cb.invoked)
+        # Finish first job, wait for scheduler to catch up
+        job1.terminate()
+        time.sleep(0.1)
+        self.assertTrue(cb.invoked)
+        self.assertEqual(len(cb.jobs),1)
+        self.assertEqual(cb.jobs[0],job1)
+        self.assertEqual(cb.sched,sched)
+        # Finish second job
+        job2.terminate()
+        time.sleep(0.1)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
     def test_set_job_working_dir(self):
         """Explicitly specify working directory for a job
 
