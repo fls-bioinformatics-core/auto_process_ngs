@@ -5,6 +5,8 @@
 import unittest
 import os
 import tempfile
+import pickle
+import cloudpickle
 from auto_process_ngs.metadata import *
 
 class TestMetadataDict(unittest.TestCase):
@@ -60,17 +62,6 @@ class TestMetadataDict(unittest.TestCase):
         metadata = MetadataDict(attributes={'salutation':'Salutation',
                                             'valediction': 'Valediction'})
         self.assertRaises(AttributeError,lambda: metadata.conversation)
-
-    def test_set_non_existent_attribute(self):
-        """Check that setting non-existent attribute raises exception
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        try:
-            metadata['conversation'] = 'hrm'
-            self.fail('AttributeError not raised')
-        except AttributeError,ex:
-            pass
 
     def test_specify_key_order(self):
         """Check that specified key ordering is respected
@@ -141,6 +132,48 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata.salutation,'hello')
         self.assertEqual(metadata.valediction,'goodbye')
         self.assertEqual(metadata.chit_chat,'stuff')
+
+    def test_cloudpickle_metadata(self):
+        """Check Metadata object can be serialised with 'cloudpickle'
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'chit_chat':'chit_chat',
+                                            'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        metadata['salutation'] = "hello"
+        metadata['valediction'] = "goodbye"
+        metadata['chit_chat'] = "stuff"
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertEqual(metadata.chit_chat,'stuff')
+        # Pickle it
+        pickled = cloudpickle.dumps(metadata)
+        # Unpickle it
+        unpickled = cloudpickle.loads(pickled)
+        self.assertEqual(unpickled.salutation,'hello')
+        self.assertEqual(unpickled.valediction,'goodbye')
+        self.assertEqual(unpickled.chit_chat,'stuff')
+
+    def test_pickle_metadata(self):
+        """Check Metadata object can be serialised with 'pickle'
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'chit_chat':'chit_chat',
+                                            'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        metadata['salutation'] = "hello"
+        metadata['valediction'] = "goodbye"
+        metadata['chit_chat'] = "stuff"
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        self.assertEqual(metadata.chit_chat,'stuff')
+        # Pickle it
+        pickled = pickle.dumps(metadata)
+        # Unpickle it
+        unpickled = pickle.loads(pickled)
+        self.assertEqual(unpickled.salutation,'hello')
+        self.assertEqual(unpickled.valediction,'goodbye')
+        self.assertEqual(unpickled.chit_chat,'stuff')
 
 class TestAnalysisDirParameters(unittest.TestCase):
     """Tests for the AnalysisDirParameters class
