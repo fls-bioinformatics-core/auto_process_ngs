@@ -270,7 +270,7 @@ for subcmd in ("setup",
                "import_project",
                "params",
                "metadata",
-               "readme"
+               "readme",
                "config",
                "params",
                "metadata",
