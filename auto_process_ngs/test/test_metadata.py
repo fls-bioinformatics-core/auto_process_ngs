@@ -63,17 +63,6 @@ class TestMetadataDict(unittest.TestCase):
                                             'valediction': 'Valediction'})
         self.assertRaises(AttributeError,lambda: metadata.conversation)
 
-    def test_set_non_existent_attribute(self):
-        """Check that setting non-existent attribute raises exception
-        """
-        metadata = MetadataDict(attributes={'salutation':'Salutation',
-                                            'valediction': 'Valediction'})
-        try:
-            metadata['conversation'] = 'hrm'
-            self.fail('AttributeError not raised')
-        except AttributeError,ex:
-            pass
-
     def test_specify_key_order(self):
         """Check that specified key ordering is respected
         """

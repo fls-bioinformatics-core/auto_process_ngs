@@ -134,12 +134,6 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 extra_keys.sort()
                 self.__key_order.extend(extra_keys)
 
-    def __setitem__(self,key,value):
-        if key in self.__attributes:
-            bcf_utils.AttributeDictionary.__setitem__(self,key,value)
-        else:
-            raise AttributeError,"Key '%s' not defined" % key
-
     def __iter__(self):
         return iter(self.__key_order)
 
