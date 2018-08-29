@@ -6,6 +6,8 @@ import unittest
 import tempfile
 import shutil
 import zipfile
+import pickle
+import cloudpickle
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
 from auto_process_ngs.mock import MockAnalysisDirFactory
@@ -193,7 +195,7 @@ class TestAnalysisProject(unittest.TestCase):
                             'PJB1-A_ACAGTG_L001_R2_001.fastq.gz',
                             'PJB1-B_ACAGTG_L002_R2_001.fastq.gz',))
         dirn = os.path.join(self.dirn,'PJB')
-        project = AnalysisProject('PJB',dirn,fastq_dir='fastqs.test')
+        project = AnalysisProject('PJB',dirn)
         project.create_directory(fastqs=self.fastqs)
         self.assertEqual(project.name,'PJB')
         self.assertTrue(os.path.isdir(project.dirn))
@@ -710,6 +712,58 @@ class TestAnalysisProject(unittest.TestCase):
         self.make_mock_project_dir('PJB',())
         project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
         self.assertEqual(project.sample_summary(),"No samples")
+
+    def test_pickle_analysis_project(self):
+        """AnalysisProject: check serialisation with 'pickle'
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        # Pickle project
+        pickled = pickle.dumps(project)
+        # Unpickle it
+        unpickled = pickle.loads(pickled)
+        # Check the unpickled data
+        self.assertEqual(unpickled.name,'PJB')
+        self.assertTrue(os.path.isdir(unpickled.dirn))
+        self.assertFalse(unpickled.multiple_fastqs)
+        self.assertFalse(unpickled.info.paired_end)
+        self.assertEqual(unpickled.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(unpickled.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(unpickled.samples[0].name,'PJB1-A')
+        self.assertEqual(unpickled.samples[1].name,'PJB1-B')
+        self.assertEqual(unpickled.fastq_dir,
+                         os.path.join(unpickled.dirn,'fastqs'))
+        self.assertEqual(unpickled.fastq_dirs,['fastqs',])
+
+    def test_cloudpickle_analysis_project(self):
+        """AnalysisProject: check serialisation with 'cloudpickle'
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        # Pickle project
+        pickled = cloudpickle.dumps(project)
+        # Unpickle it
+        unpickled = cloudpickle.loads(pickled)
+        # Check the unpickled data
+        self.assertEqual(unpickled.name,'PJB')
+        self.assertTrue(os.path.isdir(unpickled.dirn))
+        self.assertFalse(unpickled.multiple_fastqs)
+        self.assertFalse(unpickled.info.paired_end)
+        self.assertEqual(unpickled.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(unpickled.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(unpickled.samples[0].name,'PJB1-A')
+        self.assertEqual(unpickled.samples[1].name,'PJB1-B')
+        self.assertEqual(unpickled.fastq_dir,
+                         os.path.join(unpickled.dirn,'fastqs'))
+        self.assertEqual(unpickled.fastq_dirs,['fastqs',])
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
