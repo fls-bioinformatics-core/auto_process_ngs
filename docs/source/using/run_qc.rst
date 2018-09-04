@@ -1,4 +1,4 @@
-Generating QC reports using ``auto_process setup``
+Generating QC reports using ``auto_process run_qc``
 ==================================================
 
 The ``run_qc`` command is used to run the QC pipeline on the
