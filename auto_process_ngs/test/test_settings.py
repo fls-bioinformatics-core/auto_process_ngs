@@ -87,3 +87,19 @@ nprocessors = 8
         max_concurrent_jobs = s.general.max_concurrent_jobs
         self.assertEqual(s['general'].max_concurrent_jobs,
                          max_concurrent_jobs)
+
+    def test_preserve_option_case(self):
+        """Settings: case of option names is preserved
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencers]
+SN7001251 = hiseq
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check case of option
+        self.assertTrue('SN7001251' in s.sequencers)
+        self.assertEqual(s.sequencers['SN7001251'],'hiseq')
+        self.assertEqual(s.sequencers.SN7001251,'hiseq')

@@ -21,6 +21,12 @@ default_version = >=1.8.4
 no_lane_splitting = False
 create_empty_fastqs = True
 
+# Sequencers and platforms
+# Assign platforms to sequencer instrument names
+# These values will be specific to the local site
+[sequencers]
+#SN7001250 = hiseq
+
 # QC settings
 [qc]
 nprocessors = 1

@@ -133,6 +133,13 @@ class Settings(object):
                 self.fastq_strand_indexes[genome] = conf_file
         except NoSectionError:
             logging.warning("No strand stats conf files defined")
+        # Sequencers
+        self.add_section('sequencers')
+        try:
+            for instrument,platform in config.items('sequencers'):
+                self['sequencers'][instrument] = platform
+        except NoSectionError:
+            logging.warning("No sequencers defined")
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
