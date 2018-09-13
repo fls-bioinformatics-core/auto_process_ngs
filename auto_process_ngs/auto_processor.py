@@ -908,12 +908,15 @@ class AutoProcess:
             original_sample_sheet = os.path.join(self.analysis_dir,
                                                  'SampleSheet.orig.csv')
         print "Sample sheet '%s'" % custom_sample_sheet
-        # Assay type (= kit)
-        try:
-            assay = IlluminaData.SampleSheet(original_sample_sheet).header['Assay']
-        except KeyError:
-            logging.warning("No element 'Assay' found in sample sheet")
-            assay = None
+        # Library Prep Kit/Assay
+        assay = None
+        for item in ('Assay','Library Prep Kit'):
+            try:
+                assay = IlluminaData.SampleSheet(original_sample_sheet).header[item]
+                break
+            except KeyError:
+                logging.warning("No element '%s' found in sample sheet"
+                                % item)
         # Bases mask
         print "Bases mask set to 'auto' (will be determined at run time)"
         bases_mask = "auto"
