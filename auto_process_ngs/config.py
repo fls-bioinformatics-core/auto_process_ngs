@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     config: classes & funcs for configuring auto_process_ngs
-#     Copyright (C) University of Manchester 2014 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2018 Peter Briggs
 #
 ########################################################################
 #
@@ -16,17 +16,19 @@ module.
 
 """
 
-from ConfigParser import ConfigParser,NoOptionError,NoSectionError
+from ConfigParser import SafeConfigParser
+from ConfigParser import NoOptionError
+from ConfigParser import NoSectionError
 from bcftbx.JobRunner import fetch_runner
 
 #######################################################################
 # Classes
 #######################################################################
 
-class Config(ConfigParser):
-    """Wraps ConfigParser to set defaults for missing options
+class Config(SafeConfigParser):
+    """Wraps SafeConfigParser to set defaults for missing options
 
-    Implements a wrapper for ConfigParser:
+    Implements a wrapper for SafeConfigParser:
 
     - 'get' and 'getint' methods take a 'default' argument, which
       is returned if the specified option is missing from the file
@@ -45,10 +47,11 @@ class Config(ConfigParser):
 
     """
     def __init__(self):
-        ConfigParser.__init__(self)
+        SafeConfigParser.__init__(self)
+        self.optionxform = str
     def get(self,section,option,default=None):
         try:
-            value = ConfigParser.get(self,section,option)
+            value = SafeConfigParser.get(self,section,option)
             if value == 'None' or value == '':
                 return default
             else:
@@ -59,12 +62,12 @@ class Config(ConfigParser):
             return default
     def getint(self,section,option,default=None):
         try:
-            return ConfigParser.getint(self,section,option)
+            return SafeConfigParser.getint(self,section,option)
         except TypeError:
             return default
     def getboolean(self,section,option,default=None):
         try:
-            return ConfigParser.getboolean(self,section,option)
+            return SafeConfigParser.getboolean(self,section,option)
         except (TypeError,AttributeError):
             return default
     def getrunner(self,section,option,default='SimpleJobRunner'):

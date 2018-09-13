@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2017 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2018 Peter Briggs
 #
 ########################################################################
 #
@@ -36,11 +36,66 @@ import auto_process_ngs.applications as applications
 import auto_process_ngs.utils as utils
 from .samplesheet_utils import barcode_is_10xgenomics
 import bcftbx.IlluminaData as IlluminaData
+import bcftbx.platforms as platforms
 import bcftbx.utils as bcf_utils
 
 #######################################################################
 # Functions
 #######################################################################
+
+def get_sequencer_platform(dirn,instrument=None,settings=None):
+    """
+    Return the platform for the sequencing instrument
+
+    Attempts to identify the platform (e.g. 'hiseq', 'miseq' etc)
+    for a sequencing run.
+
+    If 'settings' is supplied then the platform is looked up
+    based on the instrument names and platforms listed in the
+    'sequencers' section of the configuration. If 'instrument'
+    is also supplied then this is used; otherwise the instrument
+    name is extracted from the supplied directory name.
+
+    If no match can be found then there is a final attempt to
+    determine the platform from the hard-coded names in the
+    'bcftbx.platforms' module.
+
+    Arguments:
+      dirn (str): path to the data or analysis directory
+      instrument (str): (optional) the instrument name
+      settings (Settings):  (optional) a Settings instance
+        with the configuration loaded
+
+    Returns:
+      String: either the platform or None, if the platform
+        cannot be determined.
+    """
+    # Attempt to look up the instrument name
+    platform = None
+    if instrument is None:
+        print "Extracting instrument name from directory name"
+        try:
+            datestamp,instrument,run_number,\
+                flow_cell_prefix,flow_cell_id = \
+                    IlluminaData.split_run_name_full(dirn)
+        except Exception as ex:
+            logging.warning("Unable to extract instrument name: "
+                            "%s" % ex)
+    if instrument and settings:
+        print "Identifying platform from instrument name"
+        try:
+            return settings.sequencers[instrument]
+        except KeyError:
+            # Instrument not listed in the settings
+            logging.warning("Instrument name '%s' not found in "
+                            "configuration file" % instrument)
+    # Fall back to old method
+    print "Identifying platform from data directory name"
+    platform = platforms.get_sequencer_platform(dirn)
+    if platform is None:
+        logging.warning("Unable to identify platform from "
+                        "directory name")
+    return platform
 
 def available_bcl2fastq_versions(reqs=None,paths=None):
     """

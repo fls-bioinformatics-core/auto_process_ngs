@@ -23,7 +23,6 @@ import time
 import ast
 import gzip
 import bcftbx.IlluminaData as IlluminaData
-import bcftbx.platforms as platforms
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
@@ -290,17 +289,6 @@ class AutoProcess:
                               "'%s'" % (param,self.params[param]))
                     print "Importing metadata item '%s'" % param
                     self.metadata[param] = self.params[param]
-        # Make guesses for other metadata
-        if self.metadata.platform is None:
-            # Attempt to detect sequencing platform
-            self.metadata['platform'] = \
-                platforms.get_sequencer_platform(self.analysis_dir)
-            if self.metadata.platform is None:
-                logging.warning("Unable to identify platform from "
-                                "directory name")
-            else:
-                print "Setting 'platform' metadata item to %s" % \
-                    self.metadata.platform
         # Run name
         if self.metadata.run_name is None:
             print "Attempting to set missing 'run_name' metadata item"
@@ -324,9 +312,20 @@ class AutoProcess:
                 if self.metadata.instrument_flow_cell_id is None:
                     self.metadata['instrument_flow_cell_id'] = \
                         flow_cell_prefix + flow_cell_id
-            except Exception, ex:
+            except Exception as ex:
                 logging.warning("Unable to extract missing instrument metadata "
                                 "from run name")
+        # Sequencing platform
+        if self.metadata.platform is None:
+            # Attempt to look up the instrument name
+            platform = bcl2fastq_utils.get_sequencer_platform(
+                self.analysis_dir,
+                instrument=self.metadata.instrument_name,
+                settings=self.settings)
+            if platform:
+                print "Setting 'platform' metadata item to %s" % \
+                    platform
+                self.metadata['platform'] = platform
 
     def edit_samplesheet(self):
         """
@@ -829,13 +828,6 @@ class AutoProcess:
             else:
                 logging.warning("No parameter file found in %s" %
                                 self.analysis_dir)
-        # Identify missing data and attempt to acquire
-        # Sequencing platform
-        platform = self.metadata.platform
-        if platform is None:
-            print "Identifying platform from data directory name"
-            platform = platforms.get_sequencer_platform(data_dir)
-        print "Platform identified as '%s'" % platform
         # Run datestamp, instrument name and instrument run number
         try:
             datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
@@ -850,6 +842,15 @@ class AutoProcess:
             instrument= None
             run_number = None
             flow_cell = None
+        # Identify missing data and attempt to acquire
+        # Sequencing platform
+        platform = self.metadata.platform
+        if platform is None:
+            platform = bcl2fastq_utils.get_sequencer_platform(
+                data_dir,
+                instrument=instrument,
+                settings=self.settings)
+        print "Platform identified as '%s'" % platform
         # Log dir
         self.set_log_dir(self.get_log_subdir('setup'))
         # Custom SampleSheet.csv file
@@ -959,7 +960,7 @@ class AutoProcess:
         self.create_directory(self.analysis_dir)
         # Get information
         print "Identifying platform from data directory name"
-        platform = platforms.get_sequencer_platform(analysis_dir)
+        platform = bcl2fastq_utils.get_sequencer_platform(analysis_dir)
         # Store the parameters
         self.params['analysis_dir'] = self.analysis_dir
         self.params['unaligned_dir'] = fastq_dir

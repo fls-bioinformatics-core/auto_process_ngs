@@ -23,6 +23,10 @@ other_value =
 
 [runners]
 my_runner = SimpleJobRunner
+
+[names]
+Name1 = Peter
+name1 = John
 """
 
 class TestConfig(unittest.TestCase):
@@ -42,7 +46,8 @@ class TestConfig(unittest.TestCase):
         """Check Config.get works with defaults
         """
         self.assertEqual(self.config.get('basic','salutation'),None)
-        self.assertEqual(self.config.get('basic','salutation','bonjour'),'bonjour')
+        self.assertEqual(self.config.get('basic','salutation','bonjour'),
+                         'bonjour')
 
     def test_getint(self):
         """Check Config.getint fetches integer value
@@ -75,9 +80,12 @@ class TestConfig(unittest.TestCase):
     def test_getrunner_with_default(self):
         """Check Config.getrunner works with defaults
         """
-        self.assertTrue(isinstance(self.config.getrunner('runners','your_runner'),
+        self.assertTrue(isinstance(self.config.getrunner('runners',
+                                                         'your_runner'),
                                    SimpleJobRunner))
-        self.assertTrue(isinstance(self.config.getrunner('runners','your_runner','GEJobRunner'),
+        self.assertTrue(isinstance(self.config.getrunner('runners',
+                                                         'your_runner',
+                                                         'GEJobRunner'),
                                    GEJobRunner))
 
     def test_get_with_None_value(self):
@@ -87,7 +95,13 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(self.config.get('none_types','some_value','something'),'something')
 
     def test_get_with_empty_value(self):
-        """Check Config.get works for parameters with no value set'
+        """Check Config.get works for parameters with no value set
         """
         self.assertEqual(self.config.get('none_types','other_value'),None)
         self.assertEqual(self.config.get('none_types','other_value','something'),'something')
+
+    def test_option_case_is_preserved(self):
+        """Check Config.get preserves option case
+        """
+        self.assertEqual(self.config.get('names','Name1'),'Peter')
+        self.assertEqual(self.config.get('names','name1'),'John')

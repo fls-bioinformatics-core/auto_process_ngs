@@ -7,7 +7,11 @@ import tempfile
 import os
 import shutil
 from bcftbx.mock import RunInfoXml
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.bcl2fastq_utils import *
+
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
 
 class MockBcl2fastq:
     """
@@ -172,6 +176,104 @@ class MockBcl2fastq:
         self._makedirs('bcl2fastq','2.17.1.14','etc','bcl2fastq-2.17.1.14')
         self._make_exe('bcl2fastq','2.17.1.14','bin','bcl2fastq',
                        content="#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.17.1.14\nCopyright (c) 2007-2015 Illumina, Inc.\n\n2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq --version\nEOF\nfi")
+
+class TestGetSequencerPlatform(unittest.TestCase):
+    """
+    Tests for the get_sequencer_platform function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessRunQc')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
+
+    def test_get_sequencer_platform(self):
+        """
+        get_sequencer_platform: use run directory with known sequencers
+        """
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_SN7001250_0035_BC133VACXX"),"hiseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/121210_M00879_0001_000000000-A2Y1L"),"miseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120518_ILLUMINA-73D9FA_00002_FC"),"illumina-ga2x")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/151216_NB500968_0008_AH5CFGAFXX"),"nextseq")
+
+    def test_get_sequencer_platform_from_settings(self):
+        """
+        get_sequencer_platform: use run directory and settings
+        """
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[sequencers]
+SN7001251 = hiseq
+M00880 = miseq
+FS10000171 = iseq
+""")
+        settings = Settings(settings_ini)
+        print settings.sequencers
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_SN7001251_0035_BC133VACXX",
+            settings=settings),"hiseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/121210_M00880_0001_000000000-A2Y1L",
+            settings=settings),"miseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/20180829_FS10000171_3_BNT40323-1530",
+            settings=settings),"iseq")
+
+    def test_get_sequencer_platform_from_instrument_name_and_settings(self):
+        """
+        get_sequencer_platform: use instrument name and settings
+        """
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[sequencers]
+SN7001251 = hiseq
+M00880 = miseq
+FS10000171 = iseq
+""")
+        settings = Settings(settings_ini)
+        print settings.sequencers
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_BLAH_0035_BC133VACXX",
+            instrument="SN7001251",
+            settings=settings),"hiseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/121210_BLAH_0001_000000000-A2Y1L",
+            instrument="M00880",
+            settings=settings),"miseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/20180829_BLAH_3_BNT40323-1530",
+            instrument="FS10000171",
+            settings=settings),"iseq")
+
+    def test_get_sequencer_platform_unknown_instrument(self):
+        """
+        get_sequencer_platform: handle unknown instrument name
+        """
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[sequencers]
+SN7001251 = hiseq
+M00880 = miseq
+FS10000171 = iseq
+""")
+        settings = Settings(settings_ini)
+        print settings.sequencers
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_BLAH_0035_BC133VACXX"),None)
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_BLAH_0035_BC133VACXX",
+            settings=settings),None)
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_BLAH_0035_BC133VACXX",
+            instrument="BLEURGH",
+            settings=settings),None)
 
 class TestAvailableBcl2fastqVersions(unittest.TestCase):
     """
