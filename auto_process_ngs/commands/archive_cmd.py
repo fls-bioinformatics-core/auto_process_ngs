@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 #########################################################################
 
@@ -131,7 +131,16 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         raise Exception("No platform specified (use --platform "
                         "option?)")
     if year is None:
-        year = "20%s" % str(ap.metadata.instrument_datestamp)[0:2]
+        datestamp = str(ap.metadata.instrument_datestamp)
+        if len(datestamp) == 6:
+            # Assume YYMMDD datestamp format
+            year = "20%s" % datestamp[0:2]
+        elif len(datestamp) == 8:
+            # Assume YYYYMMDD datestamp format
+            year = datestamp[0:4]
+        else:
+            raise Exception("Invalid datestamp '%s' (use "
+                            "--year option)" % datestamp)
     archive_dir = os.path.join(archive_dir,year,platform)
     if not fileops.exists(archive_dir):
         raise OSError("Archive directory '%s' doesn't exist" %
