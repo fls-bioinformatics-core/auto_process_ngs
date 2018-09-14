@@ -219,16 +219,21 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         archiving_jobs = []
         # If making fastqs read-only then transfer them separately
         if read_only_fastqs and final:
+            # Make sure excluded directories are excluded
+            extra_options =  [ex for ex in excludes]
+            # Set up to include only the fastq directories
+            extra_options.extend([
+                '--include=*/',
+                '--include=fastqs/**',
+                '--exclude=*'])
+            # Execute the rsync
             rsync_fastqs = applications.general.rsync(
                 "%s/" % ap.analysis_dir,
                 os.path.join(archive_dir,staging),
                 prune_empty_dirs=True,
                 dry_run=dry_run,
                 chmod='ugo-w',
-                extra_options=(
-                    '--include=*/',
-                    '--include=fastqs/**',
-                    '--exclude=*',))
+                extra_options=extra_options)
             print "Running %s" % rsync_fastqs
             rsync_fastqs_job = sched.submit(rsync_fastqs,
                                             name="rsync.archive_fastqs")
