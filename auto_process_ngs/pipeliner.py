@@ -687,7 +687,7 @@ class Pipeline(object):
                                                           ncompleted,
                                                           njobs))
                         else:
-                            self.report("- %s" % t.name)
+                            self.report("- %s" % t.name())
                 if self._pending:
                     self.report("%d pending tasks:"
                                 % len(self._pending))
