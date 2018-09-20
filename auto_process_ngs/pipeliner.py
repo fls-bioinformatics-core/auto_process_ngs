@@ -682,9 +682,12 @@ class Pipeline(object):
                                 % len(self._running))
                     for t in self._running:
                         njobs,ncompleted = t.njobs()
-                        self.report("- %s (%d/%d)" % (t.name(),
-                                                      ncompleted,
-                                                      njobs))
+                        if njobs > 1:
+                            self.report("- %s (%d/%d)" % (t.name(),
+                                                          ncompleted,
+                                                          njobs))
+                        else:
+                            self.report("- %s" % t.name)
                 if self._pending:
                     self.report("%d pending tasks:"
                                 % len(self._pending))
@@ -709,10 +712,11 @@ class Pipeline(object):
                     # Report if status has changed
                     if task.updated:
                         njobs,ncompleted = task.njobs()
-                        self.report("'%s' updated (%d/%d)" %
-                                    (task.name(),
-                                     ncompleted,
-                                     njobs))
+                        if njobs > 1:
+                            self.report("'%s' updated (%d/%d)" %
+                                        (task.name(),
+                                         ncompleted,
+                                         njobs))
             self._running = running
             # Check for pending tasks that can start
             pending = []
@@ -1005,7 +1009,10 @@ class PipelineTask(object):
         self._completed = True
         # Report completion
         njobs,ncompleted = self.njobs()
-        self.report("completed (%d/%d)" % (ncompleted,njobs))
+        if njobs > 1:
+            self.report("completed (%d/%d)" % (ncompleted,njobs))
+        else:
+            self.report("completed")
 
     def add_cmd(self,pipeline_job):
         """
