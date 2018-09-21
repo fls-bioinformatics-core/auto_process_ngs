@@ -433,6 +433,7 @@ if __name__ == "__main__":
         print "No organisms specified"
     # Set up the QC
     illumina_qc = IlluminaQC(
+        protocol="singlecell",
         nthreads=nprocessors['qc'],
         fastq_screen_subset=default_fastq_screen_subset,
         fastq_strand_conf=fastq_strand_conf)
