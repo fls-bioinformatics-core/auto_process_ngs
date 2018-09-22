@@ -523,6 +523,22 @@ class ICell8QCFilter(Pipeline):
             for task in cleanup_tasks:
                 self.add_task(task,requires=cleanup_requirements)
 
+    def run(self,*args,**kws):
+        """
+        Run the tasks in the pipeline
+
+        Takes the same arguments as the `Pipeline` base class
+        and performs post-termination clean up of temporary
+        directory.
+        """
+        # Run pipeline
+        exit_status = Pipeline.run(self,*args,**kws)
+        # Clean up temporary directory
+        if os.path.exists(self.tmp_dir):
+            shutil.rmtree(self.tmp_dir)
+        # Finish
+        return exit_status
+
 class ICell8FinalReporting(Pipeline):
     """
     Perform final reporting from ICELL8 pipeline
@@ -557,22 +573,6 @@ class ICell8FinalReporting(Pipeline):
         final_report = ReportProcessing("Generate processing report",
                                         outdir)
         self.add_task(final_report)
-
-    def run(self,*args,**kws):
-        """
-        Run the tasks in the pipeline
-
-        Takes the same arguments as the `Pipeline` base class
-        and performs post-termination clean up of temporary
-        directory.
-        """
-        # Run pipeline
-        exit_status = Pipeline.run(self,*args,**kws)
-        # Clean up temporary directory
-        if os.path.exists(self.tmp_dir):
-            shutil.rmtree(self.tmp_dir)
-        # Finish
-        return exit_status
 
 ######################################################################
 # ICELL8 pipeline command classes
