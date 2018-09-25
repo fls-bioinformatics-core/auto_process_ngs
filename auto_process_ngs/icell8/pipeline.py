@@ -189,7 +189,7 @@ class ICell8QCFilter(Pipeline):
                                              sample_fastqs_dir)
 
         # Temporary dir
-        tmp_dir = os.path.join(outdir,"tmp.%s" % self._id)
+        self.tmp_dir = os.path.join(outdir,"tmp.%s" % self._id)
 
         # Only build pipeline if the final fastqs don't exist
         if (os.path.exists(barcode_fastqs_dir) and
@@ -207,7 +207,7 @@ class ICell8QCFilter(Pipeline):
         setup_dirs = SetupDirectories("Setup output directories",
                                       (outdir,
                                        stats_dir,
-                                       tmp_dir))
+                                       self.tmp_dir))
         self.add_task(setup_dirs)
 
         # Initial stats
@@ -218,7 +218,7 @@ class ICell8QCFilter(Pipeline):
                                        well_list_file,
                                        unassigned=True,
                                        nprocs=nprocessors['statistics'],
-                                       temp_dir=tmp_dir)
+                                       temp_dir=self.tmp_dir)
         self.add_task(initial_stats,runner=runners['statistics'],
                       requires=(setup_dirs,))
 
@@ -286,7 +286,7 @@ class ICell8QCFilter(Pipeline):
                                       suffix="_filtered",
                                       append=True,
                                       nprocs=nprocessors['statistics'],
-                                      temp_dir=tmp_dir)
+                                      temp_dir=self.tmp_dir)
         self.add_task(filter_stats,requires=(initial_stats,
                                             collect_filtered_fastqs),
                      runner=runners['statistics'])
@@ -314,7 +314,7 @@ class ICell8QCFilter(Pipeline):
                                            suffix="_poly_g",
                                            append=True,
                                            nprocs=nprocessors['statistics'],
-                                           temp_dir=tmp_dir)
+                                           temp_dir=self.tmp_dir)
         self.add_task(poly_g_stats,
                       requires=(collect_poly_g_fastqs,filter_stats),
                       runner=runners['statistics'])
@@ -342,7 +342,7 @@ class ICell8QCFilter(Pipeline):
                                     suffix="_trimmed",
                                     append=True,
                                     nprocs=nprocessors['statistics'],
-                                    temp_dir=tmp_dir)
+                                    temp_dir=self.tmp_dir)
         self.add_task(trim_stats,requires=(collect_trimmed_fastqs,
                                            poly_g_stats),
                       runner=runners['statistics'])
@@ -383,7 +383,7 @@ class ICell8QCFilter(Pipeline):
                 suffix="_contaminant_filtered",
                 append=True,
                 nprocs=nprocessors['statistics'],
-                temp_dir=tmp_dir)
+                temp_dir=self.tmp_dir)
             self.add_task(final_stats,
                           requires=(collect_contaminant_filtered,
                                     trim_stats),
@@ -471,7 +471,7 @@ class ICell8QCFilter(Pipeline):
             suffix="_final",
             append=True,
             nprocs=nprocessors['statistics'],
-            temp_dir=tmp_dir)
+            temp_dir=self.tmp_dir)
         if do_contaminant_filter:
             final_barcode_stats_requires = (collect_barcode_fastqs,
                                             final_stats,)
@@ -505,10 +505,8 @@ class ICell8QCFilter(Pipeline):
                                               poly_g_dir))
         cleanup_tasks.append(CleanupDirectory("Remove trimmed Fastqs",
                                               trim_dir))
-        cleanup_tasks.append(CleanupDirectory("remove barcode split Fastqs",
+        cleanup_tasks.append(CleanupDirectory("Remove barcode split Fastqs",
                                               split_barcoded_fastqs_dir))
-        cleanup_tasks.append(CleanupDirectory("remove tmp directory",
-                                              tmp_dir))
         if do_contaminant_filter:
             cleanup_tasks.append(CleanupDirectory("Remove contaminant "
                                                   "filtered Fastqs",
@@ -524,6 +522,22 @@ class ICell8QCFilter(Pipeline):
                 cleanup_requirements.append(trim_stats)
             for task in cleanup_tasks:
                 self.add_task(task,requires=cleanup_requirements)
+
+    def run(self,*args,**kws):
+        """
+        Run the tasks in the pipeline
+
+        Takes the same arguments as the `Pipeline` base class
+        and performs post-termination clean up of temporary
+        directory.
+        """
+        # Run pipeline
+        exit_status = Pipeline.run(self,*args,**kws)
+        # Clean up temporary directory
+        if os.path.exists(self.tmp_dir):
+            shutil.rmtree(self.tmp_dir)
+        # Finish
+        return exit_status
 
 class ICell8FinalReporting(Pipeline):
     """
