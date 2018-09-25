@@ -163,22 +163,34 @@ def uboxplot(fastqc_data=None,fastq=None,
     # Boxplots need: mean, median, 25/75th and 10/90th quantiles
     # for each base
     max_qual = 41
-    height = max_qual + 1
     fastq_stats = FastqQualityStats()
     if fastqc_data is not None:
         try:
             fastq_stats.from_fastqc_data(fastqc_data)
         except Exception as ex:
-            logger.warning("Failed to load Fastqc data: %s" % ex)
+            logger.warning("uboxplot: failed to load Fastqc data: %s" % ex)
             raise ex
     elif fastq is not None:
         fastq_stats.from_fastq(fastq)
     else:
         raise Exception("supply path to fastqc_data.txt or fastq file")
+    # Sweep the data to check for the maximum quality score
+    for stats in (fastq_stats.p10,
+                  fastq_stats.q25,
+                  fastq_stats.q75,
+                  fastq_stats.p90,
+                  fastq_stats.median,
+                  fastq_stats.mean):
+        for qual in stats:
+            if qual > max_qual:
+                max_qual = int(ceil(qual))
+                logger.warning("uboxplot: setting max quality to %d" %
+                               max_qual)
     # To generate a bitmap in Python see:
     # http://stackoverflow.com/questions/20304438/how-can-i-use-the-python-imaging-library-to-create-a-bitmap
     #
     # Initialise output image instance
+    height = max_qual + 1
     img = Image.new('RGB',(fastq_stats.nbases,height),"white")
     pixels = img.load()
     # Create colour bands for different quality ranges

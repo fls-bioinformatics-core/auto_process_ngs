@@ -972,77 +972,88 @@ class QCReportFastqPair(object):
             idx = summary_table.add_row()
         # Populate with data
         for field in fields:
-            if field == "sample":
-                logger.debug("'sample' ignored")
-            elif field == "fastq":
-                summary_table.set_value(idx,'fastq',
-                                        Link(self.r1.name,
-                                             "#%s" % self.r1.safe_name))
-            elif field == "fastqs":
-                summary_table.set_value(idx,'fastqs',
-                                        "%s<br />%s" %
-                                        (Link(self.r1.name,
-                                              "#%s" % self.r1.safe_name),
-                                         Link(self.r2.name,
-                                              "#%s" % self.r2.safe_name)))
-            elif field == "reads":
-                summary_table.set_value(idx,'reads',
-                                        pretty_print_reads(
-                                            self.r1.fastqc.data.basic_statistics(
-                                                'Total Sequences')))
-            elif field == "read_lengths":
-                if self.paired_end:
-                    read_lengths = "%s<br />%s" % \
-                                   (self.r1.fastqc.data.basic_statistics(
-                                       'Sequence length'),
-                                    self.r2.fastqc.data.basic_statistics(
-                                       'Sequence length'))
+            try:
+                if field == "sample":
+                    logger.debug("'sample' ignored")
+                    continue
+                elif field == "fastq":
+                    value = Link(self.r1.name,"#%s" % self.r1.safe_name)
+                elif field == "fastqs":
+                    value = "%s<br />%s" % \
+                            (Link(self.r1.name,
+                                  "#%s" % self.r1.safe_name),
+                             Link(self.r2.name,
+                                  "#%s" % self.r2.safe_name))
+                elif field == "reads":
+                    value = pretty_print_reads(
+                        self.r1.fastqc.data.basic_statistics(
+                            'Total Sequences'))
+                elif field == "read_lengths":
+                    if self.paired_end:
+                        read_lengths = "%s<br />%s" % \
+                                       (self.r1.fastqc.data.basic_statistics(
+                                           'Sequence length'),
+                                        self.r2.fastqc.data.basic_statistics(
+                                            'Sequence length'))
+                    else:
+                        read_lengths = "%s" % \
+                                       self.r1.fastqc.data.basic_statistics(
+                                           'Sequence length')
+                    value = read_lengths
+                elif field == "boxplot_r1":
+                    value = Img(self.r1.uboxplot(),
+                                href="#boxplot_%s" %
+                                self.r1.safe_name)
+                elif field == "boxplot_r2":
+                    value = Img(self.r2.uboxplot(),
+                                href="#boxplot_%s" %
+                                self.r2.safe_name)
+                elif field == "fastqc_r1":
+                    value = Img(self.r1.ufastqcplot(),
+                                href="#fastqc_%s" %
+                                self.r1.safe_name,
+                                title=self.r1.fastqc_summary())
+                elif field == "fastqc_r2":
+                    value = Img(self.r2.ufastqcplot(),
+                                href="#fastqc_%s" %
+                                self.r2.safe_name,
+                                title=self.r2.fastqc_summary())
+                elif field == "screens_r1":
+                    value = Img(self.r1.uscreenplot(),
+                                href="#fastq_screens_%s" %
+                                self.r1.safe_name)
+                elif field == "screens_r2":
+                    value = Img(self.r2.uscreenplot(),
+                                href="#fastq_screens_%s" %
+                                self.r2.safe_name)
+                elif field == "strandedness":
+                    value = Img(self.ustrandplot(),
+                                href="#strandedness_%s" %
+                                self.r1.safe_name,
+                                title=self.strandedness())
                 else:
-                    read_lengths = "%s" % \
-                                   self.r1.fastqc.data.basic_statistics(
-                                       'Sequence length')
-                summary_table.set_value(idx,'read_lengths',read_lengths)
-            elif field == "boxplot_r1":
-                summary_table.set_value(idx,'boxplot_r1',
-                                        Img(self.r1.uboxplot(),
-                                            href="#boxplot_%s" %
-                                            self.r1.safe_name))
-            elif field == "boxplot_r2":
-                summary_table.set_value(idx,'boxplot_r2',
-                                        Img(self.r2.uboxplot(),
-                                            href="#boxplot_%s" %
-                                            self.r2.safe_name))
-            elif field == "fastqc_r1":
-                summary_table.set_value(idx,'fastqc_r1',
-                                        Img(self.r1.ufastqcplot(),
-                                            href="#fastqc_%s" %
-                                            self.r1.safe_name,
-                                            title=self.r1.fastqc_summary()))
-            elif field == "fastqc_r2":
-                summary_table.set_value(idx,'fastqc_r2',
-                                        Img(self.r2.ufastqcplot(),
-                                            href="#fastqc_%s" %
-                                            self.r2.safe_name,
-                                            title=self.r2.fastqc_summary()))
-            elif field == "screens_r1":
-                summary_table.set_value(idx,'screens_r1',
-                                        Img(self.r1.uscreenplot(),
-                                            href="#fastq_screens_%s" %
-                                            self.r1.safe_name))
-            elif field == "screens_r2":
-                summary_table.set_value(idx,'screens_r2',
-                                        Img(self.r2.uscreenplot(),
-                                            href="#fastq_screens_%s" %
-                                            self.r2.safe_name))
-            elif field == "strandedness":
-                summary_table.set_value(idx,'strandedness',
-                                        Img(self.ustrandplot(),
-                                            href="#strandedness_%s" %
-                                            self.r1.safe_name,
-                                            title=self.strandedness()))
-            else:
-                raise KeyError("'%s': unrecognised field for summary "
-                               "table" % field)
+                    raise KeyError("'%s': unrecognised field for summary "
+                                   "table" % field)
+                # Put value into the table
+                summary_table.set_value(idx,field,value)
+            except KeyError as ex:
+                # Assume this is an unrecognised field
+                logger.error("%s" % ex)
+                raise ex
+            except Exception as ex:
+                # Encountered an exception trying to acquire the value
+                # for the field
+                if self.paired_end:
+                    fastqs = "pair %s/%s" % (self.r1.name,
+                                             self.r2.name)
+                else:
+                    fastqs = "%s" % self.r1.name
+                logger.error("Exception setting '%s' in summary table "
+                              "for Fastq %s: %s" % (field,
+                                                    fastqs,
+                                                    ex))
+                # Put error value into the table
+                summary_table.set_value(idx,field,"<b>ERROR</b>")
 
 class QCReportFastq(object):
     """
