@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 #
-# fastq screens library
+# fastq strand library
 import os
+import logging
 from bcftbx.TabFile import TabFile
 from bcftbx.utils import AttributeDictionary
+
+# Module specific logger
+logger = logging.getLogger(__name__)
 
 """
 Example fastq_strand file for 0.0.1:
@@ -57,13 +61,21 @@ class Fastqstrand(object):
             data['forward'] = line['1st forward']
             data['reverse'] = line['2nd reverse']
             # Additional processing
-            ratio = float(data.forward)/float(data.reverse)
-            if ratio < 0.2:
-                strandedness = "reverse"
-            elif ratio > 5:
-                strandedness = "forward"
+            if data.reverse > 0.0:
+                ratio = float(data.forward)/float(data.reverse)
+            elif data.forward > 0.0:
+                ratio = float("+inf")
             else:
-                strandedness = "unstranded?"
+                ratio = None
+            if ratio is not None:
+                if ratio < 0.2:
+                    strandedness = "reverse"
+                elif ratio > 5 or ratio == float("+inf"):
+                    strandedness = "forward"
+                else:
+                    strandedness = "unstranded?"
+            else:
+                strandedness = "undetermined"
             data['ratio'] = ratio
             data['strandedness'] = strandedness
 
