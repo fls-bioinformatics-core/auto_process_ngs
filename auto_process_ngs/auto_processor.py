@@ -45,6 +45,12 @@ from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
 #######################################################################
+# Data
+#######################################################################
+
+MAKE_FASTQS_PROTOCOLS = ('standard','icell8','10x_chromium_sc')
+
+#######################################################################
 # Decorators
 #######################################################################
 
@@ -1389,8 +1395,10 @@ class AutoProcess:
         """
         # Report protocol
         print "Protocol              : %s" % protocol
-        if protocol not in ('standard','icell8','10x_chromium_sc'):
-            raise Exception("Unknown protocol: '%s'" % protocol)
+        if protocol not in MAKE_FASTQS_PROTOCOLS:
+            raise Exception("Unknown protocol: '%s' (must be one of "
+                            "%s)" % (protocol,
+                                     ','.join([MAKE_FASTQS_PROTOCOLS])))
         # Unaligned dir
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
