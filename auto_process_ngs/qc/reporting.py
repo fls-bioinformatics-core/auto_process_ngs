@@ -791,11 +791,15 @@ class QCReportFastqPair(object):
         strandedness = Fastqstrand(txt)
         output = []
         for genome in strandedness.genomes:
-            output.append("%s: F%.2f%% | R%.2f%% (%.2f)" %
+            try:
+                ratio = "%.2f" % strandedness.stats[genome].ratio
+            except TypeError:
+                ratio = "NaN"
+            output.append("%s: F%.2f%% | R%.2f%% (%s)" %
                           (genome,
                            strandedness.stats[genome].forward,
                            strandedness.stats[genome].reverse,
-                           strandedness.stats[genome].ratio))
+                           ratio))
         return "\n".join(output)
 
     def ustrandplot(self):
@@ -842,16 +846,21 @@ class QCReportFastqPair(object):
                                      strand="Strandedness *")
             strandedness_tbl.add_css_classes("summary")
             for genome in strandedness.genomes:
+                try:
+                    ratio = "%.2f" % strandedness.stats[genome].ratio
+                except TypeError:
+                    ratio = "NaN"
                 strandedness_tbl.add_row(
                     genome=genome,
                     forward=strandedness.stats[genome].forward,
                     reverse=strandedness.stats[genome].reverse,
-                    ratio=("%.2f" % strandedness.stats[genome].ratio),
+                    ratio=ratio,
                     strand=strandedness.stats[genome].strandedness)
             strandedness_report.add(strandedness_tbl)
             strandedness_report.add("* Strandedness is 'reverse' if "
                                     "ratio &lt;0.2, 'forward' if ratio "
-                                    "is &gt;5, 'unstranded' otherwise")
+                                    "is &gt;5, 'unstranded' otherwise "
+                                    "(or undetermined if 'NaN')")
         return strandedness_report
 
     def report(self,sample_report,attrs=None,relpath=None):

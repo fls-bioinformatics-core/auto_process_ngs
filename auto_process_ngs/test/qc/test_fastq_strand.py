@@ -28,22 +28,25 @@ class TestFastqstrand(unittest.TestCase):
 
 class TestFastqstrand_0_0_1(unittest.TestCase):
     def setUp(self):
-        fastq_strand_text = """#fastq_strand version: 0.0.1	#Aligner: STAR	#Reads in subset: 3
-#Genome	1st forward	2nd reverse
-hg38	13.13	93.21
-mm10	15.02	91.18
-"""
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
-            self.fastq_strand_txt = fp.name
-            fp.write(fastq_strand_text)
+        self.fastq_strand_txt = None
     def tearDown(self):
         try:
             os.remove(self.fastq_strand_txt)
         except Exception:
             pass
+    def _write_file(self,content):
+        # Write a temporary file with arbitrary conten
+        with tempfile.NamedTemporaryFile(delete=False) as fp:
+            self.fastq_strand_txt = fp.name
+            fp.write(content)
     def test_handle_fastq_strand_0_0_1(self):
         """Fastqstrand handles output from version 0.0.1
         """
+        self._write_file("""#fastq_strand version: 0.0.1	#Aligner: STAR	#Reads in subset: 3
+#Genome	1st forward	2nd reverse
+hg38	13.13	93.21
+mm10	15.02	91.18
+""")
         fastq_strand = Fastqstrand(self.fastq_strand_txt)
         self.assertEqual(fastq_strand.version,'0.0.1')
         self.assertEqual(fastq_strand.txt,self.fastq_strand_txt)
@@ -60,6 +63,54 @@ mm10	15.02	91.18
                          "%.4f" % 0.164729107)
         self.assertEqual(fastq_strand.stats['mm10'].strandedness,
                          "reverse")
+    def test_handle_no_reads_map_to_forward_strand(self):
+        """Fastqstrand handles case when no reads map to forward strand
+        """
+        self._write_file("""#fastq_strand version: 0.0.3	#Aligner: STAR	#Reads in subset: 6
+#Genome	1st forward	2nd reverse
+human	0.00	100.00
+""")
+        fastq_strand = Fastqstrand(self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.version,'0.0.3')
+        self.assertEqual(fastq_strand.txt,self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.genomes,['human',])
+        self.assertEqual(fastq_strand.stats['human'].forward,0.00)
+        self.assertEqual(fastq_strand.stats['human'].reverse,100.00)
+        self.assertEqual(fastq_strand.stats['human'].ratio,0.00)
+        self.assertEqual(fastq_strand.stats['human'].strandedness,
+                         "reverse")
+    def test_handle_no_reads_map_to_reverse_strand(self):
+        """Fastqstrand handles case when no reads map to reverse strand
+        """
+        self._write_file("""#fastq_strand version: 0.0.3	#Aligner: STAR	#Reads in subset: 6
+#Genome	1st forward	2nd reverse
+human	100.00	0.00
+""")
+        fastq_strand = Fastqstrand(self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.version,'0.0.3')
+        self.assertEqual(fastq_strand.txt,self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.genomes,['human',])
+        self.assertEqual(fastq_strand.stats['human'].forward,100.00)
+        self.assertEqual(fastq_strand.stats['human'].reverse,0.00)
+        self.assertEqual(fastq_strand.stats['human'].ratio,float("+inf"))
+        self.assertEqual(fastq_strand.stats['human'].strandedness,
+                         "forward")
+    def test_handle_no_reads_map_to_either_strand(self):
+        """Fastqstrand handles case when no reads map to either strand
+        """
+        self._write_file("""#fastq_strand version: 0.0.3	#Aligner: STAR	#Reads in subset: 6
+#Genome	1st forward	2nd reverse
+human	0.00	0.00
+""")
+        fastq_strand = Fastqstrand(self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.version,'0.0.3')
+        self.assertEqual(fastq_strand.txt,self.fastq_strand_txt)
+        self.assertEqual(fastq_strand.genomes,['human',])
+        self.assertEqual(fastq_strand.stats['human'].forward,0.00)
+        self.assertEqual(fastq_strand.stats['human'].reverse,0.00)
+        self.assertEqual(fastq_strand.stats['human'].ratio,None)
+        self.assertEqual(fastq_strand.stats['human'].strandedness,
+                         "undetermined")
 
 class TestBuildFastqStrandConfFunction(unittest.TestCase):
     indexes = dict(human="/data/to/hg38/STAR",
