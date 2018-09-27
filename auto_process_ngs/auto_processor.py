@@ -1452,12 +1452,20 @@ class AutoProcess:
         # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
         verify_include_sample_dir = False
-        if protocol == '10x_chromium_sc':
-            if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
+        if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
+            if protocol == '10x_chromium_sc':
                 # Force inclusion of sample-name subdirectories
                 # when verifying Chromium SC data
                 print "Sample sheet includes Chromium SC indices"
                 verify_include_sample_dir = True
+            else:
+                # Chromium SC indices detected but not using
+                # 10x_chromium_sc protocol
+                raise Exception("Detected 10xGenomics Chromium SC indices "
+                                "in generated sample sheet but protocol "
+                                "'%s' has been specified; must use "
+                                "'10x_chromium_sc' for these indices" %
+                                protocol)
         # Check for pre-existing Fastq outputs
         if self.verify_fastq_generation(
                 unaligned_dir=self.params.unaligned_dir,

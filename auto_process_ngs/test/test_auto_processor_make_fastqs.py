@@ -159,6 +159,48 @@ AB1,AB1,,,,,AB,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    def test_make_fastqs_standard_protocol_chromium_sc_indices(self):
+        """make_fastqs: standard protocol with Chromium SC indices raises exception
+        """
+        # Sample sheet with 10xGenomics Chromium SC indices
+        samplesheet_chromium_sc_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
+smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_sc_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertRaises(Exception,
+                          ap.make_fastqs,
+                          protocol="10x_chromium_sc")
+
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
         """
