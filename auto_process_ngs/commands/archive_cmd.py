@@ -221,11 +221,19 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if read_only_fastqs and final:
             # Make sure excluded directories are excluded
             extra_options =  [ex for ex in excludes]
-            # Set up to include only the fastq directories
-            extra_options.extend([
-                '--include=*/',
-                '--include=fastqs/**',
-                '--exclude=*'])
+            # Set up to include only the fastq directories in
+            # projects
+            fastq_dirs = []
+            for project in ap.get_analysis_projects():
+                for fastq_dir in project.fastq_dirs:
+                    fastq_dirs.append(os.path.join(
+                        os.path.basename(project.dirn),
+                        fastq_dir))
+            # Update the extra options with includes/excludes
+            extra_options.append('--include=*/')
+            for fastq_dir in fastq_dirs:
+                extra_options.append('--include=%s/**' % fastq_dir)
+            extra_options.append('--exclude=*')
             # Execute the rsync
             rsync_fastqs = applications.general.rsync(
                 "%s/" % ap.analysis_dir,
@@ -238,7 +246,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             rsync_fastqs_job = sched.submit(rsync_fastqs,
                                             name="rsync.archive_fastqs")
             # Exclude fastqs from main rsync
-            excludes.append('--exclude=fastqs')
+            for fastq_dir in fastq_dirs:
+                excludes.append('--exclude=%s' % fastq_dir)
             wait_for = [rsync_fastqs_job.job_name]
             # Add to list of jobs
             archiving_jobs.append(rsync_fastqs_job)
