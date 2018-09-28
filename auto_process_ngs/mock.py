@@ -54,12 +54,15 @@ import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
+from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .utils import ZipArchive
+from .tenx_genomics_utils import flow_cell_id
 from .qc.illumina_qc import IlluminaQC
 from .mockqc import MockQCOutputs
+import mock10xdata
 
 #######################################################################
 # Classes for making mock directories
@@ -976,6 +979,205 @@ Copyright (c) 2007-2015 Illumina, Inc.
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
         shutil.rmtree(tmpname)
+        return self._exit_code
+
+class MockCellrangerExe(object):
+    """
+    Create mock cellranger executable
+
+    This class can be used to create a mock cellranger
+    executable, which in turn can be used in place of
+    the actual cellranger software for testing purposes.
+
+    To create a mock executable, use the 'create' static
+    method, e.g.
+
+    >>> MockCellrangerExe.create("/tmpbin/cellranger")
+
+    The resulting executable will generate mock outputs
+    when run on actual or mock Illumina sequencer output
+    directories (mock versions can be produced using the
+    'mock.IlluminaRun' class in the genomics-bcftbx
+    package).
+
+    The executable can be configured on creation to
+    produce different error conditions when run:
+
+    - the exit code can be set to an arbitrary value
+      via the `exit_code` argument
+    """
+
+    @staticmethod
+    def create(path,exit_code=0,missing_fastqs=None,
+               platform=None,assert_bases_mask=None):
+        """
+        Create a "mock" cellranger executable
+
+        Arguments:
+          path (str): path to the new executable
+            to create. The final executable must
+            not exist, however the directory it
+            will be created in must.
+          exit_code (int): exit code that the
+            mock executable should complete
+            with
+          missing_fastqs (list): list of Fastq
+            names that will not be created
+          platform (str): platform for primary
+            data (if it cannot be determined from
+            the directory/instrument name)
+        """
+        path = os.path.abspath(path)
+        print "Building mock executable: %s" % path
+        # Don't clobber an existing executable
+        assert(os.path.exists(path) is False)
+        with open(path,'w') as fp:
+            fp.write("""#!/usr/bin/env python
+import sys
+from auto_process_ngs.mock import MockCellrangerExe
+sys.exit(MockCellrangerExe(path=sys.argv[0],
+                           exit_code=%s,
+                           platform=%s,
+                           assert_bases_mask=%s).main(sys.argv[1:]))
+            """ % (exit_code,
+                   ("\"%s\"" % platform
+                    if platform is not None
+                    else None),
+                   ("\"%s\"" % assert_bases_mask
+                    if assert_bases_mask is not None
+                    else None)))
+            os.chmod(path,0775)
+        with open(path,'r') as fp:
+            print "cellranger:"
+            print "%s" % fp.read()
+        return path
+
+    def __init__(self,path=None,
+                 exit_code=0,
+                 platform=None,
+                 assert_bases_mask=None):
+        """
+        Internal: configure the mock cellranger
+        """
+        self._path = path
+        self._version = "2.2.0"
+        self._exit_code = exit_code
+        self._platform = platform
+        self._assert_bases_mask = assert_bases_mask
+
+    def main(self,args):
+        """
+        Internal: provides mock cellranger functionality
+        """
+        # Build generic header
+        try:
+            cmd = " %s" % args[0]
+        except IndexError:
+            cmd = ''
+        header = """%s
+cellranger%s (%s)
+Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
+-------------------------------------------------------------------------------
+""" % (self._path,cmd,self._version)
+        # Handle version request or no args
+        print header
+        if cmd == " --version" or not cmd:
+            return self._exit_code
+        # Build top-level parser
+        p = argparse.ArgumentParser()
+        sp = p.add_subparsers(dest='command')
+        # mkfastq subparser
+        mkfastq = sp.add_parser("mkfastq")
+        mkfastq.add_argument("--samplesheet",action="store")
+        mkfastq.add_argument("--run",action="store")
+        mkfastq.add_argument("--output-dir",action="store")
+        mkfastq.add_argument("--qc",action="store_true")
+        mkfastq.add_argument("--lanes",action="store")
+        mkfastq.add_argument("--use-bases-mask",action="store")
+        mkfastq.add_argument("--ignore-dual-index",action="store_true")
+        mkfastq.add_argument("--jobmode",action="store")
+        mkfastq.add_argument("--localcores",action="store")
+        mkfastq.add_argument("--localmem",action="store")
+        mkfastq.add_argument("--mempercore",action="store")
+        mkfastq.add_argument("--maxjobs",action="store")
+        mkfastq.add_argument("--jobinterval",action="store")
+        mkfastq.add_argument("--disable-ui",action="store_true")
+        # Process command line
+        args = p.parse_args()
+        if args.command == "mkfastq":
+            ##################
+            # mkfastq command
+            ##################
+            # Run folder
+            run = args.run
+            print "Run folder: %s" % run
+            # Sample sheet
+            sample_sheet = args.samplesheet
+            print "Sample sheet: %s" % sample_sheet
+            # Output folder
+            output_dir = args.output_dir
+            print "Output dir: %s" % output_dir
+            # Lanes
+            s = SampleSheet(sample_sheet)
+            if s.has_lanes:
+                lanes = [line['Lane'] for line in s.data]
+            else:
+                lanes = IlluminaRun(runfolder).lanes
+            print "Lanes: %s" % lanes
+            # Generate mock output based on inputs
+            tmpname = "tmp.%s" % uuid.uuid4()
+            output = MockIlluminaData(name=tmpname,
+                                      package="bcl2fastq2",
+                                      unaligned_dir="bcl2fastq")
+            s = SampleSheetPredictor(sample_sheet_file=sample_sheet)
+            s.set(paired_end=True,
+                  lanes=lanes,
+                  force_sample_dir=True)
+            for project in s.projects:
+                print "Adding project: %s" % project.name
+                for sample in project.samples:
+                    for fq in sample.fastqs():
+                        if sample.sample_name is None:
+                            sample_name = sample.sample_id
+                        else:
+                            sample_name = sample.sample_name
+                        output.add_fastq(project.name,
+                                         sample_name,
+                                         fq)
+            # Add undetermined fastqs
+            # NB Would like to use the 'add_undetermined'
+            # method but this doesn't play well with using
+            # the predictor-based approach above
+            reads = (1,2)
+            for r in reads:
+                for lane in lanes:
+                    output.add_fastq(
+                        "Undetermined_indices",
+                        "undetermined",
+                        "Undetermined_S0_L%03d_R%d_001.fastq.gz"
+                        % (lane,r))
+            # Build the output directory
+            output.create()
+            # Move to final location
+            os.rename(os.path.join(tmpname,"bcl2fastq"),
+                      output_dir)
+            shutil.rmtree(tmpname)
+            # Create cellranger-specific outputs
+            flow_cell_dir = flow_cell_id(run)
+            os.mkdir(flow_cell_dir)
+            outs_dir = os.path.join(flow_cell_dir,"outs")
+            os.mkdir(outs_dir)
+            # Add qc metric files
+            if args.qc:
+                json_file = os.path.join(outs_dir,"qc_summary.json")
+                html_file = "cellranger_qc_summary.html"
+                with open(json_file,'w') as fp:
+                    fp.write(mock10xdata.QC_SUMMARY_JSON)
+                with open(html_file,'w') as fp:
+                    fp.write(mock10xdata.CELLRANGER_QC_SUMMARY)
+        else:
+            print "%s: not implemented" % command
+        print "Return exit code: %s" % self._exit_code
         return self._exit_code
 
 class MockIlluminaQcSh(object):

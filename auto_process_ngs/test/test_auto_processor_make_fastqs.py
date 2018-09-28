@@ -8,6 +8,7 @@ import shutil
 import os
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.mock import MockBcl2fastq2Exe
+from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.auto_processor import AutoProcess
 
 # Set to False to keep test output dirs
@@ -199,7 +200,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertRaises(Exception,
                           ap.make_fastqs,
-                          protocol="10x_chromium_sc")
+                          protocol="standard")
 
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
@@ -239,6 +240,80 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    def test_make_fastqs_10x_chromium_sc_protocol(self):
+        """make_fastqs: 10x_chromium_sc protocol
+        """
+        # Sample sheet with 10xGenomics Chromium SC indices
+        samplesheet_chromium_sc_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+2,smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_sc_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        ap.make_fastqs(protocol="10x_chromium_sc")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_SN7001250_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_10x_chromium_sc"),
                        "bcl2fastq"):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
