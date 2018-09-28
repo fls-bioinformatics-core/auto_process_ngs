@@ -62,6 +62,7 @@ from .utils import ZipArchive
 from .tenx_genomics_utils import flow_cell_id
 from .qc.illumina_qc import IlluminaQC
 from .mockqc import MockQCOutputs
+import mock10xdata
 
 #######################################################################
 # Classes for making mock directories
@@ -1078,9 +1079,12 @@ cellranger%s (%s)
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,cmd,self._version)
+        # Handle version request or no args
+        print header
+        if cmd == " --version" or not cmd:
+            return self._exit_code
         # Build top-level parser
         p = argparse.ArgumentParser()
-        p.add_argument("--version",action="store_true")
         sp = p.add_subparsers(dest='command')
         # mkfastq subparser
         mkfastq = sp.add_parser("mkfastq")
@@ -1100,9 +1104,6 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--disable-ui",action="store_true")
         # Process command line
         args = p.parse_args()
-        if args.version:
-            print header
-            return self._exit_code
         if args.command == "mkfastq":
             ##################
             # mkfastq command
@@ -1171,9 +1172,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 json_file = os.path.join(outs_dir,"qc_summary.json")
                 html_file = "cellranger_qc_summary.html"
                 with open(json_file,'w') as fp:
-                    fp.write("TBC")
+                    fp.write(mock10xdata.QC_SUMMARY_JSON)
                 with open(html_file,'w') as fp:
-                    fp.write("TBC")
+                    fp.write(mock10xdata.CELLRANGER_QC_SUMMARY)
         else:
             print "%s: not implemented" % command
         print "Return exit code: %s" % self._exit_code
