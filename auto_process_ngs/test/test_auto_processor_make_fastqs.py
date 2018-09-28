@@ -200,7 +200,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertRaises(Exception,
                           ap.make_fastqs,
-                          protocol="10x_chromium_sc")
+                          protocol="standard")
 
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
