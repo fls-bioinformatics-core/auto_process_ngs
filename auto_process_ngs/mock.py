@@ -1055,7 +1055,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
         Internal: configure the mock illumina_qc.sh
         """
         if version is None:
-            version = "1.3.2"
+            version = "1.3.3"
         self._version = str(version)
         self._fastq_screen = fastq_screen
         self._fastqc = fastqc
