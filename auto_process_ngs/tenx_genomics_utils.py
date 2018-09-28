@@ -470,7 +470,8 @@ def run_cellranger_mkfastq(sample_sheet,
     cmd = Command("cellranger","mkfastq",
                   "--samplesheet",sample_sheet,
                   "--run",primary_data_dir,
-                  "--output-dir",output_dir)
+                  "--output-dir",output_dir,
+                  "--qc")
     if lanes is not None:
         cmd.add_args("--lanes=%s" % lanes)
     if bases_mask is not None:
@@ -524,7 +525,17 @@ def run_cellranger_mkfastq(sample_sheet,
         json_file = os.path.join(flow_cell_dir,
                                  "outs",
                                  "qc_summary.json")
+        if not os.path.exists(json_file):
+            logger.error("cellranger mkfastq failed to make "
+                         "JSON QC summary file (%s not found)"
+                         % json_file)
+            return -1
         html_file = "cellranger_qc_summary%s.html" % lanes_suffix
+        if not os.path.exists(json_file):
+            logger.error("cellranger mkfastq failed to make "
+                         "HTML QC summary file (%s not found)"
+                         % html_file)
+            return -1
         make_qc_summary_html(json_file,html_file)
         return exit_code
 
