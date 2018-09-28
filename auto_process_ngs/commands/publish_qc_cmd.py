@@ -135,7 +135,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     else:
         location = fileops.Location(location)
     if use_hierarchy:
-        year = "20%s" % str(ap.metadata.instrument_datestamp)[0:2]
+        datestamp = str(ap.metadata.instrument_datestamp)
+        if len(datestamp) == 6:
+            # Assume YYMMDD datestamp format
+            year = "20%s" % datestamp[0:2]
+        elif len(datestamp) == 8:
+            # Assume YYYYMMDD datestamp format
+            year = datestamp[0:4]
+        else:
+            raise Exception("Invalid datestamp '%s' (use "
+                            "--year option)" % datestamp)
         platform = ap.metadata.platform
     # Check the settings
     if location.is_remote:
