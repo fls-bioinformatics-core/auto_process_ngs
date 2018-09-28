@@ -301,7 +301,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(ap.params.primary_data_dir is None)
         ap.make_fastqs(protocol="10x_chromium_sc")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y25n76,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
