@@ -1607,11 +1607,14 @@ class AutoProcess:
                     self.metadata['bcl2fastq_software'] = bcl2fastq_info
                     # Put a copy of sample sheet in the log directory
                     shutil.copy(sample_sheet,self.log_dir)
+                    # Set the output directory to the full path
+                    output_dir = os.path.join(self.analysis_dir,
+                                              self.params.unaligned_dir)
                     # Run cellranger mkfastq
                     exit_code = tenx_genomics_utils.run_cellranger_mkfastq(
                         sample_sheet=sample_sheet,
                         primary_data_dir=primary_data_dir,
-                        output_dir=self.params.unaligned_dir,
+                        output_dir=output_dir,
                         lanes=(None if lanes is None
                                else ','.join([str(l) for l in lanes])),
                         bases_mask=bases_mask,
