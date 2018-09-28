@@ -45,6 +45,12 @@ from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
 #######################################################################
+# Data
+#######################################################################
+
+MAKE_FASTQS_PROTOCOLS = ('standard','icell8','10x_chromium_sc')
+
+#######################################################################
 # Decorators
 #######################################################################
 
@@ -1389,8 +1395,10 @@ class AutoProcess:
         """
         # Report protocol
         print "Protocol              : %s" % protocol
-        if protocol not in ('standard','icell8','10x_chromium_sc'):
-            raise Exception("Unknown protocol: '%s'" % protocol)
+        if protocol not in MAKE_FASTQS_PROTOCOLS:
+            raise Exception("Unknown protocol: '%s' (must be one of "
+                            "%s)" % (protocol,
+                                     ','.join([MAKE_FASTQS_PROTOCOLS])))
         # Unaligned dir
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
@@ -1452,12 +1460,20 @@ class AutoProcess:
         # Adjust verification settings for 10xGenomics Chromium SC
         # data if necessary
         verify_include_sample_dir = False
-        if protocol == '10x_chromium_sc':
-            if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
+        if tenx_genomics_utils.has_chromium_sc_indices(sample_sheet):
+            if protocol == '10x_chromium_sc':
                 # Force inclusion of sample-name subdirectories
                 # when verifying Chromium SC data
                 print "Sample sheet includes Chromium SC indices"
                 verify_include_sample_dir = True
+            else:
+                # Chromium SC indices detected but not using
+                # 10x_chromium_sc protocol
+                raise Exception("Detected 10xGenomics Chromium SC indices "
+                                "in generated sample sheet but protocol "
+                                "'%s' has been specified; must use "
+                                "'10x_chromium_sc' for these indices" %
+                                protocol)
         # Check for pre-existing Fastq outputs
         if self.verify_fastq_generation(
                 unaligned_dir=self.params.unaligned_dir,
