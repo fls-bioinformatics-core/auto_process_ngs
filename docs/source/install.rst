@@ -33,8 +33,8 @@ Then install the requirements and then rest of the packages::
     pip install ./auto_process_ngs-0.10.0
 
 In addition a number of external software packages are required for the
-Fastq generation and QC pipelines; these are listed in the section
-:ref:`auto_process_requirements`.
+Fastq generation and QC pipelines; these are listed in the
+:doc:`requirements documentation <requirements>`.
 
 The installation may also require some configuration to tailor it to the
 local environment (for example, if running on a compute cluster); this is
