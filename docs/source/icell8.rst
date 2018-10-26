@@ -40,7 +40,7 @@ Processing protocol for ICELL8 data
 The recommended steps are:
 
 1. Generate initial FASTQs as described in
-   :ref:`icell8_fastq_generation`
+   :ref:`make_fastqs-icell8-protocol`
 2. Set up analysis directories and run initial QC as per the standard
    protocol
 3. Perform ICell8-specific filtering and additional QC on the reads

@@ -5,8 +5,9 @@ Overview
 --------
 
 The ``make_fastqs`` command is the backbone of the ``auto_process``
-pipeline. It performs the key step of generating Fastq files from
-the raw BCL data produced by the sequencer.
+pipeline. It is run after creating the analysis directory using the
+:doc:`setup <setup>` command and performs the key step of generating
+Fastq files from the raw BCL data produced by the sequencer.
 
 The general invocation of the command is:
 
@@ -46,20 +47,27 @@ the most useful are:
 * ``--no-stats`` skips the generation of statistics and processing QC
   reporting
 
+More detail on the different usage modes can be found in the
+subsequent sections:
+
+* :ref:`make_fastqs-standard-protocol`
+* :ref:`make_fastqs-icell8-protocol`
+* :ref:`make_fastqs-10x_chromium_sc-protocol`
+* :ref:`make_fastqs-mixed-protocols`
+
+Advice on handling other unusual cases and problems can be found
+here:
+
+* :doc:`Troubleshooting unusual situations <troubleshooting>`
+
 Once the Fastqs have been generated, the next step is to set up the
 project directories - see
 :doc:`Setting up project directories <setup_analysis_dirs>`.
 
-Standard Fastq generation
--------------------------
+.. _make_fastqs-commonly-used-options:
 
-After creating the analysis directory using the :doc:`setup <setup>`
-command, the Fastq generation pipeline is performed using a command
-of the form:
-
-::
-
-   auto_process.py make_fastqs *options* [ANALYSIS_DIR]
+Commonly used options
+---------------------
 
 Some of the most commonly used options are:
 
@@ -69,7 +77,7 @@ Some of the most commonly used options are:
   to use (defaults to ``custom_SampleSheet.csv``; the new sample
   sheet file will become the default for subsequent runs)
 * ``--lanes``: allows a subset of lanes to be processed (useful
-  for multi-lanes sequencers when samples with a mixture
+  for multi-lane sequencers when samples with a mixture
   of processing protocols have been run). Lanes can be specified
   as a range (e.g. ``1-4``), a list (e.g. ``6,8``) or a
   combination (e.g. ``1-4,6,8``)
@@ -85,10 +93,25 @@ Some of the most commonly used options are:
 Additional options can listed by running ``make_fastqs`` with the
 ``--help`` option.
 
-.. _icell8_fastq_generation:
+.. _make_fastqs-standard-protocol:
 
-Fastq generation for ICELL8 single-cell data
---------------------------------------------
+Standard Fastq generation (``--protocol=standard``)
+---------------------------------------------------
+
+The Fastq generation for standard data is performed using a command
+of the form:
+
+::
+
+   auto_process.py make_fastqs ...
+
+The outputs produced on successful completion are described below
+in the section :ref:`make_fastqs-outputs`.
+
+.. _make_fastqs-icell8-protocol:
+
+Fastq generation for ICELL8 single-cell data (``--protocol=icell8``)
+--------------------------------------------------------------------
 
 Initial Fastqs can be generated from ICELL8 single-cell8 data using the
 ``--protocol=icell8`` option:
@@ -118,10 +141,10 @@ the Fastqs.
    (which are mostly random) from the R1, should they happen to match
    part of an adapter sequence.
 
-.. _10x_chromium_sc_fastq_generation:
+.. _make_fastqs-10x_chromium_sc-protocol:
 
-Fastq generation for 10xGenomics Chromium single-cell data
-----------------------------------------------------------
+Fastq generation for 10xGenomics Chromium single-cell data (``--protocol=10x_chromium_sc``)
+-------------------------------------------------------------------------------------------
 
 Fastq generation can be performed for 10xGenomics Chromium
 single-cell data by using the ``--protocol=10x_chromium_sc``
@@ -143,7 +166,7 @@ This will generate the Fastqs in the specified output directory
    behaviour of ``cellranger mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
-.. _make_fastqs-advanced-usage:
+.. _make_fastqs-mixed-protocols:
 
 Fastq generation for runs with mixed protocols
 ----------------------------------------------
@@ -237,6 +260,8 @@ merged data use the ``update_fastq_stats`` command:
 ::
 
    auto_process.py update_fastq_stats
+
+.. _make_fastqs-outputs:
 
 Outputs
 -------

@@ -44,7 +44,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Running QC <using/run_qc>
    Publishing QC <using/publish_qc>
    Archiving analyses <using/archive>
-   problems
+   Troubleshooting <using/troubleshooting>
 
 .. toctree::
    :maxdepth: 2
