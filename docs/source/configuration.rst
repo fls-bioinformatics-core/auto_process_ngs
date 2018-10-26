@@ -64,6 +64,28 @@ configuration when running locally; provided that the required
 Running the QC pipeline requires additional software plus reference data
 which are described in more detail in :ref:`reference_data`.
 
+.. _config_sequencer_platforms:
+
+------------------------
+Sequencers and platforms
+------------------------
+
+The ``sequencers`` section of the configuration file allows
+platform names to be associated with the instrument names for the
+sequencers used at the local site.
+
+For example if the local facility has a HISeq 4000 instrument
+with ID ``SN7001250`` then this would be defined in ``settings.ini``
+as follows:
+
+::
+
+   [sequencers]
+   SN7001250 = hiseq4000
+
+The instrument name can be derived from the name of the directories
+produced by the sequencer (see :ref:`run_and_fastq_naming_conventions`).
+
 .. _running_on_compute_cluster:
 
 ----------------------------
