@@ -21,10 +21,10 @@ directories produced by the ``auto_process`` commands:
    :widths: auto
 
    ========================== ================================== ============
-   **Directory**              **Description and contents**       **Stage**
+   **File or Directory**      **Description and contents**       **Stage**
    -------------------------- ---------------------------------- ------------
    auto_process.info          Parameter file used for processing :doc:`setup <../using/setup>`
-   metadata.info              Run metadata                       :doc:`setup <../using/setup>`
+   metadata.info              Metadata for the run               :doc:`setup <../using/setup>`
    logs/                      Log files from each processing     :doc:`setup <../using/setup>`
                               command
    ScriptCode/                Directory for custom user scripts  :doc:`setup <../using/setup>`
@@ -40,7 +40,11 @@ directories produced by the ``auto_process`` commands:
    statistics.info            Per-Fastq statistics               :doc:`make_fastqs <../using/make_fastqs>`
    projects.info              Metadata for all projects          :doc:`make_fastqs <../using/make_fastqs>`
    <bcl2fastq>/               Output from ``bcl2fastq``          :doc:`make_fastqs <../using/make_fastqs>`
-   <PROJECT>/                 Project directory
+                              (can be set explicitly using the
+                              ``--output-dir`` option)
+   <PROJECT>/                 Project directory (one for each
+                              project defined in
+                              ``projects.info``)
    undetermined/              Project directory for undetermined
                               reads
    README.txt                 Text file with user notes on the   readme
