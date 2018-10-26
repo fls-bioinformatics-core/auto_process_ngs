@@ -21,6 +21,7 @@ of data that is being processed:
 Protocol option     Used for
 =================== =====================================
 ``standard``        Standard Illumina sequencing data
+                    (default)
 ``icell8``          ICELL8 single-cell data
 ``10x_chromium_sc`` 10xGenomics Chromium single-cell data
 =================== =====================================
@@ -37,6 +38,18 @@ By default ``make_fastqs`` performs the following steps:
   analysing the numbers of reads assigned to each sample, lane and
   project (``processing.html``).
 
+Various options are available to skip or control each of these stages;
+the most useful are:
+
+* ``--skip-rsync`` bypasses the primary data acquisition (useful if
+  rerunning having already fetched the data once)
+* ``--no-stats`` skips the generation of statistics and processing QC
+  reporting
+
+Once the Fastqs have been generated, the next step is to set up the
+project directories - see
+:doc:`Setting up project directories <setup_analysis_dirs>`.
+
 Standard Fastq generation
 -------------------------
 
@@ -47,6 +60,30 @@ of the form:
 ::
 
    auto_process.py make_fastqs *options* [ANALYSIS_DIR]
+
+Some of the most commonly used options are:
+
+* ``--output-dir``: specifies the directory to write the output
+  Fastqs to (defaults to ``bcl2fastq``)
+* ``--sample-sheet``: specifies a non-default sample sheet file
+  to use (defaults to ``custom_SampleSheet.csv``; the new sample
+  sheet file will become the default for subsequent runs)
+* ``--lanes``: allows a subset of lanes to be processed (useful
+  for multi-lanes sequencers when samples with a mixture
+  of processing protocols have been run). Lanes can be specified
+  as a range (e.g. ``1-4``), a list (e.g. ``6,8``) or a
+  combination (e.g. ``1-4,6,8``)
+* ``--use-bases-mask``: allows a custom bases mask string (which
+  controls how each cycle of raw data is used) to be specified
+  (default is to determine the bases mask automatically; set to
+  ``auto`` to restore this behaviour)
+* ``--platform``: if the sequencer platform cannot be identified
+  from the instrument name it can be explicitly specified using
+  this option (see :ref:`config_sequencer_platforms` for how to
+  associate sequencers and platforms in the configuration)
+
+Additional options can listed by running ``make_fastqs`` with the
+``--help`` option.
 
 .. _icell8_fastq_generation:
 
@@ -96,21 +133,110 @@ option:
 
 which fetches the data and runs ``cellranger mkfastq``.
 
-.. note::
-
-   This replaces the ``process_10xgenomics.py mkfastq`` command,
-   which is now deprecated and likely to be removed in future.
-
 This will generate the Fastqs in the specified output directory
 (e.g. ``bcl2fastq``) along with an HTML report derived from the
 ``cellranger`` JSON QC summary file, statistics for the Fastqs.
 
-Specifying the platform
------------------------
+.. note::
 
-``make_fastqs`` will try to identify the sequencer platform based on
-the instrument name. If the instrument name is not recognised then
-it can be explicitly specified using the ``--platform`` option.
+   ``make_fastqs`` offers various options for controlling the
+   behaviour of ``cellranger mkfastqs``, for example setting the
+   jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-advanced-usage:
+
+Fastq generation for runs with mixed protocols
+----------------------------------------------
+
+Multi-lane instruments such as the HISeq platform provide the
+option to run mixtures of samples requiring different processing
+protocols in a single sequencing run, for example:
+
+* Samples in some lanes have different barcode index
+  characteristics (e.g. different lengths) to those in
+  other lanes
+* Some lanes contain standard samples whilst others contain
+  10xGenomics or ICELL8 single-cell samples
+
+In these cases the data cannot be processed in a single
+``make_fastqs`` run. Instead the recommended procedure for
+handling these situations is:
+
+1. Prepare a single sample sheet with the appropriate indexes
+   for each lane (for example truncating index sequences, or
+   inserting the appropriate 10xGenomics indexes)
+2. Run ``make_fastqs`` multiple times to process each subset of
+   lanes on their own using the ``--lanes`` option, specifying the
+   appropriate protocol and processing options and writing the
+   Fastqs for each to a different output directory using the
+   ``--output-dir`` option
+3. Combine the outputs from each subset into a single output
+   directory using the ``merge_fastq_dirs`` command
+4. (Re)generate the statistics and QC report on the merged
+   data.
+
+For example: say we have a HISeq run with non-standard samples
+in lanes 5 and 6, and standard samples in all other lanes. In
+this case, after updating the samplesheet the standard samples
+would be processed first:
+
+::
+
+   auto_process.py make_fastqs \
+            --lanes=1-4,7-8 \
+	    --sample-sheet=SampleSheet.updated.csv \
+            --output-dir=bcl2fastq.L123478 \
+	    --no-stats
+
+The ``--lanes`` option restricts the lanes to just those with
+the standard samples. ``--output-dir`` writes the Fastqs to a
+custom output directory. Specifying ``--no-stats`` suppresses
+the statistics generation at this stage.
+
+Next process the non-standard samples, for example: if the
+samples in lanes 5 and 6 had different barcode lengths:
+
+::
+
+   auto_process.py make_fastqs \
+            --lanes=5-6 \
+            --output-dir=bcl2fastq.L56 \
+            --use-bases-mask=auto \
+            --skip-rsync \
+	    --no-stats
+
+Alternatively if the data in these lanes were 10xGenomics
+Chromium single cell data:
+
+::
+
+   auto_process.py make_fastqs \
+            --lanes=5-6 \
+	    --protocol=10x_chromium_sc \
+            --output-dir=bcl2fastq.L56 \
+            --use-bases-mask=auto \
+            --skip-rsync \
+	    --no-stats
+
+(Using ``--skip-rsync`` means that the processing doesn't try
+to fetch the raw data again.)
+
+The outputs from each subset of lanes can be merged into a
+single output directory using the ``merge_fastq_dirs`` command.
+For example:
+
+::
+
+   auto_process.py merge_fastq_dirs \
+             --primary-unaligned-dir=bcl2fastq.L123478 \
+	     --output-dir=bcl2fastq
+
+To generate the statistics and processing QC report for the
+merged data use the ``update_fastq_stats`` command:
+
+::
+
+   auto_process.py update_fastq_stats
 
 Outputs
 -------
@@ -118,7 +244,7 @@ Outputs
 On completion the ``make_fastqs`` command will produce:
 
 * An output directory called ``bcl2fastq`` with the demultiplexed
-  Fastq files
+  Fastq files (see below for more detail)
 * A set of tab-delimited files with statistics on each of the
   Fastq files
 * An HTML report on the processing QC (see the section on
@@ -132,19 +258,35 @@ On completion the ``make_fastqs`` command will produce:
    The processing QC report can be copied to the QC server using
    the :doc:`publish_qc command <publish_qc>`.
 
-Handling runs with mixed data: splitting lanes
-----------------------------------------------
+If the run included 10xGenomics Chromium 3'v2 data then will be
+additional outputs (see the section on :ref:`10xgenomics-outputs`
+in the documentation for processing 10xGenomics data).
 
-The HISeq platform enables runs with samples requiring different
-processing protocols appearing within a single run. For example:
+Output Fastq files
+******************
 
-* Lanes 1 to 6 have samples with 8bp dual indexes, but lanes 7
-  and 8 have 6p single index
-* Lanes 1 and 2 have 10xGenomics Chromium or ICELL8 single-cell
-  samples, but the remaining have contain standard samples
+Each sample defined in the input sample sheet will produce one
+or more output Fastq files, depending on:
 
-In cases such as these the recommended procedure is to prepare a
-single sample sheet which contains appropriate indexes for each
-lane, and split the processing by running ``make_fastqs`` multiple
-times for each set of lanes using the ``--lanes`` option, and
-specifying the appropriate options in each case.
+* if the run was single- or paired-end,
+* whether the sample appeared in more than one lane, and
+* whether the ``--no-lane-splitting`` option was specified
+
+By default if samples appear in more than one lane in a sequencing
+run then ``make_fastqs`` will generate multiple Fastqs with
+each Fastq only containing reads from a single lane, and with
+the lane number appearing in the Fastq file name.
+
+However if the ``--no-lane-splitting`` option is specified then
+the reads from all lanes that the sample appeared in will be
+combined into the same Fastq file.
+
+The default lane splitting behaviour can be controlled via the
+configuration options in the ``settings.ini`` file (see
+:doc:`configuration <../configuration>`).
+
+.. note::
+
+   Lane splitting is always performed for 10xGenomics single cell
+   data, regardless of the settings or options supplied to
+   ``make_fastqs``.
