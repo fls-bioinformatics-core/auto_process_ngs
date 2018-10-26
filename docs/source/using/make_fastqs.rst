@@ -47,6 +47,8 @@ the most useful are:
 * ``--no-stats`` skips the generation of statistics and processing QC
   reporting
 
+Information on other commonly used options can be found :ref:`below <make_fastqs-commonly-used-options>`.
+
 More detail on the different usage modes can be found in the
 subsequent sections:
 
