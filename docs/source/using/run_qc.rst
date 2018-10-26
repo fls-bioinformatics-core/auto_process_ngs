@@ -1,5 +1,5 @@
 Generating QC reports using ``auto_process run_qc``
-==================================================
+===================================================
 
 The ``run_qc`` command is used to run the QC pipeline on the
 Fastqs for each project within the analysis directory, and
