@@ -42,10 +42,10 @@ directories produced by the ``auto_process`` commands:
    <bcl2fastq>/               Output from ``bcl2fastq``          :doc:`make_fastqs <../using/make_fastqs>`
                               (can be set explicitly using the
                               ``--output-dir`` option)
-   <PROJECT>/                 Project directory (one for each
+   <PROJECT>/                 Project directory (one for each    :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
                               project defined in
                               ``projects.info``)
-   undetermined/              Project directory for undetermined
+   undetermined/              Project directory for undetermined :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
                               reads
    README.txt                 Text file with user notes on the   readme
                               run (e.g. unusual processing
@@ -56,7 +56,10 @@ directories produced by the ``auto_process`` commands:
 Analysis directory metadata
 ---------------------------
 
-The following additional information is associated with each analysis:
+Each analysis has additional data items associated with it which are
+stored in the ``metadata.info`` file.
+
+The most commonly used metadata items are listed in the table below:
 
 .. table::
    :widths: auto
@@ -64,8 +67,9 @@ The following additional information is associated with each analysis:
    ====================== ========================================
    **Item**               **Description**
    ---------------------- ----------------------------------------
-   ``run_number``         Locally-assigned identifier which
+   ``run_number``         Facility-assigned identifier which
                           can differ from the instrument run
+                          number
    ``source``             Source of the sequencing data, for
                           example the name of the facility,
 	                  institution or service that
@@ -75,17 +79,55 @@ The following additional information is associated with each analysis:
                           used to perform the Fastq generation
    ====================== ========================================
 
+The full set of metadata items and values for can be viewed using the
+``metadata`` command:
+
+::
+
+    auto_process.py metadata [ANALYSIS_DIR]
+
 This metadata is not required for processing, but should be set before
-the QC is published and the analysis is completed.
+the QC is published and the analysis is completed. Items can be set or
+updated using the ``--set`` option of the ``metadata`` command, for
+example:
 
-The metadata for an analysis directory can be inspected using the
-``metadata`` command::
-
-    auto_process.py metadata
-
-and updated using the ``--set`` option::
+::
 
     auto_process.py metadata --set run_number=88
+
+----------------
+Run reference ID
+----------------
+
+Each analysis directory has a "run reference ID" which is generated
+automatically from the associated metadata (specifically the platform,
+run datestamp, instrument run number and facility run number).
+
+The general form of the reference ID is:
+
+::
+
+    PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
+
+The instrument run number is included if it differs from the facility
+run number (or if the facility run number is not supplied).
+
+For example:
+
+::
+
+    HISEQ4000_181029/88#72
+
+is a run from a HiSeq 4000 instrument with datestamp ``181029`` and
+instrument run number ``88``; the facility assigned run ID ``72`` to
+the run as its local identifier.
+
+::
+
+    MISEQ_180912#3
+
+is a run a MiSeq instrument with datestamp ``180912``, where both the
+instrument and facility run numbers are ``3``.
 
 *******************
 Project directories
@@ -99,7 +141,7 @@ Each project directory will contain the following files and
 directories:
 
    ========================== ==================================
-   **Directory**              **Description and contents**
+   **File or Directory**      **Description and contents**
    -------------------------- ----------------------------------
    README.info                Project metadata
    fastqs/                    Fastq files
@@ -110,6 +152,73 @@ directories:
    multiqc_report.html        ``multiqc`` outputs
    multiqc_report_data/       Data associated with ``multiqc``
    ========================== ==================================
+
+--------------------------
+Project directory metadata
+--------------------------
+
+Each analysis project has additional data items associated with it
+which are stored in project's ``README.info`` file.
+
+The most commonly used metadata items are listed in the table below:
+
+.. table::
+   :widths: auto
+
+   ======================== =========================================
+   **Item**                 **Description**
+   ------------------------ -----------------------------------------
+   ``Run``                  Parent run name
+   ``Platform``             Sequencing platform (e.g. ``miseq``)
+   ``User``                 Name of the user(s)
+   ``PI``                   Name of PI(s)
+   ``Organism``             Organism name(s)
+   ``Library type``         The type of experiment (e.g. ``RNA-seq``)
+   ``Single cell platform`` Single cell platform, if applicable
+   ``Number of cells``      Number of cells (single cell only)
+   ``ICELL8 well list``     Well list file (ICELL8 only)
+   ``Paired_end``           Whether the data are single- or paired-
+                            end
+   ``Primary fastqs``       Subdirectory holding the 'primary' set of
+                            Fastq files for the project
+   ``Samples``              Number and list of sample names
+   ``Comments``             Any additional comments about the project
+   ======================== =========================================
+
+Typically most of the values are populated at setup time from the
+contents of the ``projects.info`` file
+(see :doc:`Setting up analysis directories <../using/setup_analysis_dirs>`),
+with the others being set automatically (for example after running
+single cell analyses).
+
+-----------------------------------
+Multiple Fastq sets within projects
+-----------------------------------
+
+Normally each project will only have one set of Fastq files
+associated with it, and these will be in the ``fastqs``
+subdirectory of the project directory.
+
+However some analyses may have more than one sets of
+associated Fastqs, and in these cases there will be multiple
+subdirectories (each of which contains one of these sets).
+
+For example, ICELL8 single cell projects typically have two
+or three sets of Fastqs:
+
+* ``fastqs.samples`` are the Fastqs after filtering and QC,
+  with the reads assigned to samples according to the
+  well list file
+* ``fastqs.barcodes`` are the Fastqs after filtering and
+  QC, with the reads assigned to barcodes according to the
+  well list file
+* (if present) ``fastqs`` are the original Fastq files
+  produced by the BCL to Fastq conversion, without any
+  additional filtering or QC
+
+The project metadata file includes the item ``Primary fastqs``
+which indicates which of the Fastq sets is the principal
+one.
 
 **********************************
 ``undetermined`` project directory
