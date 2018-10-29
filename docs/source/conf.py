@@ -297,10 +297,11 @@ for subcmd in ("setup",
         help_text = open(help_text_file,'r').read()
         title = "%s" % subcmd
         ref = ".. _commands_%s:" % subcmd
-        fp.write("%s\n\n%s\n%s\n%s" % (ref,
-                                       title,
-                                       "*"*len(title),
-                                       help_text))
+        fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                             title,
+                                             "*"*len(title)))
+        for line in help_text.split('\n'):
+            fp.write("    %s\n" % line)
         os.remove(help_text_file)
 
 # -- Make utility reference documents ------------------------------------------
@@ -346,10 +347,11 @@ for utility in ("analyse_barcodes.py",
         help_text = open(help_text_file,'r').read()
         title = "%s" % utility
         ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
-        fp.write("%s\n\n%s\n%s\n%s" % (ref,
-                                       title,
-                                       "*"*len(title),
-                                       help_text))
+        fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                             title,
+                                             "*"*len(title)))
+        for line in help_text.split('\n'):
+            fp.write("    %s\n" % line)
         os.remove(help_text_file)
 
 # -- Make developers reference documents ---------------------------------------
