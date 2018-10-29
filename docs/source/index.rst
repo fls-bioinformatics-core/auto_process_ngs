@@ -6,7 +6,7 @@ auto-process-ngs: automated processing of NGS data
 the processing of sequencing data from Illumina Next Generation
 Sequencing (NGS) platforms, specifically:
 
-* Generation of FASTQ files from raw Bcl data produced by
+* Generation of Fastq files from raw Bcl data produced by
   the sequencer
 * Dividing Fastqs into projects for subsequent analysis
 * Running quality checks (QC) on each project
