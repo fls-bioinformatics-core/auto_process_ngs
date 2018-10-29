@@ -76,8 +76,8 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Reference Documentation
 
-   commands
-   utilities
+   reference/commands
+   reference/utilities
 
 .. _developers-docs:
 

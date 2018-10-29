@@ -59,3 +59,19 @@ specified in the configuration then the reports can be copied
 there for sharing using the :doc:`publish_qc command <publish_qc>`.
 
 .. _multiqc: http://multiqc.info/
+
+-------------------------
+Running the QC standalone
+-------------------------
+
+The utility ``run_qc.py`` allows the QC pipeline to be run on an
+arbitrary set of Fastqs outside of the ``auto_process`` pipeline.
+
+For example:
+
+::
+
+   run_qc.py my_project/
+
+See the documentation on :ref:`run_qc.py <utilities_run_qc>` for
+details.

@@ -248,11 +248,23 @@ texinfo_documents = [
 
 # -- Make command reference documents ------------------------------------------
 
-commandref = os.path.join(os.getcwd(),"commands.rst")
+if not os.path.exists("reference"):
+    os.mkdir("reference")
+
+commandref = os.path.join(os.getcwd(),"reference","commands.rst")
 with open(commandref,'w') as commands:
     commands.write("""
 ``auto_process`` commands
 =========================
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+``auto_process.py`` implements the following commands:
+
+.. contents:: :local:
 
 """)
 
@@ -284,9 +296,51 @@ for subcmd in ("setup",
     with open(commandref,'a') as fp:
         help_text = open(help_text_file,'r').read()
         title = "%s" % subcmd
-        fp.write("%s\n%s\n%s" % (title,
-                                 "*"*len(title),
-                                 help_text))
+        ref = ".. _commands_%s:" % subcmd
+        fp.write("%s\n\n%s\n%s\n%s" % (ref,
+                                       title,
+                                       "*"*len(title),
+                                       help_text))
+        os.remove(help_text_file)
+
+# -- Make utility reference documents ------------------------------------------
+
+utilityref = os.path.join(os.getcwd(),"reference","utilities.rst")
+with open(utilityref,'w') as utilities:
+    utilities.write("""
+Utilities
+=========
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+In addition to the main ``auto_process.py`` command, a number of utilities
+are available:
+
+.. contents:: :local:
+
+""")
+for utility in ("audit_projects.py",
+                "download_fastqs.py",
+                "export_to_galaxy.py",
+                "manage_fastqs.py",
+                "run_qc.py",
+                "update_project_metadata.py"):
+    # Capture the output
+    help_text_file = "%s.help" % utility
+    with open(help_text_file,'w') as fp:
+        subprocess.call([utility,'--help'],stdout=fp)
+    # Write into the document
+    with open(utilityref,'a') as fp:
+        help_text = open(help_text_file,'r').read()
+        title = "%s" % utility
+        ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
+        fp.write("%s\n\n%s\n%s\n%s" % (ref,
+                                       title,
+                                       "*"*len(title),
+                                       help_text))
         os.remove(help_text_file)
 
 # -- Make developers reference documents ---------------------------------------
