@@ -322,11 +322,20 @@ are available:
 .. contents:: :local:
 
 """)
-for utility in ("audit_projects.py",
+for utility in ("analyse_barcodes.py",
+                "audit_projects.py",
+                "bclToFastq.py",
                 "download_fastqs.py",
                 "export_to_galaxy.py",
+                "fastq_statistics.py",
+                "icell8_contamination_filter.py",
+                "icell8_report.py",
+                "icell8_stats.py",
                 "manage_fastqs.py",
+                "process_10xgenomics.py",
+                "process_icell8.py",
                 "run_qc.py",
+                "split_icell8_fastqs.py",
                 "update_project_metadata.py"):
     # Capture the output
     help_text_file = "%s.help" % utility
