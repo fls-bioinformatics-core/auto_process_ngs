@@ -32,21 +32,81 @@ The recommended steps are:
 Perform initial single-library analysis
 ---------------------------------------
 
-Initial single-library analysis can be performed by using
-``process_10xgenomics.py`` to run ``cellranger count`` on all the
-samples in the Chromium-based projects, e.g.::
+Initial single-library analysis can be performed by using the
+``process_10xgenomics.py count`` wrapper to run ``cellranger count``
+on all the samples in the Chromium-based projects.
+
+The general invocation is:
+
+::
 
        process_10xgenomics.py count \
-           -t .../refdata-cellranger-mm10-1.2.0
-	   PROJECT1 PROJECT2
+           -t /path/to/refdata-cellranger-mm10-1.2.0
+	   PROJECT1 [ PROJECT2 ... ]
 
-(where ``PROJECT1`` and ``PROJECT2`` represent the projects with Chromium
-datasets).
+where ``PROJECT1`` etc represent the projects with Chromium
+datasets.
 
 .. note::
 
    See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
    for more details on the single-library analysis.
+
+.. note::
+
+   If a project metadata defines an organism name which matches one
+   of the entries in the ``10xgenomics_transcriptomes`` section of
+   the configuration file then the ``-t`` option isn't required;
+   instead the matching reference data will be used automatically
+   for the single-library analysis.
+
+.. _10xgenomics-count-options:
+
+Command line options for 'count'
+********************************
+
+The ``count`` command supports the following options::
+
+    -u : specify the name of the output directory from 'mkfastq'
+    -t : specify the path to the directory with the appropriate
+         10xGenomics transcriptome data
+    -c : specify the assay configuration (aka chemistry)
+
+See also :ref:`10xgenomics-additional-options`.
+
+.. _10xgenomics-additional-options:
+
+Options for controlling cellranger
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``process_10xgenomics.py`` has a number of additional options for
+controlling how the ``cellranger`` pipeline is run::
+
+    --jobmode JOB_MODE : job mode to run cellranger in
+    --jobinterval JOB_INTERVAL : how often jobs are submitted (in ms)
+    --maxjobs MAX_JOBS : maxiumum number of concurrent jobs to run
+
+The default ``JOB_MODE`` is ``local``, which runs the ``cellranger``
+pipelines on the local system. In this case the following additional
+options can be used to control the resources used by the pipeline::
+
+    --localcores LOCAL_CORES : maximum number of cores the pipeline
+                               can request
+    --localmem LOCAL_MEM     : maximum memory the pipeline can
+                               request (in Gbs)
+
+If ``cellranger`` is configured to use additional job submission
+systems (e.g. Grid Engine) then ``JOB_MODE`` can specify one of these
+(e.g. ``sge``). In this case the following additional options can
+be used::
+
+    --mempercore MEM_PER_CORE : memory assumed per core (in Gbs)
+
+Note that all the above options  map onto the equivalent ``cellranger``
+options; there are also the following general non-``cellranger`` options::
+
+   --modulefiles MODULEFILES : comma-separated list of environment
+                               modules to load before executing commands
 
 .. _10xgenomics-outputs:
 
@@ -120,92 +180,3 @@ reference genome and give an error of the form::
 If the reference data being used is correct then use the ``--chemistry``
 option to specify the appropriate assay configuration - see
 https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
-
-.. _10xgenomics-requirements:
-
-Requirements
-------------
-
-The ``process_10xgenomics.py`` utility requires that the ``cellranger``
-package be installed and available in the environment (for example, a
-suitable environment module can be specified via the ``--modulefiles``
-option.)
-
-See https://support.10xgenomics.com/single-cell/software/pipelines/latest/what-is-cell-ranger
-for more information on installing and running ``cellranger``.
-
-Appendix: options for 'process_10xgenomics.py'
-----------------------------------------------
-
-.. _10xgenomics-mkfastq-options:
-
-'mkfastq' options
-~~~~~~~~~~~~~~~~~
-
-.. warning::
-
-   The ``process_10xgenomics.py mkfastq`` option is deprecated;
-   use the ``make_fastqs`` command with the appropriate
-   ``--protocol`` option instead.
-
-The ``mkfastq`` command supports the following options::
-
-    -s : specify the sample sheet to use
-    -r : specify the location of the primary data for the run
-    -l : optionally, specify the lane numbers
-    -o : specify the output directory
-    --ignore-dual-index:
-         force cellranger to ignore dual indexing on runs
-         which have it
-
-See also :ref:`10xgenomics-additional-options`.
-
-.. _10xgenomics-count-options:
-
-'count' options
-~~~~~~~~~~~~~~~
-
-The ``count`` command supports the following options::
-
-    -u : specify the name of the output directory from 'mkfastq'
-    -t : specify the path to the directory with the appropriate
-         10xGenomics transcriptome data
-    -c : specify the assay configuration (aka chemistry)
-
-See also :ref:`10xgenomics-additional-options`.
-
-.. _10xgenomics-additional-options:
-
-Additional options for 'process_10xgenomics.py'
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The ``process_10xgenomics.py`` has a number of additional options for
-controlling how the ``cellranger`` pipeline is run::
-
-    --jobmode JOB_MODE : job mode to run cellranger in
-    --jobinterval JOB_INTERVAL : how often jobs are submitted (in ms)
-    --maxjobs MAX_JOBS : maxiumum number of concurrent jobs to run
-
-The default ``JOB_MODE`` is ``local``, which runs the ``cellranger``
-pipelines on the local system. In this case the following additional
-options can be used to control the resources used by the pipeline::
-
-    --localcores LOCAL_CORES : maximum number of cores the pipeline
-                               can request
-    --localmem LOCAL_MEM     : maximum memory the pipeline can
-                               request (in Gbs)
-
-If ``cellranger`` is configured to use additional job submission
-systems (e.g. Grid Engine) then ``JOB_MODE`` can specify one of these
-(e.g. ``sge``). In this case the following additional options can
-be used::
-
-    --mempercore MEM_PER_CORE : memory assumed per core (in Gbs)
-
-Note that all the above options  map onto the equivalent ``cellranger``
-options; there are also the following general non-``cellranger`` options::
-
-   --modulefiles MODULEFILES : comma-separated list of environment
-                               modules to load before executing commands
-
-
