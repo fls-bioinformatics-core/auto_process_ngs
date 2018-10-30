@@ -128,8 +128,6 @@ For example:
 
 .. _setup_import_fastqs:
 
-Specifying the platform
-
 ************************************
 Setup from existing bcl2fastq output
 ************************************
