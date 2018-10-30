@@ -280,14 +280,21 @@ On completion the ``make_fastqs`` command will produce:
   analysis project directories (see
   :doc:`Setting up project directories <setup_analysis_dirs>`)
 
+If the run included 10xGenomics Chromium 3'v2 data then there will
+be some additional outputs:
+
+* A report in the top-level analysis directory called
+  ``cellranger_qc_summary[_LANES].html``, which is an HTML copy
+  of the QC summary JSON file produced by ``cellranger mkfastq``
+  (nb ``LANES`` will be the subset of lanes from the
+  run which contained the Chromium data, if the run consisted
+  of a mixture of Chromium and non-Chromium samples, for example:
+  ``--lanes=5,6`` results in ``56``).
+
 .. note::
 
-   The processing QC report can be copied to the QC server using
+   The processing QC reports can be copied to the QC server using
    the :doc:`publish_qc command <publish_qc>`.
-
-If the run included 10xGenomics Chromium 3'v2 data then will be
-additional outputs (see the section on :ref:`10xgenomics-outputs`
-in the documentation for processing 10xGenomics data).
 
 Output Fastq files
 ******************

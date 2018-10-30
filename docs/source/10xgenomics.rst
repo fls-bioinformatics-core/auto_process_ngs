@@ -10,148 +10,22 @@ provide the ``cellranger`` software package to perform Fastq generation
 and subsequent analyses.
 
 The auto-process package currently provides a utility script called
-``process_10xgenomics.py`` to help with processing the 10xGenomics Chromium
-data. This sits alongside the standard ``auto_process`` commands, and
-wraps a subset of the ``cellranger`` commands whilst also providing a
-degree of integration with the ``auto_process`` protocols.
+``process_10xgenomics.py`` which wraps a subset of the ``cellranger``
+commands whilst also providing a degree of integration with the
+``auto_process`` pipeline.
 
-The stages are:
+Processing protocol for 10xGenomics Chromium data
+-------------------------------------------------
 
-1. :ref:`10xgenomics-fastq-generation`
-2. :ref:`10xgenomics-set-up-analysis-dirs`
-3. :ref:`10xgenomics-initial-single-library-analysis`
+The recommended steps are:
 
-Each of these is covered in detail in the subsequent sections.
-
-.. _10xgenomics-fastq-generation:
-
-Fastq generation
-----------------
-
-The first step is to generate Fastq files from the raw sequencing data.
-There are currently two possible scenarios:
-
-1. The sequencing run only contains Chromium samples, or
-2. The sequencing run contains a mixture of Chromium and non-Chromium
-   samples.
-
-The Fastq protocols for these two scenarios are slightly different and
-are described in the following sections.
-
-.. note::
-
-   The output directory structure from ``cellranger mkfastq`` doesn't
-   conform precisely to that from ``bcl2fastq2`` as outlined in the
-   manual for the latter.
-
-Sequencing run only contains Chromium samples
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Fastq generation can be performed by running the command::
-
-    auto_process.py make_fastqs --protocol=10x_chromium_sc
-
-which fetches the data and runs ``cellranger mkfastq``.
-
-.. note::
-
-   This replaces the ``process_10xgenomics.py mkfastq`` command,
-   which is now deprecated and likely to be removed in future.
-
-This will generate the Fastqs in the specified output directory (e.g.
-``bcl2fastq``) along with an HTML report derived from the ``cellranger``
-JSON QC summary file, statistics for the Fastqs.
-
-Sequencing run contains both Chromium and non-Chromium samples
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-In this case it is necessary to split the processing to handle the
-Chromium and non-Chromium datasets separately. See the section
-:ref:`problem-split-processing` for how to split the processing into
-batches.
-
-It is recommended to generate Fastqs for the lanes containing
-'standard' (i.e. non-Chromium) datasets first, using the
-``auto_process.py make_fastqs --lanes=...`` command.
-
-When this has completed, the Fastqs can be generated for the lanes
-with the Chromium datasets by rerunning the ``make_fastqs`` command
-specifying the ``10x_chromium_sc`` protocol along with the lanes
-which contain these data, e.g.::
-
-    auto_process.py make_fastqs \
-        --protocol=10x_chromium_sc \
-        --lanes=5,6 \
-	--output-dir=bcl2fastq.chromium \
-        --skip-rsync \
-        --no-stats
-
-This will generate the Fastqs in the specified output directory (e.g.
-``bcl2fastq.chromium``) along with an HTML report derived from the
-``cellranger`` JSON QC summary file. It will also update the existing
-``projects.info`` file with entries for the Chromium projects.
-
-Finally, to update the statistics with the Chromium Fastqs, run e.g.::
-
-    auto_process.py update_fastq_stats \
-         --unaligned-dir bcl2fastq.chromium \
-         --add
-
-``--add`` is necessary to combine the statistics for the Chromium data
-with those from the standard datasets.
-
-.. _10xgenomics-set-up-analysis-dirs:
-
-Set up project analysis directories and run QC
-----------------------------------------------
-
-Regardless of the scenario described previously, the ``projects.info``
-file should contain initial entries for both the Chromium and
-non-Chromium datasets (if any).
-
-.. note::
-
-   The ``projects.info`` can also be updated using the
-   ``update_projects`` command::
-
-       process_10xgenomics.py update_projects \
-           -u bcl2fastq.chromium
-
-   which will add entries for the Chromium projects and samples
-   to the ``projects.info`` file. However this option is likely
-   to be deprecated in future.
-
-Once the file has been edited to include additional data on the user,
-PI etc, the ``setup_analysis_dirs`` command can be used to create
-analysis directories for each of the projects.
-
-For runs which consist solely of Chromium datasets, do e.g.::
-
-    auto_process.py setup_analysis_dirs \
-        --unaligned_dir=bcl2fastq.chromium
-
-For runs with a mixture of Chromium and non-Chromium datasets it's
-necessary to run this command twice: once to set up projects for the
-non-Chromium samples and once to set up to the Chromium projects.
-E.g.::
-
-    # Set up non-Chromium-based projects
-    auto_process.py setup_analysis_dirs
-
-    # Set up Chromium-based projects
-    auto_process.py setup_analysis_dirs \
-        --unaligned_dir=bcl2fastq.chromium \
-        --undetermined=undetermined.chromium
-
-.. note::
-
-   The ``--undetermined`` option is required to also create a 'project'
-   specifically for the undetermined reads from the Chromium data.
-
-Once the projects are set up, the standard QC pipeline can be run
-using the ``run_qc`` command::
-
-       auto_process.py run_qc
+1. Generate the Fastqs as described in
+   :ref:`make_fastqs-10x_chromium_sc-protocol`
+2. Set up analysis directories and run initial QC as per the standard
+   protocol
+3. Perform initial single library analysis by running the
+   ``process_10xgenomics.py`` utility, as described in
+   :ref:`10xgenomics-initial-single-library-analysis`
 
 .. _10xgenomics-initial-single-library-analysis:
 
@@ -169,44 +43,15 @@ samples in the Chromium-based projects, e.g.::
 (where ``PROJECT1`` and ``PROJECT2`` represent the projects with Chromium
 datasets).
 
-   This generates the 'count' output in a temporary directory and copies
-   the ``web_summary.html`` files into the project directories on
-   completion.
-
-   It also creates an index file and a ZIP archive with the HTML summary
-   reports from ``cellranger count``. These reports are copied by the
-   ``publish_qc`` command, along with the standard QC reports.
-
 .. note::
 
    See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
    for more details on the single-library analysis.
 
-.. _10xgenomics-requirements:
-
-Requirements
-------------
-
-The ``process_10xgenomics.py`` utility requires that the ``cellranger``
-package be installed and available in the environment (for example, a
-suitable environment module can be specified via the ``--modulefiles``
-option.)
-
-See https://support.10xgenomics.com/single-cell/software/pipelines/latest/what-is-cell-ranger
-for more information on installing and running ``cellranger``.
-
 .. _10xgenomics-outputs:
 
 Outputs and reports
--------------------
-
-The ``process_10xgenomics.py mkfastq`` command generates a report in the
-top-level analysis directory called ``cellranger_qc_summary[_LANES].html``,
-which is an HTML copy of the QC summary JSON file produced by
-``cellranger mkfastq`` (nb ``LANES`` will be the subset of lanes from the
-run which contained the Chromium data, if the run consisted of a mixture of
-Chromium and non-Chromium samples; , for example: ``--lanes=5,6`` results
-in ``56``).
+*******************
 
 After running the ``process_10xgenomics.py counts`` command, the project
 directory will contain the following output directories:
@@ -244,19 +89,8 @@ The directory will also contain:
    for viewing elsewhere
  * A ``README.info`` file
 
-Appendix: known issues
-----------------------
-
-Fastq generation fails for single-indexed 10x data produced in dual-index flowcell
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If the 10x data is single-indexed but has been produced in a dual-index
-flowcell (for example, if the samples were run in a subset of lanes on a
-HISeq instrument alongside standard libraries in other lanes), then
-``cellranger mkfastq`` will fail.
-
-Use the ``--ignore-dual-index`` option to force ``cellranger`` to process
-the data in this case.
+Troubleshooting
+***************
 
 Single-library analyses fail for low read counts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -287,6 +121,19 @@ If the reference data being used is correct then use the ``--chemistry``
 option to specify the appropriate assay configuration - see
 https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
 
+.. _10xgenomics-requirements:
+
+Requirements
+------------
+
+The ``process_10xgenomics.py`` utility requires that the ``cellranger``
+package be installed and available in the environment (for example, a
+suitable environment module can be specified via the ``--modulefiles``
+option.)
+
+See https://support.10xgenomics.com/single-cell/software/pipelines/latest/what-is-cell-ranger
+for more information on installing and running ``cellranger``.
+
 Appendix: options for 'process_10xgenomics.py'
 ----------------------------------------------
 
@@ -294,6 +141,12 @@ Appendix: options for 'process_10xgenomics.py'
 
 'mkfastq' options
 ~~~~~~~~~~~~~~~~~
+
+.. warning::
+
+   The ``process_10xgenomics.py mkfastq`` option is deprecated;
+   use the ``make_fastqs`` command with the appropriate
+   ``--protocol`` option instead.
 
 The ``mkfastq`` command supports the following options::
 
@@ -312,7 +165,7 @@ See also :ref:`10xgenomics-additional-options`.
 'count' options
 ~~~~~~~~~~~~~~~
 
- The ``count`` command supports the following options::
+The ``count`` command supports the following options::
 
     -u : specify the name of the output directory from 'mkfastq'
     -t : specify the path to the directory with the appropriate

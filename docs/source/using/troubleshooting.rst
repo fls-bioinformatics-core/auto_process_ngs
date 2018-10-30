@@ -11,6 +11,7 @@ with suggestions on how to address them:
  * :ref:`troubleshooting-handling-inline-barcodes`
  * :ref:`troubleshooting-no-adapter-trimming`
  * :ref:`troubleshooting-missing-fastqs-after-demultiplexing`
+ * :ref:`troubleshooting-10x-single-index-data-in-dual-index-flowcell`
 
 .. _troubleshooting-incomplete-run:
 
@@ -176,3 +177,16 @@ complete successfully.
 
    Be aware that the empty Fastqs may not be treated as valid input to
    some external downstream software packages.
+
+.. _troubleshooting-10x-single-index-data-in-dual-index-flowcell:
+
+10xGenomics: Fastq generation fails for single-index data in dual-index flowcell
+********************************************************************************
+
+If the 10x data is single-indexed but has been produced in a dual-index
+flowcell (for example, if the samples were run in a subset of lanes on a
+HISeq instrument alongside standard libraries in other lanes), then
+``cellranger mkfastq`` will fail.
+
+Use the ``--ignore-dual-index`` option to force ``cellranger`` to process
+the data in this case.
