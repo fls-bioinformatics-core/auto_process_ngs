@@ -339,7 +339,9 @@ for utility in ("analyse_barcodes.py",
     # Capture the output
     help_text_file = "%s.help" % utility
     with open(help_text_file,'w') as fp:
-        subprocess.call([utility,'--help'],stdout=fp)
+        subprocess.call([utility,'--help'],
+                        stdout=fp,
+                        stderr=subprocess.STDOUT)
     # Write into the document
     with open(utilityref,'a') as fp:
         help_text = open(help_text_file,'r').read()
@@ -348,6 +350,8 @@ for utility in ("analyse_barcodes.py",
         fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
                                              title,
                                              "*"*len(title)))
+        if not help_text:
+            help_text = "No output from --help command?"
         for line in help_text.split('\n'):
             fp.write("    %s\n" % line)
         os.remove(help_text_file)
