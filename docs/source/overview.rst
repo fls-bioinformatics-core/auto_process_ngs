@@ -42,10 +42,28 @@ like:
   area to the archive storage area, for subsequent
   bioinformatics analysis.
 
-Additional commands are available for reporting:
-
 * :doc:`auto_process.py report <using/report>` generates
   reports on analysis directories in various formats.
+
+Additional helper commands are available:
+
+* :ref:`auto_process.py samplesheet <commands_samplesheet>`
+  checks the supplied samplesheet file for errors and
+  allows it to be edited.
+
+* :ref:`auto_process.py readme <commands_readme>`
+  creates a ``README`` text file for notes.
+
+* :ref:`auto_process.py metadata <commands_metadata>`
+  allows the metadata associated with an analysis
+  directory to be viewed and updated.
+
+* :ref:`auto_process.py merge_fastq_dirs <commands_merge_fastq_dirs>`
+  merges together data outputs from multiple ``make_fastqs``
+  commands.
+
+* :ref:`auto_process.py update_fastq_stats <commands_update_fastq_stats>`
+  regenerates the statistics and processing reports.
 
 ===========
 Terminology
@@ -57,12 +75,12 @@ This documentation refers to various concepts such as
 follows:
 
 * **(Sequencing) run**: the primary sequencing data (i.e.
-  Bcl files) produced by a run of a sequencer
+  BCL files) produced by a run of a sequencer
 * **Analysis directory**: the top-level directory which
   holds the outputs from ``auto_process`` when processing
   data from a sequencing run
 * **Analysis project**: a subdirectory of an analysis
-  directory which holds the FASTQs and QC outputs for
+  directory which holds the Fastqs and QC outputs for
   a set of samples (aka a *project*) from the sequencing
   run; there can be multiple analysis projects within a
   single analysis directory
