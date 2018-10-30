@@ -92,8 +92,8 @@ Some of the most commonly used options are:
   this option (see :ref:`config_sequencer_platforms` for how to
   associate sequencers and platforms in the configuration)
 
-Additional options can listed by running ``make_fastqs`` with the
-``--help`` option.
+The full set of options can be found in the
+:ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
 
 .. _make_fastqs-standard-protocol:
 
@@ -198,7 +198,7 @@ handling these situations is:
 3. Combine the outputs from each subset into a single output
    directory using the ``merge_fastq_dirs`` command
 4. (Re)generate the statistics and QC report on the merged
-   data.
+   data using the ``update_fastq_stats`` command
 
 For example: say we have a HISeq run with non-standard samples
 in lanes 5 and 6, and standard samples in all other lanes. In
@@ -262,6 +262,12 @@ merged data use the ``update_fastq_stats`` command:
 ::
 
    auto_process.py update_fastq_stats
+
+See the appropriate sections of the command reference for
+the full set of available options:
+
+* :ref:`commands_merge_fastq_dirs`
+* :ref:`commands_update_fastq_stats`
 
 .. _make_fastqs-outputs:
 
