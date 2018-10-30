@@ -85,5 +85,4 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    :maxdepth: 2
    :caption: Developer Documentation
 
-   advanced
-   developers/index
+   developers/api_docs/index

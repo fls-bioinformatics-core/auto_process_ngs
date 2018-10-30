@@ -375,11 +375,18 @@ if not os.path.exists(devdocdir):
     print "Making %s" % devdocdir
     os.mkdir(devdocdir)
 
+# Ensure the 'api_docs' subdir exists
+api_doc_dir = os.path.join(os.getcwd(),
+                           "developers",
+                           "api_docs")
+if not os.path.exists(api_doc_dir):
+    print "Making %s" % api_doc_dir
+    os.mkdir(api_doc_dir)
+
 # Generate documents for each module
 for modname in modlist:
     docname = modname.replace('.','_')
-    docfile = os.path.join(os.getcwd(),
-                           "developers",
+    docfile = os.path.join(api_doc_dir,
                            "%s.rst" % docname)
     print "Generating %s" % docfile
     with open(docfile,'w') as doc:
@@ -392,12 +399,12 @@ for modname in modlist:
 """ % (title,'='*len(title),modname))
 
 # Generate an index
-devindex = os.path.join(os.getcwd(),"developers","index.rst")
-print "Writing %s" % devindex
-with open(devindex,'w') as doc:
-    doc.write("""=====================
-Developers' reference
-=====================
+api_index = os.path.join(api_doc_dir,"index.rst")
+print "Writing %s" % api_index
+with open(api_index,'w') as doc:
+    doc.write("""=============================
+Developers' API documentation
+=============================
 
 .. toctree::
    :maxdepth: 2

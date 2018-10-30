@@ -6,5 +6,5 @@
 auto_process_settings_local.py
 settings.ini
 docs/build
-docs/source/developers
+docs/source/developers/api_docs
 docs/source/reference
