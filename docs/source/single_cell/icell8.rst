@@ -18,16 +18,10 @@ This is illustrated in the figure below:
 
 .. image:: ../images/icell8_read1.png
 
-.. note::
-
-   Each inline barcode corresponds to a specific well in the
-   experiment, which in turn corresponds to a specific single
-   cell.
-
-.. note::
-
-   Older versions of the pipeline (autoprocess version 0.8.0
-   and earlier) assumed that the UMI length was 10 bases.
+Each inline barcode corresponds to a specific well in the
+experiment, which in turn corresponds to a specific single
+cell. The mapping of barcodes to well/cell are given in the
+:ref:`icell8_well_list_file`.
 
 The corresponding R2 read contains the actual sequence data
 corresponding to the cell and UMI referenced by its R1 partner.
@@ -202,8 +196,8 @@ The well list file is a tab-delimited file output from the ICELL8 which
 amongst other things lists the valid ICELL8 barcodes for the experiment
 and the mapping of barcodes to samples.
 
-(As noted elsewhere, each barcode corresponds to a well which in turn
-corresponds to a single cell.)
+Each barcode corresponds to a well which in turn corresponds to a single
+cell.
 
 .. _icell8_pipeline_configuration:
 
