@@ -53,6 +53,15 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Reporting analyses <using/report>
    Managing and sharing data <using/managing_data>
 
+.. _single-cell-docs:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Processing single-cell data
+
+   Takara Bio ICELL8 data <single_cell/icell8>
+   10xGenomics Chromium data  <single_cell/10xgenomics>
+
 .. toctree::
    :maxdepth: 2
    :caption: Outputs
@@ -60,15 +69,6 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Analysis and project directories <output/analysis_dirs>
    Processing QC <output/processing_qc>
    QC reports <output/qc_reports>
-
-.. _single-cell-docs:
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Single-cell Platforms
-
-   Takara Bio ICELL8 data <icell8>
-   10xGenomics Chromium data  <10xgenomics>
 
 .. _reference-docs:
 

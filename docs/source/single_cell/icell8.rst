@@ -16,7 +16,7 @@ molecular identifier (UMI) for the read pair:
 
 This is illustrated in the figure below:
 
-.. image:: images/icell8_read1.png 
+.. image:: ../images/icell8_read1.png
 
 .. note::
 

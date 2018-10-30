@@ -111,8 +111,8 @@ Supported single-cell platforms
 The pipeline supports handling data from the Takara Bio SMARTer
 ICELL8 and 10xGenomics Chromium single-call RNA-seq platforms:
 
-* :doc:`Handling ICELL8 scRNA-seq data <icell8>`
-* :doc:`Handling 10xGenomics Chromium scRNA-seq data <10xgenomics>`
+* :doc:`Handling ICELL8 scRNA-seq data <single_cell/icell8>`
+* :doc:`Handling 10xGenomics Chromium scRNA-seq data <single_cell/10xgenomics>`
 
 .. _run_and_fastq_naming_conventions:
 
