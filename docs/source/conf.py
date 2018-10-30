@@ -42,7 +42,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'auto_process_ngs'
-copyright = u'2015, Peter Briggs/University of Manchester'
+copyright = u'2015-2018 University of Manchester'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -135,7 +135,8 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+# See https://stackoverflow.com/questions/18969093/how-to-include-the-toctree-in-the-sidebar-of-each-page
+html_sidebars = { '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html'] }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -244,3 +245,176 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+# -- Make command reference documents ------------------------------------------
+
+if not os.path.exists("reference"):
+    os.mkdir("reference")
+
+commandref = os.path.join(os.getcwd(),"reference","commands.rst")
+with open(commandref,'w') as commands:
+    commands.write("""
+``auto_process`` commands
+=========================
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+``auto_process.py`` implements the following commands:
+
+.. contents:: :local:
+
+""")
+
+import subprocess
+for subcmd in ("setup",
+               "make_fastqs",
+               "analyse_barcodes",
+               "setup_analysis_dirs",
+               "run_qc",
+               "publish_qc",
+               "archive",
+               "report",
+               "samplesheet",
+               "merge_fastq_dirs",
+               "update_fastq_stats",
+               "import_project",
+               "config",
+               "params",
+               "metadata",
+               "readme",
+               "clone"):
+    # Capture the output
+    help_text_file = "%s.help" % subcmd
+    with open(help_text_file,'w') as fp:
+        subprocess.call(['auto_process.py',subcmd,'--help'],stdout=fp)
+    # Write into the document
+    with open(commandref,'a') as fp:
+        help_text = open(help_text_file,'r').read()
+        title = "%s" % subcmd
+        ref = ".. _commands_%s:" % subcmd
+        fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                             title,
+                                             "*"*len(title)))
+        for line in help_text.split('\n'):
+            fp.write("    %s\n" % line)
+        os.remove(help_text_file)
+
+# -- Make utility reference documents ------------------------------------------
+
+utilityref = os.path.join(os.getcwd(),"reference","utilities.rst")
+with open(utilityref,'w') as utilities:
+    utilities.write("""
+Utilities
+=========
+
+.. note::
+
+   This documentation has been auto-generated from the
+   command help
+
+In addition to the main ``auto_process.py`` command, a number of utilities
+are available:
+
+.. contents:: :local:
+
+""")
+for utility in ("analyse_barcodes.py",
+                "audit_projects.py",
+                "bclToFastq.py",
+                "download_fastqs.py",
+                "export_to_galaxy.py",
+                "fastq_statistics.py",
+                "icell8_contamination_filter.py",
+                "icell8_report.py",
+                "icell8_stats.py",
+                "manage_fastqs.py",
+                "process_10xgenomics.py",
+                "process_icell8.py",
+                "run_qc.py",
+                "split_icell8_fastqs.py",
+                "update_project_metadata.py"):
+    # Capture the output
+    help_text_file = "%s.help" % utility
+    with open(help_text_file,'w') as fp:
+        subprocess.call([utility,'--help'],
+                        stdout=fp,
+                        stderr=subprocess.STDOUT)
+    # Write into the document
+    with open(utilityref,'a') as fp:
+        help_text = open(help_text_file,'r').read()
+        title = "%s" % utility
+        ref = ".. _utilities_%s:" % os.path.splitext(utility)[0]
+        fp.write("%s\n\n%s\n%s\n\n::\n\n" % (ref,
+                                             title,
+                                             "*"*len(title)))
+        if not help_text:
+            help_text = "No output from --help command?"
+        for line in help_text.split('\n'):
+            fp.write("    %s\n" % line)
+        os.remove(help_text_file)
+
+# -- Make developers reference documents ---------------------------------------
+
+# Fetch a list of modules
+# See https://stackoverflow.com/a/1708706/579925
+from pkgutil import walk_packages
+def get_modules(pkg):
+    modlist = []
+    for importer,modname,ispkg in walk_packages(path=pkg.__path__,
+                                                prefix=pkg.__name__+'.',
+                                                onerror=lambda x: None):
+        modname = '.'.join(modname.split('.')[1:])
+        modlist.append(modname)
+    return modlist
+
+import auto_process_ngs
+modlist = get_modules(auto_process_ngs)
+
+# Ensure the 'developers' subdir exists
+devdocdir = os.path.join(os.getcwd(),"developers")
+if not os.path.exists(devdocdir):
+    print "Making %s" % devdocdir
+    os.mkdir(devdocdir)
+
+# Ensure the 'api_docs' subdir exists
+api_doc_dir = os.path.join(os.getcwd(),
+                           "developers",
+                           "api_docs")
+if not os.path.exists(api_doc_dir):
+    print "Making %s" % api_doc_dir
+    os.mkdir(api_doc_dir)
+
+# Generate documents for each module
+for modname in modlist:
+    docname = modname.replace('.','_')
+    docfile = os.path.join(api_doc_dir,
+                           "%s.rst" % docname)
+    print "Generating %s" % docfile
+    with open(docfile,'w') as doc:
+         title = "``auto_process_ngs.%s``" % modname
+         doc.write("""%s
+%s
+
+.. automodule:: auto_process_ngs.%s
+   :members:
+""" % (title,'='*len(title),modname))
+
+# Generate an index
+api_index = os.path.join(api_doc_dir,"index.rst")
+print "Writing %s" % api_index
+with open(api_index,'w') as doc:
+    doc.write("""=============================
+Developers' API documentation
+=============================
+
+.. toctree::
+   :maxdepth: 2
+
+""")
+    for modname in modlist:
+        doc.write("   %s\n" % modname.replace('.','_'))
+
+

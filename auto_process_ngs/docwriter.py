@@ -6,9 +6,6 @@
 #########################################################################
 
 """
-docwriter
-=========
-
 ``docwriter`` provides a set of classes that can be used to create
 HTML documents programmatically.
 

@@ -1,5 +1,5 @@
-Managing Data
-=============
+Managing and sharing data
+=========================
 
 These additional tasks are not really part of the automated processing, but
 the utilities for performing them are currently part of the same package so
@@ -17,11 +17,11 @@ they are outlined here.
 ************************************************************
 
 The ``manage_fastqs.py`` utility can be used to explore and copy data from
-a run directory to another location on a per-project basis.
+an analysis directory to another location on a per-project basis.
 
 For example, to get a list of projects within a run::
 
-    manage_fastqs.py RUN_DIR
+    manage_fastqs.py ANALYSIS_DIR
 
 .. note::
 
@@ -31,38 +31,38 @@ For example, to get a list of projects within a run::
 
 To see a list of the FASTQ files associated with a particular project::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME
 
 To copy the FASTQs to a local or remote directory, use the ``copy`` command::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME copy /path/to/local/dir
-    manage_fastqs.py RUN_DIR PROJECTNAME copy me@remote.org:/path/to/remote/dir
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME copy /path/to/local/dir
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME copy me@remote.org:/path/to/remote/dir
 
 This will also generate an MD5 checksum file for the transferred files; to
 generate the MD5 sums on their own, use the ``md5`` command::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME md5
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME md5
 
-Finally to make a zip file containing the FASTQs, use the ``zip`` command::
+Finally to make a zip file containing the Fastqs, use the ``zip`` command::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME zip
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME zip
 
 .. note::
 
-    The ``zip`` option works best if the FASTQs are relatively small.
+    The ``zip`` option works best if the Fastqs are relatively small.
 
-Working with multiple FASTQ sets
+Working with multiple Fastq sets
 --------------------------------
 
-If a project has more than one FASTQ set associated with it then by
+If a project has more than one Fastq set associated with it then by
 default the operations described above will use the "primary" set
-(typically, the set of FASTQ files in the ``fastqs`` subdirectory
+(typically, the set of Fastq files in the ``fastqs`` subdirectory
 of the project).
 
 To operate on an alternative set, use the ``--fastq_dir`` option to
 switch e.g.::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME --fastq_dir=ALT_FASTQS_DIR
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME --fastq_dir=ALT_FASTQS_DIR
 
 Handling subsets of files
 -------------------------
@@ -77,16 +77,16 @@ For example to only copy ``R1`` files::
 
 .. _download_fastqs:
 
-``download_fastqs.py``: fetch FASTQs from a webserver in batch
+``download_fastqs.py``: fetch Fastqs from a webserver in batch
 **************************************************************
 
-FASTQ files pushed to a webserver using ``manage_fastqs.py`` can be retrieved
+Fastq files pushed to a webserver using ``manage_fastqs.py`` can be retrieved
 in batch using the ``download_fastqs.py`` utility::
 
      download_fastqs.py http://example.com/fastqs/
 
 This fetches the checksum file from the URL and then uses that to get a
-list of FASTQ files to download. Once the files are downloaded it runs
+list of Fastq files to download. Once the files are downloaded it runs
 the Linux ``md5sum`` program to verify the integrity of the downloads.
 
 .. note::
@@ -96,22 +96,22 @@ the Linux ``md5sum`` program to verify the integrity of the downloads.
 
 .. _export_to_galaxy:
 
-``export_to_galaxy.py``: export FASTQs to a data library in a local Galaxy instance
+``export_to_galaxy.py``: export Fastqs to a data library in a local Galaxy instance
 ***********************************************************************************
 
-The ``export_to_galaxy.py`` utility will upload FASTQ files from a run into
+The ``export_to_galaxy.py`` utility will upload Fastq files from a run into
 a data library on a local Galaxy instance::
 
-    export_to_galaxy.py http://localhost:8080 "MISeq Data" /mnt/galaxy-data RUN_DIR
+    export_to_galaxy.py http://localhost:8080 "MISeq Data" /mnt/galaxy-data ANALYSIS_DIR
 
 The script performs the following actions:
 
- * Copy uncompressed versions of the FASTQ files from ``RUN_DIR`` to a
+ * Copy uncompressed versions of the Fastq files from ``ANALYSIS_DIR`` to a
    ``RUN/PROJECT`` directory structure under the target directory (e.g.
    ``/mnt/galaxy-data``)
  * Make a new folder for the run in the target data library (e.g.
    ``MISeq Data``) with subfolders for each project linked to the
-   uncompressed FASTQ files created in the previous step.
+   uncompressed Fastq files created in the previous step.
 
 .. note::
 
@@ -135,7 +135,7 @@ library type and so on).
 Use the ``update_project_metadata.py`` utility to check and update the
 metadata associated with a project, for example to update the PI::
 
-    update_project_metadata.py RUN_DIR PROJECT -u PI="Andrew Jones"
+    update_project_metadata.py ANALYSIS_DIR PROJECT -u PI="Andrew Jones"
 
 .. note::
 
@@ -143,7 +143,7 @@ metadata associated with a project, for example to update the PI::
     or predating the automated processing system, might not have metadata
     files. To create one use::
 
-        update_project_metadata.py RUN_DIR PROJECT -i
+        update_project_metadata.py ANALYSIS_DIR PROJECT -i
 
     before using ``-u`` to populate the fields.
 

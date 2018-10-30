@@ -4,9 +4,6 @@
 #     Copyright (C) University of Manchester 2018 Peter Briggs
 #
 """
-illumina_qc.py
-==============
-
 Provides utility classes and functions for generating QC commands
 and checking outputs from them.
 

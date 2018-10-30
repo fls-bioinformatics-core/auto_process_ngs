@@ -4,9 +4,6 @@
 #     Copyright (C) University of Manchester 2017-2018 Peter Briggs
 #
 """
-pipeliner.py
-============
-
 Module providing utility classes and functions for building simple
 'pipelines' of tasks.
 

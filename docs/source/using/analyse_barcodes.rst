@@ -1,5 +1,5 @@
-Barcode Analysis
-================
+Analyse index sequences in demultiplexed Fastqs using ``auto_process analyse_barcodes``
+=======================================================================================
 
 Overview
 --------
@@ -23,22 +23,21 @@ The ``analyse_barcodes`` command (and underlying ``analyse_barcodes.py``
 utility) can be used to help diagnose and understand problems with barcode
 assignment in these situations.
 
-.. note::
-
-   ``analyse_barcodes.py`` replaces the ``count_barcodes.py`` program from
-   earlier versions.
-
 Performing the analysis
 -----------------------
 
-Barcode analysis can be run after the ``make_fastqs`` step. Its simplest
-invocation is::
+Barcode analysis can be run after the :doc:`make_fastqs <make_fastqs>`
+stage. Its simplest invocation is:
+
+::
 
     auto_process.py analyse_barcodes
 
 This counts the reads associated with each barcode sequence for each
 FASTQ file output by ``bcl2fastq``, and reports the "top" (i.e. most
-frequent) barcode sequences across the run. For example::
+frequent) barcode sequences across the run. For example:
+
+::
 
     Barcodes which cover less than 0.1% of reads have been excluded
     Reported barcodes cover 93.9% of the data
@@ -53,7 +52,9 @@ frequent) barcode sequences across the run. For example::
 Where an index sequence corresponds to a sample defined in the sample
 sheet, the name of the sample is shown. We expect that the top ranked
 barcodes should all correspond to samples, so "gaps" in the list
-indicate that there may be a problem, e.g.::
+indicate that there may be a problem, e.g.:
+
+::
 
     ...
        16	CAACT		1	4170435	2.3%	(76.1%)
