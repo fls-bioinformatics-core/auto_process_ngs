@@ -47,7 +47,7 @@ directories produced by the ``auto_process`` commands:
                               ``projects.info``)
    undetermined/              Project directory for undetermined :doc:`setup_analysis_dirs <../using/setup_analysis_dirs>`
                               reads
-   README.txt                 Text file with user notes on the   readme
+   README.txt                 Text file with user notes on the   :ref:`commands_readme`
                               run (e.g. unusual processing
                               steps)
    ========================== ================================== ============
