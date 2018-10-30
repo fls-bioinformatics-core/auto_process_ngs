@@ -53,7 +53,7 @@ The ``process_icell8.py`` utility script performs initial filtering
 and QC according to the protocol described below. The utility also splits
 the read pairs into Fastqs by both barcode and by sample.
 
-In addition to the FastqS produced from the  :ref:`icell8_fastq_generation`
+In addition to the FastqS produced from the  :ref:`make_fastqs-icell8-protocol`
 step, the processing also requires an input :ref:`icell8_well_list_file`.
 This lists the valid ICELL8 barcodes and maps those barcodes to their
 parent sample.
