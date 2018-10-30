@@ -57,7 +57,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Processing single-cell data
+   :caption: Single-cell data
 
    Takara Bio ICELL8 data <single_cell/icell8>
    10xGenomics Chromium data  <single_cell/10xgenomics>
