@@ -67,11 +67,21 @@ Running the QC standalone
 The utility ``run_qc.py`` allows the QC pipeline to be run on an
 arbitrary set of Fastqs outside of the ``auto_process`` pipeline.
 
-For example:
+The general invocation is:
 
 ::
 
-   run_qc.py my_project/
+   run_qc.py DIR [ DIR ... ]
 
-See the documentation on :ref:`utilities_run_qc` for
-details.
+where ``DIR`` is a directory with the Fastq files to run the QC
+on (or which has a ``fastqs`` subdirectory with the Fastqs; use
+the ``--fastq_dir`` option to specify a different subdirectory).
+
+Some of the most commonly used options are:
+
+* ``--protocol``: specify the QC protocol
+* ``--organism``: specify the organism(s)
+* ``--multiqc``: turns on generation of MultiQC reports
+
+See the documentation in the :ref:`utilities_run_qc` section
+for the full range of options.
