@@ -73,5 +73,5 @@ For example:
 
    run_qc.py my_project/
 
-See the documentation on :ref:`run_qc.py <utilities_run_qc>` for
+See the documentation on :ref:`utilities_run_qc` for
 details.
