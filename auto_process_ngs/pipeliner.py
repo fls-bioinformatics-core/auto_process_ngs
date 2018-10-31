@@ -746,6 +746,20 @@ class Pipeline(object):
             ranks.append(current_rank)
         return ranks
 
+    def get_dependent_tasks(self,task_id):
+        """
+        Return task ids that depend on supplied task id
+        """
+        dependents = set()
+        for id_ in self.task_list():
+            task,requires,kws = self.get_task(id_)
+            for req in requires:
+                if req.id() == task_id:
+                    dependents.update(self.get_dependent_tasks(id_))
+                    dependents.add(id_)
+                    break
+        return list(dependents)
+
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1):
         """
