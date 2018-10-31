@@ -532,6 +532,7 @@ class Pipeline(object):
         self._name = str(name)
         self._id = "%s.%s" % (sanitize_name(self._name),
                               time.strftime("%Y%m%d.%H%M%S"))
+        self._tasks = {}
         self._pending = []
         self._running = []
         self._finished = []
@@ -601,16 +602,73 @@ class Pipeline(object):
             run time (see the ``run`` method of
             PipelineTask for valid options)
         """
-        self._pending.append((task,requires,kws))
-        self.report("Adding task '%s' (%s)" % (task.name(),
-                                               task.id()))
-        if requires:
-            for req in requires:
-                if req.id() not in [t[0].id() for t in self._pending]:
-                    self.report("-> Adding requirement '%s' (%s)" %
-                                (req.name(),req.id))
-                    self.add_task(req)
+        self._tasks[task.id()] = (task,requires,kws)
+        for req in requires:
+            if req.id() not in self.task_list():
+                self.add_task(req,())
         return task
+
+    def task_list(self):
+        """
+        Return a list of task ids
+        """
+        return self._tasks.keys()
+
+    def get_task(self,task_id):
+        """
+        Return information on a task
+
+        Arguments:
+          task_id (str): unique identifier for
+            a task
+
+        Returns:
+          Tuple: tuple of (task,requirements,kws)
+            where task is a PipelineTask instance,
+            requirements is a list of PipelineTask
+            instances that the task depends on,
+            and kws is a keyword mapping.
+        """
+        return self._tasks[task_id]
+
+    def rank_tasks(self):
+        """
+        Rank the tasks into order
+
+        Returns:
+          List: list of 'ranks', with each rank
+            being a list of task ids.
+        """
+        # Create a dictionary with task ids as keys and
+        # lists of the required task ids as values
+        required = dict()
+        for task_id in self.task_list():
+            required[task_id] = [t.id()
+                                 for t in self.get_task(task_id)[1]]
+        # Rank the task ids
+        ranks = list()
+        while required:
+            # Populate the current rank with tasks which don't
+            # have any requirements
+            current_rank = []
+            for task_id in required.keys():
+                if not required[task_id]:
+                    # Task no longer has requirements so add
+                    # to the current rank
+                    current_rank.append(task_id)
+                    # Remove task id from the list of tasks so it
+                    # isn't checked on the next iteration
+                    del(required[task_id])
+            # Update the requirement lists for remaining tasks
+            # to remove those add to the current rank
+            for task_id in required.keys():
+                new_reqs = []
+                for req in required[task_id]:
+                    if req not in current_rank:
+                        new_reqs.append(req)
+                required[task_id] = new_reqs
+            ranks.append(current_rank)
+        return ranks
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1):
@@ -669,6 +727,15 @@ class Pipeline(object):
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
         self.report("-- log file         : %s" % self._log_file)
+        # Sort the tasks and set up the pipeline
+        self.report("Scheduling tasks...")
+        for i,rank in enumerate(self.rank_tasks()):
+            self.report("Task rank %d:" % i)
+            for task_id in rank:
+                task,requires,kws = self.get_task(task_id)
+                self._pending.append((task,requires,kws))
+                self.report("-- %s (%s)" % (task.name(),
+                                            task.id()))
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:

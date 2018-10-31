@@ -201,6 +201,92 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task2.exit_code,1)
         self.assertEqual(task3.output.list,[])
 
+    def test_pipeline_method_task_list(self):
+        """
+        Pipeline: test the 'task_list' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make an empty pipeline
+        ppl = Pipeline()
+        self.assertEqual(ppl.task_list(),[])
+        # Add a task
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Check the task list
+        task_list = ppl.task_list()
+        self.assertEqual(len(task_list),2)
+        self.assertTrue(task1.id() in task_list)
+        self.assertTrue(task2.id() in task_list)
+
+    def test_pipeline_method_get_task(self):
+        """
+        Pipeline: test the 'get_task' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Fetch task data
+        task1_data = ppl.get_task(task1.id())
+        self.assertEqual(task1_data[0],task1)
+        self.assertEqual(task1_data[1],())
+        self.assertEqual(task1_data[2],{})
+        task2_data = ppl.get_task(task2.id())
+        self.assertEqual(task2_data[0],task2)
+        self.assertEqual(task2_data[1],(task1,))
+        self.assertEqual(task2_data[2],{})
+
+    def test_pipeline_method_rank_tasks(self):
+        """
+        Pipeline: test the 'rank_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Rank the tasks
+        ranked_tasks = ppl.rank_tasks()
+        # Should be 3 ranks
+        self.assertEqual(len(ranked_tasks),3)
+        # Check the ranks
+        self.assertEqual(ranked_tasks[0],[task1.id()])
+        self.assertEqual(sorted(ranked_tasks[1]),
+                         sorted([task2.id(),task3.id()]))
+        self.assertEqual(ranked_tasks[2],[task4.id()])
+
 class TestPipelineTask(unittest.TestCase):
 
     def setUp(self):
