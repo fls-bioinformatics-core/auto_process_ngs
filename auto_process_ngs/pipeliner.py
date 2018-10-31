@@ -420,6 +420,23 @@ probably better suited to situations where the same command was used
 in more than one distinct tasks. In cases where the command is only
 used in one task, using ``PipelineCommandWrapper`` is recommended.
 
+Advanced pipeline construction: appending and merging
+-----------------------------------------------------
+
+It possible to build larger pipelines out of smaller ones by using
+the ``append_pipeline`` and ``merge_pipeline`` methods of the
+``Pipeline`` class:
+
+* ``append_pipeline`` takes all the tasks from one pipeline and
+  adds them to the end of another, so that the appended tasks
+  only run after the original tasks have completed.
+* ``merge_pipeline`` takes all the tasks from one pipeline and
+  adds them into another, without requiring that they wait until
+  the original tasks have finished.
+
+Appending can be used for building a pipeline out of distinct
+'sections' of sub-pipelines; merging can be useful for running
+multiple pipelines in parallel.
 """
 
 ######################################################################
@@ -607,6 +624,65 @@ class Pipeline(object):
             if req.id() not in self.task_list():
                 self.add_task(req,())
         return task
+
+    def append_pipeline(self,pipeline):
+        """
+        Append tasks from another pipeline
+
+        Adds the tasks from the supplied pipeline
+        instance into this pipeline, ensuring that the
+        appended tasks depend on the original tasks
+        completing.
+
+        Dependencies which were already defined in the
+        pipeline being appended are preserved when they
+        are added to the first.
+
+        Arguments:
+          pipeline (Pipeline): pipeline instance with
+            tasks to be appended
+        """
+        # Get the final tasks from the current
+        # pipeline
+        ranks = self.rank_tasks()
+        if ranks:
+            final_tasks = [self.get_task(t)[0] for t in ranks[-1]]
+        else:
+            final_tasks = []
+        # Get the starting tasks from the new
+        # pipeline
+        ranks = pipeline.rank_tasks()
+        initial_tasks = ranks[0]
+        # Add the tasks from the new pipeline
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            if task_id in initial_tasks:
+                if requirements:
+                    requirements = list(requirements).extend(final_tasks)
+                else:
+                    requirements = list(final_tasks)
+            self.add_task(task,requirements,**kws)
+
+    def merge_pipeline(self,pipeline):
+        """
+        Add tasks from another pipeline
+
+        Adds the tasks from the supplied pipeline
+        instance into this pipeline, without requiring
+        that the appended tasks depend on the original
+        tasks.
+
+        Dependencies which were already defined in the
+        pipeline being appended are preserved when they
+        are added to the first.
+
+        Arguments:
+          pipeline (Pipeline): pipeline instance with
+            tasks to be added
+        """
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            self.add_task(task,requirements,**kws)
 
     def task_list(self):
         """

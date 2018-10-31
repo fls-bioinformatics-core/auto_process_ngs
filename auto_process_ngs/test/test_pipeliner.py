@@ -287,6 +287,79 @@ class TestPipeline(unittest.TestCase):
                          sorted([task2.id(),task3.id()]))
         self.assertEqual(ranked_tasks[2],[task4.id()])
 
+    def test_pipeline_append_pipeline(self):
+        """
+        Pipeline: append one pipeline to another
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make first pipeline
+        ppl1 = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl1.add_task(task2,requires=(task1,))
+        ppl1.add_task(task3,requires=(task1,))
+        ppl1.add_task(task4,requires=(task3,))
+        self.assertEqual(len(ppl1.task_list()),4)
+        # Make second pipeline
+        ppl2 = Pipeline()
+        task5 = Append("Append 5",task1.output.list,"item5")
+        task6 = Append("Append 6",task3.output.list,"item6")
+        task7 = Append("Append 7",task3.output.list,"item7")
+        ppl2.add_task(task6,requires=(task5,))
+        ppl2.add_task(task7,requires=(task6,))
+        self.assertEqual(len(ppl2.task_list()),3)
+        # Append second pipeline to the first
+        ppl1.append_pipeline(ppl2)
+        self.assertEqual(len(ppl1.task_list()),7)
+        # Check requirements on first task of pipeline 2
+        # have been updated
+        self.assertEqual(ppl1.get_task(task5.id())[1],[task4,])
+
+    def test_pipeline_merge_pipeline(self):
+        """
+        Pipeline: merge one pipeline into another
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make first pipeline
+        ppl1 = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl1.add_task(task2,requires=(task1,))
+        ppl1.add_task(task3,requires=(task1,))
+        ppl1.add_task(task4,requires=(task3,))
+        self.assertEqual(len(ppl1.task_list()),4)
+        # Make second pipeline
+        ppl2 = Pipeline()
+        task5 = Append("Append 5",task1.output.list,"item5")
+        task6 = Append("Append 6",task3.output.list,"item6")
+        task7 = Append("Append 7",task3.output.list,"item7")
+        ppl2.add_task(task6,requires=(task5,))
+        ppl2.add_task(task7,requires=(task6,))
+        self.assertEqual(len(ppl2.task_list()),3)
+        # Merge second pipeline into the first
+        ppl1.merge_pipeline(ppl2)
+        self.assertEqual(len(ppl1.task_list()),7)
+
 class TestPipelineTask(unittest.TestCase):
 
     def setUp(self):
