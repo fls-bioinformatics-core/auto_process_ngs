@@ -170,7 +170,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_pipeline_stops_on_task_failure(self):
         """
-        Pipeline: stops on task failure (IMMEDIATE mode)
+        Pipeline: immediate exit on task failure in 'immediate' mode
         """
         # Define a reusable task
         # Appends item to a list
@@ -224,7 +224,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_pipeline_defers_task_failure(self):
         """
-        Pipeline: defer task failure (DEFERRED mode)
+        Pipeline: deferred exit on task failure in 'deferred' mode
         """
         # Define a reusable task
         # Appends item to a list
@@ -818,6 +818,9 @@ class TestPipelineCommand(unittest.TestCase):
             shutil.rmtree(self.working_dir)
 
     def test_pipelinecommand(self):
+        """
+        PipelineCommand: check command and wrapper script
+        """
         # Subclass PipelineCommand
         class EchoCmd(PipelineCommand):
             def init(self,txt):
@@ -853,6 +856,9 @@ class TestPipelineCommand(unittest.TestCase):
 class TestPipelineCommandWrapper(unittest.TestCase):
 
     def test_piplinecommandwrapper(self):
+        """
+        PipelineCommandWrapper: check generated command
+        """
         # Make a pipeline command wrapper
         cmd = PipelineCommandWrapper("Echo text","echo","hello")
         # Check name and generated command
