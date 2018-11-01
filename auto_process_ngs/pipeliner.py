@@ -1198,7 +1198,6 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            self.report("done '%s'" % f.__name__)
             for line in output:
                 self.report("%s STDOUT: %s" % (f.__name__,line))
         except NotImplementedError:
