@@ -16,6 +16,7 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
 from bcftbx.JobRunner import SimpleJobRunner
@@ -169,7 +170,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_pipeline_stops_on_task_failure(self):
         """
-        Pipeline: check pipeline stops on task failure
+        Pipeline: stops on task failure (IMMEDIATE mode)
         """
         # Define a reusable task
         # Appends item to a list
@@ -180,26 +181,99 @@ class TestPipeline(unittest.TestCase):
                 for item in self.args.l:
                     self.output.list.append(item)
                 self.output.list.append(self.args.s)
-        # Define a task that always fails
-        class Failure(PipelineTask):
-            def init(self):
-                pass
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
             def setup(self):
                 self.fail(message="Automatic fail")
-        # Build the pipeline
+        # Build a failing pipeline
         ppl = Pipeline()
-        task1 = Append("Append 1",(),"item1")
-        task2 = Failure("Failing task")
-        task3 = Append("Append 3",task1.output.list,"item3")
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
         ppl.add_task(task2,requires=(task1,))
-        ppl.add_task(task3,requires=(task2,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,))
+        ppl.add_task(task3_2,requires=(task3_1,))
         # Run the pipeline
-        exit_status = ppl.run(working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              exit_on_failure=PipelineFailure.IMMEDIATE)
         # Check the outputs
         self.assertEqual(exit_status,1)
-        self.assertEqual(task1.output.list,["item1"])
-        self.assertEqual(task2.exit_code,1)
-        self.assertEqual(task3.output.list,[])
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,[])
+        self.assertEqual(task2_2.output.list,[])
+        self.assertEqual(task3_1.output.list,[])
+        self.assertEqual(task3_2.output.list,[])
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,None)
+        self.assertEqual(task2_2.exit_code,None)
+        self.assertEqual(task3_1.exit_code,None)
+        self.assertEqual(task3_2.exit_code,None)
+        self.assertEqual(exit_status,1)
+
+    def test_pipeline_defers_task_failure(self):
+        """
+        Pipeline: defer task failure (DEFERRED mode)
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
+            def setup(self):
+                self.fail(message="Automatic fail")
+        # Build a failing pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,))
+        ppl.add_task(task3_2,requires=(task3_1,))
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              exit_on_failure=PipelineFailure.DEFERRED)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,["2","2_1"])
+        self.assertEqual(task2_2.output.list,["2","2_1","2_2"])
+        self.assertEqual(task3_1.output.list,[])
+        self.assertEqual(task3_2.output.list,[])
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,0)
+        self.assertEqual(task2_2.exit_code,0)
+        self.assertEqual(task3_1.exit_code,None)
+        self.assertEqual(task3_2.exit_code,None)
 
     def test_pipeline_method_task_list(self):
         """
