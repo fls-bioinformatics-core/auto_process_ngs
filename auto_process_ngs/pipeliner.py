@@ -384,6 +384,37 @@ form::
 When parsing the stdout it is recommended to check for these lines
 using e.g. ``line.startswith("#### ")``.
 
+Handling failed tasks in pipelines
+----------------------------------
+
+If a task in a pipeline fails (that is, completes with a
+non-zero exit code) then the pipeline is considered to have
+failed. In this case the pipeline can use one of a number of
+strategies to handle execution of the remaining tasks:
+
+* Pipeline execution halts immediately and all running tasks
+  are terminated ('immediate' mode, the default)
+* Pipeline execution continues but all tasks which depend on
+  the failed tasks are removed and not executed ('deferred'
+  mode)
+
+The strategy can be set explicitly at runtime by setting the
+``exit_on_failure`` argument of the pipeline ``run`` method
+to one of the values defined in the ``PipelineFailure`` class.
+
+For example::
+
+    from pipeliner import PipelineFailure
+    ...
+    # Define pipeline
+    ...
+    # Run pipeline in 'deferred' mode
+    ppl.run(exit_on_failure=PipelineFailure.DEFERRED)
+
+Note that regardless of how the failures are handled the
+pipeline will always return exit code 1 when one or more
+tasks fail.
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -420,6 +451,23 @@ probably better suited to situations where the same command was used
 in more than one distinct tasks. In cases where the command is only
 used in one task, using ``PipelineCommandWrapper`` is recommended.
 
+Advanced pipeline construction: appending and merging
+-----------------------------------------------------
+
+It possible to build larger pipelines out of smaller ones by using
+the ``append_pipeline`` and ``merge_pipeline`` methods of the
+``Pipeline`` class:
+
+* ``append_pipeline`` takes all the tasks from one pipeline and
+  adds them to the end of another, so that the appended tasks
+  only run after the original tasks have completed.
+* ``merge_pipeline`` takes all the tasks from one pipeline and
+  adds them into another, without requiring that they wait until
+  the original tasks have finished.
+
+Appending can be used for building a pipeline out of distinct
+'sections' of sub-pipelines; merging can be useful for running
+multiple pipelines in parallel.
 """
 
 ######################################################################
@@ -455,6 +503,11 @@ logger.addHandler(logging.NullHandler())
 ######################################################################
 
 ALLOWED_CHARS = string.lowercase + string.digits + "._-"
+
+# JSE-drop job status codes
+class PipelineFailure(object):
+    IMMEDIATE = 0
+    DEFERRED = 1
 
 ######################################################################
 # Generic pipeline base classes
@@ -532,11 +585,15 @@ class Pipeline(object):
         self._name = str(name)
         self._id = "%s.%s" % (sanitize_name(self._name),
                               time.strftime("%Y%m%d.%H%M%S"))
+        self._tasks = {}
         self._pending = []
         self._running = []
         self._finished = []
+        self._failed = []
+        self._removed = []
         self._scheduler = None
         self._log_file = None
+        self._exit_on_failure = PipelineFailure.IMMEDIATE
 
     def report(self,s):
         """
@@ -601,19 +658,150 @@ class Pipeline(object):
             run time (see the ``run`` method of
             PipelineTask for valid options)
         """
-        self._pending.append((task,requires,kws))
-        self.report("Adding task '%s' (%s)" % (task.name(),
-                                               task.id()))
-        if requires:
-            for req in requires:
-                if req.id() not in [t[0].id() for t in self._pending]:
-                    self.report("-> Adding requirement '%s' (%s)" %
-                                (req.name(),req.id))
-                    self.add_task(req)
+        self._tasks[task.id()] = (task,requires,kws)
+        for req in requires:
+            if req.id() not in self.task_list():
+                self.add_task(req,())
         return task
 
+    def append_pipeline(self,pipeline):
+        """
+        Append tasks from another pipeline
+
+        Adds the tasks from the supplied pipeline
+        instance into this pipeline, ensuring that the
+        appended tasks depend on the original tasks
+        completing.
+
+        Dependencies which were already defined in the
+        pipeline being appended are preserved when they
+        are added to the first.
+
+        Arguments:
+          pipeline (Pipeline): pipeline instance with
+            tasks to be appended
+        """
+        # Get the final tasks from the current
+        # pipeline
+        ranks = self.rank_tasks()
+        if ranks:
+            final_tasks = [self.get_task(t)[0] for t in ranks[-1]]
+        else:
+            final_tasks = []
+        # Get the starting tasks from the new
+        # pipeline
+        ranks = pipeline.rank_tasks()
+        initial_tasks = ranks[0]
+        # Add the tasks from the new pipeline
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            if task_id in initial_tasks:
+                if requirements:
+                    requirements = list(requirements).extend(final_tasks)
+                else:
+                    requirements = list(final_tasks)
+            self.add_task(task,requirements,**kws)
+
+    def merge_pipeline(self,pipeline):
+        """
+        Add tasks from another pipeline
+
+        Adds the tasks from the supplied pipeline
+        instance into this pipeline, without requiring
+        that the appended tasks depend on the original
+        tasks.
+
+        Dependencies which were already defined in the
+        pipeline being appended are preserved when they
+        are added to the first.
+
+        Arguments:
+          pipeline (Pipeline): pipeline instance with
+            tasks to be added
+        """
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            self.add_task(task,requirements,**kws)
+
+    def task_list(self):
+        """
+        Return a list of task ids
+        """
+        return self._tasks.keys()
+
+    def get_task(self,task_id):
+        """
+        Return information on a task
+
+        Arguments:
+          task_id (str): unique identifier for
+            a task
+
+        Returns:
+          Tuple: tuple of (task,requirements,kws)
+            where task is a PipelineTask instance,
+            requirements is a list of PipelineTask
+            instances that the task depends on,
+            and kws is a keyword mapping.
+        """
+        return self._tasks[task_id]
+
+    def rank_tasks(self):
+        """
+        Rank the tasks into order
+
+        Returns:
+          List: list of 'ranks', with each rank
+            being a list of task ids.
+        """
+        # Create a dictionary with task ids as keys and
+        # lists of the required task ids as values
+        required = dict()
+        for task_id in self.task_list():
+            required[task_id] = [t.id()
+                                 for t in self.get_task(task_id)[1]]
+        # Rank the task ids
+        ranks = list()
+        while required:
+            # Populate the current rank with tasks which don't
+            # have any requirements
+            current_rank = []
+            for task_id in required.keys():
+                if not required[task_id]:
+                    # Task no longer has requirements so add
+                    # to the current rank
+                    current_rank.append(task_id)
+                    # Remove task id from the list of tasks so it
+                    # isn't checked on the next iteration
+                    del(required[task_id])
+            # Update the requirement lists for remaining tasks
+            # to remove those add to the current rank
+            for task_id in required.keys():
+                new_reqs = []
+                for req in required[task_id]:
+                    if req not in current_rank:
+                        new_reqs.append(req)
+                required[task_id] = new_reqs
+            ranks.append(current_rank)
+        return ranks
+
+    def get_dependent_tasks(self,task_id):
+        """
+        Return task ids that depend on supplied task id
+        """
+        dependents = set()
+        for id_ in self.task_list():
+            task,requires,kws = self.get_task(id_)
+            for req in requires:
+                if req.id() == task_id:
+                    dependents.update(self.get_dependent_tasks(id_))
+                    dependents.add(id_)
+                    break
+        return list(dependents)
+
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
-            log_file=None,sched=None,default_runner=None,max_jobs=1):
+            log_file=None,sched=None,default_runner=None,max_jobs=1,
+            exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -634,6 +822,12 @@ class Pipeline(object):
             concurrent jobs in scheduler (defaults to 1;
             ignored if a scheduler is provided via 'sched'
             argument)
+          exit_on_failure (int): either IMMEDIATE (any
+            task failures cause immediate termination of
+            of the pipeline; this is the default) or
+            DEFERRED (the pipeline execution continues
+            and only raises an error when all tasks
+            have finished running)
         """
         # Deal with working directory
         if working_dir is None:
@@ -663,58 +857,26 @@ class Pipeline(object):
             self._log_file = os.path.abspath(log_file)
             if os.path.exists(self._log_file):
                 os.remove(self._log_file)
+        # How to handle task failure
+        self._exit_on_failure = exit_on_failure
         # Execute the pipeline
         self.report("Started")
         self.report("-- working directory: %s" % working_dir)
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
         self.report("-- log file         : %s" % self._log_file)
+        # Sort the tasks and set up the pipeline
+        self.report("Scheduling tasks...")
+        for i,rank in enumerate(self.rank_tasks()):
+            self.report("Task rank %d:" % i)
+            for task_id in rank:
+                task,requires,kws = self.get_task(task_id)
+                self._pending.append((task,requires,kws))
+                self.report("-- %s (%s)" % (task.name(),
+                                            task.id()))
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
-            # Report the current running and pending tasks
-            if update:
-                if self._running:
-                    self.report("%d running tasks:"
-                                % len(self._running))
-                    for t in self._running:
-                        njobs,ncompleted = t.njobs()
-                        if njobs > 1:
-                            self.report("- %s (%d/%d)" % (t.name(),
-                                                          ncompleted,
-                                                          njobs))
-                        else:
-                            self.report("- %s" % t.name())
-                if self._pending:
-                    self.report("%d pending tasks:"
-                                % len(self._pending))
-                    for t in self._pending:
-                        self.report("- %s" % t[0].name())
-                update = False
-            # Check for running tasks that have completed
-            running = []
-            failed = []
-            for task in self._running:
-                if task.completed:
-                    self.report("finished '%s'"
-                                % task.name())
-                    self._finished.append(task)
-                    update = True
-                    # Check if task failed
-                    if task.exit_code != 0:
-                        failed.append(task)
-                else:
-                    # Still running
-                    running.append(task)
-                    # Report if status has changed
-                    if task.updated:
-                        njobs,ncompleted = task.njobs()
-                        if njobs > 1:
-                            self.report("'%s' updated (%d/%d)" %
-                                        (task.name(),
-                                         ncompleted,
-                                         njobs))
-            self._running = running
             # Check for pending tasks that can start
             pending = []
             for task,requirements,kws in self._pending:
@@ -724,9 +886,10 @@ class Pipeline(object):
                     run_task = True
                 else:
                     # Check requirements
-                    run_task = reduce(lambda x,y:
-                                      x and y.completed
-                                      and y.exit_code == 0,
+                    run_task = reduce(lambda x,y: x and
+                                      (y not in self._running) and
+                                      y.completed and
+                                      (y.exit_code == 0),
                                       requirements,True)
                 if run_task:
                     self.report("started '%s' (%s)" % (task.name(),
@@ -752,19 +915,101 @@ class Pipeline(object):
                 else:
                     pending.append((task,requirements,kws))
             self._pending = pending
+            # Check for running tasks that have completed
+            running = []
+            failed = []
+            for task in self._running:
+                if task.completed:
+                    self.report("finished '%s'"
+                                % task.name())
+                    self._finished.append(task)
+                    update = True
+                    # Check if task failed
+                    if task.exit_code != 0:
+                        failed.append(task)
+                else:
+                    # Still running
+                    running.append(task)
+                    # Report if status has changed
+                    if task.updated:
+                        njobs,ncompleted = task.njobs()
+                        if njobs > 1:
+                            self.report("'%s' updated (%d/%d)" %
+                                        (task.name(),
+                                         ncompleted,
+                                         njobs))
+            self._running = running
             # Check for tasks that have failed
             if failed:
-                self.report("Following tasks failed:")
-                for task in failed:
-                    self.report("- '%s' (%s)" % (task.name(),
-                                                 task.id()))
-                return self.terminate()
-            # Pause before checking again
-            if not update:
+                if self._exit_on_failure == PipelineFailure.IMMEDIATE:
+                    # Terminate all tasks and stop immediately
+                    self.report("Following tasks failed:")
+                    for task in failed:
+                        self.report("- '%s' (%s)" % (task.name(),
+                                                     task.id()))
+                    self._failed.extend(failed)
+                    return self.terminate()
+                elif self._exit_on_failure == PipelineFailure.DEFERRED:
+                    # Remove any tasks waiting on the failures
+                    # but defer pipeline termination
+                    self.report("There are failed tasks but pipeline exit "
+                                "will be deferred")
+                    for task in failed:
+                        self.report("Task failed: '%s' (%s)" %
+                                    (task.name(),task.id()))
+                        dependent_tasks = self.get_dependent_tasks(task.id())
+                        pending = []
+                        for t in self._pending:
+                            if t[0].id() in dependent_tasks:
+                                self.report("-- removing dependent task "
+                                            "'%s' (%s)" %
+                                            (t[0].name(),t[0].id()))
+                                self._removed.append(t[0])
+                            else:
+                                pending.append(t)
+                        self._pending = pending
+                    self._failed.extend(failed)
+            # Report the current running and pending tasks
+            if update:
+                if self._running:
+                    self.report("%d running tasks:"
+                                % len(self._running))
+                    for t in self._running:
+                        njobs,ncompleted = t.njobs()
+                        if njobs > 1:
+                            self.report("- %s (%d/%d)" % (t.name(),
+                                                          ncompleted,
+                                                          njobs))
+                        else:
+                            self.report("- %s" % t.name())
+                if self._pending:
+                    self.report("%d pending tasks:"
+                                % len(self._pending))
+                    for t in self._pending:
+                        self.report("- %s" % t[0].name())
+                update = False
+            else:
+                # Pause before checking again
                 time.sleep(5)
         # Finished
-        self.report("Completed: ok")
-        return 0
+        if self._failed:
+            # Report failed tasks
+            self.report("Pipeline completed but the following tasks failed:")
+            for task in self._failed:
+                self.report("- '%s' (%s)" % (task.name(),
+                                             task.id()))
+            if self._removed:
+                # Report any tasks that were removed
+                self.report("The following tasks were not executed:")
+                for task in self._removed:
+                    self.report("- '%s' (%s)" % (task.name(),
+                                                 task.id()))
+            self.report("Completed: failed")
+            return 1
+        else:
+            # No errors
+            self.report("Completed: ok")
+            return 0
 
 class PipelineTask(object):
     """
@@ -953,7 +1198,6 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            self.report("done '%s'" % f.__name__)
             for line in output:
                 self.report("%s STDOUT: %s" % (f.__name__,line))
         except NotImplementedError:

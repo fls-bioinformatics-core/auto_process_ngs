@@ -16,6 +16,7 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
 from bcftbx.JobRunner import SimpleJobRunner
@@ -169,7 +170,7 @@ class TestPipeline(unittest.TestCase):
 
     def test_pipeline_stops_on_task_failure(self):
         """
-        Pipeline: check pipeline stops on task failure
+        Pipeline: immediate exit on task failure in 'immediate' mode
         """
         # Define a reusable task
         # Appends item to a list
@@ -180,26 +181,287 @@ class TestPipeline(unittest.TestCase):
                 for item in self.args.l:
                     self.output.list.append(item)
                 self.output.list.append(self.args.s)
-        # Define a task that always fails
-        class Failure(PipelineTask):
-            def init(self):
-                pass
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
             def setup(self):
                 self.fail(message="Automatic fail")
-        # Build the pipeline
+        # Build a failing pipeline
         ppl = Pipeline()
-        task1 = Append("Append 1",(),"item1")
-        task2 = Failure("Failing task")
-        task3 = Append("Append 3",task1.output.list,"item3")
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
         ppl.add_task(task2,requires=(task1,))
-        ppl.add_task(task3,requires=(task2,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,))
+        ppl.add_task(task3_2,requires=(task3_1,))
         # Run the pipeline
-        exit_status = ppl.run(working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              exit_on_failure=PipelineFailure.IMMEDIATE)
         # Check the outputs
         self.assertEqual(exit_status,1)
-        self.assertEqual(task1.output.list,["item1"])
-        self.assertEqual(task2.exit_code,1)
-        self.assertEqual(task3.output.list,[])
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,[])
+        self.assertEqual(task2_2.output.list,[])
+        self.assertEqual(task3_1.output.list,[])
+        self.assertEqual(task3_2.output.list,[])
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,None)
+        self.assertEqual(task2_2.exit_code,None)
+        self.assertEqual(task3_1.exit_code,None)
+        self.assertEqual(task3_2.exit_code,None)
+        self.assertEqual(exit_status,1)
+
+    def test_pipeline_defers_task_failure(self):
+        """
+        Pipeline: deferred exit on task failure in 'deferred' mode
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Define a version of the 'append' task that
+        # always fails
+        class Failure(Append):
+            def setup(self):
+                self.fail(message="Automatic fail")
+        # Build a failing pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"1")
+        task2 = Append("Append 2",(),"2")
+        task3 = Failure("Failing append 3",(),"3")
+        task2_1 = Append("Append 2_1",task2.output.list,"2_1")
+        task2_2 = Append("Append 2_2",task2_1.output.list,"2_2")
+        task3_1 = Append("Append 3_1",task3.output.list,"3_1")
+        task3_2 = Append("Append 3_2",task3_1.output.list,"3_2")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task2_1,requires=(task2,))
+        ppl.add_task(task2_2,requires=(task2_1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task3_1,requires=(task3,))
+        ppl.add_task(task3_2,requires=(task3_1,))
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              exit_on_failure=PipelineFailure.DEFERRED)
+        # Check the outputs
+        self.assertEqual(exit_status,1)
+        self.assertEqual(task1.output.list,["1"])
+        self.assertEqual(task2.output.list,["2"])
+        self.assertEqual(task2_1.output.list,["2","2_1"])
+        self.assertEqual(task2_2.output.list,["2","2_1","2_2"])
+        self.assertEqual(task3_1.output.list,[])
+        self.assertEqual(task3_2.output.list,[])
+        # Check the exit codes
+        self.assertEqual(task1.exit_code,0)
+        self.assertEqual(task2.exit_code,0)
+        self.assertEqual(task3.exit_code,1)
+        self.assertEqual(task2_1.exit_code,0)
+        self.assertEqual(task2_2.exit_code,0)
+        self.assertEqual(task3_1.exit_code,None)
+        self.assertEqual(task3_2.exit_code,None)
+
+    def test_pipeline_method_task_list(self):
+        """
+        Pipeline: test the 'task_list' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make an empty pipeline
+        ppl = Pipeline()
+        self.assertEqual(ppl.task_list(),[])
+        # Add a task
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Check the task list
+        task_list = ppl.task_list()
+        self.assertEqual(len(task_list),2)
+        self.assertTrue(task1.id() in task_list)
+        self.assertTrue(task2.id() in task_list)
+
+    def test_pipeline_method_get_task(self):
+        """
+        Pipeline: test the 'get_task' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Fetch task data
+        task1_data = ppl.get_task(task1.id())
+        self.assertEqual(task1_data[0],task1)
+        self.assertEqual(task1_data[1],())
+        self.assertEqual(task1_data[2],{})
+        task2_data = ppl.get_task(task2.id())
+        self.assertEqual(task2_data[0],task2)
+        self.assertEqual(task2_data[1],(task1,))
+        self.assertEqual(task2_data[2],{})
+
+    def test_pipeline_method_rank_tasks(self):
+        """
+        Pipeline: test the 'rank_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Rank the tasks
+        ranked_tasks = ppl.rank_tasks()
+        # Should be 3 ranks
+        self.assertEqual(len(ranked_tasks),3)
+        # Check the ranks
+        self.assertEqual(ranked_tasks[0],[task1.id()])
+        self.assertEqual(sorted(ranked_tasks[1]),
+                         sorted([task2.id(),task3.id()]))
+        self.assertEqual(ranked_tasks[2],[task4.id()])
+
+    def test_pipeline_method_get_dependent_tasks(self):
+        """
+        Pipeline: test the 'get_dependent_tasks' method
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make a pipeline
+        ppl = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl.add_task(task2,requires=(task1,))
+        ppl.add_task(task3,requires=(task1,))
+        ppl.add_task(task4,requires=(task3,))
+        # Check the dependent tasks
+        self.assertEqual(sorted(ppl.get_dependent_tasks(task1.id())),
+                         sorted([task2.id(),task3.id(),task4.id()]))
+        self.assertEqual(ppl.get_dependent_tasks(task2.id()),[])
+        self.assertEqual(ppl.get_dependent_tasks(task3.id()),[task4.id()])
+        self.assertEqual(ppl.get_dependent_tasks(task4.id()),[])
+
+    def test_pipeline_append_pipeline(self):
+        """
+        Pipeline: append one pipeline to another
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make first pipeline
+        ppl1 = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl1.add_task(task2,requires=(task1,))
+        ppl1.add_task(task3,requires=(task1,))
+        ppl1.add_task(task4,requires=(task3,))
+        self.assertEqual(len(ppl1.task_list()),4)
+        # Make second pipeline
+        ppl2 = Pipeline()
+        task5 = Append("Append 5",task1.output.list,"item5")
+        task6 = Append("Append 6",task3.output.list,"item6")
+        task7 = Append("Append 7",task3.output.list,"item7")
+        ppl2.add_task(task6,requires=(task5,))
+        ppl2.add_task(task7,requires=(task6,))
+        self.assertEqual(len(ppl2.task_list()),3)
+        # Append second pipeline to the first
+        ppl1.append_pipeline(ppl2)
+        self.assertEqual(len(ppl1.task_list()),7)
+        # Check requirements on first task of pipeline 2
+        # have been updated
+        self.assertEqual(ppl1.get_task(task5.id())[1],[task4,])
+
+    def test_pipeline_merge_pipeline(self):
+        """
+        Pipeline: merge one pipeline into another
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make first pipeline
+        ppl1 = Pipeline()
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl1.add_task(task2,requires=(task1,))
+        ppl1.add_task(task3,requires=(task1,))
+        ppl1.add_task(task4,requires=(task3,))
+        self.assertEqual(len(ppl1.task_list()),4)
+        # Make second pipeline
+        ppl2 = Pipeline()
+        task5 = Append("Append 5",task1.output.list,"item5")
+        task6 = Append("Append 6",task3.output.list,"item6")
+        task7 = Append("Append 7",task3.output.list,"item7")
+        ppl2.add_task(task6,requires=(task5,))
+        ppl2.add_task(task7,requires=(task6,))
+        self.assertEqual(len(ppl2.task_list()),3)
+        # Merge second pipeline into the first
+        ppl1.merge_pipeline(ppl2)
+        self.assertEqual(len(ppl1.task_list()),7)
 
 class TestPipelineTask(unittest.TestCase):
 
@@ -556,6 +818,9 @@ class TestPipelineCommand(unittest.TestCase):
             shutil.rmtree(self.working_dir)
 
     def test_pipelinecommand(self):
+        """
+        PipelineCommand: check command and wrapper script
+        """
         # Subclass PipelineCommand
         class EchoCmd(PipelineCommand):
             def init(self,txt):
@@ -591,6 +856,9 @@ class TestPipelineCommand(unittest.TestCase):
 class TestPipelineCommandWrapper(unittest.TestCase):
 
     def test_piplinecommandwrapper(self):
+        """
+        PipelineCommandWrapper: check generated command
+        """
         # Make a pipeline command wrapper
         cmd = PipelineCommandWrapper("Echo text","echo","hello")
         # Check name and generated command
