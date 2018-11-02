@@ -54,7 +54,8 @@ import os
 import logging
 modules_python_dirs = ('/usr/share/Modules/init/',
                        '/usr/share/modules/init/',
-                       '/opt/clusterware/opt/Modules/init/',)
+                       '/opt/clusterware/opt/Modules/init/',
+                       '/opt/clusterware/opt/modules/init/')
 for d in modules_python_dirs:
     modules_python = os.path.join(d,'python.py')
     if not os.path.isfile(modules_python):
@@ -62,7 +63,8 @@ for d in modules_python_dirs:
     else:
         break
 modulecmd_dirs = ('/usr/bin',
-                  '/opt/clusterware/opt/Modules/bin',)
+                  '/opt/clusterware/opt/Modules/bin',
+                  '/opt/clusterware/opt/modules/bin',)
 for d in modulecmd_dirs:
     modulecmd = os.path.join(d,'modulecmd')
     if not os.path.isfile(modulecmd):
