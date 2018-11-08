@@ -525,6 +525,69 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.output.invocations,
                          ["init","setup","finish"])
 
+    def test_pipelinetask_init(self):
+        """
+        PipelineTask: check task 'init' invocations
+        """
+        # Define a task for testing
+        class CheckInit(PipelineTask):
+            def init(self,a,b,c='hello',d=13,e=None):
+                self.add_output('results',list())
+            def setup(self):
+                result = "a=%s b=%s c=%s d=%s e=%s" \
+                         % (self.args.a,
+                            self.args.b,
+                            self.args.c,
+                            self.args.d,
+                            self.args.e)
+                self.output.results.append(result)
+        # Make a task instance with minimal arglist
+        task = CheckInit("Minimal arglist","a","b")
+        self.assertEqual(task.args.a,"a")
+        self.assertEqual(task.args.b,"b")
+        self.assertEqual(task.args.c,"hello")
+        self.assertEqual(task.args.d,13)
+        self.assertEqual(task.args.e,None)
+        # Make a task instance with named minimal arglist
+        task = CheckInit("Named minimal arglist",a="a",b="b")
+        self.assertEqual(task.args.a,"a")
+        self.assertEqual(task.args.b,"b")
+        self.assertEqual(task.args.c,"hello")
+        self.assertEqual(task.args.d,13)
+        self.assertEqual(task.args.e,None)
+        # Make a task instance with named minimal arglist (reversed)
+        task = CheckInit("Named minimal arglist reversed",
+                         b="a",a="b")
+        self.assertEqual(task.args.a,"b")
+        self.assertEqual(task.args.b,"a")
+        self.assertEqual(task.args.c,"hello")
+        self.assertEqual(task.args.d,13)
+        self.assertEqual(task.args.e,None)
+        # Make a task instance with args and subset of keywords
+        task = CheckInit("Args and subset of keywords",
+                         "a","b",e=True,d=12)
+        self.assertEqual(task.args.a,"a")
+        self.assertEqual(task.args.b,"b")
+        self.assertEqual(task.args.c,"hello")
+        self.assertEqual(task.args.d,12)
+        self.assertEqual(task.args.e,True)
+        # Make a task instance with full arglist with keywords
+        task = CheckInit("Full arglist with keywords",
+                         "a","b",c="goodbye",d=12,e=True)
+        self.assertEqual(task.args.a,"a")
+        self.assertEqual(task.args.b,"b")
+        self.assertEqual(task.args.c,"goodbye")
+        self.assertEqual(task.args.d,12)
+        self.assertEqual(task.args.e,True)
+        # Make a task instance with full arglist no keywords
+        task = CheckInit("Full arglist no keywords",
+                         "a","b","goodbye",12,True)
+        self.assertEqual(task.args.a,"a")
+        self.assertEqual(task.args.b,"b")
+        self.assertEqual(task.args.c,"goodbye")
+        self.assertEqual(task.args.d,12)
+        self.assertEqual(task.args.e,True)
+
     def test_pipelinetask_no_commands(self):
         """
         PipelineTask: run task with no commands
