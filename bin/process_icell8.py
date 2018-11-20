@@ -401,16 +401,21 @@ if __name__ == "__main__":
         ICell8FinalReporting(outdir,
                              project=analysis_project))
 
+    # Chain the pipelines
+    print "Merging the pipelines"
+    ppl = pipelines[0]
+    for p in pipelines[1:]:
+        ppl.append_pipeline(p)
+
     # Execute the pipelines
-    print "Running the pipelines"
-    for ppl in pipelines:
-        exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
-                              default_runner=runners['default'],
-                              max_jobs=max_jobs)
-        if exit_status != 0:
-            # Finished with error
-            logger.critical("Pipeline failed: exit status %s" % exit_status)
-            sys.exit(exit_status)
+    print "Running the final pipeline"
+    exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
+                          default_runner=runners['default'],
+                          max_jobs=max_jobs)
+    if exit_status != 0:
+        # Finished with error
+        logger.critical("Pipeline failed: exit status %s" % exit_status)
+        sys.exit(exit_status)
 
     # Run the QC
     print "Running the QC"
