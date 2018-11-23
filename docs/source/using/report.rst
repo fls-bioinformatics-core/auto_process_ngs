@@ -101,6 +101,7 @@ Field name                Associated value
 ``source``                Source of the sequencing data
 ``data_source``           Alias for ``source``
 ``analysis_dir``          Full path to the analysis directory
+``path``                  Alias for ``analysis_dir``
 ``project_name``          Name of the project
 ``project``               Alias for ``project_name``
 ``user``                  User associated with project

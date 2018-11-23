@@ -401,7 +401,7 @@ def report_projects(ap,fields=None):
                 project_line.append(str(run_number))
             elif field == 'source' or field == 'data_source':
                 project_line.append(data_source)
-            elif field == 'analysis_dir':
+            elif field == 'analysis_dir' or field == 'path':
                 project_line.append(ap.params.analysis_dir)
             elif field == 'project' or field == 'project_name':
                 project_line.append(project.name)

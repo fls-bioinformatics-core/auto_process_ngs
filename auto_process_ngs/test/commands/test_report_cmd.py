@@ -492,9 +492,9 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
         expected = """2 projects found
-170901\tMISEQ_170901#87\t87\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2
-170901\tMISEQ_170901#87\t87\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
-"""
+170901\tMISEQ_170901#87\t87\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2\t%s
+170901\tMISEQ_170901#87\t87\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4\t%s
+""" % (ap.params.analysis_dir,ap.params.analysis_dir)
         custom_fields = ['datestamp','run_id','run_number','source','null','project','user','PI','library_type','single_cell_platform','organism','platform','#samples','#cells','paired_end','samples','path']
         for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
                        expected.split('\n')):
