@@ -34,7 +34,7 @@ class ReportingMode(object):
 # Command functions
 #######################################################################
 
-def report(ap,mode=None):
+def report(ap,mode=None,fields=None):
     """
     Print a report on an analysis project
 
@@ -43,6 +43,8 @@ def report(ap,mode=None):
         analysis directory to be reported on
       mode (int): reporting mode (concise, summary,
         projects or info)
+      fields (list): optional set of fields to report
+        (only for 'projects' reporting mode)
     """
     # Turn off saving of parameters
     ap._save_params = False
@@ -50,15 +52,19 @@ def report(ap,mode=None):
     # Do the reporting
     if mode is None or mode == ReportingMode.INFO:
         f = report_info
+        kws = {}
     elif mode == ReportingMode.CONCISE:
         f = report_concise
+        kws = {}
     elif mode == ReportingMode.SUMMARY:
         f = report_summary
+        kws = {}
     elif mode == ReportingMode.PROJECTS:
         f = report_projects
+        kws = { 'fields': fields }
     else:
         raise Exception("Unknown reporting mode")
-    print f(ap)
+    print f(ap,**kws)
 
 def report_info(ap):
     """Generate a general report
@@ -298,18 +304,18 @@ def report_summary(ap):
                     report.append("  %s  %s" % (' '*width,line))
     return '\n'.join(report)
 
-def report_projects(ap):
+def report_projects(ap,fields=None):
     """Generate one line reports suitable for pasting into spreadsheet
 
     Generate one-line report for each each project with tab-separated
     data items, suitable for injection into a spreadsheet.
 
-    Each line has the following information:
+    By default each line has the following information:
 
     - Run id e.g. HISEQ_140328
     - Run number
     - Source
-    - Date
+    - Empty field (for user supplied date)
     - User
     - PI
     - Application
@@ -321,13 +327,34 @@ def report_projects(ap):
     - PE (yes/no)
     - Samples
 
+    Alternatively a custom list of fields can be specified via
+    the 'fields' argument.
+
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to be reported on
+      fields (list): list or tuple of field names to
+        output for each project
         
     Returns:
       String with the report text.
     """
+    # Set default fields
+    if fields is None:
+        fields = ('run_id',
+                  'run_number',
+                  'source',
+                  'null',
+                  'user',
+                  'PI',
+                  'application',
+                  'single_cell_platform',
+                  'organism',
+                  'sequencer_platform',
+                  'no_of_samples',
+                  'no_of_cells',
+                  'paired_end',
+                  'sample_names',)
     # Acquire data
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # General information
@@ -363,21 +390,44 @@ def report_projects(ap):
                                               ('' if nprojects == 1
                                                else 's')))
     for project in analysis_dir.projects:
-        project_line = [run_id,str(run_number),data_source,'']
         info = project.info
-        project_line.append('' if not info.user else info.user)
-        project_line.append('' if not info.PI else info.PI)
-        project_line.append('' if not info.library_type
-                            else info.library_type)
-        project_line.append('' if not info.single_cell_platform
-                            else info.single_cell_platform)
-        project_line.append('' if not info.organism else info.organism)
-        project_line.append(platform)
-        project_line.append(str(len(project.samples)))
-        project_line.append('' if not info.number_of_cells
-                            else str(info.number_of_cells))
-        project_line.append(paired_end)
-        project_line.append(project.prettyPrintSamples())
+        project_line = []
+        for field in fields:
+            if field == 'run_id':
+                project_line.append(run_id)
+            elif field == 'run_number':
+                project_line.append(str(run_number))
+            elif field == 'source' or field == 'data_source':
+                project_line.append(data_source)
+            elif field == 'user':
+                project_line.append('' if not info.user else info.user)
+            elif field == 'PI' or field == 'pi':
+                project_line.append('' if not info.PI else info.PI)
+            elif field == 'application' or field == 'library_type':
+                project_line.append('' if not info.library_type
+                                    else info.library_type)
+            elif field == 'single_cell_platform':
+                project_line.append('' if not info.single_cell_platform
+                                    else info.single_cell_platform)
+            elif field == 'organism':
+                project_line.append('' if not info.organism
+                                    else info.organism)
+            elif field == 'sequencer_platform' or field == 'platform':
+                project_line.append(platform)
+            elif field == 'no_of_samples' or field == '#samples':
+                project_line.append(str(len(project.samples)))
+            elif field == 'no_of_cells' or field == '#cells':
+                project_line.append('' if not info.number_of_cells
+                                    else str(info.number_of_cells))
+            elif field == 'paired_end':
+                project_line.append(paired_end)
+            elif field == 'sample_names' or field == 'samples':
+                project_line.append(project.prettyPrintSamples())
+            elif field == 'null' or field == '':
+                project_line.append('')
+            else:
+                raise KeyError("'%s': unrecognised field for reporting "
+                               "project" % field)
         report.append('\t'.join(project_line))
     report = '\n'.join(report)
     return report

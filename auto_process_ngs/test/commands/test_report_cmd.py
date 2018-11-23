@@ -466,6 +466,40 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_projects_custom_fields(self):
+        """report: report run in 'projects' mode with custom fields
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """2 projects found
+MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
+"""
+        custom_fields = ['run_id','run_number','source','null','user','PI','library_type','single_cell_platform','organism','platform','#samples','#cells','paired_end','samples']
+        for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
     def test_report_projects_single_cell(self):
         """report: report single-cell run in 'projects' mode
         """

@@ -664,6 +664,8 @@ def add_report_command(cmdparser):
                  "injection into a spreadsheet")
     p.add_option('--full',action='store_true',dest='full',default=False,
                  help="print summary report suitable for record-keeping")
+    p.add_option('--fields',action='store',dest='fields',default=None,
+                 help="fields to report")
     add_debug_option(p)
 
 def add_readme_command(cmdparser):
@@ -1138,4 +1140,8 @@ if __name__ == "__main__":
                 sys.exit(1)
             else:
                 mode = None
-            d.report(mode=mode)
+            if options.fields:
+                fields = str(options.fields).split(',')
+            else:
+                fields = None
+            d.report(mode=mode,fields=fields)
