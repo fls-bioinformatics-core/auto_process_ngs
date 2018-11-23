@@ -129,6 +129,11 @@ Field name                Associated value
 ``null``                  Writes an empty field
 ========================= ========================
 
+Composite fields can be specified by joining two or more fields
+with the ``+`` character (for example, ``project+run_id``); the
+resulting value will be the values of the individual fields
+joined by underscores.
+
 .. note::
 
    Custom fields are only available for the ``--projects``

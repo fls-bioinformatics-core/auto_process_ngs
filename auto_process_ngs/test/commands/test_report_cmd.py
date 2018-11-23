@@ -7,11 +7,13 @@ import tempfile
 import shutil
 import os
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.commands.report_cmd import report_info
 from auto_process_ngs.commands.report_cmd import report_concise
 from auto_process_ngs.commands.report_cmd import report_summary
 from auto_process_ngs.commands.report_cmd import report_projects
+from auto_process_ngs.commands.report_cmd import fetch_value
 from auto_process_ngs.commands.report_cmd import default_value
 
 # Unit tests
@@ -534,6 +536,88 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
         for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
+
+class TestFetchValueFunction(unittest.TestCase):
+    """
+    Tests for the 'fetch_value' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestProjectsSummary')
+        # Store original location so we can get back at the end
+        self.pwd = os.getcwd()
+        # Move to working dir
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        def del_rw(action,name,excinfo):
+            # Explicitly remove read only files/
+            # dirs
+            os.chmod(os.path.dirname(name),0755)
+            os.chmod(name,0655)
+            os.remove(name)
+        shutil.rmtree(self.dirn,onerror=del_rw)
+
+    def test_fetch_value(self):
+        """
+        report: test the fetch_value function
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "scRNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower",
+                        "Single cell platform": "ICELL8",
+                        "Number of cells": 1311 },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Acquire project
+        project = AnalysisProject('AB',
+                                  os.path.join(mockdir.dirn,'AB'))
+        # Check the returned values
+        self.assertEqual(fetch_value(ap,project,'datestamp'),'170901')
+        self.assertEqual(fetch_value(ap,project,'run_id'),'MISEQ_170901#87')
+        self.assertEqual(fetch_value(ap,project,'run_number'),'87')
+        self.assertEqual(fetch_value(ap,project,'source'),'testing')
+        self.assertEqual(fetch_value(ap,project,'data_source'),'testing')
+        self.assertEqual(fetch_value(ap,project,'analysis_dir'),mockdir.dirn)
+        self.assertEqual(fetch_value(ap,project,'path'),mockdir.dirn)
+        self.assertEqual(fetch_value(ap,project,'project'),'AB')
+        self.assertEqual(fetch_value(ap,project,'project_name'),'AB')
+        self.assertEqual(fetch_value(ap,project,'user'),'Alison Bell')
+        self.assertEqual(fetch_value(ap,project,'PI'),'Audrey Bower')
+        self.assertEqual(fetch_value(ap,project,'pi'),'Audrey Bower')
+        self.assertEqual(fetch_value(ap,project,'application'),'scRNA-seq')
+        self.assertEqual(fetch_value(ap,project,'library_type'),'scRNA-seq')
+        self.assertEqual(fetch_value(ap,project,'organism'),'Human')
+        self.assertEqual(fetch_value(ap,project,'sequencer_platform'),'MISEQ')
+        self.assertEqual(fetch_value(ap,project,'platform'),'MISEQ')
+        self.assertEqual(fetch_value(ap,project,'no_of_samples'),'2')
+        self.assertEqual(fetch_value(ap,project,'#samples'),'2')
+        self.assertEqual(fetch_value(ap,project,'single_cell_platform'),'ICELL8')
+        self.assertEqual(fetch_value(ap,project,'no_of_cells'),'1311')
+        self.assertEqual(fetch_value(ap,project,'#cells'),'1311')
+        self.assertEqual(fetch_value(ap,project,'paired_end'),'yes')
+        self.assertEqual(fetch_value(ap,project,'samples'),'AB1-2')
+        self.assertEqual(fetch_value(ap,project,'sample_names'),'AB1-2')
+        self.assertEqual(fetch_value(ap,project,'null'),'')
 
 class TestDefaultValueFunction(unittest.TestCase):
     """
