@@ -96,8 +96,13 @@ Field name                Associated value
 ``sequencer_platform``    Sequencer platform for the run
                           (e.g. ``MISEQ``)
 ``platform``              Alias for ``sequencer_platform``
+``datestamp``             Datestamp for the run (e.g.
+                          ``150729``)
 ``source``                Source of the sequencing data
 ``data_source``           Alias for ``source``
+``analysis_dir``          Full path to the analysis directory
+``project_name``          Name of the project
+``project``               Alias for ``project_name``
 ``user``                  User associated with project
 ``PI``                    Principle investigator associated
                           with the project
