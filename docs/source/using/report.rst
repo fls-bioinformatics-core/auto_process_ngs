@@ -138,3 +138,9 @@ joined by underscores.
 
    Custom fields are only available for the ``--projects``
    reporting mode.
+
+Writing reports to a file
+-------------------------
+
+By default reports are written to stdout; use the ``--file`` option
+to send the report to a file instead.

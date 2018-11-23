@@ -9,6 +9,7 @@
 # Imports
 #######################################################################
 
+import sys
 import os
 import ast
 import logging
@@ -34,7 +35,7 @@ class ReportingMode(object):
 # Command functions
 #######################################################################
 
-def report(ap,mode=None,fields=None):
+def report(ap,mode=None,fields=None,out_file=None):
     """
     Print a report on an analysis project
 
@@ -45,6 +46,8 @@ def report(ap,mode=None,fields=None):
         projects or info)
       fields (list): optional set of fields to report
         (only for 'projects' reporting mode)
+      out_file (str): optional, path to a file to write
+        the report to (default is to write to stdout)
     """
     # Turn off saving of parameters
     ap._save_params = False
@@ -64,7 +67,13 @@ def report(ap,mode=None,fields=None):
         kws = { 'fields': fields }
     else:
         raise Exception("Unknown reporting mode")
-    print f(ap,**kws)
+    # Generate and write the report
+    if out_file:
+        print "Writing report to %s" % out_file
+        fp = open(out_file,'w')
+    else:
+        fp = sys.stdout
+    fp.write("%s\n" % f(ap,**kws))
 
 def report_info(ap):
     """Generate a general report

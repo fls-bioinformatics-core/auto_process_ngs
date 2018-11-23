@@ -666,6 +666,9 @@ def add_report_command(cmdparser):
                  help="print summary report suitable for record-keeping")
     p.add_option('--fields',action='store',dest='fields',default=None,
                  help="fields to report")
+    p.add_option('--file',action='store',dest='out_file',default=None,
+                 help="write report to OUT_FILE (default is to write to "
+                 "stdout)")
     add_debug_option(p)
 
 def add_readme_command(cmdparser):
@@ -1144,4 +1147,4 @@ if __name__ == "__main__":
                 fields = str(options.fields).split(',')
             else:
                 fields = None
-            d.report(mode=mode,fields=fields)
+            d.report(mode=mode,fields=fields,out_file=options.out_file)

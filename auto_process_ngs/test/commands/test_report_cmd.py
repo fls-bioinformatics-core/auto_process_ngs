@@ -9,6 +9,8 @@ import os
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.commands.report_cmd import ReportingMode
+from auto_process_ngs.commands.report_cmd import report
 from auto_process_ngs.commands.report_cmd import report_info
 from auto_process_ngs.commands.report_cmd import report_concise
 from auto_process_ngs.commands.report_cmd import report_summary
@@ -536,6 +538,69 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
         for o,e in zip(report_projects(ap).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
+
+class TestReport(unittest.TestCase):
+    """
+    Tests for the 'report' command invoked directly
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestProjectsSummary')
+        # Store original location so we can get back at the end
+        self.pwd = os.getcwd()
+        # Move to working dir
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        def del_rw(action,name,excinfo):
+            # Explicitly remove read only files/
+            # dirs
+            os.chmod(os.path.dirname(name),0755)
+            os.chmod(name,0655)
+            os.remove(name)
+        shutil.rmtree(self.dirn,onerror=del_rw)
+
+    def test_report_to_file(self):
+        """report: report run to file
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            project_metadata={
+                "AB": { "User": "Alison Bell",
+                        "Library type": "RNA-seq",
+                        "Organism": "Human",
+                        "PI": "Audrey Bower" },
+                "CDE": { "User": "Charles David Edwards",
+                         "Library type": "ChIP-seq",
+                         "Organism": "Mouse",
+                         "PI": "Colin Delaney Eccleston" }
+            },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        out_file = os.path.join(self.dirn,"projects.tsv")
+        report(ap,mode=ReportingMode.PROJECTS,out_file=out_file)
+        # Check the outputs
+        expected = """2 projects found
+MISEQ_170901#87\t87\ttesting\t\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2
+MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4
+"""
+        self.assertTrue(os.path.exists(out_file))
+        with open(out_file,'r') as fp:
+            report_contents = fp.read()
+            for o,e in zip(report_contents.split('\n'),
+                           expected.split('\n')):
+                self.assertEqual(o,e)
 
 class TestFetchValueFunction(unittest.TestCase):
     """
