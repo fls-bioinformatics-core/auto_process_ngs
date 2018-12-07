@@ -80,8 +80,8 @@ For example:
     Additional notes/comments:
     - AB: 1% PhiX spike in
 
-Customing data that are reported
---------------------------------
+Customising data that are reported: fields and templates
+--------------------------------------------------------
 
 The data that are reported can be customised by using the ``--fields``
 option of the ``report`` command.
@@ -133,6 +133,11 @@ Composite fields can be specified by joining two or more fields
 with the ``+`` character (for example, ``project+run_id``); the
 resulting value will be the values of the individual fields
 joined by underscores.
+
+Commonly used sets of fields can be made into "templates", which
+can be defined in the ``reporting_templates`` section of the
+``settings.ini`` configuration file and then specified using the
+``--templates`` option of the ``report`` command.
 
 .. note::
 

@@ -666,6 +666,9 @@ def add_report_command(cmdparser):
                  help="print summary report suitable for record-keeping")
     p.add_option('--fields',action='store',dest='fields',default=None,
                  help="fields to report")
+    p.add_option('--template',action='store',dest='template',default=None,
+                 help="name of template with fields to report (templates "
+                 "should be defined in the config file)")
     p.add_option('--file',action='store',dest='out_file',default=None,
                  help="write report to OUT_FILE (default is to write to "
                  "stdout)")
@@ -1145,6 +1148,20 @@ if __name__ == "__main__":
                 mode = None
             if options.fields:
                 fields = str(options.fields).split(',')
+            elif options.template:
+                try:
+                    fields = str(__settings.reporting_templates[options.template]).split(',')
+                except KeyError:
+                    print "Template '%s' not in list of custom " \
+                        "templates:" % options.template
+                    if __settings.reporting_templates:
+                        for template in __settings.reporting_templates:
+                            print "- %s" % template
+                    else:
+                        print "- (no templates defined)"
+                    logging.critical("--template: unrecognised template '%s'"
+                                     % options.template)
+                    sys.exit(1)
             else:
                 fields = None
             d.report(mode=mode,fields=fields,out_file=options.out_file)

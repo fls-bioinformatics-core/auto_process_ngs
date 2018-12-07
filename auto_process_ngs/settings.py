@@ -218,6 +218,13 @@ class Settings(object):
             'qc_web_server','use_hierarchy')
         self.qc_web_server['exclude_zip_files'] = config.getboolean(
             'qc_web_server','exclude_zip_files')
+        # Templates for reporting project data
+        self.add_section('reporting_templates')
+        try:
+            for template,fields in config.items('reporting_templates'):
+                self['reporting_templates'][template] = fields
+        except NoSectionError:
+            logging.debug("No reporting templates defined")
 
     def get_bcl2fastq_config(self,section,config):
         """
