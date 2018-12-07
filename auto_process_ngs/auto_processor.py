@@ -84,15 +84,18 @@ def add_command(name,f):
         # Wraps execution of the supplied
         # function to trap exceptions and
         # add additional commentary
-        print "Running '%s' command" % name
+        print "[%s] Running '%s' command" % (timestamp(),name)
         try:
             ret = f(*args,**kws)
         except Exception as ex:
             logging.fatal("%s: %s" % (name,ex))
             ret = 1
         else:
-            print "%s: finished" % name
+            print "[%s] %s: finished" % (timestamp(),name)
         return ret
+    def timestamp():
+        # Return the current time
+        return time.strftime("%Y-%m-%d %H:%M:%S")
     def wrapper(cls):
         # Adds the supplied function to
         # to the class
