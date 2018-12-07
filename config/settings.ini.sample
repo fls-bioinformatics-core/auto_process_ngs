@@ -109,3 +109,8 @@ url = None
 use_hierarchy = False
 # If set then exclude ZIP archives from publication
 exclude_zip_files = False
+
+# Templates for reporting
+# Assign fields to template names for reporting projects
+[reporting_templates]
+#bcf = datestamp,,user,run_id,#samples,#cells,organism,library_type,PI,analysis_dir

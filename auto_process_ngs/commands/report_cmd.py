@@ -9,13 +9,16 @@
 # Imports
 #######################################################################
 
+import sys
 import os
 import ast
 import logging
+import tempfile
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 import auto_process_ngs.analysis as analysis
 import auto_process_ngs.utils as utils
+import auto_process_ngs.fileops as fileops
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -34,7 +37,7 @@ class ReportingMode(object):
 # Command functions
 #######################################################################
 
-def report(ap,mode=None):
+def report(ap,mode=None,fields=None,out_file=None):
     """
     Print a report on an analysis project
 
@@ -43,6 +46,10 @@ def report(ap,mode=None):
         analysis directory to be reported on
       mode (int): reporting mode (concise, summary,
         projects or info)
+      fields (list): optional set of fields to report
+        (only for 'projects' reporting mode)
+      out_file (str): optional, path to a file to write
+        the report to (default is to write to stdout)
     """
     # Turn off saving of parameters
     ap._save_params = False
@@ -50,15 +57,29 @@ def report(ap,mode=None):
     # Do the reporting
     if mode is None or mode == ReportingMode.INFO:
         f = report_info
+        kws = {}
     elif mode == ReportingMode.CONCISE:
         f = report_concise
+        kws = {}
     elif mode == ReportingMode.SUMMARY:
         f = report_summary
+        kws = {}
     elif mode == ReportingMode.PROJECTS:
         f = report_projects
+        kws = { 'fields': fields }
     else:
         raise Exception("Unknown reporting mode")
-    print f(ap)
+    # Generate and write the report
+    report = f(ap,**kws)
+    if out_file:
+        fp,temp_file = tempfile.mkstemp()
+        with os.fdopen(fp,'w') as fpp:
+            fpp.write("%s\n" % report)
+        fileops.copy(temp_file,out_file)
+        os.remove(temp_file)
+        print "Report written to %s" % out_file
+    else:
+        print report
 
 def report_info(ap):
     """Generate a general report
@@ -298,18 +319,18 @@ def report_summary(ap):
                     report.append("  %s  %s" % (' '*width,line))
     return '\n'.join(report)
 
-def report_projects(ap):
+def report_projects(ap,fields=None):
     """Generate one line reports suitable for pasting into spreadsheet
 
     Generate one-line report for each each project with tab-separated
     data items, suitable for injection into a spreadsheet.
 
-    Each line has the following information:
+    By default each line has the following information:
 
     - Run id e.g. HISEQ_140328
     - Run number
     - Source
-    - Date
+    - Empty field (for user supplied date)
     - User
     - PI
     - Application
@@ -321,38 +342,41 @@ def report_projects(ap):
     - PE (yes/no)
     - Samples
 
+    Alternatively a custom list of fields can be specified via
+    the 'fields' argument.
+
+    Composite fields can be specified by joining two or more
+    fields with '+' (e.g. 'project+run_id'); the resulting
+    value will be the values of the individual fields joined by
+    underscores.
+
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the
         analysis directory to be reported on
+      fields (list): list or tuple of field names to
+        output for each project
         
     Returns:
       String with the report text.
     """
+    # Set default fields
+    if fields is None:
+        fields = ('run_id',
+                  'run_number',
+                  'source',
+                  'null',
+                  'user',
+                  'PI',
+                  'application',
+                  'single_cell_platform',
+                  'organism',
+                  'sequencer_platform',
+                  'no_of_samples',
+                  'no_of_cells',
+                  'paired_end',
+                  'sample_names',)
     # Acquire data
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
-    # General information
-    run_name = ap.run_name
-    try:
-        datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-        run_number = run_number.lstrip('0')
-    except Exception, ex:
-        logger.warning("Unable to extract information from run name '%s'" \
-                       % run_name)
-        logger.warning("Exception: %s" % ex)
-        date_stamp = ''
-        run_number = ''
-    if ap.metadata.platform is not None:
-        platform = ap.metadata.platform.upper()
-    else:
-        platform = ''
-    run_id = ap.run_reference_id
-    if ap.metadata.run_number is not None:
-        run_number = ap.metadata.run_number
-    if ap.metadata.source is not None:
-        data_source = ap.metadata.source
-    else:
-        data_source = ''
-    paired_end = 'yes' if analysis_dir.paired_end else 'no'
     # Generate report, one line per project
     report = []
     nprojects = len(analysis_dir.projects)
@@ -363,24 +387,85 @@ def report_projects(ap):
                                               ('' if nprojects == 1
                                                else 's')))
     for project in analysis_dir.projects:
-        project_line = [run_id,str(run_number),data_source,'']
-        info = project.info
-        project_line.append('' if not info.user else info.user)
-        project_line.append('' if not info.PI else info.PI)
-        project_line.append('' if not info.library_type
-                            else info.library_type)
-        project_line.append('' if not info.single_cell_platform
-                            else info.single_cell_platform)
-        project_line.append('' if not info.organism else info.organism)
-        project_line.append(platform)
-        project_line.append(str(len(project.samples)))
-        project_line.append('' if not info.number_of_cells
-                            else str(info.number_of_cells))
-        project_line.append(paired_end)
-        project_line.append(project.prettyPrintSamples())
+        project_line = []
+        for field in fields:
+            # Deal with composite fields (multiple field names
+            # joined with '+')
+            value = []
+            for subfield in field.split('+'):
+                value.append(fetch_value(ap,project,subfield))
+            # Append to the output line
+            project_line.append('_'.join(value))
         report.append('\t'.join(project_line))
     report = '\n'.join(report)
     return report
+
+def fetch_value(ap,project,field):
+    """
+    Return the value of the supplied field
+
+    Given a field name, return the value determined from
+    the data in the supplied AutoProcessor and
+    AnalysisProject instances.
+
+    Arguments:
+      ap (AutoProcessor): autoprocessor pointing to the
+        analysis directory to be reported on
+      project (AnalysisProject): project to report on
+      field (str): field name to return value of
+
+    Returns:
+      String: value of supplied field.
+    """
+    # Convenience variable for project info
+    try:
+        info = project.info
+    except AttributeError:
+        info = None
+    # Generate value for supplied field name
+    if field == 'datestamp':
+        return IlluminaData.split_run_name(ap.run_name)[0]
+    elif field == 'run_id':
+        return ap.run_reference_id
+    elif field == 'run_number':
+        return ('' if not ap.metadata.run_number
+                else str(ap.metadata.run_number))
+    elif field == 'source' or field == 'data_source':
+        return ('' if not ap.metadata.source
+                else ap.metadata.source)
+    elif field == 'analysis_dir' or field == 'path':
+        return ap.params.analysis_dir
+    elif field == 'project' or field == 'project_name':
+        return project.name
+    elif field == 'user':
+        return ('' if not info.user else info.user)
+    elif field == 'PI' or field == 'pi':
+        return ('' if not info.PI else info.PI)
+    elif field == 'application' or field == 'library_type':
+        return ('' if not info.library_type
+                else info.library_type)
+    elif field == 'single_cell_platform':
+        return ('' if not info.single_cell_platform
+                else info.single_cell_platform)
+    elif field == 'organism':
+        return ('' if not info.organism else info.organism)
+    elif field == 'sequencer_platform' or field == 'platform':
+        return ('' if not ap.metadata.platform
+                else str(ap.metadata.platform).upper())
+    elif field == 'no_of_samples' or field == '#samples':
+        return str(len(project.samples))
+    elif field == 'no_of_cells' or field == '#cells':
+        return ('' if not info.number_of_cells
+                else str(info.number_of_cells))
+    elif field == 'paired_end':
+        return ('yes' if ap.paired_end else 'no')
+    elif field == 'sample_names' or field == 'samples':
+        return project.prettyPrintSamples()
+    elif field == 'null' or field == '':
+        return ''
+    else:
+        raise KeyError("'%s': unrecognised field for reporting"
+                       % field)
 
 def default_value(s,default=""):
     """
