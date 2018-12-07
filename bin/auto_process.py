@@ -670,8 +670,9 @@ def add_report_command(cmdparser):
                  help="name of template with fields to report (templates "
                  "should be defined in the config file)")
     p.add_option('--file',action='store',dest='out_file',default=None,
-                 help="write report to OUT_FILE (default is to write to "
-                 "stdout)")
+                 help="write report to OUT_FILE; destination can be a local "
+                 "file or a remote file specified as [[USER@]HOST:]PATH "
+                 "(default is to write to stdout)")
     add_debug_option(p)
 
 def add_readme_command(cmdparser):

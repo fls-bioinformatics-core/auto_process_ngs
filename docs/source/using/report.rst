@@ -148,4 +148,5 @@ Writing reports to a file
 -------------------------
 
 By default reports are written to stdout; use the ``--file`` option
-to send the report to a file instead.
+to send the report to a file instead. The destination can be a
+local file, or a remote file specified as ``[[USER@]HOST:]PATH``.
