@@ -13,10 +13,12 @@ import sys
 import os
 import ast
 import logging
+import tempfile
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 import auto_process_ngs.analysis as analysis
 import auto_process_ngs.utils as utils
+import auto_process_ngs.fileops as fileops
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -68,12 +70,16 @@ def report(ap,mode=None,fields=None,out_file=None):
     else:
         raise Exception("Unknown reporting mode")
     # Generate and write the report
+    report = f(ap,**kws)
     if out_file:
-        print "Writing report to %s" % out_file
-        fp = open(out_file,'w')
+        fp,temp_file = tempfile.mkstemp()
+        with os.fdopen(fp,'w') as fpp:
+            fpp.write("%s\n" % report)
+        fileops.copy(temp_file,out_file)
+        os.remove(temp_file)
+        print "Report written to %s" % out_file
     else:
-        fp = sys.stdout
-    fp.write("%s\n" % f(ap,**kws))
+        print report
 
 def report_info(ap):
     """Generate a general report
