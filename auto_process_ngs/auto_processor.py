@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
 #
 #########################################################################
 #
@@ -38,7 +38,6 @@ import simple_scheduler
 import bcl2fastq_utils
 import samplesheet_utils
 from .settings import Settings
-from .qc.processing import report_processing_qc
 from .exceptions import MissingParameterFileException
 from auto_process_ngs import get_version
 
@@ -105,6 +104,7 @@ def add_command(name,f):
 @add_command("publish_qc",commands.publish_qc_cmd.publish_qc)
 @add_command("archive",commands.archive_cmd.archive)
 @add_command("report",commands.report_cmd.report)
+@add_command("update_fastq_stats",commands.update_fastq_stats)
 class AutoProcess(object):
     """
     Class implementing an automatic fastq generation and QC
@@ -1288,100 +1288,6 @@ class AutoProcess(object):
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return analysis.AnalysisProject(dirs[0],undetermined_dir)
-
-    def generate_stats(self,stats_file=None,per_lane_stats_file=None,
-                       unaligned_dir=None,add_data=False,nprocessors=None,
-                       runner=None):
-        """Generate statistics for FASTQ files
-
-        Generates statistics for all FASTQ files found in the
-        'unaligned' directory, by running the 'fastq_statistics.py'
-        program.
-
-        Arguments
-          stats_file: (optional) specify the name and path of
-            a non-default file to write the statistics to
-            (defaults to 'statistics.info' unless over-ridden by
-            local settings)
-          per_lane_stats_file: (optional) path for per-lane
-            statistics output file (defaults to
-            'per_lane_statistics.info' unless over-ridden by
-            local settings)
-          unaligned_dir: (optional) where to look for Fastq files
-            from bcl2fastq
-          add_data: (optional) if True then add stats to the existing
-            stats files (default is to overwrite existing stats
-            files)
-          nprocessors: (optional) number of cores to use when
-            running 'fastq_statistics.py'
-          runner: (optional) specify a non-default job runner to
-            use for fastq_statistics.py
-
-        """
-        # Get file names for output files
-        if stats_file is None:
-            if self.params['stats_file'] is not None:
-                stats_file = self.params['stats_file']
-            else:
-                stats_file='statistics.info'
-        if per_lane_stats_file is None:
-            if self.params['per_lane_stats_file'] is not None:
-                per_lane_stats_file = self.params['per_lane_stats_file']
-            else:
-                per_lane_stats_file='per_lane_statistics.info'
-        # Sort out unaligned_dir
-        if unaligned_dir is None:
-            if self.params.unaligned_dir is None:
-                self.params['unaligned_dir'] = 'bcl2fastq'
-            unaligned_dir = self.params.unaligned_dir
-        if not os.path.exists(os.path.join(self.params.analysis_dir,unaligned_dir)):
-            logging.error("Unaligned dir '%s' not found" % unaligned_dir)
-        # Set up runner
-        if runner is not None:
-            runner = fetch_runner(runner)
-        else:
-            runner = self.settings.runners.stats
-        runner.set_log_dir(self.log_dir)
-        # Number of cores
-        if nprocessors is None:
-            nprocessors = self.settings.fastq_stats.nprocessors
-        # Generate statistics
-        fastq_statistics = applications.Command('fastq_statistics.py',
-                                                '--unaligned',unaligned_dir,
-                                                '--output',
-                                                os.path.join(self.params.analysis_dir,
-                                                             stats_file),
-                                                '--per-lane-stats',
-                                                os.path.join(self.params.analysis_dir,
-                                                             per_lane_stats_file),
-                                                self.params.analysis_dir,
-                                                '--nprocessors',nprocessors)
-        if add_data:
-            fastq_statistics.add_args('--update')
-        print "Generating statistics: running %s" % fastq_statistics
-        fastq_statistics_job = simple_scheduler.SchedulerJob(runner,
-                                                             fastq_statistics.command_line,
-                                                             name='fastq_statistics',
-                                                             working_dir=self.analysis_dir)
-        fastq_statistics_job.start()
-        try:
-            fastq_statistics_job.wait()
-        except KeyboardInterrupt,ex:
-            logging.warning("Keyboard interrupt, terminating fastq_statistics")
-            fastq_statistics_job.terminate()
-            raise ex
-        exit_code = fastq_statistics_job.exit_code
-        print "fastq_statistics completed: exit code %s" % exit_code
-        if exit_code != 0:
-            raise Exception("fastq_statistics exited with an error")
-        self.params['stats_file'] = stats_file
-        self.params['per_lane_stats_file'] = per_lane_stats_file
-        print "Statistics generation completed: %s" % self.params.stats_file
-        print "Generating processing QC report"
-        processing_qc_html = os.path.join(self.analysis_dir,
-                                          "processing_qc.html")
-        report_processing_qc(self,processing_qc_html)
-        print "Finished"
 
     def analyse_barcodes(self,unaligned_dir=None,lanes=None,
                          mismatches=None,cutoff=None,

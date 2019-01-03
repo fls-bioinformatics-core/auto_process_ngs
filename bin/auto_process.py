@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_process.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-16 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
 #
 #########################################################################
 #
@@ -1015,13 +1015,13 @@ if __name__ == "__main__":
                                output_dir=options.output_dir,
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
-            d.set_log_dir(d.get_log_subdir(cmd))
-            d.generate_stats(unaligned_dir=options.unaligned_dir,
-                             stats_file=options.stats_file,
-                             per_lane_stats_file=options.per_lane_stats_file,
-                             add_data=options.add_data,
-                             nprocessors=options.nprocessors,
-                             runner=options.runner)
+            d.update_fastq_stats(
+                unaligned_dir=options.unaligned_dir,
+                stats_file=options.stats_file,
+                per_lane_stats_file=options.per_lane_stats_file,
+                add_data=options.add_data,
+                nprocessors=options.nprocessors,
+                runner=options.runner)
         elif cmd == 'analyse_barcodes':
             if options.lanes is not None:
                 lanes = bcf_utils.parse_lanes(options.lanes)

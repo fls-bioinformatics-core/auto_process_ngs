@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 #########################################################################
 
@@ -30,6 +30,7 @@ from ..samplesheet_utils import SampleSheetLinter
 from ..applications import Command
 from ..applications import general as general_apps
 from ..simple_scheduler import SchedulerJob
+from ..qc.processing import report_processing_qc
 from bcftbx import IlluminaData
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
@@ -447,11 +448,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
                                 "expected outputs")
     # Generate statistics
     if generate_stats:
-        ap.generate_stats(stats_file=stats_file,
-                          per_lane_stats_file=per_lane_stats_file,
-                          unaligned_dir=ap.params.unaligned_dir,
-                          nprocessors=nprocessors,
-                          runner=runner)
+        fastq_statistics(ap,
+                         stats_file=stats_file,
+                         per_lane_stats_file=per_lane_stats_file,
+                         unaligned_dir=ap.params.unaligned_dir,
+                         nprocessors=nprocessors,
+                         runner=runner)
     # Make a 'projects.info' metadata file
     if lanes:
         ap.update_project_metadata_file()
@@ -550,7 +552,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
       ap (AutoProcessor): autoprocessor pointing to the analysis
         directory to create Fastqs for
       unaligned_dir (str): output directory for bcl-to-fastq conversion
-        sample_sheet: input sample sheet file
+      sample_sheet (str): path to input sample sheet file
       primary_data_dir (str): path to the top-level directory holding
         the sequencing data
       require_bcl2fastq (str): if set then should be a string of the form
@@ -721,3 +723,96 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     if exit_code != 0:
         logger.error("bcl2fastq exited with an error")
     return exit_code
+
+def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
+                     unaligned_dir=None,add_data=False,nprocessors=None,
+                     runner=None):
+    """Generate statistics for Fastq files
+
+    Generates statistics for all Fastq files found in the
+    'unaligned' directory, by running the 'fastq_statistics.py'
+    program.
+
+    Arguments
+      ap (AutoProcessor): autoprocessor pointing to the analysis
+        directory to create Fastqs for
+      stats_file (str): path of a non-default file to write the
+        statistics to (defaults to 'statistics.info' unless
+        over-ridden by local settings)
+      per_lane_stats_file (str): path for per-lane statistics
+        output file (defaults to 'per_lane_statistics.info'
+        unless over-ridden by local settings)
+      unaligned_dir (str): output directory for bcl-to-fastq
+        conversion
+      add_data (bool): if True then add stats to the existing
+        stats files (default is to overwrite existing stats
+        files)
+      nprocessors (int): number of cores to use when running
+        'fastq_statistics.py'
+      runner (JobRunner): (optional) specify a non-default job
+        runner to use for running 'fastq_statistics.py'
+    """
+    # Get file names for output files
+    if stats_file is None:
+        if ap.params['stats_file'] is not None:
+            stats_file = ap.params['stats_file']
+        else:
+            stats_file='statistics.info'
+        if per_lane_stats_file is None:
+            if ap.params['per_lane_stats_file'] is not None:
+                per_lane_stats_file = ap.params['per_lane_stats_file']
+            else:
+                per_lane_stats_file='per_lane_statistics.info'
+    # Sort out unaligned_dir
+    if unaligned_dir is None:
+        if ap.params.unaligned_dir is None:
+            ap.params['unaligned_dir'] = 'bcl2fastq'
+        unaligned_dir = ap.params.unaligned_dir
+    if not os.path.exists(os.path.join(ap.params.analysis_dir,unaligned_dir)):
+        logger.error("Unaligned dir '%s' not found" % unaligned_dir)
+    # Set up runner
+    if runner is not None:
+        runner = fetch_runner(runner)
+    else:
+        runner = ap.settings.runners.stats
+    runner.set_log_dir(ap.log_dir)
+    # Number of cores
+    if nprocessors is None:
+        nprocessors = ap.settings.fastq_stats.nprocessors
+    # Generate statistics
+    fastq_statistics_cmd = Command(
+        'fastq_statistics.py',
+        '--unaligned',unaligned_dir,
+        '--output',os.path.join(ap.params.analysis_dir,stats_file),
+        '--per-lane-stats',os.path.join(ap.params.analysis_dir,
+                                        per_lane_stats_file),
+        ap.params.analysis_dir,
+        '--nprocessors',nprocessors
+    )
+    if add_data:
+        fastq_statistics_cmd.add_args('--update')
+    print "Generating statistics: running %s" % fastq_statistics_cmd
+    fastq_statistics_job = SchedulerJob(
+        runner,
+        fastq_statistics_cmd.command_line,
+        name='fastq_statistics',
+        working_dir=ap.analysis_dir
+    )
+    fastq_statistics_job.start()
+    try:
+        fastq_statistics_job.wait()
+    except KeyboardInterrupt as ex:
+        logger.warning("Keyboard interrupt, terminating fastq_statistics")
+        fastq_statistics_job.terminate()
+        raise ex
+    exit_code = fastq_statistics_job.exit_code
+    print "fastq_statistics completed: exit code %s" % exit_code
+    if exit_code != 0:
+        raise Exception("fastq_statistics exited with an error")
+    ap.params['stats_file'] = stats_file
+    ap.params['per_lane_stats_file'] = per_lane_stats_file
+    print "Statistics generation completed: %s" % ap.params.stats_file
+    print "Generating processing QC report"
+    processing_qc_html = os.path.join(ap.analysis_dir,
+                                      "processing_qc.html")
+    report_processing_qc(ap,processing_qc_html)
