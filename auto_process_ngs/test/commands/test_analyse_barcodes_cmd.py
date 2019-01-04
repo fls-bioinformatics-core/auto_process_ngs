@@ -1,5 +1,5 @@
 #######################################################################
-# Tests for autoprocessor.py module: make_fastqs
+# Tests for analyse_barcodes_cmd.py module
 #######################################################################
 
 import unittest
@@ -10,13 +10,14 @@ import gzip
 from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.commands.analyse_barcodes_cmd import analyse_barcodes
 
 # Set to False to preserve test outputs
 REMOVE_TEST_OUTPUTS = True
 
-class TestAutoProcessMakeFastqs(unittest.TestCase):
+class TestAutoProcessAnalyseBarcodes(unittest.TestCase):
     """
-    Tests for AutoProcess.make_fastqs
+    Tests for AutoProcess.analyse_barcodes
     """
     def setUp(self):
         # Create a temp working dir
@@ -71,7 +72,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         self._insert_fastq_reads(mockdir.dirn)
         # Analyse barcodes
         ap = AutoProcess(mockdir.dirn)
-        ap.analyse_barcodes()
+        analyse_barcodes(ap)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -120,7 +121,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         self._insert_fastq_reads(mockdir.dirn)
         # Analyse barcodes
         ap = AutoProcess(mockdir.dirn)
-        ap.analyse_barcodes()
+        analyse_barcodes(ap)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
