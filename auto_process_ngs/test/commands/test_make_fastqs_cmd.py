@@ -1,15 +1,16 @@
 #######################################################################
-# Tests for autoprocessor.py module: make_fastqs
+# Tests for make_fastqs_cmd.py module
 #######################################################################
 
 import unittest
 import tempfile
 import shutil
 import os
+from auto_process_ngs.auto_processor import AutoProcess
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
-from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.commands.make_fastqs_cmd import make_fastqs
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -44,7 +45,8 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
-
+            
+    #@unittest.skip("Skipped")
     def test_make_fastqs_standard_protocol(self):
         """make_fastqs: standard protocol
         """
@@ -66,7 +68,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="standard")
+        make_fastqs(ap,protocol="standard")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
         self.assertEqual(ap.params.primary_data_dir,
@@ -95,6 +97,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_standard_protocol_no_demultiplexing(self):
         """make_fastqs: standard protocol with no demultiplexing
         """
@@ -137,7 +140,7 @@ AB1,AB1,,,,,AB,
                               "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
-        ap.make_fastqs(protocol="standard")
+        make_fastqs(ap,protocol="standard")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -199,9 +202,11 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertRaises(Exception,
-                          ap.make_fastqs,
+                          make_fastqs,
+                          ap,
                           protocol="standard")
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
         """
@@ -225,7 +230,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="icell8")
+        make_fastqs(ap,protocol="icell8")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"y25n76,I8,I8,y101")
         self.assertEqual(ap.params.primary_data_dir,
@@ -299,7 +304,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="10x_chromium_sc")
+        make_fastqs(ap,protocol="10x_chromium_sc")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
@@ -328,6 +333,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_icell8_protocol_no_demultiplexing(self):
         """make_fastqs: icell8 protocol with no demultiplexing
         """
@@ -370,7 +376,7 @@ AB1,AB1,,,,,icell8,
                               "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
-        ap.make_fastqs(protocol="icell8")
+        make_fastqs(ap,protocol="icell8")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -393,6 +399,7 @@ AB1,AB1,,,,,icell8,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_missing_fastqs_no_placeholders(self):
         """make_fastqs: missing fastqs, no placeholders
         """
@@ -418,7 +425,8 @@ AB1,AB1,,,,,icell8,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
-                          ap.make_fastqs,
+                          make_fastqs,
+                          ap,
                           protocol="standard",
                           create_empty_fastqs=False)
         # Check outputs
@@ -449,6 +457,7 @@ AB1,AB1,,,,,icell8,
                              "002_make_fastqs",
                              "missing_fastqs.log")))
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_missing_fastqs_with_placeholders(self):
         """make_fastqs: missing fastqs with placeholders
         """
@@ -473,8 +482,9 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="standard",
-                       create_empty_fastqs=True)
+        make_fastqs(ap,
+                    protocol="standard",
+                    create_empty_fastqs=True)
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
         self.assertEqual(ap.params.primary_data_dir,
@@ -508,6 +518,7 @@ AB1,AB1,,,,,icell8,
                              "002_make_fastqs",
                              "missing_fastqs.log")))
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_handle_bcl2fastq2_failure(self):
         """make_fastqs: handle bcl2fastq2 failure
         """
@@ -532,7 +543,8 @@ AB1,AB1,,,,,icell8,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
-                          ap.make_fastqs,
+                          make_fastqs,
+                          ap,
                           protocol="standard")
         # Check outputs
         analysis_dir = os.path.join(
@@ -556,6 +568,7 @@ AB1,AB1,,,,,icell8,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_unknown_platform(self):
         """make_fastqs: unknown platform raises exception
         """
@@ -578,9 +591,11 @@ AB1,AB1,,,,,icell8,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
-                          ap.make_fastqs,
+                          make_fastqs,
+                          ap,
                           protocol="standard")
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_explicitly_specify_platform(self):
         """make_fastqs: explicitly specify the platform
         """
@@ -603,7 +618,8 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="standard",
+        make_fastqs(ap,
+                       protocol="standard",
                        platform="miseq")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
@@ -633,6 +649,7 @@ AB1,AB1,,,,,icell8,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_specify_platform_via_metadata(self):
         """make_fastqs: implicitly specify the platform via metadata
         """
@@ -658,7 +675,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
-        ap.make_fastqs(protocol="standard")
+        make_fastqs(ap,protocol="standard")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
         self.assertEqual(ap.params.primary_data_dir,
@@ -687,6 +704,7 @@ AB1,AB1,,,,,icell8,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_invalid_barcodes(self):
         """make_fastqs: stop for invalid barcodes
         """
@@ -733,8 +751,10 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
-                          ap.make_fastqs)
+                          make_fastqs,
+                          ap)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_samplesheet_with_invalid_characters(self):
         """make_fastqs: stop for invalid characters in sample sheet
         """
@@ -781,4 +801,57 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertRaises(Exception,
-                          ap.make_fastqs)
+                          make_fastqs,
+                          ap)
+
+    #@unittest.skip("Not implemented")
+    def test_make_fastqs_10x_chromium_sc_protocol(self):
+        """make_fastqs: 10x_chromium_sc protocol
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger executables
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        make_fastqs(ap,protocol="10x_chromium_sc")
+        # Check parameters
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_SN7001250_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_10x_chromium_sc"),
+                       "bcl2fastq",
+                       "HGXXXX"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html",
+                      "cellranger_qc_summary.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
