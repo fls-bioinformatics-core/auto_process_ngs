@@ -1491,59 +1491,6 @@ class AutoProcess(object):
             logging.error("Missing barcode analysis HTML report: %s" %
                           html_file)
 
-    def verify_fastq_generation(self,unaligned_dir=None,lanes=None,
-                                include_sample_dir=False):
-        """Check that generated Fastqs match sample sheet predictions
-
-        Arguments:
-          unaligned_dir (str): explicitly specify the bcl2fastq output
-            directory to check
-          lanes (list): specify a list of lane numbers (integers) to
-            check (others will be ignored)
-          include_sample_dir (bool): if True then include a
-            'sample_name' directory level when checking for
-            bcl2fastq2 outputs, even if one shouldn't be present
-
-        Returns:
-          True if outputs match sample sheet, False otherwise.
- 
-        """
-        if unaligned_dir is None:
-            if self.params.unaligned_dir is not None:
-                unaligned_dir = self.params.unaligned_dir
-            else:
-                logging.debug("Bcl2fastq output directory not defined")
-                return False
-        else:
-            logging.warning("Checking custom bcl2fastq output directory '%s'" %
-                            unaligned_dir)
-        bcl_to_fastq_dir = os.path.join(self.analysis_dir,unaligned_dir)
-        if not os.path.isdir(bcl_to_fastq_dir):
-            # Directory doesn't exist
-            return False
-        # Make a temporary sample sheet to verify against
-        tmp_sample_sheet = os.path.join(self.tmp_dir,
-                                        "SampleSheet.verify.%s.csv" %
-                                        time.strftime("%Y%m%d%H%M%S"))
-        bcl2fastq_utils.make_custom_sample_sheet(self.params.sample_sheet,
-                                                 tmp_sample_sheet,
-                                                 lanes=lanes)
-        # Try to create an IlluminaData object
-        try:
-            illumina_data = IlluminaData.IlluminaData(
-                self.analysis_dir,
-                unaligned_dir=unaligned_dir)
-        except IlluminaData.IlluminaDataError as ex:
-            # Failed to initialise
-            logging.warning("Failed to get information from %s: %s" %
-                            (bcl_to_fastq_dir,ex))
-            return False
-        # Do check
-        return IlluminaData.verify_run_against_sample_sheet(
-            illumina_data,
-            tmp_sample_sheet,
-            include_sample_dir=include_sample_dir)
-
     def merge_fastq_dirs(self,primary_unaligned_dir,output_dir=None,
                          dry_run=False):
         """

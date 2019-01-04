@@ -237,7 +237,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                             "'10x_chromium_sc' for these indices" %
                             protocol)
     # Check for pre-existing Fastq outputs
-    if ap.verify_fastq_generation(
+    if verify_fastq_generation(
+            ap,
             unaligned_dir=ap.params.unaligned_dir,
             lanes=lanes,
             include_sample_dir=verify_include_sample_dir):
@@ -397,7 +398,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if exit_code != 0:
             raise Exception("Fastq generation finished with error: "
                             "exit code %d" % exit_code)
-        if not ap.verify_fastq_generation(
+        if not verify_fastq_generation(
+                ap,
                 lanes=lanes,
                 include_sample_dir=verify_include_sample_dir):
             # Check failed
@@ -723,6 +725,60 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     if exit_code != 0:
         logger.error("bcl2fastq exited with an error")
     return exit_code
+
+def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
+                            include_sample_dir=False):
+    """Check that generated Fastqs match sample sheet predictions
+
+    Arguments:
+      ap (AutoProcessor): autoprocessor pointing to the analysis
+        directory to do Fastqs verification on
+      unaligned_dir (str): explicitly specify the bcl2fastq output
+        directory to check
+      lanes (list): specify a list of lane numbers (integers) to
+        check (others will be ignored)
+      include_sample_dir (bool): if True then include a
+        'sample_name' directory level when checking for
+         bcl2fastq2 outputs, even if one shouldn't be present
+
+     Returns:
+       True if outputs match sample sheet, False otherwise.
+    """
+    if unaligned_dir is None:
+        if ap.params.unaligned_dir is not None:
+            unaligned_dir = ap.params.unaligned_dir
+        else:
+            logger.debug("Bcl2fastq output directory not defined")
+            return False
+    else:
+        logger.warning("Checking custom bcl2fastq output directory '%s'" %
+                       unaligned_dir)
+    bcl_to_fastq_dir = os.path.join(ap.analysis_dir,unaligned_dir)
+    if not os.path.isdir(bcl_to_fastq_dir):
+        # Directory doesn't exist
+        return False
+    # Make a temporary sample sheet to verify against
+    tmp_sample_sheet = os.path.join(ap.tmp_dir,
+                                    "SampleSheet.verify.%s.csv" %
+                                    time.strftime("%Y%m%d%H%M%S"))
+    make_custom_sample_sheet(ap.params.sample_sheet,
+                             tmp_sample_sheet,
+                             lanes=lanes)
+    # Try to create an IlluminaData object
+    try:
+        illumina_data = IlluminaData.IlluminaData(
+            ap.analysis_dir,
+            unaligned_dir=unaligned_dir)
+    except IlluminaData.IlluminaDataError as ex:
+        # Failed to initialise
+        logger.warning("Failed to get information from %s: %s" %
+                        (bcl_to_fastq_dir,ex))
+        return False
+    # Do check
+    return IlluminaData.verify_run_against_sample_sheet(
+        illumina_data,
+        tmp_sample_sheet,
+        include_sample_dir=include_sample_dir)
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
                      unaligned_dir=None,add_data=False,nprocessors=None,
