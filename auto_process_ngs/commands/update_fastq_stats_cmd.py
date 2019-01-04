@@ -48,9 +48,10 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
         runner to use for running 'fastq_statistics.py'
     """
     ap.set_log_dir(ap.get_log_subdir("update_fastq_stats"))
-    fastq_statistics(unaligned_dir=options.unaligned_dir,
-                     stats_file=options.stats_file,
-                     per_lane_stats_file=options.per_lane_stats_file,
-                     add_data=options.add_data,
-                     nprocessors=options.nprocessors,
-                     runner=options.runner)
+    fastq_statistics(ap,
+                     unaligned_dir=unaligned_dir,
+                     stats_file=stats_file,
+                     per_lane_stats_file=per_lane_stats_file,
+                     add_data=add_data,
+                     nprocessors=nprocessors,
+                     runner=runner)
