@@ -15,7 +15,7 @@ for pattern in ('bin/*.py','bin/*.sh',):
 
 # Installation requirements
 install_requires = ['pillow',
-                    'matplotlib',
+                    'matplotlib<=2.2.3',
                     'pandas',
                     'cloudpickle',
                     'psutil',
