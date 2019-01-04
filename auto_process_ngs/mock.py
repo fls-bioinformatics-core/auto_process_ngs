@@ -1281,11 +1281,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # Add qc metric files
             if args.qc:
                 json_file = os.path.join(outs_dir,"qc_summary.json")
-                html_file = "cellranger_qc_summary%s.html" % lanes_ext
                 with open(json_file,'w') as fp:
                     fp.write(mock10xdata.QC_SUMMARY_JSON)
-                with open(html_file,'w') as fp:
-                    fp.write(mock10xdata.CELLRANGER_QC_SUMMARY)
         else:
             print "%s: not implemented" % command
         print "Return exit code: %s" % self._exit_code

@@ -543,15 +543,19 @@ def run_cellranger_mkfastq(sample_sheet,
                          "JSON QC summary file (%s not found)"
                          % json_file)
             return -1
+        # Make HTML QC summary
         html_file = os.path.join(working_dir,
                                  "cellranger_qc_summary%s.html" %
                                  lanes_suffix)
-        if not os.path.exists(html_file):
-            logger.error("cellranger mkfastq failed to make "
-                         "HTML QC summary file (%s not found)"
-                         % html_file)
-            return -1
+        if os.path.exists(html_file):
+            logger.warning("Removing existing HTML QC summary file: %s"
+                           % html_file)
+            os.remove(html_file)
         make_qc_summary_html(json_file,html_file)
+        if not os.path.exists(html_file):
+            logger.error("Failed to create HTML QC summary file "
+                         "(%s not found)" % html_file)
+            return -1
         return exit_code
 
 def run_cellranger_count(fastq_dir,
