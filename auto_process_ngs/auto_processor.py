@@ -940,6 +940,7 @@ class AutoProcess(object):
         self.params['analysis_dir'] = self.analysis_dir
         self.params['sample_sheet'] = custom_sample_sheet
         self.params['bases_mask'] = bases_mask
+        self.params['acquired_primary_data'] = False
         # Store the metadata
         self.metadata['run_name'] = self.run_name
         self.metadata['platform'] = platform

@@ -250,6 +250,7 @@ class AnalysisDirParameters(MetadataDict):
     bases_mask: bases mask string
     project_metadata: name of the project metadata file
     primary_data_dir: directory used to hold copies of primary data
+    acquired_primary_data: whether primary data has been copied
     unaligned_dir: output directory for bcl2fastq conversion
     barcode_analysis_dir: directory holding barcode analysis outputs
     stats_file: name of file with per-fastq statistics
@@ -272,6 +273,7 @@ class AnalysisDirParameters(MetadataDict):
                                   'bases_mask':'bases_mask',
                                   'project_metadata':'project_metadata',
                                   'primary_data_dir':'primary_data_dir',
+                                  'acquired_primary_data':'acquired_primary_data',
                                   'unaligned_dir':'unaligned_dir',
                                   'barcode_analysis_dir':'barcode_analysis_dir',
                                   'stats_file':'stats_file',
