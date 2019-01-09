@@ -27,6 +27,7 @@ import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.FASTQFile import FastqIterator
 import config
 import commands
 import applications
@@ -1454,8 +1455,28 @@ class AutoProcess(object):
             barcode_report_cmd.add_args('--cutoff',cutoff)
         # Mismatches
         if mismatches is None:
-            mismatches = bcl2fastq_utils.get_nmismatches(
-                self.params.bases_mask)
+            # Try to determine number of mismatches from
+            # stored bases mask
+            bases_mask = self.params.bases_mask
+            if bcl2fastq_utils.bases_mask_is_valid(bases_mask):
+                mismatches = bcl2fastq_utils.get_nmismatches(bases_mask)
+            else:
+                # No valid stored bases mask - try to extract barcode
+                # from Fastq header
+                logging.warning("Invalid bases mask: '%s'" %
+                                bases_mask)
+                fq = illumina_data.\
+                     projects[0].\
+                     samples[0].\
+                     fastq_subset(read_number=1,full_path=True)[0]
+                print "Extracting index sequence from %s" % fq
+                for r in FastqIterator(fq):
+                    seq_id = r.seqid
+                    break
+                if len(seq_id.index_sequence) >= 6:
+                    mismatches = 1
+                else:
+                    mismatches = 0
         barcode_report_cmd.add_args('--mismatches',mismatches)
         # Add the list of count files to process
         barcode_report_cmd.add_args('-c')
