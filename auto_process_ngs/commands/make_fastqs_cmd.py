@@ -289,8 +289,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # Set platform in metadata
         ap.metadata['platform'] = illumina_run.platform
         # Bases mask
-        if bases_mask is None:
-            bases_mask = ap.params.bases_mask
+        if bases_mask is not None:
+            ap.params['bases_mask'] = bases_mask
+        bases_mask = ap.params.bases_mask
         print "Bases mask setting    : %s" % bases_mask
         if protocol != '10x_chromium_sc':
             if bases_mask == "auto":
@@ -300,7 +301,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        ap.params.bases_mask = bases_mask
         # Do fastq generation according to protocol
         if protocol == 'icell8':
             # ICell8 data
@@ -316,7 +316,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
             if not bases_mask_is_valid(bases_mask):
                 raise Exception("Invalid bases mask: '%s'" %
                                 bases_mask)
-            ap.params.bases_mask = bases_mask
             # Switch to standard protocol
             protocol = 'standard'
         if protocol == 'standard':
@@ -582,8 +581,6 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     # Bases mask
     if bases_mask is None:
         bases_mask = ap.params.bases_mask
-    else:
-        ap.params['bases_mask'] = bases_mask
     # Check for basic information needed to do bcl2fastq conversion
     if ap.params.data_dir is None:
         raise Exception("No source data directory")
