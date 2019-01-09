@@ -205,9 +205,6 @@ def add_make_fastqs_command(cmdparser):
                             dest='only_fetch_primary_data',default=False,
                             help="only fetch the primary data, don't perform any other "
                             "operations")
-    primary_data.add_option('--skip-rsync',action='store_true',
-                            dest='skip_rsync',default=False,
-                            help="don't rsync the primary data at the beginning of processing")
     primary_data.add_option('--remove-primary-data',action='store_true',
                             dest='remove_primary_data',default=False,
                             help="Delete the primary data at the end of processing (default "
@@ -476,6 +473,12 @@ def add_make_fastqs_command(cmdparser):
                           help="don't run the Fastq generation step "
                           "(deprecated: use the '--skip-fastq-generation' "
                           "option instead)")
+    deprecated.add_option('--skip-rsync',action='store_true',
+                          dest='skip_rsync',default=False,
+                          help="don't rsync the primary data at the beginning "
+                          "of processing (deprecated: primary data acquisition "
+                          "is skipped automatically if data has already been "
+                          "rsynced)")
     p.add_option_group(deprecated)
 
 def add_setup_analysis_dirs_command(cmdparser):
