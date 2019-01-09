@@ -56,8 +56,58 @@ GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
 """)
 
-    def test_analyse_barcodes(self):
-        """analyse_barcodes: test with defaults
+    def test_analyse_barcodes_with_stored_bases_mask(self):
+        """analyse_barcodes: test with stored bases mask
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            bases_mask='y76,I6,y76',
+            metadata={ "instrument_datestamp": "160621" },
+            top_dir=self.wd)
+        mockdir.create(no_project_dirs=True)
+        # Add data to Fastq files
+        self._insert_fastq_reads(mockdir.dirn)
+        # Analyse barcodes
+        ap = AutoProcess(mockdir.dirn)
+        ap.analyse_barcodes()
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "160621_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,"barcode_analysis")),
+                            "Missing dir: barcode_analysis")
+        self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,"barcode_analysis","counts")),
+                            "Missing dir: barcode_analysis/counts")
+        for f in ("AB.AB1_S1_R1_001.fastq.gz.counts",
+                  "AB.AB2_S2_R1_001.fastq.gz.counts",
+                  "CDE.CDE3_S3_R1_001.fastq.gz.counts",
+                  "CDE.CDE4_S4_R1_001.fastq.gz.counts",
+                  "undetermined.Undetermined_S0_R1_001.fastq.gz.counts"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,"barcode_analysis","counts",f)),
+                            "Missing file: %s" % f)
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.report")),
+                        "Missing file: barcodes.report")
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.xls")),
+                        "Missing file: barcodes.xls")
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.html")),
+                        "Missing file: barcodes.html")
+
+    def test_analyse_barcodes_no_stored_bases_mask(self):
+        """analyse_barcodes: test with no stored bases mask
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(

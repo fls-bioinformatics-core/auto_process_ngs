@@ -118,6 +118,7 @@ class MockAnalysisDir(MockIlluminaData):
                  platform,
                  unaligned_dir='bcl2fastq',
                  fmt='bcl2fastq2',
+                 bases_mask='auto',
                  paired_end=True,
                  lanes=None,
                  no_lane_splitting=False,
@@ -139,6 +140,8 @@ class MockAnalysisDir(MockIlluminaData):
           fmt (str): format of the outputs (can be
             'casava' or 'bcl2fastq2'; default is
             'bcl2fastq')
+          bases_mask (str): bases mask string to
+            put into 'auto_process.info'
           paired_end (bool): whether run should be
             paired end (set True, default) or single
             end (set False)
@@ -172,6 +175,7 @@ class MockAnalysisDir(MockIlluminaData):
         # Make a mock-up of an analysis dir
         self.run_name = os.path.basename(str(run_name))
         self.platform = str(platform).lower()
+        self.bases_mask = bases_mask
         self.readme = readme
         # Store metadata
         self.metadata = { 'run_name': self.run_name,
@@ -230,7 +234,7 @@ class MockAnalysisDir(MockIlluminaData):
         # Add auto_process.info file
         with open(os.path.join(self.dirn,'auto_process.info'),'w') as fp:
             fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
-            fp.write("bases_mask\ty76,I8,I8,y76\n")
+            fp.write("bases_mask\t%s\n" % self.bases_mask)
             fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
             fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
             fp.write("primary_data_dir\t%s/primary_data/%s\n" % (self.dirn,
@@ -705,7 +709,8 @@ class MockAnalysisDirFactory(object):
                    no_lane_splitting=True,
                    top_dir=None,
                    metadata=None,
-                   project_metadata=None):
+                   project_metadata=None,
+                   bases_mask='auto'):
         """
         Basic analysis dir from bcl2fastq v2
         """
@@ -716,6 +721,7 @@ class MockAnalysisDirFactory(object):
         mad = MockAnalysisDir(run_name,platform,
                               unaligned_dir='bcl2fastq',
                               fmt='bcl2fastq2',
+                              bases_mask=bases_mask,
                               paired_end=paired_end,
                               no_lane_splitting=no_lane_splitting,
                               lanes=lanes,

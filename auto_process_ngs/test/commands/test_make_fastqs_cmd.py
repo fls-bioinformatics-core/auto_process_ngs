@@ -70,7 +70,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         self.assertTrue(ap.params.primary_data_dir is None)
         make_fastqs(ap,protocol="standard")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
@@ -207,6 +207,57 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                           protocol="standard")
 
     #@unittest.skip("Skipped")
+    def test_make_fastqs_standard_protocol_stores_bases_mask(self):
+        """make_fastqs: standard protocol stores supplied bases mask
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess()
+        ap.setup(os.path.join(self.wd,
+                              "171020_M00879_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        make_fastqs(ap,protocol="standard",bases_mask="y101,I8,I8,y101")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_M00879_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
     def test_make_fastqs_icell8_protocol(self):
         """make_fastqs: icell8 protocol
         """
@@ -232,7 +283,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertTrue(ap.params.primary_data_dir is None)
         make_fastqs(ap,protocol="icell8")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y25n76,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
@@ -486,7 +537,7 @@ AB1,AB1,,,,,icell8,
                     protocol="standard",
                     create_empty_fastqs=True)
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
@@ -622,7 +673,7 @@ AB1,AB1,,,,,icell8,
                        protocol="standard",
                        platform="miseq")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
@@ -677,7 +728,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.primary_data_dir is None)
         make_fastqs(ap,protocol="standard")
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
