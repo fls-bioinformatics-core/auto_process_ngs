@@ -101,6 +101,7 @@ def add_command(name,f):
 
 @add_command("make_fastqs",commands.make_fastqs)
 @add_command("analyse_barcodes",commands.analyse_barcodes)
+@add_command("merge_fastq_dirs",commands.merge_fastq_dirs)
 @add_command("setup_analysis_dirs",commands.setup_analysis_dirs)
 @add_command("run_qc",commands.run_qc)
 @add_command("publish_qc",commands.publish_qc_cmd.publish_qc)
