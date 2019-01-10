@@ -40,22 +40,16 @@ By default ``make_fastqs`` performs the following steps:
   project (``processing.html``).
 
 Various options are available to skip or control each of these stages;
-the most useful are:
-
-* ``--skip-rsync`` bypasses the primary data acquisition (useful if
-  rerunning having already fetched the data once)
-* ``--no-stats`` skips the generation of statistics and processing QC
-  reporting
-
-Information on other commonly used options can be found :ref:`below <make_fastqs-commonly-used-options>`.
-
-More detail on the different usage modes can be found in the
+more detail on the different usage modes can be found in the
 subsequent sections:
 
 * :ref:`make_fastqs-standard-protocol`
 * :ref:`make_fastqs-icell8-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
 * :ref:`make_fastqs-mixed-protocols`
+
+Information on other commonly used options can be found
+:ref:`below <make_fastqs-commonly-used-options>`.
 
 Advice on handling other unusual cases and problems can be found
 here:
@@ -91,6 +85,9 @@ Some of the most commonly used options are:
   from the instrument name it can be explicitly specified using
   this option (see :ref:`config_sequencer_platforms` for how to
   associate sequencers and platforms in the configuration)
+* ``--no-stats`` skips the generation of statistics and processing
+  QC reporting (helpful when handling runs requiring multiple
+  rounds of processing; see :ref:`make_fastqs-mixed-protocols`)
 
 The full set of options can be found in the
 :ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
@@ -227,7 +224,6 @@ samples in lanes 5 and 6 had different barcode lengths:
             --lanes=5-6 \
             --output-dir=bcl2fastq.L56 \
             --use-bases-mask=auto \
-            --skip-rsync \
 	    --no-stats
 
 Alternatively if the data in these lanes were 10xGenomics
@@ -240,11 +236,7 @@ Chromium single cell data:
 	    --protocol=10x_chromium_sc \
             --output-dir=bcl2fastq.L56 \
             --use-bases-mask=auto \
-            --skip-rsync \
 	    --no-stats
-
-(Using ``--skip-rsync`` means that the processing doesn't try
-to fetch the raw data again.)
 
 The outputs from each subset of lanes can be merged into a
 single output directory using the ``merge_fastq_dirs`` command.

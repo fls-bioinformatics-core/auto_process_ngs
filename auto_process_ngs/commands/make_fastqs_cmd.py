@@ -257,12 +257,14 @@ def make_fastqs(ap,protocol='standard',platform=None,
         log_dir += "_L%s" % ''.join([str(l) for l in sorted(lanes)])
     ap.set_log_dir(ap.get_log_subdir(log_dir))
     # Fetch primary data
-    if not skip_rsync:
+    if not skip_rsync and not ap.params.acquired_primary_data:
         if get_primary_data(ap) != 0:
             logger.error("Failed to acquire primary data")
-            raise Exception, "Failed to acquire primary data"
-        if only_fetch_primary_data:
-            return
+            raise Exception("Failed to acquire primary data")
+        else:
+            ap.params['acquired_primary_data'] = True
+    if only_fetch_primary_data:
+        return
     # Deal with platform information
     if not platform:
         platform = ap.metadata.platform

@@ -68,6 +68,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="standard")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -75,6 +76,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -281,6 +283,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="icell8")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -288,6 +291,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -355,6 +359,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="10x_chromium_sc")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -362,6 +367,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -475,11 +481,19 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         self.assertRaises(Exception,
                           make_fastqs,
                           ap,
                           protocol="standard",
                           create_empty_fastqs=False)
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -533,6 +547,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,
                     protocol="standard",
                     create_empty_fastqs=True)
@@ -542,6 +557,7 @@ AB1,AB1,,,,,icell8,
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -641,6 +657,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         self.assertRaises(Exception,
                           make_fastqs,
                           ap,
@@ -669,6 +686,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,
                        protocol="standard",
                        platform="miseq")
@@ -678,6 +696,7 @@ AB1,AB1,,,,,icell8,
                          os.path.join(self.wd,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -726,6 +745,7 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="standard")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -733,6 +753,7 @@ AB1,AB1,,,,,icell8,
                          os.path.join(self.wd,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -801,6 +822,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         self.assertRaises(Exception,
                           make_fastqs,
                           ap)
@@ -851,6 +873,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         self.assertRaises(Exception,
                           make_fastqs,
                           ap)
@@ -877,12 +900,14 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
         make_fastqs(ap,protocol="10x_chromium_sc")
         # Check parameters
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_SN7001250_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
