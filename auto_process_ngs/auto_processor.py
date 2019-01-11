@@ -22,6 +22,7 @@ import uuid
 import time
 import ast
 import gzip
+import urllib2
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
@@ -792,8 +793,8 @@ class AutoProcess(object):
         Arguments:
           data_dir (str): source data directory
           analysis_dir (str): corresponding analysis directory
-          sample_sheet (str): name and location of non-default sample sheet
-            file
+          sample_sheet (str): name and location of non-default sample
+            sheet file
 
         """
         data_dir = data_dir.rstrip(os.sep)
@@ -870,27 +871,41 @@ class AutoProcess(object):
             # Try each possibility until one sticks
             for target in targets:
                 target = fileops.Location(target)
-                if target.is_remote:
-                    sample_sheet = str(target)
-                else:
-                    if os.path.isabs(target.path):
-                        sample_sheet = target.path
-                    else:
-                        sample_sheet = os.path.join(data_dir,
-                                                    target.path)
-                print "Trying '%s'" % sample_sheet
                 tmp_sample_sheet = os.path.join(self.tmp_dir,
                                                 os.path.basename(target.path))
-                rsync = applications.general.rsync(sample_sheet,
-                                                   self.tmp_dir)
-                print "%s" % rsync
-                status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
-                if status != 0:
-                    logging.warning("Failed to fetch sample sheet '%s'"
-                                    % sample_sheet)
-                    tmp_sample_sheet = None
+                if target.is_url:
+                    # Try fetching samplesheet from URL
+                    print "Trying '%s'" % target.url
+                    try:
+                        urlfp = urllib2.urlopen(target.url)
+                        with open(tmp_sample_sheet,'w') as fp:
+                            fp.write(urlfp.read())
+                    except Exception as ex:
+                        logging.warning("Error fetching sample sheet data "
+                                        "from '%s': %s" % (target.url,ex))
+                        tmp_sample_sheet = None
                 else:
-                    break
+                    # Assume target samplesheet is a file on a local
+                    # or remote server
+                    if target.is_remote:
+                        sample_sheet = str(target)
+                    else:
+                        if os.path.isabs(target.path):
+                            sample_sheet = target.path
+                        else:
+                            sample_sheet = os.path.join(data_dir,
+                                                        target.path)
+                    print "Trying '%s'" % sample_sheet
+                    rsync = applications.general.rsync(sample_sheet,
+                                                       self.tmp_dir)
+                    print "%s" % rsync
+                    status = rsync.run_subprocess(log=self.log_path('rsync.sample_sheet.log'))
+                    if status != 0:
+                        logging.warning("Failed to fetch sample sheet '%s'"
+                                        % sample_sheet)
+                        tmp_sample_sheet = None
+                    else:
+                        break
             # Bail out if no sample sheet was acquired
             if tmp_sample_sheet is None:
                 shutil.rmtree(self.analysis_dir)
