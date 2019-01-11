@@ -488,7 +488,7 @@ AB1,AB1,,,,,icell8,
                           protocol="standard",
                           create_empty_fastqs=False)
         # Check parameters
-        self.assertEqual(ap.params.bases_mask,"y101,I8,I8,y101")
+        self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
