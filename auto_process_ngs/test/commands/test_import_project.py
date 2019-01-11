@@ -8,6 +8,7 @@ import shutil
 import os
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.auto_processor import AutoProcess
+from auto_process_ngs.commands.import_project_cmd import import_project
 
 class TestAutoProcessImportProject(unittest.TestCase):
     """Tests for AutoProcess.import_project
@@ -40,7 +41,7 @@ Comments\t1% PhiX spike in
         shutil.rmtree(self.dirn)
 
     def test_import_project(self):
-        """Check AutoProcess.import_project imports a project
+        """import_project: check project is imported
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -56,7 +57,7 @@ Comments\t1% PhiX spike in
                                        for p in ap.get_analysis_projects_from_dirs()])
         self.assertFalse(os.path.exists(os.path.join(ap.analysis_dir,'NewProj')))
         # Import the project
-        ap.import_project(self.new_project_dir)
+        import_project(ap,self.new_project_dir)
         self.assertTrue('NewProj' in [p.name
                                       for p in ap.get_analysis_projects()])
         self.assertTrue('NewProj' in [p.name
@@ -71,7 +72,7 @@ Comments\t1% PhiX spike in
         self.assertTrue(os.path.exists(os.path.join(ap2.analysis_dir,'NewProj')))
 
     def test_import_project_already_in_metadata_file(self):
-        """AutoProcess.import_project fails if project exists in projects.info
+        """import_project: fails when project is already in projects.info
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -86,10 +87,12 @@ Comments\t1% PhiX spike in
         # Import the project
         ap = AutoProcess(mockdir.dirn)
         self.assertRaises(Exception,
-                          ap.import_project,self.new_project_dir)
+                          import_project,
+                          ap,
+                          self.new_project_dir)
 
     def test_import_project_directory_already_exists(self):
-        """AutoProcess.import_project fails if directory already exists
+        """import_project: fails if project directory already exists
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -102,4 +105,6 @@ Comments\t1% PhiX spike in
         # Import the project
         ap = AutoProcess(mockdir.dirn)
         self.assertRaises(Exception,
-                          ap.import_project,self.new_project_dir)
+                          import_project,
+                          ap,
+                          self.new_project_dir)
