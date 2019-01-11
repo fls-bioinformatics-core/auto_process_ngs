@@ -14,4 +14,5 @@ from run_qc_cmd import run_qc
 from publish_qc_cmd import publish_qc
 from archive_cmd import archive
 from report_cmd import report
+from merge_fastq_dirs_cmd import merge_fastq_dirs
 from update_fastq_stats_cmd import update_fastq_stats
