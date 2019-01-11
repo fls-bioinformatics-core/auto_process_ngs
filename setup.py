@@ -18,6 +18,7 @@ install_requires = ['pillow',
                     'matplotlib',
                     'pandas',
                     'cloudpickle',
+                    'psutil',
                     'genomics-bcftbx',
                     'nebulizer']
 # If we're on ReadTheDocs then we can reduce this
