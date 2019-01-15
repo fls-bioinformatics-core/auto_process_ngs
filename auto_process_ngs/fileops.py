@@ -32,6 +32,7 @@ These functions perform specific operations directly:
 - rename: rename (move) a file or directory
 - exists: test if a file or directory exists
 - remove_file: remove (delete) a file
+- disk_usage: get info on disk usage for a path
 
 These functions generate commands that can be executed e.g.
 via a scheduler, to perform the required operations:
@@ -51,6 +52,8 @@ via a scheduler, to perform the required operations:
 import os
 import shutil
 import getpass
+import psutil
+import collections
 import logging
 import bcftbx.utils as bcftbx_utils
 import applications
@@ -395,6 +398,52 @@ def remove_file(path):
             rm_cmd.command_line)
     retval,output = rm_cmd.subprocess_check_output()
     return retval
+
+def disk_usage(path):
+    """
+    Get disk usage for a path
+
+    Wraps the psutil 'disk_usage' function for local paths,
+    and runs the 'df' command for paths on remote systems.
+    Raises OSError if the path doesn't exist.
+
+    Arguments:
+      path (str): path to directory
+
+    Returns:
+      NamedTuple: NamedTuple with fields 'total', 'used',
+        'free' and 'percent'.
+    """
+    path = Location(path)
+    if not path.is_remote:
+        return psutil.disk_usage(path.path)
+    else:
+        # Check path exists on remote system
+        if not exists(path.path):
+            raise OSError("[Errno 2] No such file or directory: '%s'" %
+                          path)
+        # Run df command on remote system
+        # Use --block-size=1 to get same output as
+        df_cmd = applications.Command('df',
+                                      '--block-size=1',
+                                      '--output=size,used,avail,pcent',
+                                      path.path)
+        df_cmd = applications.general.ssh_command(
+            path.user,
+            path.server,
+            df_cmd.command_line)
+        retval,output = df_cmd.subprocess_check_output()
+        # Process the output
+        # df output looks like e.g.:
+        #   1B-blocks        Used       Avail Use%
+        # 78729973760 40163758080 34522906624  54%
+        fields = output.split('\n')[1].split()
+        sdiskusage = collections.namedtuple("sdiskusage",
+                                            "total used free percent")
+        return sdiskusage(total=int(fields[0]),
+                          used=int(fields[1]),
+                          free=int(fields[2]),
+                          percent=float(fields[3].strip('%')))
 
 ########################################################################
 # Command generation functions

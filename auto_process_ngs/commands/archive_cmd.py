@@ -18,6 +18,7 @@ import auto_process_ngs.fileops as fileops
 import auto_process_ngs.simple_scheduler as simple_scheduler
 import auto_process_ngs.tenx_genomics_utils as tenx_genomics_utils
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.utils import format_file_size
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -165,6 +166,12 @@ def archive(ap,archive_dir=None,platform=None,year=None,
     # Check if final archive already exists
     if fileops.exists(os.path.join(archive_dir,final_dest)):
         raise Exception("Final archive already exists, stopping")
+    # Report available space on target filesystem
+    usage = fileops.disk_usage(archive_dir)
+    print "Available  : %s/%s (%s%% in use)" % \
+        (format_file_size(usage.free),
+         format_file_size(usage.total),
+         usage.percent)
     # Check metadata
     check_metadata = ap.check_metadata(('source','run_number'))
     if not check_metadata:
@@ -317,5 +324,11 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if not dry_run:
             fileops.rename(os.path.join(archive_dir,staging),
                            os.path.join(archive_dir,final_dest))
+    # Report usage of target filesystem
+    usage = fileops.disk_usage(archive_dir)
+    print "Usage of archive: %s available (of %s) (%s%% in use)" % \
+        (format_file_size(usage.free),
+         format_file_size(usage.total),
+         usage.percent)
     # Finish
     return retval

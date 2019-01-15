@@ -311,6 +311,29 @@ class TestRemoveFile(FileopsTestCase):
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(test_dir))
 
+class TestDiskUsage(FileopsTestCase):
+    """Tests for the 'disk_usage' function
+    """
+    def test_local_disk_usage(self):
+        """fileops.disk_usage: get disk usage for a local directory
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        os.mkdir(test_dir)
+        self.assertTrue(os.path.exists(test_dir))
+        usage = disk_usage(test_dir)
+        self.assertTrue(usage.total > 0)
+        self.assertTrue(usage.used > 0)
+        self.assertTrue(usage.free > 0)
+        self.assertTrue(usage.percent > 0)
+    def test_local_remove_file_fails_on_dir(self):
+        """fileops.disk_usage: raise OSError when directory doesn't exist
+        """
+        test_dir = os.path.join(self.test_dir,'test_dir')
+        self.assertFalse(os.path.exists(test_dir))
+        self.assertRaises(OSError,
+                          disk_usage,
+                          test_dir)
+
 class TestCopyCommand(unittest.TestCase):
     """Tests for the 'copy_command' function
     """
