@@ -168,9 +168,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         raise Exception("Final archive already exists, stopping")
     # Report available space on target filesystem
     usage = fileops.disk_usage(archive_dir)
-    print "Available  : %s/%s (%s%%)" % (format_file_size(usage.free),
-                                         format_file_size(usage.total),
-                                         usage.percent)
+    print "Available  : %s/%s (%s%% in use)" % \
+        (format_file_size(usage.free),
+         format_file_size(usage.total),
+         usage.percent)
     # Check metadata
     check_metadata = ap.check_metadata(('source','run_number'))
     if not check_metadata:
@@ -325,7 +326,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                            os.path.join(archive_dir,final_dest))
     # Report usage of target filesystem
     usage = fileops.disk_usage(archive_dir)
-    print "Usage of archive: %s available (of %s) (%s%%)" % \
+    print "Usage of archive: %s available (of %s) (%s%% in use)" % \
         (format_file_size(usage.free),
          format_file_size(usage.total),
          usage.percent)
