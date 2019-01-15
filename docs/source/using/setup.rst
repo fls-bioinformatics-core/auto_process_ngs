@@ -98,6 +98,22 @@ For example:
       --sample-sheet /mnt/data/samplesheets/SampleSheet_180817.csv \
       /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
 
+The sample sheet can also be on a remote system, for example:
+
+::
+
+   auto_process.py setup \
+      --sample-sheet pjb@kellerman.man.ac.uk:samplesheets/SampleSheet_180817.csv \
+      /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
+
+or it can be a URL:
+
+::
+
+   auto_process.py setup \
+      --sample-sheet https://example.com/samplesheets/SampleSheet_180817.csv \
+      /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
+
 .. _setup_remote_data_dir:
 
 ********************************************
