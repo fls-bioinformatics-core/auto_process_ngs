@@ -110,6 +110,7 @@ def add_command(name,f):
 @add_command("report",commands.report_cmd.report)
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)
+@add_command("clone",commands.clone)
 class AutoProcess(object):
     """
     Class implementing an automatic fastq generation and QC
@@ -998,97 +999,6 @@ class AutoProcess(object):
         self.generate_stats()
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
-
-    def clone(self,clone_dir,copy_fastqs=False):
-        """
-        Make a 'clone' (i.e. copy) to new directory
-
-        Makes a copy of the processing directory, including
-        metadata and parameters but ignoring any project
-        subdirectories.
-
-        By default the 'unaligned' directory in the new
-        directory is simply a symlink from the original
-        directory; set the 'copy_fastqs' to make copies
-        instead.
-
-        Arguments
-          clone_dir (str): path to the new directory to
-            create as a clone (must not already exist).
-          copy_fastqs (boolean): set to True to copy the
-            fastq files (otherwise default behaviour is
-            to make a symlink)
-
-        """
-        clone_dir = os.path.abspath(clone_dir)
-        if os.path.exists(clone_dir):
-            # Directory already exists
-            logging.critical("Target directory '%s' already exists" % clone_dir)
-            raise Exception("Clone failed, target directory already exists")
-        self.create_directory(clone_dir)
-        # Copy metadata and parameters
-        self.save_metadata(os.path.join(clone_dir,
-                                        os.path.basename(
-                                            self.metadata_file)),
-                           force=True)
-        self.save_parameters(os.path.join(clone_dir,
-                                          os.path.basename(
-                                              self.parameter_file)),
-                             force=True)
-        # Link to or copy fastqs
-        unaligned_dir = os.path.join(self.analysis_dir,self.params.unaligned_dir)
-        if os.path.isdir(unaligned_dir):
-            clone_unaligned_dir = os.path.join(clone_dir,
-                                               os.path.basename(
-                                                   self.params.unaligned_dir))
-            if not copy_fastqs:
-                # Link to unaligned dir
-                print "Symlinking %s" % clone_unaligned_dir
-                os.symlink(unaligned_dir,clone_unaligned_dir)
-            else:
-                # Copy unaligned dir
-                print "Copying %s" % clone_unaligned_dir
-                shutil.copytree(unaligned_dir,clone_unaligned_dir)
-        else:
-            print "No 'unaligned' dir found"
-        # Duplicate project directories
-        projects = self.get_analysis_projects()
-        if projects:
-            print "Duplicating project directories:"
-            for project in self.get_analysis_projects():
-                print "-- %s" % project.name
-                fastqs = project.fastqs
-                new_project = analysis.AnalysisProject(
-                    project.name,
-                    os.path.join(clone_dir,project.name),
-                    user=project.info.user,
-                    PI=project.info.PI,
-                    library_type=project.info.library_type,
-                    single_cell_platform=project.info.single_cell_platform,
-                    organism=project.info.organism,
-                    run=project.info.run,
-                    comments=project.info.comments,
-                    platform=project.info.platform)
-                new_project.create_directory(fastqs=fastqs,
-                                             link_to_fastqs=(not copy_fastqs))
-        # Copy additional files, if found
-        for f in ("SampleSheet.orig.csv",
-                  self.params.sample_sheet,
-                  self.params.stats_file,
-                  self.params.project_metadata):
-            srcpath = os.path.join(self.analysis_dir,f)
-            if os.path.exists(srcpath):
-                shutil.copy(srcpath,clone_dir)
-        # Create the basic set of subdirectories
-        d = AutoProcess(analysis_dir=clone_dir)
-        d.log_dir
-        d.script_code_dir
-        # Update the settings
-        for s in ("sample_sheet",):
-            d.params[s] = os.path.join(d.analysis_dir,
-                                       os.path.relpath(d.params[s],
-                                                       self.analysis_dir))
-        d.save_parameters()
 
     def print_values(self,data):
         """

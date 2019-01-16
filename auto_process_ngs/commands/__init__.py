@@ -17,3 +17,4 @@ from report_cmd import report
 from merge_fastq_dirs_cmd import merge_fastq_dirs
 from update_fastq_stats_cmd import update_fastq_stats
 from import_project_cmd import import_project
+from clone_cmd import clone
