@@ -27,8 +27,9 @@ def clone(ap,clone_dir,copy_fastqs=False):
     """
     Make a 'clone' (i.e. copy) of an analysis directory
 
-    Makes a copy of the analysis directory, including metadata
-    and parameters but ignoring any project subdirectories.
+    Makes a functional copy of an existing analysis directory,
+    including metadata and parameters, stats files, processing
+    reports and project subdirectories.
 
     By default the 'unaligned' directory in the new directory is
     simply a symlink from the original directory; set the
@@ -43,6 +44,7 @@ def clone(ap,clone_dir,copy_fastqs=False):
         (otherwise default behaviour is to make symlinks)
     """
     clone_dir = os.path.abspath(clone_dir)
+    print "Cloning into %s" % clone_dir
     if os.path.exists(clone_dir):
         # Directory already exists
         logger.critical("Target directory '%s' already exists" %
@@ -75,20 +77,19 @@ def clone(ap,clone_dir,copy_fastqs=False):
                                            os.path.basename(unaligned_dir))
         if not copy_fastqs:
             # Link to unaligned dir
-            print "Symlinking %s" % clone_unaligned_dir
+            print "[Unaligned] symlinking %s" % clone_unaligned_dir
             os.symlink(unaligned_dir,clone_unaligned_dir)
         else:
             # Copy unaligned dir
-            print "Copying %s" % clone_unaligned_dir
+            print "[Unaligned] copying %s" % clone_unaligned_dir
             shutil.copytree(unaligned_dir,clone_unaligned_dir)
     else:
-        print "No 'unaligned' dir found"
+        print "[Unaligned] no 'unaligned' dir found"
     # Duplicate project directories
     projects = ap.get_analysis_projects()
     if projects:
-        print "Duplicating project directories:"
         for project in ap.get_analysis_projects():
-            print "-- %s" % project.name
+            print "[Projects] duplicating project '%s'" % project.name
             fastqs = project.fastqs
             new_project = AnalysisProject(
                 project.name,
@@ -114,9 +115,11 @@ def clone(ap,clone_dir,copy_fastqs=False):
               "processing_qc.html",):
         srcpath = os.path.join(ap.analysis_dir,f)
         if os.path.exists(srcpath):
+            print "[Files] copying %s" % f
             shutil.copy(srcpath,clone_dir)
     # Create the basic set of subdirectories
     for subdir in ('logs','ScriptCode',):
+        print "[Subdirectories] making %s" % subdir
         bcf_utils.mkdir(os.path.join(clone_dir,subdir))
     # Update the settings
     parameter_file = os.path.join(clone_dir,
@@ -124,8 +127,9 @@ def clone(ap,clone_dir,copy_fastqs=False):
     params = AnalysisDirParameters(filen=os.path.join(
         clone_dir,
         os.path.basename(ap.parameter_file)))
-    for s in ("sample_sheet",):
-        params[s] = os.path.join(clone_dir,
-                                 os.path.relpath(params[s],
+    for p in ("sample_sheet","primary_data_dir"):
+        print "[Parameters] updating '%s'" % p
+        params[p] = os.path.join(clone_dir,
+                                 os.path.relpath(params[p],
                                                  ap.analysis_dir))
     params.save()
