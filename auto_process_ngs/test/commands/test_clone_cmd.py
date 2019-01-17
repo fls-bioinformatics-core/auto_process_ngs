@@ -53,6 +53,7 @@ class TestAutoProcessClone(unittest.TestCase):
         analysis_dir.create()
         ap = AutoProcess(analysis_dir.dirn)
         UpdateAnalysisDir(ap).add_processing_report()
+        ap.add_directory("primary_data/190116_M01234_0002_AXYZ123")
         # Make a copy
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         self.assertFalse(os.path.exists(clone_dir))
@@ -73,9 +74,14 @@ class TestAutoProcessClone(unittest.TestCase):
                       'processing_qc.html',):
             f = os.path.join(clone_dir,filen)
             self.assertTrue(os.path.isfile(f),"Missing '%s'" % filen)
-        # Check unassigned
-        unassigned = os.path.join(clone_dir,'bcl2fastq')
-        self.assertTrue(os.path.islink(unassigned))
+        # Check unaligned
+        unaligned = os.path.join(clone_dir,'bcl2fastq')
+        self.assertTrue(os.path.islink(unaligned))
+        # Check primary data
+        primary_data = os.path.join(clone_dir,
+                                    'primary_data',
+                                    '190116_M01234_0002_AXYZ123')
+        self.assertTrue(os.path.islink(primary_data))
         # Check projects
         for proj in ('AB','CDE','undetermined'):
             d = os.path.join(clone_dir,proj)
@@ -96,6 +102,7 @@ class TestAutoProcessClone(unittest.TestCase):
         analysis_dir.create()
         ap = AutoProcess(analysis_dir.dirn)
         UpdateAnalysisDir(ap).add_processing_report()
+        ap.add_directory("primary_data/190116_M01234_0002_AXYZ123")
         # Make a copy
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         self.assertFalse(os.path.exists(clone_dir))
@@ -116,9 +123,14 @@ class TestAutoProcessClone(unittest.TestCase):
                       'processing_qc.html',):
             f = os.path.join(clone_dir,filen)
             self.assertTrue(os.path.isfile(f),"Missing '%s'" % filen)
-        # Check unassigned
-        unassigned = os.path.join(clone_dir,'bcl2fastq')
-        self.assertTrue(os.path.isdir(unassigned))
+        # Check unaligned
+        unaligned = os.path.join(clone_dir,'bcl2fastq')
+        self.assertTrue(os.path.isdir(unaligned))
+        # Check primary data
+        primary_data = os.path.join(clone_dir,
+                                    'primary_data',
+                                    '190116_M01234_0002_AXYZ123')
+        self.assertTrue(os.path.islink(primary_data))
         # Check projects
         for proj in ('AB','CDE','undetermined'):
             d = os.path.join(clone_dir,proj)
@@ -139,6 +151,7 @@ class TestAutoProcessClone(unittest.TestCase):
         analysis_dir.create()
         ap = AutoProcess(analysis_dir.dirn)
         UpdateAnalysisDir(ap).add_processing_report()
+        ap.add_directory("primary_data/190116_M01234_0002_AXYZ123")
         # Make target dir
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         os.mkdir(clone_dir)

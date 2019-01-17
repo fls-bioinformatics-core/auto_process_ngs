@@ -54,6 +54,20 @@ def clone(ap,clone_dir,copy_fastqs=False):
     for f in (ap.metadata_file,ap.parameter_file):
         if os.path.exists(f):
             shutil.copy(f,os.path.join(clone_dir,os.path.basename(f)))
+    # Primary data directory
+    primary_data_dir = os.path.join(ap.analysis_dir,
+                                    ap.params.primary_data_dir)
+    if os.path.isdir(primary_data_dir):
+        clone_primary_data_dir = os.path.join(clone_dir,
+                                              os.path.basename(primary_data_dir))
+        print "[Primary data] making %s" % clone_primary_data_dir
+        bcf_utils.mkdir(clone_primary_data_dir)
+        data_dir = os.path.basename(ap.params.data_dir)
+        if os.path.exists(os.path.join(primary_data_dir,data_dir)):
+            clone_data_dir = os.path.join(clone_primary_data_dir,data_dir)
+            print "[Primary data] symlinking %s" % clone_data_dir
+            os.symlink(os.path.join(primary_data_dir,data_dir),
+                       clone_data_dir)
     # Link to or copy fastqs
     unaligned_dir = os.path.join(ap.analysis_dir,ap.params.unaligned_dir)
     if os.path.isdir(unaligned_dir):
