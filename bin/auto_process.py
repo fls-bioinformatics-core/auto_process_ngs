@@ -700,13 +700,11 @@ def add_clone_command(cmdparser):
     """
     p = cmdparser.add_command('clone',help="Make a copy of an analysis directory",
                               usage="%prog clone [OPTIONS] DIR CLONE_DIR",
-                              description="Make a copy of an existing auto_processed analysis "
-                              "directory DIR, in a new directory CLONE_DIR. The clone will "
-                              "not include any project directories, but will copy the "
-                              "projects.info file.")
+                              description="Make a copy of an existing "
+                              "directory DIR in a new directory CLONE_DIR.")
     p.add_option('--copy-fastqs',action='store_true',dest='copy_fastqs',default=False,
-                 help="Copy fastq.gz files from DIR into DIR2 (default is to make a "
-                 "link to the bcl-to-fastq directory)")
+                 help="Copy fastq.gz files from DIR into CLONE_DIR (default is "
+                 "to make a link to the bcl-to-fastq directory)")
     add_debug_option(p)
 
 def add_analyse_barcodes_command(cmdparser):
