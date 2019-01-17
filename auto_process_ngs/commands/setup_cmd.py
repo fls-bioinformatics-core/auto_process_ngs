@@ -66,23 +66,23 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
             ".%s.%s" % (os.path.basename(analysis_dir),
                         uuid.uuid4()))
         ap.analysis_dir = tmp_analysis_dir
-        logging.debug("Creating temp directory '%s'" %
-                      ap.analysis_dir)
+        logger.debug("Creating temp directory '%s'" %
+                     ap.analysis_dir)
         # Create directory structure
         ap.create_directory(ap.analysis_dir)
         ap.log_dir
         ap.script_code_dir
     else:
         # Directory already exists
-        logging.warning("Analysis directory '%s' already exists" %
-                        analysis_dir)
+        logger.warning("Analysis directory '%s' already exists" %
+                       analysis_dir)
         ap.analysis_dir = analysis_dir
         # check for parameter file
         if ap.has_parameter_file:
             ap.load_parameters()
         else:
-            logging.warning("No parameter file found in %s" %
-                            ap.analysis_dir)
+            logger.warning("No parameter file found in %s" %
+                           ap.analysis_dir)
     # Run datestamp, instrument name and instrument run number
     try:
         datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
@@ -90,9 +90,9 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
         run_number = run_number.lstrip('0')
         flow_cell = flow_cell_prefix + flow_cell_id
     except Exception as ex:
-        logging.warning("Unable to extract information from run name '%s'" \
-                        % run_name)
-        logging.warning("Exception: %s" % ex)
+        logger.warning("Unable to extract information from run name '%s'" \
+                       % run_name)
+        logger.warning("Exception: %s" % ex)
         datestamp = None
         instrument= None
         run_number = None
@@ -129,8 +129,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
                     with open(tmp_sample_sheet,'w') as fp:
                         fp.write(urlfp.read())
                 except urllib2.URLError as ex:
-                    logging.warning("Error fetching sample sheet data "
-                                    "from '%s': %s" % (target.url,ex))
+                    logger.warning("Error fetching sample sheet data "
+                                   "from '%s': %s" % (target.url,ex))
                     tmp_sample_sheet = None
             else:
                 # Assume target samplesheet is a file on a local
@@ -149,8 +149,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
                 print "%s" % rsync
                 status = rsync.run_subprocess(log=ap.log_path('rsync.sample_sheet.log'))
                 if status != 0:
-                    logging.warning("Failed to fetch sample sheet '%s'"
-                                    % sample_sheet)
+                    logger.warning("Failed to fetch sample sheet '%s'"
+                                   % sample_sheet)
                     tmp_sample_sheet = None
                 else:
                     break
@@ -183,8 +183,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
             assay = SampleSheet(original_sample_sheet).header[item]
             break
         except KeyError:
-            logging.warning("No element '%s' found in sample sheet"
-                            % item)
+            logger.warning("No element '%s' found in sample sheet"
+                           % item)
     # Bases mask
     print "Bases mask set to 'auto' (will be determined at run time)"
     bases_mask = "auto"
@@ -193,7 +193,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
     check_and_warn(sample_sheet=sample_sheet)
     # Move analysis dir to final location if necessary
     if ap.analysis_dir != analysis_dir:
-        logging.debug("Moving %s to final directory" % ap.analysis_dir)
+        logger.debug("Moving %s to final directory" % ap.analysis_dir)
         os.rename(ap.analysis_dir,analysis_dir)
         ap.analysis_dir = analysis_dir
         # Update the custom sample sheet path
