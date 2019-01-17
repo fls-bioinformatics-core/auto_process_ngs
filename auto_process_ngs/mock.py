@@ -241,12 +241,18 @@ class MockAnalysisDir(MockIlluminaData):
             fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
             fp.write("bases_mask\t%s\n" % self.bases_mask)
             fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
-            fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
+            if self.include_stats_files:
+                fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
+            else:
+                fp.write("per_lane_stats_file\t.\n")
             fp.write("primary_data_dir\t%s/primary_data/%s\n" % (self.dirn,
                                                                  self.run_name))
             fp.write("project_metadata\tprojects.info\n")
             fp.write("sample_sheet\t%s/custom_SampleSheet.csv\n" % self.dirn)
-            fp.write("stats_file\tstatistics.info\n")
+            if self.include_stats_files:
+                fp.write("stats_file\tstatistics.info\n")
+            else:
+                fp.write("stats_file\t.\n")
             fp.write("unaligned_dir\tbcl2fastq\n")
         # Add (empty) stats files
         if self.include_stats_files:
