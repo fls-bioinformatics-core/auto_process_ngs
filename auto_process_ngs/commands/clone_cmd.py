@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def clone(ap,clone_dir,copy_fastqs=False):
+def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
     """
     Make a 'clone' (i.e. copy) of an analysis directory
 
@@ -42,6 +42,8 @@ def clone(ap,clone_dir,copy_fastqs=False):
         clone (must not already exist).
       copy_fastqs (boolean): set to True to copy the Fastq files
         (otherwise default behaviour is to make symlinks)
+      exclude_projects (boolean): set to True to exclude any
+        projects from the parent analysis directory
     """
     clone_dir = os.path.abspath(clone_dir)
     print "Cloning into %s" % clone_dir
@@ -87,7 +89,7 @@ def clone(ap,clone_dir,copy_fastqs=False):
         print "[Unaligned] no 'unaligned' dir found"
     # Duplicate project directories
     projects = ap.get_analysis_projects()
-    if projects:
+    if projects and not exclude_projects:
         for project in ap.get_analysis_projects():
             print "[Projects] duplicating project '%s'" % project.name
             fastqs = project.fastqs

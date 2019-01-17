@@ -153,6 +153,63 @@ class TestAutoProcessClone(unittest.TestCase):
         self.assertEqual(params.primary_data_dir,
                          os.path.join(clone_dir,"primary_data"))
 
+    def test_clone_analysis_dir_no_projects(self):
+        """
+        clone: copies an analysis directory excluding projects
+        """
+        # Make a source analysis dir
+        analysis_dir = MockAnalysisDirFactory.bcl2fastq2(
+            "190116_M01234_0002_AXYZ123",
+            platform="miseq",
+            paired_end=True,
+            no_lane_splitting=False,
+            include_stats_files=True,
+            top_dir=self.dirn)
+        analysis_dir.create()
+        ap = AutoProcess(analysis_dir.dirn)
+        UpdateAnalysisDir(ap).add_processing_report()
+        ap.add_directory("primary_data/190116_M01234_0002_AXYZ123")
+        # Make a copy
+        clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
+        self.assertFalse(os.path.exists(clone_dir))
+        clone(ap,clone_dir,exclude_projects=True)
+        self.assertTrue(os.path.isdir(clone_dir))
+        # Check contents
+        for subdir in ('logs','ScriptCode'):
+            d = os.path.join(clone_dir,subdir)
+            self.assertTrue(os.path.isdir(d),"Missing '%s'" % subdir)
+        for filen in ('SampleSheet.orig.csv',
+                      'custom_SampleSheet.csv',
+                      'auto_process.info',
+                      'metadata.info',
+                      'statistics.info',
+                      'statistics_full.info',
+                      'per_lane_statistics.info',
+                      'per_lane_sample_stats.info',
+                      'processing_qc.html',):
+            f = os.path.join(clone_dir,filen)
+            self.assertTrue(os.path.isfile(f),"Missing '%s'" % filen)
+        # Check unaligned
+        unaligned = os.path.join(clone_dir,'bcl2fastq')
+        self.assertTrue(os.path.islink(unaligned))
+        # Check primary data
+        primary_data = os.path.join(clone_dir,
+                                    'primary_data',
+                                    '190116_M01234_0002_AXYZ123')
+        self.assertTrue(os.path.islink(primary_data))
+        # Check projects
+        for proj in ('AB','CDE','undetermined'):
+            d = os.path.join(clone_dir,proj)
+            self.assertFalse(os.path.exists(d),"Found '%s'" % proj)
+        # Check parameters
+        params = AnalysisDirParameters(filen=os.path.join(
+            clone_dir,
+            'auto_process.info'))
+        self.assertEqual(params.sample_sheet,
+                         os.path.join(clone_dir,"custom_SampleSheet.csv"))
+        self.assertEqual(params.primary_data_dir,
+                         os.path.join(clone_dir,"primary_data"))
+
     def test_clone_fails_if_target_dir_exists(self):
         """
         clone: raises an exception if target dir already exists 
