@@ -126,7 +126,8 @@ class MockAnalysisDir(MockIlluminaData):
                  top_dir=None,
                  metadata=None,
                  readme=None,
-                 project_metadata=None):
+                 project_metadata=None,
+                 include_stats_files=False):
         """
         Create a mock-up of an analysis directory
 
@@ -171,12 +172,16 @@ class MockAnalysisDir(MockIlluminaData):
             projects and values are dictionaries of
             metadata items, which will be written to
             the README.info file for that project
+          include_stats_files (bool): whether to
+            include (empty) stats files (default:
+            False, don't include stats files)
         """
         # Make a mock-up of an analysis dir
         self.run_name = os.path.basename(str(run_name))
         self.platform = str(platform).lower()
         self.bases_mask = bases_mask
         self.readme = readme
+        self.include_stats_files = include_stats_files
         # Store metadata
         self.metadata = { 'run_name': self.run_name,
                           'platform': self.platform, }
@@ -236,13 +241,26 @@ class MockAnalysisDir(MockIlluminaData):
             fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
             fp.write("bases_mask\t%s\n" % self.bases_mask)
             fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
-            fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
-            fp.write("primary_data_dir\t%s/primary_data/%s\n" % (self.dirn,
-                                                                 self.run_name))
+            if self.include_stats_files:
+                fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
+            else:
+                fp.write("per_lane_stats_file\t.\n")
+            fp.write("primary_data_dir\t%s/primary_data\n" % self.dirn)
             fp.write("project_metadata\tprojects.info\n")
             fp.write("sample_sheet\t%s/custom_SampleSheet.csv\n" % self.dirn)
-            fp.write("stats_file\tstatistics.info\n")
+            if self.include_stats_files:
+                fp.write("stats_file\tstatistics.info\n")
+            else:
+                fp.write("stats_file\t.\n")
             fp.write("unaligned_dir\tbcl2fastq\n")
+        # Add (empty) stats files
+        if self.include_stats_files:
+            for stats_file in ('statistics.info',
+                               'statistics_full.info',
+                               'per_lane_statistics.info',
+                               'per_lane_sample_stats.info',):
+                with open(os.path.join(self.dirn,stats_file),'w') as fp:
+                    fp.write('')
         # Add top-level README file
         if self.readme is not None:
             open(os.path.join(self.dirn,'README'),'w').write(self.readme)
@@ -710,7 +728,8 @@ class MockAnalysisDirFactory(object):
                    top_dir=None,
                    metadata=None,
                    project_metadata=None,
-                   bases_mask='auto'):
+                   bases_mask='auto',
+                   include_stats_files=False):
         """
         Basic analysis dir from bcl2fastq v2
         """
@@ -727,6 +746,7 @@ class MockAnalysisDirFactory(object):
                               lanes=lanes,
                               metadata=metadata,
                               project_metadata=project_metadata,
+                              include_stats_files=include_stats_files,
                               top_dir=top_dir)
         mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
         mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
