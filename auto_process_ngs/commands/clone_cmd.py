@@ -92,8 +92,12 @@ def clone(ap,clone_dir,copy_fastqs=False):
     # Copy additional files, if found
     for f in ("SampleSheet.orig.csv",
               ap.params.sample_sheet,
+              ap.params.project_metadata,
               ap.params.stats_file,
-              ap.params.project_metadata,):
+              ap.params.per_lane_stats_file,
+              "statistics_full.info",
+              "per_lane_sample_stats.info",
+              "processing_qc.html",):
         srcpath = os.path.join(ap.analysis_dir,f)
         if os.path.exists(srcpath):
             shutil.copy(srcpath,clone_dir)

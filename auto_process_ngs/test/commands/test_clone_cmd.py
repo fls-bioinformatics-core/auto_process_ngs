@@ -8,6 +8,7 @@ import shutil
 import os
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.mock import UpdateAnalysisDir
 from auto_process_ngs.commands.clone_cmd import clone
 
 # Set to False to keep test output dirs
@@ -50,10 +51,11 @@ class TestAutoProcessClone(unittest.TestCase):
             include_stats_files=True,
             top_dir=self.dirn)
         analysis_dir.create()
+        ap = AutoProcess(analysis_dir.dirn)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Make a copy
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         self.assertFalse(os.path.exists(clone_dir))
-        ap = AutoProcess(analysis_dir.dirn)
         clone(ap,clone_dir)
         self.assertTrue(os.path.isdir(clone_dir))
         # Check contents
@@ -64,7 +66,11 @@ class TestAutoProcessClone(unittest.TestCase):
                       'custom_SampleSheet.csv',
                       'auto_process.info',
                       'metadata.info',
-                      'statistics.info',):
+                      'statistics.info',
+                      'statistics_full.info',
+                      'per_lane_statistics.info',
+                      'per_lane_sample_stats.info',
+                      'processing_qc.html',):
             f = os.path.join(clone_dir,filen)
             self.assertTrue(os.path.isfile(f),"Missing '%s'" % filen)
         # Check unassigned
@@ -88,10 +94,11 @@ class TestAutoProcessClone(unittest.TestCase):
             include_stats_files=True,
             top_dir=self.dirn)
         analysis_dir.create()
+        ap = AutoProcess(analysis_dir.dirn)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Make a copy
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         self.assertFalse(os.path.exists(clone_dir))
-        ap = AutoProcess(analysis_dir.dirn)
         clone(ap,clone_dir,copy_fastqs=True)
         self.assertTrue(os.path.isdir(clone_dir))
         # Check contents
@@ -102,7 +109,11 @@ class TestAutoProcessClone(unittest.TestCase):
                       'custom_SampleSheet.csv',
                       'auto_process.info',
                       'metadata.info',
-                      'statistics.info',):
+                      'statistics.info',
+                      'statistics_full.info',
+                      'per_lane_statistics.info',
+                      'per_lane_sample_stats.info',
+                      'processing_qc.html',):
             f = os.path.join(clone_dir,filen)
             self.assertTrue(os.path.isfile(f),"Missing '%s'" % filen)
         # Check unassigned
@@ -126,11 +137,12 @@ class TestAutoProcessClone(unittest.TestCase):
             include_stats_files=True,
             top_dir=self.dirn)
         analysis_dir.create()
+        ap = AutoProcess(analysis_dir.dirn)
+        UpdateAnalysisDir(ap).add_processing_report()
         # Make target dir
         clone_dir = os.path.join(self.dirn,"190116_M01234_0002_AXYZ123_copy")
         os.mkdir(clone_dir)
         # Try to copy source dir
-        ap = AutoProcess(analysis_dir.dirn)
         self.assertRaises(Exception,
                           clone,
                           ap,clone_dir)
