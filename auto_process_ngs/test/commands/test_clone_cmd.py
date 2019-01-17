@@ -9,6 +9,7 @@ import os
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisDir
+from auto_process_ngs.metadata import AnalysisDirParameters
 from auto_process_ngs.commands.clone_cmd import clone
 
 # Set to False to keep test output dirs
@@ -86,6 +87,14 @@ class TestAutoProcessClone(unittest.TestCase):
         for proj in ('AB','CDE','undetermined'):
             d = os.path.join(clone_dir,proj)
             self.assertTrue(os.path.isdir(d),"Missing '%s'" % proj)
+        # Check parameters
+        params = AnalysisDirParameters(filen=os.path.join(
+            clone_dir,
+            'auto_process.info'))
+        self.assertEqual(params.sample_sheet,
+                         os.path.join(clone_dir,"custom_SampleSheet.csv"))
+        self.assertEqual(params.primary_data_dir,
+                         os.path.join(clone_dir,"primary_data"))
 
     def test_clone_analysis_dir_copy_fastqs(self):
         """
@@ -135,6 +144,14 @@ class TestAutoProcessClone(unittest.TestCase):
         for proj in ('AB','CDE','undetermined'):
             d = os.path.join(clone_dir,proj)
             self.assertTrue(os.path.isdir(d),"Missing '%s'" % proj)
+        # Check parameters
+        params = AnalysisDirParameters(filen=os.path.join(
+            clone_dir,
+            'auto_process.info'))
+        self.assertEqual(params.sample_sheet,
+                         os.path.join(clone_dir,"custom_SampleSheet.csv"))
+        self.assertEqual(params.primary_data_dir,
+                         os.path.join(clone_dir,"primary_data"))
 
     def test_clone_fails_if_target_dir_exists(self):
         """
