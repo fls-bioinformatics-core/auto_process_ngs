@@ -31,6 +31,7 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.FASTQFile import FastqIterator
 import config
 import commands
+import commands.make_fastqs_cmd
 import applications
 import analysis
 import metadata
@@ -795,8 +796,19 @@ class AutoProcess(object):
         # that within that they are arranged in the structure
         # 'Project_<name>/Sample_<name>/<fastq>'
         self.analysis_dir = os.path.abspath(analysis_dir)
+        fastq_dir = os.path.abspath(fastq_dir)
+        # Check that Fastq dir exists and has the correct structure
+        try:
+            illumina_data = IlluminaData.IlluminaData(
+                os.path.dirname(fastq_dir),
+                unaligned_dir=os.path.basename(fastq_dir))
+        except IlluminaData.IlluminaDataError:
+            raise Exception("Can't get data from Fastq dir '%s'" %
+                            fastq_dir)
         # Create directory structure
         self.create_directory(self.analysis_dir)
+        self.log_dir
+        self.script_code_dir
         # Get information
         print "Identifying platform from data directory name"
         platform = bcl2fastq_utils.get_sequencer_platform(analysis_dir)
@@ -805,11 +817,11 @@ class AutoProcess(object):
         self.params['unaligned_dir'] = fastq_dir
         # Store the metadata
         self.metadata['platform'] = platform
+        # Generate statistics
+        commands.make_fastqs_cmd.fastq_statistics(self)
         # Set flag to allow parameters etc to be saved back
         self._save_params = True
         self._save_metadata = True
-        # Generate statistics
-        self.generate_stats()
         # Make a 'projects.info' metadata file
         self.make_project_metadata_file()
 
