@@ -223,13 +223,20 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
     ap._save_metadata = True
 
 def setup_from_fastq_dir(ap,analysis_dir,fastq_dir):
-    # Do setup for an existing directory containing fastq files
-    # with the same structure as that produced by CASAVA and bcl2fastq
-    #
-    # Assumes that the files are in a subdirectory of the analysis
-    # directory specified by the 'fastq_dir' argument, and
-    # that within that they are arranged in the structure
-    # 'Project_<name>/Sample_<name>/<fastq>'
+    """
+    Set up analysis directory from existing bcl-to-fastq outputs
+
+    Initialises an analysis directory and processing parameters
+    from an existing bcl-to-fastq output directory (which can
+    be either CASAVA or bcl2fastq2 style).
+
+    Arguments:
+      ap (AutoProcess): autoprocessor pointing to the analysis
+        directory to create Fastqs for
+      analysis_dir (str): analysis directory to create
+      fastq_dir (str): path to the top-level directory
+        with the output from bcl2fastq2 or CASAVA
+    """
     ap.analysis_dir = os.path.abspath(analysis_dir)
     fastq_dir = os.path.abspath(fastq_dir)
     # Check that Fastq dir exists and has the correct structure
