@@ -251,7 +251,22 @@ def setup_from_fastq_dir(ap,analysis_dir,fastq_dir):
     ap.create_directory(ap.analysis_dir)
     ap.log_dir
     ap.script_code_dir
-    # Get information
+    # Run datestamp, instrument name and instrument run number
+    try:
+        dirn = os.path.basename(analysis_dir)
+        datestamp,instrument,run_number,flow_cell_prefix,flow_cell_id = \
+                                    split_run_name_full(dirn)
+        run_number = run_number.lstrip('0')
+        flow_cell = flow_cell_prefix + flow_cell_id
+    except Exception as ex:
+        logger.warning("Unable to extract information from directory name '%s'" \
+                       % os.path.basename(analysis_dir))
+        logger.warning("Exception: %s" % ex)
+        datestamp = None
+        instrument= None
+        run_number = None
+        flow_cell = None
+    # Get platform
     print "Identifying platform from data directory name"
     platform = get_sequencer_platform(analysis_dir)
     # Store the parameters
@@ -259,6 +274,10 @@ def setup_from_fastq_dir(ap,analysis_dir,fastq_dir):
     ap.params['unaligned_dir'] = fastq_dir
     # Store the metadata
     ap.metadata['platform'] = platform
+    ap.metadata['instrument_name'] = instrument
+    ap.metadata['instrument_datestamp'] = datestamp
+    ap.metadata['instrument_run_number'] = run_number
+    ap.metadata['instrument_flow_cell_id'] = flow_cell
     # Generate statistics
     fastq_statistics(ap)
     # Set flag to allow parameters etc to be saved back

@@ -387,10 +387,11 @@ class TestAutoProcessSetupFromFastqDir(unittest.TestCase):
         self.assertEqual(ap.metadata.platform,"miseq")
         self.assertEqual(ap.metadata.assay,None)
         self.assertEqual(ap.metadata.bcl2fastq_software,None)
-        self.assertEqual(ap.metadata.instrument_name,None)
-        self.assertEqual(ap.metadata.instrument_datestamp,None)
-        self.assertEqual(ap.metadata.instrument_run_number,None)
-        self.assertEqual(ap.metadata.instrument_flow_cell_id,None)
+        self.assertEqual(ap.metadata.instrument_name,"M00879")
+        self.assertEqual(ap.metadata.instrument_datestamp,"151125")
+        self.assertEqual(ap.metadata.instrument_run_number,"1")
+        self.assertEqual(ap.metadata.instrument_flow_cell_id,
+                         "000000000-ABCDE1")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
@@ -462,10 +463,11 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         self.assertEqual(ap.metadata.platform,"miseq")
         self.assertEqual(ap.metadata.assay,None)
         self.assertEqual(ap.metadata.bcl2fastq_software,None)
-        self.assertEqual(ap.metadata.instrument_name,None)
-        self.assertEqual(ap.metadata.instrument_datestamp,None)
-        self.assertEqual(ap.metadata.instrument_run_number,None)
-        self.assertEqual(ap.metadata.instrument_flow_cell_id,None)
+        self.assertEqual(ap.metadata.instrument_name,"M00879")
+        self.assertEqual(ap.metadata.instrument_datestamp,"151125")
+        self.assertEqual(ap.metadata.instrument_run_number,"1")
+        self.assertEqual(ap.metadata.instrument_flow_cell_id,
+                         "000000000-ABCDE1")
         # Delete to force write of data to disk
         del(ap)
         # Check directory exists
