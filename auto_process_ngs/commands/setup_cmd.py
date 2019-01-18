@@ -13,10 +13,13 @@ import logging
 from ..bcl2fastq_utils import get_sequencer_platform
 from ..bcl2fastq_utils import make_custom_sample_sheet
 from ..applications import general as general_applications
+from ..commands.make_fastqs_cmd import fastq_statistics
 from ..fileops import exists
 from ..fileops import Location
 from ..samplesheet_utils import predict_outputs
 from ..samplesheet_utils import check_and_warn
+from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import split_run_name_full
 
@@ -218,3 +221,41 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None):
     # Set flags to allow parameters etc to be saved back
     ap._save_params = True
     ap._save_metadata = True
+
+def setup_from_fastq_dir(ap,analysis_dir,fastq_dir):
+    # Do setup for an existing directory containing fastq files
+    # with the same structure as that produced by CASAVA and bcl2fastq
+    #
+    # Assumes that the files are in a subdirectory of the analysis
+    # directory specified by the 'fastq_dir' argument, and
+    # that within that they are arranged in the structure
+    # 'Project_<name>/Sample_<name>/<fastq>'
+    ap.analysis_dir = os.path.abspath(analysis_dir)
+    fastq_dir = os.path.abspath(fastq_dir)
+    # Check that Fastq dir exists and has the correct structure
+    try:
+        illumina_data = IlluminaData(
+            os.path.dirname(fastq_dir),
+            unaligned_dir=os.path.basename(fastq_dir))
+    except IlluminaDataError:
+        raise Exception("Can't get data from Fastq dir '%s'" %
+                        fastq_dir)
+    # Create directory structure
+    ap.create_directory(ap.analysis_dir)
+    ap.log_dir
+    ap.script_code_dir
+    # Get information
+    print "Identifying platform from data directory name"
+    platform = get_sequencer_platform(analysis_dir)
+    # Store the parameters
+    ap.params['analysis_dir'] = ap.analysis_dir
+    ap.params['unaligned_dir'] = fastq_dir
+    # Store the metadata
+    ap.metadata['platform'] = platform
+    # Generate statistics
+    fastq_statistics(ap)
+    # Set flag to allow parameters etc to be saved back
+    ap._save_params = True
+    ap._save_metadata = True
+    # Make a 'projects.info' metadata file
+    ap.make_project_metadata_file()

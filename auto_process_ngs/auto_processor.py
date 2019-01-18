@@ -31,7 +31,6 @@ from bcftbx.JobRunner import fetch_runner
 from bcftbx.FASTQFile import FastqIterator
 import config
 import commands
-import commands.make_fastqs_cmd
 import applications
 import analysis
 import metadata
@@ -102,6 +101,7 @@ def add_command(name,f):
 #######################################################################
 
 @add_command("setup",commands.setup)
+@add_command("setup_from_fastq_dir",commands.setup_from_fastq_dir)
 @add_command("make_fastqs",commands.make_fastqs)
 @add_command("analyse_barcodes",commands.analyse_barcodes)
 @add_command("merge_fastq_dirs",commands.merge_fastq_dirs)
@@ -786,44 +786,6 @@ class AutoProcess(object):
                 return self.load_illumina_data().paired_end
             except IlluminaData.IlluminaDataError:
                 return None
-
-    def setup_from_fastq_dir(self,analysis_dir,fastq_dir):
-        # Do setup for an existing directory containing fastq files
-        # with the same structure as that produced by CASAVA and bcl2fastq
-        #
-        # Assumes that the files are in a subdirectory of the analysis
-        # directory specified by the 'fastq_dir' argument, and
-        # that within that they are arranged in the structure
-        # 'Project_<name>/Sample_<name>/<fastq>'
-        self.analysis_dir = os.path.abspath(analysis_dir)
-        fastq_dir = os.path.abspath(fastq_dir)
-        # Check that Fastq dir exists and has the correct structure
-        try:
-            illumina_data = IlluminaData.IlluminaData(
-                os.path.dirname(fastq_dir),
-                unaligned_dir=os.path.basename(fastq_dir))
-        except IlluminaData.IlluminaDataError:
-            raise Exception("Can't get data from Fastq dir '%s'" %
-                            fastq_dir)
-        # Create directory structure
-        self.create_directory(self.analysis_dir)
-        self.log_dir
-        self.script_code_dir
-        # Get information
-        print "Identifying platform from data directory name"
-        platform = bcl2fastq_utils.get_sequencer_platform(analysis_dir)
-        # Store the parameters
-        self.params['analysis_dir'] = self.analysis_dir
-        self.params['unaligned_dir'] = fastq_dir
-        # Store the metadata
-        self.metadata['platform'] = platform
-        # Generate statistics
-        commands.make_fastqs_cmd.fastq_statistics(self)
-        # Set flag to allow parameters etc to be saved back
-        self._save_params = True
-        self._save_metadata = True
-        # Make a 'projects.info' metadata file
-        self.make_project_metadata_file()
 
     def print_values(self,data):
         """

@@ -8,6 +8,7 @@
 #######################################################################
 
 from setup_cmd import setup
+from setup_cmd import setup_from_fastq_dir
 from setup_analysis_dirs_cmd import setup_analysis_dirs
 from make_fastqs_cmd import make_fastqs
 from analyse_barcodes_cmd import analyse_barcodes

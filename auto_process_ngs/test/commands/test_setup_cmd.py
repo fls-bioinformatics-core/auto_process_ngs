@@ -12,6 +12,7 @@ from auto_process_ngs.mock import MockAnalysisDirFactory
 from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import MockIlluminaData
 from auto_process_ngs.commands.setup_cmd import setup as setup_
+from auto_process_ngs.commands.setup_cmd import setup_from_fastq_dir
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -374,7 +375,7 @@ class TestAutoProcessSetupFromFastqDir(unittest.TestCase):
         # Set up autoprocessor
         analysis_dirn = "151125_M00879_0001_000000000-ABCDE1_analysis"
         ap = AutoProcess()
-        ap.setup_from_fastq_dir(analysis_dirn,casava_outputs.unaligned_dir)
+        setup_from_fastq_dir(ap,analysis_dirn,casava_outputs.unaligned_dir)
         # Check parameters
         self.assertEqual(ap.analysis_dir,
                          os.path.join(self.dirn,analysis_dirn))
@@ -450,7 +451,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         # Set up autoprocessor
         analysis_dirn = "151125_M00879_0001_000000000-ABCDE1_analysis"
         ap = AutoProcess()
-        ap.setup_from_fastq_dir(analysis_dirn,bcl2fastq2_outputs.unaligned_dir)
+        setup_from_fastq_dir(ap,analysis_dirn,bcl2fastq2_outputs.unaligned_dir)
         # Check parameters
         self.assertEqual(ap.analysis_dir,
                          os.path.join(self.dirn,analysis_dirn))
@@ -505,7 +506,8 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         analysis_dirn = os.path.join(self.dirn,"empty_analysis")
         ap = AutoProcess()
         self.assertRaises(Exception,
-                          ap.setup_from_fastq_dir,
+                          setup_from_fastq_dir,
+                          ap,
                           analysis_dirn,
                           empty_dir)
         self.assertFalse(os.path.exists(analysis_dirn))
@@ -531,7 +533,8 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         analysis_dirn = os.path.join(self.dirn,"invalid_analysis")
         ap = AutoProcess()
         self.assertRaises(Exception,
-                          ap.setup_from_fastq_dir,
+                          setup_from_fastq_dir,
+                          ap,
                           analysis_dirn,
                           invalid_dir)
         self.assertFalse(os.path.exists(analysis_dirn))
