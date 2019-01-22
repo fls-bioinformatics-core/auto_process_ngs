@@ -256,6 +256,85 @@ class TestAutoProcessSetup(unittest.TestCase):
                 self.dirn,
                 '160621_NB00879_0087_000000000-AGEW9_analysis')))
 
+    def test_autoprocess_setup_external_samplesheet(self):
+        """setup: specify an external samplesheet file
+        """
+        # Create mock Illumina run directory with no samplesheet
+        mock_illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Make a samplesheet file
+        sample_sheet = os.path.join(self.dirn,"external_SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write("""[Header]
+IEMFileVersion,4
+Date,01/22/2019
+Workflow,GenerateFASTQ
+Application,FASTQ Only
+Assay,TruSeq HT
+Description,
+Chemistry,Amplicon
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTA,,
+Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
+""")
+        # Set up autoprocessor
+        ap = AutoProcess()
+        setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
+        analysis_dirn = "%s_analysis" % mock_illumina_run.name
+        # Check parameters
+        self.assertEqual(ap.analysis_dir,
+                         os.path.join(self.dirn,analysis_dirn))
+        self.assertEqual(ap.params.data_dir,mock_illumina_run.dirn)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(self.dirn,analysis_dirn,
+                                      'custom_SampleSheet.csv'))
+        self.assertEqual(ap.params.bases_mask,'auto')
+        # Check metadata
+        self.assertEqual(ap.metadata.run_name,
+                         "171020_NB500968_00002_AHGXXXX")
+        self.assertEqual(ap.metadata.run_number,None)
+        self.assertEqual(ap.metadata.source,None)
+        self.assertEqual(ap.metadata.platform,"nextseq")
+        self.assertEqual(ap.metadata.assay,"TruSeq HT")
+        self.assertEqual(ap.metadata.bcl2fastq_software,None)
+        self.assertEqual(ap.metadata.instrument_name,"NB500968")
+        self.assertEqual(ap.metadata.instrument_datestamp,"171020")
+        self.assertEqual(ap.metadata.instrument_run_number,"2")
+        self.assertEqual(ap.metadata.instrument_flow_cell_id,
+                         "AHGXXXX")
+        # Delete to force write of data to disk
+        del(ap)
+        # Check directory exists
+        self.assertTrue(os.path.isdir(analysis_dirn))
+        # Check files exist
+        for filen in ('SampleSheet.orig.csv',
+                      'custom_SampleSheet.csv',
+                      'auto_process.info',
+                      'metadata.info',):
+            self.assertTrue(os.path.exists(os.path.join(analysis_dirn,
+                                                        filen)),
+                            "Missing file: %s" % filen)
+        # Check subdirs have been created
+        for subdirn in ('ScriptCode',
+                        'logs',):
+            self.assertTrue(os.path.isdir(os.path.join(analysis_dirn,
+                                                       subdirn)),
+                            "Missing subdir: %s" % subdirn)
+
     def test_autoprocess_setup_samplesheet_from_url(self):
         """setup: works when samplesheet is a URL
         """
