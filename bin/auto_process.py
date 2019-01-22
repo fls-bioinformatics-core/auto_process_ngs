@@ -919,7 +919,7 @@ if __name__ == "__main__":
         if options.fastq_dir is None:
             d.setup(args[0],
                     analysis_dir=options.analysis_dir,
-                    sample_sheet_file=options.sample_sheet,
+                    sample_sheet=options.sample_sheet,
                     unaligned_dir=options.fastq_dir)
     elif cmd == 'clone':
         if len(args) != 2:

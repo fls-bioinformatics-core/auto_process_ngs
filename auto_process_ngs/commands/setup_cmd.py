@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Command functions
 #######################################################################
 
-def setup(ap,data_dir,analysis_dir=None,sample_sheet_file=None,
+def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
           unaligned_dir=None):
     """
     Set up the initial analysis directory
@@ -47,7 +47,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet_file=None,
         directory to create Fastqs for
       data_dir (str): source data directory
       analysis_dir (str): corresponding analysis directory
-      sample_sheet_file (str): name and location of non-default
+      sample_sheet (str): name and location of non-default
         sample sheet file; can be a local or remote file, or
         a URL (optional, will use sample sheet from the
         source data directory if present)
@@ -122,18 +122,17 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet_file=None,
         custom_sample_sheet = ap.params.sample_sheet
         if custom_sample_sheet is not None:
             # Sample sheet already stored
-            sample_sheet = SampleSheet(custom_sample_sheet)
             original_sample_sheet = os.path.join(ap.analysis_dir,
                                                  'SampleSheet.orig.csv')
             print "Sample sheet '%s'" % custom_sample_sheet
         else:
             # Look for sample sheet
             print "Acquiring sample sheet..."
-            if sample_sheet_file is None:
+            if sample_sheet is None:
                 targets = ('Data/Intensities/BaseCalls/SampleSheet.csv',
                            'SampleSheet.csv',)
             else:
-                targets = (sample_sheet_file,)
+                targets = (sample_sheet,)
             # Try each possibility until one sticks
             for target in targets:
                 target = Location(target)
@@ -154,21 +153,21 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet_file=None,
                     # Assume target samplesheet is a file on a local
                     # or remote server
                     if target.is_remote:
-                        sample_sheet = str(target)
+                        target_sample_sheet = str(target)
                     else:
                         if os.path.isabs(target.path):
-                            sample_sheet = target.path
+                            target_sample_sheet = target.path
                         else:
-                            sample_sheet = os.path.join(data_dir,
-                                                        target.path)
-                    print "Trying '%s'" % sample_sheet
-                    rsync = general_applications.rsync(sample_sheet,
+                            target_sample_sheet = os.path.join(data_dir,
+                                                               target.path)
+                    print "Trying '%s'" % target_sample_sheet
+                    rsync = general_applications.rsync(target_sample_sheet,
                                                        ap.tmp_dir)
                     print "%s" % rsync
                     status = rsync.run_subprocess(log=ap.log_path('rsync.sample_sheet.log'))
                     if status != 0:
                         logger.warning("Failed to fetch sample sheet '%s'"
-                                       % sample_sheet)
+                                       % target_sample_sheet)
                         tmp_sample_sheet = None
                     else:
                         break
@@ -216,9 +215,9 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet_file=None,
     bases_mask = "auto"
     # Generate and print predicted outputs and warnings
     if custom_sample_sheet is not None:
-        sample_sheet = SampleSheet(custom_sample_sheet)
-        print predict_outputs(sample_sheet=sample_sheet)
-        check_and_warn(sample_sheet=sample_sheet)
+        sample_sheet_data = SampleSheet(custom_sample_sheet)
+        print predict_outputs(sample_sheet=sample_sheet_data)
+        check_and_warn(sample_sheet=sample_sheet_data)
     # Check supplied unaligned Fastq dir
     if unaligned_dir is not None:
         try:

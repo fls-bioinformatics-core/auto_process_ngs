@@ -276,7 +276,7 @@ class TestAutoProcessSetup(unittest.TestCase):
         print sample_sheet
         # Set up autoprocessor
         ap = AutoProcess()
-        setup_(ap,mock_illumina_run.dirn,sample_sheet_file=sample_sheet)
+        setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
         # Check parameters
         self.assertEqual(ap.analysis_dir,
