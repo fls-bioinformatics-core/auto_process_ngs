@@ -117,10 +117,11 @@ def add_setup_command(cmdparser):
     p.add_option('--sample-sheet',action='store',dest='sample_sheet',default=None,
                  help="Copy sample sheet file from name and location SAMPLE_SHEET "
                  "(default is to look for SampleSheet.csv inside DIR)")
-    p.add_option('--fastq-dir',action='store',dest='fastq_dir',default=None,
+    p.add_option('--fastq-dir',action='store',dest='unaligned_dir',default=None,
                  help="Import fastq.gz files from FASTQ_DIR (which should be a "
-                 "subdirectory of DIR with the same structure as that produced "
-                 "by CASAVA/bcl2fastq i.e. 'Project_<name>/Sample_<name>/<fastq>')")
+                 "subdirectory of DIR with the same structure as that the "
+                 "'Unaligned' or 'bcl2fastq2' output directory produced "
+                 "by CASAVA/bcl2fastq)")
     p.add_option('--analysis-dir',action='store',dest='analysis_dir',default=None,
                  help="Make new directory called ANALYSIS_DIR (otherwise default is "
                  "'DIR_analysis')")
@@ -918,9 +919,8 @@ if __name__ == "__main__":
         if options.fastq_dir is None:
             d.setup(args[0],
                     analysis_dir=options.analysis_dir,
-                    sample_sheet=options.sample_sheet)
-        else:
-            d.setup_from_fastq_dir(args[0],options.fastq_dir)
+                    sample_sheet=options.sample_sheet,
+                    unaligned_dir=options.fastq_dir)
     elif cmd == 'clone':
         if len(args) != 2:
             sys.stderr.write("Need to supply an existing analysis dir and "

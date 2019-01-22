@@ -150,9 +150,17 @@ Setup from existing bcl2fastq output
 
 A new analysis directory can be created from an existing
 ``bcl2fastq`` output directory using the ``--fastq-dir``
-option.
+option, which should be used to specify the subdirectory
+of the ``DATA_DIR`` which contains the output Fastq files.
 
-.. warning::
+For example:
 
-   This functionality has not been recently tested and
-   cannot be guaranteed to work correctly.
+::
+
+   auto_process.py setup \
+      --fastq-dir bcl2fastq2 \
+      /mnt/data/seqruns/180817_M00123_0001_000000000-BV1X2
+
+where ``bcl2fastq2`` is the output directory from the
+BCL-to-Fastq conversion software, within the run data
+directory ``180817_M00123_0001_000000000-BV1X2``.
