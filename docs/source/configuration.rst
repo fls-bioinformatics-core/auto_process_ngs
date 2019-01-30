@@ -13,9 +13,11 @@ The autoprocessor reads its global settings for the local system from a
 ``settings.ini`` file, which it looks for in order in the following
 locations:
 
-1. The current directory
-2. The ``config`` subdirectory of the installation directory
-3. The installation directory (for legacy installations only)
+1. The file specified by the ``AUTO_PROCESS_CONF`` environment
+   variable (if set)
+2. The current directory
+3. The ``config`` subdirectory of the installation directory
+4. The installation directory (for legacy installations only)
 
 To create a ``settings.ini`` file for a new installation, use the command
 

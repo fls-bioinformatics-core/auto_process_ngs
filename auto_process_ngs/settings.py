@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2019 Peter Briggs
 #
 #########################################################################
 #
@@ -429,9 +429,11 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     Look for a configuration settings file (default name
     'settings.ini'). The search path is:
 
-    1. current directory
-    2. 'config' subdir of installation location
-    3. top-level installation location
+    1. file specified by the AUTO_PROCESS_CONF environment
+       variable (if it exists)
+    2. current directory
+    3. 'config' subdir of installation location
+    4. top-level installation location
 
     The first file with a matching name is returned.
 
@@ -445,6 +447,14 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
     found.
 
     """
+    # Check for environment variable
+    try:
+        settings_file = os.environ['AUTO_PROCESS_CONF']
+        if os.path.exists(settings_file):
+            return settings_file
+    except KeyError:
+        pass
+    # Check locations
     install_dir = get_install_dir()
     config_dir = get_config_dir()
     config_file_dirs = (os.getcwd(),
