@@ -1095,29 +1095,3 @@ def split_sample_name(s):
         if part.isdigit():
             parts[i] = int(part)
     return parts
-
-def cmp_sample_names(a,b):
-    """Compare two sample names for sorting
-
-    Compares two sample names and returns an integer according
-    to the outcome.
-
-    Arguments:
-      a (str): first sample name
-      b (str): second sample name for comparison
-
-    Returns:
-      Integer: the return value is negative if a < b, zero if
-        a == b, and strictly positive if a > b.
-    """
-    for a,b in izip_longest(split_sample_name(a),
-                            split_sample_name(b),
-                            fillvalue=None):
-        if a is None:
-            return -1
-        elif b is None:
-            return 1
-        cmp_ = cmp(a,b)
-        if cmp_ != 0:
-            return cmp_
-    return 0

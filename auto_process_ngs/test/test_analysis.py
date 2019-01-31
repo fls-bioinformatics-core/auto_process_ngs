@@ -905,18 +905,3 @@ class TestSplitSampleNameFunction(unittest.TestCase):
         self.assertEqual(split_sample_name("PJB1"),["PJB",1])
         self.assertEqual(split_sample_name("PJB0001"),["PJB",1])
         self.assertEqual(split_sample_name("PJB_1-10"),["PJB_",1,"-",10])
-
-class TestCmpSampleNameFunction(unittest.TestCase):
-    """
-    Tests for the 'cmp_sample_names' function
-    """
-    def test_cmp_sample_name(self):
-        """cmp_sample_names: check names are compared correctly
-        """
-        self.assertEqual(cmp_sample_names("AB","CDE"),-1)
-        self.assertEqual(cmp_sample_names("CDE","AB"),1)
-        self.assertEqual(cmp_sample_names("CDE","CDE"),0)
-        self.assertEqual(cmp_sample_names("CDE01","CDE02"),-1)
-        self.assertEqual(cmp_sample_names("CDE02","CDE10"),-1)
-        self.assertEqual(cmp_sample_names("CDE_1_02","CDE_2_10"),-1)
-        self.assertEqual(cmp_sample_names("CDE_1","CDE_1_longer"),-1)
