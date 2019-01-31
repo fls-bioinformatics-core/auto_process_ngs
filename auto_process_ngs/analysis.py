@@ -43,6 +43,7 @@ from .fastq_utils import IlluminaFastqAttrs
 from qc.reporting import QCReporter
 from qc.reporting import QCSample
 from qc.illumina_qc import IlluminaQC
+from itertools import izip_longest
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -1052,3 +1053,68 @@ class AnalysisSample:
 
         """
         return str(self.name)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def split_sample_name(s):
+    """Split sample name into numerical and non-numerical parts
+
+    Utility function which splits the supplied sample name
+    into numerical (i.e. integer) and non-numerical (i.e. all
+    other types of character) parts, and returns the parts as
+    a list.
+
+    For example:
+
+    >>> split_sample_name("PJB_01-123_T004")
+    ['PJB_',1,'-',123,'_T',4]
+
+    Arguments:
+      s (str): the sample name to be split
+
+    Returns:
+      List: list with the numerical and non-numerical parts
+        of the name.
+    """
+    parts = []
+    current = ''
+    for c in str(s):
+        if (current.isdigit() and not c.isdigit()) or \
+           (not current.isdigit() and c.isdigit()):
+            parts.append(current)
+            current = ''
+        current += c
+    if current:
+        parts.append(current)
+    for i,part in enumerate(parts):
+        if part.isdigit():
+            parts[i] = int(part)
+    return parts
+
+def cmp_sample_names(a,b):
+    """Compare two sample names for sorting
+
+    Compares two sample names and returns an integer according
+    to the outcome.
+
+    Arguments:
+      a (str): first sample name
+      b (str): second sample name for comparison
+
+    Returns:
+      Integer: the return value is negative if a < b, zero if
+        a == b, and strictly positive if a > b.
+    """
+    for a,b in izip_longest(split_sample_name(a),
+                            split_sample_name(b),
+                            fillvalue=None):
+        if a is None:
+            return -1
+        elif b is None:
+            return 1
+        cmp_ = cmp(a,b)
+        if cmp_ != 0:
+            return cmp_
+    return 0
