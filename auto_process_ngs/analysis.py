@@ -391,6 +391,8 @@ class AnalysisProject:
                 self.samples.append(sample)
             sample.add_fastq(os.path.normpath(
                 os.path.join(self.fastq_dir,fq)))
+        # Sort samples by name
+        self.samples.sort(cmp_sample_names)
         logger.debug("Listing samples and files:")
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
