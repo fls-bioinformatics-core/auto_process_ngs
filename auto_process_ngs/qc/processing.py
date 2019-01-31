@@ -4,6 +4,7 @@
 
 import os
 from bcftbx.TabFile import TabFile
+from ..analysis import split_sample_name
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import List
@@ -144,7 +145,12 @@ def report_processing_qc(analysis_dir,html_file):
                         barplot='',
                     )
             s.add(tbl)
-            for sample in data['samples']:
+            # Sort the sample data into order of sample name
+            samples = sorted([s for s in data['samples']],
+                             key=lambda s: split_sample_name(s['sname']))
+            # Write the table
+            for sample in samples:
+                print sample
                 pname = sample['pname']
                 sname = sample['sname']
                 nreads = sample['nreads']
