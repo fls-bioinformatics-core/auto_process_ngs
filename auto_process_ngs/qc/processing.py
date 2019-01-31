@@ -150,7 +150,6 @@ def report_processing_qc(analysis_dir,html_file):
                              key=lambda s: split_sample_name(s['sname']))
             # Write the table
             for sample in samples:
-                print sample
                 pname = sample['pname']
                 sname = sample['sname']
                 nreads = sample['nreads']
