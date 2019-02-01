@@ -348,8 +348,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger = find_program('cellranger')
                 if not cellranger:
                     raise Exception("No cellranger package found")
-                print "Using cellranger %s: %s" % (
-                    cellranger_info(cellranger)[-1],cellranger)
+                cellranger_software_info = cellranger_info(cellranger)
+                print "Using cellranger %s: %s" % \
+                    (cellranger_software_info[-1],
+                     cellranger)
                 # Check we have bcl2fastq
                 bcl2fastq = find_program('bcl2fastq')
                 if not bcl2fastq:
@@ -367,7 +369,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 # Store info on bcl2fastq package
                 ap.metadata['bcl2fastq_software'] = bcl2fastq_info
                 # Store info on cellranger package
-                ap.metadata['cellranger_software'] = cellranger_info
+                ap.metadata['cellranger_software'] = cellranger_software_info
                 # Put a copy of sample sheet in the log directory
                 shutil.copy(sample_sheet,ap.log_dir)
                 # Determine output directory absolute path
