@@ -213,6 +213,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     # Bases mask
     print "Bases mask set to 'auto' (will be determined at run time)"
     bases_mask = "auto"
+    # Data source metadata
+    data_source = ap.settings.metadata.default_data_source
     # Generate and print predicted outputs and warnings
     if custom_sample_sheet is not None:
         sample_sheet_data = SampleSheet(custom_sample_sheet)
@@ -263,6 +265,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_run_number'] = run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
     ap.metadata['assay'] = assay
+    ap.metadata['source'] = data_source
     # Make a 'projects.info' metadata file
     if unaligned_dir is not None:
         ap.make_project_metadata_file()

@@ -57,6 +57,8 @@ class TestSettings(unittest.TestCase):
         # QC reporting
         self.assertEqual(s.qc_web_server.dirn,None)
         self.assertEqual(s.qc_web_server.url,None)
+        # Metadata
+        self.assertEqual(s.metadata.default_data_source,None)
 
     def test_partial_settings_file(self):
         """Settings: load a partial settings.ini file

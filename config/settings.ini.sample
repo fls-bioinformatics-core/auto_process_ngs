@@ -90,6 +90,10 @@ icell8 = SimpleJobRunner
 icell8_contaminant_filter = SimpleJobRunner
 icell8_statistics = SimpleJobRunner
 
+# Defaults for metadata
+[metadata]
+default_data_source = None
+
 # Settings for archiving analyses
 # dirn should be a directory in the form [[user@]host:]path
 [archive]
