@@ -88,6 +88,25 @@ as follows:
 The instrument name can be derived from the name of the directories
 produced by the sequencer (see :ref:`run_and_fastq_naming_conventions`).
 
+----------------
+Default metadata
+----------------
+
+The ``metadata`` section of the configuration file allows defaults
+to be specified for metadata items associated with each run.
+
+Currently it is possible to set a default for the ``source``
+metadata item, which specifies where the data was received from,
+for example:
+
+::
+
+   [metadata]
+   default_data_source = "Local sequencing facility"
+
+If no default is set then the values can be updated using the
+``metadata`` command (see :ref:`commands_metadata`).
+
 .. _running_on_compute_cluster:
 
 ----------------------------
