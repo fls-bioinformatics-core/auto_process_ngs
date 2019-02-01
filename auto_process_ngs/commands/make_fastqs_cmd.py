@@ -747,11 +747,8 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
         if ap.params.unaligned_dir is not None:
             unaligned_dir = ap.params.unaligned_dir
         else:
-            logger.debug("Bcl2fastq output directory not defined")
-            return False
-    else:
-        logger.warning("Checking custom bcl2fastq output directory '%s'" %
-                       unaligned_dir)
+            raise Exception("Bcl2fastq output directory not defined")
+    print "Checking bcl2fastq output directory '%s'" % unaligned_dir
     bcl_to_fastq_dir = os.path.join(ap.analysis_dir,unaligned_dir)
     if not os.path.isdir(bcl_to_fastq_dir):
         # Directory doesn't exist
