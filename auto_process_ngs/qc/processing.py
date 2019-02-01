@@ -194,17 +194,22 @@ def report_processing_qc(analysis_dir,html_file):
         lanes = filter(lambda c: c.startswith('L'),stats.header())
         sample = None
         for project in projects:
-            subset = filter(lambda d: d['Project'] == project,stats)
+            # Get subset of lines for this project
+            subset = sorted(filter(lambda d: d['Project'] == project,stats),
+                            key=lambda l: split_sample_name(l['Sample']))
+            # Work out which lanes are included
             subset_lanes = filter(lambda l:
                                   reduce(lambda x,y: x or bool(y),
                                          [d[l] for d in subset],
                                          False),
                                   lanes)
+            # Add a new section for this project
             s = per_file_stats.add_subsection(
                 "%s" % project,
                 name="per_file_stats_%s" % project
             )
             project_toc_list.add_item(Link("%s" % project,s))
+            # Build the data of data
             tbl = Table(columns=('Sample','Fastq','Size'))
             if subset_lanes:
                 tbl.append_columns(*subset_lanes)
