@@ -205,6 +205,7 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.source,None)
         self.assertEqual(metadata.assay,None)
         self.assertEqual(metadata.bcl2fastq_software,None)
+        self.assertEqual(metadata.cellranger_software,None)
 
 class TestProjectMetadataFile(unittest.TestCase):
     """Tests for the ProjectMetadataFile class
