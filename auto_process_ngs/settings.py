@@ -162,6 +162,10 @@ class Settings(object):
                 if platform not in self.platform:
                     self.platform[platform] = AttributeDictionary()
                 self.platform[platform]['bcl2fastq'] = bcl2fastq
+        # Metadata defaults
+        self.add_section('metadata')
+        self.metadata['default_data_source'] = config.get('metadata',
+                                                          'default_data_source')
         # icell8
         self.add_section('icell8')
         self.icell8['aligner'] = config.get('icell8','aligner')
