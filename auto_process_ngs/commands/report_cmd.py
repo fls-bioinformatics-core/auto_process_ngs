@@ -242,6 +242,11 @@ def report_summary(ap):
             ap.metadata.bcl2fastq_software)
     except ValueError:
         bcl2fastq_software = None
+    try:
+        cellranger_software = ast.literal_eval(
+            ap.metadata.cellranger_software)
+    except ValueError:
+        cellranger_software = None
     if ap.metadata.assay is not None:
         assay = ap.metadata.assay
     else:
@@ -266,6 +271,11 @@ def report_summary(ap):
                   ('Unknown' if not bcl2fastq_software else
                    "%s %s" % (bcl2fastq_software[1],
                               bcl2fastq_software[2])))
+    if cellranger_software:
+        report.append("Cellranger: %s" %
+                  ('Unknown' if not bcl2fastq_software else
+                   "%s %s" % (cellranger_software[1],
+                              cellranger_software[2])))
     report.append("Assay    : %s" % assay)
     report.append("")
     # Projects
