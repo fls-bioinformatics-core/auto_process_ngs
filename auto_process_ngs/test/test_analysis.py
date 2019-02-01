@@ -713,6 +713,22 @@ class TestAnalysisProject(unittest.TestCase):
         project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
         self.assertEqual(project.sample_summary(),"No samples")
 
+    def test_order_samples_by_name(self):
+        """AnalysisProject: sample_summary works for SE data
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB2_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB3_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB10_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB20_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB21_ACAGTG_L001_R1_001.fastq.gz',))
+        project = AnalysisProject('PJB',os.path.join(self.dirn,'PJB'))
+        sample_names = [s.name for s in project.samples]
+        self.assertEqual(sample_names,
+                         ['PJB1','PJB2','PJB3','PJB10','PJB20','PJB21'])
+
     def test_pickle_analysis_project(self):
         """AnalysisProject: check serialisation with 'pickle'
         """
@@ -877,3 +893,15 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertEqual(sample.fastq_subset(read_number=2),[fq_r2])
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
+
+class TestSplitSampleNameFunction(unittest.TestCase):
+    """
+    Tests for the 'split_sample_name' function
+    """
+    def test_split_sample_name(self):
+        """split_sample_name: check names are split correctly
+        """
+        self.assertEqual(split_sample_name("PJB"),["PJB"])
+        self.assertEqual(split_sample_name("PJB1"),["PJB",1])
+        self.assertEqual(split_sample_name("PJB0001"),["PJB",1])
+        self.assertEqual(split_sample_name("PJB_1-10"),["PJB_",1,"-",10])

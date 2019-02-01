@@ -43,6 +43,7 @@ from .fastq_utils import IlluminaFastqAttrs
 from qc.reporting import QCReporter
 from qc.reporting import QCSample
 from qc.illumina_qc import IlluminaQC
+from itertools import izip_longest
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -390,6 +391,9 @@ class AnalysisProject:
                 self.samples.append(sample)
             sample.add_fastq(os.path.normpath(
                 os.path.join(self.fastq_dir,fq)))
+        # Sort samples by name
+        self.samples = sorted(self.samples,
+                              key=lambda s: split_sample_name(s.name))
         logger.debug("Listing samples and files:")
         for sample in self.samples:
             logger.debug("* %s: %s" % (sample.name,sample.fastq))
@@ -1052,3 +1056,42 @@ class AnalysisSample:
 
         """
         return str(self.name)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def split_sample_name(s):
+    """Split sample name into numerical and non-numerical parts
+
+    Utility function which splits the supplied sample name
+    into numerical (i.e. integer) and non-numerical (i.e. all
+    other types of character) parts, and returns the parts as
+    a list.
+
+    For example:
+
+    >>> split_sample_name("PJB_01-123_T004")
+    ['PJB_',1,'-',123,'_T',4]
+
+    Arguments:
+      s (str): the sample name to be split
+
+    Returns:
+      List: list with the numerical and non-numerical parts
+        of the name.
+    """
+    parts = []
+    current = ''
+    for c in str(s):
+        if (current.isdigit() and not c.isdigit()) or \
+           (not current.isdigit() and c.isdigit()):
+            parts.append(current)
+            current = ''
+        current += c
+    if current:
+        parts.append(current)
+    for i,part in enumerate(parts):
+        if part.isdigit():
+            parts[i] = int(part)
+    return parts
