@@ -59,21 +59,29 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
         if os.path.exists(f):
             shutil.copy(f,os.path.join(clone_dir,os.path.basename(f)))
     # Primary data directory
-    primary_data_dir = os.path.join(ap.analysis_dir,
-                                    ap.params.primary_data_dir)
-    if os.path.isdir(primary_data_dir):
-        clone_primary_data_dir = os.path.join(clone_dir,
-                                              os.path.basename(primary_data_dir))
-        print "[Primary data] making %s" % clone_primary_data_dir
-        bcf_utils.mkdir(clone_primary_data_dir)
-        data_dir = os.path.basename(ap.params.data_dir)
-        if os.path.exists(os.path.join(primary_data_dir,data_dir)):
-            clone_data_dir = os.path.join(clone_primary_data_dir,data_dir)
-            print "[Primary data] symlinking %s" % clone_data_dir
-            os.symlink(os.path.join(primary_data_dir,data_dir),
-                       clone_data_dir)
+    if ap.params.primary_data_dir:
+        primary_data_dir = os.path.join(ap.analysis_dir,
+                                        ap.params.primary_data_dir)
+        if os.path.isdir(primary_data_dir):
+            clone_primary_data_dir = os.path.join(clone_dir,
+                                                  os.path.basename(primary_data_dir))
+            print "[Primary data] making %s" % clone_primary_data_dir
+            bcf_utils.mkdir(clone_primary_data_dir)
+            data_dir = os.path.basename(ap.params.data_dir)
+            if os.path.exists(os.path.join(primary_data_dir,data_dir)):
+                clone_data_dir = os.path.join(clone_primary_data_dir,data_dir)
+                print "[Primary data] symlinking %s" % clone_data_dir
+                os.symlink(os.path.join(primary_data_dir,data_dir),
+                           clone_data_dir)
     # Link to or copy fastqs
-    unaligned_dir = os.path.join(ap.analysis_dir,ap.params.unaligned_dir)
+    if not ap.params.unaligned_dir:
+        for d in ('Unaligned','bcl2fastq',):
+            unaligned_dir = os.path.join(ap.analysis_dir,d)
+            if os.path.isdir(unaligned_dir):
+                break
+            unaligned_dir = None
+    else:
+        unaligned_dir = os.path.join(ap.analysis_dir,ap.params.unaligned_dir)
     if os.path.isdir(unaligned_dir):
         clone_unaligned_dir = os.path.join(clone_dir,
                                            os.path.basename(unaligned_dir))
@@ -108,13 +116,23 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
                                          link_to_fastqs=(not copy_fastqs))
     # Copy additional files, if found
     for f in ("SampleSheet.orig.csv",
-              ap.params.sample_sheet,
-              ap.params.project_metadata,
-              ap.params.stats_file,
-              ap.params.per_lane_stats_file,
+              ("custom_SampleSheet.csv"
+               if not ap.params.sample_sheet
+               else ap.params.sample_sheet),
+              ("projects.info"
+               if not ap.params.project_metadata
+               else ap.params.project_metadata),
+              ("statistics.info"
+               if not ap.params.stats_file
+               else ap.params.stats_file),
+              ("per_lane_statistics.info"
+               if not ap.params.per_lane_stats_file
+               else ap.params.per_lane_stats_file),
               "statistics_full.info",
               "per_lane_sample_stats.info",
               "processing_qc.html",):
+        if not f:
+            continue
         srcpath = os.path.join(ap.analysis_dir,f)
         if os.path.exists(srcpath):
             print "[Files] copying %s" % f
@@ -130,6 +148,8 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
         clone_dir,
         os.path.basename(ap.parameter_file)))
     for p in ("sample_sheet","primary_data_dir"):
+        if not params[p]:
+            continue
         print "[Parameters] updating '%s'" % p
         params[p] = os.path.join(clone_dir,
                                  os.path.relpath(params[p],
