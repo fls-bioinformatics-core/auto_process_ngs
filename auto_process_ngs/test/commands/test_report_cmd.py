@@ -373,6 +373,10 @@ Additional notes/comments:
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
+                       "bcl2fastq_software":
+                       "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
+                       "cellranger_software":
+                       "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
                        "assay": "Nextera" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
@@ -394,13 +398,14 @@ Additional notes/comments:
         # Generate summary report
         expected = """MISEQ run #87 datestamped 170901
 ================================
-Run name : 170901_M00879_0087_000000000-AGEW9
-Reference: MISEQ_170901#87
-Platform : MISEQ
-Directory: %s
-Endedness: Paired end
-Bcl2fastq: Unknown
-Assay    : Nextera
+Run name  : 170901_M00879_0087_000000000-AGEW9
+Reference : MISEQ_170901#87
+Platform  : MISEQ
+Directory : %s
+Endedness : Paired end
+Bcl2fastq : bcl2fastq 2.17.1.14
+Cellranger: cellranger 3.0.1
+Assay     : Nextera
 
 2 projects:
 - 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)           

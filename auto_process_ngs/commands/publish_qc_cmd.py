@@ -363,6 +363,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                        value=('unspecified' if not bcl2fastq_software else
                               "%s %s" % (bcl2fastq_software[1],
                                          bcl2fastq_software[2])))
+    try:
+        cellranger_software = ast.literal_eval(
+            ap.metadata.cellranger_software)
+    except ValueError:
+        cellranger_software = None
+    params_tbl.add_row(param="Cellranger",
+                       value=('unspecified' if not cellranger_software else
+                              "%s %s" % (cellranger_software[1],
+                                         cellranger_software[2])))
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)

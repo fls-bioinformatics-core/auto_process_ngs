@@ -296,6 +296,8 @@ class AnalysisDirMetadata(MetadataDict):
     platform: sequencing platform e.g. 'miseq'
     assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
     bcl2fastq_software: info on the Bcl conversion software used
+    cellranger_software: info on the 10xGenomics cellranger software
+      used
     instrument_name: name/i.d. for the sequencing instrument
     instrument_datestamp: datestamp from the sequencing instrument
     instrument_run_number: the run number from the sequencing
@@ -320,6 +322,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'platform':'platform',
                                   'assay': 'assay',
                                   'bcl2fastq_software': 'bcl2fastq_software',
+                                  'cellranger_software': 'cellranger_software',
                                   'instrument_name': 'instrument_name',
                                   'instrument_datestamp': 'instrument_datestamp',
                                   'instrument_flow_cell_id': 'instrument_flow_cell_id',
