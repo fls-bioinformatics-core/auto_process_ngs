@@ -219,6 +219,13 @@ def report_summary(ap):
     Returns:
       String with the report text.
     """
+    # Default items to report
+    report_items = ['Run name',
+                    'Reference',
+                    'Platform',
+                    'Directory',
+                    'Endedness',
+                    'Bcl2fastq',]
     # Gather information
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     datestamp = None
@@ -245,10 +252,12 @@ def report_summary(ap):
     try:
         cellranger_software = ast.literal_eval(
             ap.metadata.cellranger_software)
+        report_items.append('Cellranger')
     except ValueError:
         cellranger_software = None
     if ap.metadata.assay is not None:
         assay = ap.metadata.assay
+        report_items.append('Assay')
     else:
         assay = ''
     # Generate report text
@@ -261,22 +270,37 @@ def report_summary(ap):
     else:
         title = "%s" % os.path.basename(ap.analysis_dir)
     report.append("%s\n%s" % (title,'='*len(title)))
-    report.append("Run name : %s" % run_name)
-    report.append("Reference: %s" % ap.run_reference_id)
-    report.append("Platform : %s" % platform)
-    report.append("Directory: %s" % ap.params.analysis_dir)
-    report.append("Endedness: %s" % \
-                  ('Paired end' if analysis_dir.paired_end else 'Single end'))
-    report.append("Bcl2fastq: %s" %
-                  ('Unknown' if not bcl2fastq_software else
-                   "%s %s" % (bcl2fastq_software[1],
-                              bcl2fastq_software[2])))
-    if cellranger_software:
-        report.append("Cellranger: %s" %
-                  ('Unknown' if not bcl2fastq_software else
-                   "%s %s" % (cellranger_software[1],
-                              cellranger_software[2])))
-    report.append("Assay    : %s" % assay)
+    # General information
+    field_width = max([len(i) for i in report_items])
+    for item in report_items:
+        # Get the value for each item
+        if item == 'Run name':
+            value = run_name
+        elif item == 'Reference':
+            value = ap.run_reference_id
+        elif item == 'Platform':
+            value = platform
+        elif item == 'Directory':
+            value = ap.params.analysis_dir
+        elif item == 'Endedness':
+            value = ('Paired end' if analysis_dir.paired_end else
+                     'Single end')
+        elif item == 'Bcl2fastq':
+            value = ('Unknown' if not bcl2fastq_software else
+                     "%s %s" % (bcl2fastq_software[1],
+                                bcl2fastq_software[2]))
+        elif item == 'Cellranger':
+            value = ('Unknown' if not cellranger_software else
+                     "%s %s" % (cellranger_software[1],
+                                cellranger_software[2]))
+        elif item == 'Assay':
+            value = assay
+        else:
+            raise Exception("Unknown reporting item '%s'" % item)
+        # Append a line reporting the value
+        report.append("%s%s: %s" % (item,
+                                    ' '*(field_width-len(item)),
+                                    value))
     report.append("")
     # Projects
     report.append("%d project%s:" % (analysis_dir.n_projects,
