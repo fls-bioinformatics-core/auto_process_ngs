@@ -649,24 +649,42 @@ class QCReport(Document):
         Adds entries for the project metadata to the "metadata"
         table in the report
         """
-        metadata_items = ['user','PI','library_type','organism',]
-        if self.project.info.single_cell_platform is not None:
-            metadata_items.insert(3,'single_cell_platform')
+        metadata_items = ['user',
+                          'PI',
+                          'library_type',
+                          'single_cell_platform',
+                          'number_of_cells',
+                          'organism',
+                          'qc_protocol',
+                          'comments',]
         metadata_titles = {
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
             'single_cell_platform': 'Single cell preparation platform',
+            'number_of_cells': 'Number of cells',
             'organism': 'Organism',
+            'qc_protocol': 'QC protocol',
+            'comments': 'Additional comments',
         }
         for item in metadata_items:
-            if self.project.info[item]:
-                self.metadata_table.add_row(
-                    item=metadata_titles[item],
-                    value=self.project.info[item])
-        self.metadata_table.add_row(
-            item='QC protocol',
-            value=self.project.qc_info(self.qc_dir).protocol)
+            # Acquire the value
+            try:
+                if self.project.info[item]:
+                    value = self.project.info[item]
+                else:
+                    # No value set, skip this item
+                    continue
+            except KeyError:
+                if item == 'qc_protocol':
+                    value = self.project.qc_info(self.qc_dir).protocol
+                else:
+                    raise Exception("Unrecognised item to report: '%s'"
+                                    % item)
+            # Add to the metadata table
+            self.metadata_table.add_row(
+                item=metadata_titles[item],
+                value=value)
 
     def report_sample(self,sample):
         """
