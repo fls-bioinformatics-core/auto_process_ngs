@@ -177,6 +177,17 @@ class MockBcl2fastq:
         self._make_exe('bcl2fastq','2.17.1.14','bin','bcl2fastq',
                        content="#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.17.1.14\nCopyright (c) 2007-2015 Illumina, Inc.\n\n2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq --version\nEOF\nfi")
 
+    def bcl2fastq_220(self):
+        """
+        Add a mock bcl2fastq 2.20 installation
+
+        """
+        # bcl2fastq 2.20.0.422
+        self._makedirs('bcl2fastq','2.20.0.422','bin')
+        self._makedirs('bcl2fastq','2.20.0.422','etc','bcl2fastq-2.20.0.422')
+        self._make_exe('bcl2fastq','2.20.0.422','bin','bcl2fastq',
+                       content="#!/bin/bash\nif [ \"$1\" == \"--version\" ] ; then cat >&2 <<EOF\nBCL to FASTQ file converter\nbcl2fastq v2.20.0.422\nCopyright (c) 2007-2017 Illumina, Inc.\n\nEOF\nfi")
+
 class TestGetSequencerPlatform(unittest.TestCase):
     """
     Tests for the get_sequencer_platform function
@@ -552,6 +563,20 @@ class TestBclToFastqInfo(unittest.TestCase):
         self.assertEqual(path,exe)
         self.assertEqual(name,'bcl2fastq')
         self.assertEqual(version,'2.17.1.14')
+
+    def test_bcl2fastq_2_20_0_422(self):
+        """
+        Collect info for bcl2fastq 2.20.0.422
+
+        """
+        # bcl2fastq 2.20.0.422
+        self.mockbcl2fastq.bcl2fastq_220()
+        self.mockbcl2fastq.set_path()
+        exe = self.mockbcl2fastq.exes[0]
+        path,name,version = bcl_to_fastq_info()
+        self.assertEqual(path,exe)
+        self.assertEqual(name,'bcl2fastq')
+        self.assertEqual(version,'2.20.0.422')
 
     def test_bcl2fastq_1_8_4_supplied_exe(self):
         """
