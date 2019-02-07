@@ -819,7 +819,7 @@ class MockBcl2fastq2Exe(object):
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
-               version='2.17.1.14'):
+               version='2.20.0.422'):
         """
         Create a "mock" bcl2fastq executable
 
