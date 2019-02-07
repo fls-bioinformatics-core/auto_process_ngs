@@ -220,6 +220,7 @@ AB1,AB1,,,,,AB,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_standard_protocol_chromium_sc_indices(self):
         """make_fastqs: standard protocol with Chromium SC indices raises exception
         """
@@ -369,6 +370,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
+    #@unittest.skip("Skipped")
     def test_make_fastqs_10x_chromium_sc_protocol(self):
         """make_fastqs: 10x_chromium_sc protocol
         """
@@ -933,7 +935,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                           make_fastqs,
                           ap)
 
-    #@unittest.skip("Not implemented")
+    #@unittest.skip("Skipped")
     def test_make_fastqs_10x_chromium_sc_protocol(self):
         """make_fastqs: 10x_chromium_sc protocol
         """
