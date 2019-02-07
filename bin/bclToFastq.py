@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bclToFastq.py: wrapper for converting Illumina bcl files to fastq
-#     Copyright (C) University of Manchester 2013-2016 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -23,7 +23,7 @@ CASAVA or bcl2fastq software packages.
 __version__ = "0.2.0"
 
 # Set of versions that this is known to work with
-BCL2FASTQ_VERSIONS = ('1.8','2.17',)
+BCL2FASTQ_VERSIONS = ('1.8','2.17','2.20',)
 
 #######################################################################
 # Import modules that this module depends on
@@ -42,6 +42,7 @@ from auto_process_ngs.bcl2fastq_utils import available_bcl2fastq_versions
 from auto_process_ngs.bcl2fastq_utils import bcl_to_fastq_info
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_1_8
 from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_2_17
+from auto_process_ngs.bcl2fastq_utils import run_bcl2fastq_2_20
 
 #######################################################################
 # Functions
@@ -203,14 +204,14 @@ def main():
     if known_version == '1.8':
         print "Ignore missing stats    : %s" % options.ignore_missing_stats
         print "Ignore missing control  : %s" % options.ignore_missing_control
-    elif known_version == '2.17':
+    elif known_version in ('2.17','2.20',):
         print "No lane splitting       : %s" % options.no_lane_splitting
         print "Min trimmed read length : %s" % \
             options.minimum_trimmed_read_length
         print "Mask short adapter reads: %s" % \
             options.mask_short_adapter_reads
     # Run bclToFastq conversion based on the version
-    if bcl2fastq_version.startswith('1.8.'):
+    if known_version in ('1.8',):
         # 1.8.* pipeline
         status = run_bcl2fastq_1_8(
             illumina_run.basecalls_dir,
@@ -224,7 +225,7 @@ def main():
             ignore_missing_stats=options.ignore_missing_stats,
             ignore_missing_control=options.ignore_missing_control
         )
-    elif bcl2fastq_version.startswith('2.17.'):
+    elif known_version in ('2.17',):
         # bcl2fastq 2.17.*
         if options.nprocessors is not None:
             # Explicitly set number of threads for each stage
@@ -258,6 +259,38 @@ def main():
             mask_short_adapter_reads=options.mask_short_adapter_reads,
             loading_threads=loading_threads,
             demultiplexing_threads=demultiplexing_threads,
+            processing_threads=processing_threads,
+            writing_threads=writing_threads
+        )
+    elif known_version in ('2.20',):
+        # bcl2fastq 2.20.*
+        if options.nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            nprocessors=int(options.nprocessors)
+            loading_threads=min(4,nprocessors)
+            writing_threads=min(4,nprocessors)
+            processing_threads=nprocessors
+            print "Explicitly setting number of threads for each stage:"
+            print "Loading (-r)       : %d" % loading_threads
+            print "Processing (-p)    : %d" % processing_threads
+            print "Writing (-w)       : %d" % writing_threads
+        else:
+            # Use the defaults
+            loading_threads = None
+            processing_threads = None
+            writing_threads = None
+        # Run the bcl to fastq conversion
+        status = run_bcl2fastq_2_20(
+            illumina_run.run_dir,
+            sample_sheet,
+            output_dir=output_dir,
+            mismatches=options.nmismatches,
+            bases_mask=options.bases_mask,
+            ignore_missing_bcl=options.ignore_missing_bcl,
+            no_lane_splitting=options.no_lane_splitting,
+            minimum_trimmed_read_length=options.minimum_trimmed_read_length,
+            mask_short_adapter_reads=options.mask_short_adapter_reads,
+            loading_threads=loading_threads,
             processing_threads=processing_threads,
             writing_threads=writing_threads
         )
