@@ -248,19 +248,35 @@ def main():
             multiqc_report = os.path.join(p.dirn,
                                           "multi%s_report.html" %
                                           qc_base)
-            multiqc_cmd = Command(
-                'multiqc',
-                '--title','%s' % opts.title,
-                '--filename','%s' % multiqc_report,
-                '--force',
-                qc_dir)
-            print "Running %s" % multiqc_cmd
-            multiqc_retval = multiqc_cmd.run_subprocess()
-            if multiqc_retval == 0 and os.path.exists(multiqc_report):
-                print "MultiQC: %s" % multiqc_report
+            # Check if we need to rerun MultiQC
+            if os.path.exists(multiqc_report) and not opts.force:
+                run_multiqc = False
+                multiqc_mtime = os.stat(multiqc_report).st_mtime
+                for f in os.listdir(qc_dir):
+                    if os.stat(os.path.join(qc_dir,f)).st_mtime > \
+                       multiqc_mtime:
+                        # Input is newer than report
+                        run_multiqc = True
+                        break
             else:
-                print "MultiQC: FAILED"
-                retval += 1
+                run_multiqc = True
+            # (Re)run MultiQC
+            if run_multiqc:
+                multiqc_cmd = Command(
+                    'multiqc',
+                    '--title','%s' % opts.title,
+                    '--filename','%s' % multiqc_report,
+                    '--force',
+                    qc_dir)
+                print "Running %s" % multiqc_cmd
+                multiqc_retval = multiqc_cmd.run_subprocess()
+                if multiqc_retval == 0 and os.path.exists(multiqc_report):
+                    print "MultiQC: %s" % multiqc_report
+                else:
+                    print "MultiQC: FAILED"
+                    retval += 1
+            else:
+                print "MultiQC: %s (already exists)" % multiqc_report
         # Report generation
         if opts.filename is None:
             out_file = '%s_report.html' % qc_base
