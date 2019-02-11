@@ -640,7 +640,7 @@ class QCReport(Document):
         if fastq_strand:
             outputs.append("strandedness")
         # Look for MultiQC report
-        print "Checking for MultiQC report in %s" % self.project.dirn)
+        print "Checking for MultiQC report in %s" % self.project.dirn
         multiqc_report = os.path.join(self.project.dirn,
                                       "multi%s_report.html"
                                       % os.path.basename(self.qc_dir))
