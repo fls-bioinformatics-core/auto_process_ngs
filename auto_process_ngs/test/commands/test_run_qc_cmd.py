@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import os
+import zipfile
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
@@ -80,6 +81,17 @@ class TestAutoProcessRunQc(unittest.TestCase):
                 self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
                                                             p,f)),
                                 "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s_analysis.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s_analysis" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_with_strandedness(self):
         """run_qc: standard QC run with strandedness determination
@@ -138,6 +150,17 @@ mouse = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
                                                             p,f)),
                                 "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s_analysis.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s_analysis" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_single_end_with_strandedness(self):
         """run_qc: single-end QC run with strandedness determination
@@ -197,6 +220,17 @@ mouse = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
                                                             p,f)),
                                 "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s_analysis.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s_analysis" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_single_cell_with_strandedness(self):
         """run_qc: single-cell QC run with strandedness determination
@@ -257,3 +291,14 @@ mouse = /data/genomeIndexes/mm10/STAR
                 self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
                                                             p,f)),
                                 "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s_analysis.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s_analysis" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())

@@ -639,6 +639,13 @@ class QCReport(Document):
         logger.debug("fastq_strand: %s" % fastq_strand)
         if fastq_strand:
             outputs.append("strandedness")
+        # Look for MultiQC report
+        print "Checking for MultiQC report in %s" % self.project.dirn)
+        multiqc_report = os.path.join(self.project.dirn,
+                                      "multi%s_report.html"
+                                      % os.path.basename(self.qc_dir))
+        if os.path.isfile(multiqc_report):
+            outputs.append("multiqc")
         self.outputs = outputs
         return self.outputs
 
@@ -657,6 +664,8 @@ class QCReport(Document):
                           'organism',
                           'qc_protocol',
                           'comments',]
+        if 'multiqc' in self.outputs:
+            metadata_items.append('multiqc')
         metadata_titles = {
             'user': 'User',
             'PI': 'PI',
@@ -666,6 +675,7 @@ class QCReport(Document):
             'organism': 'Organism',
             'qc_protocol': 'QC protocol',
             'comments': 'Additional comments',
+            'multiqc': 'MultiQC report',
         }
         for item in metadata_items:
             # Acquire the value
@@ -678,6 +688,13 @@ class QCReport(Document):
             except KeyError:
                 if item == 'qc_protocol':
                     value = self.project.qc_info(self.qc_dir).protocol
+                elif item == 'multiqc':
+                    multiqc_report = os.path.join(self.project.dirn,
+                                                  "multi%s_report.html"
+                                                  % os.path.basename(
+                                                      self.qc_dir))
+                    value = Link(os.path.basename(multiqc_report),
+                                 multiqc_report)
                 else:
                     raise Exception("Unrecognised item to report: '%s'"
                                     % item)
