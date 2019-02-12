@@ -251,9 +251,9 @@ def main():
             # Check if we need to rerun MultiQC
             if os.path.exists(multiqc_report) and not opts.force:
                 run_multiqc = False
-                multiqc_mtime = os.stat(multiqc_report).st_mtime
+                multiqc_mtime = os.path.getmtime(multiqc_report)
                 for f in os.listdir(qc_dir):
-                    if os.stat(os.path.join(qc_dir,f)).st_mtime > \
+                    if os.path.getmtime(os.path.join(qc_dir,f)) > \
                        multiqc_mtime:
                         # Input is newer than report
                         run_multiqc = True

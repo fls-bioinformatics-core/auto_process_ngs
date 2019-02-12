@@ -689,12 +689,9 @@ class QCReport(Document):
                 if item == 'qc_protocol':
                     value = self.project.qc_info(self.qc_dir).protocol
                 elif item == 'multiqc':
-                    multiqc_report = os.path.join(self.project.dirn,
-                                                  "multi%s_report.html"
-                                                  % os.path.basename(
-                                                      self.qc_dir))
-                    value = Link(os.path.basename(multiqc_report),
-                                 multiqc_report)
+                    multiqc_report = "multi%s_report.html" \
+                                     % os.path.basename(self.qc_dir)
+                    value = Link(multiqc_report)
                 else:
                     raise Exception("Unrecognised item to report: '%s'"
                                     % item)
