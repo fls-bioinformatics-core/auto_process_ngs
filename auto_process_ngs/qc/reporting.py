@@ -690,7 +690,7 @@ class QCReport(Document):
             outputs.append("strandedness")
             versions = set()
             for f in fastq_strand:
-                versions.add(FastqStrand(
+                versions.add(Fastqstrand(
                     os.path.join(self.qc_dir,f)).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
