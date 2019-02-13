@@ -68,6 +68,14 @@ h2 { background-color: #8CC63F;
           margin: 0;
           border-top-left-radius: 20px;
           border-bottom-right-radius: 20px; }
+/* Summary section */
+div.summary { margin: 10 10;
+              border: solid 2px #8CC63F;
+              padding: 0;
+              border-top-left-radius: 25px; }
+.info { padding: 5px 15px;
+        float: left; }
+.info h3 { margin: 5px; }
 /* Samples and Fastqs */
 .sample { margin: 10 10;
           border: solid 2px #8CC63F;
@@ -610,8 +618,19 @@ class QCReport(Document):
         Associated name is 'summary'
         """
         summary = self.add_section("Summary",name='summary')
-        summary.add(self.metadata_table)
-        summary.add(self.software_table)
+        summary.add_css_classes("summary")
+        # Add subsections inside a container
+        info = summary.add_subsection()
+        general_info = info.add_subsection("General information")
+        general_info.add_css_classes("info")
+        general_info.add(self.metadata_table)
+        software_info = info.add_subsection("Software")
+        software_info.add_css_classes("info")
+        software_info.add(self.software_table)
+        # Add an empty section to clear HTML floats
+        clear = summary.add_subsection()
+        clear.add_css_classes("clear")
+        # Add the summary table
         summary.add("%d samples | %d fastqs" % (len(self.project.samples),
                                                 len(self.project.fastqs)))
         summary.add(self.summary_table)
