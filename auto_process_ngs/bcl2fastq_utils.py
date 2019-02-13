@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq_utils.py: utility functions for bcl2fastq conversion
-#     Copyright (C) University of Manchester 2013-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -23,7 +23,8 @@ Utility functions for bcl to fastq conversion operations:
 - get_bases_mask: get a bases mask string
 - run_bcl2fastq_1_8: run bcl-to-fastq conversion from CASAVA/bcl2fastq 1.8.*
 - run_bcl2fastq_2_17: run bcl-to-fastq conversion from bcl2fastq 2.17.*
-
+- run_bcl2fastq_2_20: run bcl-to-fastq conversion from bcl2fastq 2.20.*
+- run_bcl2fastq_2: general wrapper for running bcl2fastq 2.*
 """
 
 #######################################################################
@@ -583,22 +584,44 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
         logging.error("make returned %s" % returncode)
     return returncode
 
-def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
-                       output_dir="Unaligned",
-                       mismatches=None,
-                       bases_mask=None,
-                       ignore_missing_bcl=False,
-                       no_lane_splitting=False,
-                       minimum_trimmed_read_length=None,
-                       mask_short_adapter_reads=None,
-                       loading_threads=None,
-                       demultiplexing_threads=None,
-                       processing_threads=None,
-                       writing_threads=None):
+def run_bcl2fastq_2_17(*args,**kws):
     """
     Wrapper for running bcl2fastq 2.17.*
 
     Runs the bcl2fastq 2.17.* software to generate fastq files
+       from bcl files.
+
+    Wrapper for the generic `run_bcl2fastq_2` function.
+    """
+    return run_bcl2fastq_2(*args,**kws)
+
+def run_bcl2fastq_2_20(*args,**kws):
+    """
+    Wrapper for running bcl2fastq 2.20.*
+
+    Runs the bcl2fastq 2.20.* software to generate fastq files
+       from bcl files.
+
+    Wrapper for the generic `run_bcl2fastq_2` function.
+    """
+    return run_bcl2fastq_2(*args,**kws)
+
+def run_bcl2fastq_2(basecalls_dir,sample_sheet,
+                    output_dir="Unaligned",
+                    mismatches=None,
+                    bases_mask=None,
+                    ignore_missing_bcl=False,
+                    no_lane_splitting=False,
+                    minimum_trimmed_read_length=None,
+                    mask_short_adapter_reads=None,
+                    loading_threads=None,
+                    demultiplexing_threads=None,
+                    processing_threads=None,
+                    writing_threads=None):
+    """
+    Wrapper for running bcl2fastq 2.*
+
+    Runs the bcl2fastq 2.* software to generate fastq files
        from bcl files.
 
     Arguments:
@@ -638,9 +661,8 @@ def run_bcl2fastq_2_17(basecalls_dir,sample_sheet,
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
-      errors within the function (e.g. missing Makefile) or the exit
-      code from the failed program.
-
+      errors within the function or if the exit code from the program
+      was non-zero.
     """
     # Set up and run bcl2fastq2
     bcl2fastq2_cmd = applications.bcl2fastq.bcl2fastq2(

@@ -818,7 +818,8 @@ class MockBcl2fastq2Exe(object):
 
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
-               platform=None,assert_bases_mask=None):
+               platform=None,assert_bases_mask=None,
+               version='2.20.0.422'):
         """
         Create a "mock" bcl2fastq executable
 
@@ -835,6 +836,8 @@ class MockBcl2fastq2Exe(object):
           platform (str): platform for primary
             data (if it cannot be determined from
             the directory/instrument name)
+          version (str): version of bcl2fastq2
+            to imitate
         """
         path = os.path.abspath(path)
         print "Building mock executable: %s" % path
@@ -847,7 +850,8 @@ from auto_process_ngs.mock import MockBcl2fastq2Exe
 sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            missing_fastqs=%s,
                            platform=%s,
-                           assert_bases_mask=%s).main(sys.argv[1:]))
+                           assert_bases_mask=%s,
+                           version='%s').main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
                    ("\"%s\"" % platform
@@ -855,7 +859,8 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                     else None),
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
-                    else None)))
+                    else None),
+                   version))
             os.chmod(path,0775)
         with open(path,'r') as fp:
             print "bcl2fastq:"
@@ -865,7 +870,8 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
     def __init__(self,exit_code=0,
                  missing_fastqs=None,
                  platform=None,
-                 assert_bases_mask=None):
+                 assert_bases_mask=None,
+                 version=None):
         """
         Internal: configure the mock bcl2fastq2
         """
@@ -873,6 +879,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
         self._missing_fastqs = missing_fastqs
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        self._version = version
 
     def main(self,args):
         """
@@ -880,11 +887,13 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
         """
         # Build generic header
         header = """BCL to FASTQ file converter
-bcl2fastq v2.17.1.14
-Copyright (c) 2007-2015 Illumina, Inc.
-
-2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq %s""" \
-    % ' '.join(args)
+bcl2fastq v%s
+""" % self._version
+        if self._version.startswith("2.17."):
+            header += \
+            "Copyright (c) 2007-2015 Illumina, Inc.\n\n2015-12-17 14:08:00 [7fa113f3f780] Command-line invocation: bcl2fastq %s" % ' '.join(args)
+        elif self._version.startswith("2.20."):
+            header += "Copyright (c) 2007-2017 Illumina, Inc.\n"
         # Handle version request
         if "--version" in args:
             print header
@@ -901,7 +910,8 @@ Copyright (c) 2007-2015 Illumina, Inc.
         p.add_argument("--ignore-missing-bcls",action="store_true")
         p.add_argument("--no-lane-splitting",action="store_true")
         p.add_argument("-r",action="store")
-        p.add_argument("-d",action="store")
+        if self._version.startswith("2.17."):
+            p.add_argument("-d",action="store")
         p.add_argument("-p",action="store")
         p.add_argument("-w",action="store")
         args = p.parse_args(args)
