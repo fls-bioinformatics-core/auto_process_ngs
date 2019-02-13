@@ -851,7 +851,8 @@ class QCReport(Document):
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
             fastq_pair.update_summary_table(self.summary_table,idx=idx,
-                                            fields=self.summary_fields)
+                                            fields=self.summary_fields,
+                                            relpath=self.relpath)
 
 class QCReportFastqPair(object):
     """
@@ -1072,7 +1073,8 @@ class QCReportFastqPair(object):
         clear = fastqs_report.add_subsection()
         clear.add_css_classes("clear")
 
-    def update_summary_table(self,summary_table,idx=None,fields=None):
+    def update_summary_table(self,summary_table,idx=None,fields=None,
+                             relpath=None):
         """
         Add a line to a summary table reporting a Fastq pair
 
@@ -1101,6 +1103,8 @@ class QCReportFastqPair(object):
             table row to update (if None then a new row is
             appended)
           fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         # Fields to report
         if fields is None:
@@ -1140,16 +1144,23 @@ class QCReportFastqPair(object):
                         self.r1.fastqc.data.basic_statistics(
                             'Total Sequences'))
                 elif field == "read_lengths":
+                    read_lengths_r1 = Link(
+                        self.r1.fastqc.data.basic_statistics(
+                            'Sequence length'),
+                        self.r1.fastqc.summary.link_to_module(
+                            'Sequence Length Distribution',
+                            relpath=relpath))
                     if self.paired_end:
-                        read_lengths = "%s<br />%s" % \
-                                       (self.r1.fastqc.data.basic_statistics(
-                                           'Sequence length'),
-                                        self.r2.fastqc.data.basic_statistics(
-                                            'Sequence length'))
+                        read_lengths_r2 = Link(
+                            self.r2.fastqc.data.basic_statistics(
+                                'Sequence length'),
+                            self.r2.fastqc.summary.link_to_module(
+                                'Sequence Length Distribution',
+                                relpath=relpath))
+                        read_lengths = "%s<br />%s" % (read_lengths_r1,
+                                                       read_lengths_r2)
                     else:
-                        read_lengths = "%s" % \
-                                       self.r1.fastqc.data.basic_statistics(
-                                           'Sequence length')
+                        read_lengths = "%s" % read_lengths_r1
                     value = read_lengths
                 elif field == "boxplot_r1":
                     value = Img(self.r1.uboxplot(),
