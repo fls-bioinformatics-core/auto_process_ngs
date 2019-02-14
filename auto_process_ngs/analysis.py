@@ -1111,6 +1111,8 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     # Platform
     if platform is not None:
         platform = platform.upper()
+    else:
+        platform = instrument
     # Run number
     if run_number is not None:
         run_number = int(run_number)

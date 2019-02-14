@@ -996,11 +996,15 @@ class TestRunReferenceIdFunction(unittest.TestCase):
         self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
                                           platform=None,
                                           facility_run_number=87),
-                         "160621_M00879_0087_000000000-AGEW9")
+                         "M00879_160621#87")
+        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
+                                          platform=None,
+                                          facility_run_number=88),
+                         "M00879_160621/87#88")
         self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
                                           platform=None,
                                           facility_run_number=87),
-                         "160621_M00879_0087_000000000-AGEW9")
+                         "M00879_160621#87")
 
     def test_run_reference_id_no_facility_run_number(self):
         """run_reference_id: run name and platform (no facility run number)
