@@ -974,6 +974,54 @@ class TestAnalysisSample(unittest.TestCase):
         self.assertTrue(sample.paired_end)
         self.assertEqual(str(sample),'PJB1-B')
 
+class TestRunReferenceIdFunction(unittest.TestCase):
+    """
+    Tests for the 'run_reference_id' function
+    """
+    def test_run_reference_id(self):
+        """run_reference_id: run name, platform and facility run number
+        """
+        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
+                                          platform="miseq",
+                                          facility_run_number=87),
+                         "MISEQ_160621#87")
+        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                                          platform="miseq",
+                                          facility_run_number=87),
+                         "MISEQ_160621#87")
+
+    def test_run_reference_id_no_platform(self):
+        """run_reference_id: run name and facility run number (no platform)
+        """
+        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
+                                          platform=None,
+                                          facility_run_number=87),
+                         "160621_M00879_0087_000000000-AGEW9")
+        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                                          platform=None,
+                                          facility_run_number=87),
+                         "160621_M00879_0087_000000000-AGEW9")
+
+    def test_run_reference_id_no_facility_run_number(self):
+        """run_reference_id: run name and platform (no facility run number)
+        """
+        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
+                                          platform="miseq",
+                                          facility_run_number=None),
+                         "MISEQ_160621/87")
+
+    def test_run_reference_id_facility_run_number_differs(self):
+        """run_reference_id: instrument and facility run numbers differ
+        """
+        self.assertEqual(run_reference_id("160621_M00879_0087_000000000-AGEW9",
+                                          platform="miseq",
+                                          facility_run_number=90),
+                         "MISEQ_160621/87#90")
+        self.assertEqual(run_reference_id("/data/160621_M00879_0087_000000000-AGEW9/",
+                                          platform="miseq",
+                                          facility_run_number=90),
+                         "MISEQ_160621/87#90")
+
 class TestSplitSampleNameFunction(unittest.TestCase):
     """
     Tests for the 'split_sample_name' function
