@@ -670,23 +670,8 @@ class AutoProcess(object):
 
     @property
     def run_reference_id(self):
-        """Return a run reference id e.g. 'HISEQ_140701/242#22'
-
-        The run reference code is a code that identifies the sequencing
-        run, and has the general form:
-
-        PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
-
-        - PLATFORM is always uppercased e.g. HISEQ, MISEQ, GA2X
-        - DATESTAMP is the YYMMDD code e.g. 140701
-        - INSTRUMENT_RUN_NUMBER is the run number that forms part of the
-          run directory e.g. for '140701_SN0123_0045_000000000-A1BCD'
-          it is '45'
-        - FACILITY_RUN_NUMBER is the run number that has been assigned
-          by the facility
-
-        Note that the instrument run number is only used if it differs
-        from the facility run number.
+        """
+        Return a run reference id (e.g. 'HISEQ_140701/242#22')
         """
         return analysis.run_reference_id(
             self.run_name,
