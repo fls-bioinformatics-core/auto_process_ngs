@@ -1026,6 +1026,26 @@ class TestRunReferenceIdFunction(unittest.TestCase):
                                           facility_run_number=90),
                          "MISEQ_160621/87#90")
 
+    def test_run_reference_id_bad_run_name(self):
+        """run_reference_id: handle 'bad' run name (cannot be split)
+        """
+        self.assertEqual(run_reference_id("rag_05_2017",
+                                          platform=None,
+                                          facility_run_number=None),
+                         "rag_05_2017")
+        self.assertEqual(run_reference_id("rag_05_2017",
+                                          platform="miseq",
+                                          facility_run_number=None),
+                         "MISEQ_rag_05_2017")
+        self.assertEqual(run_reference_id("rag_05_2017",
+                                          platform=None,
+                                          facility_run_number=90),
+                         "rag_05_2017#90")
+        self.assertEqual(run_reference_id("rag_05_2017",
+                                          platform="miseq",
+                                          facility_run_number=90),
+                         "MISEQ_rag_05_2017#90")
+
 class TestSplitSampleNameFunction(unittest.TestCase):
     """
     Tests for the 'split_sample_name' function

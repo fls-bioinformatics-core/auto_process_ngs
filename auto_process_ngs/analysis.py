@@ -1090,6 +1090,21 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     Note that the instrument run number is only used if it differs
     from the facility run number.
 
+    If the platform isn't supplied then the instrument name is
+    used instead, e.g.:
+
+    'SN0123_140701/242#22'
+
+    If the run name can't be split into components then the
+    general form will be:
+
+    [PLATFORM_]RUN_NAME[#FACILITY_RUN_NUMBER]
+
+    depending on whether platform and/or facility run number have
+    been supplied. For example for a run called 'rag_05_2017':
+
+    'MISEQ_rag_05_2017#90'
+
     Arguments:
       run_name (str): the run name (can be a path)
       platform (str): the platform name (optional)
@@ -1126,16 +1141,18 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
         run_id = platform
         if datestamp is not None:
             run_id += "_%s" % datestamp
-        if run_number is not None:
-            try:
-                if run_number != facility_run_number:
-                    run_id += "/%s" % run_number
-            except ValueError:
-                run_id += "/%s" % run_number
-        if facility_run_number is not None:
-            run_id += "#%s" % facility_run_number
+        else:
+            run_id += "_%s" % run_name
     else:
         run_id = run_name
+    if run_number is not None:
+        try:
+            if run_number != facility_run_number:
+                run_id += "/%s" % run_number
+        except ValueError:
+            run_id += "/%s" % run_number
+    if facility_run_number is not None:
+        run_id += "#%s" % facility_run_number
     return run_id
 
 def split_sample_name(s):
