@@ -288,10 +288,14 @@ class MockAnalysisDir(MockIlluminaData):
                 project_name = 'undetermined'
             else:
                 project_name = project
+            project_metadata = { 'Run': self.run_name,
+                                 'Platform': self.platform }
             try:
-                project_metadata = self.project_metadata[project_name]
+                for item in self.project_metadata[project_name]:
+                    project_metadata[item] = \
+                                self.project_metadata[project_name][item]
             except KeyError:
-                project_metadata = dict()
+                pass
             project_dir = MockAnalysisProject(project_name,
                                               metadata=project_metadata)
             sample_names = []
