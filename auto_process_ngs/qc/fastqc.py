@@ -341,4 +341,4 @@ class FastqcData:
             key,value = line.split('\t')
             if key == measure:
                 return value
-        raise KeyError("No key '%s'" % key)
+        raise KeyError("No measure '%s'" % measure)
