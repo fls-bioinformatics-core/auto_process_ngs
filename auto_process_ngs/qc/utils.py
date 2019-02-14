@@ -57,19 +57,19 @@ def verify_qc(project,qc_dir=None,illumina_qc=None,runner=None,
     if runner is None:
         runner = Settings().general.default_runner
     # Set up QC project
-    project = ProjectQC(project,
-                        illumina_qc=illumina_qc,
-                        qc_dir=qc_dir,
-                        log_dir=log_dir)
+    project_ = ProjectQC(project,
+                         illumina_qc=illumina_qc,
+                         qc_dir=qc_dir,
+                         log_dir=log_dir)
     # Set up and start scheduler
     sched = SimpleScheduler()
     sched.start()
     # QC check for project
-    project.check_qc(sched,
-                     name="verify_qc",
-                     runner=runner)
+    project_.check_qc(sched,
+                      name="verify_qc",
+                      runner=runner)
     sched.wait()
-    return project.verify()
+    return project_.verify()
 
 def report_qc(project,qc_dir=None,illumina_qc=None,
               report_html=None,zip_outputs=True,multiqc=False,
@@ -103,18 +103,18 @@ def report_qc(project,qc_dir=None,illumina_qc=None,
     if runner is None:
         runner = Settings().general.default_runner
     # Set up QC project
-    project = ProjectQC(project,
-                        illumina_qc=illumina_qc,
-                        qc_dir=qc_dir,
-                        log_dir=log_dir)
+    project_ = ProjectQC(project,
+                         illumina_qc=illumina_qc,
+                         qc_dir=qc_dir,
+                         log_dir=log_dir)
     # Set up and start scheduler
     sched = SimpleScheduler()
     sched.start()
     # Generate QC for project
-    project.report_qc(sched,
-                      report_html=report_html,
-                      multiqc=multiqc,
-                      zip_outputs=zip_outputs,
-                      runner=runner)
+    project_.report_qc(sched,
+                       report_html=report_html,
+                       multiqc=multiqc,
+                       zip_outputs=zip_outputs,
+                       runner=runner)
     sched.wait()
-    return project.reporting_status
+    return project_.reporting_status
