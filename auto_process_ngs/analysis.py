@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -40,8 +40,6 @@ from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import IlluminaFastqAttrs
-from qc.reporting import QCReporter
-from qc.reporting import QCSample
 from qc.illumina_qc import IlluminaQC
 from itertools import izip_longest
 
@@ -748,94 +746,25 @@ class AnalysisProject:
     def qc(self):
         """
         Return QCReporter instance for QC outputs
+
+        Not supported after version 0.15.0
+
+        Raises exception if invoked
         """
-        return QCReporter(self)
+        raise Exception("%s.qc method no longer supported"
+                        % self.__class__)
 
     def qc_report(self,title=None,report_html=None,qc_dir=None,
                   force=False):
         """
         Report QC outputs for project
 
-        Generates HTML and zipped QC reports.
+        Not supported after version 0.15.0
 
-        Arguments:
-          title (str): title text for the report
-          report_html (str): path for output HTML report file
-          qc_dir (str): path for QC output dir (if None then
-            use default QC directory)
-          force (bool): if True then force reports to be
-            regenerated (by default reports will not be
-            regenerated if they already exist)
-
-        Returns:
-          String: name of zip file, or None if there was a
-            problem.
+        Use the 'report_qc' function from qc.utils instead.
         """
-        if qc_dir is None:
-            qc_dir = self._qc_dir
-        elif not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(self.dirn,qc_dir)
-        if not (force or self.verify_qc(qc_dir=qc_dir)):
-            logger.debug("Failed to generate QC report for %s: QC "
-                          "not verified and force not specified"
-                          % self.name)
-            return None
-        # Create HTML report
-        logger.debug("Creating HTML QC report for %s" % self.name)
-        try:
-            if not title:
-                if self.info.run is not None:
-                    title = "%s/%s: QC report" % (self.info.run,self.name)
-                else:
-                    title = "%s: QC report" % self.name
-            if report_html is None:
-                report_html = os.path.join(self.dirn,"qc_report.html")
-            self.qc.report(title=title,
-                           filename=report_html,
-                           qc_dir=qc_dir,
-                           relative_links=True)
-        except Exception as ex:
-            logger.error("Exception trying to generate QC report "
-                         "for %s: %s" % (self.name,ex))
-            return None
-        # Get a name for the zip file derived from the HTML
-        # report filename
-        zip_name = os.path.splitext(os.path.basename(report_html))[0]
-        # Create zip file
-        logger.debug("Creating zip archive of QC report for %s" %
-                      self.name)
-        try:
-            analysis_dir = os.path.basename(os.path.dirname(self.dirn))
-            report_zip = os.path.join(self.dirn,
-                                      "%s.%s.%s.zip" %
-                                      (zip_name,
-                                       self.name,
-                                       analysis_dir))
-            zip_file = ZipArchive(report_zip,relpath=self.dirn,
-                                  prefix="%s.%s.%s" %
-                                  (zip_name,
-                                   self.name,
-                                   analysis_dir))
-            # Add the HTML report
-            zip_file.add_file(report_html)
-            # Add the FastQC and screen files
-            illumina_qc = IlluminaQC()
-            for sample in self.qc.samples:
-                for fastqs in sample.fastq_pairs:
-                    for fq in fastqs:
-                        logger.debug("Adding QC outputs for %s" % fq)
-                        for f in illumina_qc.expected_outputs(fq,qc_dir):
-                            if f.endswith('.zip'):
-                                # Exclude .zip file
-                                continue
-                            if os.path.exists(f):
-                                zip_file.add(f)
-            # Finished
-            return report_zip
-        except Exception as ex:
-            logger.error("Exception trying to generate zip archive "
-                         "of QC report for %s: %s" % (self.name,ex))
-            return None
+        raise Exception("%s.qc_report method no longer supported"
+                        % self.__class__)
 
     @property
     def multiple_fastqs(self):
@@ -870,22 +799,13 @@ class AnalysisProject:
         """
         Check if QC run has completed successfully
 
-        Arguments:
-          qc_dir (str): path for QC output dir (if None then
-            use default QC directory)
+        Not supported after version 0.15.0
 
-        Returns:
-          Boolean: True if QC run is completed, False
-            if QC couldn't be verified.
+        Use the 'verify_qc' function from the qc.utils module
+        instead.
         """
-        if qc_dir is None:
-            qc_dir = self._qc_dir
-        elif not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(self.dirn,qc_dir)
-        try:
-            return self.qc.verify(qc_dir=qc_dir)
-        except AttributeError:
-            return False
+        raise Exception("%s.qc_report method no longer supported"
+                        % self.__class__)
 
     def get_sample(self,name):
         """Return sample that matches 'name'
@@ -1026,27 +946,22 @@ class AnalysisSample:
     def qc_sample(self):
         """Fetch QCSample object for this sample
 
-        Returns:
-          Populated QCSample object.
+        Not supported after version 0.15.0
 
+        Raises exception if invoked
         """
-        return QCSample(self)
+        raise Exception("%s.qc_sample method no longer supported"
+                        % self.__class__)
 
     def verify_qc(self,qc_dir,fastq):
         """Check if QC completed for a fastq file
 
-        Arguments:
-          qc_dir: name of the QC directory
-          fastq : fastq file to get the QC information for
+        Not supported after version 0.15.0
 
-        Returns:
-          True if QC completed correctly, False otherwise.
-
+        Raises exception if invoked
         """
-        present,missing = IlluminaQC().check_outputs(fastq,qc_dir)
-        if missing:
-            return False
-        return True
+        raise Exception("%s.verify_qc method no longer supported"
+                        % self.__class__)
 
     def __repr__(self):
         """Implement __repr__ built-in
