@@ -72,7 +72,6 @@ class Fastqc:
         Arguments:
           fastqc_dir (str): path to the top-level
             output directory from a FastQC run.
-
         """
         self._fastqc_dir = os.path.abspath(fastqc_dir)
         self._fastqc_summary = FastqcSummary(
@@ -86,25 +85,36 @@ class Fastqc:
 
     @property
     def version(self):
+        """
+        Version of FastQC that was used
+        """
         return self.data.version
 
     @property
     def dir(self):
+        """
+        Path to the directory with the FastQC outputs
+        """
         return self._fastqc_dir
 
     @property
     def html_report(self):
+        """
+        Path to the associated HTML report file
+        """
         return self._html_report
 
     @property
     def zip(self):
+        """
+        Path to the associated ZIP archive
+        """
         return self._zip
 
     @property
     def summary(self):
         """
         Return a FastqcSummary instance
-
         """
         return self._fastqc_summary
 
@@ -112,7 +122,6 @@ class Fastqc:
     def data(self):
         """
         Return a FastqcData instance
-
         """
         return self._fastqc_data
 
@@ -149,12 +158,14 @@ class Fastqc:
 class FastqcSummary(TabFile):
     """
     Class representing data from a Fastqc summary file
-
     """
     def __init__(self,summary_file=None):
         """
         Create a new FastqcSummary instance
 
+        Arguments:
+          summary_file (str): path to the FastQC
+            ``summary.txt`` file
         """
         TabFile.__init__(self,
                          column_names=('Status',
@@ -184,19 +195,34 @@ class FastqcSummary(TabFile):
 
     @property
     def passes(self):
-        # Return modules with passes
+        """
+        Return modules with passes
+
+        Returns a list with the names of the modules that
+        have status 'PASS'.
+        """
         return [r['Module'] for r in filter(lambda x: x['Status'] == 'PASS',
                                             self)]
 
     @property
     def warnings(self):
-        # Return modules with warnings
+        """
+        Return modules with warnings
+
+        Returns a list with the names of the modules that
+        have status 'WARN'.
+        """
         return [r['Module'] for r in filter(lambda x: x['Status'] == 'WARN',
                                             self)]
 
     @property
     def failures(self):
-        # Return modules with failures
+        """
+        Return modules with failures
+
+        Returns a list with the names of the modules that
+        have status 'FAIL'.
+        """
         return [r['Module'] for r in filter(lambda x: x['Status'] == 'FAIL',
                                             self)]
 
@@ -223,6 +249,7 @@ class FastqcSummary(TabFile):
 
     def html_report(self):
         """
+        Return the path of the HTML report from FastQC
         """
         return os.path.dirname(self.path)+'.html'
 
@@ -260,7 +287,6 @@ class FastqcData:
     To access a field in the 'Basic Statistics' module:
 
     >>> nreads = fqc.basic_statistics('Total Sequences')
-
     """
     def __init__(self,data_file):
         """
@@ -269,7 +295,6 @@ class FastqcData:
         Arguments:
           data_file (str): path to a ``fastqc_data.txt``
             file which will be read in and processed
-
         """
         self._data_file = os.path.abspath(data_file)
         self._fastqc_version = None
@@ -301,12 +326,27 @@ class FastqcData:
     def path(self):
         """
         Path to the fastqc_data.txt file
-
         """
         return self._data_file
 
     def data(self,module):
         """
+        Return the raw data for a module
+
+        Returns the data for the specified module as a list
+        of lines.
+
+        The first list item/line is the header line; data items
+        within each line are tab-delimited.
+
+        For example:
+
+        >>> Fastqc('myfastq_fastq').data.data('Sequence Length Distribution')
+        ['#Length\tCount',
+         '35\t8826.0',
+         '36\t2848.0',
+         '37\t4666.0',
+         '38\t4524.0']
         """
         if module in self._modules:
             return self._modules[module]
@@ -334,8 +374,7 @@ class FastqcData:
           String: value of the requested 'measure'
 
         Raises:
-          KeyError: if measure is not found.
-
+          KeyError: if 'measure' is not found.
         """
         for line in self.data('Basic Statistics'):
             key,value = line.split('\t')
