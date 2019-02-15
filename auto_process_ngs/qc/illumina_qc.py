@@ -32,7 +32,7 @@ import os
 import logging
 from bcftbx.qc.report import strip_ngs_extensions
 from ..applications import Command
-from ..fastq_utils import IlluminaFastqAttrs
+from ..analysis import AnalysisFastq
 from ..fastq_utils import pair_fastqs_by_name
 
 FASTQ_SCREENS = ('model_organisms',
@@ -85,6 +85,10 @@ class IlluminaQC(object):
         self.nthreads = nthreads
         self.fastq_strand_conf = fastq_strand_conf
         self.ungzip_fastqs = ungzip_fastqs
+        if fastq_attrs is None:
+            self.fastq_attrs = AnalysisFastq
+        else:
+            self.fastq_attrs = fastq_attrs
 
     def version(self):
         """
@@ -242,13 +246,13 @@ class IlluminaQC(object):
                 cmd.add_args('--subset',self.fastq_screen_subset)
             if qc_dir is not None:
                 cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
-            if IlluminaFastqAttrs(fastq).read_number == 1:
+            if self.fastq_attrs(fastq).read_number == 1:
                 # Screens for R2 only
                 cmd.add_args('--no-screens')
             cmds.append(cmd)
             # Strandedness (R2 only)
             if self.fastq_strand_conf is not None:
-                if IlluminaFastqAttrs(fastq).read_number == 2:
+                if self.fastq_attrs(fastq).read_number == 2:
                     cmd = Command('fastq_strand.py',
                                   '-n',self.nthreads,
                                   '--conf',self.fastq_strand_conf,
@@ -372,13 +376,13 @@ class IlluminaQC(object):
             expected.extend([os.path.join(qc_dir,f)
                              for f in fastqc_output(fastq)])
             # Fastq_screen outputs (R2 only)
-            if IlluminaFastqAttrs(fastq).read_number == 2:
+            if self.fastq_attrs(fastq).read_number == 2:
                 for name in FASTQ_SCREENS:
                     expected.extend([os.path.join(qc_dir,f)
                                      for f in fastq_screen_output(fastq,name)])
             # Strand stats output (R2 only)
             if self.fastq_strand_conf:
-                if IlluminaFastqAttrs(fastq).read_number == 2:
+                if self.fastq_attrs(fastq).read_number == 2:
                     expected.append(os.path.join(
                         qc_dir,fastq_strand_output(fastq)))
         return expected
@@ -416,7 +420,7 @@ class IlluminaQC(object):
         Internal: remove index (I1/I2) Fastqs from list
         """
         return filter(lambda fq:
-                      not IlluminaFastqAttrs(fq).is_index_read,
+                      not self.fastq_attrs(fq).is_index_read,
                       fastqs)
 
     def _fastq_pairs(self,fastqs):
@@ -424,7 +428,8 @@ class IlluminaQC(object):
         Internal: remove singletons and return paired Fastqs
         """
         return filter(lambda p: len(p) == 2,
-                      pair_fastqs_by_name(fastqs))
+                      pair_fastqs_by_name(fastqs,
+                                          fastq_attrs=self.fastq_attrs))
 
     def _to_list(self,args):
         """
