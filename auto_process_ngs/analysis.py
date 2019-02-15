@@ -40,7 +40,6 @@ from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import IlluminaFastqAttrs
-from qc.illumina_qc import IlluminaQC
 from itertools import izip_longest
 
 # Module specific logger
