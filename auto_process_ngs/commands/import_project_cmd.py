@@ -13,6 +13,8 @@ import os
 import logging
 from ..applications import general as applications_general
 from ..analysis import AnalysisProject
+from ..qc.utils import verify_qc
+from ..qc.utils import report_qc
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -44,6 +46,8 @@ def import_project(ap,project_dir):
                         project_name)
     # Load target as a project
     project = AnalysisProject(project_name,project_dir)
+    # Set up a log directory
+    ap.set_log_dir(ap.get_log_subdir('import_project_%s' % project_name))
     # Rsync the project directory
     print "Importing project directory contents for '%s'" % project_name
     try:
@@ -84,13 +88,17 @@ def import_project(ap,project_dir):
         logger.error("Exception when trying to acquire project %s: %s"
                       % (project_name,ex))
         return
-    if project.qc is None:
+    if project.qc_dir is None:
         print "No QC for %s" % project_name
     else:
-        if project.qc.verify():
+        if verify_qc(project,log_dir=ap.log_dir):
             try:
-                project.qc_report()
+                report_qc(project,
+                          zip_outputs=True,
+                          multiqc=True,
+                          log_dir=ap.log_dir)
                 print "Updated QC report for %s" % project_name
             except Exception, ex:
-                logger.error("import_project: failed to generate QC "
-                             "report for %s" % project_name)
+                raise Exception("Project '%s' imported but failed to "
+                                "generate QC report: %s" % (project_name,
+                                                            ex))

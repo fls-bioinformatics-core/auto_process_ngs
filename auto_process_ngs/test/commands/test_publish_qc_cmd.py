@@ -13,6 +13,9 @@ from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.commands.publish_qc_cmd import publish_qc
 
+# Set to False to keep test output dirs
+REMOVE_TEST_OUTPUTS = True
+
 class TestAutoProcessPublishQc(unittest.TestCase):
     """
     Tests for AutoProcess.publish_qc
@@ -39,7 +42,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         # Return to original dir
         os.chdir(self.pwd)
         # Remove the temporary test directory
-        shutil.rmtree(self.dirn)
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.dirn)
 
     def test_publish_qc_metadata_missing(self):
         """publish_qc: raise exception if metadata not set

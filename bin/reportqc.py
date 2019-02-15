@@ -105,7 +105,7 @@ def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     # Add the QC outputs
     if illumina_qc is None:
         illumina_qc = IlluminaQC()
-    for sample in project.qc.samples:
+    for sample in QCReporter(project).samples:
         for fastqs in sample.fastq_pairs:
             for fq in fastqs:
                 logging.debug("Adding QC outputs for %s" % fq)

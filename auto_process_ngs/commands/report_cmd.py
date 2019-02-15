@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 #########################################################################
 
@@ -19,6 +19,7 @@ import bcftbx.utils as bcf_utils
 import auto_process_ngs.analysis as analysis
 import auto_process_ngs.utils as utils
 import auto_process_ngs.fileops as fileops
+from ..qc.utils import verify_qc
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -133,7 +134,7 @@ def report_info(ap):
         report.append("  #cells  : %s" % default_value(info.number_of_cells))
         report.append("  Samples : %s" % project.prettyPrintSamples())
         report.append("  QC      : %s" % ('ok'
-                                          if project.verify_qc()
+                                          if verify_qc(project)
                                           else 'not verified'))
         report.append("  Comments: %s" % (project.info.comments))
     return '\n'.join(report)
