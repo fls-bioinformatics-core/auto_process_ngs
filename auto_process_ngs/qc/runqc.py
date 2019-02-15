@@ -405,7 +405,8 @@ class ProjectQC(object):
             group = None
             print "Examining files in sample %s" % sample.name
             pairs = []
-            for fastq_pair in pair_fastqs_by_name(sample.fastq):
+            for fastq_pair in pair_fastqs_by_name(sample.fastq,
+                                                  fastq_attrs=project.fastq_attrs):
                 # Identify pairs with missing QC outputs
                 logging.debug("Checking Fastq pair: %s" % (fastq_pair,))
                 for fq in fastq_pair:
