@@ -57,7 +57,8 @@ class IlluminaQC(object):
     def __init__(self,protocol="standardPE",
                  fastq_screen_subset=None,nthreads=1,
                  fastq_strand_conf=None,
-                 ungzip_fastqs=False):
+                 ungzip_fastqs=False,
+                 fastq_attrs=None):
         """
         Create a new IlluminaQC instance
 
@@ -76,6 +77,9 @@ class IlluminaQC(object):
           ungzip_fastqs (bool): if True then also
             ungzip the source Fastqs (if gzipped)
             (default is not to uncompress the Fastqs)
+          fastq_attrs (BaseFastqAttrs): optional,
+            class to use for extracting data from the
+            Fastq names (default: AnalysisFastq)
         """
         if protocol not in PROTOCOLS:
             raise Exception("IlluminaQC: unrecognised protocol '%s'" %
