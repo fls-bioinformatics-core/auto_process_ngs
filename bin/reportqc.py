@@ -61,7 +61,8 @@ def verify_qc(project,qc_dir=None,illumina_qc=None):
             present,missing = illumina_qc.check_outputs(fq,qc_dir)
             if missing:
                 fastqs.append(fq)
-        for fq_pair in pair_fastqs_by_name(sample.fastq):
+        for fq_pair in pair_fastqs_by_name(sample.fastq,
+                                           fastq_attrs=project.fastq_attrs):
             present,missing = illumina_qc.check_outputs(fq_pair,qc_dir)
             if missing:
                 fastqs.extend(fq_pair)
