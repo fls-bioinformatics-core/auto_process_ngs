@@ -20,6 +20,7 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from ..analysis import run_reference_id
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
@@ -731,7 +732,9 @@ class QCReport(Document):
         Adds entries for the project metadata to the "metadata"
         table in the report
         """
-        metadata_items = ['user',
+        metadata_items = ['run',
+                          'run_id',
+                          'user',
                           'PI',
                           'library_type',
                           'single_cell_platform',
@@ -742,6 +745,8 @@ class QCReport(Document):
         if 'multiqc' in self.outputs:
             metadata_items.append('multiqc')
         metadata_titles = {
+            'run_id': 'Run ID',
+            'run': 'Run name',
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
@@ -761,7 +766,13 @@ class QCReport(Document):
                     # No value set, skip this item
                     continue
             except KeyError:
-                if item == 'qc_protocol':
+                if item == 'run_id':
+                    value = run_reference_id(
+                        self.project.info['run'],
+                        platform=self.project.info['platform'],
+                        facility_run_number=
+                        self.run_metadata['run_number'])
+                elif item == 'qc_protocol':
                     value = self.project.qc_info(self.qc_dir).protocol
                 elif item == 'multiqc':
                     multiqc_report = "multi%s_report.html" \
