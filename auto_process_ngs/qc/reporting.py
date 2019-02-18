@@ -52,7 +52,12 @@ logger = logging.getLogger(__name__)
 
 from .illumina_qc import FASTQ_SCREENS
 
-QC_REPORT_CSS_STYLES = """/* Headers */
+QC_REPORT_CSS_STYLES = """/* General styles */
+html { font-family: DejaVu Serif, serif; }
+p { font-size: 85%;
+    color: #808080; }
+/* Headers */
+h1, h2, h3, h4 { font-family: DejaVu Serif, serif; }
 h1 { background-color: #42AEC2;
      color: white;\n
      padding: 5px 10px; }
@@ -63,21 +68,23 @@ h2 { background-color: #8CC63F;
      margin: 0;
      border-top-left-radius: 20px;
      border-bottom-right-radius: 20px; }
- h3, h4 { background-color: grey;
-          color: white;
-          display: block;
-          padding: 5px 15px;
-          margin: 0;
-          border-top-left-radius: 20px;
-          border-bottom-right-radius: 20px; }
+h3, h4 { background-color: grey;
+         color: white;
+         display: block;
+         padding: 5px 15px;
+         margin: 0;
+         border-top-left-radius: 20px;
+         border-bottom-right-radius: 20px; }
 /* Summary section */
 div.summary { margin: 10 10;
               border: solid 2px #8CC63F;
               padding: 0;
               border-top-left-radius: 25px; }
 .info { padding: 5px 15px;
-        float: left; }
+        float: left;
+        font-size: 100%; }
 .info h3 { margin: 5px; }
+.info p { color: black; }
 /* Samples and Fastqs */
 .sample { margin: 10 10;
           border: solid 2px #8CC63F;
@@ -138,9 +145,6 @@ table.programs th { text-align: left;
                     padding: 2px 5px; }
 table.programs td { padding: 2px 5px;
                     border-bottom: solid 1px lightgray; }
-/* General styles */
-p { font-size: 85%;
-    color: #808080; }
 /* Rules for printing */
 @media print
 {
