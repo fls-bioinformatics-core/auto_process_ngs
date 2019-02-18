@@ -609,6 +609,10 @@ def add_publish_qc_command(cmdparser):
                  dest='force',default=False,
                  help="force generation of QC reports for all projects even "
                  "if verification has failed")
+    p.add_option('--legacy',action='store_true',
+                 dest='legacy_mode',default=False,
+                 help="legacy mode: include links to MultiQC reports in the "
+                 "top-level index page")
     add_debug_option(p)
 
 def add_archive_command(cmdparser):
@@ -1140,7 +1144,7 @@ if __name__ == "__main__":
                          exclude_zip_files=(options.exclude_zip_files == 'yes'),
                          ignore_missing_qc=options.ignore_missing_qc,
                          regenerate_reports=options.regenerate_reports,
-                         force=options.force)
+                         force=options.force,legacy=options.legacy_mode)
         elif cmd == 'report':
             if options.logging:
                 mode = ReportingMode.CONCISE
