@@ -509,6 +509,9 @@ class QCReport(Document):
         if os.path.exists(run_metadata_file):
             print "Loading run metadata from %s" % run_metadata_file
             self.run_metadata.load(run_metadata_file)
+        else:
+            logger.warning("Run metadata file '%s' not found"
+                           % run_metadata_file)
         # Set up title
         if title is None:
             title = "QC report: %s" % self.project.name
@@ -570,10 +573,16 @@ class QCReport(Document):
         self.preamble = self._init_preamble_section()
         self.summary = self._init_summary_section()
         # Build the report
+        print "Building the report..."
         self.report_metadata()
         self.report_software()
         for sample in self.project.samples:
-            self.report_sample(sample)
+            try:
+                self.report_sample(sample)
+            except Exception as ex:
+                logger.error("Exception for sample '%s': %s"
+                             % (sample.name,ex))
+                raise ex
 
     def _init_metadata_table(self):
         """
@@ -642,10 +651,14 @@ class QCReport(Document):
         comments = info.add_subsection("Comments")
         comments.add_css_classes("info")
         comments_list = List()
-        if self.project.info.comments:
-            for comment in self.project.info.comments.split(';'):
-                comments_list.add_item(comment.strip())
-        else:
+        try:
+            if self.project.info.comments:
+                for comment in self.project.info.comments.split(';'):
+                    comments_list.add_item(comment.strip())
+            else:
+                # Drop out with exception
+                raise AttributeError
+        except AttributeError:
             comments_list.add_item("N/A")
         comments.add(comments_list)
         # Add an empty section to clear HTML floats
@@ -785,11 +798,16 @@ class QCReport(Document):
                     continue
             except KeyError:
                 if item == 'run_id':
-                    value = run_reference_id(
-                        self.project.info['run'],
-                        platform=self.project.info['platform'],
-                        facility_run_number=
-                        self.run_metadata['run_number'])
+                    try:
+                        value = run_reference_id(
+                            self.project.info['run'],
+                            platform=self.project.info['platform'],
+                            facility_run_number=
+                            self.run_metadata['run_number'])
+                    except AttributeError as ex:
+                        logger.warning("Run reference ID can't be "
+                                       "determined: %s (ignored)" % ex)
+                        continue
                 elif item == 'qc_protocol':
                     value = self.project.qc_info(self.qc_dir).protocol
                 elif item == 'multiqc':
