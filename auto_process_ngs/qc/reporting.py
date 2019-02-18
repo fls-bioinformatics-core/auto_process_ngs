@@ -27,6 +27,7 @@ from ..docwriter import Table
 from ..docwriter import Img
 from ..docwriter import Link
 from ..docwriter import Target
+from ..docwriter import List
 from ..metadata import AnalysisDirMetadata
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
@@ -636,7 +637,13 @@ class QCReport(Document):
         # Add comments section
         comments = info.add_subsection("Comments")
         comments.add_css_classes("info")
-        comments.add(self.project.info.comments)
+        comments_list = List()
+        if self.project.info.comments:
+            for comment in self.project.info.comments.split(';'):
+                comments_list.add_item(comment.strip())
+        else:
+            comments_list.add_item("N/A")
+        comments.add(comments_list)
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection()
         clear.add_css_classes("clear")
