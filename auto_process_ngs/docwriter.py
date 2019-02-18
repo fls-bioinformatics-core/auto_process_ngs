@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     docwriter.py: HTML document generation library
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 #########################################################################
 
@@ -113,7 +113,8 @@ class Document(object):
         """
         return [rule for rule in self._css_rules]
 
-    def add_section(self,title=None,section=None,name=None):
+    def add_section(self,title=None,section=None,name=None,
+                    css_classes=None):
         """
         Add a section to the document
 
@@ -129,14 +130,18 @@ class Document(object):
             document
           name (str): internal name for the section;
             if not supplied then the name will be
-            generated automatically from the title.
+            generated automatically from the title
+          css_classes (list): list or iterable with
+            names of CSS classes to associate with
+            the new section.
 
         Returns:
           Section: the new or supplied section as
             appropriate.
         """
         if section is None:
-            section = Section(title=title,name=name)
+            section = Section(title=title,name=name,
+                              css_classes=css_classes)
         self._sections.append(section)
         return section
 
@@ -226,7 +231,8 @@ class Section(object):
     >>> result.add("Some nice figures")
     >>> result.add(Img("graph.png"))
     """
-    def __init__(self,title=None,name=None,level=2):
+    def __init__(self,title=None,name=None,level=2,
+                 css_classes=None):
         """
         Create a new Section instance
 
@@ -236,6 +242,9 @@ class Section(object):
             the section
           level (int): section heading level
             (defaults to 2)
+          css_classes (list): list or iterable with
+            names of CSS classes to associate with
+            the section
 
         """
         self._title = title
@@ -243,6 +252,8 @@ class Section(object):
         self._content = []
         self._css_classes = []
         self._level = level
+        if css_classes:
+            self.add_css_classes(*css_classes)
 
     @property
     def name(self):
@@ -303,7 +314,8 @@ class Section(object):
         for content in args:
             self._content.append(content)
 
-    def add_subsection(self,title=None,section=None,name=None):
+    def add_subsection(self,title=None,section=None,name=None,
+                       css_classes=None):
         """
         Add subsection within the section
 
@@ -318,12 +330,17 @@ class Section(object):
             the current Section as-is
           name (str): name used for the 'id' of
             the section
+          css_classes (list): list or iterable with
+            names of CSS classes to associate with
+            the new section.
 
         Returns:
           Section: the appended section.
         """
         if section is None:
-            subsection = Section(title=title,name=name,level=self._level+1)
+            subsection = Section(title=title,name=name,
+                                 level=self._level+1,
+                                 css_classes=css_classes)
         else:
             subsection = section
         self.add(subsection)

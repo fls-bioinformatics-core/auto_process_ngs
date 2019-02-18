@@ -73,6 +73,15 @@ class TestDocument(unittest.TestCase):
                          "<h2>External section</h2>\n"
                          "</div>")
 
+    def test_document_add_section_with_css_classes(self):
+        d = Document("Document with section with CSS classes")
+        s = d.add_section("New section",css_classes=("summary","new",))
+        self.assertEqual(d.html(),
+                         "<h1>Document with section with CSS classes</h1>\n"
+                         "<div id='New_section' class='summary new'>\n"
+                         "<h2>New section</h2>\n"
+                         "</div>")
+
     def test_document_with_css_rules(self):
         d  = Document("CSS rules")
         d.add_css_rule("h1 { color: black; }")
@@ -112,8 +121,7 @@ class TestSection(unittest.TestCase):
         self.assertEqual(s.html(),"")
 
     def test_empty_section_with_css_class(self):
-        s = Section()
-        s.add_css_classes("clear")
+        s = Section(css_classes=("clear",))
         self.assertEqual(s.title,None)
         self.assertEqual(s.name,None)
         self.assertEqual(s.level,2)
@@ -163,6 +171,22 @@ class TestSection(unittest.TestCase):
                          "<div id='Section_with_subsection'>\n"
                          "<h2>Section with subsection</h2>\n"
                          "<div id='Subsection'>\n"
+                         "<h3>Subsection</h3>\n"
+                         "</div>\n"
+                         "</div>")
+
+    def test_section_with_subsection_and_css_classes(self):
+        s = Section("Section with subsection and CSS classes")
+        sub = s.add_subsection("Subsection",css_classes=("subsection","new"))
+        self.assertTrue(isinstance(sub,Section))
+        self.assertEqual(s.title,"Section with subsection and CSS classes")
+        self.assertEqual(s.name,"Section_with_subsection_and_CSS_classes")
+        self.assertEqual(s.level,2)
+        self.assertEqual(sub.level,3)
+        self.assertEqual(s.html(),
+                         "<div id='Section_with_subsection_and_CSS_classes'>\n"
+                         "<h2>Section with subsection and CSS classes</h2>\n"
+                         "<div id='Subsection' class='subsection new'>\n"
                          "<h3>Subsection</h3>\n"
                          "</div>\n"
                          "</div>")
