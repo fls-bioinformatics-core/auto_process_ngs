@@ -631,6 +631,15 @@ class QCReport(Document):
         # Add an empty section to clear HTML floats
         clear = summary.add_subsection()
         clear.add_css_classes("clear")
+        # Add additional subsections for comments etc
+        info = summary.add_subsection()
+        # Add comments section
+        comments = info.add_subsection("Comments")
+        comments.add_css_classes("info")
+        comments.add(self.project.info.comments)
+        # Add an empty section to clear HTML floats
+        clear = summary.add_subsection()
+        clear.add_css_classes("clear")
         # Add the summary table
         summary.add("%d samples | %d fastqs" % (len(self.project.samples),
                                                 len(self.project.fastqs)))
@@ -740,8 +749,7 @@ class QCReport(Document):
                           'single_cell_platform',
                           'number_of_cells',
                           'organism',
-                          'qc_protocol',
-                          'comments',]
+                          'qc_protocol',]
         if 'multiqc' in self.outputs:
             metadata_items.append('multiqc')
         metadata_titles = {
@@ -754,7 +762,6 @@ class QCReport(Document):
             'number_of_cells': 'Number of cells',
             'organism': 'Organism',
             'qc_protocol': 'QC protocol',
-            'comments': 'Additional comments',
             'multiqc': 'MultiQC report',
         }
         for item in metadata_items:
