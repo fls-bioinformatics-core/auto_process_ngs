@@ -16,6 +16,86 @@ from auto_process_ngs.applications import Command
 from auto_process_ngs.fastq_utils import BaseFastqAttrs
 from auto_process_ngs.analysis import *
 
+class TestAnalysisFastq(unittest.TestCase):
+    """
+    Tests for the AnalysisFastq class
+    """
+    def test_illumina_style_with_extras(self):
+        """AnalysisFastq: Illumina-style fastq name with extra elements appended
+        """
+        fq = AnalysisFastq('M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+        self.assertEqual(fq.sample_name,'M_19_0040_S13-A40h-R_D709-D505')
+        self.assertEqual(fq.basename,
+                         'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,7)
+        self.assertEqual(fq.read_number,1)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.canonical_name,'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001')
+        self.assertEqual(fq.extras,'_repeated_1')
+        self.assertEqual(str(fq),
+                         'M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+    def test_non_canonical_fastq_name(self):
+        """AnalysisFastq: Illumina-style fastq name with extra elements appended
+        """
+        fq = AnalysisFastq('PB04_trimmoPE_bowtie2_notHg38.1')
+        self.assertEqual(fq.sample_name,'PB04_trimmoPE_bowtie2_notHg38.1')
+        self.assertEqual(fq.basename,'PB04_trimmoPE_bowtie2_notHg38.1')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,None)
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,None)
+        self.assertEqual(fq.set_number,None)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(fq.canonical_name,None)
+        self.assertEqual(fq.extras,None)
+        self.assertEqual(str(fq),'PB04_trimmoPE_bowtie2_notHg38.1')
+    def test_reproduces_illumina_fastq_attrs(self):
+        """AnalysisFastq: reproduces IlluminaFastqAttr behaviour
+        """
+        for name in ('NH1_ChIP-seq_Gli1_ACAGTG_L003_R2_001',
+                     'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001',
+                     'NH1_ChIP-seq_Gli1_S4_L003_R2_001',
+                     'NH1_ChIP-seq_Gli1_S4_L003_I1_001',
+                     'NH1_ChIP-seq_Gli1_S4_R2_001',
+                     'NH1_ChIP-seq_Gli1',
+                     'NH1_ChIP-seq_Gli1_R2',
+                     'NH1_ChIP-seq_Gli1_L001',
+                     'NH1_ChIP-seq_Gli1_L001_R2',
+                     'NH1_ChIP-seq_Gli1_ACAGTG',
+                     'NH1_ChIP-seq_Gli1_ACAGTG_R2',
+                     'NH1_ChIP-seq_Gli1_ACAGTG_L001',
+                     'NH1_ChIP-seq_Gli1_ACAGTG_L001_R2',):
+            illumina_fastq_attrs = IlluminaFastqAttrs(name)
+            fq = AnalysisFastq(name)
+            self.assertEqual(fq.sample_name,illumina_fastq_attrs.sample_name)
+            self.assertEqual(fq.basename,illumina_fastq_attrs.basename)
+            self.assertEqual(fq.extension,illumina_fastq_attrs.extension)
+            self.assertEqual(fq.sample_number,illumina_fastq_attrs.sample_number)
+            self.assertEqual(fq.barcode_sequence,illumina_fastq_attrs.barcode_sequence)
+            self.assertEqual(fq.lane_number,illumina_fastq_attrs.lane_number)
+            self.assertEqual(fq.read_number,illumina_fastq_attrs.read_number)
+            self.assertEqual(fq.is_index_read,illumina_fastq_attrs.is_index_read)
+            self.assertEqual(str(fq),str(illumina_fastq_attrs))
+    def test_changing_attribute_updates_canonical_name(self):
+        """AnalysisFastq: changing attributes is reflected in canonical name
+        """
+        fq = AnalysisFastq('M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+        fq.read_number = 2
+        self.assertEqual(fq.canonical_name,
+                         'M_19_0040_S13-A40h-R_D709-D505_L007_R2_001')
+    def test_changing_attribute_updates_repr(self):
+        """AnalysisFastq: changing attributes is reflected in repr
+        """
+        fq = AnalysisFastq('M_19_0040_S13-A40h-R_D709-D505_L007_R1_001_repeated_1')
+        fq.read_number = 2
+        self.assertEqual(str(fq),
+                         'M_19_0040_S13-A40h-R_D709-D505_L007_R2_001_repeated_1')
+
 class TestAnalysisDir(unittest.TestCase):
     """Tests for the AnalysisDir class
 
@@ -312,7 +392,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
         self.assertEqual(project.info.samples,
-                         '2 samples (PB04_S4_R1_unpaired, PB04_trimmoPE_bowtie2_notHg38.1)')
+                         '2 samples (PB04, PB04_trimmoPE_bowtie2_notHg38.1)')
         self.assertEqual(project.fastq_dirs,['fastqs',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
 

@@ -39,6 +39,7 @@ from .metadata import AnalysisDirParameters
 from .metadata import AnalysisProjectInfo
 from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
+from .fastq_utils import BaseFastqAttrs
 from .fastq_utils import IlluminaFastqAttrs
 from itertools import izip_longest
 
@@ -49,10 +50,100 @@ logger = logging.getLogger(__name__)
 # Classes
 #######################################################################
 
-class AnalysisFastq(IlluminaFastqAttrs):
+class AnalysisFastq(BaseFastqAttrs):
     """
-    Wrapper for IlluminaFastqAttrs
+    Class for extracting information about Fastq files
+
+    Given the name of a Fastq file, extract data about the sample name,
+    barcode sequence, lane number, read number and set number.
+
+    Uses the IlluminaFastqAttrs class to handle Fastq filenames
+    which consist of a valid Fastq name as defined by
+    IlluminaFastqAttrs, but with additional elements appended.
+
+    Instances of this class have the following attributes
+    (defined in the base class):
+
+    fastq:            the original fastq file name
+    basename:         basename with NGS extensions stripped
+    extension:        full extension e.g. '.fastq.gz'
+    sample_name:      name of the sample
+    sample_number:    integer (or None if no sample number)
+    barcode_sequence: barcode sequence (string or None)
+    lane_number:      integer (or None if no lane number)
+    read_number:      integer (or None if no read number)
+    set_number:       integer (or None if no set number)
+    is_index_read:    boolean (True if index read, False if not)
+
+    There are two additional attributes:
+
+    canonical_name:   the 'canonical' part of the name (string,
+                      or None if no canonical part could be
+                      extracted)
+    extras:           the 'extra' part of the name (string,
+                      or None if there was no trailing extra
+                      part)
     """
+    def __init__(self,fastq):
+        # Initialise the base class
+        BaseFastqAttrs.__init__(self,fastq)
+        # Additional attributes
+        self.extras = None
+        # Try to identify a canonical component of the
+        # name by removing trailing parts and testing
+        fastq_base = self.basename
+        extras = []
+        fq_attrs = IlluminaFastqAttrs(fastq_base)
+        while fq_attrs.sample_name == fq_attrs.basename:
+            # Remove more trailing components and try again
+            extras.append(fastq_base.split('_')[-1])
+            fastq_base = '_'.join(fastq_base.split('_')[:-1])
+            if not fastq_base:
+                # No more components to remove
+                fq_attrs = IlluminaFastqAttrs(self.basename)
+                extras = None
+                break
+            else:
+                fq_attrs = IlluminaFastqAttrs(fastq_base)
+        # Copy attributes across
+        self.sample_name = fq_attrs.sample_name
+        self.sample_number = fq_attrs.sample_number
+        self.barcode_sequence = fq_attrs.barcode_sequence
+        self.lane_number = fq_attrs.lane_number
+        self.read_number = fq_attrs.read_number
+        self.set_number = fq_attrs.set_number
+        self.is_index_read = fq_attrs.is_index_read
+        # Store extras
+        if extras:
+            self.extras = "_%s" % '_'.join(extras[::-1])
+        else:
+            self.extras = None
+    @property
+    def canonical_name(self):
+        """
+        Return the 'canonical' part of the name
+        """
+        illumina_fastq_attrs = IlluminaFastqAttrs(self.fastq)
+        illumina_fastq_attrs.sample_name = self.sample_name
+        illumina_fastq_attrs.sample_number = self.sample_number
+        illumina_fastq_attrs.barcode_sequence = self.barcode_sequence
+        illumina_fastq_attrs.lane_number = self.lane_number
+        illumina_fastq_attrs.read_number = self.read_number
+        illumina_fastq_attrs.set_number = self.set_number
+        illumina_fastq_attrs.is_index_read = self.is_index_read
+        if illumina_fastq_attrs.sample_name != illumina_fastq_attrs.basename:
+            return str(illumina_fastq_attrs)
+        else:
+            return None
+    def __repr__(self):
+        """
+        Implement __repr__ built-in
+        """
+        if self.canonical_name:
+            return "%s%s" % (self.canonical_name,
+                             self.extras if self.extras else '')
+        else:
+            return self.basename
 
 class AnalysisDir:
     """Class describing an analysis directory
