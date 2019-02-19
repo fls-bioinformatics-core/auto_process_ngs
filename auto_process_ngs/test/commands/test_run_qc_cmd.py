@@ -68,7 +68,8 @@ class TestAutoProcessRunQc(unittest.TestCase):
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1)
+                        max_jobs=1,
+                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
@@ -126,7 +127,8 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1)
+                        max_jobs=1,
+                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
@@ -196,7 +198,8 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1)
+                        max_jobs=1,
+                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
@@ -267,7 +270,8 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1)
+                        max_jobs=1,
+                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
