@@ -34,6 +34,7 @@ class TestSettings(unittest.TestCase):
         # General settings
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.general.poll_interval,5.0)
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.run_qc,None)
         # Bcl2fastq
@@ -75,6 +76,7 @@ nprocessors = 8
         # General settings
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
+        self.assertEqual(s.general.poll_interval,5.0)
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.run_qc,None)
         # Fastq_stats
