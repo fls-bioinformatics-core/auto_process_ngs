@@ -67,6 +67,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -104,6 +105,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -142,6 +144,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
@@ -176,6 +179,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -213,6 +217,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
@@ -248,6 +253,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
@@ -282,6 +288,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)
@@ -320,6 +327,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -353,6 +361,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -392,6 +401,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -432,6 +442,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -468,6 +479,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -503,6 +515,7 @@ class TestRunQC(unittest.TestCase):
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
                            max_jobs=1,
+                           poll_interval=0.5,
                            batch_size=3)
         # Check output and reports
         self.assertEqual(status,0)
@@ -540,6 +553,7 @@ class TestRunQC(unittest.TestCase):
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
                            max_jobs=1,
+                           poll_interval=0.5,
                            batch_size=3)
         # Check output and reports
         self.assertEqual(status,1)
@@ -578,6 +592,7 @@ class TestRunQC(unittest.TestCase):
                            qc_runner=SimpleJobRunner(),
                            verify_runner=SimpleJobRunner(),
                            report_runner=SimpleJobRunner(),
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
