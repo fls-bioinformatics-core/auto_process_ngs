@@ -110,7 +110,7 @@ class TestSimpleScheduler(unittest.TestCase):
         """Start and stop without running any jobs
 
         """
-        sched = SimpleScheduler(runner=MockJobRunner())
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01)
         sched.start()
         self.assertEqual(sched.n_waiting,0)
         self.assertEqual(sched.n_running,0)
@@ -722,15 +722,15 @@ class TestSimpleScheduler(unittest.TestCase):
         sched = SimpleScheduler(runner=SimpleJobRunner(log_dir=self.log_dir),
                                 poll_interval=0.01)
         sched.start()
-        job_1 = sched.submit(['sleep','10'],name='sleep_10')
-        job_2 = sched.submit(['sleep','30'],name='sleep_30')
-        job_3 = sched.submit(['sleep','5'],name='sleep_5')
+        job_1 = sched.submit(['sleep','1'],name='sleep_1')
+        job_2 = sched.submit(['sleep','3'],name='sleep_3')
+        job_3 = sched.submit(['sleep','10'],name='sleep_10')
         self.assertFalse(job_1.completed)
         self.assertFalse(job_2.completed)
         self.assertFalse(job_3.completed)
         # Wait for job to finish
         try:
-            sched.wait_for(('sleep_5','sleep_10'),timeout=10)
+            sched.wait_for(('sleep_1','sleep_3'),timeout=10)
         except SchedulerTimeout:
             sched.stop()
             job_1.terminate()
@@ -738,8 +738,8 @@ class TestSimpleScheduler(unittest.TestCase):
             job_3.terminate()
             self.fail("'wait_for' timed out")
         self.assertTrue(job_1.completed)
-        self.assertFalse(job_2.completed)
-        self.assertTrue(job_3.completed)
+        self.assertTrue(job_2.completed)
+        self.assertFalse(job_3.completed)
         sched.stop()
 
 class TestSchedulerJob(unittest.TestCase):
@@ -801,7 +801,7 @@ class TestSchedulerJob(unittest.TestCase):
         self.log_dir = tempfile.mkdtemp()
         job = SchedulerJob(
             SimpleJobRunner(log_dir=self.log_dir),
-            ['sleep','5'])
+            ['sleep','1'])
         self.assertFalse(job.completed)
         try:
             job.start()
@@ -818,7 +818,7 @@ class TestSchedulerJob(unittest.TestCase):
             runner=SimpleJobRunner(log_dir=self.log_dir),
             poll_interval=0.01)
         sched.start()
-        job = sched.submit(['sleep','5'])
+        job = sched.submit(['sleep','1'])
         self.assertFalse(job.completed)
         try:
             job.wait(poll_interval=0.01,timeout=10)
@@ -837,7 +837,7 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertRaises(SchedulerTimeout,
                           job.wait,
                           poll_interval=0.01,
-                          timeout=5)
+                          timeout=1)
 
     def test_restart_scheduler_job(self):
         """Restart running SchedulerJob
@@ -917,7 +917,7 @@ class TestSchedulerReporter(unittest.TestCase):
         """
         fp = cStringIO.StringIO()
         reporter = SchedulerReporter(fp=fp)
-        sched = SimpleScheduler()
+        sched = SimpleScheduler(poll_interval=0.01)
         reporter.scheduler_status(sched)
         self.assertEqual('',fp.getvalue())
 
@@ -926,7 +926,7 @@ class TestSchedulerReporter(unittest.TestCase):
         """
         fp = cStringIO.StringIO()
         reporter = SchedulerReporter(fp=fp,scheduler_status="%(n_running)s jobs")
-        sched = SimpleScheduler()
+        sched = SimpleScheduler(poll_interval=0.01)
         reporter.scheduler_status(sched)
         self.assertEqual('0 jobs\n',fp.getvalue())
 
@@ -980,7 +980,7 @@ class TestSchedulerReporter(unittest.TestCase):
             fp=fp,
             group_added="Group has been added: #%(group_id)d: \"%(group_name)s\""
         )
-        group = SchedulerGroup('test',1,SimpleScheduler())
+        group = SchedulerGroup('test',1,SimpleScheduler(poll_interval=0.01))
         reporter.group_added(group)
         self.assertEqual('Group has been added: #1: "test"\n',fp.getvalue())
 
@@ -992,7 +992,7 @@ class TestSchedulerReporter(unittest.TestCase):
             fp=fp,
             group_end="Group completed: #%(group_id)d: \"%(group_name)s\""
         )
-        group = SchedulerGroup('test',1,SimpleScheduler())
+        group = SchedulerGroup('test',1,SimpleScheduler(poll_interval=0.01))
         job = group.add(['sleep','50'],name='sleep',wait_for=[])
         group.close()
         job.terminate()
