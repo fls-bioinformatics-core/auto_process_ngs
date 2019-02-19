@@ -94,7 +94,7 @@ class RunQC(object):
 
     def run(self,report_html=None,multiqc=False,qc_runner=None,
             verify_runner=None,report_runner=None,max_jobs=None,
-            batch_size=None):
+            poll_interval=5,batch_size=None):
         """
         Schedule and execute QC jobs
 
@@ -111,6 +111,8 @@ class RunQC(object):
             for QC reporting
           max_jobs (int): optional, specify maximum
             number of jobs to run concurrently
+          poll_interval (float): specify polling interval
+            for scheduler (default: 5s)
           batch_size (int): if set then run QC commands in
             batches, with each job running this many
             commands at a time
@@ -129,7 +131,8 @@ class RunQC(object):
         if report_runner is None:
             report_runner = verify_runner
         # Set up and start scheduler
-        self._sched = SimpleScheduler(max_concurrent=max_jobs)
+        self._sched = SimpleScheduler(max_concurrent=max_jobs,
+                                      poll_interval=poll_interval)
         self._sched.start()
         # Initial QC check for each project
         for project in self._projects:
