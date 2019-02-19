@@ -134,14 +134,14 @@ class Settings(object):
             for genome,conf_file in config.items('fastq_strand_indexes'):
                 self.fastq_strand_indexes[genome] = conf_file
         except NoSectionError:
-            logging.warning("No strand stats conf files defined")
+            logging.debug("No strand stats conf files defined")
         # Sequencers
         self.add_section('sequencers')
         try:
             for instrument,platform in config.items('sequencers'):
                 self['sequencers'][instrument] = platform
         except NoSectionError:
-            logging.warning("No sequencers defined")
+            logging.debug("No sequencers defined")
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
@@ -193,7 +193,7 @@ class Settings(object):
             for genome,transcriptome in config.items('10xgenomics_transcriptomes'):
                 self['10xgenomics_transcriptomes'][genome] = transcriptome
         except NoSectionError:
-            logging.warning("No 10xgenomics transcriptomes defined")
+            logging.debug("No 10xgenomics transcriptomes defined")
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
