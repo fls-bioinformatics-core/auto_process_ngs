@@ -914,7 +914,7 @@ if __name__ == "__main__":
             __settings.save()
         else:
             # Report the current configuration settings
-            __settings.report_settings()
+            paginate(__settings.report_settings())
     elif cmd == 'setup':
         if len(args) != 1:
             sys.stderr.write("Need to supply a data source location\n")

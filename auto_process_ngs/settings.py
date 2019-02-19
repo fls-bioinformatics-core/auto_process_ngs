@@ -367,19 +367,22 @@ class Settings(object):
     def report_settings(self):
         """
         Report the settings read from the config file
-
         """
+        text = []
         if self.settings_file:
-            print "Settings from %s:" % self.settings_file
+            text.append("Settings from %s" % self.settings_file)
         else:
-            logging.warning("No settings file found, reporting built-in defaults")
+            logging.warning("No settings file found, reporting built-in "
+                            "defaults")
         for section in self._sections:
             if self.has_subsections(section):
                 for subsection in getattr(self,section):
-                    show_dictionary('%s:%s' % (section,subsection),
-                                    getattr(self,section)[subsection])
+                    text.append(
+                        show_dictionary('%s:%s' % (section,subsection),
+                                        getattr(self,section)[subsection]))
             else:
-                show_dictionary(section,getattr(self,section))
+                text.append(show_dictionary(section,getattr(self,section)))
+        return '\n'.join(text)
 
 #######################################################################
 # Functions
@@ -497,9 +500,9 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
 def show_dictionary(name,d):
     """
     Print the contents of a dictionary
-
     """
-    print "[%s]" % name
+    text = ["[%s]" % name]
     for key in d:
-        print "\t%s = %s" % (key,(d[key] if d[key] is not None
-                                  else '<Not set>'))
+        text.append("\t%s = %s" % (key,(d[key] if d[key] is not None
+                                        else '<Not set>')))
+    return '\n'.join(text)
