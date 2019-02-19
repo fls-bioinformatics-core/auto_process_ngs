@@ -623,13 +623,15 @@ class Pipeline(object):
         self.stop_scheduler()
         return 1
 
-    def start_scheduler(self,runner=None,max_concurrent=1):
+    def start_scheduler(self,runner=None,max_concurrent=1,
+                        poll_interval=5):
         """
         Internal: instantiate and start local scheduler
         """
         if self._scheduler is None:
             sched = SimpleScheduler(runner=runner,
                                     max_concurrent=max_concurrent,
+                                    poll_interval=poll_interval,
                                     reporter=SchedulerReporter())
             sched.start()
             self._scheduler = sched
@@ -801,7 +803,7 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            exit_on_failure=PipelineFailure.IMMEDIATE):
+            poll_interval=5,exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -822,6 +824,11 @@ class Pipeline(object):
             concurrent jobs in scheduler (defaults to 1;
             ignored if a scheduler is provided via 'sched'
             argument)
+          poll_interval (float): optional polling interval
+            (seconds) to set in scheduler (if scheduler not
+            provided via the 'sched' argument), and to use
+            for checking if tasks have completed (defaults
+            to 5s)
           exit_on_failure (int): either IMMEDIATE (any
             task failures cause immediate termination of
             of the pipeline; this is the default) or
@@ -837,7 +844,8 @@ class Pipeline(object):
         if sched is None:
             # Create and start a scheduler
             sched = self.start_scheduler(runner=default_runner,
-                                         max_concurrent=max_jobs)
+                                         max_concurrent=max_jobs,
+                                         poll_interval=poll_interval)
         # Deal with log directory
         if log_dir is None:
             log_dir = "%s.logs" % self._id
@@ -903,6 +911,7 @@ class Pipeline(object):
                         task.run(sched=sched,
                                  log_dir=log_dir,
                                  scripts_dir=scripts_dir,
+                                 poll_interval=poll_interval,
                                  **kws)
                     except Exception as ex:
                         self.report("Failed to start task '%s': %s" %
@@ -990,7 +999,7 @@ class Pipeline(object):
                 update = False
             else:
                 # Pause before checking again
-                time.sleep(5)
+                time.sleep(poll_interval)
         # Finished
         if self._failed:
             # Report failed tasks
@@ -1284,7 +1293,8 @@ class PipelineTask(object):
         return self._output
 
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
-            scripts_dir=None,log_file=None,wait_for=(),async=True):
+            scripts_dir=None,log_file=None,wait_for=(),async=True,
+            poll_interval=5):
         """
         Run the task
 
@@ -1308,6 +1318,9 @@ class PipelineTask(object):
             wait for before running jobs from this task
           async (bool): if False then block until the task has
             completed
+          poll_interval (float): interval between checks on task
+            completion (in seconds) for non-async tasks (defaults
+            to 5 seconds)
         """
         # Initialise
         if working_dir is None:
@@ -1368,7 +1381,7 @@ class PipelineTask(object):
             if not async:
                 # Wait for job or group to complete before returning
                 while not self.completed:
-                    time.sleep(5)
+                    time.sleep(poll_interval)
         else:
             # No commands to execute
             self.finish_task()
