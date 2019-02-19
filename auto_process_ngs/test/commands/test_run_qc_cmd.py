@@ -63,13 +63,19 @@ class TestAutoProcessRunQc(unittest.TestCase):
             metadata={ "instrument_datestamp": "170901" },
             top_dir=self.dirn)
         mockdir.create()
+        # Settings file with polling interval
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
         # Make autoprocess instance
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(settings_ini))
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1,
-                        poll_interval=0.5)
+                        max_jobs=1)
         self.assertEqual(status,0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
@@ -114,10 +120,14 @@ class TestAutoProcessRunQc(unittest.TestCase):
                                "CDE": { "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes
+        # Settings file with fastq_strand indexes and
+        # polling interval
         settings_ini = os.path.join(self.dirn,"settings.ini")
         with open(settings_ini,'w') as s:
-            s.write("""[fastq_strand_indexes]
+            s.write("""[general]
+poll_interval = 0.5
+
+[fastq_strand_indexes]
 human = /data/genomeIndexes/hg38/STAR
 mouse = /data/genomeIndexes/mm10/STAR
 """)
@@ -127,8 +137,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1,
-                        poll_interval=0.5)
+                        max_jobs=1)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
@@ -185,10 +194,14 @@ mouse = /data/genomeIndexes/mm10/STAR
                                "CDE": { "Organism": "mouse", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes
+        # Settings file with fastq_strand indexes and
+        # polling interval
         settings_ini = os.path.join(self.dirn,"settings.ini")
         with open(settings_ini,'w') as s:
-            s.write("""[fastq_strand_indexes]
+            s.write("""[general]
+poll_interval = 0.5
+
+[fastq_strand_indexes]
 human = /data/genomeIndexes/hg38/STAR
 mouse = /data/genomeIndexes/mm10/STAR
 """)
@@ -198,8 +211,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1,
-                        poll_interval=0.5)
+                        max_jobs=1)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
@@ -257,10 +269,14 @@ mouse = /data/genomeIndexes/mm10/STAR
                                         "Single cell platform": "ICELL8", } },
             top_dir=self.dirn)
         mockdir.create()
-        # Settings file with fastq_strand indexes
+        # Settings file with fastq_strand indexes and
+        # polling interval
         settings_ini = os.path.join(self.dirn,"settings.ini")
         with open(settings_ini,'w') as s:
-            s.write("""[fastq_strand_indexes]
+            s.write("""[general]
+poll_interval = 0.5
+
+[fastq_strand_indexes]
 human = /data/genomeIndexes/hg38/STAR
 mouse = /data/genomeIndexes/mm10/STAR
 """)
@@ -270,8 +286,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Run the QC
         status = run_qc(ap,
                         run_multiqc=True,
-                        max_jobs=1,
-                        poll_interval=0.5)
+                        max_jobs=1)
         self.assertEqual(status,0)
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
