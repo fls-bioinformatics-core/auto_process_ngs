@@ -206,8 +206,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -262,8 +260,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -312,8 +308,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         # Additional QC for second fastq set in first project
         project_qc = "qc.extra_report.%s.%s" % (multi_fastqs_project.name,
                                                 os.path.basename(
@@ -322,9 +316,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
         outputs.append("%s.zip" % project_qc)
         outputs.append(os.path.join(project_qc,"qc.extra_report.html"))
         outputs.append(os.path.join(project_qc,"qc.extra"))
-        # MultiQC output
-        outputs.append("multiqc.extra_report.%s.html" %
-                       multi_fastqs_project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -398,8 +389,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -452,8 +441,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -509,8 +496,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         # ICell8 outputs
         icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
                                                   os.path.basename(
@@ -667,8 +652,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         # Cellranger count outputs
         cellranger_count_dir = "cellranger_count_report.%s.%s" % (
             tenxgenomics_project.name,
@@ -736,8 +719,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(final_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -787,8 +768,6 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
             zip_files.append("%s.zip" % project_qc)
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         # ICell8 outputs
         icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
                                                   os.path.basename(
@@ -899,10 +878,50 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-            # MultiQC output
-            outputs.append("multiqc_report.%s.html" % project.name)
         for item in outputs:
             f = os.path.join(final_dir,
                              "20160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_with_projects_legacy_mode(self):
+        """publish_qc: projects with all QC outputs (legacy mode)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir,legacy=True)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+            # MultiQC output
+            outputs.append("multiqc_report.%s.html" % project.name)
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)

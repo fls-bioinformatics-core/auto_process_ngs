@@ -116,6 +116,12 @@ def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
                         continue
                     if os.path.exists(f):
                         zip_file.add(f)
+    # MultiQC output
+    multiqc = os.path.join(project.dirn,
+                           "multi%s_report.html" %
+                           os.path.basename(qc_dir))
+    if os.path.exists(multiqc):
+        zip_file.add(multiqc)
     # Finished
     return report_zip
 
@@ -144,8 +150,8 @@ def main():
                          help="title for output QC reports")
     reporting.add_option('-f','--filename',
                          action='store',dest='filename',default=None,
-                 help="file name for output HTML QC report (default: "
-                         "<DIR>/<QC_DIR>_report.html)")
+                         help="file name for output HTML QC report "
+                         "(default: <DIR>/<QC_DIR>_report.html)")
     reporting.add_option('--zip',action='store_true',
                          dest='zip',default=False,
                          help="make ZIP archive for the QC report")
@@ -198,6 +204,7 @@ def main():
             qc_dir = opts.qc_dir
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(p.dirn,qc_dir)
+        qc_base = os.path.basename(qc_dir)
         # Warning if there is a mismatch
         qc_info = p.qc_info(qc_dir)
         if qc_info.fastq_dir is not None and \
@@ -236,8 +243,41 @@ def main():
             print "Verification: OK"
             if opts.verify:
                 continue
+        # MultiQC report
+        if opts.multiqc:
+            multiqc_report = os.path.join(p.dirn,
+                                          "multi%s_report.html" %
+                                          qc_base)
+            # Check if we need to rerun MultiQC
+            if os.path.exists(multiqc_report) and not opts.force:
+                run_multiqc = False
+                multiqc_mtime = os.path.getmtime(multiqc_report)
+                for f in os.listdir(qc_dir):
+                    if os.path.getmtime(os.path.join(qc_dir,f)) > \
+                       multiqc_mtime:
+                        # Input is newer than report
+                        run_multiqc = True
+                        break
+            else:
+                run_multiqc = True
+            # (Re)run MultiQC
+            if run_multiqc:
+                multiqc_cmd = Command(
+                    'multiqc',
+                    '--title','%s' % opts.title,
+                    '--filename','%s' % multiqc_report,
+                    '--force',
+                    qc_dir)
+                print "Running %s" % multiqc_cmd
+                multiqc_retval = multiqc_cmd.run_subprocess()
+                if multiqc_retval == 0 and os.path.exists(multiqc_report):
+                    print "MultiQC: %s" % multiqc_report
+                else:
+                    print "MultiQC: FAILED"
+                    retval += 1
+            else:
+                print "MultiQC: %s (already exists)" % multiqc_report
         # Report generation
-        qc_base = os.path.basename(qc_dir)
         if opts.filename is None:
             out_file = '%s_report.html' % qc_base
         else:
@@ -255,24 +295,6 @@ def main():
             report_zip = zip_report(p,report_html,qc_dir,
                                     illumina_qc=illumina_qc)
             print "ZIP archive: %s" % report_zip
-        # MultiQC report
-        if opts.multiqc:
-            multiqc_report = os.path.join(p.dirn,
-                                          "multi%s_report.html" %
-                                          qc_base)
-            multiqc_cmd = Command(
-                'multiqc',
-                '--title','%s' % opts.title,
-                '--filename','%s' % multiqc_report,
-                '--force',
-                qc_dir)
-            print "Running %s" % multiqc_cmd
-            multiqc_retval = multiqc_cmd.run_subprocess()
-            if multiqc_retval == 0 and os.path.exists(multiqc_report):
-                print "MultiQC: %s" % multiqc_report
-            else:
-                print "MultiQC: FAILED"
-                retval += 1
     # Finish with appropriate exit code
     sys.exit(retval)
 

@@ -670,71 +670,13 @@ class AutoProcess(object):
 
     @property
     def run_reference_id(self):
-        """Return a run reference id e.g. 'HISEQ_140701/242#22'
-
-        The run reference code is a code that identifies the sequencing
-        run, and has the general form:
-
-        PLATFORM_DATESTAMP[/INSTRUMENT_RUN_NUMBER]#FACILITY_RUN_NUMBER
-
-        - PLATFORM is always uppercased e.g. HISEQ, MISEQ, GA2X
-        - DATESTAMP is the YYMMDD code e.g. 140701
-        - INSTRUMENT_RUN_NUMBER is the run number that forms part of the
-          run directory e.g. for '140701_SN0123_0045_000000000-A1BCD'
-          it is '45'
-        - FACILITY_RUN_NUMBER is the run number that has been assigned
-          by the facility
-
-        Note that the instrument run number is only used if it differs
-        from the facility run number.
-
         """
-        # Extract information from run name
-        run_name = self.run_name
-        try:
-            datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-        except Exception, ex:
-            logging.warning("Unable to extract information from run name '%s'" \
-                            % run_name)
-            logging.warning("Exception: %s" % ex)
-            instrument = None
-            date_stamp = None
-            run_number = None
-        # Update items from metadata
-        if self.metadata.instrument_name:
-            instrument = self.metadata.instrument_name
-        if self.metadata.instrument_datestamp:
-            date_stamp = self.metadata.instrument_datestamp
-        if self.metadata.instrument_run_number:
-            run_number = self.metadata.instrument_run_number
-        if run_number is not None:
-            run_number = str(run_number).lstrip('0')
-        # Platform
-        if self.metadata.platform is not None:
-            platform = self.metadata.platform.upper()
-        else:
-            platform = None
-        # Facility run number
-        if self.metadata.run_number is not None:
-            facility_run_number = str(self.metadata.run_number)
-        else:
-            facility_run_number = None
-        # Construct the reference id
-        if platform is not None:
-            run_id = platform
-            if datestamp is not None:
-                run_id += "_%s" % datestamp
-            if run_number is not None:
-                try:
-                    if run_number != facility_run_number:
-                        run_id += "/%s" % run_number
-                except ValueError:
-                    run_id += "/%s" % run_number
-            if facility_run_number is not None:
-                run_id += "#%s" % facility_run_number
-        else:
-            run_id = run_name
-        return run_id
+        Return a run reference id (e.g. 'HISEQ_140701/242#22')
+        """
+        return analysis.run_reference_id(
+            self.run_name,
+            platform=self.metadata.platform,
+            facility_run_number=self.metadata.run_number)
 
     @property
     def parameter_file(self):

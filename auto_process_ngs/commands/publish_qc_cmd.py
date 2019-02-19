@@ -62,7 +62,7 @@ div.footer { font-style: italic;
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                regenerate_reports=False,force=False,use_hierarchy=False,
-               exclude_zip_files=False):
+               exclude_zip_files=False,legacy=False):
     """
     Copy the QC reports to the webserver
 
@@ -79,13 +79,21 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     each Fastq set in each project:
 
     - QC report for standard QC
-    - MultiQC report
 
     Also if a project comprises ICell8 or 10xGenomics Chromium
     data:
 
     - ICell8 processing report, or
     - 'cellranger count' reports for each sample
+
+    In 'legacy' mode, the top-level report will also contain
+    explicit links for each project for the following (where
+    appropriate):
+
+    - MultiQC report
+
+    (These reports should now be accessible from the per-project
+    QC reports, regardless of whther 'legacy' mode is specified.)
 
     Raises an exception if:
 
@@ -116,6 +124,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
       exclude_zip_files (bool): if True then exclude any ZIP
         archives from publication (default is to include ZIP
         files)
+      legacy (bool): if True then operate in 'legacy' mode (i.e.
+        explicitly include MultiQC reports for each project)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -273,15 +283,16 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             else:
                 # Not verified
                 print "...%s: failed to verify QC" % qc_dir
-            # MultiQC report
-            multiqc_report = os.path.join(project.dirn,
-                                          "multi%s.html"
-                                          % qc_base)
-            if os.path.exists(multiqc_report):
-                print "...%s: found MultiQC report" % qc_dir
-                qc_artefacts['multiqc_report'] = multiqc_report
-            else:
-                print "...%s: no MultiQC report" % qc_dir
+            if legacy:
+                # MultiQC report
+                multiqc_report = os.path.join(project.dirn,
+                                              "multi%s.html"
+                                              % qc_base)
+                if os.path.exists(multiqc_report):
+                    print "...%s: found MultiQC report" % qc_dir
+                    qc_artefacts['multiqc_report'] = multiqc_report
+                else:
+                    print "...%s: no MultiQC report" % qc_dir
         # ICell8 pipeline report
         icell8_zip = os.path.join(project.dirn,
                                   "icell8_processing.%s.%s.zip" %

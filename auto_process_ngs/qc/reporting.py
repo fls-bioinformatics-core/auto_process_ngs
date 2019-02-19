@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 
 #######################################################################
@@ -12,6 +12,7 @@ import sys
 import os
 import logging
 import time
+import ast
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import cmp_sample_names
 from bcftbx.TabFile import TabFile
@@ -19,12 +20,15 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from ..analysis import run_reference_id
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
 from ..docwriter import Img
 from ..docwriter import Link
 from ..docwriter import Target
+from ..docwriter import List
+from ..metadata import AnalysisDirMetadata
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
@@ -48,7 +52,12 @@ logger = logging.getLogger(__name__)
 
 from .illumina_qc import FASTQ_SCREENS
 
-QC_REPORT_CSS_STYLES = """/* Headers */
+QC_REPORT_CSS_STYLES = """/* General styles */
+html { font-family: DejaVu Serif, serif; }
+p { font-size: 85%;
+    color: #808080; }
+/* Headers */
+h1, h2, h3, h4 { font-family: DejaVu Serif, serif; }
 h1 { background-color: #42AEC2;
      color: white;\n
      padding: 5px 10px; }
@@ -59,13 +68,23 @@ h2 { background-color: #8CC63F;
      margin: 0;
      border-top-left-radius: 20px;
      border-bottom-right-radius: 20px; }
- h3, h4 { background-color: grey;
-          color: white;
-          display: block;
-          padding: 5px 15px;
-          margin: 0;
-          border-top-left-radius: 20px;
-          border-bottom-right-radius: 20px; }
+h3, h4 { background-color: grey;
+         color: white;
+         display: block;
+         padding: 5px 15px;
+         margin: 0;
+         border-top-left-radius: 20px;
+         border-bottom-right-radius: 20px; }
+/* Summary section */
+div.summary { margin: 10 10;
+              border: solid 2px #8CC63F;
+              padding: 0;
+              border-top-left-radius: 25px; }
+.info { padding: 5px 15px;
+        float: left;
+        font-size: 100%; }
+.info h3 { margin: 5px; }
+.info p { color: black; }
 /* Samples and Fastqs */
 .sample { margin: 10 10;
           border: solid 2px #8CC63F;
@@ -126,9 +145,6 @@ table.programs th { text-align: left;
                     padding: 2px 5px; }
 table.programs td { padding: 2px 5px;
                     border-bottom: solid 1px lightgray; }
-/* General styles */
-p { font-size: 85%;
-    color: #808080; }
 /* Rules for printing */
 @media print
 {
@@ -480,6 +496,22 @@ class QCReport(Document):
                 print "\t- %s" % output
         else:
             logger.warning("No QC outputs found")
+        if self.software:
+            print "Software versions:"
+            for package in self.software:
+                print "\t- %s: %s" % (package,
+                                      ','.join(self.software[package]))
+        # Load metadata from parent run
+        self.run_metadata = AnalysisDirMetadata()
+        run_metadata_file = os.path.join(
+            os.path.dirname(os.path.abspath(self.project.dirn)),
+            "metadata.info")
+        if os.path.exists(run_metadata_file):
+            print "Loading run metadata from %s" % run_metadata_file
+            self.run_metadata.load(run_metadata_file)
+        else:
+            logger.warning("Run metadata file '%s' not found"
+                           % run_metadata_file)
         # Set up title
         if title is None:
             title = "QC report: %s" % self.project.name
@@ -535,14 +567,22 @@ class QCReport(Document):
         self.report_attrs = report_attrs
         # Initialise tables
         self.metadata_table = self._init_metadata_table()
+        self.software_table = self._init_software_table()
         self.summary_table = self._init_summary_table()
         # Initialise report sections
         self.preamble = self._init_preamble_section()
         self.summary = self._init_summary_section()
         # Build the report
+        print "Building the report..."
         self.report_metadata()
+        self.report_software()
         for sample in self.project.samples:
-            self.report_sample(sample)
+            try:
+                self.report_sample(sample)
+            except Exception as ex:
+                logger.error("Exception for sample '%s': %s"
+                             % (sample.name,ex))
+                raise ex
 
     def _init_metadata_table(self):
         """
@@ -554,6 +594,17 @@ class QCReport(Document):
         metadata_tbl.no_header()
         metadata_tbl.add_css_classes('metadata')
         return metadata_tbl
+
+    def _init_software_table(self):
+        """
+        Internal: set up a table for software information
+
+        Associated CSS class is 'metadata'
+        """
+        software_tbl = Table(('program','version',))
+        software_tbl.no_header()
+        software_tbl.add_css_classes('metadata')
+        return software_tbl
 
     def _init_summary_table(self):
         """
@@ -582,7 +633,38 @@ class QCReport(Document):
         Associated name is 'summary'
         """
         summary = self.add_section("Summary",name='summary')
-        summary.add(self.metadata_table)
+        summary.add_css_classes("summary")
+        # Add subsections inside a container
+        info = summary.add_subsection()
+        general_info = info.add_subsection("General information")
+        general_info.add_css_classes("info")
+        general_info.add(self.metadata_table)
+        software_info = info.add_subsection("Software")
+        software_info.add_css_classes("info")
+        software_info.add(self.software_table)
+        # Add an empty section to clear HTML floats
+        clear = summary.add_subsection()
+        clear.add_css_classes("clear")
+        # Add additional subsections for comments etc
+        info = summary.add_subsection()
+        # Add comments section
+        comments = info.add_subsection("Comments")
+        comments.add_css_classes("info")
+        comments_list = List()
+        try:
+            if self.project.info.comments:
+                for comment in self.project.info.comments.split(';'):
+                    comments_list.add_item(comment.strip())
+            else:
+                # Drop out with exception
+                raise AttributeError
+        except AttributeError:
+            comments_list.add_item("N/A")
+        comments.add(comments_list)
+        # Add an empty section to clear HTML floats
+        clear = summary.add_subsection()
+        clear.add_css_classes("clear")
+        # Add the summary table
         summary.add("%d samples | %d fastqs" % (len(self.project.samples),
                                                 len(self.project.fastqs)))
         summary.add(self.summary_table)
@@ -593,8 +675,10 @@ class QCReport(Document):
         Internal: determine which QC outputs are present
         """
         outputs = []
+        software = {}
         print "Scanning contents of %s" % self.qc_dir
         files = os.listdir(self.qc_dir)
+        print "\t- %d objects found" % len(files)
         fastqs = [strip_ngs_extensions(os.path.basename(fq))
                   for fq in self.project.fastqs]
         fastqs_r1 = filter(lambda f:
@@ -613,6 +697,7 @@ class QCReport(Document):
                          f.endswith("_screen.png"),
                          files)
         logger.debug("Screens: %s" % screens)
+        print "\t- %d fastq_screen files" % len(screens)
         if screens:
             for fq in fastqs_r1:
                 if filter(lambda s: s.startswith(fq),screens):
@@ -622,24 +707,55 @@ class QCReport(Document):
                 if filter(lambda s: s.startswith(fq),screens):
                     outputs.append("screens_r2")
                     break
+            versions = set()
+            for screen in filter(lambda s:
+                                 s.endswith("_screen.txt"),
+                                 screens):
+                versions.add(Fastqscreen(
+                    os.path.join(self.qc_dir,screen)).version)
+            if versions:
+                software['fastq_screen'] = sorted(list(versions))
         # Look for fastqc outputs
-        fastqc = filter(lambda f: f.endswith("_fastqc.html"),files)
-        logger.debug("Fastqc: %s" % fastqc)
-        if fastqc:
+        fastqcs = filter(lambda f: f.endswith("_fastqc.html"),files)
+        logger.debug("Fastqc: %s" % fastqcs)
+        print "\t- %d fastqc files" % len(fastqcs)
+        if fastqcs:
             for fq in fastqs_r1:
-                if filter(lambda f: f.startswith(fq),fastqc):
+                if filter(lambda f: f.startswith(fq),fastqcs):
                     outputs.append("fastqc_r1")
                     break
             for fq in fastqs_r2:
-                if filter(lambda f: f.startswith(fq),fastqc):
+                if filter(lambda f: f.startswith(fq),fastqcs):
                     outputs.append("fastqc_r2")
                     break
+            versions = set()
+            for f in fastqcs:
+                d = os.path.splitext(f)[0]
+                versions.add(Fastqc(
+                    os.path.join(self.qc_dir,d)).version)
+            if versions:
+                software['fastqc'] = sorted(list(versions))
         # Look for fastq_strand outputs
         fastq_strand = filter(lambda f: f.endswith("_fastq_strand.txt"),files)
         logger.debug("fastq_strand: %s" % fastq_strand)
+        print "\t- %d fastq_strand files" % len(fastq_strand)
         if fastq_strand:
             outputs.append("strandedness")
+            versions = set()
+            for f in fastq_strand:
+                versions.add(Fastqstrand(
+                    os.path.join(self.qc_dir,f)).version)
+            if versions:
+                software['fastq_strand'] = sorted(list(versions))
+        # Look for MultiQC report
+        print "Checking for MultiQC report in %s" % self.project.dirn
+        multiqc_report = os.path.join(self.project.dirn,
+                                      "multi%s_report.html"
+                                      % os.path.basename(self.qc_dir))
+        if os.path.isfile(multiqc_report):
+            outputs.append("multiqc")
         self.outputs = outputs
+        self.software = software
         return self.outputs
 
     def report_metadata(self):
@@ -649,24 +765,116 @@ class QCReport(Document):
         Adds entries for the project metadata to the "metadata"
         table in the report
         """
-        metadata_items = ['user','PI','library_type','organism',]
-        if self.project.info.single_cell_platform is not None:
-            metadata_items.insert(3,'single_cell_platform')
+        metadata_items = ['run',
+                          'run_id',
+                          'user',
+                          'PI',
+                          'library_type',
+                          'single_cell_platform',
+                          'number_of_cells',
+                          'organism',
+                          'qc_protocol',]
+        if 'multiqc' in self.outputs:
+            metadata_items.append('multiqc')
         metadata_titles = {
+            'run_id': 'Run ID',
+            'run': 'Run name',
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
             'single_cell_platform': 'Single cell preparation platform',
+            'number_of_cells': 'Number of cells',
             'organism': 'Organism',
+            'qc_protocol': 'QC protocol',
+            'multiqc': 'MultiQC report',
         }
         for item in metadata_items:
-            if self.project.info[item]:
-                self.metadata_table.add_row(
-                    item=metadata_titles[item],
-                    value=self.project.info[item])
-        self.metadata_table.add_row(
-            item='QC protocol',
-            value=self.project.qc_info(self.qc_dir).protocol)
+            # Acquire the value
+            try:
+                if self.project.info[item]:
+                    value = self.project.info[item]
+                else:
+                    # No value set, skip this item
+                    continue
+            except KeyError:
+                if item == 'run_id':
+                    try:
+                        value = run_reference_id(
+                            self.project.info['run'],
+                            platform=self.project.info['platform'],
+                            facility_run_number=
+                            self.run_metadata['run_number'])
+                    except AttributeError as ex:
+                        logger.warning("Run reference ID can't be "
+                                       "determined: %s (ignored)" % ex)
+                        continue
+                elif item == 'qc_protocol':
+                    value = self.project.qc_info(self.qc_dir).protocol
+                elif item == 'multiqc':
+                    multiqc_report = "multi%s_report.html" \
+                                     % os.path.basename(self.qc_dir)
+                    value = Link(multiqc_report)
+                else:
+                    raise Exception("Unrecognised item to report: '%s'"
+                                    % item)
+            # Add to the metadata table
+            self.metadata_table.add_row(
+                item=metadata_titles[item],
+                value=value)
+
+    def report_software(self):
+        """
+        Report the software versions used in the processing & QC
+
+        Adds entries for the software versions to the "software"
+        table in the report
+        """
+        software_packages = ['bcl2fastq',
+                             'cellranger',
+                             'fastqc',
+                             'fastq_screen',
+                             'fastq_strand',]
+        software_names = {
+            'bcl2fastq': 'Bcl2fastq',
+            'cellranger': 'Cellranger',
+            'fastqc': 'FastQC',
+            'fastq_screen': 'FastqScreen',
+            'fastq_strand': 'FastqStrand',
+        }
+        for pkg in software_packages:
+            # Acquire the value
+            try:
+                if self.software[pkg]:
+                    value = ','.join(self.software[pkg])
+                else:
+                    # No value set, skip this item
+                    continue
+            except KeyError:
+                if pkg == 'bcl2fastq':
+                    try:
+                        bcl2fastq = ast.literal_eval(
+                            self.run_metadata.bcl2fastq_software)
+                        value = bcl2fastq[2]
+                    except ValueError:
+                        continue
+                elif pkg == 'cellranger':
+                    try:
+                        cellranger = ast.literal_eval(
+                            self.run_metadata.cellranger_software)
+                        value = cellranger[2]
+                    except ValueError:
+                        continue
+                elif pkg not in software_names:
+                    # Unrecognised package name
+                    raise Exception("Unrecognised software package "
+                                    "item to report: '%s'" % pkg)
+                else:
+                    # No value set, skip this item
+                    continue
+            # Add to the metadata table
+            self.software_table.add_row(
+                program=software_names[pkg],
+                version=value)
 
     def report_sample(self,sample):
         """
@@ -709,7 +917,8 @@ class QCReport(Document):
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
             fastq_pair.update_summary_table(self.summary_table,idx=idx,
-                                            fields=self.summary_fields)
+                                            fields=self.summary_fields,
+                                            relpath=self.relpath)
 
 class QCReportFastqPair(object):
     """
@@ -930,7 +1139,8 @@ class QCReportFastqPair(object):
         clear = fastqs_report.add_subsection()
         clear.add_css_classes("clear")
 
-    def update_summary_table(self,summary_table,idx=None,fields=None):
+    def update_summary_table(self,summary_table,idx=None,fields=None,
+                             relpath=None):
         """
         Add a line to a summary table reporting a Fastq pair
 
@@ -959,6 +1169,8 @@ class QCReportFastqPair(object):
             table row to update (if None then a new row is
             appended)
           fields (list): list of custom fields to report
+          relpath (str): if set then make link paths
+            relative to 'relpath'
         """
         # Fields to report
         if fields is None:
@@ -998,16 +1210,23 @@ class QCReportFastqPair(object):
                         self.r1.fastqc.data.basic_statistics(
                             'Total Sequences'))
                 elif field == "read_lengths":
+                    read_lengths_r1 = Link(
+                        self.r1.fastqc.data.basic_statistics(
+                            'Sequence length'),
+                        self.r1.fastqc.summary.link_to_module(
+                            'Sequence Length Distribution',
+                            relpath=relpath))
                     if self.paired_end:
-                        read_lengths = "%s<br />%s" % \
-                                       (self.r1.fastqc.data.basic_statistics(
-                                           'Sequence length'),
-                                        self.r2.fastqc.data.basic_statistics(
-                                            'Sequence length'))
+                        read_lengths_r2 = Link(
+                            self.r2.fastqc.data.basic_statistics(
+                                'Sequence length'),
+                            self.r2.fastqc.summary.link_to_module(
+                                'Sequence Length Distribution',
+                                relpath=relpath))
+                        read_lengths = "%s<br />%s" % (read_lengths_r1,
+                                                       read_lengths_r2)
                     else:
-                        read_lengths = "%s" % \
-                                       self.r1.fastqc.data.basic_statistics(
-                                           'Sequence length')
+                        read_lengths = "%s" % read_lengths_r1
                     value = read_lengths
                 elif field == "boxplot_r1":
                     value = Img(self.r1.uboxplot(),
