@@ -34,7 +34,7 @@ class TestPipeline(unittest.TestCase):
 
     def _get_scheduler(self):
         # Set up a scheduler
-        self.sched = SimpleScheduler(poll_interval=0.5)
+        self.sched = SimpleScheduler(poll_interval=0.01)
         self.sched.start()
         return self.sched
 
@@ -65,7 +65,8 @@ class TestPipeline(unittest.TestCase):
         task2 = Append("Append 2",task1.output.list,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertEqual(task1.output.list,["item1"])
@@ -92,7 +93,8 @@ class TestPipeline(unittest.TestCase):
         task2 = Echo("Write item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
@@ -124,7 +126,8 @@ class TestPipeline(unittest.TestCase):
         self._get_scheduler()
         # Run the pipeline
         exit_status = ppl.run(sched=self.sched,
-                              working_dir=self.working_dir)
+                              working_dir=self.working_dir,
+                              poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
@@ -160,7 +163,8 @@ class TestPipeline(unittest.TestCase):
         task2 = Print("Print item2",task1.output.file,"item2")
         ppl.add_task(task2,requires=(task1,))
         # Run the pipeline
-        exit_status = ppl.run(working_dir=self.working_dir)
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
         # Check the outputs
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
@@ -203,6 +207,7 @@ class TestPipeline(unittest.TestCase):
         ppl.add_task(task3_2,requires=(task3_1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
                               exit_on_failure=PipelineFailure.IMMEDIATE)
         # Check the outputs
         self.assertEqual(exit_status,1)
@@ -257,6 +262,7 @@ class TestPipeline(unittest.TestCase):
         ppl.add_task(task3_2,requires=(task3_1,))
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
                               exit_on_failure=PipelineFailure.DEFERRED)
         # Check the outputs
         self.assertEqual(exit_status,1)
@@ -467,7 +473,7 @@ class TestPipelineTask(unittest.TestCase):
 
     def setUp(self):
         # Set up a scheduler
-        self.sched = SimpleScheduler(poll_interval=0.5)
+        self.sched = SimpleScheduler(poll_interval=0.01)
         self.sched.start()
         # Make a temporary working dir
         self.working_dir = tempfile.mkdtemp(
@@ -780,6 +786,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
+                 poll_interval=0.2,
                  async=False)
         # Check final state
         self.assertTrue(task.completed)
@@ -830,6 +837,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
+                 poll_interval=0.1,
                  async=False)
         # Check final state
         self.assertTrue(task.completed)
@@ -861,6 +869,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
+                 poll_interval=0.1,
                  async=False)
         # Check final state
         self.assertTrue(task.completed)
