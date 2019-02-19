@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import os
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisDir
@@ -23,6 +24,15 @@ class TestAutoProcessPublishQc(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessPublishQc')
+        # Create settings instance
+        # This allows us to set the polling interval for the
+        # unit tests
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
+        self.settings = Settings(settings_ini)
         # Create a temp 'bin' dir
         self.bin = os.path.join(self.dirn,"bin")
         os.mkdir(self.bin)
@@ -55,7 +65,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
             metadata={ "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -77,7 +88,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report
         UpdateAnalysisDir(ap).add_processing_report()
         # Make a mock publication area
@@ -106,7 +118,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing and barcode analysis reports
         UpdateAnalysisDir(ap).add_processing_report()
         UpdateAnalysisDir(ap).add_barcode_analysis()
@@ -139,7 +152,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -184,7 +198,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -224,7 +239,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -278,7 +294,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -334,7 +351,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report
         UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
@@ -362,7 +380,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report
         UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
@@ -414,7 +433,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report
         UpdateAnalysisDir(ap).add_processing_report()
         # Add QC outputs for subset of projects
@@ -469,7 +489,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         projects = ap.get_analysis_projects()
@@ -524,7 +545,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing and cellranger QC reports
         UpdateAnalysisDir(ap).add_processing_report()
         UpdateAnalysisDir(ap).add_cellranger_qc_output()
@@ -556,7 +578,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing and cellranger QC reports
         UpdateAnalysisDir(ap).add_processing_report()
         UpdateAnalysisDir(ap).add_cellranger_qc_output(lanes="45")
@@ -588,7 +611,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing and cellranger QC reports
         UpdateAnalysisDir(ap).add_processing_report()
         UpdateAnalysisDir(ap).add_cellranger_qc_output(lanes="45")
@@ -622,7 +646,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing and cellranger QC reports
         UpdateAnalysisDir(ap).add_processing_report()
         UpdateAnalysisDir(ap).add_cellranger_qc_output()
@@ -692,7 +717,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -737,7 +763,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         projects = ap.get_analysis_projects()
@@ -824,7 +851,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -851,7 +879,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "20160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():
@@ -896,7 +925,8 @@ class TestAutoProcessPublishQc(unittest.TestCase):
                        "instrument_datestamp": "160621" },
             top_dir=self.dirn)
         mockdir.create()
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         # Add processing report and QC outputs
         UpdateAnalysisDir(ap).add_processing_report()
         for project in ap.get_analysis_projects():

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     publish_qc_cmd.py: implement auto process publish_qc command
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 #########################################################################
 
@@ -14,7 +14,7 @@ import time
 import string
 import ast
 import auto_process_ngs.fileops as fileops
-import auto_process_ngs.simple_scheduler as simple_scheduler
+from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
@@ -345,7 +345,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         ap.set_log_dir(ap.get_log_subdir('publish_qc'))
         runner = ap.settings.general.default_runner
         runner.set_log_dir(ap.log_dir)
-        sched = simple_scheduler.SimpleScheduler(runner=runner)
+        sched = SimpleScheduler(
+            runner=runner,
+            max_concurrent=ap.settings.general.max_concurrent_jobs,
+            poll_interval=ap.settings.general.poll_interval
+        )
         sched.start()
     else:
         sched = None
