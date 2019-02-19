@@ -60,6 +60,17 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(self.config.getint('advanced','p'),None)
         self.assertEqual(self.config.getint('advanced','p',11),11)
 
+    def test_getfloat(self):
+        """Check Config.getfloat fetches float value
+        """
+        self.assertEqual(self.config.getfloat('advanced','m'),42.0)
+
+    def test_getfloat_with_default(self):
+        """Check Config.getfloat works with defaults
+        """
+        self.assertEqual(self.config.getfloat('advanced','p'),None)
+        self.assertEqual(self.config.getfloat('advanced','p',5.0),5.0)
+
     def test_getboolean(self):
         """Check Config.getboolean fetches boolean value
         """
