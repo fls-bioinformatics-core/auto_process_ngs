@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 #########################################################################
 
@@ -220,7 +220,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         # Setup a scheduler for multiple rsync jobs
         sched = simple_scheduler.SimpleScheduler(
             runner=runner,
-            max_concurrent=ap.settings.general.max_concurrent_jobs)
+            max_concurrent=ap.settings.general.max_concurrent_jobs,
+            poll_interval=ap.settings.general.poll_interval)
         sched.start()
         # Keep track of jobs
         archiving_jobs = []
