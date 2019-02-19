@@ -6,6 +6,7 @@ import unittest
 import tempfile
 import shutil
 import os
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from bcftbx.mock import MockIlluminaRun
 from auto_process_ngs.mock import MockBcl2fastq2Exe
@@ -22,6 +23,15 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.wd = tempfile.mkdtemp(suffix='TestAutoProcessMakeFastqs')
+        # Create settings instance
+        # This allows us to set the polling interval for the
+        # unit tests
+        settings_ini = os.path.join(self.wd,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
+        self.settings = Settings(settings_ini)
         # Create a temp 'bin' dir
         self.bin = os.path.join(self.wd,"bin")
         os.mkdir(self.bin)
@@ -63,7 +73,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -117,7 +127,7 @@ class TestAutoProcessMakeFastqs(unittest.TestCase):
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -192,7 +202,7 @@ AB1,AB1,,,,,AB,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
@@ -254,7 +264,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
             top_dir=self.wd)
         illumina_run.create()
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
@@ -280,7 +290,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -333,7 +343,7 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_SN7001250_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -409,7 +419,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_SN7001250_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
@@ -485,7 +495,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
@@ -532,7 +542,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -598,7 +608,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -660,7 +670,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -708,7 +718,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -737,7 +747,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -793,7 +803,7 @@ AB1,AB1,,,,,icell8,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_UNKNOWN_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -873,7 +883,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -924,7 +934,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
@@ -951,7 +961,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
                               "171020_SN7001250_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
