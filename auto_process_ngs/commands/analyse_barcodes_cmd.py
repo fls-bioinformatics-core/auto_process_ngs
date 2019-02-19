@@ -144,7 +144,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     # Schedule the jobs needed to do counting
     sched = SimpleScheduler(
         runner=runner,
-        max_concurrent=ap.settings.general.max_concurrent_jobs)
+        max_concurrent=ap.settings.general.max_concurrent_jobs,
+        poll_interval=ap.settings.general.poll_interval)
     sched.start()
     # Do counting
     print "Getting counts from fastq files"

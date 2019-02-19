@@ -8,6 +8,7 @@ import shutil
 import os
 import gzip
 from bcftbx.IlluminaData import IlluminaData
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.commands.analyse_barcodes_cmd import analyse_barcodes
@@ -22,6 +23,15 @@ class TestAutoProcessAnalyseBarcodes(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.wd = tempfile.mkdtemp(suffix='TestAutoProcessAnalyseBarcodes')
+        # Create settings instance
+        # This allows us to set the polling interval for the
+        # unit tests
+        settings_ini = os.path.join(self.wd,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
+        self.settings = Settings(settings_ini)
         # Store original location
         self.pwd = os.getcwd()
         # Move to working dir
@@ -71,7 +81,8 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         # Add data to Fastq files
         self._insert_fastq_reads(mockdir.dirn)
         # Analyse barcodes
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         analyse_barcodes(ap)
         # Check outputs
         analysis_dir = os.path.join(
@@ -120,7 +131,8 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         # Add data to Fastq files
         self._insert_fastq_reads(mockdir.dirn)
         # Analyse barcodes
-        ap = AutoProcess(mockdir.dirn)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
         analyse_barcodes(ap)
         # Check outputs
         analysis_dir = os.path.join(

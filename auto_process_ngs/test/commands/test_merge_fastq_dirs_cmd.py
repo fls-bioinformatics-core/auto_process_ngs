@@ -8,6 +8,7 @@ import shutil
 import os
 import gzip
 from auto_process_ngs.mock import MockAnalysisDir
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.commands.merge_fastq_dirs_cmd import merge_fastq_dirs
 
@@ -35,6 +36,15 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessMergeFastqDirs')
+        # Create settings instance
+        # This allows us to set the polling interval for the
+        # unit tests
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
+        self.settings = Settings(settings_ini)
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
         # Move to working dir
@@ -185,7 +195,8 @@ class TestAutoProcessMergeFastqDirs(unittest.TestCase):
         """
         analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.AB",output_dir="bcl2fastq")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
@@ -231,7 +242,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_bcl2fastq2()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,
                          "bcl2fastq.lanes1-2",
                          output_dir="bcl2fastq")
@@ -333,7 +345,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.AB")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
@@ -378,7 +391,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_bcl2fastq2()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.lanes1-2")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
@@ -426,7 +440,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_casava()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.lanes1-2")
         # Check outputs
         self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
@@ -474,7 +489,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.AB",dry_run=True)
         # Check outputs
         self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
@@ -491,7 +507,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_bcl2fastq2()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.lanes1-2",dry_run=True)
         # Check outputs
         self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))
@@ -508,7 +525,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         """
         analysis_dir = self._setup_casava()
         # Merge the unaligned dirs
-        self.ap = AutoProcess(analysis_dir)
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
         merge_fastq_dirs(self.ap,"bcl2fastq.lanes1-2",dry_run=True)
         # Check outputs
         self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes1-2'))

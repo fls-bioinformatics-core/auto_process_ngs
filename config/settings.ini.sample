@@ -4,6 +4,7 @@
 [general]
 default_runner = SimpleJobRunner
 max_concurrent_jobs = 12
+poll_interval = 5
 
 # Explicitly specify modulefiles to load for each step
 # Specify modulefiles as a comma-separated list

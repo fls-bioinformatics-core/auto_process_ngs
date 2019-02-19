@@ -514,7 +514,9 @@ def get_primary_data(ap,runner=None):
                              working_dir=os.getcwd())
     rsync_job.start()
     try:
-        rsync_job.wait()
+        rsync_job.wait(
+            poll_interval=ap.settings.general.poll_interval
+        )
     except KeyboardInterrupt:
         logger.warning("Keyboard interrupt, terminating primary data "
                        "rsync operation")
@@ -718,7 +720,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
                                  working_dir=os.getcwd())
     bcl2fastq_job.start()
     try:
-        bcl2fastq_job.wait()
+        bcl2fastq_job.wait(
+            poll_interval=ap.settings.general.poll_interval
+        )
     except KeyboardInterrupt,ex:
         logger.warning("Keyboard interrupt, terminating bcl2fastq")
         bcl2fastq_job.terminate()
@@ -856,7 +860,9 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     )
     fastq_statistics_job.start()
     try:
-        fastq_statistics_job.wait()
+        fastq_statistics_job.wait(
+            poll_interval=ap.settings.general.poll_interval
+        )
     except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating fastq_statistics")
         fastq_statistics_job.terminate()

@@ -8,6 +8,7 @@ import shutil
 import os
 import pwd
 import grp
+from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import UpdateAnalysisProject
@@ -25,6 +26,15 @@ class TestArchiveCommand(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
         self.dirn = tempfile.mkdtemp(suffix='TestArchiveCommand')
+        # Create settings instance
+        # This allows us to set the polling interval for the
+        # unit tests
+        settings_ini = os.path.join(self.dirn,"settings.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 0.5
+""")
+        self.settings = Settings(settings_ini)
         # Store original location so we can get back at the end
         self.pwd = os.getcwd()
         # Move to working dir
@@ -67,7 +77,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do archiving op
@@ -133,7 +144,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do archiving op
@@ -187,7 +199,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do archiving op
@@ -248,7 +261,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do archiving op
@@ -309,7 +323,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Add additional fastq set for first project
@@ -386,7 +401,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do staging archiving op
@@ -449,7 +465,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         ap.save_metadata()
@@ -526,7 +543,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do staging archiving op with no year
@@ -589,7 +607,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Do staging archiving op with no year
@@ -657,7 +676,8 @@ class TestArchiveCommand(unittest.TestCase):
             final_dir,
             "170901_M00879_0087_000000000-AGEW9_analysis")
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Staging attempt should fail
@@ -718,7 +738,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Add a .bak project directory
@@ -775,7 +796,8 @@ class TestArchiveCommand(unittest.TestCase):
         self.assertTrue(os.path.isdir(final_dir))
         self.assertEqual(len(os.listdir(final_dir)),0)
         # Make autoprocess instance and set required metadata
-        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
         ap.set_metadata("source","testing")
         ap.set_metadata("run_number","87")
         # Add a .bak project directory

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     config: classes & funcs for configuring auto_process_ngs
-#     Copyright (C) University of Manchester 2014-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -64,6 +64,11 @@ class Config(SafeConfigParser):
         try:
             return SafeConfigParser.getint(self,section,option)
         except TypeError:
+            return default
+    def getfloat(self,section,option,default=None):
+        try:
+            return SafeConfigParser.getfloat(self,section,option)
+        except (TypeError,AttributeError):
             return default
     def getboolean(self,section,option,default=None):
         try:

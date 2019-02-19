@@ -89,7 +89,9 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
         runner.set_log_dir(ap.log_dir)
         sched = SimpleScheduler(
             runner=runner,
-            max_concurrent=ap.settings.general.max_concurrent_jobs)
+            max_concurrent=ap.settings.general.max_concurrent_jobs,
+            poll_interval=ap.settings.general.poll_interval
+        )
         sched.start()
         jobs = []
     # Top-level for undetermined reads

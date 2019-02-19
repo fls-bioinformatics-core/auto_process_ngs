@@ -109,6 +109,8 @@ class Settings(object):
                                                           'SimpleJobRunner')
         self.general['max_concurrent_jobs'] = config.getint('general',
                                                             'max_concurrent_jobs',12)
+        self.general['poll_interval'] = config.getfloat('general',
+                                                        'poll_interval',5)
         # modulefiles
         self.add_section('modulefiles')
         self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')

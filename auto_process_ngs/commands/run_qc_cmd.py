@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
            fastq_screen_subset=100000,nthreads=1,
            runner=None,fastq_dir=None,qc_dir=None,
-           report_html=None,run_multiqc=True):
+           report_html=None,run_multiqc=True,
+           poll_interval=None):
     """Run QC pipeline script for projects
 
     Run the illumina_qc.sh script to perform QC on projects.
@@ -69,6 +70,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         report (default: '<QC_DIR>_report.html')
       run_multiqc (bool): if True then run MultiQC at the end of
         the QC run (default)
+      poll_interval (float): specifies non-default polling
+        interval for scheduler used for running QC
 
     Returns:
       Integer: UNIX-style integer returncode where 0 = successful
@@ -103,6 +106,9 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         qc_runner = fetch_runner(runner)
     else:
         qc_runner = ap.settings.runners.qc
+    # Get scheduler parameters
+    if poll_interval is None:
+        poll_interval = ap.settings.general.poll_interval
     # Set up the QC for each project
     runqc = RunQC()
     for project in projects:
@@ -140,5 +146,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        qc_runner=qc_runner,
                        verify_runner=default_runner,
                        report_runner=default_runner,
-                       max_jobs=max_jobs)
+                       max_jobs=max_jobs,
+                       poll_interval=poll_interval)
     return status
