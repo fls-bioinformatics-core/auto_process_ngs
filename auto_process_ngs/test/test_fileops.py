@@ -9,7 +9,6 @@ import shutil
 import pwd
 import grp
 from bcftbx.JobRunner import SimpleJobRunner
-from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.fileops import *
 
