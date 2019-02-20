@@ -632,24 +632,23 @@ class QCReport(Document):
 
         Associated name is 'summary'
         """
-        summary = self.add_section("Summary",name='summary')
-        summary.add_css_classes("summary")
+        summary = self.add_section("Summary",name='summary',
+                                   css_classes=("summary",))
         # Add subsections inside a container
         info = summary.add_subsection()
-        general_info = info.add_subsection("General information")
-        general_info.add_css_classes("info")
+        general_info = info.add_subsection("General information",
+                                           css_classes=("info",))
         general_info.add(self.metadata_table)
-        software_info = info.add_subsection("Software")
-        software_info.add_css_classes("info")
+        software_info = info.add_subsection("Software",
+                                           css_classes=("info",))
         software_info.add(self.software_table)
         # Add an empty section to clear HTML floats
-        clear = summary.add_subsection()
-        clear.add_css_classes("clear")
+        clear = summary.add_subsection(css_classes=("clear",))
         # Add additional subsections for comments etc
         info = summary.add_subsection()
         # Add comments section
-        comments = info.add_subsection("Comments")
-        comments.add_css_classes("info")
+        comments = info.add_subsection("Comments",
+                                       css_classes=("info",))
         comments_list = List()
         try:
             if self.project.info.comments:
@@ -662,8 +661,7 @@ class QCReport(Document):
             comments_list.add_item("N/A")
         comments.add(comments_list)
         # Add an empty section to clear HTML floats
-        clear = summary.add_subsection()
-        clear.add_css_classes("clear")
+        clear = summary.add_subsection(css_classes=("clear",))
         # Add the summary table
         summary.add("%d samples | %d fastqs" % (len(self.project.samples),
                                                 len(self.project.fastqs)))
@@ -891,8 +889,8 @@ class QCReport(Document):
         # Create a new section for the sample
         sample_report = self.add_section(
             "Sample: %s" % sample.name,
-            name="sample_%s" % sample.name)
-        sample_report.add_css_classes('sample')
+            name="sample_%s" % sample.name,
+            css_classes=('sample',))
         # Number of fastqs
         if self.project.info.paired_end:
             sample_report.add("%d fastq R1/R2 pairs" %
@@ -1104,15 +1102,14 @@ class QCReportFastqPair(object):
                      'program_versions',
                      'strandedness')
         # Add container section for Fastq pair
-        fastqs_report = sample_report.add_subsection()
-        fastqs_report.add_css_classes('fastqs')
+        fastqs_report = sample_report.add_subsection(css_classes=('fastqs',))
         # Create sections for individual Fastqs
         for fq in (self.r1,self.r2):
             if fq is None:
                 continue
             fq_report = fastqs_report.add_subsection(fq.name,
-                                                     name=fq.safe_name)
-            fq_report.add_css_classes('fastq')
+                                                     name=fq.safe_name,
+                                                     css_classes=('fastq',))
             # Add reports for each requested 'attribute'
             for attr in attrs:
                 if attr == "fastqc":
@@ -1136,8 +1133,7 @@ class QCReportFastqPair(object):
             # Strandedness
             self.report_strandedness(fastqs_report)
         # Add an empty section to clear HTML floats
-        clear = fastqs_report.add_subsection()
-        clear.add_css_classes("clear")
+        clear = fastqs_report.add_subsection(css_classes=("clear",))
 
     def update_summary_table(self,summary_table,idx=None,fields=None,
                              relpath=None):
