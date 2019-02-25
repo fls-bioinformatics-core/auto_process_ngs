@@ -25,7 +25,7 @@ Additional supporting classes:
 There are some underlying classes and functions that are intended for
 internal use:
 
-- Capturing: capture stdout from a Python function
+- Capturing: capture stdout and stderr from a Python function
 - Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
@@ -541,17 +541,34 @@ class FileCollector(Iterator):
             self._idx = None
             raise StopIteration
 
-# Capture stdout from a function call - see
-# http://stackoverflow.com/a/16571630/579925
-class Capturing(list):
+# Capture stdout and stderr from a function call
+# Based on code from http://stackoverflow.com/a/16571630/579925
+# Modified to handle both stdout and stderr (original version
+# only handled stdout)
+# Usage:
+# >>> with Capturing() as output:
+# ...     print "Hello!"
+# >>> for line in output.stdout:
+# ...     print "Line: %s" % line
+# >>> for line in output.stderr:
+# ...     print "Err: %s" % line
+class Capturing(object):
+    def __init__(self):
+        self.stdout = list()
+        self.stderr = list()
     def __enter__(self):
         self._stdout = sys.stdout
+        self._stderr = sys.stderr
         sys.stdout = self._stringio = StringIO()
+        sys.stderr = self._stringerr = StringIO()
         return self
     def __exit__(self,*args):
-        self.extend(self._stringio.getvalue().splitlines())
+        self.stdout.extend(self._stringio.getvalue().splitlines())
+        self.stderr.extend(self._stringerr.getvalue().splitlines())
         del self._stringio    # free up some memory
+        del self._stringerr
         sys.stdout = self._stdout
+        sys.stderr = self._stderr
 
 class Pipeline(object):
     """
@@ -1207,8 +1224,10 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            for line in output:
-                self.report("%s STDOUT: %s" % (f.__name__,line))
+            for line in output.stdout:
+                self.report("[%s] %s" % (f.__name__,line))
+            for line in output.stderr:
+                self.report("[%s] %s" % (f.__name__,line))
         except NotImplementedError:
             pass
         except Exception as ex:
