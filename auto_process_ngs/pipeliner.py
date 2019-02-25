@@ -1749,7 +1749,7 @@ class Dispatcher(object):
             written
         """
         # Unpickle the components
-        print "Dispatcher: running 'execute'..."
+        logger.info("Dispatcher: running 'execute'...")
         try:
             func = self._unpickle_object(pkl_func_file)
         except AttributeError as ex:
@@ -1760,13 +1760,13 @@ class Dispatcher(object):
             return 1
         args = self._unpickle_object(pkl_args_file)
         kwds = self._unpickle_object(pkl_kwds_file)
-        print "Dispatcher: executing:"
-        print "-- function: %s" % func
-        print "-- args    : %s" % (args,)
-        print "-- kwds    : %s" % (kwds,)
+        logger.info("Dispatcher: executing:")
+        logger.info("-- function: %s" % func)
+        logger.info("-- args    : %s" % (args,))
+        logger.info("-- kwds    : %s" % (kwds,))
         # Execute the function
         result = func(*args,**kwds)
-        print "Dispatcher: result: %s" % (result,)
+        logger.info("Dispatcher: result: %s" % (result,))
         # Pickle the result
         if pkl_result_file:
             self._pickle_object(result,pkl_result_file)
@@ -1786,10 +1786,10 @@ class Dispatcher(object):
           Command: a Command instance that can be used to
             execute the function.
         """
-        print "Dispatching function:"
-        print "-- function: %s" % func
-        print "-- args    : %s" % (args,)
-        print "-- kwds    : %s" % (kwds,)
+        logger.info("Dispatching function:")
+        logger.info("-- function: %s" % func)
+        logger.info("-- args    : %s" % (args,))
+        logger.info("-- kwds    : %s" % (kwds,))
         # Pickle the components
         pkl_func_file = self._pickle_object(func)
         pkl_args_file = self._pickle_object(args)
