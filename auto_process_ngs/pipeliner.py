@@ -287,7 +287,9 @@ The main differences between this and the PipelineTask class are:
    method contains code to post-process these results.
 
 The advantage of this approach is that intensive operations (e.g.
-processing large numbers of file
+processing large numbers of files) previous performed by Python
+functions can be farmed out to external processes without having
+to be wrapped in new executable programs.
 
 Building and running a pipeline
 -------------------------------
