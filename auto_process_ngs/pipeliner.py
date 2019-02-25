@@ -25,7 +25,7 @@ Additional supporting classes:
 There are some underlying classes and functions that are intended for
 internal use:
 
-- Capturing: capture stdout from a Python function
+- Capturing: capture stdout and stderr from a Python function
 - Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
@@ -541,17 +541,34 @@ class FileCollector(Iterator):
             self._idx = None
             raise StopIteration
 
-# Capture stdout from a function call - see
-# http://stackoverflow.com/a/16571630/579925
-class Capturing(list):
+# Capture stdout and stderr from a function call
+# Based on code from http://stackoverflow.com/a/16571630/579925
+# Modified to handle both stdout and stderr (original version
+# only handled stdout)
+# Usage:
+# >>> with Capturing() as output:
+# ...     print "Hello!"
+# >>> for line in output.stdout:
+# ...     print "Line: %s" % line
+# >>> for line in output.stderr:
+# ...     print "Err: %s" % line
+class Capturing(object):
+    def __init__(self):
+        self.stdout = list()
+        self.stderr = list()
     def __enter__(self):
         self._stdout = sys.stdout
+        self._stderr = sys.stderr
         sys.stdout = self._stringio = StringIO()
+        sys.stderr = self._stringerr = StringIO()
         return self
     def __exit__(self,*args):
-        self.extend(self._stringio.getvalue().splitlines())
+        self.stdout.extend(self._stringio.getvalue().splitlines())
+        self.stderr.extend(self._stringerr.getvalue().splitlines())
         del self._stringio    # free up some memory
+        del self._stringerr
         sys.stdout = self._stdout
+        sys.stderr = self._stderr
 
 class Pipeline(object):
     """
@@ -803,7 +820,8 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,exit_on_failure=PipelineFailure.IMMEDIATE):
+            poll_interval=5,verbose=False,
+            exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -829,6 +847,8 @@ class Pipeline(object):
             provided via the 'sched' argument), and to use
             for checking if tasks have completed (defaults
             to 5s)
+          verbose (bool): if True then report additional
+            information for diagnostics
           exit_on_failure (int): either IMMEDIATE (any
             task failures cause immediate termination of
             of the pipeline; this is the default) or
@@ -912,6 +932,7 @@ class Pipeline(object):
                                  log_dir=log_dir,
                                  scripts_dir=scripts_dir,
                                  poll_interval=poll_interval,
+                                 verbose=verbose,
                                  **kws)
                     except Exception as ex:
                         self.report("Failed to start task '%s': %s" %
@@ -1207,8 +1228,10 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            for line in output:
-                self.report("%s STDOUT: %s" % (f.__name__,line))
+            for line in output.stdout:
+                self.report("[%s] %s" % (f.__name__,line))
+            for line in output.stderr:
+                self.report("[%s] %s" % (f.__name__,line))
         except NotImplementedError:
             pass
         except Exception as ex:
@@ -1294,7 +1317,7 @@ class PipelineTask(object):
 
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),async=True,
-            poll_interval=5):
+            poll_interval=5,verbose=False):
         """
         Run the task
 
@@ -1321,6 +1344,8 @@ class PipelineTask(object):
           poll_interval (float): interval between checks on task
             completion (in seconds) for non-async tasks (defaults
             to 5 seconds)
+          verbose (bool): if True then report additional
+            information for diagnostics
         """
         # Initialise
         if working_dir is None:
@@ -1337,10 +1362,12 @@ class PipelineTask(object):
         # Generate commands to run
         cmds = []
         for command in self._commands:
-            self.report("%s" % command.cmd())
+            if verbose:
+                self.report("%s" % command.cmd())
             script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
             cmd = Command('/bin/bash',script_file)
-            self.report("wrapper script %s" % script_file)
+            if verbose:
+                self.report("wrapper script %s" % script_file)
             cmds.append(cmd)
         # Run the commands
         if cmds:
@@ -1730,7 +1757,7 @@ class Dispatcher(object):
             written
         """
         # Unpickle the components
-        print "Dispatcher: running 'execute'..."
+        logger.info("Dispatcher: running 'execute'...")
         try:
             func = self._unpickle_object(pkl_func_file)
         except AttributeError as ex:
@@ -1741,13 +1768,13 @@ class Dispatcher(object):
             return 1
         args = self._unpickle_object(pkl_args_file)
         kwds = self._unpickle_object(pkl_kwds_file)
-        print "Dispatcher: executing:"
-        print "-- function: %s" % func
-        print "-- args    : %s" % (args,)
-        print "-- kwds    : %s" % (kwds,)
+        logger.info("Dispatcher: executing:")
+        logger.info("-- function: %s" % func)
+        logger.info("-- args    : %s" % (args,))
+        logger.info("-- kwds    : %s" % (kwds,))
         # Execute the function
         result = func(*args,**kwds)
-        print "Dispatcher: result: %s" % (result,)
+        logger.info("Dispatcher: result: %s" % (result,))
         # Pickle the result
         if pkl_result_file:
             self._pickle_object(result,pkl_result_file)
@@ -1767,10 +1794,10 @@ class Dispatcher(object):
           Command: a Command instance that can be used to
             execute the function.
         """
-        print "Dispatching function:"
-        print "-- function: %s" % func
-        print "-- args    : %s" % (args,)
-        print "-- kwds    : %s" % (kwds,)
+        logger.info("Dispatching function:")
+        logger.info("-- function: %s" % func)
+        logger.info("-- args    : %s" % (args,))
+        logger.info("-- kwds    : %s" % (kwds,))
         # Pickle the components
         pkl_func_file = self._pickle_object(func)
         pkl_args_file = self._pickle_object(args)
