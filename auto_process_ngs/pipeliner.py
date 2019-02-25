@@ -820,7 +820,8 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,exit_on_failure=PipelineFailure.IMMEDIATE):
+            poll_interval=5,verbose=False,
+            exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -846,6 +847,8 @@ class Pipeline(object):
             provided via the 'sched' argument), and to use
             for checking if tasks have completed (defaults
             to 5s)
+          verbose (bool): if True then report additional
+            information for diagnostics
           exit_on_failure (int): either IMMEDIATE (any
             task failures cause immediate termination of
             of the pipeline; this is the default) or
@@ -929,6 +932,7 @@ class Pipeline(object):
                                  log_dir=log_dir,
                                  scripts_dir=scripts_dir,
                                  poll_interval=poll_interval,
+                                 verbose=verbose,
                                  **kws)
                     except Exception as ex:
                         self.report("Failed to start task '%s': %s" %
@@ -1313,7 +1317,7 @@ class PipelineTask(object):
 
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),async=True,
-            poll_interval=5):
+            poll_interval=5,verbose=False):
         """
         Run the task
 
@@ -1340,6 +1344,8 @@ class PipelineTask(object):
           poll_interval (float): interval between checks on task
             completion (in seconds) for non-async tasks (defaults
             to 5 seconds)
+          verbose (bool): if True then report additional
+            information for diagnostics
         """
         # Initialise
         if working_dir is None:
@@ -1356,10 +1362,12 @@ class PipelineTask(object):
         # Generate commands to run
         cmds = []
         for command in self._commands:
-            self.report("%s" % command.cmd())
+            if verbose:
+                self.report("%s" % command.cmd())
             script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
             cmd = Command('/bin/bash',script_file)
-            self.report("wrapper script %s" % script_file)
+            if verbose:
+                self.report("wrapper script %s" % script_file)
             cmds.append(cmd)
         # Run the commands
         if cmds:
