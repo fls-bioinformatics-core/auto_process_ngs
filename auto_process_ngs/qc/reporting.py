@@ -225,10 +225,14 @@ class QCReporter(object):
                 qc_dir = os.path.join(self._project.dirn,
                                       qc_dir)
         logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
+        if illumina_qc is None:
+            illumina_qc = IlluminaQC()
+        fastqs_missing_qc = illumina_qc.fastqs_missing_qc(
+            self._project.fastqs,
+            qc_dir)
         verified = True
-        for sample in self._samples:
-            if not sample.verify(qc_dir,illumina_qc=illumina_qc):
-                verified = False
+        for stage in fastqs_missing_qc:
+            verified = verified and (len(fastqs_missing_qc[stage]) == 0)
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
@@ -331,11 +335,7 @@ class QCSample(object):
           Boolean: returns True if the QC products are
             present, False otherwise.
         """
-        logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
-        for fq_pair in self.fastq_pairs:
-            if not fq_pair.verify(qc_dir,illumina_qc=illumina_qc):
-                return False
-        return True
+        raise Exception("QCSample.verify: withdrawn")
 
 class FastqSet(object):
     """
@@ -407,17 +407,7 @@ class FastqSet(object):
           Boolean: returns True if the QC products are
             present, False otherwise.
         """
-        logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
-        logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
-        if illumina_qc is None:
-            illumina_qc = IlluminaQC()
-        for fq in self._fastqs:
-            if fq is None:
-                continue
-            present,missing = illumina_qc.check_outputs(fq,qc_dir)
-            if missing:
-                return False
-        return True
+        raise Exception("FastqSet.verify: withdrawn")
 
 class QCReport(Document):
     """

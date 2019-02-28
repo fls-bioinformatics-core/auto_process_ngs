@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2019 Peter Briggs
 #
 
 #######################################################################
@@ -10,6 +10,7 @@
 
 import sys
 import os
+import json
 import optparse
 import logging
 from bcftbx.utils import find_program
@@ -55,18 +56,7 @@ def verify_qc(project,qc_dir=None,illumina_qc=None):
         qc_dir = project.qc_dir
     if illumina_qc is None:
         illumina_qc = IlluminaQC()
-    fastqs = []
-    for sample in project.samples:
-        for fq in sample.fastq:
-            present,missing = illumina_qc.check_outputs(fq,qc_dir)
-            if missing:
-                fastqs.append(fq)
-        for fq_pair in pair_fastqs_by_name(sample.fastq,
-                                           fastq_attrs=project.fastq_attrs):
-            present,missing = illumina_qc.check_outputs(fq_pair,qc_dir)
-            if missing:
-                fastqs.extend(fq_pair)
-    return sorted(list(set(fastqs)))
+    return illumina_qc.fastqs_missing_qc(project.fastqs,qc_dir)
 
 def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     """
@@ -106,16 +96,16 @@ def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     # Add the QC outputs
     if illumina_qc is None:
         illumina_qc = IlluminaQC()
-    for sample in QCReporter(project).samples:
-        for fastqs in sample.fastq_pairs:
-            for fq in fastqs:
-                logging.debug("Adding QC outputs for %s" % fq)
-                for f in illumina_qc.expected_outputs(fq,qc_dir):
-                    if f.endswith('.zip'):
-                        # Exclude .zip file
-                        continue
-                    if os.path.exists(f):
-                        zip_file.add(f)
+    outputs = illumina_qc.expected_outputs(project.fastqs,qc_dir)
+    expected_outputs = set()
+    for stage in outputs:
+        for fqs,files in outputs[stage]:
+            for f in files:
+                expected_outputs.add(f)
+    expected_outputs = sorted(list(expected_outputs))
+    for f in expected_outputs:
+        if not f.endswith('.zip') and os.path.exists(f):
+            zip_file.add(f)
     # MultiQC output
     multiqc = os.path.join(project.dirn,
                            "multi%s_report.html" %
@@ -174,6 +164,12 @@ def main():
                             dest='list_unverified',default=False,
                             help="list the Fastqs that failed "
                             "verification")
+    verification.add_option('-j','--json_file',action='store',
+                            dest='json_file',default=False,
+                            help="path to JSON file with data on the "
+                            "Fastqs that have failed or missing QC "
+                            "outputs (only written if -l option is "
+                            "also specified)")
     p.add_option_group(verification)
     opts,args = p.parse_args()
     if len(args) < 1:
@@ -233,8 +229,13 @@ def main():
             sys.exit(1)
         if unverified:
             if opts.list_unverified:
-                for fq in unverified:
-                    print fq
+                for stage in unverified:
+                    for fqs in unverified[stage]:
+                        print "[%s] %s" % (stage,fqs)
+                if opts.json_file:
+                    json_file = os.path.abspath(opts.json_file)
+                    with open(json_file,'w') as fp:
+                        json.dump(unverified,fp)
             print "Verification: FAILED"
             retval = 1
             if not opts.force:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     runqc: run and report QC from analysis projects
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 """
 Provides core functionality for running, verification and reporting
@@ -22,6 +22,7 @@ import logging
 import uuid
 import tempfile
 import shutil
+import json
 import auto_process_ngs.analysis as analysis
 import auto_process_ngs.fileops as fileops
 from auto_process_ngs.applications import Command
@@ -252,6 +253,7 @@ class ProjectQC(object):
         self.tmp = None
         # Verification
         self.verification_status = None
+        self.json_file = None
         self.fastqs_missing_qc = None
         # Reporting
         self.reporting_status = None
@@ -283,11 +285,11 @@ class ProjectQC(object):
         Check for Fastqs with missing/failed QC outputs
 
         Schedules a job to run the `reportqc` utility,
-        and invokes the `_extract_fastqs` method to
-        parse the output and get a list of Fastqs
-        which have missing or failed QC outputs.
+        and invokes the `_collect_fastq_groups` method
+        to fetch a list of Fastq groups which have missing
+        or failed QC outputs.
 
-        The Fastq paths are stored in the
+        The Fastq groups are stored in the
         `fastqs_missing_qc` instance variable.
 
         The status of the verification can be checked
@@ -308,13 +310,16 @@ class ProjectQC(object):
         project = self.project
         name = "%s.%s" % (name,self.title)
         self.verification_status = None
-        self.fastqs_missing_qc = None
+        self.fastqs_missing_qc = dict()
+        self.json_file = os.path.join(self.qc_dir,
+                                      "missing_qc.json")
         collect_cmd = Command(
             "reportqc.py",
             "--fastq_dir",self.fastq_dir,
             "--qc_dir",self.qc_dir,
             "--verify",
-            "--list-unverified")
+            "--list-unverified",
+            "--json_file",self.json_file)
         if self.illumina_qc.fastq_strand_conf:
             collect_cmd.add_args("--strand_stats")
         collect_cmd.add_args(project.dirn)
@@ -322,46 +327,42 @@ class ProjectQC(object):
                             name="%s" % name,
                             wd=project.dirn,
                             log_dir=self.log_dir,
-                            callbacks=(self._extract_fastqs,),
+                            callbacks=
+                            (self._collect_fastq_groups,),
                             wait_for=wait_for,
                             runner=runner)
 
-    def _extract_fastqs(self,name,jobs,sched):
+    def _collect_fastq_groups(self,name,jobs,sched):
         """
-        Internal: callback to get Fastqs from `reportqc`
+        Internal: callback to get Fastq groups from `reportqc`
 
         Invoked to handle the completion of a job running
-        `reportqc ... --verify --list-unverified` and parse
-        the output to get a list of Fastqs with missing or
-        failed QC.
+        `reportqc ... --verify --list-unverified --json_file`
+        and collect the JSON output which contains the Fastq
+        groups which have missing or failed QC outputs (this
+        will be a dictionary with the same format as that
+        output from the IlluminaQC `fastqs_missing_qc` method).
 
         The list of Fastqs can be accessed via the
         `fastqs_missing_qc` instance attribute.
         """
-        logger.debug("Extracting Fastqs with missing/failed QC")
+        logger.debug("Collecting Fastq groups with missing/failed QC")
         check_qc = jobs[0]
         logger.debug("Exit code: %s" % check_qc.exit_code)
-        logger.debug("Log file: %s" % check_qc.log)
-        if check_qc.log is not None:
-            logger.debug("Log file contents:")
-            logger.debug("%s" % open(check_qc.log,'r').read())
-        else:
-            logger.warning("No log file output: can't list Fastqs with "
-                           "missing QC outputs")
         if check_qc.exit_code is None:
             self.verification_status = 1
         else:
             self.verification_status = check_qc.exit_code
-        self.fastqs_missing_qc = list()
-        if check_qc.log is not None:
-            with open(check_qc.log,'r') as log:
-                for line in log:
-                    if line.startswith(self.project.dirn):
-                        self.fastqs_missing_qc.append(line.rstrip())
-                        self.verification_status += 1
-            logger.debug("Fastqs with missing QC outputs:")
-            for fq in self.fastqs_missing_qc:
-                logger.debug("%s" % fq)
+        if self.verification_status != 0:
+            if os.path.exists(self.json_file):
+                logger.debug("Reading data on Fastq groups with "
+                             "missing QC outputs from %s"
+                             % self.json_file)
+                with open(self.json_file,'r') as fp:
+                    self.fastqs_missing_qc = json.load(fp)
+            else:
+                logger.warning("Missing JSON file '%s': can't get "
+                               "data on Fastq groups" % self.json_file)
 
     def setup_qc(self,sched,qc_runner=None,verify_runner=None,
                  batch_size=None):
@@ -401,81 +402,47 @@ class ProjectQC(object):
             print "QC commands will be batched (up to %d commands " \
                 "per batch script)" % batch_size
             batch_qc_cmds = list()
-            batch_jobs = list()
-        groups = []
-        for sample in samples:
+        jobs = []
+        # Pass the data on Fastqs with missing QC outputs to
+        # to the command generator
+        qc_cmds = self.illumina_qc.commands(self.fastqs_missing_qc,
+                                                qc_dir=project.qc_dir)
+        # Handle batching
+        if use_batches:
+            batch_qc_cmds.extend(qc_cmds)
+            while len(batch_qc_cmds) >= batch_size:
+                job = self._submit_batch(sched,
+                                         batch_qc_cmds[:batch_size],
+                                         runner=qc_runner)
+                jobs.append(job.name)
+                batch_qc_cmds = batch_qc_cmds[batch_size:]
+                continue
+        else:
+            # Create and submit QC job for each command
             indx = 0
-            group = None
-            print "Examining files in sample %s" % sample.name
-            pairs = []
-            for fastq_pair in pair_fastqs_by_name(sample.fastq,
-                                                  fastq_attrs=project.fastq_attrs):
-                # Identify pairs with missing QC outputs
-                logging.debug("Checking Fastq pair: %s" % (fastq_pair,))
-                for fq in fastq_pair:
-                    # Check if Fastq is in list of those with
-                    # missing QC outputs
-                    if fq not in self.fastqs_missing_qc:
-                        logger.debug("\t%s: QC verified" % fq)
-                        continue
-                    else:
-                        logger.debug("\t%s: QC not verified, adding "
-                                     "pair" % fq)
-                        pairs.append(fastq_pair)
-                        break
-            # Set up QC for each pair with missing outputs
-            for fastq_pair in pairs:
-                # Report the Fastqs in this set
-                print "Setting up QC run:"
-                for fq in fastq_pair:
-                    print "\t%s" % os.path.basename(fq)
-                # Acquire QC commands for this pair
-                qc_cmds = self.illumina_qc.commands(fastq_pair,
-                                                    qc_dir=project.qc_dir)
-                # Handle batching
-                if use_batches:
-                    batch_qc_cmds.extend(qc_cmds)
-                    while len(batch_qc_cmds) >= batch_size:
-                        job = self._submit_batch(sched,
-                                                 batch_qc_cmds[:batch_size],
-                                                 runner=qc_runner)
-                        batch_jobs.append(job.name)
-                        batch_qc_cmds = batch_qc_cmds[batch_size:]
-                    continue
-                # Create a group if none exists for this sample
-                if group is None:
-                    group = sched.group("%s.%s" % (project.name,
-                                                   sample.name),
-                                        log_dir=self.log_dir)
-                # Create and submit QC job for each command
-                for qc_cmd in qc_cmds:
-                    indx += 1
-                    command_name = os.path.splitext(
-                        os.path.basename(qc_cmd.command))[0]
-                    label = "%s.%s.%s#%03d" % \
-                            (command_name,
-                             self.title,
-                             sample.name,indx)
-                    job = group.add(qc_cmd,
-                                    name=label,
-                                    wd=project.dirn,
-                                    runner=qc_runner)
-                    print "Job: %s" %  job
-            # Indicate no more jobs to add for this sample
-            if group:
-                group.close()
-                groups.append(group.name)
+            for qc_cmd in qc_cmds:
+                indx += 1
+                command_name = os.path.splitext(
+                    os.path.basename(qc_cmd.command))[0]
+                label = "%s.%s#%03d" % \
+                        (command_name,
+                         self.title,
+                         indx)
+                job = sched.submit(qc_cmd,
+                                   name=label,
+                                   wd=project.dirn,
+                                   runner=qc_runner)
+                print "Job: %s" %  job
+                jobs.append(job.name)
         # Batch any remaining jobs
         if use_batches:
             if batch_qc_cmds:
                 job = self._submit_batch(sched,
                                          batch_qc_cmds,
                                          runner=qc_runner)
-                batch_jobs.append(job.name)
-            # Verification should wait for these jobs
-            wait_for = batch_jobs
-        else:
-            wait_for = groups
+                jobs.append(job.name)
+        # Verification needs to wait for jobs to complete
+        wait_for = jobs
         # Add verification job
         verify_job = self.check_qc(sched,
                                    "verify_qc",
@@ -491,6 +458,14 @@ class ProjectQC(object):
         Internal: callback to clean up after QC completion
         """
         print "Post-QC clean up for '%s'" % self.project.name
+        # Remove JSON file for verification
+        if os.path.exists(self.json_file):
+            try:
+                os.remove(self.json_file)
+            except OSError as ex:
+                logger.warning("Failed to remove '%s': %s" %
+                               self.json_file)
+            self.json_file = None
         # Remove temporary dir
         if self.tmp is not None:
             try:

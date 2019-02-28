@@ -1,27 +1,54 @@
 #!/usr/bin/env python
 #
 #     illumina_qc: running and validating QC
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 """
-Provides utility classes and functions for generating QC commands
-and checking outputs from them.
+Overview
+--------
 
-Provides the following core class:
+This module provides utility classes and functions for generating
+QC commands and checking the associated outputs.
+
+It provides the following core class:
 
 - IlluminaQC: QC command generator
 
-Provides the following supporting functions:
+It also provides the following supporting functions:
 
 - determine_qc_protocol: get QC protocol for a project
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
 
-Provides the following constants:
+and the following module-level constants:
 
+- QC_MODULES: tuple of QC module names
 - FASTQ_SCREENS: tuple of screen names
 - PROTOCOLS: tuple of QC protocol names
+
+Usage
+-----
+
+The procedure for using IlluminaQC instances is as follows:
+
+- Create an IlluminaQC instance for the appropriate QC
+  protocol and settings;
+
+- Generate a dictionary of Fastq groups with missing QC
+  outputs with each QC 'module' under this protocol, by
+  invoking the `fastqs_missing_qc` method and supplying
+  a list of Fastq files (typically all Fastqs in a
+  project);
+
+- Pass this dictionary of Fastq groups into the `commands`
+  method, to generate a list of commands that should be
+  run to generate the missing QC outputs.
+
+- The QC for a project or other set of Fastqs can also be
+  checked by invoking the `fastqs_missing_qc` method and
+  examining whether any Fastq groups are returned for any
+  of the QC modules.
 """
 
 #######################################################################
@@ -34,6 +61,9 @@ from bcftbx.qc.report import strip_ngs_extensions
 from ..applications import Command
 from ..analysis import AnalysisFastq
 from ..fastq_utils import pair_fastqs_by_name
+
+QC_MODULES = ('illumina_qc',
+              'fastq_strand',)
 
 FASTQ_SCREENS = ('model_organisms',
                  'other_organisms',
@@ -104,23 +134,31 @@ class IlluminaQC(object):
         if status == 0:
             return qc_script_info.strip().split()[-1]
 
-    def commands(self,fastqs,qc_dir=None):
+    def commands(self,fastq_groups,qc_dir=None):
         """
         Generate commands for running QC scripts
 
-        Note that index reads (e.g. I1 Fastqs) will
-        not have commands generated for them.
+        Takes a dictionary output from the
+        `fastqs_missing_qc` method (where the keys
+        are QC module names and the associated values
+        are lists of Fastq groupings - either a single
+        Fastq or a list or iterable with multiple
+        Fastqs - which are missing expected QC
+        outputs from that module).
+
+        Returns a list of commands that will generate
+        the missing QC outputs when executed.
 
         Arguments:
-          fastqs (list): list of paths to Fastq files
-            to run the QC script on
+          fastq_groups (dictionary): Fastq groupings
+            for each QC module which have missing
+            associated QC outputs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
         Returns:
           List: list of `Command` instances (one per
-            Fastq) for running the `illumina_qc.sh`
-            script on.
+            Fastq group) for running the QC commands.
         """
         if self.protocol == "standardSE":
             commands = self._commands_for_single_end
@@ -128,146 +166,204 @@ class IlluminaQC(object):
             commands = self._commands_for_paired_end
         elif self.protocol == "singlecell":
             commands = self._commands_for_single_cell
-        return commands(fastqs,qc_dir=qc_dir)
+        return commands(fastq_groups,qc_dir=qc_dir)
 
-    def _commands_for_paired_end(self,fastqs,qc_dir=None):
+    def _commands_for_paired_end(self,fastq_groups,
+                                 qc_dir=None):
         """
         Generate commands for running paired-end QC scripts
 
-        Note that index reads (e.g. I1 Fastqs) will
-        not have commands generated for them.
+        Takes a dictionary output from the
+        `fastqs_missing_qc` method (where the keys
+        are QC module names and the associated values
+        are lists of Fastq groupings - either a single
+        Fastq or a list or iterable with multiple
+        Fastqs - which are missing expected QC
+        outputs from that module).
+
+        Returns a list of commands that will generate
+        the missing QC outputs when executed.
 
         Arguments:
-          fastqs (list): list of paths to Fastq files
-            to run the QC script on
+          fastq_groups (dictionary): Fastq groupings
+            for each QC module which have missing
+            associated QC outputs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
         Returns:
           List: list of `Command` instances (one per
-            Fastq) for running the `illumina_qc.sh`
-            script on.
+            Fastq group) for running the QC commands.
         """
         cmds = list()
-        # Convert to list and filter out index reads
-        fastqs = self._remove_index_reads(self._to_list(fastqs))
-        # Generate QC commands for individual Fastqs
-        for fastq in fastqs:
-            # Build command
-            cmd = Command('illumina_qc.sh',fastq)
-            if self.ungzip_fastqs:
-                cmd.add_args('--ungzip-fastqs')
-            cmd.add_args('--threads',self.nthreads)
-            if self.fastq_screen_subset is not None:
-                cmd.add_args('--subset',self.fastq_screen_subset)
-            if qc_dir is not None:
-                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
-            cmds.append(cmd)
-        # Generate pair-wise QC commands
-        for fq_pair in self._fastq_pairs(fastqs):
-            # Strandedness for this pair
-            if self.fastq_strand_conf is not None:
-                cmd = Command('fastq_strand.py',
-                              '-n',self.nthreads,
-                              '--conf',self.fastq_strand_conf,
-                              '--outdir',os.path.abspath(qc_dir),
-                              *fq_pair)
-                cmds.append(cmd)
+        # Iterate over QC modules
+        for qc_module in filter(lambda s: s in fastq_groups,
+                                QC_MODULES):
+            # Iterate over Fastq groupings in each module
+            for fqs in fastq_groups[qc_module]:
+                fastqs = self._remove_index_reads(self._to_list(fqs))
+                if qc_module == 'illumina_qc':
+                    # illumina_qc.sh
+                    for fastq in fastqs:
+                        cmd = Command('illumina_qc.sh',fastq)
+                        if self.ungzip_fastqs:
+                            cmd.add_args('--ungzip-fastqs')
+                        cmd.add_args('--threads',self.nthreads)
+                        if self.fastq_screen_subset is not None:
+                            cmd.add_args('--subset',self.fastq_screen_subset)
+                        if qc_dir is not None:
+                            cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+                        cmds.append(cmd)
+                elif qc_module == 'fastq_strand':
+                    # fastq_strand.py
+                    if self.fastq_strand_conf is not None:
+                        for fq_pair in self._fastq_pairs(fastqs):
+                            print fq_pair
+                            cmd = Command('fastq_strand.py',
+                                          '-n',self.nthreads,
+                                          '--conf',self.fastq_strand_conf,
+                                          '--outdir',os.path.abspath(qc_dir),
+                                          *fq_pair)
+                            cmds.append(cmd)
+        # Return list of commands
         return cmds
 
-    def _commands_for_single_end(self,fastqs,qc_dir=None):
+    def _commands_for_single_end(self,fastq_groups,
+                                 qc_dir=None):
         """
         Generate commands for running single-end QC scripts
 
-        Note that index reads (e.g. I1 Fastqs) will
-        not have commands generated for them.
+        Takes a dictionary output from the
+        `fastqs_missing_qc` method (where the keys
+        are QC module names and the associated values
+        are lists of Fastq groupings - either a single
+        Fastq or a list or iterable with multiple
+        Fastqs - which are missing expected QC
+        outputs from that module).
+
+        Returns a list of commands that will generate
+        the missing QC outputs when executed.
 
         Arguments:
-          fastqs (list): list of paths to Fastq files
-            to run the QC script on
+          fastq_groups (dictionary): Fastq groupings
+            for each QC module which have missing
+            associated QC outputs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
         Returns:
           List: list of `Command` instances (one per
-            Fastq) for running the `illumina_qc.sh`
-            script on.
+            Fastq group) for running the QC commands.
         """
         cmds = list()
-        # Convert to list and filter out index reads
-        fastqs = self._remove_index_reads(self._to_list(fastqs))
-        # Generate QC commands for individual Fastqs
-        for fastq in fastqs:
-            # Build command
-            cmd = Command('illumina_qc.sh',fastq)
-            if self.ungzip_fastqs:
-                cmd.add_args('--ungzip-fastqs')
-            cmd.add_args('--threads',self.nthreads)
-            if self.fastq_screen_subset is not None:
-                cmd.add_args('--subset',self.fastq_screen_subset)
-            if qc_dir is not None:
-                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
-            cmds.append(cmd)
-            # Strandedness
-            if self.fastq_strand_conf is not None:
-                cmd = Command('fastq_strand.py',
-                              '-n',self.nthreads,
-                              '--conf',self.fastq_strand_conf,
-                              '--outdir',os.path.abspath(qc_dir),
-                              fastq)
-                cmds.append(cmd)
+        # Iterate over QC modules
+        for qc_module in filter(lambda s: s in fastq_groups,
+                                QC_MODULES):
+            # Iterate over Fastqs in each module
+            for fqs in fastq_groups[qc_module]:
+                fastqs = self._remove_index_reads(self._to_list(fqs))
+                if qc_module == 'illumina_qc':
+                    # illumina_qc.sh
+                    for fastq in fastqs:
+                        cmd = Command('illumina_qc.sh',fastq)
+                        if self.ungzip_fastqs:
+                            cmd.add_args('--ungzip-fastqs')
+                        cmd.add_args('--threads',self.nthreads)
+                        if self.fastq_screen_subset is not None:
+                            cmd.add_args('--subset',self.fastq_screen_subset)
+                        if qc_dir is not None:
+                            cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+                        cmds.append(cmd)
+                elif qc_module == 'fastq_strand':
+                    # fastq_strand.py
+                    if self.fastq_strand_conf is not None:
+                        for fastq in fastqs:
+                            cmd = Command('fastq_strand.py',
+                                          '-n',self.nthreads,
+                                          '--conf',self.fastq_strand_conf,
+                                          '--outdir',os.path.abspath(qc_dir),
+                                          fastq)
+                            cmds.append(cmd)
+        # Return list of commands
         return cmds
 
-    def _commands_for_single_cell(self,fastqs,qc_dir=None):
+    def _commands_for_single_cell(self,fastq_groups,
+                                  qc_dir=None):
         """
         Generate commands for running single cell QC scripts
 
-        Note that index reads (e.g. I1 Fastqs) will
-        not have commands generated for them.
+        Takes a dictionary output from the
+        `fastqs_missing_qc` method (where the keys
+        are QC module names and the associated values
+        are lists of Fastq groupings - either a single
+        Fastq or a list or iterable with multiple
+        Fastqs - which are missing expected QC
+        outputs from that module).
+
+        Returns a list of commands that will generate
+        the missing QC outputs when executed.
 
         Arguments:
-          fastqs (list): list of paths to Fastq files
-            to run the QC script on
+          fastq_groups (dictionary): Fastq groupings
+            for each QC module which have missing
+            associated QC outputs
           qc_dir (str): path to the directory which
             will hold the outputs from the QC script
 
         Returns:
           List: list of `Command` instances (one per
-            Fastq) for running the `illumina_qc.sh`
-            script on.
+            Fastq group) for running the QC commands.
         """
         cmds = list()
-        # Convert to list and filter out index reads
-        fastqs = self._remove_index_reads(self._to_list(fastqs))
-        # Generate QC commands for individual Fastqs
-        for fastq in fastqs:
-            # Build command
-            cmd = Command('illumina_qc.sh',fastq)
-            if self.ungzip_fastqs:
-                cmd.add_args('--ungzip-fastqs')
-            cmd.add_args('--threads',self.nthreads)
-            if self.fastq_screen_subset is not None:
-                cmd.add_args('--subset',self.fastq_screen_subset)
-            if qc_dir is not None:
-                cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
-            if self.fastq_attrs(fastq).read_number == 1:
-                # Screens for R2 only
-                cmd.add_args('--no-screens')
-            cmds.append(cmd)
-            # Strandedness (R2 only)
-            if self.fastq_strand_conf is not None:
-                if self.fastq_attrs(fastq).read_number == 2:
-                    cmd = Command('fastq_strand.py',
-                                  '-n',self.nthreads,
-                                  '--conf',self.fastq_strand_conf,
-                                  '--outdir',os.path.abspath(qc_dir),
-                                  fastq)
-                    cmds.append(cmd)
+        # Iterate over QC modules
+        for qc_module in filter(lambda s: s in fastq_groups,
+                                QC_MODULES):
+            # Iterate over Fastq groupings in each module
+            for fqs in fastq_groups[qc_module]:
+                fastqs = self._remove_index_reads(self._to_list(fqs))
+                if qc_module == 'illumina_qc':
+                    # illumina_qc.sh
+                    for fastq in fastqs:
+                        cmd = Command('illumina_qc.sh',fastq)
+                        if self.ungzip_fastqs:
+                            cmd.add_args('--ungzip-fastqs')
+                        cmd.add_args('--threads',self.nthreads)
+                        if self.fastq_screen_subset is not None:
+                            cmd.add_args('--subset',self.fastq_screen_subset)
+                        if qc_dir is not None:
+                            cmd.add_args('--qc_dir',os.path.abspath(qc_dir))
+                        if self.fastq_attrs(fastq).read_number == 1:
+                            # Screens for R2 only
+                            cmd.add_args('--no-screens')
+                        cmds.append(cmd)
+                elif qc_module == 'fastq_strand':
+                    # fastq_strand.py
+                    if self.fastq_strand_conf is not None:
+                        for fastq in fastqs:
+                            if self.fastq_attrs(fastq).read_number == 2:
+                                cmd = Command(
+                                    'fastq_strand.py',
+                                    '-n',self.nthreads,
+                                    '--conf',self.fastq_strand_conf,
+                                    '--outdir',os.path.abspath(qc_dir),
+                                    fastq)
+                                cmds.append(cmd)
         return cmds
 
     def expected_outputs(self,fastqs,qc_dir):
         """
         Generate expected outputs for input Fastq
+
+        Returns a dictionary where keys are the names
+        of QC modules (e.g. 'illumina_qc'), and the
+        associated values are lists of tuples, which
+        in turn consist of Fastq-output pairs i.e.
+
+        (fastqs,outputs)
+
+        `fastqs` can be a single Fastq file or many
+        Fastqs in a list or iterable; `outputs` is a
+        list or iterable of the associated QC outputs.
 
         Arguments:
           fastqs (str/list): either path to a single
@@ -277,8 +373,9 @@ class IlluminaQC(object):
             will hold the outputs from the QC script
 
         Returns:
-          List: list of expected output files from
-            the QC for the supplied Fastq.
+          Dictionary: dictionary of QC modules with
+            lists of tuples with Fastqs and associated
+            QC output file names.
         """
         if self.protocol == "standardSE":
             outputs = self._outputs_for_single_end
@@ -292,6 +389,17 @@ class IlluminaQC(object):
         """
         Generate expected outputs for standard PE protocol
 
+        Returns a dictionary where keys are the names
+        of QC modules (e.g. 'illumina_qc'), and the
+        associated values are lists of tuples, which
+        in turn consist of Fastq-output pairs i.e.
+
+        `(fastqs,outputs)`
+
+        `fastqs` can be a single Fastq file or many
+        Fastqs in a list or iterable; `outputs` is a
+        list or iterable of the associated QC outputs.
+
         Arguments:
           fastqs (str/list): either path to a single
             Fastq file, or a list of paths to multiple
@@ -300,33 +408,58 @@ class IlluminaQC(object):
             will hold the outputs from the QC script
 
         Returns:
-          List: list of expected output files from
-            the QC for the supplied Fastq.
+          Dictionary: dictionary of QC modules with
+            lists of tuples with Fastqs and associated
+            QC output file names.
         """
         qc_dir = os.path.abspath(qc_dir)
         fastqs = self._remove_index_reads(self._to_list(fastqs))
-        expected = []
-        # Expected outputs for single Fastqs
-        for fastq in fastqs:
-            # FastQC outputs
-            expected.extend([os.path.join(qc_dir,f)
-                             for f in fastqc_output(fastq)])
-            # Fastq_screen outputs
-            for name in FASTQ_SCREENS:
-                expected.extend([os.path.join(qc_dir,f)
-                                 for f in fastq_screen_output(fastq,name)])
-        # Pair-wise outputs
-        for fq_pair in self._fastq_pairs(fastqs):
-            # Strand stats output
-            if self.fastq_strand_conf:
-                expected.append(os.path.join(
-                    qc_dir,fastq_strand_output(fq_pair[0])))
-        return expected
+        outputs = dict()
+        for qc_module in QC_MODULES:
+            output = []
+            if qc_module == 'illumina_qc':
+                # Expected outputs for single Fastqs
+                for fastq in fastqs:
+                    expected = []
+                    # FastQC outputs
+                    expected.extend([os.path.join(qc_dir,f)
+                                     for f in fastqc_output(fastq)])
+                    # Fastq_screen outputs
+                    for name in FASTQ_SCREENS:
+                        expected.extend([os.path.join(qc_dir,f)
+                                         for f in
+                                         fastq_screen_output(fastq,name)])
+                    output.append((fastq,expected))
+            elif qc_module == 'fastq_strand':
+                # Pair-wise outputs
+                if self.fastq_strand_conf:
+                    for fq_pair in self._fastq_pairs(fastqs):
+                        # Strand stats output
+                        expected = [os.path.join(
+                            qc_dir,fastq_strand_output(fq_pair[0]))]
+                        output.append((fq_pair,expected))
+            else:
+                logger.warning("Ignoring unimplemented QC module '%s'"
+                               % qc_module)
+            if output:
+                outputs[qc_module] = output
+        return outputs
 
     def _outputs_for_single_end(self,fastqs,qc_dir):
         """
         Generate expected outputs for standard SE protocol
 
+        Returns a dictionary where keys are the names
+        of QC modules (e.g. 'illumina_qc'), and the
+        associated values are lists of tuples, which
+        in turn consist of Fastq-output pairs i.e.
+
+        (fastqs,outputs)
+
+        `fastqs` can be a single Fastq file or many
+        Fastqs in a list or iterable; `outputs` is a
+        list or iterable of the associated QC outputs.
+
         Arguments:
           fastqs (str/list): either path to a single
             Fastq file, or a list of paths to multiple
@@ -335,31 +468,56 @@ class IlluminaQC(object):
             will hold the outputs from the QC script
 
         Returns:
-          List: list of expected output files from
-            the QC for the supplied Fastq.
+          Dictionary: dictionary of QC modules with
+            lists of tuples with Fastqs and associated
+            QC output file names.
         """
         qc_dir = os.path.abspath(qc_dir)
         fastqs = self._remove_index_reads(self._to_list(fastqs))
-        expected = []
-        # Expected outputs for single Fastqs
-        for fastq in fastqs:
-            # FastQC outputs
-            expected.extend([os.path.join(qc_dir,f)
-                             for f in fastqc_output(fastq)])
-            # Fastq_screen outputs
-            for name in FASTQ_SCREENS:
-                expected.extend([os.path.join(qc_dir,f)
-                                 for f in fastq_screen_output(fastq,name)])
-            # Strand stats output
-            if self.fastq_strand_conf:
-                expected.append(os.path.join(
-                    qc_dir,fastq_strand_output(fastq)))
-        return expected
+        outputs = dict()
+        for qc_module in QC_MODULES:
+            output = []
+            if qc_module == 'illumina_qc':
+                # Expected outputs for single Fastqs
+                for fastq in fastqs:
+                    expected = []
+                    # FastQC outputs
+                    expected.extend([os.path.join(qc_dir,f)
+                                     for f in fastqc_output(fastq)])
+                    # Fastq_screen outputs
+                    for name in FASTQ_SCREENS:
+                        expected.extend([os.path.join(qc_dir,f)
+                                         for f in
+                                         fastq_screen_output(fastq,name)])
+                    output.append((fastq,expected))
+            elif qc_module == 'fastq_strand':
+                # Strand stats output
+                if self.fastq_strand_conf:
+                    expected = [os.path.join(
+                        qc_dir,fastq_strand_output(fastq))]
+                    output.append((fastq,expected))
+            else:
+                logger.warning("Ignoring unimplemented QC module '%s'"
+                               % qc_module)
+            if output:
+                outputs[qc_module] = output
+        return outputs
 
     def _outputs_for_single_cell(self,fastqs,qc_dir):
         """
         Generate expected outputs for single-cell protocol
 
+        Returns a dictionary where keys are the names
+        of QC modules (e.g. 'illumina_qc'), and the
+        associated values are lists of tuples, which
+        in turn consist of Fastq-output pairs i.e.
+
+        (fastqs,outputs)
+
+        `fastqs` can be a single Fastq file or many
+        Fastqs in a list or iterable; `outputs` is a
+        list or iterable of the associated QC outputs.
+
         Arguments:
           fastqs (str/list): either path to a single
             Fastq file, or a list of paths to multiple
@@ -368,33 +526,100 @@ class IlluminaQC(object):
             will hold the outputs from the QC script
 
         Returns:
-          List: list of expected output files from
-            the QC for the supplied Fastq.
+          Dictionary: dictionary of QC modules with
+            lists of tuples with Fastqs and associated
+            QC output file names.
         """
         qc_dir = os.path.abspath(qc_dir)
         fastqs = self._remove_index_reads(self._to_list(fastqs))
-        expected = []
-        # Expected outputs for single Fastqs
-        for fastq in fastqs:
-            # FastQC outputs
-            expected.extend([os.path.join(qc_dir,f)
-                             for f in fastqc_output(fastq)])
-            # Fastq_screen outputs (R2 only)
-            if self.fastq_attrs(fastq).read_number == 2:
-                for name in FASTQ_SCREENS:
+        outputs = dict()
+        for qc_module in QC_MODULES:
+            output = []
+            if qc_module == 'illumina_qc':
+                # Expected outputs for single Fastqs
+                for fastq in fastqs:
+                    expected = []
+                    # FastQC outputs
                     expected.extend([os.path.join(qc_dir,f)
-                                     for f in fastq_screen_output(fastq,name)])
-            # Strand stats output (R2 only)
-            if self.fastq_strand_conf:
-                if self.fastq_attrs(fastq).read_number == 2:
-                    expected.append(os.path.join(
-                        qc_dir,fastq_strand_output(fastq)))
-        return expected
+                                     for f in fastqc_output(fastq)])
+                    # Fastq_screen outputs (R2 only)
+                    if self.fastq_attrs(fastq).read_number == 2:
+                        for name in FASTQ_SCREENS:
+                            expected.extend([os.path.join(qc_dir,f)
+                                             for f in
+                                             fastq_screen_output(fastq,name)])
+                    output.append((fastq,expected))
+            elif qc_module == 'fastq_strand':
+                # Strand stats output (R2 only)
+                if self.fastq_strand_conf:
+                    for fastq in fastqs:
+                        if self.fastq_attrs(fastq).read_number == 2:
+                            expected = [os.path.join(
+                                qc_dir,fastq_strand_output(fastq))]
+                            output.append((fastq,expected))
+            else:
+                logger.warning("Ignoring unimplemented QC module '%s'"
+                               % qc_module)
+            if output:
+                outputs[qc_module] = output
+        return outputs
+
+    def fastqs_missing_qc(self,fastqs,qc_dir):
+        """
+        Filter Fastqs with missing QC outputs
+
+        Returns a dictionary where the keys are
+        QC modules and the associated values are
+        lists of Fastq groupings (either a single
+        Fastq or a list or iterable with multiple
+        Fastqs) which are missing expected QC
+        outputs from that module.
+
+        The output from this method is the correct
+        format for input into the `commands`
+        method (to generate commands that will
+        produce the missing outputs when executed).
+
+        Arguments:
+          fastqs (str/list): either path to a single
+            Fastq file, or a list of paths to multiple
+            Fastqs
+          qc_dir (str): path to the directory which
+            will hold the outputs from the QC script
+
+        Returns:
+          Dictionary: dictionary where keys are
+            QC modules and values are lists of
+            Fastq groupings which are missing
+            expected QC outputs.
+        """
+        result = dict()
+        qc_dir = os.path.abspath(qc_dir)
+        outputs = self.check_outputs(fastqs,qc_dir)
+        for qc_module in outputs:
+            unverified = list()
+            for fqs,present,missing in outputs[qc_module]:
+                if missing:
+                    unverified.append(fqs)
+            if unverified:
+                result[qc_module] = unverified
+        return result
 
     def check_outputs(self,fastqs,qc_dir):
         """
         Check QC outputs for input Fastq
 
+        Returns a dictionary with QC modules as
+        keys and the corresponding values being
+        lists of (fastqs,present,missing) tuples
+        where:
+
+        - `fastqs` are one or more Fastqs
+        - `present` is a list of the output files
+           that are found on the system
+        - `missing` is a list of outputs files
+           that aren't found.
+
         Arguments:
           fastqs (str/list): either path to a single
             Fastq file, or a list of paths to multiple
@@ -403,21 +628,28 @@ class IlluminaQC(object):
             will hold the outputs from the QC script
 
         Returns:
-          Tuple: tuple (present,missing), where
-            'present' is a list of outputs which were
-            found, and 'missing' is a list of those
-            which were not.
+          Dictionary: dictionary with QC modules as
+            keys and corresponding values being
+            lists of (fastqs,present,missing) tuples.
         """
         qc_dir = os.path.abspath(qc_dir)
-        present = []
-        missing = []
-        # Check that outputs exist
-        for output in self.expected_outputs(fastqs,qc_dir):
-            if os.path.exists(output):
-                present.append(output)
-            else:
-                missing.append(output)
-        return (present,missing)
+        result = dict()
+        # Check whether outputs exist
+        expected = self.expected_outputs(fastqs,qc_dir)
+        for qc_module in expected:
+            for fqs,outputs in expected[qc_module]:
+                present = []
+                missing = []
+                for output in outputs:
+                    if os.path.exists(output):
+                        present.append(output)
+                    else:
+                        missing.append(output)
+                try:
+                    result[qc_module].append((fqs,present,missing))
+                except KeyError:
+                    result[qc_module] = [(fqs,present,missing),]
+        return result
 
     def _remove_index_reads(self,fastqs):
         """
