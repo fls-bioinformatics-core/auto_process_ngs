@@ -593,6 +593,24 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.args.c,"goodbye")
         self.assertEqual(task.args.d,12)
         self.assertEqual(task.args.e,True)
+        # Check task raises exception if init fails
+        # Define a task for testing
+        class FailInit(PipelineTask):
+            def init(self,a,b,c='hello',d=13,e=None):
+                raise Exception("Forced init to fail")
+            def setup(self):
+                result = "a=%s b=%s c=%s d=%s e=%s" \
+                         % (self.args.a,
+                            self.args.b,
+                            self.args.c,
+                            self.args.d,
+                            self.args.e)
+                self.output.results.append(result)
+        self.assertRaises(Exception,
+                          FailInit,
+                          "This will fail on init",
+                          "a",
+                          "b")
 
     def test_pipelinetask_no_commands(self):
         """

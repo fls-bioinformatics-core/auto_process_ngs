@@ -1108,6 +1108,9 @@ class PipelineTask(object):
             pass
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
+        if self._exit_code != 0:
+            raise Exception("Error running 'init' method for task '%s' "
+                            "(%s)" % (self._name,self.__class__))
 
     @property
     def args(self):
@@ -1241,7 +1244,7 @@ class PipelineTask(object):
         except Exception as ex:
             self.report("exception invoking '%s': %s" %
                         (f.__name__,ex))
-            traceback.print_exc(ex)
+            self.report(traceback.format_exc(ex))
             self._exit_code += 1
         # Switch back to original directory
         if self._working_dir is not None:
