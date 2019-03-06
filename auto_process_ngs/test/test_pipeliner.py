@@ -16,6 +16,7 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
@@ -957,6 +958,59 @@ class TestPipelineCommandWrapper(unittest.TestCase):
         # Add argument and check updated command
         cmd.add_args("there")
         self.assertEqual(str(cmd.cmd()),"echo hello there")
+
+class TestPipelineParam(unittest.TestCase):
+
+    def test_pipelineparam_no_type(self):
+        """
+        PipelineParam: no type specified
+        """
+        # No initial value
+        p = PipelineParam()
+        self.assertEqual(p.value,None)
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+        p.set(123)
+        self.assertEqual(p.value,123)
+
+    def test_pipelineparam_with_initial_value(self):
+        """
+        PipelineParam: initial value supplied
+        """
+        # Specify an initial value
+        p = PipelineParam("abc")
+        self.assertEqual(p.value,"abc")
+        p = PipelineParam(value="def")
+        self.assertEqual(p.value,"def")
+
+    def test_pipelineparam_with_type(self):
+        """
+        PipelineParam: type function supplied
+        """
+        # Specify type function as 'str'
+        p = PipelineParam(type=str)
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+        p.set(123)
+        self.assertEqual(p.value,"123")
+        # Specify type function as 'int'
+        p = PipelineParam(type=int)
+        p.set(123)
+        self.assertEqual(p.value,123)
+        p.set("123")
+        self.assertEqual(p.value,123)
+        # Exception for bad value
+        p.set("abc")
+        self.assertRaises(ValueError,lambda: p.value)
+        # Specify type function as 'float'
+        p = PipelineParam(type=float)
+        p.set(1.23)
+        self.assertEqual(p.value,1.23)
+        p.set("1.23")
+        self.assertEqual(p.value,1.23)
+        # Exception for bad value
+        p.set("abc")
+        self.assertRaises(ValueError,lambda: p.value)
 
 class TestFileCollector(unittest.TestCase):
 

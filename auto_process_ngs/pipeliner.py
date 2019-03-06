@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -207,7 +207,8 @@ are a number of implications:
 
 2. Outputs from tasks should be passed by object references (e.g.
    via a list or dictionary, which can be updated by the task after
-   being passed, or via specialised classes such as ``FileCollector``).
+   being passed, via specialised classes such as ``FileCollector``
+   or ``PipelineParam`` - see sections below).
 
 As an example, consider the following task which reverses the order of
 a list of items::
@@ -229,9 +230,22 @@ reference to the output list, which can then be passed to another task.
 The list will be populated when the reverse task runs, at which point
 the output will be available to the following tasks.
 
-The ``FileCollector`` class is a specialised class which enables
-the collection of files matching a glob-type pattern, and which can
-be used as an alternative where appropriate. For example::
+Specialised task input/output classes
+-------------------------------------
+
+There are currently two specialised classes which can be used to
+pass data from the output of one task into the input of another:
+
+``FileCollector``
+*****************
+
+The ``FileCollector`` class enables the collection of files matching
+a glob-type pattern. It behaves as an iterator, with the file collection
+being deferred until the iteration actually takes place; it can therefore
+be used as an output for tasks where a set of files are created but the
+precise number or names of the files are not known *a priori*.
+
+For example::
 
     class MakeFiles(PipelineTask):
         def init(self,d,filenames):
@@ -243,6 +257,31 @@ be used as an alternative where appropriate. For example::
             for f in self.args.filenames:
                 with open(os.path.join(self.args.d,f) as fp:
                     fp.write()
+
+``PipelineParam``
+*****************
+
+The ``PipelineParam`` class offers a way to pass strings or numerical
+types which would normally be immutable between tasks.
+
+For example::
+
+    import string
+    from random import choice
+
+    class RandomString(PipelineTask):
+        def init(self,n):
+            self.add_output('string',PipelineParam())
+        def setup(self):
+            # Create a random string of length 'n' characters
+            allchar = string.ascii_letters + string.punctuation + string.digits
+            s = "".join([choice(allchar) for x in range(self.args.n)])
+            # Assign the string to the output
+            self.output.string.set(s)
+
+If passed as input to a subsequent task, the ``PipelineParam``
+instance will behave as a static value when accessed via
+``self.args...``.
 
 Running Python functions as tasks
 ---------------------------------
@@ -542,6 +581,81 @@ class FileCollector(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
+
+class PipelineParam(object):
+    """
+    Class for passing arbitrary values between tasks
+
+    The PipelineParam class offers a way to dynamically assign
+    values for types which would otherwise be immutable (e.g.
+    strings).
+
+    A new PipelineParam is created using e.g.:
+
+    >>> p = PipelineParam()
+
+    In this form there will be no initial value, however
+    one can be assigned using the ``value`` argument, e.g.:
+
+    >>> p = PipelineParam(value="first")
+
+    The associated value can be returned using the ``value``
+    property:
+
+    >>> p.value
+    "first"
+
+    and updated using the ``set`` method, e.g.:
+
+    >>> p.set("last")
+    >>> p.value
+    "last"
+
+    The return type can be explicitly specified on object
+    instantiation using the ``type`` argument, for example
+    to force that a string is always returned:
+
+    >>> p = PipelinerParam(type=str)
+    >>> p.set(123)
+    >>> p.value
+    "123"
+    """
+    def __init__(self,value=None,type=None):
+        """
+        Create a new PipelineParam instance
+
+        Arguments:
+          value (object): optional, initial value to assign
+            to the instance
+          type (function): optional, function used to convert
+            the stored value when fetched via the `value`
+            property
+        """
+        self._value = None
+        self._type = type
+        if value is not None:
+            self.set(value)
+    def set(self,newvalue):
+        """
+        Update the value assigned to the instance
+
+        Arguments:
+          newvalue (object): new value to assign
+        """
+        self._value = newvalue
+    @property
+    def value(self):
+        """
+        Return the assigned value
+
+        If a `type` function was also specified on instance
+        creation then this will be used to convert the
+        assigned value before it is returned.
+        """
+        try:
+            return self._type(self._value)
+        except TypeError:
+            return self._value
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
@@ -1117,7 +1231,16 @@ class PipelineTask(object):
         """
         Fetch parameters supplied to the instance
         """
-        return AttributeDictionary(**self._callargs)
+        args = AttributeDictionary(**self._callargs)
+        for a in args:
+            try:
+                # If arg is a PipelineParam then convert it
+                # and store the final value instead of the
+                # PipelineParam instance
+                args[a] = args[a].value
+            except AttributeError:
+                pass
+        return args
 
     @property
     def completed(self):
