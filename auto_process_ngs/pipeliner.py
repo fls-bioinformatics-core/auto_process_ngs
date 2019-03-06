@@ -930,11 +930,13 @@ class Pipeline(object):
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
                         kws['working_dir'] = working_dir
+                    if 'log_dir' not in kws:
+                        kws['log_dir'] = log_dir
+                    if 'scripts_dir' not in kws:
+                        kws['scripts_dir'] = scripts_dir
                     kws['log_file'] = self._log_file
                     try:
                         task.run(sched=sched,
-                                 log_dir=log_dir,
-                                 scripts_dir=scripts_dir,
                                  poll_interval=poll_interval,
                                  verbose=verbose,
                                  **kws)
