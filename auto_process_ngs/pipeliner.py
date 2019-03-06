@@ -907,8 +907,10 @@ class Pipeline(object):
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
-            # Check for pending tasks that can start
             pending = []
+            running = []
+            failed = []
+            # Check for pending tasks that can start
             for task,requirements,kws in self._pending:
                 run_task = False
                 if not requirements:
@@ -948,8 +950,6 @@ class Pipeline(object):
                     pending.append((task,requirements,kws))
             self._pending = pending
             # Check for running tasks that have completed
-            running = []
-            failed = []
             for task in self._running:
                 if task.completed:
                     self.report("finished '%s'"
