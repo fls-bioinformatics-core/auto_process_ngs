@@ -103,6 +103,81 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(open(out_file,'r').read(),
                          "item1\nitem2\n")
 
+    def test_pipeline_with_multiple_commands(self):
+        """
+        Pipeline: define and run pipeline with multiple commands
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                self.add_output('files',list())
+            def setup(self):
+                for f,s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text to file",
+                            "echo",s,
+                            ">>",f))
+            def finish(self):
+                for f,s in self.args.s:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = EchoMany("Write items",
+                        ("out1.txt","item"),
+                        ("out2.txt","item"),)
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt","out2.txt")]
+        for out_file in out_files:
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(open(out_file,'r').read(),
+                             "item\n")
+
+    def test_pipeline_with_batched_commands(self):
+        """
+        Pipeline: define and run pipeline with batched commands
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                self.add_output('files',list())
+            def setup(self):
+                for f,s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text to file",
+                            "echo",s,
+                            ">>",f))
+            def finish(self):
+                for f,s in self.args.s:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = EchoMany("Write items",
+                        ("out1.txt","item"),
+                        ("out2.txt","item"),)
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              batch_size=2)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt","out2.txt")]
+        for out_file in out_files:
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(open(out_file,'r').read(),
+                             "item\n")
+
     def test_pipeline_with_external_scheduler(self):
         """
         Pipeline: run pipeline using user-defined scheduler
@@ -687,6 +762,120 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[4],"Hello!")
         self.assertTrue(stdout[5].startswith("#### END "))
         self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_with_multiple_commands(self):
+        """
+        PipelineTask: run task with multiple shell commands
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                pass
+            def setup(self):
+                for s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",s))
+        # Make a task instance
+        task = EchoMany("Echo string","Hello!","Goodbye!")
+        # Check initial state
+        self.assertEqual(task.args.s,("Hello!","Goodbye!"))
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Goodbye!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),15) # 15 = 14 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Echo text")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"Hello!")
+        self.assertTrue(stdout[5].startswith("#### END "))
+        self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[7],"#### COMMAND Echo text")
+        self.assertEqual(stdout[8],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[9],"#### USER %s" % self._user())
+        self.assertTrue(stdout[10].startswith("#### START "))
+        self.assertEqual(stdout[11],"Goodbye!")
+        self.assertTrue(stdout[12].startswith("#### END "))
+        self.assertEqual(stdout[13],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_with_batched_commands(self):
+        """
+        PipelineTask: run task with batched shell commands
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                pass
+            def setup(self):
+                for s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",s))
+        # Make a task instance
+        task = EchoMany("Echo string","Hello!","Goodbye!")
+        # Check initial state
+        self.assertEqual(task.args.s,("Hello!","Goodbye!"))
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task with batches
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 batch_size=2,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Batch commands for Echo string
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # Goodbye!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
+        self.assertEqual(stdout[0],
+                         "#### COMMAND Batch commands for Echo string")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"Hello!")
+        self.assertEqual(stdout[5],"Goodbye!")
+        self.assertTrue(stdout[6].startswith("#### END "))
+        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_failing_command(self):
         """
