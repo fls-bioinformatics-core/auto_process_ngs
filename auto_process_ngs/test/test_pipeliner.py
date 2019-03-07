@@ -178,6 +178,39 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(open(out_file,'r').read(),
                              "item\n")
 
+    def test_pipeline_sets_pipelineparam_as_task_input(self):
+        """
+        Pipeline: handle PipelineParam passed as task input
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Create a pipeline param instance
+        s = PipelineParam("hello")
+        self.assertEqual(s.value,"hello")
+        # Build the pipeline
+        ppl = Pipeline()
+        task = Echo("Write item1","out.txt",s)
+        ppl.add_task(task)
+        # Update the pipeline param
+        s.set("goodbye")
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_file = os.path.join(self.working_dir,"out.txt")
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"goodbye\n")
+
     def test_pipeline_with_external_scheduler(self):
         """
         Pipeline: run pipeline using user-defined scheduler
