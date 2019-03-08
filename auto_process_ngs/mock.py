@@ -1,11 +1,9 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2019 Peter Briggs
 #
 ########################################################################
 
 """
-mock.py
-
 Provides classes for mocking up examples of inputs and outputs for
 various parts of the process pipeline (including example directory
 structures), as well as mock executables, to be used in testing.
@@ -39,7 +37,6 @@ the external software required for parts of the pipeline:
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
-
 """
 
 #######################################################################
@@ -61,8 +58,6 @@ from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
-from .tenx_genomics_utils import flow_cell_id
-from .qc.illumina_qc import IlluminaQC
 from .mockqc import MockQCOutputs
 import mock10xdata
 
@@ -607,7 +602,6 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self._project.use_qc_dir(qc_dir)
         print "- QC dir: %s" % self._project.qc_dir
         # Generate base QC outputs (one set per fastq)
-        illumina_qc = IlluminaQC(protocol=protocol)
         for fq in self._project.fastqs:
             print "Adding outputs for %s" % fq
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
@@ -619,7 +613,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                                   screen)
         # Update protocol in qc.info
         qc_info = self._project.qc_info(self._project.qc_dir)
-        qc_info['protocol'] = illumina_qc.protocol
+        qc_info['protocol'] = protocol
+        qc_info['fastq_dir'] = self._project.fastq_dir
         qc_info.save()
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
