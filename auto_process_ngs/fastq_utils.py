@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_utils.py: utility functions for operating on fastq files
-#     Copyright (C) University of Manchester 2016-18 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -10,8 +10,6 @@
 #########################################################################
 
 """
-fastq_utils.py
-
 Utility classes and functions for operating on Fastq files:
 
 - BaseFastqAttrs: base class for extracting info from Fastq file
@@ -23,7 +21,7 @@ Utility classes and functions for operating on Fastq files:
 - get_read_count: count total reads across one or more Fastqs
 - pair_fastqs: automagically pair up FASTQ files
 - pair_fastqs_by_name: pair up FASTQ files based on their names
-
+- remove_index_fastqs: remove index (I1/I2) Fastqs from a list
 """
 
 #######################################################################
@@ -626,3 +624,21 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
             pairs.append((fqr2,))
     pairs = sorted(pairs,cmp=lambda x,y: cmp(x[0],y[0]))
     return pairs
+
+def remove_index_fastqs(fastqs,fastq_attrs=IlluminaFastqAttrs):
+    """
+    Remove index (I1/I2) Fastqs from list
+
+    Arguments:
+      fastqs (list): list of paths to Fastq files
+      fastq_attrs (BaseFastqAttrs): class to use for
+        extracting attributes from Fastq names
+        (defaults to IlluminaFastqAttrs)
+
+    Returns:
+      List: input Fastq list with any index read
+        Fastqs removed.
+    """
+    return filter(lambda fq:
+                  not fastq_attrs(fq).is_index_read,
+                  fastqs)
