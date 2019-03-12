@@ -56,6 +56,7 @@ from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
 from .analysis import AnalysisProject
+from .fastq_utils import pair_fastqs_by_name
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
@@ -575,6 +576,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
 
     def add_qc_outputs(self,fastq_set=None,qc_dir=None,
                        protocol="standardPE",
+                       include_fastq_strand=True,
                        include_multiqc=True):
         """
         Add mock QC outputs
@@ -586,6 +588,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
             directory
           protocol (str): specify non-default QC
             protocol to use
+          include_fastq_strand (bool): if True then
+            add mock fastq_strand.py outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
         """
@@ -605,12 +609,28 @@ class UpdateAnalysisProject(DirectoryUpdater):
         for fq in self._project.fastqs:
             print "Adding outputs for %s" % fq
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
+            if protocol == 'singlecell' and \
+               self._project.fastq_attrs(fq).read_number == 1:
+                continue
             for screen in ("model_organisms",
                            "other_organisms",
                            "rRNA"):
                 MockQCOutputs.fastq_screen_v0_9_2(fq,
                                                   self._project.qc_dir,
                                                   screen)
+        # Handle fastq_strand, if requested
+        if include_fastq_strand:
+            fastq_strand_conf = os.path.join(self._project.dirn,
+                                             "fastq_strand.conf")
+            with open(fastq_strand_conf,'w') as fp:
+                fp.write("")
+            for fq_pair in pair_fastqs_by_name(self._project.fastqs):
+                if protocol == 'singlecell':
+                    fq = fq_pair[1]
+                else:
+                    fq = fq_pair[0]
+                MockQCOutputs.fastq_strand_v0_0_4(fq,
+                                                  self._project.qc_dir)
         # Update protocol in qc.info
         qc_info = self._project.qc_info(self._project.qc_dir)
         qc_info['protocol'] = protocol

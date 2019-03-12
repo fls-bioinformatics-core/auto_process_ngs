@@ -1,5 +1,5 @@
-#     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2016 Peter Briggs
+#     mockqcdata.py: module providing mock Illumina data for testing
+#     Copyright (C) University of Manchester 2012-2019 Peter Briggs
 #
 ########################################################################
 
@@ -987,6 +987,12 @@ SpR6	203860	203860	100.00	0	0.00	0	0.00	0	0.00	0	0.00
 """
 }
 
+
+FASTQ_STRAND_V0_0_4 = { 'fastq_strand.txt': """#fastq_strand version: 0.0.4    #Aligner: STAR  #Reads in subset: 10000
+#Genome 1st forward     2nd reverse
+human   5.17    103.76
+"""
+}
+
 # Base64 encoded generic example PNG
 BASE64_PNG_DATA = "iVBORw0KGgoAAAANSUhEUgAAAEwAAAAqCAIAAACWWCo7AAABFElEQVR4nO2asW3DMBBFvwwv4YZ1BjDgwn1qNlqDN8vnGirEOjO4j2sVUp0JmIJQQwOOAyOxfbwH4YMQVOjdB0EV6khCPSRzzuM8ak2Sm0cP+T8wSTXUexLQd20r50i63k3DJBJyRlqS3/mSMcYQQlrSNEyud+XOQ4r5Fcej1JIiAQIA45y6zgMewJpBZF1LeTz8/Uteg7xpyrUkGUuTgHv+JkV+nvLpJNsgAhEPAPBAfKlvg1ua3O8zql36DMf3nckLNmTMGfNnKgng8IWXzkuaOCdNUgv1EaKA/t3t3vxyTiWHj6mJJk1SCyaphVXyrDmbalI1JqkFk9SCSWrBJLVgklowSS2YpBZMUgtNSHYt/Kz0Dck+c8rgvriAAAAAAElFTkSuQmCC"
-
