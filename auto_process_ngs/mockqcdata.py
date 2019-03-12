@@ -987,10 +987,9 @@ SpR6	203860	203860	100.00	0	0.00	0	0.00	0	0.00	0	0.00
 """
 }
 
-
-FASTQ_STRAND_V0_0_4 = { 'fastq_strand.txt': """#fastq_strand version: 0.0.4    #Aligner: STAR  #Reads in subset: 10000
-#Genome 1st forward     2nd reverse
-human   5.17    103.76
+FASTQ_STRAND_V0_0_4 = { 'fastq_strand.txt': """#fastq_strand version: 0.0.4	#Aligner: STAR	#Reads in subset: 10000
+#Genome	1st forward	2nd reverse
+human	5.17	103.76
 """
 }
 
