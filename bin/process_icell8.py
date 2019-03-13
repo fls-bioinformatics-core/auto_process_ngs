@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_icell8.py: perform processing of Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 """
 process_icell8.py
@@ -28,9 +28,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.pipeline import ICell8QCFilter
 from auto_process_ngs.icell8.pipeline import ICell8FinalReporting
-from auto_process_ngs.qc.runqc import RunQC
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.qc.pipeline import QCPipeline
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
@@ -419,42 +417,28 @@ if __name__ == "__main__":
 
     # Run the QC
     print "Running the QC"
-    # Set up conf file for strandedness determination
-    fastq_strand_conf = None
-    if analysis_project.info.organism:
-        print "Organisms: %s" % analysis_project.info.organism
-        fastq_strand_indexes = build_fastq_strand_conf(
-            analysis_project.info.organism.lower().split(','),
-            __settings.fastq_strand_indexes)
-        if fastq_strand_indexes:
-            print "Setting up conf file for strandedness determination"
-            fastq_strand_conf = os.path.join(analysis_project.dirn,
-                                             "fastq_strand.conf")
-            with open(fastq_strand_conf,'w') as fp:
-                fp.write("%s\n" % fastq_strand_indexes)
-        else:
-            print "No matching indexes for strandedness determination"
-    else:
-        print "No organisms specified"
-    # Set up the QC
-    illumina_qc = IlluminaQC(
-        protocol="singlecell",
-        nthreads=nprocessors['qc'],
-        fastq_screen_subset=default_fastq_screen_subset,
-        fastq_strand_conf=fastq_strand_conf)
-    runqc = RunQC()
+    runqc = QCPipeline(
+        runners={
+            'qc_runner': runners['qc'],
+            'report_runner': default_runner,
+        })
     runqc.add_project(analysis_project,
+                      qc_protocol="singlecell",
                       fastq_dir="fastqs.samples",
                       qc_dir="qc.samples",
-                      illumina_qc=illumina_qc)
+                      fastq_strand_indexes=
+                      __settings.fastq_strand_indexes,
+                      nthreads=nprocessors['qc'],
+                      multiqc=True)
     runqc.add_project(analysis_project,
+                      qc_protocol="singlecell",
                       fastq_dir="fastqs.barcodes",
                       qc_dir="qc.barcodes",
-                      illumina_qc=illumina_qc)
-    exit_status = runqc.run(multiqc=True,
-                            qc_runner=runners['qc'],
-                            report_runner=default_runner,
-                            max_jobs=max_jobs,
+                      fastq_strand_indexes=
+                      __settings.fastq_strand_indexes,
+                      nthreads=nprocessors['qc'],
+                      multiqc=True)
+    exit_status = runqc.run(max_jobs=max_jobs,
                             batch_size=25)
     if exit_status != 0:
         # Finished with error
