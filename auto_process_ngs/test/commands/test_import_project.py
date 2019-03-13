@@ -97,10 +97,11 @@ Comments\t1% PhiX spike in
             'miseq',
             top_dir=self.dirn)
         mockdir.create()
-        # Add  QC outputs to the project to be imported
+        # Add QC outputs to the project to be imported
         UpdateAnalysisProject(
             AnalysisProject('NewProj',self.new_project_dir)).add_qc_outputs(
                 include_multiqc=False)
+        print os.listdir(os.path.join(self.dirn,'NewProj'))
         # Check that the project is not currently present
         ap = AutoProcess(mockdir.dirn)
         self.assertFalse('NewProj' in [p.name
