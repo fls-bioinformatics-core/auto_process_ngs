@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -18,12 +18,9 @@ Provides the following functions:
 
 import os
 import logging
-import uuid
-import tempfile
-import shutil
-from .runqc import ProjectQC
+from ..applications import Command
 from auto_process_ngs.settings import Settings
-from auto_process_ngs.simple_scheduler import SimpleScheduler
+from auto_process_ngs.simple_scheduler import SchedulerJob
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -32,8 +29,8 @@ logger = logging.getLogger(__name__)
 # Functions
 #######################################################################
 
-def verify_qc(project,qc_dir=None,illumina_qc=None,runner=None,
-              log_dir=None):
+def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
+              runner=None,log_dir=None):
     """
     Verify the QC run for a project
 
@@ -42,8 +39,10 @@ def verify_qc(project,qc_dir=None,illumina_qc=None,runner=None,
         to verify the QC for
       qc_dir (str): optional, specify the subdir with
         the QC outputs being verified
-      illumina_qc (IlluminaQC): optional, configured
-        IlluminaQC object to use for QC verification
+      fastq_dir (str): optional, specify a non-default
+        directory with Fastq files being verified
+      qc_protocol (str): optional, QC protocol to
+        verify against
       runner (JobRunner): optional, job runner to use
         for running the verification
       log_dir (str): optional, specify a directory to
@@ -56,22 +55,34 @@ def verify_qc(project,qc_dir=None,illumina_qc=None,runner=None,
     # Sort out runners
     if runner is None:
         runner = Settings().general.default_runner
-    # Set up QC project
-    project_ = ProjectQC(project,
-                         illumina_qc=illumina_qc,
-                         qc_dir=qc_dir,
-                         log_dir=log_dir)
-    # Set up and start scheduler
-    sched = SimpleScheduler()
-    sched.start()
-    # QC check for project
-    project_.check_qc(sched,
-                      name="verify_qc",
-                      runner=runner)
-    sched.wait()
-    return project_.verify()
+    # Construct command for QC verification
+    verify_cmd = Command(
+        "reportqc.py",
+        "--verify")
+    if qc_protocol is not None:
+        verify_cmd.add_args("--protocol",qc_protocol)
+    if qc_dir is not None:
+        verify_cmd.add_args("--qc_dir",qc_dir)
+    if fastq_dir is not None:
+        verify_cmd.add_args("--fastq_dir",fastq_dir)
+    verify_cmd.add_args(project.dirn)
+    # Run the command
+    verify = SchedulerJob(runner,
+                          verify_cmd.command_line,
+                          name="verify_qc.%s" % project.name,
+                          working_dir=project.dirn,
+                          log_dir=log_dir)
+    verify.start()
+    try:
+        verify.wait()
+    except KeyboardInterrupt,ex:
+        logger.warning("Keyboard interrupt, terminating QC verification")
+        verify.terminate()
+        raise ex
+    # Return boolean based on the exit code
+    return (verify.exit_code == 0)
 
-def report_qc(project,qc_dir=None,illumina_qc=None,
+def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               report_html=None,zip_outputs=True,multiqc=False,
               runner=None,log_dir=None):
     """
@@ -82,8 +93,10 @@ def report_qc(project,qc_dir=None,illumina_qc=None,
         to report the QC for
       qc_dir (str): optional, specify the subdir with
         the QC outputs being reported
-      illumina_qc (IlluminaQC): optional, configured
-        IlluminaQC object to use for QC reporting
+      fastq_dir (str): optional, specify a non-default
+        directory with Fastq files being verified
+      qc_protocol (str): optional, QC protocol to
+        verify against
       report_html (str): optional, path to the name of
         the output QC report
       zip_outputs (bool): if True then also generate ZIP
@@ -102,19 +115,55 @@ def report_qc(project,qc_dir=None,illumina_qc=None,
     # Sort out runners
     if runner is None:
         runner = Settings().general.default_runner
-    # Set up QC project
-    project_ = ProjectQC(project,
-                         illumina_qc=illumina_qc,
-                         qc_dir=qc_dir,
-                         log_dir=log_dir)
-    # Set up and start scheduler
-    sched = SimpleScheduler()
-    sched.start()
-    # Generate QC for project
-    project_.report_qc(sched,
-                       report_html=report_html,
-                       multiqc=multiqc,
-                       zip_outputs=zip_outputs,
-                       runner=runner)
-    sched.wait()
-    return project_.reporting_status
+    # Basename for the outputs
+    if qc_dir is None:
+        qc_base = os.path.basename(project.qc_dir)
+    else:
+        qc_base = os.path.basename(qc_dir)
+    # Report HTML file name
+    if report_html is None:
+        out_file = '%s_report.html' % qc_base
+    else:
+        out_file = report_html
+    if not os.path.isabs(out_file):
+        out_file = os.path.join(project.dirn,out_file)
+    # Report title
+    if project.info.run is None:
+        title = "%s" % project.name
+    else:
+        title = "%s/%s" % (project.info.run,
+                           project.name)
+    if fastq_dir is not None:
+        title = "%s (%s)" % (title,fastq_dir)
+    title = "%s: QC report" % title
+    # Construct command for reporting
+    report_cmd = Command(
+        "reportqc.py",
+        "--filename",out_file,
+        "--title",title)
+    if qc_protocol is not None:
+        verify_cmd.add_args("--protocol",qc_protocol)
+    if qc_dir is not None:
+        report_cmd.add_args("--qc_dir",qc_dir)
+    if fastq_dir is not None:
+        report_cmd.add_args("--fastq_dir",fastq_dir)
+    if multiqc:
+        report_cmd.add_args("--multiqc")
+    if zip_outputs:
+        report_cmd.add_args("--zip")
+    report_cmd.add_args(project.dirn)
+    # Run the command
+    report = SchedulerJob(runner,
+                          report_cmd.command_line,
+                          name="report_qc.%s" % project.name,
+                          working_dir=project.dirn,
+                          log_dir=log_dir)
+    report.start()
+    try:
+        report.wait()
+    except KeyboardInterrupt,ex:
+        logger.warning("Keyboard interrupt, terminating QC reporting")
+        report.terminate()
+        raise ex
+    # Return the exit code
+    return report.exit_code
