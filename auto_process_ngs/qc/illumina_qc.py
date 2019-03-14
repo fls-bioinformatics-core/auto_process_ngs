@@ -8,7 +8,6 @@ Provides utility functions for QC outputs.
 
 Provides the following functions:
 
-- determine_qc_protocol: get QC protocol for a project
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
@@ -28,24 +27,6 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Functions
 #######################################################################
-
-def determine_qc_protocol(project):
-    """
-    Determine the QC protocol for a project
-
-    Arguments:
-      project (AnalysisProject): project instance
-
-    Return:
-      String: QC protocol for the project
-    """
-    if project.info.paired_end:
-        protocol = "standardPE"
-    else:
-        protocol = "standardSE"
-    if project.info.single_cell_platform is not None:
-        protocol = "singlecell"
-    return protocol
 
 def fastq_screen_output(fastq,screen_name):
     """

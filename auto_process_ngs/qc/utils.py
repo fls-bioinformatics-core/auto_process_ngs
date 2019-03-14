@@ -8,6 +8,7 @@ Provides utility classes and functions for analysis project QC.
 
 Provides the following functions:
 
+- determine_qc_protocol: get QC protocol for a project
 - verify_qc: verify the QC run for a project
 - report_qc: generate report for the QC run for a project
 """
@@ -28,6 +29,24 @@ logger = logging.getLogger(__name__)
 #######################################################################
 # Functions
 #######################################################################
+
+def determine_qc_protocol(project):
+    """
+    Determine the QC protocol for a project
+
+    Arguments:
+      project (AnalysisProject): project instance
+
+    Return:
+      String: QC protocol for the project
+    """
+    if project.info.paired_end:
+        protocol = "standardPE"
+    else:
+        protocol = "standardSE"
+    if project.info.single_cell_platform is not None:
+        protocol = "singlecell"
+    return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               runner=None,log_dir=None):

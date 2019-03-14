@@ -12,9 +12,9 @@
 import os
 import logging
 from ..applications import Command
-from ..qc.illumina_qc import determine_qc_protocol
 from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
+from ..qc.utils import determine_qc_protocol
 from ..utils import get_organism_list
 from bcftbx.JobRunner import fetch_runner
 
