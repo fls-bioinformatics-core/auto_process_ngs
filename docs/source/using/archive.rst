@@ -63,5 +63,16 @@ and the final location would be
 
    /mnt/archive/2018/miseq/180817_M00123_0001_000000000-BV1X2_analysis
 
+---------------------
+Archiving failed runs
+---------------------
 
+By default it is not possible to archive an analysis directory
+which doesn't have any project directories.
 
+However in some cases it might be desirable to archive an incomplete
+analysis directory, for example if the original run had failed.
+
+In this case the ``--force`` option of the ``archive`` command
+can be used to force archiving of the analysis directory, provided
+that a ``bcl2fastq`` output subdirectory (or similar) also exists.
