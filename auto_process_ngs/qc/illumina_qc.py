@@ -12,11 +12,6 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
-
-Provides the following constants:
-
-- FASTQ_SCREENS: tuple of screen names
-- PROTOCOLS: tuple of QC protocol names
 """
 
 #######################################################################
@@ -26,14 +21,6 @@ Provides the following constants:
 import os
 import logging
 from bcftbx.qc.report import strip_ngs_extensions
-
-FASTQ_SCREENS = ('model_organisms',
-                 'other_organisms',
-                 'rRNA',)
-
-PROTOCOLS = ('standardPE',
-             'standardSE',
-             'singlecell')
 
 # Module specific logger
 logger = logging.getLogger(__name__)

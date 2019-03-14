@@ -48,11 +48,11 @@ from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
 from ..utils import get_organism_list
+from .constants import FASTQ_SCREENS
 from .illumina_qc import determine_qc_protocol
 from .illumina_qc import fastqc_output
 from .illumina_qc import fastq_screen_output
 from .illumina_qc import fastq_strand_output
-from .illumina_qc import FASTQ_SCREENS
 from .fastq_strand import build_fastq_strand_conf
 
 # Module specific logger

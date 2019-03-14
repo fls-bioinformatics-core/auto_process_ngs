@@ -29,7 +29,7 @@ import auto_process_ngs.envmod as envmod
 from auto_process_ngs.qc.pipeline import QCPipeline
 
 # QC protocols
-from auto_process_ngs.qc.illumina_qc import PROTOCOLS
+from auto_process_ngs.qc.constants import PROTOCOLS
 
 # Module-specific logger
 logger = logging.getLogger(__name__)

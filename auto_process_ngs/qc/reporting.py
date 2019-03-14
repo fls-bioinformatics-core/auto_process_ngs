@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # Data
 #######################################################################
 
-from .illumina_qc import FASTQ_SCREENS
+from .constants import FASTQ_SCREENS
 
 QC_REPORT_CSS_STYLES = """/* General styles */
 html { font-family: DejaVu Serif, serif; }

@@ -16,8 +16,8 @@ from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
+from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
-from auto_process_ngs.qc.illumina_qc import PROTOCOLS
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.pipeline import check_illumina_qc_outputs
 from auto_process_ngs.qc.pipeline import check_fastq_strand_outputs
