@@ -211,6 +211,36 @@ Summary of data in 'bcl2fastq' dir:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_info_no_projects(self):
+        """report: report run with no projects in 'info' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        expected = """Run reference: MISEQ_170901#87
+Directory    : %s
+Platform     : miseq
+Unaligned dir: bcl2fastq
+
+Summary of data in 'bcl2fastq' dir:
+
+- AB: AB1-2 (2 paired end samples)
+- CDE: CDE3-4 (2 paired end samples)
+
+No analysis projects found""" % mockdir.dirn
+        for o,e in zip(report_info(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
 class TestReportConcise(unittest.TestCase):
     """
     Tests for the 'report' command ('concise' mode)
