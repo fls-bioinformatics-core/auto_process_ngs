@@ -7,6 +7,8 @@ import tempfile
 import shutil
 import os
 import gzip
+import auto_process_ngs.applications as applications
+from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.mock import MockAnalysisDir
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
@@ -533,3 +535,40 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'save.bcl2fastq.lanes3-4'))
         self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes1-2'))
         self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.lanes3-4'))
+
+    def test_bcl2fastq2_can_be_loaded_after_rsync(self):
+        """
+        merge_fastq_dirs: rsynced bcl2fastq v2 output can be loaded
+        """
+        analysis_dir = self._setup_bcl2fastq2()
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
+        merge_fastq_dirs(self.ap,
+                         "bcl2fastq.lanes1-2",
+                         output_dir="bcl2fastq")
+        # Check output directory exists and can be loaded
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq'))
+        try:
+            illumina_data = IlluminaData(analysis_dir,
+                                         unaligned_dir='bcl2fastq')
+        except Exception as ex:
+            self.fail("exception loading merged directory: %s" % ex)
+        # Rsync (with empty directories pruned)
+        target_dir = os.path.join(self.dirn,"rsynced")
+        os.mkdir(target_dir)
+        applications.general.rsync(
+            "%s/bcl2fastq" % self.ap.analysis_dir,
+            target_dir,
+            prune_empty_dirs=True).run_subprocess(
+                log=os.path.join(self.dirn,
+                                 "rsync.log"))
+        # Check rsynced directory exists and can be loaded
+        self._assert_dir_exists(os.path.join(target_dir,'bcl2fastq'))
+        try:
+            illumina_data = IlluminaData(target_dir,
+                                         unaligned_dir='bcl2fastq')
+        except Exception as ex:
+            self.fail("exception loading rsynced directory: %s" % ex)
+        
+        

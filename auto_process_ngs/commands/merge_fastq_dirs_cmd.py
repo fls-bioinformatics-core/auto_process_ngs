@@ -265,6 +265,10 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
     if not dry_run and fmt == "bcl2fastq2":
         for dirn in ('Reports','Stats'):
             mkdir(os.path.join(merge_dir,dirn))
+            # Add a hidden placeholder to preserve these directories
+            # on rsync -m (prune empty dirs)
+            with open(os.path.join(merge_dir,dirn,'.placeholder'),'w') as fp:
+                fp.write("")
     # Wait for scheduler jobs to complete
     if not dry_run:
         sched.wait()
