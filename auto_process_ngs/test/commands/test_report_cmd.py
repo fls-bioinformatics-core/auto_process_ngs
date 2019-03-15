@@ -631,6 +631,27 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_no_projects(self):
+        """report: report run with no projects in 'projects' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate projects report
+        expected = """No projects found
+"""
+        for o,e in zip(report_projects(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
 class TestReport(unittest.TestCase):
     """
     Tests for the 'report' command invoked directly
