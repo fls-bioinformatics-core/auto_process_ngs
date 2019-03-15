@@ -499,9 +499,11 @@ Assay     : Nextera
 No projects found; 'bcl2fastq' directory contains the following data:
 
 - 'AB':  2 samples
-- 'CDE': 2 samples
-""" % mockdir.dirn
-        for o,e in zip(report_summary(ap).split('\n'),
+- 'CDE': 2 samples""" % mockdir.dirn
+        report = report_summary(ap)
+        self.assertEqual(len(report.split('\n')),
+                         len(expected.split('\n')))
+        for o,e in zip(report.split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
 

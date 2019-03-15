@@ -368,10 +368,11 @@ def report_summary(ap):
                           "the following data:\n" %
                           ap.params.unaligned_dir)
             for project in illumina_data.projects:
-                rows.append(("- '%s:'" % project.name,
+                rows.append(("- '%s':" % project.name,
                              "%s sample%s" % (len(project.samples),
                                               's' if len(project.samples) != 1
                                               else '')))
+            report.append(utils.pretty_print_rows(rows))
         except IlluminaData.IlluminaDataError as ex:
             report.append("No projects found")
     # Additional comments/notes
