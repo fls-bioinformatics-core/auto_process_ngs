@@ -466,6 +466,45 @@ Additional notes/comments:
                        expected.split('\n')):
             self.assertEqual(o,e)
 
+    def test_report_summary_no_projects(self):
+        """report: report run with no projects in 'summary' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "bcl2fastq_software":
+                       "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
+                       "cellranger_software":
+                       "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
+                       "assay": "Nextera" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate summary report
+        expected = """MISEQ run #87 datestamped 170901
+================================
+Run name  : 170901_M00879_0087_000000000-AGEW9
+Reference : MISEQ_170901#87
+Platform  : MISEQ
+Directory : %s
+Endedness : Paired end
+Bcl2fastq : bcl2fastq 2.17.1.14
+Cellranger: cellranger 3.0.1
+Assay     : Nextera
+
+No projects found; 'bcl2fastq' directory contains the following data:
+
+- 'AB':  2 samples
+- 'CDE': 2 samples
+""" % mockdir.dirn
+        for o,e in zip(report_summary(ap).split('\n'),
+                       expected.split('\n')):
+            self.assertEqual(o,e)
+
 class TestReportProjects(unittest.TestCase):
     """
     Tests for the 'report' command ('projects' mode)

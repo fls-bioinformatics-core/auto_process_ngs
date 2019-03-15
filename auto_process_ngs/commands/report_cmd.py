@@ -324,39 +324,56 @@ def report_summary(ap):
                                     value))
     report.append("")
     # Projects
-    report.append("%d project%s:" % (analysis_dir.n_projects,
-                                     '' if analysis_dir.n_projects == 1 else 's'))
-    data_items = ('user',
-                  'PI',
-                  'library_type',
-                  'single_cell_platform',
-                  'number_of_cells',
-                  'organism')
     rows = []
     comments = bcf_utils.OrderedDictionary()
-    for project in analysis_dir.projects:
-        project_data = dict(project=project.name)
-        for item in data_items:
-            value = project.info[item]
-            project_data[item] = value if value not in ('.','?') else \
-                                 '<unspecified %s>' % item.lower()
-        library = project_data['library_type']
-        if project_data['single_cell_platform'] is not None:
-            library += " (%s)" % project_data['single_cell_platform']
-        samples = "%d sample%s" % (len(project.samples),
-                                   's' if len(project.samples) != 1 else '')
-        if project_data['number_of_cells'] is not None:
-            samples += "/%d cell%s" % (int(project_data['number_of_cells']),
-                                       's' if int(project_data['number_of_cells']) != 1 else '')
-        rows.append(("- '%s':" % project_data['project'],
-                     project_data['user'],
-                     project_data['organism'],
-                     library,
-                     samples,
-                     "(PI %s)" % project_data['PI']))
-        if project.info.comments:
-            comments[project.name] = project.info.comments
-    report.append(utils.pretty_print_rows(rows))
+    if analysis_dir.n_projects != 0:
+        report.append("%d project%s:" % (analysis_dir.n_projects,
+                                         '' if analysis_dir.n_projects == 1
+                                         else 's'))
+        data_items = ('user',
+                      'PI',
+                      'library_type',
+                      'single_cell_platform',
+                      'number_of_cells',
+                      'organism')
+        for project in analysis_dir.projects:
+            project_data = dict(project=project.name)
+            for item in data_items:
+                value = project.info[item]
+                project_data[item] = value if value not in ('.','?') else \
+                                     '<unspecified %s>' % item.lower()
+            library = project_data['library_type']
+            if project_data['single_cell_platform'] is not None:
+                library += " (%s)" % project_data['single_cell_platform']
+            samples = "%d sample%s" % (len(project.samples),
+                                       's' if len(project.samples) != 1 else '')
+            if project_data['number_of_cells'] is not None:
+                samples += "/%d cell%s" % (
+                    int(project_data['number_of_cells']),
+                    's' if int(project_data['number_of_cells']) != 1 else '')
+            rows.append(("- '%s':" % project_data['project'],
+                         project_data['user'],
+                         project_data['organism'],
+                         library,
+                         samples,
+                         "(PI %s)" % project_data['PI']))
+            if project.info.comments:
+                comments[project.name] = project.info.comments
+        report.append(utils.pretty_print_rows(rows))
+    else:
+        # No projects - try loading data from unaligned dir
+        try:
+            illumina_data = ap.load_illumina_data()
+            report.append("No projects found; '%s' directory contains "
+                          "the following data:\n" %
+                          ap.params.unaligned_dir)
+            for project in illumina_data.projects:
+                rows.append(("- '%s:'" % project.name,
+                             "%s sample%s" % (len(project.samples),
+                                              's' if len(project.samples) != 1
+                                              else '')))
+        except IlluminaData.IlluminaDataError as ex:
+            report.append("No projects found")
     # Additional comments/notes
     if comments:
         width = max([len(x) for x in comments])
