@@ -95,6 +95,105 @@ def fastq_strand_output(fastq):
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
 
+def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
+    """
+    Return Fastqs missing QC outputs from illumina_qc.sh
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from `illumina_qc.sh`
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      qc_protocol (str): QC protocol to predict outputs
+        for; if not set then defaults to standard QC
+        based on ended-ness
+
+    Returns:
+      List: list of Fastq files with missing outputs.
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    fastqs = set()
+    for fastq in remove_index_fastqs(project.fastqs,
+                                     project.fastq_attrs):
+        # FastQC
+        for output in [os.path.join(qc_dir,f)
+                       for f in fastqc_output(fastq)]:
+            if not os.path.exists(output):
+                fastqs.add(fastq)
+        # Fastq_screen
+        if qc_protocol == 'singlecell':
+            if project.fastq_attrs(fastq).read_number == 1:
+                # No screens for R1 for single cell
+                continue
+        for screen in FASTQ_SCREENS:
+            for output in [os.path.join(qc_dir,f)
+                        for f in fastq_screen_output(fastq,screen)]:
+                if not os.path.exists(output):
+                    fastqs.add(fastq)
+    return sorted(list(fastqs))
+
+def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
+                               qc_protocol=None):
+    """
+    Return Fastqs missing QC outputs from illumina_qc.sh
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from `illumina_qc.sh`
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      fastq_strand_conf (str): path to a fastq_strand
+        config file; strandedness QC outputs will be
+        included unless the path is `None` or the
+        config file doesn't exist. Relative path is
+        assumed to be a subdirectory of the project
+      qc_protocol (str): QC protocol to predict outputs
+        for; if not set then defaults to standard QC
+        based on ended-ness
+
+    Returns:
+      List: list of Fastq file "pairs" with missing
+        outputs; pairs are (R1,R2) tuples, with 'R2'
+        missing if only one Fastq is used for the
+        strandedness determination.
+    """
+    # Sort out QC directory
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    # Sort out fastq_strand config file
+    if fastq_strand_conf is not None:
+        if not os.path.isabs(fastq_strand_conf):
+            fastq_strand_conf = os.path.join(project.dirn,
+                                             fastq_strand_conf)
+    if not os.path.exists(fastq_strand_conf):
+        # No conf file, nothing to check
+        return list()
+    fastq_pairs = set()
+    for fq_pair in pair_fastqs_by_name(
+            remove_index_fastqs(project.fastqs,
+                                project.fastq_attrs),
+            fastq_attrs=project.fastq_attrs):
+        # Strand stats output
+        if qc_protocol == 'singlecell':
+            # Strand stats output based on R2
+            fq_pair = (fq_pair[1],)
+        output = os.path.join(qc_dir,
+                              fastq_strand_output(fq_pair[0]))
+        if not os.path.exists(output):
+            fastq_pairs.add(fq_pair)
+    return sorted(list(fastq_pairs))
+
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                      qc_protocol=None):
     """
