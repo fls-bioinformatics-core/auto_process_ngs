@@ -20,7 +20,7 @@ from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.pipeline import check_illumina_qc_outputs
 from auto_process_ngs.qc.pipeline import check_fastq_strand_outputs
-from auto_process_ngs.qc.pipeline import expected_outputs
+from auto_process_ngs.qc.outputs import expected_outputs
 from auto_process_ngs.qc.utils import determine_qc_protocol
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
 from auto_process_ngs import get_version

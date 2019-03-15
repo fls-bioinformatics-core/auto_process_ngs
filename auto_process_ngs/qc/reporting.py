@@ -32,10 +32,10 @@ from ..metadata import AnalysisDirMetadata
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
-from .illumina_qc import fastqc_output
-from .illumina_qc import fastq_screen_output
-from .illumina_qc import fastq_strand_output
-from .pipeline import expected_outputs
+from .outputs import fastqc_output
+from .outputs import fastq_screen_output
+from .outputs import fastq_strand_output
+from .outputs import expected_outputs
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot

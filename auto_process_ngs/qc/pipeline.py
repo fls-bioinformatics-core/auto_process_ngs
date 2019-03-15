@@ -26,7 +26,6 @@ Functions:
 - copy_project
 - check_illumina_qc_outputs
 - check_fastq_strand_outputs
-- expected_outputs
 """
 
 ######################################################################
@@ -49,9 +48,10 @@ from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
 from ..utils import get_organism_list
 from .constants import FASTQ_SCREENS
-from .illumina_qc import fastqc_output
-from .illumina_qc import fastq_screen_output
-from .illumina_qc import fastq_strand_output
+from .outputs import fastqc_output
+from .outputs import fastq_screen_output
+from .outputs import fastq_strand_output
+from .outputs import expected_outputs
 from .utils import determine_qc_protocol
 from .fastq_strand import build_fastq_strand_conf
 
@@ -863,69 +863,3 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         if not os.path.exists(output):
             fastq_pairs.add(fq_pair)
     return sorted(list(fastq_pairs))
-
-def expected_outputs(project,qc_dir,fastq_strand_conf=None,
-                     qc_protocol=None):
-    """
-    Return expected QC outputs for a project
-
-    Arguments:
-      project (AnalysisProject): project to predict the
-        QC outputs for
-      qc_dir (str): path to the QC directory (relative
-        path is assumed to be a subdirectory of the
-        project)
-      fastq_strand_conf (str): path to a fastq_strand
-        config file; strandedness QC outputs will be
-        included unless the path is `None` or the
-        config file doesn't exist. Relative path is
-        assumed to be a subdirectory of the project
-      qc_protocol (str): QC protocol to predict outputs
-        for; if not set then defaults to standard QC
-        based on ended-ness
-
-    Returns:
-      List: list of full paths to the expected QC
-        outputs from the project.
-    """
-    # Sort out QC directory
-    if not os.path.isabs(qc_dir):
-        qc_dir = os.path.join(project.dirn,qc_dir)
-    # Sort out fastq_strand config file
-    if fastq_strand_conf is not None:
-        if not os.path.isabs(fastq_strand_conf):
-            fastq_strand_conf = os.path.join(project.dirn,
-                                             fastq_strand_conf)
-    # Assemble the expected outputs
-    outputs = set()
-    for fastq in remove_index_fastqs(project.fastqs,
-                                     project.fastq_attrs):
-        # FastQC
-        for output in [os.path.join(qc_dir,f)
-                       for f in fastqc_output(fastq)]:
-            outputs.add(output)
-        # Fastq_screen
-        if qc_protocol == 'singlecell' and \
-           project.fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell
-            continue
-        for screen in FASTQ_SCREENS:
-            for output in [os.path.join(qc_dir,f)
-                        for f in fastq_screen_output(fastq,screen)]:
-                outputs.add(output)
-    if fastq_strand_conf and os.path.exists(fastq_strand_conf):
-        for fq_pair in pair_fastqs_by_name(
-                remove_index_fastqs(project.fastqs,
-                                    project.fastq_attrs),
-                fastq_attrs=project.fastq_attrs):
-            # Strand stats output
-            if qc_protocol == 'singlecell':
-                # Strand stats output based on R2
-                output = os.path.join(qc_dir,
-                                      fastq_strand_output(fq_pair[1]))
-            else:
-                # Strand stats output based on R1
-                output = os.path.join(qc_dir,
-                                      fastq_strand_output(fq_pair[0]))
-            outputs.add(output)
-    return sorted(list(outputs))
