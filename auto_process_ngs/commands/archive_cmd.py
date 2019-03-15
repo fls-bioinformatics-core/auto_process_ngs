@@ -252,7 +252,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             # Set up to include only the fastq directories in
             # projects
             fastq_dirs = []
-            for project in ap.get_analysis_projects():
+            for project in projects:
                 for fastq_dir in project.fastq_dirs:
                     fastq_dirs.append(os.path.join(
                         os.path.basename(project.dirn),

@@ -847,8 +847,8 @@ poll_interval = 0.5
             d = os.path.join(final_archive_dir,d)
             self.assertFalse(os.path.exists(d))
 
-    def test_archive_force_no_projects(self):
-        """archive: force archiving run with no projects
+    def test_archive_force_stage_no_projects(self):
+        """archive: force staging of run with no projects
         """
         # Make a mock auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -896,6 +896,57 @@ poll_interval = 0.5
                  "SampleSheet.orig.csv")
         for f in files:
             f = os.path.join(staging_dir,f)
+            self.assertTrue(os.path.exists(f))
+
+    def test_archive_force_no_projects(self):
+        """archive: force final archiving of run with no projects
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Do archiving op to staging
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=True,
+                         final=True,
+                         force=True)
+        self.assertEqual(status,0)
+        # Check that final dir exists
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        self.assertEqual(len(os.listdir(final_dir)),1)
+        # Check contents
+        dirs = ("bcl2fastq","logs",)
+        for d in dirs:
+            d = os.path.join(final_archive_dir,d)
+            self.assertTrue(os.path.exists(d))
+        files = ("auto_process.info",
+                 "custom_SampleSheet.csv",
+                 "metadata.info",
+                 "projects.info",
+                 "SampleSheet.orig.csv")
+        for f in files:
+            f = os.path.join(final_archive_dir,f)
             self.assertTrue(os.path.exists(f))
 
     def test_archive_force_fails_for_no_data(self):
