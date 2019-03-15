@@ -323,6 +323,24 @@ class TestReportConcise(unittest.TestCase):
         self.assertEqual(report_concise(ap),
                          "Paired end: 'AB': Alison Bell, Human ICELL8 scRNA-seq (PI: Audrey Bower) (2 samples/1311 cells); 'CDE': Charles David Edwards, Mouse ChIP-seq (PI: Colin Delaney Eccleston) (2 samples)")
 
+    def test_report_concise_no_projects(self):
+        """report: report run with no projects in 'concise' mode
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "source": "testing",
+                       "run_number": 87,
+                       "assay": "Nextera" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        # Generate concise report
+        self.assertEqual(report_concise(ap),
+                         "Paired end: no projects found; contents of 'bcl2fastq' are: 'AB' (2 samples), 'CDE' (2 samples)")
+
 class TestReportSummary(unittest.TestCase):
     """
     Tests for the 'report' command ('summary' mode)

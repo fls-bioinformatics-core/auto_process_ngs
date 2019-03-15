@@ -165,25 +165,41 @@ def report_concise(ap):
     """
     report = []
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
-    for p in analysis_dir.projects:
-        samples = "%d sample%s" % (len(p.samples),
-                                   's' if len(p.samples) != 1
-                                   else '')
-        if p.info.number_of_cells is not None:
-            samples += "/%d cell%s" % (p.info.number_of_cells,
-                                       's' if p.info.number_of_cells != 1
+    if analysis_dir.projects:
+        for p in analysis_dir.projects:
+            samples = "%d sample%s" % (len(p.samples),
+                                       's' if len(p.samples) != 1
                                        else '')
-        report.append("'%s': %s, %s %s%s (PI: %s) (%s)" % \
-                      (p.name,
-                       p.info.user,
-                       p.info.organism,
-                       ('%s ' % p.info.single_cell_platform
-                        if p.info.single_cell_platform else ''),
-                       p.info.library_type,
-                       p.info.PI,
-                       samples
-                   ))
-    report = '; '.join(report)
+            if p.info.number_of_cells is not None:
+                samples += "/%d cell%s" % (p.info.number_of_cells,
+                                           's' if p.info.number_of_cells != 1
+                                           else '')
+            report.append("'%s': %s, %s %s%s (PI: %s) (%s)" % \
+                          (p.name,
+                           p.info.user,
+                           p.info.organism,
+                           ('%s ' % p.info.single_cell_platform
+                            if p.info.single_cell_platform else ''),
+                           p.info.library_type,
+                           p.info.PI,
+                           samples
+                          ))
+        report = '; '.join(report)
+    else:
+        # No projects - try loading data from unaligned dir
+        try:
+            illumina_data = ap.load_illumina_data()
+            for p in illumina_data.projects:
+                report.append("'%s' (%s sample%s)" %
+                              (p.name,
+                               len(p.samples),
+                               's' if len(p.samples) != 1 else ''))
+            report = ', '.join(report)
+            report = "no projects found; contents of '%s' are: %s" % \
+                     (ap.params.unaligned_dir,
+                      report)
+        except IlluminaData.IlluminaDataError as ex:
+            report = "no projects found"
     # Paired end run?
     if analysis_dir.paired_end:
         endedness = "Paired end"
