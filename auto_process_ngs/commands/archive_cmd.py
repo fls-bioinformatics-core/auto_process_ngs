@@ -180,10 +180,30 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         logger.warning("Some metadata items not set, proceeding")
     if not is_staging:
         # Are there any projects to archive?
-        projects = ap.get_analysis_projects()
+        try:
+            projects = ap.get_analysis_projects()
+        except Exception as ex:
+            logging.warning("Error trying to fetch analysis projects: "
+                            "%s" % ex)
+            projects = []
         if not projects:
-            raise Exception("No project directories found, nothing "
-                            "to archive")
+            if not force:
+                raise Exception("No project directories found, nothing "
+                                "to archive")
+            # Check if there is a bcl2fastq directory instead
+            unaligned_dir = ap.params.unaligned_dir
+            if not os.path.isabs(unaligned_dir):
+                unaligned_dir = os.path.join(ap.analysis_dir,
+                                             unaligned_dir)
+            if os.path.exists(unaligned_dir):
+                logging.warning("No project directories found, forcing "
+                                "archiving of bcl2fastq output directory "
+                                "'%s' instead" % ap.params.unaligned_dir)
+                include_bcl2fastq = True
+            else:
+                raise Exception("No project directories or bcl2fastq "
+                                "directory output found, nothing to "
+                                "archive (even with --force)")
         # Determine which directories to exclude
         excludes = ['--exclude=primary_data',
                     '--exclude=save.*',
