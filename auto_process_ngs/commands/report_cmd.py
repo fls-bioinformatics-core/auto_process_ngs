@@ -116,10 +116,14 @@ def report_info(ap):
     else:
         report.append("No information on source fastq data (no unaligned dir "
                       "found)")
-    projects = ap.get_analysis_projects()
-    report.append("\n%d analysis project%s:" % (len(projects),
-                                                "s" if len(projects) != 0
-                                                else ""))
+    try:
+        projects = ap.get_analysis_projects()
+        report.append("\n%d analysis project%s:" % (len(projects),
+                                                    "s" if len(projects) != 0
+                                                    else ""))
+    except Exception as ex:
+        projects = []
+        report.append("\nNo analysis projects found")
     for project in projects:
         info = project.info
         report.append("\n- %s" % project.name)
@@ -161,25 +165,41 @@ def report_concise(ap):
     """
     report = []
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
-    for p in analysis_dir.projects:
-        samples = "%d sample%s" % (len(p.samples),
-                                   's' if len(p.samples) != 1
-                                   else '')
-        if p.info.number_of_cells is not None:
-            samples += "/%d cell%s" % (p.info.number_of_cells,
-                                       's' if p.info.number_of_cells != 1
+    if analysis_dir.projects:
+        for p in analysis_dir.projects:
+            samples = "%d sample%s" % (len(p.samples),
+                                       's' if len(p.samples) != 1
                                        else '')
-        report.append("'%s': %s, %s %s%s (PI: %s) (%s)" % \
-                      (p.name,
-                       p.info.user,
-                       p.info.organism,
-                       ('%s ' % p.info.single_cell_platform
-                        if p.info.single_cell_platform else ''),
-                       p.info.library_type,
-                       p.info.PI,
-                       samples
-                   ))
-    report = '; '.join(report)
+            if p.info.number_of_cells is not None:
+                samples += "/%d cell%s" % (p.info.number_of_cells,
+                                           's' if p.info.number_of_cells != 1
+                                           else '')
+            report.append("'%s': %s, %s %s%s (PI: %s) (%s)" % \
+                          (p.name,
+                           p.info.user,
+                           p.info.organism,
+                           ('%s ' % p.info.single_cell_platform
+                            if p.info.single_cell_platform else ''),
+                           p.info.library_type,
+                           p.info.PI,
+                           samples
+                          ))
+        report = '; '.join(report)
+    else:
+        # No projects - try loading data from unaligned dir
+        try:
+            illumina_data = ap.load_illumina_data()
+            for p in illumina_data.projects:
+                report.append("'%s' (%s sample%s)" %
+                              (p.name,
+                               len(p.samples),
+                               's' if len(p.samples) != 1 else ''))
+            report = ', '.join(report)
+            report = "no projects found; contents of '%s' are: %s" % \
+                     (ap.params.unaligned_dir,
+                      report)
+        except IlluminaData.IlluminaDataError as ex:
+            report = "no projects found"
     # Paired end run?
     if analysis_dir.paired_end:
         endedness = "Paired end"
@@ -304,39 +324,57 @@ def report_summary(ap):
                                     value))
     report.append("")
     # Projects
-    report.append("%d project%s:" % (analysis_dir.n_projects,
-                                     '' if analysis_dir.n_projects == 1 else 's'))
-    data_items = ('user',
-                  'PI',
-                  'library_type',
-                  'single_cell_platform',
-                  'number_of_cells',
-                  'organism')
     rows = []
     comments = bcf_utils.OrderedDictionary()
-    for project in analysis_dir.projects:
-        project_data = dict(project=project.name)
-        for item in data_items:
-            value = project.info[item]
-            project_data[item] = value if value not in ('.','?') else \
-                                 '<unspecified %s>' % item.lower()
-        library = project_data['library_type']
-        if project_data['single_cell_platform'] is not None:
-            library += " (%s)" % project_data['single_cell_platform']
-        samples = "%d sample%s" % (len(project.samples),
-                                   's' if len(project.samples) != 1 else '')
-        if project_data['number_of_cells'] is not None:
-            samples += "/%d cell%s" % (int(project_data['number_of_cells']),
-                                       's' if int(project_data['number_of_cells']) != 1 else '')
-        rows.append(("- '%s':" % project_data['project'],
-                     project_data['user'],
-                     project_data['organism'],
-                     library,
-                     samples,
-                     "(PI %s)" % project_data['PI']))
-        if project.info.comments:
-            comments[project.name] = project.info.comments
-    report.append(utils.pretty_print_rows(rows))
+    if analysis_dir.n_projects != 0:
+        report.append("%d project%s:" % (analysis_dir.n_projects,
+                                         '' if analysis_dir.n_projects == 1
+                                         else 's'))
+        data_items = ('user',
+                      'PI',
+                      'library_type',
+                      'single_cell_platform',
+                      'number_of_cells',
+                      'organism')
+        for project in analysis_dir.projects:
+            project_data = dict(project=project.name)
+            for item in data_items:
+                value = project.info[item]
+                project_data[item] = value if value not in ('.','?') else \
+                                     '<unspecified %s>' % item.lower()
+            library = project_data['library_type']
+            if project_data['single_cell_platform'] is not None:
+                library += " (%s)" % project_data['single_cell_platform']
+            samples = "%d sample%s" % (len(project.samples),
+                                       's' if len(project.samples) != 1 else '')
+            if project_data['number_of_cells'] is not None:
+                samples += "/%d cell%s" % (
+                    int(project_data['number_of_cells']),
+                    's' if int(project_data['number_of_cells']) != 1 else '')
+            rows.append(("- '%s':" % project_data['project'],
+                         project_data['user'],
+                         project_data['organism'],
+                         library,
+                         samples,
+                         "(PI %s)" % project_data['PI']))
+            if project.info.comments:
+                comments[project.name] = project.info.comments
+        report.append(utils.pretty_print_rows(rows))
+    else:
+        # No projects - try loading data from unaligned dir
+        try:
+            illumina_data = ap.load_illumina_data()
+            report.append("No projects found; '%s' directory contains "
+                          "the following data:\n" %
+                          ap.params.unaligned_dir)
+            for project in illumina_data.projects:
+                rows.append(("- '%s':" % project.name,
+                             "%s sample%s" % (len(project.samples),
+                                              's' if len(project.samples) != 1
+                                              else '')))
+            report.append(utils.pretty_print_rows(rows))
+        except IlluminaData.IlluminaDataError as ex:
+            report.append("No projects found")
     # Additional comments/notes
     if comments:
         width = max([len(x) for x in comments])
