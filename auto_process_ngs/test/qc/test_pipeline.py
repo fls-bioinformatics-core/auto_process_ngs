@@ -14,7 +14,6 @@ from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.pipeline import QCPipeline
-from auto_process_ngs.qc.pipeline import copy_project
 from auto_process_ngs.qc.pipeline import check_illumina_qc_outputs
 from auto_process_ngs.qc.pipeline import check_fastq_strand_outputs
 
@@ -573,40 +572,6 @@ class TestQCPipeline(unittest.TestCase):
         # Check log directory
         self.assertTrue(os.path.exists(log_dir),
                         "Log dir '%s' not found" % log_dir)
-
-class TestCopyProject(unittest.TestCase):
-    """
-    Tests for the 'copy_project' function
-    """
-    def setUp(self):
-        # Create a temp working dir
-        self.wd = tempfile.mkdtemp(suffix='TestCopyProject')
-
-    def tearDown(self):
-        # Remove the temporary test directory
-        if REMOVE_TEST_OUTPUTS:
-            shutil.rmtree(self.wd)
-
-    def test_copy_project(self):
-        """
-        copy_project: copies project instance
-        """
-        # Make mock analysis project
-        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
-                                       "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
-        p.create(top_dir=self.wd)
-        # Make initial project
-        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
-        # Make a copy
-        project2 = copy_project(project)
-        # Check copy
-        self.assertEqual(project.name,project2.name)
-        self.assertEqual(project.dirn,project2.dirn)
-        self.assertEqual(project.fastq_dir,project2.fastq_dir)
-        self.assertEqual(project.fastq_dirs,project2.fastq_dirs)
-        self.assertEqual(project.fastqs,project2.fastqs)
-        self.assertEqual(project.info.organism,project2.info.organism)
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """

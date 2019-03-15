@@ -26,6 +26,7 @@ Functions:
 
 - run_reference_id:
 - split_sample_name:
+- copy_analysis_project:
 """
 
 #######################################################################
@@ -1206,3 +1207,33 @@ def split_sample_name(s):
         if part.isdigit():
             parts[i] = int(part)
     return parts
+
+def copy_analysis_project(project,fastq_dir=None):
+    """
+    Make a copy of an AnalysisProject instance
+
+    Arguments:
+      project (AnalysisProject): project intance to copy
+      fastq_dir (str): if set then specifies the Fastq
+        subdirectory to use in the new instance
+
+    Returns:
+      AnalysisProject: new AnalysisProject instance which
+        is a copy of the one supplied on input.
+    """
+    if fastq_dir is None:
+        fastq_dir = project.fastq_dir
+    return AnalysisProject(project.name,
+                           project.dirn,
+                           user=project.info.user,
+                           PI=project.info.PI,
+                           library_type=project.info.library_type,
+                           single_cell_platform=
+                           project.info.single_cell_platform,
+                           organism=project.info.organism,
+                           run=project.info.run,
+                           comments=project.info.comments,
+                           platform=project.info.platform,
+                           fastq_dir=fastq_dir,
+                           fastq_attrs=
+                           project.fastq_attrs)

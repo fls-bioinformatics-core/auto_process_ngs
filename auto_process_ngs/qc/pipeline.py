@@ -23,7 +23,6 @@ Pipeline task classes:
 
 Functions:
 
-- copy_project
 - check_illumina_qc_outputs
 - check_fastq_strand_outputs
 """
@@ -39,6 +38,7 @@ from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
+from ..analysis import copy_analysis_project
 from ..applications import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
@@ -129,7 +129,7 @@ class QCPipeline(Pipeline):
         self.report("Protocol: %s" % qc_protocol)
 
         # Clone the supplied project
-        project = copy_project(project,fastq_dir=fastq_dir)
+        project = copy_analysis_project(project,fastq_dir=fastq_dir)
 
         # Handle sample subsetting
         if sample_pattern is None:
@@ -734,36 +734,6 @@ class ReportQC(PipelineFunctionTask):
 ######################################################################
 # Functions
 ######################################################################
-
-def copy_project(project,fastq_dir=None):
-    """
-    Make a copy of an AnalysisProject instance
-
-    Arguments:
-      project (AnalysisProject): project intance to copy
-      fastq_dir (str): if set then specifies the Fastq
-        subdirectory to use in the new instance
-
-    Returns:
-      AnalysisProject: new AnalysisProject instance which
-        is a copy of the one supplied on input.
-    """
-    if fastq_dir is None:
-        fastq_dir = project.fastq_dir
-    return AnalysisProject(project.name,
-                           project.dirn,
-                           user=project.info.user,
-                           PI=project.info.PI,
-                           library_type=project.info.library_type,
-                           single_cell_platform=
-                           project.info.single_cell_platform,
-                           organism=project.info.organism,
-                           run=project.info.run,
-                           comments=project.info.comments,
-                           platform=project.info.platform,
-                           fastq_dir=fastq_dir,
-                           fastq_attrs=
-                           project.fastq_attrs)
 
 def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
     """

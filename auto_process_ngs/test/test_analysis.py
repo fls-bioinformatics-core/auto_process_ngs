@@ -1057,3 +1057,36 @@ class TestSplitSampleNameFunction(unittest.TestCase):
         self.assertEqual(split_sample_name("PJB1"),["PJB",1])
         self.assertEqual(split_sample_name("PJB0001"),["PJB",1])
         self.assertEqual(split_sample_name("PJB_1-10"),["PJB_",1,"-",10])
+
+class TestCopyAnalysisProject(unittest.TestCase):
+    """
+    Tests for the 'copy_analysis_project' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCopyProject')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.wd)
+
+    def test_copy_project(self):
+        """
+        copy_project: copies project instance
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        # Make initial project
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Make a copy
+        project2 = copy_analysis_project(project)
+        # Check copy
+        self.assertEqual(project.name,project2.name)
+        self.assertEqual(project.dirn,project2.dirn)
+        self.assertEqual(project.fastq_dir,project2.fastq_dir)
+        self.assertEqual(project.fastq_dirs,project2.fastq_dirs)
+        self.assertEqual(project.fastqs,project2.fastqs)
+        self.assertEqual(project.info.organism,project2.info.organism)
