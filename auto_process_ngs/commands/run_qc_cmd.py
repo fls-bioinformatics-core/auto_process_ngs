@@ -122,7 +122,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                           organism=project.info.organism,
                           qc_protocol=protocol,
                           sample_pattern=sample_pattern,
-                          nthreads=nthreads,
                           multiqc=True)
     # Run the QC
     status = runqc.run(nthreads=nthreads,
