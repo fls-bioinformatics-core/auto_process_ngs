@@ -390,6 +390,71 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task3_1.exit_code,None)
         self.assertEqual(task3_2.exit_code,None)
 
+    def test_pipeline_add_param(self):
+        """
+        Pipeline: test the 'add_param' method
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a parameter
+        self.assertFalse('ncores' in ppl.params)
+        ppl.add_param('ncores',value=1,type=int)
+        self.assertTrue('ncores' in ppl.params)
+        self.assertTrue(isinstance(ppl.params.ncores,
+                                   PipelineParam))
+        self.assertEqual(ppl.params.ncores.value,1)
+
+    def test_pipeline_add_param_twice_fails(self):
+        """
+        Pipeline: 'add_param' fails when parameter is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a parameter
+        self.assertFalse('ncores' in ppl.params)
+        ppl.add_param('ncores',value=1,type=int)
+        self.assertTrue('ncores' in ppl.params)
+        self.assertRaises(KeyError,
+                          ppl.add_param,
+                          'ncores')
+
+    def test_pipeline_param_passed_at_runtime(self):
+        """
+        Pipeline: check parameter is passed at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Build the pipeline with a parameter
+        ppl = Pipeline()
+        ppl.add_param('out_file')
+        task1 = Echo("Echo item1",
+                     f=ppl.params.out_file,
+                     s="item1")
+        task2 = Echo("Echo item2",
+                     f=ppl.params.out_file,
+                     s="item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Check the parameter before setting a value
+        self.assertEqual(ppl.params.out_file.value,None)
+        # Run the pipeline setting the output file
+        out_file = os.path.join(self.working_dir,"out.txt")
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              params={ 'out_file': out_file, })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),
+                         "item1\nitem2\n")
+
     def test_pipeline_method_task_list(self):
         """
         Pipeline: test the 'task_list' method
@@ -1027,7 +1092,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 poll_interval=0.2,
+                 poll_interval=0.5,
                  async=False)
         # Check final state
         self.assertTrue(task.completed)

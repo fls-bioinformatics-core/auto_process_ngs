@@ -483,6 +483,52 @@ the task to the pipeline. For example::
 This will override any batch size set globally when the
 pipeline is run.
 
+Setting pipeline parameters at execution time
+---------------------------------------------
+
+When building pipelines, it is sometimes necessary or desirable
+a parameter into a task where the value of the parameter isn't
+known until execution time (via the ``run`` method).
+
+For example, a task in the pipeline might need to know the
+number of cores or the location of a temporary directory to be
+used, which only be set this at execution time.
+
+To handle these situations, it possible to define arbitrary
+parameters within the ``Pipeline`` class at build time and then
+set the values of these parameters at execution time.
+
+Use the ``add_param`` method is used to define a parameter, for
+example:
+
+::
+
+    ppl = Pipeline()
+    ppl.add_param('ncores',value=1,type=int)
+    ppl.add_param('tmpdir')
+
+This creates a new ``PipelineParam`` instance which is associated
+with the supplied name.
+
+The parameters can be accessed via the pipeline's ``params``
+property, and passed as input into tasks, for example:
+
+::
+
+    task = ExampleTask("This is an example",
+                       ncores=ppl.params.ncores,
+                       tmpdir=ppl.params.tmpdir)
+    ppl.add_task(task)
+
+The runtime values of parameters are then passed via the
+``params`` argument of the pipeline's ``run`` invocation:
+
+::
+
+    temporary_dir = tempfile.mkdtemp()
+    ppl.run(params={ 'ncores': 8,
+                     'tmpdir': temporary_dir, })
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -751,9 +797,17 @@ class Pipeline(object):
         self._finished = []
         self._failed = []
         self._removed = []
+        self._params = AttributeDictionary()
         self._scheduler = None
         self._log_file = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
+
+    @property
+    def params(self):
+        """
+        Access the parameters defined for the pipeline
+        """
+        return self._params
 
     def report(self,s):
         """
@@ -825,6 +879,30 @@ class Pipeline(object):
             if req.id() not in self.task_list():
                 self.add_task(req,())
         return task
+
+    def add_param(self,name,value=None,type=None):
+        """
+        Define a new pipeline parameter
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied name.
+
+        Parameters can be accessed and set via the ``params``
+        property of the pipeline.
+
+        Arguments:
+          name (str): name for the new parameter
+          value (object): optional, initial value to assign
+            to the instance
+          type (function): optional, function used to convert
+            the stored value when fetched via the `value`
+            property
+        """
+        if name in self._params:
+            raise KeyError("Parameter '%s' already defined"
+                           % name)
+        self._params[name] = PipelineParam(type=type,
+                                           value=value)
 
     def append_pipeline(self,pipeline):
         """
@@ -963,7 +1041,7 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,batch_size=None,verbose=False,
+            poll_interval=5,params=None,batch_size=None,verbose=False,
             exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
@@ -990,6 +1068,8 @@ class Pipeline(object):
             provided via the 'sched' argument), and to use
             for checking if tasks have completed (defaults
             to 5s)
+          params (mapping): a dictionary or mapping which
+            associates parameter names with values
           batch_size (int): if set then run commands in
             each task in batches, with each batch running
             this many commands at a time (default is to run
@@ -1007,6 +1087,10 @@ class Pipeline(object):
         if working_dir is None:
             working_dir = os.getcwd()
         working_dir = os.path.abspath(working_dir)
+        # Deal with parameters
+        if params:
+            for p in params:
+                self.params[p].set(params[p])
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -1040,6 +1124,14 @@ class Pipeline(object):
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
         self.report("-- log file         : %s" % self._log_file)
+        # Report parameter settings
+        if self.params:
+            self.report("Pipeline parameters")
+            width = max([len(p) for p in self.params])
+            for p in sorted([p for p in self.params]):
+                self.report("-- %s%s: %s" % (p,
+                                             ' '*(width-len(p)),
+                                             self.params[p].value))
         # Sort the tasks and set up the pipeline
         self.report("Scheduling tasks...")
         for i,rank in enumerate(self.rank_tasks()):
