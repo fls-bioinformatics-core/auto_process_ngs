@@ -120,14 +120,15 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                           qc_dir=qc_dir,
                           fastq_dir=fastq_dir,
                           organism=project.info.organism,
-                          fastq_strand_indexes=
-                          ap.settings.fastq_strand_indexes,
                           qc_protocol=protocol,
                           sample_pattern=sample_pattern,
                           nthreads=nthreads,
                           multiqc=True)
     # Run the QC
-    status = runqc.run(log_file=log_file,
+    status = runqc.run(nthreads=nthreads,
+                       fastq_strand_indexes=
+                       ap.settings.fastq_strand_indexes,
+                       log_file=log_file,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs)
     return status

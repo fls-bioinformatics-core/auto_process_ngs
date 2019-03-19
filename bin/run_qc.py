@@ -200,11 +200,11 @@ if __name__ == "__main__":
                       qc_dir=args.qc_dir,
                       fastq_dir=args.fastq_dir,
                       organism=args.organism,
-                      fastq_strand_indexes=
-                      __settings.fastq_strand_indexes,
-                      qc_protocol=args.qc_protocol,
-                      nthreads=args.nthreads)
-    status = runqc.run(max_jobs=args.max_jobs)
+                      qc_protocol=args.qc_protocol)
+    status = runqc.run(nthreads=args.nthreads,
+                       fastq_strand_indexes=
+                       __settings.fastq_strand_indexes,
+                       max_jobs=args.max_jobs)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)

@@ -97,9 +97,10 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
-                          fastq_strand_indexes={ 'human': '/data/hg38/star_index' },
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,0)
@@ -134,9 +135,10 @@ class TestQCPipeline(unittest.TestCase):
         runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
-                          fastq_strand_indexes={ 'human': '/data/hg38/star_index' },
                           multiqc=True)
-        status = runqc.run(poll_interval=0.5,
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           poll_interval=0.5,
                            max_jobs=1)
         # Check output and reports
         self.assertEqual(status,1)

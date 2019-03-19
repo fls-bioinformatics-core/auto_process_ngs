@@ -83,12 +83,17 @@ class QCPipeline(Pipeline):
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="QC")
 
+        # Define parameters
+        self.add_param('nthreads',type=int,value=1)
+        self.add_param('fastq_subset',type=int)
+        self.add_param('fastq_strand_indexes',type=dict)
+
         # Deal with runners
         self.store_runners(runners)
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
-                    fastq_strand_indexes=None,qc_protocol=None,multiqc=False,
-                    sample_pattern=None,nthreads=None,log_dir=None):
+                    qc_protocol=None,multiqc=False,
+                    sample_pattern=None,log_dir=None):
         """
         Add a project to the QC pipeline
 
@@ -102,16 +107,12 @@ class QCPipeline(Pipeline):
             metadata)
           fastq_dir (str): directory holding Fastq files
             (defaults to primary fastq_dir in project)
-          fastq_strand_indexes (dict): mapping of organism
-            IDs to directories with STAR index
           qc_protocol (str): QC protocol to use
           multiqc (bool): if True then also run MultiQC
             (default is not to run MultiQC)
           sample_pattern (str): glob-style pattern to
             match a subset of projects and samples (not
             implemented)
-          nthreads (int): number of threads/processors to
-            use for QC jobs (defaults to 1)
           log_dir (str): directory to write log files to
             (defaults to 'logs' subdirectory of the QC
             directory)
@@ -132,8 +133,8 @@ class QCPipeline(Pipeline):
         if sample_pattern is None:
             sample_pattern = '*'
         if sample_pattern != '*':
-            raise NotImplementedException("Sample subsetting not "
-                                          "supported")
+            raise NotImplementedError("Sample subsetting not "
+                                      "supported")
 
         # Sort out the QC dir
         if qc_dir is None:
@@ -183,6 +184,8 @@ class QCPipeline(Pipeline):
             "%s: basic QC (illumina_qc.sh)" % project_name,
             check_illumina_qc.output.fastqs,
             qc_dir,
+            fastq_screen_subset=self.params.fastq_subset,
+            nthreads=self.params.nthreads,
             qc_protocol=qc_protocol,
             fastq_attrs=project.fastq_attrs
         )
@@ -197,7 +200,7 @@ class QCPipeline(Pipeline):
             project_name,
             project,
             organism=organism,
-            star_indexes=fastq_strand_indexes
+            star_indexes=self.params.fastq_strand_indexes
         )
         self.add_task(setup_fastq_strand_conf,
                       requires=(setup_qc_dirs,),
@@ -223,6 +226,8 @@ class QCPipeline(Pipeline):
             check_fastq_strand.output.fastq_pairs,
             qc_dir,
             setup_fastq_strand_conf.output.fastq_strand_conf,
+            fastq_strand_subset=self.params.fastq_subset,
+            nthreads=self.params.nthreads,
             qc_protocol=qc_protocol
         )
         self.add_task(run_fastq_strand,
@@ -243,12 +248,19 @@ class QCPipeline(Pipeline):
                       runner=self.runners['report_runner'],
                       log_dir=log_dir)
 
-    def run(self,working_dir=None,log_file=None,batch_size=None,
-            max_jobs=1,poll_interval=5):
+    def run(self,nthreads=None,fastq_strand_indexes=None,
+            fastq_subset=None,working_dir=None,log_file=None,
+            batch_size=None,max_jobs=1,poll_interval=5):
         """
         Run the tasks in the pipeline
 
         Arguments:
+          nthreads (int): number of threads/processors to
+            use for QC jobs (defaults to 1)
+          fastq_strand_indexes (dict): mapping of organism
+            IDs to directories with STAR index
+          fastq_subset (int): explicitly specify
+            the subset size for subsetting running Fastqs
           working_dir (str): optional path to a working
             directory (defaults to the current directory)
           log_dir (str): path of directory where log files
@@ -285,7 +297,12 @@ class QCPipeline(Pipeline):
                             default_runner=self.runners['default'],
                             log_file=log_file,
                             batch_size=batch_size,
-                            exit_on_failure=PipelineFailure.DEFERRED)
+                            exit_on_failure=PipelineFailure.DEFERRED,
+                            params={
+                                'nthreads': nthreads,
+                                'fastq_subset': fastq_subset,
+                                'fastq_strand_indexes': fastq_strand_indexes,
+                            })
 
     def store_runners(self,runners):
         """
@@ -602,7 +619,8 @@ class RunFastqStrand(PipelineFunctionTask):
     """
     Run the fastq_strand.py utility
     """
-    def init(self,fastq_pairs,qc_dir,fastq_strand_conf,nthreads=1,
+    def init(self,fastq_pairs,qc_dir,fastq_strand_conf,
+             fastq_strand_subset=None,nthreads=1,
              qc_protocol=None):
         """
         Initialise the RunFastqStrand task.
@@ -616,6 +634,8 @@ class RunFastqStrand(PipelineFunctionTask):
             to subdirectory 'qc' of project directory)
           fastq_strand_conf (str): path to the fastq_strand
             config file to use
+          fastq_strand_subset (int): explicitly specify
+            the subset size for running fastq_strand
           nthreads (int): number of threads/processors to
             use (defaults to 1)
           qc_protocol (str): QC protocol to use
@@ -635,17 +655,22 @@ class RunFastqStrand(PipelineFunctionTask):
                           self.run_fastq_strand,
                           fastq_pair,
                           self.args.qc_dir,
+                          fastq_strand_subset=
+                          self.args.fastq_strand_subset,
                           fastq_strand_conf=self.args.fastq_strand_conf,
                           nthreads=self.args.nthreads,
                           qc_protocol=self.args.qc_protocol)
     def run_fastq_strand(self,fastq_pair,qc_dir,fastq_strand_conf,
-                         nthreads=1,qc_protocol=None):
+                         fastq_strand_subset=None,nthreads=1,
+                         qc_protocol=None):
         # Build fastq_strand.py command
         cmd = Command('fastq_strand.py',
                               '-n',nthreads,
                               '--conf',fastq_strand_conf,
-                              '--outdir',os.path.abspath(qc_dir),
-                              *fastq_pair)
+                              '--outdir',os.path.abspath(qc_dir))
+        if fastq_strand_subset:
+            cmd.add_args('--subset',fastq_strand_subset)
+        cmd.add_args(*fastq_pair)
         # Execute the command
         status = cmd.run_subprocess(working_dir=qc_dir)
         if status != 0:
