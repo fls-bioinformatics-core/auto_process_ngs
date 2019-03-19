@@ -202,6 +202,7 @@ if __name__ == "__main__":
                       organism=args.organism,
                       qc_protocol=args.qc_protocol)
     status = runqc.run(nthreads=args.nthreads,
+                       fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=
                        __settings.fastq_strand_indexes,
                        max_jobs=args.max_jobs)
