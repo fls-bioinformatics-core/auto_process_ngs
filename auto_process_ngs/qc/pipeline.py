@@ -85,6 +85,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_strand_indexes',type=dict)
 
         # Define runners
+        self.add_runner('verify_runner')
         self.add_runner('qc_runner')
         self.add_runner('report_runner')
 
@@ -174,6 +175,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(check_illumina_qc,
                       requires=(setup_qc_dirs,),
+                      runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
         # Run illumina_qc.sh
@@ -214,6 +216,7 @@ class QCPipeline(Pipeline):
         )
         self.add_task(check_fastq_strand,
                       requires=(setup_fastq_strand_conf,),
+                      runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
         # Run fastq_strand.py
@@ -273,7 +276,7 @@ class QCPipeline(Pipeline):
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'qc_runner',
-            'report_runner','default'
+            'report_runner','verify_runner','default'
           default_runner (JobRunner): optional default
             job runner to use
         """
