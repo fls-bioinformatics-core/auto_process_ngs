@@ -388,6 +388,9 @@ used to configure the scheduler, specifically:
 
 * ``max_jobs``: this sets the maximum number of concurrent
   jobs that the scheduler will run (defaults to 1)
+* ``poll_interval``: the time interval that the scheduler will
+  used when checking the status of running jobs (defaults to
+  5 seconds)
 
 If more control is required over the scheduler then the calling
 subprogram can create and configure its own ``SimpleScheduler``
@@ -1263,7 +1266,7 @@ class Pipeline(object):
         self.report("-- log file         : %s" % self._log_file)
         # Report parameter settings
         if self.params:
-            self.report("Pipeline parameters")
+            self.report("Pipeline parameters:")
             width = max([len(p) for p in self.params])
             for p in sorted([p for p in self.params]):
                 self.report("-- %s%s: %s" % (p,
