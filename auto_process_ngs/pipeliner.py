@@ -395,9 +395,66 @@ instance and pass this to the ``run`` method instead. Note that
 it is the responsibility of the subprogram to start and stop
 the scheduler that it provides.
 
-The ``run`` method also accepts a ``runner`` method which sets
-the default job runner that the pipeline will use. By default
-jobs are run using a ``SimpleJobRunner`` instance.
+Specifying job runners for tasks
+--------------------------------
+
+By default when a pipeline is executed then all jobs within
+its tasks will be run using the default job runner supplied
+via the ``default_runner`` argument of the pipeline's ``run``
+method.
+
+For example:
+
+::
+
+    ppl.run(default_runner=SpecialJobRunner())
+
+(If no default is supplied then a ``SimpleJobRunner`` is used
+as the default runner.)
+
+Typically it is desirable to be able to exercise more granular
+control over the job runners used within the pipeline. This is
+possible via the ``runner`` keyword of the ``add_task`` method
+of the ``Pipeline`` class, which allows a job runner to be
+specified which will then used when jobs in that task are
+executed.
+
+For example:
+
+::
+
+    ppl.add_task(my_task,runner=SimpleJobRunner())
+
+The ``Pipeline`` class also allows parameterisation of job
+runners when building a pipeline. Placeholders for job
+runners can be defined using the ``add_runner`` method,
+and accessed via the ``runners`` property to be associated
+with tasks.
+
+For example:
+
+::
+
+    # Define runner
+    ppl.add_runner('my_runner')
+    ...
+    # Associate runner with task
+    ppl.add_task(my_task,runner=ppl.runners['my_runner'])
+
+Job runners can then be set explicitly when the pipeline is
+executed, using the ``runners`` argument of the ``run``
+method to supply a mapping of runner names to job runner
+instances.
+
+For example:
+
+::
+
+    ppl.run(runners={ 'my_runner': SpecialJobRunner() })
+
+Any runner names that don't have associated job runner
+instances will use the default runner defined via the
+``default_runner`` argument.
 
 Dealing with stdout from tasks
 ------------------------------
@@ -605,6 +662,7 @@ from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
+from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
@@ -825,9 +883,12 @@ class Pipeline(object):
         self._failed = []
         self._removed = []
         self._params = AttributeDictionary()
+        self._runners = dict()
         self._scheduler = None
         self._log_file = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
+        # Initialise default runner
+        self._runners['default'] = PipelineParam(value=SimpleJobRunner())
 
     @property
     def params(self):
@@ -835,6 +896,20 @@ class Pipeline(object):
         Access the parameters defined for the pipeline
         """
         return self._params
+
+    @property
+    def runners(self):
+        """
+        Access the runners defined for the pipeline
+
+        Returns the dictionary mapping runner names to
+        PipelineParam instances that store the runner
+        instances; so to get the runner associated with
+        a name do e.g.
+
+        >>> runner = ppl.runners['my_runner'].value
+        """
+        return dict(**self._runners)
 
     def report(self,s):
         """
@@ -930,6 +1005,33 @@ class Pipeline(object):
                            % name)
         self._params[name] = PipelineParam(type=type,
                                            value=value)
+
+    def add_runner(self,name):
+        """
+        Define a new runner within the pipeline
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied runner name.
+
+        Runner instances can be accessed and set via the
+        ``params`` property of the pipeline, for example:
+
+        To access:
+
+        >>> runner = ppl.runners['my_runner'].value
+
+        To set:
+
+        >>> ppl.runners['my_runner'].set(SimpleJobRunner())
+
+        Arguments:
+          name (str): name for the new runner
+        """
+        if name in self._runners:
+            raise KeyError("Runner '%s' already defined" % name)
+        self.report("Defining new runner '%s'" % name)
+        self._runners[name] = PipelineParam(
+            default=lambda: self.runners['default'].value)
 
     def append_pipeline(self,pipeline):
         """
@@ -1068,8 +1170,8 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,params=None,batch_size=None,verbose=False,
-            exit_on_failure=PipelineFailure.IMMEDIATE):
+            poll_interval=5,params=None,runners=None,batch_size=None,
+            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -1097,6 +1199,8 @@ class Pipeline(object):
             to 5s)
           params (mapping): a dictionary or mapping which
             associates parameter names with values
+          runners (mapping): a dictionary or mapping which
+            associates runner names with job runners
           batch_size (int): if set then run commands in
             each task in batches, with each batch running
             this many commands at a time (default is to run
@@ -1118,6 +1222,12 @@ class Pipeline(object):
         if params:
             for p in params:
                 self.params[p].set(params[p])
+        # Deal with runners
+        if runners:
+            for r in runners:
+                self.runners[r].set(runners[r])
+        if default_runner:
+            self.runners['default'].set(default_runner)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -1159,6 +1269,13 @@ class Pipeline(object):
                 self.report("-- %s%s: %s" % (p,
                                              ' '*(width-len(p)),
                                              self.params[p].value))
+        # Report runners
+        self.report("Runners:")
+        width = max([len(r) for r in self.runners])
+        for r in sorted(self.runners):
+            self.report("-- %s%s: %s" % (r,
+                                         ' '*(width-len(r)),
+                                         self.runners[r].value))
         # Sort the tasks and set up the pipeline
         self.report("Scheduling tasks...")
         for i,rank in enumerate(self.rank_tasks()):
@@ -1190,6 +1307,7 @@ class Pipeline(object):
                 if run_task:
                     self.report("started '%s' (%s)" % (task.name(),
                                                        task.id()))
+                    kws = dict(**kws)
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
@@ -1201,6 +1319,14 @@ class Pipeline(object):
                     if 'batch_size' not in kws:
                         kws['batch_size'] = batch_size
                     kws['log_file'] = self._log_file
+                    for k in kws:
+                        # If any keywords are actually PipelineParams
+                        # then replace with the actual values
+                        try:
+                            kws[k] = kws[k].value
+                            logger.debug("'%s' -> %s" % (k,kws[k]))
+                        except AttributeError:
+                            pass
                     try:
                         task.run(sched=sched,
                                  poll_interval=poll_interval,

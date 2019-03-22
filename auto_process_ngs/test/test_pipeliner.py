@@ -455,6 +455,122 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(open(out_file,'r').read(),
                          "item1\nitem2\n")
 
+    def test_pipeline_add_runner(self):
+        """
+        Pipeline: test the 'add_runner' method
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a runner definition
+        self.assertFalse('test_runner' in ppl.runners)
+        ppl.add_runner('test_runner')
+        print ppl.runners
+        self.assertTrue('test_runner' in ppl.runners)
+        self.assertTrue(isinstance(ppl.runners['test_runner'],
+                                   PipelineParam))
+        self.assertTrue(isinstance(ppl.runners['test_runner'].value,
+                                   SimpleJobRunner))
+
+    def test_pipeline_add_runner_twice_raises_exception(self):
+        """
+        Pipeline: 'add_runner' raises exception when runner is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a runner definition
+        self.assertFalse('test_runner' in ppl.runners)
+        ppl.add_runner('test_runner')
+        self.assertTrue('test_runner' in ppl.runners)
+        self.assertRaises(KeyError,
+                          ppl.add_runner,
+                          'test_runner')
+
+    def test_pipeline_runner_passed_at_runtime(self):
+        """
+        Pipeline: check runner is passed at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Define custom runner for testing
+        class TestJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"out.txt")
+        ppl = Pipeline()
+        ppl.add_runner("test_runner")
+        task1 = Echo("Echo item1",
+                     f=out_file,
+                     s="item1")
+        ppl.add_task(task1,
+                     runner=ppl.runners["test_runner"])
+        # Run the pipeline setting the runner
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              runners={ 'test_runner':
+                                        TestJobRunner(), })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"item1\n")
+
+    def test_pipeline_runner_set_default_runner_at_runtime(self):
+        """
+        Pipeline: check setting default runner at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Define custom runners for testing
+        class DefaultJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        class TestJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"out.txt")
+        ppl = Pipeline()
+        ppl.add_runner("test_runner1")
+        ppl.add_runner("test_runner2")
+        task1 = Echo("Echo item1",
+                     f=out_file,
+                     s="item1")
+        task2 = Echo("Echo item2",
+                     f=out_file,
+                     s="item2")
+        ppl.add_task(task1,
+                     runner=ppl.runners["test_runner1"])
+        ppl.add_task(task2,
+                     requires=(task1,),
+                     runner=ppl.runners["test_runner2"])
+        # Run the pipeline setting the default runner
+        # and only one of the two runners
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              default_runner=DefaultJobRunner(),
+                              runners={ 'test_runner1':
+                                        TestJobRunner(), })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
+
     def test_pipeline_method_task_list(self):
         """
         Pipeline: test the 'task_list' method
