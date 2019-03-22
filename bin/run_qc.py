@@ -173,6 +173,7 @@ if __name__ == "__main__":
         qc_runner = fetch_runner(args.runner)
     else:
         qc_runner = self._settings.runners.qc
+    verify_runner = default_runner
     report_runner = default_runner
 
     # Load the project
@@ -191,11 +192,7 @@ if __name__ == "__main__":
 
     # Set up and run the QC pipeline
     announce("Running QC")
-    runqc = QCPipeline(
-        runners={
-            'qc_runner': qc_runner,
-            'report_runner': report_runner,
-        })
+    runqc = QCPipeline()
     runqc.add_project(project,
                       qc_dir=args.qc_dir,
                       fastq_dir=args.fastq_dir,
@@ -205,8 +202,12 @@ if __name__ == "__main__":
                        fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=
                        __settings.fastq_strand_indexes,
-                       max_jobs=args.max_jobs)
+                       max_jobs=args.max_jobs,
+                       runners={
+                           'qc_runner': qc_runner,
+                           'verify_runner': verify_runner,
+                           'report_runner': report_runner,
+                       })
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
-

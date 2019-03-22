@@ -107,12 +107,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     ap.set_log_dir(ap.get_log_subdir('run_qc'))
     log_file = os.path.join(ap.log_dir,"run_qc.log")
     # Set up the QC for each project
-    runqc = QCPipeline(
-        runners={
-            'qc_runner': qc_runner,
-            'verify_runner': default_runner,
-            'report_runner': default_runner,
-        })
+    runqc = QCPipeline()
     for project in projects:
         # Determine the QC protocol
         protocol = determine_qc_protocol(project)
@@ -129,5 +124,10 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        ap.settings.fastq_strand_indexes,
                        log_file=log_file,
                        poll_interval=poll_interval,
-                       max_jobs=max_jobs)
+                       max_jobs=max_jobs,
+                       runners={
+                           'qc_runner': qc_runner,
+                           'verify_runner': default_runner,
+                           'report_runner': default_runner,
+                       })
     return status
