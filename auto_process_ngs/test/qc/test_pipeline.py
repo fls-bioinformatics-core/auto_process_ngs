@@ -59,12 +59,13 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -94,14 +95,14 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_strand_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -132,14 +133,14 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(fastq_strand_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
@@ -167,12 +168,12 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=False)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -203,12 +204,12 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
@@ -237,12 +238,12 @@ class TestQCPipeline(unittest.TestCase):
         p.create(top_dir=self.wd)
         # Set up and run the QC
         runqc = QCPipeline()
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
@@ -269,12 +270,13 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,1)
         for f in ("qc",
@@ -304,13 +306,14 @@ class TestQCPipeline(unittest.TestCase):
                                 fastq_dir="fastqs.cells")
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           fastq_dir="fastqs.cells",
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -335,13 +338,14 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB1_S1_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           qc_dir="qc.non_default",
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         self.assertFalse(os.path.exists(os.path.join(self.wd,
@@ -373,12 +377,13 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_R1_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -410,13 +415,14 @@ class TestQCPipeline(unittest.TestCase):
                                       "CD4_S4_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         for p in ("AB","CD"):
             runqc.add_project(AnalysisProject(p,
                                               os.path.join(self.wd,p)),
                               multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for p in ("AB","CD"):
@@ -445,12 +451,13 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_I1_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -477,13 +484,14 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
                            max_jobs=1,
-                           batch_size=3)
+                           batch_size=3,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         for f in ("qc",
@@ -512,13 +520,14 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_R2_001.fastq.gz"))
         p.create(top_dir=self.wd)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True)
         status = runqc.run(poll_interval=0.5,
                            max_jobs=1,
-                           batch_size=3)
+                           batch_size=3,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,1)
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
@@ -548,13 +557,14 @@ class TestQCPipeline(unittest.TestCase):
         self.assertFalse(os.path.exists(log_dir),
                          "Log dir '%s' already exists" % log_dir)
         # Set up and run the QC
-        runqc = QCPipeline(runners={ 'default': SimpleJobRunner(), })
+        runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
                                           os.path.join(self.wd,"PJB")),
                           multiqc=True,
                           log_dir=log_dir)
         status = runqc.run(poll_interval=0.5,
-                           max_jobs=1)
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
         self.assertEqual(status,0)
         self.assertTrue(os.path.isdir(os.path.join(self.wd,

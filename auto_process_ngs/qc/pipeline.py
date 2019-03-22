@@ -28,7 +28,6 @@ Pipeline task classes:
 
 import os
 import logging
-from collections import defaultdict
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from ..analysis import AnalysisProject
@@ -73,12 +72,9 @@ class QCPipeline(Pipeline):
     >>> qc.add_project(AnalysisProject("CDE","./CDE")
     >>> qc.run()
     """
-    def __init__(self,runners=None):
+    def __init__(self):
         """
-        Arguments:
-          runners (dict): mapping of names to JobRunner
-            instances; valid names are 'qc_runner',
-            'report_runner','default'
+        Create a new QCPipeline instance
         """
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="QC")
@@ -88,8 +84,9 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
 
-        # Deal with runners
-        self.store_runners(runners)
+        # Define runners
+        self.add_runner('qc_runner')
+        self.add_runner('report_runner')
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,multiqc=False,
@@ -250,7 +247,8 @@ class QCPipeline(Pipeline):
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
             fastq_subset=None,working_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,poll_interval=5):
+            batch_size=None,max_jobs=1,poll_interval=5,
+            runners=None,default_runner=None):
         """
         Run the tasks in the pipeline
 
@@ -273,6 +271,11 @@ class QCPipeline(Pipeline):
             concurrent jobs in scheduler (defaults to 1)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
+          runners (dict): mapping of names to JobRunner
+            instances; valid names are 'qc_runner',
+            'report_runner','default'
+          default_runner (JobRunner): optional default
+            job runner to use
         """
         # Working directory
         if working_dir is None:
@@ -285,16 +288,11 @@ class QCPipeline(Pipeline):
         log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
 
-        # Report the runners
-        for r in self.runners:
-            self.report("Runner '%s': %s" % (r,self.runners[r]))
-
         # Execute the pipeline
         return Pipeline.run(self,
                             working_dir=working_dir,
                             log_dir=log_dir,
                             scripts_dir=scripts_dir,
-                            default_runner=self.runners['default'],
                             log_file=log_file,
                             batch_size=batch_size,
                             exit_on_failure=PipelineFailure.DEFERRED,
@@ -302,19 +300,9 @@ class QCPipeline(Pipeline):
                                 'nthreads': nthreads,
                                 'fastq_subset': fastq_subset,
                                 'fastq_strand_indexes': fastq_strand_indexes,
-                            })
-
-    def store_runners(self,runners):
-        """
-        Internal: store supplied runners
-        """
-        if runners is None:
-            runners = dict()
-        try:
-            default_runner = runners['default']
-        except KeyError:
-            default_runner = SimpleJobRunner()
-        self.runners = defaultdict(lambda: default_runner,**runners)
+                            },
+                            runners=runners,
+                            default_runner=default_runner)
 
 ######################################################################
 # Pipeline task classes
