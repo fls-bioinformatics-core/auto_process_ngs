@@ -20,6 +20,7 @@ Additional supporting classes:
 - PipelineFunctionTask: subclass of PipelineTask which enables Python
   functions to be run as external processes
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
+- PipelineParam: class for passing arbitrary values between tasks
 - FileCollector: returning collections of files based on glob patterns
 
 There are some underlying classes and functions that are intended for
@@ -688,12 +689,23 @@ class PipelineParam(object):
     instantiation using the ``type`` argument, for example
     to force that a string is always returned:
 
-    >>> p = PipelinerParam(type=str)
+    >>> p = PipelineParam(type=str)
     >>> p.set(123)
     >>> p.value
     "123"
+
+    If the ``default`` function is supplied then this will
+    be used to generate a value if the stored value is
+    ``None``:
+
+    >>> p = PipelineParam(default=lambda: "default")
+    >>> p.value
+    "default"
+    >>> p.set("assigned")
+    >>> p.value
+    "assigned"
     """
-    def __init__(self,value=None,type=None):
+    def __init__(self,value=None,type=None,default=None):
         """
         Create a new PipelineParam instance
 
@@ -703,9 +715,13 @@ class PipelineParam(object):
           type (function): optional, function used to convert
             the stored value when fetched via the `value`
             property
+          default (function): optional, function which will
+            return a default value if no explicit value is
+            set (i.e. value is `None`)
         """
         self._value = None
         self._type = type
+        self._default = default
         if value is not None:
             self.set(value)
     def set(self,newvalue):
@@ -721,10 +737,21 @@ class PipelineParam(object):
         """
         Return the assigned value
 
+        If a `default` function was specified on instance
+        creation then this will be used to generate the
+        value to return if the stored value is `None`.
+
         If a `type` function was also specified on instance
         creation then this will be used to convert the
         assigned value before it is returned.
         """
+        if self._value is None:
+            # Try to return default value
+            try:
+                return self._default()
+            except TypeError:
+                pass
+        # Return stored value
         try:
             return self._type(self._value)
         except TypeError:

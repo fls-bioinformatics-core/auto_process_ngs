@@ -1299,6 +1299,16 @@ class TestPipelineParam(unittest.TestCase):
         p.set("abc")
         self.assertRaises(ValueError,lambda: p.value)
 
+    def test_pipelineparam_with_default(self):
+        """
+        PipelineParam: default function supplied
+        """
+        # Specify type function as 'str'
+        p = PipelineParam(default=lambda: "default")
+        self.assertEqual(p.value,"default")
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):
