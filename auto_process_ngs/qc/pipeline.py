@@ -28,6 +28,8 @@ Pipeline task classes:
 
 import os
 import logging
+import tempfile
+import shutil
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from ..analysis import AnalysisProject
@@ -281,8 +283,10 @@ class QCPipeline(Pipeline):
             job runner to use
         """
         # Working directory
+        clean_up_on_completion = False
         if working_dir is None:
-            working_dir = "__qc.ppl.out"
+            working_dir = tempfile.mkdtemp(prefix="__qc.",suffix=".tmp")
+            clean_up_on_completion = True
         working_dir = os.path.abspath(working_dir)
         if not os.path.exists(working_dir):
             mkdir(working_dir)
@@ -292,20 +296,27 @@ class QCPipeline(Pipeline):
         scripts_dir = os.path.join(working_dir,"scripts")
 
         # Execute the pipeline
-        return Pipeline.run(self,
-                            working_dir=working_dir,
-                            log_dir=log_dir,
-                            scripts_dir=scripts_dir,
-                            log_file=log_file,
-                            batch_size=batch_size,
-                            exit_on_failure=PipelineFailure.DEFERRED,
-                            params={
-                                'nthreads': nthreads,
-                                'fastq_subset': fastq_subset,
-                                'fastq_strand_indexes': fastq_strand_indexes,
-                            },
-                            runners=runners,
-                            default_runner=default_runner)
+        status = Pipeline.run(self,
+                              working_dir=working_dir,
+                              log_dir=log_dir,
+                              scripts_dir=scripts_dir,
+                              log_file=log_file,
+                              batch_size=batch_size,
+                              exit_on_failure=PipelineFailure.DEFERRED,
+                              params={
+                                  'nthreads': nthreads,
+                                  'fastq_subset': fastq_subset,
+                                  'fastq_strand_indexes': fastq_strand_indexes,
+                              },
+                              runners=runners,
+                              default_runner=default_runner)
+
+        # Clean up working dir
+        if status == 0 and clean_up_on_completion:
+            shutil.rmtree(working_dir)
+
+        # Return pipeline status
+        return status
 
 ######################################################################
 # Pipeline task classes
