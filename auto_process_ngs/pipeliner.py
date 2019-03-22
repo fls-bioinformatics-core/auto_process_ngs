@@ -628,34 +628,6 @@ class PipelineFailure(object):
 # Generic pipeline base classes
 ######################################################################
 
-class FileCollector(Iterator):
-    """
-    Class to return set of files based on glob pattern
-    """
-    def __init__(self,dirn,pattern):
-        self._dirn = os.path.abspath(dirn)
-        self._pattern = pattern
-        self._files = None
-        self._idx = None
-    def __len__(self):
-        if self._files is None:
-            self._files = collect_files(self._dirn,self._pattern)
-            self._idx = -1
-        return len(self._files)
-    def next(self):
-        if self._files is None:
-            self._files = collect_files(self._dirn,self._pattern)
-        if self._idx is None:
-            self._idx = 0
-        else:
-            self._idx += 1
-        try:
-            return self._files[self._idx]
-        except IndexError:
-            self._files = None
-            self._idx = None
-            raise StopIteration
-
 class PipelineParam(object):
     """
     Class for passing arbitrary values between tasks
@@ -756,6 +728,34 @@ class PipelineParam(object):
             return self._type(self._value)
         except TypeError:
             return self._value
+
+class FileCollector(Iterator):
+    """
+    Class to return set of files based on glob pattern
+    """
+    def __init__(self,dirn,pattern):
+        self._dirn = os.path.abspath(dirn)
+        self._pattern = pattern
+        self._files = None
+        self._idx = None
+    def __len__(self):
+        if self._files is None:
+            self._files = collect_files(self._dirn,self._pattern)
+            self._idx = -1
+        return len(self._files)
+    def next(self):
+        if self._files is None:
+            self._files = collect_files(self._dirn,self._pattern)
+        if self._idx is None:
+            self._idx = 0
+        else:
+            self._idx += 1
+        try:
+            return self._files[self._idx]
+        except IndexError:
+            self._files = None
+            self._idx = None
+            raise StopIteration
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
