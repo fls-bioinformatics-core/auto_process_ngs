@@ -404,9 +404,9 @@ class TestPipeline(unittest.TestCase):
                                    PipelineParam))
         self.assertEqual(ppl.params.ncores.value,1)
 
-    def test_pipeline_add_param_twice_fails(self):
+    def test_pipeline_add_param_twice_raises_exception(self):
         """
-        Pipeline: 'add_param' fails when parameter is added twice
+        Pipeline: 'add_param' raises exception when parameter is added twice
         """
         # Make an empty pipeline
         ppl = Pipeline()
