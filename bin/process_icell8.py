@@ -390,8 +390,7 @@ if __name__ == "__main__":
                        do_contaminant_filter=do_contaminant_filter,
                        do_quality_filter=do_quality_filter,
                        do_clean_up=do_clean_up,
-                       nprocessors=nprocessors,
-                       runners=runners))
+                       nprocessors=nprocessors))
 
     # Final reporting
     print "Setting up a pipeline for final reporting"
@@ -409,6 +408,7 @@ if __name__ == "__main__":
     print "Running the final pipeline"
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
                           default_runner=runners['default'],
+                          runners=runners,
                           max_jobs=max_jobs)
     if exit_status != 0:
         # Finished with error
@@ -417,29 +417,28 @@ if __name__ == "__main__":
 
     # Run the QC
     print "Running the QC"
-    runqc = QCPipeline(
-        runners={
-            'qc_runner': runners['qc'],
-            'report_runner': default_runner,
-        })
+    runqc = QCPipeline()
     runqc.add_project(analysis_project,
                       qc_protocol="singlecell",
                       fastq_dir="fastqs.samples",
                       qc_dir="qc.samples",
-                      fastq_strand_indexes=
-                      __settings.fastq_strand_indexes,
-                      nthreads=nprocessors['qc'],
                       multiqc=True)
     runqc.add_project(analysis_project,
                       qc_protocol="singlecell",
                       fastq_dir="fastqs.barcodes",
                       qc_dir="qc.barcodes",
-                      fastq_strand_indexes=
-                      __settings.fastq_strand_indexes,
-                      nthreads=nprocessors['qc'],
                       multiqc=True)
     exit_status = runqc.run(max_jobs=max_jobs,
-                            batch_size=25)
+                            batch_size=25,
+                            runners={
+                                'qc_runner': runners['qc'],
+                                'report_runner': default_runner,
+                                'verify_runner': default_runner
+                            },
+                            fastq_strand_indexes=
+                            __settings.fastq_strand_indexes,
+                            nthreads=nprocessors['qc'],
+                            default_runner=default_runner)
     if exit_status != 0:
         # Finished with error
         logger.critical("QC failed: exit status %s" % exit_status)
