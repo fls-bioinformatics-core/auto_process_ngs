@@ -1324,6 +1324,7 @@ class Pipeline(object):
         self.report("-- verbose output   : %s" % ('yes'
                                                   if verbose
                                                   else 'no'))
+        self.report("-- concurrent jobs  : %s" % max_jobs)
         # Report parameter settings
         if self.params:
             self.report("Pipeline parameters:")
