@@ -1705,10 +1705,6 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            for line in output.stdout:
-                self.report("[%s] %s" % (f.__name__,line))
-            for line in output.stderr:
-                self.report("[%s] %s" % (f.__name__,line))
         except NotImplementedError:
             pass
         except Exception as ex:
@@ -1716,6 +1712,11 @@ class PipelineTask(object):
                         (f.__name__,ex))
             self.report(traceback.format_exc(ex))
             self._exit_code += 1
+        # Report stdout and stderr
+        for line in output.stdout:
+            self.report("[%s] %s" % (f.__name__,line))
+        for line in output.stderr:
+            self.report("[%s] %s" % (f.__name__,line))
         # Switch back to original directory
         if self._working_dir is not None:
             os.chdir(current_dir)
