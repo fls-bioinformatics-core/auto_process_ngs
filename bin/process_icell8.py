@@ -146,6 +146,9 @@ if __name__ == "__main__":
     p.add_argument('--force',action='store_true',
                    dest='force',default=False,
                    help="force overwrite of existing outputs")
+    p.add_argument("-v","--verbose",action='store_true',
+                   dest="verbose",default=False,
+                   help="produce verbose output for diagnostics")
     p.add_argument("--no-quality-filter",action='store_true',
                    dest="no_quality_filter",
                    help="deprecated: kept for backwards compatibility "
@@ -409,7 +412,8 @@ if __name__ == "__main__":
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
                           default_runner=runners['default'],
                           runners=runners,
-                          max_jobs=max_jobs)
+                          max_jobs=max_jobs,
+                          verbose=args.verbose)
     if exit_status != 0:
         # Finished with error
         logger.critical("Pipeline failed: exit status %s" % exit_status)
@@ -438,7 +442,8 @@ if __name__ == "__main__":
                             fastq_strand_indexes=
                             __settings.fastq_strand_indexes,
                             nthreads=nprocessors['qc'],
-                            default_runner=default_runner)
+                            default_runner=default_runner,
+                            verbose=args.verbose)
     if exit_status != 0:
         # Finished with error
         logger.critical("QC failed: exit status %s" % exit_status)
