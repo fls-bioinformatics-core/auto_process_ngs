@@ -121,10 +121,11 @@ class QCPipeline(Pipeline):
         # Do internal setup
         ###################
 
+        self.report("Adding project: %s" % project.name)
+
         # Determine QC protocol (if not set)
         if qc_protocol is None:
             qc_protocol = determine_qc_protocol(project)
-        self.report("Protocol: %s" % qc_protocol)
 
         # Clone the supplied project
         project = copy_analysis_project(project,fastq_dir=fastq_dir)
@@ -141,6 +142,12 @@ class QCPipeline(Pipeline):
             qc_dir = 'qc'
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(project.dirn,qc_dir)
+
+        # Report details
+        self.report("-- Protocol  : %s" % qc_protocol)
+        self.report("-- Directory : %s" % project.dirn)
+        self.report("-- Fastqs dir: %s" % project.fastq_dir)
+        self.report("-- QC dir    : %s" % qc_dir)
 
         ####################
         # Build the pipeline
