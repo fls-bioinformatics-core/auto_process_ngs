@@ -390,6 +390,37 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task3_1.exit_code,None)
         self.assertEqual(task3_2.exit_code,None)
 
+    def test_pipeline_built_in_parameters(self):
+        """
+        Pipeline: test the built-in parameters are set
+        """
+        # Define a task to output values passed in
+        class OutputValues(PipelineTask):
+            def init(self,working_dir,batch_size,verbose):
+                self.add_output('builtins',dict())
+            def setup(self):
+                self.output.builtins['working_dir'] = self.args.working_dir
+                self.output.builtins['batch_size'] = self.args.batch_size
+                self.output.builtins['verbose'] = self.args.verbose
+        # Make a pipeline
+        ppl = Pipeline()
+        task = OutputValues("Output the built-in parameter values",
+                            working_dir=ppl.params.WORKING_DIR,
+                            batch_size=ppl.params.BATCH_SIZE,
+                            verbose=ppl.params.VERBOSE)
+        ppl.add_task(task)
+        self.assertTrue("WORKING_DIR" in ppl.params)
+        self.assertTrue("BATCH_SIZE" in ppl.params)
+        self.assertTrue("VERBOSE" in ppl.params)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              batch_size=100,
+                              verbose=True)
+        self.assertEqual(task.output.builtins['working_dir'],
+                         self.working_dir)
+        self.assertEqual(task.output.builtins['batch_size'],100)
+        self.assertEqual(task.output.builtins['verbose'],True)
+
     def test_pipeline_add_param(self):
         """
         Pipeline: test the 'add_param' method

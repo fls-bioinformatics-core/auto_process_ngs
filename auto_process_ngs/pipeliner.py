@@ -590,6 +590,34 @@ The runtime values of parameters are then passed via the
     ppl.run(params={ 'ncores': 8,
                      'tmpdir': temporary_dir, })
 
+Built-in parameters
+-------------------
+
+In addition to the custom parameters defined using the
+``add_param`` method and outlined in the previous section, a
+number of 'built-in' parameters are also available as properties
+of the ``Pipeline`` instance, for use when building a pipeline.
+
+Specifically these are:
+
+* ``WORKING_DIR``: the working directory used by the pipeline
+* ``BATCH_SIZE``: the batch size to be used when running jobs
+  within pipeline tasks
+* ``VERBOSE``: whether the pipeline is running in 'verbose'
+  mode
+
+These can be used in the same way as the custom parameters when
+setting up tasks, for example:
+
+::
+
+    task = ExampleTask("This is an example",
+                       ncores=ppl.params.ncores,
+                       tmpdir=ppl.params.WORKING_DIR)
+
+The values will be set when the pipeline's ``run`` method is
+invoked.
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -892,6 +920,10 @@ class Pipeline(object):
         self._exit_on_failure = PipelineFailure.IMMEDIATE
         # Initialise default runner
         self._runners['default'] = PipelineParam(value=SimpleJobRunner())
+        # Initialise built-in parameters
+        self.add_param("WORKING_DIR",type=str)
+        self.add_param("BATCH_SIZE",type=int)
+        self.add_param("VERBOSE",type=bool)
 
     @property
     def params(self):
@@ -1237,7 +1269,7 @@ class Pipeline(object):
         if working_dir is None:
             working_dir = os.getcwd()
         working_dir = os.path.abspath(working_dir)
-        # Deal with parameters
+        # Deal with custom parameters
         if params:
             for p in params:
                 self.params[p].set(params[p])
@@ -1274,6 +1306,10 @@ class Pipeline(object):
                 os.remove(self._log_file)
         # How to handle task failure
         self._exit_on_failure = exit_on_failure
+        # Assign built-in parameters
+        self.params.WORKING_DIR.set(working_dir)
+        self.params.BATCH_SIZE.set(batch_size)
+        self.params.VERBOSE.set(verbose)
         # Execute the pipeline
         self.report("Started")
         self.report("-- working directory: %s" % working_dir)
