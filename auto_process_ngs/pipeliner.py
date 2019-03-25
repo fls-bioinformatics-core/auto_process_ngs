@@ -1073,6 +1073,14 @@ class Pipeline(object):
                 else:
                     requirements = list(final_tasks)
             self.add_task(task,requirements,**kws)
+        # Add parameters from the new pipeline
+        for p in pipeline.params:
+            if p not in self._params:
+                self._params[p] = pipeline.params[p]
+        # Add runner definitions from the new pipeline
+        for r in pipeline.runners:
+            if r not in self.runners:
+                self.add_runner(r)
 
     def merge_pipeline(self,pipeline):
         """
@@ -1094,6 +1102,14 @@ class Pipeline(object):
         for task_id in pipeline.task_list():
             task,requirements,kws = pipeline.get_task(task_id)
             self.add_task(task,requirements,**kws)
+        # Add parameters from the new pipeline
+        for p in pipeline.params:
+            if p not in self._params:
+                self._params[p] = pipeline.params[p]
+        # Add runner definitions from the new pipeline
+        for r in pipeline.runners:
+            if r not in self.runners:
+                self.add_runner(r)
 
     def task_list(self):
         """

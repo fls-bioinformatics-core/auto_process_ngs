@@ -701,6 +701,8 @@ class TestPipeline(unittest.TestCase):
                 self.output.list.append(self.args.s)
         # Make first pipeline
         ppl1 = Pipeline()
+        ppl1.add_param("param1")
+        ppl1.add_runner("runner1")
         task1 = Append("Append 1",(),"item1")
         task2 = Append("Append 2",task1.output.list,"item2")
         task3 = Append("Append 3",task1.output.list,"item3")
@@ -711,6 +713,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),4)
         # Make second pipeline
         ppl2 = Pipeline()
+        ppl2.add_param("param2")
+        ppl2.add_runner("runner2")
         task5 = Append("Append 5",task1.output.list,"item5")
         task6 = Append("Append 6",task3.output.list,"item6")
         task7 = Append("Append 7",task3.output.list,"item7")
@@ -723,6 +727,12 @@ class TestPipeline(unittest.TestCase):
         # Check requirements on first task of pipeline 2
         # have been updated
         self.assertEqual(ppl1.get_task(task5.id())[1],[task4,])
+        # Check params from both pipelines are defined
+        self.assertTrue('param1' in ppl1.params)
+        self.assertTrue('param2' in ppl1.params)
+        # Check runners from both pipelines are defined
+        self.assertTrue('runner1' in ppl1.runners)
+        self.assertTrue('runner2' in ppl1.runners)
 
     def test_pipeline_merge_pipeline(self):
         """
@@ -739,6 +749,8 @@ class TestPipeline(unittest.TestCase):
                 self.output.list.append(self.args.s)
         # Make first pipeline
         ppl1 = Pipeline()
+        ppl1.add_param("param1")
+        ppl1.add_runner("runner1")
         task1 = Append("Append 1",(),"item1")
         task2 = Append("Append 2",task1.output.list,"item2")
         task3 = Append("Append 3",task1.output.list,"item3")
@@ -749,6 +761,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),4)
         # Make second pipeline
         ppl2 = Pipeline()
+        ppl2.add_param("param2")
+        ppl2.add_runner("runner2")
         task5 = Append("Append 5",task1.output.list,"item5")
         task6 = Append("Append 6",task3.output.list,"item6")
         task7 = Append("Append 7",task3.output.list,"item7")
@@ -758,6 +772,12 @@ class TestPipeline(unittest.TestCase):
         # Merge second pipeline into the first
         ppl1.merge_pipeline(ppl2)
         self.assertEqual(len(ppl1.task_list()),7)
+        # Check params from both pipelines are defined
+        self.assertTrue('param1' in ppl1.params)
+        self.assertTrue('param2' in ppl1.params)
+        # Check runners from both pipelines are defined
+        self.assertTrue('runner1' in ppl1.runners)
+        self.assertTrue('runner2' in ppl1.runners)
 
 class TestPipelineTask(unittest.TestCase):
 
