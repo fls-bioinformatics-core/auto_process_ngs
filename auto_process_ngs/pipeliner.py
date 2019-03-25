@@ -680,7 +680,7 @@ logger.addHandler(logging.NullHandler())
 
 ALLOWED_CHARS = string.lowercase + string.digits + "._-"
 
-# JSE-drop job status codes
+# Pipeline failure modes
 class PipelineFailure(object):
     IMMEDIATE = 0
     DEFERRED = 1
