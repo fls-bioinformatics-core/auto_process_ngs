@@ -1346,8 +1346,11 @@ class Pipeline(object):
             for task_id in rank:
                 task,requires,kws = self.get_task(task_id)
                 self._pending.append((task,requires,kws))
-                self.report("-- %s (%s)" % (task.name(),
-                                            task.id()))
+                if verbose:
+                    self.report("-- %s (%s)" % (task.name(),
+                                                task.id()))
+                else:
+                    self.report("-- %s" % task.name())
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
@@ -1368,8 +1371,11 @@ class Pipeline(object):
                                       (y.exit_code == 0),
                                       requirements,True)
                 if run_task:
-                    self.report("started '%s' (%s)" % (task.name(),
-                                                       task.id()))
+                    if verbose:
+                        self.report("started '%s' (%s)" % (task.name(),
+                                                           task.id()))
+                    else:
+                        self.report("started '%s'" % task.name())
                     kws = dict(**kws)
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
