@@ -274,7 +274,8 @@ class QCPipeline(Pipeline):
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           working_dir (str): optional path to a working
-            directory (defaults to the current directory)
+            directory (defaults to temporary directory in
+            the current directory)
           log_dir (str): path of directory where log files
             will be written to
           batch_size (int): if set then run commands in
@@ -296,7 +297,9 @@ class QCPipeline(Pipeline):
         # Working directory
         clean_up_on_completion = False
         if working_dir is None:
-            working_dir = tempfile.mkdtemp(prefix="__qc.",suffix=".tmp")
+            working_dir = tempfile.mkdtemp(prefix="__qc.",
+                                           suffix=".tmp",
+                                           dir=os.getcwd())
             clean_up_on_completion = True
         working_dir = os.path.abspath(working_dir)
         if not os.path.exists(working_dir):
