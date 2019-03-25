@@ -311,37 +311,37 @@ def get_required_samplesheet_format(bcl2fastq_version):
         raise NotImplementedError('unknown version: %s' %
                                   bcl2fastq_version)
 
-def get_bases_mask(run_info_xml,sample_sheet_file):
+def get_bases_mask(run_info_xml,sample_sheet_file=None):
     """
     Get bases mask string
 
     Generates initial bases mask based on data in RunInfo.xml (which
     says how many reads there are, how many cycles in each read, and
-    which are index reads). Then updates this using the barcode
-    information in the sample sheet file.
+    which are index reads), and optionally updates this using the
+    barcode information in the sample sheet file.
 
     Arguments:
       run_info_xml: name and path of RunInfo.xml file from the
         sequencing run
-      sample_sheet_file: name and path of sample sheet file.
+      sample_sheet_file: (optional) path to sample sheet file
 
     Returns:
       Bases mask string e.g. 'y101,I6'. 
-
     """
     # Get initial bases mask
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
     print "Bases mask: %s (from RunInfo.xml)" % bases_mask
-    # Update bases mask from sample sheet
-    example_barcode = IlluminaData.samplesheet_index_sequence(
-        IlluminaData.SampleSheet(sample_sheet_file).data[0])
-    if example_barcode is None:
-        example_barcode = ""
-    if barcode_is_10xgenomics(example_barcode):
-        print "Bases mask: barcode is 10xGenomics sample set ID"
-    else:
-        bases_mask = IlluminaData.fix_bases_mask(bases_mask,
-                                                 example_barcode)
+    if sample_sheet_file is not None:
+        # Update bases mask from sample sheet
+        example_barcode = IlluminaData.samplesheet_index_sequence(
+            IlluminaData.SampleSheet(sample_sheet_file).data[0])
+        if example_barcode is None:
+            example_barcode = ""
+        if barcode_is_10xgenomics(example_barcode):
+            print "Bases mask: barcode is 10xGenomics sample set ID"
+        else:
+            bases_mask = IlluminaData.fix_bases_mask(bases_mask,
+                                                     example_barcode)
         print "Bases mask: %s (updated for barcode sequence '%s')" % \
             (bases_mask,example_barcode)
     return bases_mask

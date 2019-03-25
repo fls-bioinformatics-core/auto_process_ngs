@@ -1010,6 +1010,26 @@ SL4,SL4,,,N704,SI-GA-D2,SL,
         self.assertEqual(get_bases_mask(run_info_xml,sample_sheet),
                          "y76,I6,y76")
 
+    def test_get_bases_mask_single_index_no_sample_sheet(self):
+        """get_bases_mask: handle single index (no samplesheet)
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.nextseq("171020_NB500968_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml),"y76,I6,y76")
+
+    def test_get_bases_mask_dual_index_no_sample_sheet(self):
+        """get_bases_mask: handle dual index (no samplesheet)
+        """
+        # Make a RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.hiseq("171020_SN7001250_00002_AHGXXXX"))
+        # Check the bases mask
+        self.assertEqual(get_bases_mask(run_info_xml),"y101,I8,I8,y101")
+
 class TestGetNmismatches(unittest.TestCase):
     """Tests for the get_nmismatches function
 
