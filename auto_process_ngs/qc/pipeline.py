@@ -322,6 +322,7 @@ class QCPipeline(Pipeline):
                                   'fastq_subset': fastq_subset,
                                   'fastq_strand_indexes': fastq_strand_indexes,
                               },
+                              max_jobs=max_jobs,
                               runners=runners,
                               default_runner=default_runner,
                               verbose=verbose)
