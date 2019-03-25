@@ -180,7 +180,8 @@ class QCPipeline(Pipeline):
             project_name,
             project,
             qc_dir,
-            qc_protocol=qc_protocol
+            qc_protocol=qc_protocol,
+            verbose=self.params.VERBOSE
         )
         self.add_task(check_illumina_qc,
                       requires=(setup_qc_dirs,),
@@ -221,7 +222,8 @@ class QCPipeline(Pipeline):
             project,
             qc_dir,
             setup_fastq_strand_conf.output.fastq_strand_conf,
-            qc_protocol=qc_protocol
+            qc_protocol=qc_protocol,
+            verbose=self.params.VERBOSE
         )
         self.add_task(check_fastq_strand,
                       requires=(setup_fastq_strand_conf,),
@@ -260,7 +262,7 @@ class QCPipeline(Pipeline):
     def run(self,nthreads=None,fastq_strand_indexes=None,
             fastq_subset=None,working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,poll_interval=5,
-            runners=None,default_runner=None):
+            runners=None,default_runner=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -288,6 +290,8 @@ class QCPipeline(Pipeline):
             'report_runner','verify_runner','default'
           default_runner (JobRunner): optional default
             job runner to use
+          verbose (bool): if True then report additional
+            information for diagnostics
         """
         # Working directory
         clean_up_on_completion = False
@@ -316,7 +320,8 @@ class QCPipeline(Pipeline):
                                   'fastq_strand_indexes': fastq_strand_indexes,
                               },
                               runners=runners,
-                              default_runner=default_runner)
+                              default_runner=default_runner,
+                              verbose=verbose)
 
         # Clean up working dir
         if status == 0 and clean_up_on_completion:
@@ -378,7 +383,8 @@ class CheckIlluminaQCOutputs(PipelineFunctionTask):
     """
     Check the outputs from the illumina_qc.sh script
     """
-    def init(self,project,qc_dir,qc_protocol=None):
+    def init(self,project,qc_dir,qc_protocol=None,
+             verbose=False):
         """
         Initialise the CheckIlluminaQCOutputs task.
 
@@ -388,6 +394,8 @@ class CheckIlluminaQCOutputs(PipelineFunctionTask):
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
           qc_protocol (str): QC protocol to use
+          verbose (bool): if True then print additional
+            information from the task
 
         Outputs:
           fastqs (list): list of Fastqs that have
@@ -406,11 +414,17 @@ class CheckIlluminaQCOutputs(PipelineFunctionTask):
         for result in self.result():
             self.output.fastqs.extend(result)
         if self.output.fastqs:
-            print "Fastqs with missing QC outputs from illumina_qc.sh:"
-            for fq in self.output.fastqs:
-                print "-- %s" % fq
+            if self.args.verbose:
+                print "Fastqs with missing QC outputs from " \
+                    "illumina_qc.sh:"
+                for fq in self.output.fastqs:
+                    print "-- %s" % fq
+            else:
+                print "%s Fastqs with missing QC outputs from " \
+                    "illumina_qc.sh" % len(self.output.fastqs)
         else:
-            print "No Fastqs with missing QC outputs from illumina_qc.sh"
+            print "No Fastqs with missing QC outputs from " \
+                "illumina_qc.sh"
 
 class RunIlluminaQC(PipelineFunctionTask):
     """
@@ -581,7 +595,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
     Check the outputs from the fastq_strand.py utility
     """
     def init(self,project,qc_dir,fastq_strand_conf,
-             qc_protocol=None):
+             qc_protocol=None,verbose=False):
         """
         Initialise the CheckFastqStrandOutputs task.
 
@@ -593,6 +607,8 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
           fastq_strand_conf (str): path to the fastq_strand
             config file
           qc_protocol (str): QC protocol to use
+          verbose (bool): if True then print additional
+            information from the task
 
         Outputs:
           fastq_pairs (list): list of tuples with Fastq
@@ -618,11 +634,17 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
         for result in self.result():
             self.output.fastq_pairs.extend(result)
         if self.output.fastq_pairs:
-            print "Fastq pairs with missing QC outputs from fastq_strand.py:"
-            for fq_pair in self.output.fastq_pairs:
-                print "-- %s" % (fq_pair,)
+            if self.args.verbose:
+                print "Fastq pairs with missing QC outputs from " \
+                    "fastq_strand.py:"
+                for fq_pair in self.output.fastq_pairs:
+                    print "-- %s" % (fq_pair,)
+            else:
+                print "%s Fastq pairs with missing QC outputs from " \
+                    "fastq_strand.py" % len(self.output.fastq_pairs)
         else:
-            print "No Fastqs with missing QC outputs from fastq_strand.py"
+            print "No Fastqs with missing QC outputs from " \
+                "fastq_strand.py"
 
 class RunFastqStrand(PipelineFunctionTask):
     """
