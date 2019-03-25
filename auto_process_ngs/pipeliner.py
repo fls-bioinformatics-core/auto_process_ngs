@@ -1279,7 +1279,15 @@ class Pipeline(object):
         self.report("-- working directory: %s" % working_dir)
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
-        self.report("-- log file         : %s" % self._log_file)
+        self.report("-- log file         : %s" % ('<not set>'
+                                                  if self._log_file is None
+                                                  else self._log_file))
+        self.report("-- batch size       : %s" % ('<not set>'
+                                                  if batch_size is None
+                                                  else batch_size))
+        self.report("-- verbose output   : %s" % ('yes'
+                                                  if verbose
+                                                  else 'no'))
         # Report parameter settings
         if self.params:
             self.report("Pipeline parameters:")
