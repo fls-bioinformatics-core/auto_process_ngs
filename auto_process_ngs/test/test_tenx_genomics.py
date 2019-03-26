@@ -142,13 +142,47 @@ class TestCellrangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\ncat <<EOF\ncellranger $1  (2.0.1)\nCopyright (c) 2017 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger mkfastq\n\n    cellranger count\n    cellranger aggr\n    cellranger reanalyze\n    cellranger mkloupe\n    cellranger mat2csv\n\n    cellranger mkgtf\n    cellranger mkref\n\n    cellranger vdj\n\n    cellranger mkvdjref\n\n    cellranger testrun\n    cellranger upload\n    cellranger sitecheckEOF")
         os.chmod(cellranger_201,0775)
         return cellranger_201
-            
+    def _make_mock_cellranger_atac_101(self):
+        # Make a fake cellranger-atac 1.0.1 executable
+        cellranger_atac_101 = os.path.join(self.wd,"cellranger-atac")
+        with open(cellranger_atac_101,'w') as fp:
+            fp.write("#!/bin/bash\ncat <<EOF\ncellranger-atac  (1.0.1)\nCopyright (c) 2018 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger-atac mkfastq\n\n    cellranger-atac count\n\n    cellranger-atac testrun\n    cellranger-atac upload\n    cellranger-atac sitecheckEOF")
+        os.chmod(cellranger_atac_101,0775)
+        return cellranger_atac_101
+
     def test_cellranger_201(self):
         """cellranger_info: collect info for cellranger 2.0.1
         """
         cellranger = self._make_mock_cellranger_201()
         self.assertEqual(cellranger_info(path=cellranger),
                          (cellranger,'cellranger','2.0.1'))
+
+    def test_cellranger_201_on_path(self):
+        """cellranger_info: collect info for cellranger 2.0.1 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger = self._make_mock_cellranger_201()
+        self.assertEqual(cellranger_info(name='cellranger'),
+                         (cellranger,'cellranger','2.0.1'))
+
+    def test_cellranger_atac_101(self):
+        """cellranger_info: collect info for cellranger-atac 1.0.1
+        """
+        cellranger_atac = self._make_mock_cellranger_atac_101()
+        self.assertEqual(cellranger_info(path=cellranger_atac),
+                         (cellranger_atac,'cellranger-atac','1.0.1'))
+
+    def test_cellranger_atac_101_on_path(self):
+        """cellranger_info: collect info for cellranger-atac 1.0.1 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger_atac = self._make_mock_cellranger_atac_101()
+        self.assertEqual(cellranger_info(name='cellranger-atac'),
+                         (cellranger_atac,'cellranger-atac','1.0.1'))
 
 class TestMetricsSummary(unittest.TestCase):
     """

@@ -35,6 +35,7 @@ from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdirs
+from bcftbx.utils import find_program
 from .applications import Command
 from .simple_scheduler import SchedulerJob
 from .simple_scheduler import SimpleScheduler
@@ -351,7 +352,7 @@ def set_cell_count_for_project(project_dir):
     project.info.save()
     return 0
 
-def cellranger_info(path=None):
+def cellranger_info(path=None,name=None):
     """
     Retrieve information on the cellranger software
 
@@ -365,8 +366,10 @@ def cellranger_info(path=None):
     If no version is identified then the script path is still
     returned, but without any version info.
 
-    In all cases the package package name will be returned as
-    'cellranger'.
+    If a 'path' is supplied then the package name will be taken
+    from the basename; otherwise the package name can be supplied
+    via the 'name' argument. If neither are supplied then the
+    package name defaults to 'cellranger'.
 
     Returns:
       Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
@@ -377,20 +380,25 @@ def cellranger_info(path=None):
     """
     # Initialise
     cellranger_path = ''
-    package_name = 'cellranger'
+    if name is None:
+        if path:
+            name = os.path.basename(path)
+        else:
+            name = 'cellranger'
+    package_name = name
     package_version = ''
     # Locate the core script
     if not path:
-        cellranger_path = find_program('cellranger')
+        cellranger_path = find_program(package_name)
     else:
         cellranger_path = os.path.abspath(path)
     # Identify the version
-    if os.path.basename(cellranger_path) == 'cellranger':
+    if os.path.basename(cellranger_path) == package_name:
         # Run the program to get the version
         version_cmd = Command(cellranger_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
         for line in output.split('\n'):
-            if line.startswith('cellranger'):
+            if line.startswith(package_name):
                 # Extract version from line of the form
                 # cellranger  (2.0.1)
                 try:
