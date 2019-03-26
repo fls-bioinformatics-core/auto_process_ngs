@@ -49,6 +49,24 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 3,smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
 4,smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
 """
+        self.sample_sheet_with_atac_indices = """[Header]
+IEMFileVersion,4
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
+2,smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+3,smpl3,smpl3,,,A006,SI-NA-C1,10xGenomics,
+4,smpl4,smpl4,,,A007,SI-NA-D1,10xGenomics,
+"""
         self.sample_sheet_standard_indices = """[Header]
 IEMFileVersion,4
 
@@ -104,6 +122,13 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_chromium_indices)
+        self.assertTrue(has_chromium_sc_indices(s))
+    def test_sample_sheet_all_sc_atac_indices(self):
+        """
+        has_chromium_indices: sample sheet with 10x scATAC-seq indices only
+        """
+        s = self._make_sample_sheet(
+            self.sample_sheet_with_atac_indices)
         self.assertTrue(has_chromium_sc_indices(s))
     def test_sample_sheet_no_chromium_indices(self):
         """

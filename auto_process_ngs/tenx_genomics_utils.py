@@ -196,6 +196,12 @@ def has_chromium_sc_indices(sample_sheet):
 
     e.g. 'SI-GA-B11'
 
+    For scATAC-seq the indices are of the form:
+
+    SI-NA-[A-H][1-12]
+
+    e.g. 'SI-NA-G9'
+
     Arguments:
       sample_sheet (str): path to the sample sheet CSV
         file to check
