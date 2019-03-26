@@ -471,6 +471,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
                 qc_base = "%s_report" % qc_dir
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
+                if fastq_dir.startswith("%s%s" % (project.dirn,os.sep)):
+                    fastq_dir = os.path.relpath(fastq_dir,project.dirn)
                 if fastq_dir != project.info.primary_fastq_dir:
                     fastq_set = fastq_dir
                 else:
