@@ -462,7 +462,11 @@ class AnalysisProject:
         if fastq_dir is None:
             fastq_dir = self.info.primary_fastq_dir
         else:
-            if fastq_dir not in self.fastq_dirs:
+            if fastq_dir.startswith("%s%s" % (self.dirn,os.sep)):
+                fastq_dir_ = os.path.relpath(fastq_dir,self.dirn)
+            else:
+                fastq_dir_ = fastq_dir
+            if fastq_dir_ not in self.fastq_dirs:
                 logger.warning("Requested fastqs dir '%s' not in list "
                                "of possible dirs %s" %
                                (fastq_dir,
