@@ -470,6 +470,25 @@ def run_cellranger_mkfastq(sample_sheet,
     Returns:
       Integer: exit code from the cellranger command.
     """
+    # Check for existing cellranger outputs
+    flow_cell_dir = os.path.join(working_dir,
+                                 flow_cell_id(primary_data_dir))
+    if lanes is not None:
+        lanes_suffix = "_%s" % lanes.replace(',','')
+    else:
+        lanes_suffix = ""
+    flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
+    mro_file = os.path.join(working_dir,
+                            "__%s.mro" %
+                            os.path.basename(flow_cell_dir))
+    if not dry_run:
+        if os.path.exists(flow_cell_dir):
+            logger.warning("Removing existing output directory: %s" %
+                           flow_cell_dir)
+            shutil.rmtree(flow_cell_dir)
+        if os.path.exists(mro_file):
+            logger.warning("Removing existing mro file: %s" % mro_file)
+            os.remove(mro_file)
     # Construct the cellranger command
     cmd = Command("cellranger","mkfastq",
                   "--samplesheet",sample_sheet,
@@ -524,14 +543,7 @@ def run_cellranger_mkfastq(sample_sheet,
         if exit_code != 0:
             logger.error("cellranger mkfastq exited with an error")
             return exit_code
-        # Deal with the QC summary report
-        flow_cell_dir = os.path.join(working_dir,
-                                     flow_cell_id(primary_data_dir))
-        if lanes is not None:
-            lanes_suffix = "_%s" % lanes.replace(',','')
-        else:
-            lanes_suffix = ""
-        flow_cell_dir = "%s%s" % (flow_cell_dir,lanes_suffix)
+        # Check outputs and QC summary report
         if not os.path.isdir(flow_cell_dir):
             logger.error("No output directory '%s'" % flow_cell_dir)
             return -1
