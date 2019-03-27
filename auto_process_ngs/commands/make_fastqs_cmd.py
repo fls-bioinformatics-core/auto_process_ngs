@@ -830,6 +830,36 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         unaligned_dir = ap.params.unaligned_dir
     if not os.path.exists(os.path.join(ap.params.analysis_dir,unaligned_dir)):
         logger.error("Unaligned dir '%s' not found" % unaligned_dir)
+    # Check if any Fastqs are newer than stats files
+    newest_mtime = 0
+    for f in (stats_file,per_lane_stats_file,):
+        try:
+            newest_mtime = max(newest_mtime,
+                               os.path.getmtime(f))
+        except OSError:
+            # Missing file
+            newest_mtime = 0
+            break
+    illumina_data = IlluminaData.IlluminaData(ap.params.analysis_dir,
+                                              unaligned_dir)
+    if newest_mtime > 0:
+        regenerate_stats = False
+        for project in illumina_data.projects:
+            for sample in project.samples:
+                for fq in sample.fastq:
+                    if (os.path.getmtime(os.path.join(sample.dirn,fq)) >
+                        newest_mtime):
+                        regenerate_stats = True
+                        break
+        if regenerate_stats:
+            logger.warning("Fastqs are newer than stats files")
+        else:
+            # Don't rerun the stats, just regenerate the report
+            logger.warning("Stats files are newer than Fastqs")
+            processing_qc_html = os.path.join(ap.analysis_dir,
+                                              "processing_qc.html")
+            report_processing_qc(ap,processing_qc_html)
+            return
     # Set up runner
     if runner is not None:
         runner = fetch_runner(runner)
