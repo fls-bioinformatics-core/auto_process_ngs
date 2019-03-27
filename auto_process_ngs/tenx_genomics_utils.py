@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx_genomics_utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 
 """
@@ -19,7 +19,6 @@ Chromium SC 3'v2 system:
 - run_cellranger_count
 - run_cellranger_count_for_project
 - add_cellranger_args
-
 """
 
 #######################################################################
@@ -470,6 +469,9 @@ def run_cellranger_mkfastq(sample_sheet,
     Returns:
       Integer: exit code from the cellranger command.
     """
+    # Working directory
+    if working_dir is None:
+        working_dir = os.getcwd()
     # Check for existing cellranger outputs
     flow_cell_dir = os.path.join(working_dir,
                                  flow_cell_id(primary_data_dir))
@@ -508,9 +510,6 @@ def run_cellranger_mkfastq(sample_sheet,
                         jobinterval=cellranger_jobinterval,
                         localcores=cellranger_localcores,
                         localmem=cellranger_localmem)
-    # Working directory
-    if working_dir is None:
-        working_dir = os.getcwd()
     # Run the command
     print "Running %s" % cmd
     if not dry_run:
