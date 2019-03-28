@@ -425,6 +425,7 @@ def run_cellranger_mkfastq(sample_sheet,
                            lanes=None,
                            bases_mask=None,
                            ignore_dual_index=False,
+                           cellranger_exe='cellranger',
                            cellranger_jobmode='local',
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
@@ -441,6 +442,11 @@ def run_cellranger_mkfastq(sample_sheet,
     generate Fastqs from bcl files for Chromium single-cell
     data.
 
+    To run the 'mkfastq' command using a different version
+    of cellranger (e.g. cellranger-atac), specify the
+    cellranger executable using the 'cellranger_exe'
+    argument.
+
     Arguments:
       sample_sheet (str): path to input samplesheet with
         10xGenomics barcode indices
@@ -456,6 +462,8 @@ def run_cellranger_mkfastq(sample_sheet,
       ignore_dual_index (bool): optional, on a dual-indexed
         flowcell where the second index was not used for
         the 10x sample, ignore it
+      cellranger_exe (str): optional, name or path to
+        cellranger executable (default: "cellranger")
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -506,7 +514,8 @@ def run_cellranger_mkfastq(sample_sheet,
             logger.warning("Removing existing mro file: %s" % mro_file)
             os.remove(mro_file)
     # Construct the cellranger command
-    cmd = Command("cellranger","mkfastq",
+    cmd = Command(cellranger_exe,
+                  "mkfastq",
                   "--samplesheet",sample_sheet,
                   "--run",primary_data_dir,
                   "--output-dir",output_dir,

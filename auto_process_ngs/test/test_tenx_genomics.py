@@ -303,6 +303,57 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(os.path.isfile("cellranger_qc_summary.html"))
         self.assertTrue(os.path.isdir(output_dir))
 
+    def test_run_cellranger_mkfastq_atac(self):
+        """run_cellranger_mkfastq: check cellranger-atac is executed
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Mock sample sheet with chromium scATAC-seq indices
+        sample_sheet_file = os.path.join(self.wd,"samplesheet.csv")
+        with open(sample_sheet_file,'w') as fp:
+            fp.write("""[Header]
+IEMFileVersion,4
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
+2,smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+3,smpl3,smpl3,,,A006,SI-NA-C1,10xGenomics,
+4,smpl4,smpl4,,,A007,SI-NA-D1,10xGenomics,
+""")
+        # Create mock bcl2fastq and cellranger-atac executables
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-atac"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Output dir
+        output_dir = "bcl2fastq"
+        self.assertFalse(os.path.exists("HGXXXX"))
+        self.assertFalse(os.path.exists("cellranger_qc_summary.html"))
+        self.assertFalse(os.path.exists(output_dir))
+        # Run 'cellranger mkfastq'
+        exit_code = run_cellranger_mkfastq(sample_sheet_file,
+                                           illumina_run.dirn,
+                                           output_dir,
+                                           cellranger_exe="cellranger-atac")
+        # Check outputs
+        self.assertEqual(exit_code,0)
+        self.assertTrue(os.path.isdir("HGXXXX"))
+        self.assertTrue(os.path.isfile("cellranger_qc_summary.html"))
+        self.assertTrue(os.path.isdir(output_dir))
+
     def test_run_cellranger_mkfastq_subset_of_lanes(self):
         """run_cellranger_mkfastq: check cellranger is executed for subset of lanes
         """
