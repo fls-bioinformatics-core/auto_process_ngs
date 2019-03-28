@@ -7,6 +7,7 @@ import tempfile
 import os
 import shutil
 from bcftbx.mock import MockIlluminaRun
+from bcftbx.mock import RunInfoXml
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.tenx_genomics_utils import *
@@ -144,6 +145,53 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         s = self._make_sample_sheet(
             self.sample_sheet_mixed_indices)
         self.assertTrue(has_chromium_sc_indices(s))
+
+class TestGetBasesMask10xAtac(unittest.TestCase):
+    """
+    Tests for the 'get_bases_mask_10x_atac' function
+    """
+    def setUp(self):
+        # Create a temporary working dir
+        self.wd = tempfile.mkdtemp()
+
+    def tearDown(self):
+        # Remove working dir
+        if self.wd is not None:
+            shutil.rmtree(self.wd)
+
+    def test_get_bases_mask_10x_atac_I8_I16_dual_indexes(self):
+        """get_bases_mask_10x_atac: run with I8,I16 dual indexes
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y76,I8,I16,y76",4,12))
+        self.assertEqual(get_bases_mask_10x_atac(run_info_xml),
+                         "y76,I8,y16,y76")
+
+    def test_get_bases_mask_10x_atac_I16_I16_dual_indexes(self):
+        """get_bases_mask_10x_atac: run with I16,I16 dual indexes
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y76,I16,I16,y76",4,12))
+        self.assertEqual(get_bases_mask_10x_atac(run_info_xml),
+                         "y76,I8nnnnnnnn,y16,y76")
+
+    def test_get_bases_mask_10x_atac_too_short_index(self):
+        """get_bases_mask_10x_atac: run with too-short index
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y76,I6,I16,y76",4,12))
+        self.assertRaises(Exception,
+                          get_bases_mask_10x_atac,
+                          run_info_xml)
 
 class TestCellrangerInfo(unittest.TestCase):
     """

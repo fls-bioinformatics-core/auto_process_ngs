@@ -45,6 +45,7 @@ from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
 from .analysis import AnalysisProject
+from .bcl2fastq_utils import get_bases_mask
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
 import css_rules
@@ -210,12 +211,50 @@ def has_chromium_sc_indices(sample_sheet):
       Boolean: True if the sample sheet contains at least
         one Chromium SC index, False if not.
     """
-    index_pattern = re.compile(r"SI-GA-[A-H](1[1-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[1-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         if index_pattern.match(line['index']):
             return True
     return False
+
+def get_bases_mask_10x_atac(runinfo_xml):
+    """
+    Acquire a bases mask for 10xGenomics scATAC-seq
+
+    Generates an initial bases mask based on the run
+    contents, and then updates this so that:
+
+    1. Only the first 8 bases of the first index read
+       are actually used, and
+    2. The second index read is converted to a data
+       read.
+
+    For example: if the initial bases mask is
+    'Y50,I16,I16,Y50' then the scATAC-seq bases mask
+    will be 'Y50,I8nnnnnnnn,Y16,Y50'.
+
+    Arguments:
+      runinfo_xml (str): path to the RunInfo.xml for
+        the sequencing run
+
+    Returns:
+      String: 10xGenomics scATAC-seq bases mask string
+    """
+    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    # First read
+    r1_mask = bases_mask[0]
+    # Update first index to restrict to 8 bases
+    num_cycles = int(bases_mask[1][1:])
+    if num_cycles < 8:
+        raise Exception("Index read < 8 bases")
+    i1_mask = "I8%s" % ('n'*(num_cycles-8),)
+    # Update second index to second read
+    r2_mask = bases_mask[2].replace('i','y')
+    # Keep last read as is
+    r3_mask = bases_mask[3]
+    # Reassemble and return
+    return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
 
 def make_qc_summary_html(json_file,html_file):
     """
