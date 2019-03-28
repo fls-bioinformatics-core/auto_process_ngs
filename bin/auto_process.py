@@ -80,6 +80,7 @@ import auto_process_ngs.envmod as envmod
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.samplesheet_utils import predict_outputs
 from auto_process_ngs.utils import paginate
+from auto_process_ngs.commands.make_fastqs_cmd import MAKE_FASTQS_PROTOCOLS
 from auto_process_ngs.commands.report_cmd import ReportingMode
 
 __version__ = auto_process_ngs.get_version()
@@ -217,8 +218,9 @@ def add_make_fastqs_command(cmdparser):
                                 dest='protocol',default='standard',
                                 help="specify Fastq generation protocol "
                                 "depending on the data being processed. "
-                                "Must be one of 'standard', 'icell8', "
-                                "'10x_chromium_sc' (default: 'standard')")
+                                "Must be one of %s (default: 'standard')"
+                                % ', '.join(["'%s'" % x
+                                             for x in MAKE_FASTQS_PROTOCOLS]))
     fastq_generation.add_option('--sample-sheet',action="store",
                                 dest="sample_sheet",default=None,
                                 help="use an alternative sample sheet to "
