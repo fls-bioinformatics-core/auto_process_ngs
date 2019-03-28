@@ -458,6 +458,84 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_make_fastqs_10x_chromium_sc_atac_protocol(self):
+        """make_fastqs: 10x_chromium_sc_atac protocol
+        """
+        # Sample sheet with 10xGenomics Chromium SC ATAC-seq indices
+        samplesheet_chromium_sc_atac_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
+2,smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_sc_atac_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger-atac
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger-atac"),
+                                 reads=('R1','R2','R3','I1',))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        make_fastqs(ap,protocol="10x_chromium_sc_atac")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_SN7001250_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_10x_chromium_sc_atac"),
+                       "bcl2fastq"):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
     def test_make_fastqs_icell8_protocol_no_demultiplexing(self):
         """make_fastqs: icell8 protocol with no demultiplexing
         """
