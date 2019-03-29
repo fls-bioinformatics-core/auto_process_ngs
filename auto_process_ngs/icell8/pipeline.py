@@ -566,6 +566,8 @@ class ICell8FinalReporting(Pipeline):
         """
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="ICELL8: final reporting")
+        # Define runners
+        self.add_runner("report")
         # Reset primary fastq dir (if working in a project)
         if project is not None:
             update_project_data = UpdateProjectData(
@@ -576,7 +578,8 @@ class ICell8FinalReporting(Pipeline):
         # Final report
         final_report = ReportProcessing("Generate processing report",
                                         outdir)
-        self.add_task(final_report)
+        self.add_task(final_report,
+                      runner=self.runners['report'])
 
 ######################################################################
 # ICELL8 pipeline command classes

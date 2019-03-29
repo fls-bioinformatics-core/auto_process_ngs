@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     # Pipeline stages
-    stages = ('default','contaminant_filter','qc','statistics')
+    stages = ('default','contaminant_filter','qc','statistics','report')
     # Fetch defaults
     default_batch_size = __settings.icell8.batch_size
     default_aligner = __settings.icell8.aligner
