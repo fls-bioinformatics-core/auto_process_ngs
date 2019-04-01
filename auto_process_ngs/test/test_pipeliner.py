@@ -757,7 +757,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),7)
         # Check requirements on first task of pipeline 2
         # have been updated
-        self.assertEqual(ppl1.get_task(task5.id())[1],[task4,])
+        self.assertEqual(sorted(ppl1.get_task(task5.id())[1]),
+                         sorted([task2,task4,]))
         # Check params from both pipelines are defined
         self.assertTrue('param1' in ppl1.params)
         self.assertTrue('param2' in ppl1.params)
