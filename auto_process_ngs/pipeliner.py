@@ -926,6 +926,13 @@ class Pipeline(object):
         self.add_param("VERBOSE",type=bool)
 
     @property
+    def name(self):
+        """
+        Return the name of the pipeline
+        """
+        return self._name
+
+    @property
     def params(self):
         """
         Access the parameters defined for the pipeline
