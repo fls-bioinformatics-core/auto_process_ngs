@@ -1092,17 +1092,21 @@ class Pipeline(object):
           pipeline (Pipeline): pipeline instance with
             tasks to be appended
         """
-        # Get the final tasks from the current
-        # pipeline
-        ranks = self.rank_tasks()
-        if ranks:
-            final_tasks = [self.get_task(t)[0] for t in ranks[-1]]
-        else:
-            final_tasks = []
-        # Get the starting tasks from the new
-        # pipeline
+        self.report("Appending tasks from pipeline '%s'" % pipeline.name)
+        # Get the final tasks from the base pipeline
+        final_tasks = []
+        for task_id in self.task_list():
+            if not self.get_dependent_tasks(task_id):
+                final_tasks.append(self.get_task(task_id)[0])
+        self.report("Identified final tasks from base pipeline:")
+        for task in final_tasks:
+            self.report("-- %s" % task.name())
+        # Get the starting tasks from the new pipeline
         ranks = pipeline.rank_tasks()
         initial_tasks = ranks[0]
+        self.report("Identified initial tasks from appended pipeline:")
+        for task_id in initial_tasks:
+            self.report("-- %s" % pipeline.get_task(task_id)[0].name())
         # Add the tasks from the new pipeline
         for task_id in pipeline.task_list():
             task,requirements,kws = pipeline.get_task(task_id)
@@ -1111,10 +1115,12 @@ class Pipeline(object):
                     requirements = list(requirements).extend(final_tasks)
                 else:
                     requirements = list(final_tasks)
-            self.add_task(task,requirements,**kws)
+            self.add_task(task,requires=requirements,**kws)
         # Add parameters from the new pipeline
         for p in pipeline.params:
             if p not in self._params:
+                self.report("Adding parameter '%s' from appended pipeline"
+                            % p)
                 self._params[p] = pipeline.params[p]
         # Add runner definitions from the new pipeline
         for r in pipeline.runners:
