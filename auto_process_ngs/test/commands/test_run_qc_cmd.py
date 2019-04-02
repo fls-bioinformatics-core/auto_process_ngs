@@ -142,7 +142,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
             self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"fastq_strand.conf")))
+                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
             fastq_strand_outputs = filter(lambda f:
@@ -216,7 +216,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
             self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"fastq_strand.conf")))
+                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
             fastq_strand_outputs = filter(lambda f:
@@ -291,7 +291,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         # Check the fastq_strand_conf files were created
         for p in ("AB","CDE"):
             self.assertTrue(os.path.exists(
-                os.path.join(mockdir.dirn,p,"fastq_strand.conf")))
+                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
             fastq_strand_outputs = filter(lambda f:
