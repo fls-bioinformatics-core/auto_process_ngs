@@ -384,6 +384,11 @@ def add_make_fastqs_command(cmdparser):
                             "demultiplexing step (turn off using "
                             "--create-empty-fastqs)%s"
                             % default_no_create_empty_fastqs)
+    # Fastqs for index reads
+    bcl_to_fastq.add_option('--create-fastq-for-index-reads',
+                            action='store_true',
+                            dest='create_fastq_for_index_reads',default=False,
+                            help="also create FASTQs for index reads")
     # Number of processors
     default_nprocessors = []
     for platform in __settings.platform:
@@ -1026,6 +1031,7 @@ if __name__ == "__main__":
                     no_lane_splitting=no_lane_splitting,
                     minimum_trimmed_read_length=options.minimum_trimmed_read_length,
                     mask_short_adapter_reads=options.mask_short_adapter_reads,
+                    create_fastq_for_index_reads=options.create_fastq_for_index_reads,
                     stats_file=options.stats_file,
                     per_lane_stats_file=options.per_lane_stats_file,
                     barcode_analysis_dir=options.barcode_analysis_dir,

@@ -61,6 +61,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 bases_mask=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
+                create_fastq_for_index_reads=False,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
@@ -132,6 +133,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         length of ACGT bases that must be present in a read after
         adapter trimming for it not to be masked completely
         with Ns.
+      create_fastq_for_index_reads (boolean): if True then also create
+        Fastq files for index reads (default, don't create index read
+        Fastqs)
       stats_file (str): if set then use this as the name of the output
         per-fastq stats file.
       per_lane_stats_file (str): if set then use this as the name of
@@ -347,6 +351,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                     no_lane_splitting=no_lane_splitting,
                     minimum_trimmed_read_length=minimum_trimmed_read_length,
                     mask_short_adapter_reads=mask_short_adapter_reads,
+                    create_fastq_for_index_reads=create_fastq_for_index_reads,
                     nprocessors=nprocessors,
                     runner=runner)
             except Exception as ex:
@@ -620,8 +625,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
                  require_bcl2fastq=None,bases_mask=None,
                  ignore_missing_bcl=False,ignore_missing_stats=False,
                  no_lane_splitting=None,minimum_trimmed_read_length=None,
-                 mask_short_adapter_reads=None,nprocessors=None,
-                 runner=None):
+                 mask_short_adapter_reads=None,
+                 create_fastq_for_index_reads=False,
+                 nprocessors=None,runner=None):
     """
     Generate FASTQ files from the raw BCL files
 
@@ -652,6 +658,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
         via --minimum-trimmed-read-length
       mask_short_adapter_reads (int): if set then supply to bcl2fastq via
         --mask-short-adapter-reads
+      create_fastq_for_index_reads (boolean): if True then also create
+        Fastq files for index reads (default, don't create index read
+        Fastqs)
       nprocessors (int): number of processors to run bclToFastq.py with
       runner (JobRunner): (optional) specify a non-default job runner to
         use for fastq generation
@@ -753,6 +762,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     print "No lane splitting     : %s" % no_lane_splitting
     print "Min trimmed read len  : %s" % minimum_trimmed_read_length
     print "Mask short adptr reads: %s" % mask_short_adapter_reads
+    print "Create index Fastqs   : %s" % create_fastq_for_index_reads
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.bcl2fastq
@@ -775,6 +785,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     if mask_short_adapter_reads is not None:
         bcl2fastq.add_args('--mask-short-adapter-reads',
                            mask_short_adapter_reads)
+    if create_fastq_for_index_reads:
+        bcl2fastq.add_args('--create-fastq-for-index-reads')
     bcl2fastq.add_args('--platform',
                        ap.metadata.platform,
                        '--bcl2fastq_path',

@@ -108,6 +108,10 @@ def main():
     bcl2fastq2.add_option('--no-lane-splitting',action="store_true",
                           dest="no_lane_splitting",default=False,
                           help="Don't split output FASTQ files by lane")
+    bcl2fastq2.add_option('--create-fastq-for-index-reads',
+                          action="store_true",default=False,
+                          dest="create_fastq_for_index_reads",
+                          help="also create FASTQ files for index reads")
     # Adapter trimming (bcl2fastq 2 only)
     adapter_trimming = optparse.OptionGroup(p,'Adapter trimming (bcl2fastq v2 only)')
     adapter_trimming.add_option('--minimum-trimmed-read-length',action="store",
@@ -210,6 +214,8 @@ def main():
             options.minimum_trimmed_read_length
         print "Mask short adapter reads: %s" % \
             options.mask_short_adapter_reads
+        print "Create index read Fastqs: %s" % \
+            options.create_fastq_for_index_reads
     # Run bclToFastq conversion based on the version
     if known_version in ('1.8',):
         # 1.8.* pipeline
@@ -257,6 +263,7 @@ def main():
             no_lane_splitting=options.no_lane_splitting,
             minimum_trimmed_read_length=options.minimum_trimmed_read_length,
             mask_short_adapter_reads=options.mask_short_adapter_reads,
+            create_fastq_for_index_reads=options.create_fastq_for_index_reads,
             loading_threads=loading_threads,
             demultiplexing_threads=demultiplexing_threads,
             processing_threads=processing_threads,
@@ -290,6 +297,7 @@ def main():
             no_lane_splitting=options.no_lane_splitting,
             minimum_trimmed_read_length=options.minimum_trimmed_read_length,
             mask_short_adapter_reads=options.mask_short_adapter_reads,
+            create_fastq_for_index_reads=options.create_fastq_for_index_reads,
             loading_threads=loading_threads,
             processing_threads=processing_threads,
             writing_threads=writing_threads

@@ -614,6 +614,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
                     no_lane_splitting=False,
                     minimum_trimmed_read_length=None,
                     mask_short_adapter_reads=None,
+                    create_fastq_for_index_reads=False,
                     loading_threads=None,
                     demultiplexing_threads=None,
                     processing_threads=None,
@@ -650,6 +651,9 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
       mask_short_adapter_reads: optional, specify the minimum length
         of ACGT bases that must be present in a read after adapter
         trimming for it not to be masked completely with Ns.
+      create_fastq_for_index_reads: optional, if True then also create
+        Fastq files for index reads (default, don't create index read
+        Fastqs)
       loading_threads: optional, specify number of threads to use
         for loading bcl data (--loading-threads)
       demultiplexing_threads: optional, specify number of threads to
@@ -675,6 +679,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
         no_lane_splitting=no_lane_splitting,
         minimum_trimmed_read_length=minimum_trimmed_read_length,
         mask_short_adapter_reads=mask_short_adapter_reads,
+        create_fastq_for_index_reads=create_fastq_for_index_reads,
         loading_threads=loading_threads,
         demultiplexing_threads=demultiplexing_threads,
         processing_threads=processing_threads,
