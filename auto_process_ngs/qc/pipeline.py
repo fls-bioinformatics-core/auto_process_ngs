@@ -208,6 +208,7 @@ class QCPipeline(Pipeline):
             "%s: conf file for strandedness (fastq_strand)" %
             project_name,
             project,
+            qc_dir=qc_dir,
             organism=organism,
             star_indexes=self.params.fastq_strand_indexes
         )
@@ -530,13 +531,16 @@ class SetupFastqStrandConf(PipelineFunctionTask):
     """
     Set up a fastq_strand.conf file
     """
-    def init(self,project,organism=None,star_indexes=None):
+    def init(self,project,qc_dir=None,organism=None,star_indexes=None):
         """
         Initialise the SetupFastqStrandConf task.
 
         Arguments:
           project (AnalysisProject): project to run
             QC for
+          qc_dir (str): if supplied then points to directory
+            for QC outputs (defaults to subdirectory 'qc'
+            of project directory)
           organism (str): if supplied then must be a
             string with the names of one or more organisms,
             with multiple organisms separated by spaces
@@ -552,7 +556,12 @@ class SetupFastqStrandConf(PipelineFunctionTask):
         """
         self.add_output('fastq_strand_conf',Param(type=str))
     def setup(self):
-        self.fastq_strand_conf = os.path.join(self.args.project.dirn,
+        qc_dir = self.args.qc_dir
+        if qc_dir is None:
+            qc_dir = 'qc'
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(self.args.project.dirn,qc_dir)
+        self.fastq_strand_conf = os.path.join(qc_dir,
                                               "fastq_strand.conf")
         self.add_call("Setup fastq_strand.conf for %s"
                       % self.args.project.name,

@@ -224,9 +224,14 @@ class QCReporter(object):
             if not os.path.isabs(qc_dir):
                 qc_dir = os.path.join(self._project.dirn,
                                       qc_dir)
-        fastq_strand_conf = os.path.join(self._project.dirn,
-                                         "fastq_strand.conf")
         logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
+        for dirn in (self._project.dirn,qc_dir):
+            fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
+            if os.path.exists(fastq_strand_conf):
+                break
+            fastq_strand_conf = None
+        logger.debug("QCReporter.verify: fastq_strand conf file : %s" %
+                     fastq_strand_conf)
         verified = True
         for f in expected_outputs(self._project,qc_dir,
                                   fastq_strand_conf,
