@@ -194,6 +194,13 @@ class Settings(object):
                 self['10xgenomics_transcriptomes'][genome] = transcriptome
         except NoSectionError:
             logging.debug("No 10xgenomics transcriptomes defined")
+        # 10xgenomics scATAC-seq genome references
+        self.add_section('10xgenomics_atac_genome_references')
+        try:
+            for genome,reference in config.items('10xgenomics_atac_genome_references'):
+                self['10xgenomics_atac_genome_references'][genome] = reference
+        except NoSectionError:
+            logging.debug("No 10xgenomics scATAC-seq genome references defined")
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
