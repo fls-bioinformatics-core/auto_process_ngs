@@ -681,7 +681,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
             print "No Fastqs with missing QC outputs from " \
                 "fastq_strand.py"
 
-class RunFastqStrand(PipelineFunctionTask):
+class RunFastqStrand(PipelineTask):
     """
     Run the fastq_strand.py utility
     """
@@ -716,38 +716,20 @@ class RunFastqStrand(PipelineFunctionTask):
             print "No conf file: nothing to do"
             return
         for fastq_pair in self.args.fastq_pairs:
-            self.add_call("Run fastq_strand.py for %s..." %
-                          os.path.basename(fastq_pair[0]),
-                          self.run_fastq_strand,
-                          fastq_pair,
-                          self.args.qc_dir,
-                          fastq_strand_subset=
-                          self.args.fastq_strand_subset,
-                          fastq_strand_conf=self.args.fastq_strand_conf,
-                          nthreads=self.args.nthreads,
-                          qc_protocol=self.args.qc_protocol)
-    def run_fastq_strand(self,fastq_pair,qc_dir,fastq_strand_conf,
-                         fastq_strand_subset=None,nthreads=1,
-                         qc_protocol=None):
-        # Build fastq_strand.py command
-        cmd = Command('fastq_strand.py',
-                              '-n',nthreads,
-                              '--conf',fastq_strand_conf,
-                              '--outdir',os.path.abspath(qc_dir))
-        if fastq_strand_subset:
-            cmd.add_args('--subset',fastq_strand_subset)
-        cmd.add_args(*fastq_pair)
-        # Execute the command
-        status = cmd.run_subprocess(working_dir=qc_dir)
-        if status != 0:
-            raise Exception("Error running fastq_strand.py for %s: "
-                            "exit code: %s" % (fastq_pair,status))
-        # Check the outputs
-        output = fastq_strand_output(fastq_pair[0])
-        failed = (not os.path.exists(os.path.join(qc_dir,output)))
-        if failed:
-            raise Exception("fastq_strand.py failed to produce "
-                            "output for %s" % (fastq_pair,))
+            cmd = PipelineCommandWrapper(
+                "Run fastq_strand.py for %s" %
+                os.path.basename(fastq_pair[0]),
+                'fastq_strand.py',
+                '-n',self.args.nthreads,
+                '--conf',self.args.fastq_strand_conf,
+                '--outdir',
+                os.path.abspath(self.args.qc_dir))
+            if self.args.fastq_strand_subset:
+                cmd.add_args('--subset',
+                             self.args.fastq_strand_subset)
+            cmd.add_args(*fastq_pair)
+            # Add the command
+            self.add_cmd(cmd)
 
 class ReportQC(PipelineFunctionTask):
     """
