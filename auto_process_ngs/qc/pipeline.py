@@ -39,7 +39,9 @@ from ..applications import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
+from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineFunctionTask
+from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
 from ..utils import get_organism_list
@@ -174,6 +176,13 @@ class QCPipeline(Pipeline):
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
 
+        # Check illumina_qc.sh is compatible version
+        check_illumina_qc_version = CheckIlluminaQCVersion(
+            "%s: check illumina_qc.sh version" %
+            project_name)
+        self.add_task(check_illumina_qc_version,
+                      log_dir=log_dir)
+
         # Check outputs for illumina_qc.sh
         check_illumina_qc = CheckIlluminaQCOutputs(
             "%s: check basic QC outputs (illumina_qc.sh)" %
@@ -184,7 +193,8 @@ class QCPipeline(Pipeline):
             verbose=self.params.VERBOSE
         )
         self.add_task(check_illumina_qc,
-                      requires=(setup_qc_dirs,),
+                      requires=(setup_qc_dirs,
+                                check_illumina_qc_version,),
                       runner=self.runners['verify_runner'],
                       log_dir=log_dir)
 
@@ -384,6 +394,28 @@ class SetupQCDirs(PipelineFunctionTask):
         qc_info['fastq_dir'] = self.args.project.fastq_dir
         qc_info.save()
 
+class CheckIlluminaQCVersion(PipelineTask):
+    """
+    Check the illumina_qc.sh version is compatible with the pipeline
+    """
+    def init(self,compatible_versions=('1.3.2','1.3.3')):
+        """
+        Initialise the CheckIlluminaQC task
+        """
+        pass
+    def setup(self):
+        version = self.illumina_qc_version()
+        if version not in self.args.compatible_versions:
+            self.fail(message="QC script version is %s, needs %s" %
+                      (version,'/'.join(compatible_versions)))
+    def illumina_qc_version(self):
+        # Return version of illumina_qc.sh script
+        status,qc_script_info = Command(
+            'illumina_qc.sh',
+            '--version').subprocess_check_output()
+        if status == 0:
+            return qc_script_info.strip().split()[-1]
+
 class CheckIlluminaQCOutputs(PipelineFunctionTask):
     """
     Check the outputs from the illumina_qc.sh script
@@ -431,7 +463,7 @@ class CheckIlluminaQCOutputs(PipelineFunctionTask):
             print "No Fastqs with missing QC outputs from " \
                 "illumina_qc.sh"
 
-class RunIlluminaQC(PipelineFunctionTask):
+class RunIlluminaQC(PipelineTask):
     """
     Run the illumina_qc.sh script
     """
@@ -460,31 +492,21 @@ class RunIlluminaQC(PipelineFunctionTask):
         if not self.args.fastqs:
             print "Nothing to do"
             return
-        # Check the illumina_qc.sh version
-        compatible_versions = ('1.3.2','1.3.3')
-        version = self.illumina_qc_version()
-        if version not in compatible_versions:
-            self.fail(message="QC script version is %s, needs %s" %
-                      (version,'/'.join(compatible_versions)))
         # Set up the illumina_qc.sh runs for each Fastq
         for fastq in self.args.fastqs:
-            self.add_call("Run illumina_qc.sh for %s" %
-                          os.path.basename(fastq),
-                          self.run_illumina_qc,
-                          fastq,
-                          self.args.qc_dir,
-                          fastq_screen_subset=
-                          self.args.fastq_screen_subset,
-                          nthreads=self.args.nthreads,
-                          qc_protocol=self.args.qc_protocol,
-                          fastq_attrs=self.args.fastq_attrs)
-    def illumina_qc_version(self):
-        # Return version of illumina_qc.sh script
-        status,qc_script_info = Command(
-            'illumina_qc.sh',
-            '--version').subprocess_check_output()
-        if status == 0:
-            return qc_script_info.strip().split()[-1]
+            cmd = PipelineCommandWrapper(
+                "Run illumina_qc.sh for %s" % os.path.basename(fastq),
+                'illumina_qc.sh',fastq,
+                '--threads',self.args.nthreads,
+                '--qc_dir',os.path.abspath(self.args.qc_dir))
+            if self.args.fastq_screen_subset is not None:
+                cmd.add_args('--subset',self.args.fastq_screen_subset)
+            # No screens for R1 reads for single cell
+            if self.args.qc_protocol == 'singlecell' and \
+               self.args.fastq_attrs(fastq).read_number == 1:
+                cmd.add_args('--no-screens')
+            # Add the command
+            self.add_cmd(cmd)
     def run_illumina_qc(self,fastq,qc_dir,fastq_screen_subset=None,
                         nthreads=1,qc_protocol=None,fastq_attrs=None):
         # How to extract attributes from Fastq names
