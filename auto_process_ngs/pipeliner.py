@@ -1064,7 +1064,7 @@ class Pipeline(object):
         self._params[name] = PipelineParam(type=type,
                                            value=value)
 
-    def add_runner(self,name):
+    def add_runner(self,name,param=None):
         """
         Define a new runner within the pipeline
 
@@ -1089,6 +1089,7 @@ class Pipeline(object):
             raise KeyError("Runner '%s' already defined" % name)
         self.report("Defining new runner '%s'" % name)
         self._runners[name] = PipelineParam(
+            name=name,
             default=lambda: self.runners['default'].value)
 
     def append_pipeline(self,pipeline):
@@ -1123,15 +1124,6 @@ class Pipeline(object):
         self.report("Identified initial tasks from appended pipeline:")
         for task_id in initial_tasks:
             self.report("-- %s" % pipeline.get_task(task_id)[0].name())
-        # Add the tasks from the new pipeline
-        for task_id in pipeline.task_list():
-            task,requirements,kws = pipeline.get_task(task_id)
-            if task_id in initial_tasks:
-                if requirements:
-                    requirements = list(requirements).extend(final_tasks)
-                else:
-                    requirements = list(final_tasks)
-            self.add_task(task,requires=requirements,**kws)
         # Add parameters from the new pipeline
         for p in pipeline.params:
             if p not in self._params:
@@ -1142,6 +1134,22 @@ class Pipeline(object):
         for r in pipeline.runners:
             if r not in self.runners:
                 self.add_runner(r)
+        # Add the tasks from the new pipeline
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            if task_id in initial_tasks:
+                if requirements:
+                    requirements = list(requirements).extend(final_tasks)
+                else:
+                    requirements = list(final_tasks)
+            # Update the runner for the task
+            if 'runner' in kws:
+                name = kws['runner'].name
+                self.report("Updating runner '%s' for task '%s'"
+                            % (name,task.name()))
+                kws['runner'] = self.runners[name]
+            # Add the task to the source pipeline
+            self.add_task(task,requires=requirements,**kws)
 
     def merge_pipeline(self,pipeline):
         """
@@ -1160,9 +1168,6 @@ class Pipeline(object):
           pipeline (Pipeline): pipeline instance with
             tasks to be added
         """
-        for task_id in pipeline.task_list():
-            task,requirements,kws = pipeline.get_task(task_id)
-            self.add_task(task,requirements,**kws)
         # Add parameters from the new pipeline
         for p in pipeline.params:
             if p not in self._params:
@@ -1171,6 +1176,14 @@ class Pipeline(object):
         for r in pipeline.runners:
             if r not in self.runners:
                 self.add_runner(r)
+        # Add the tasks
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            # Update the runner for the task
+            if 'runner' in kws:
+                name = kws['runner'].name
+                kws['runner'] = self.runners[name]
+            self.add_task(task,requirements,**kws)
 
     def task_list(self):
         """
