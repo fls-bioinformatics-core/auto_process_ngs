@@ -431,7 +431,7 @@ if __name__ == "__main__":
                       qc_protocol="singlecell",
                       fastq_dir="fastqs.barcodes",
                       qc_dir="qc.barcodes",
-                      multiqc=True)
+                      multiqc=False)
     exit_status = runqc.run(max_jobs=max_jobs,
                             batch_size=25,
                             runners={
