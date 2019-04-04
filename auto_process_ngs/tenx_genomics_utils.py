@@ -632,8 +632,9 @@ def run_cellranger_mkfastq(sample_sheet,
         return exit_code
 
 def run_cellranger_count(fastq_dir,
-                         transcriptome,
+                         reference_data_path,
                          chemistry='auto',
+                         cellranger_exe='cellranger',
                          cellranger_jobmode='local',
                          cellranger_maxjobs=None,
                          cellranger_mempercore=None,
@@ -660,12 +661,15 @@ def run_cellranger_count(fastq_dir,
         from 'cellranger mkfastq', or the output folder
         from 'bcl2fastq' (or with a similar structure),
         or any folder containing Fastq files
-      transcriptome (str): path to the cellranger
+      reference_data_path (str): path to the cellranger
         compatible transcriptome reference data
-        directory
+        directory (for scRNA-seq) or ATAC reference
+        genome data (for scATAC-seq)
       chemistry (str): assay configuration (set to
         'auto' to let cellranger determine this
-        automatically)
+        automatically; ignored if not scRNA-seq)
+      cellranger_exe (str): optional, name or path to
+        cellranger executable (default: "cellranger")
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -699,6 +703,8 @@ def run_cellranger_count(fastq_dir,
     Returns:
       Integer: exit code from the cellranger command.
     """
+    # Cellranger mode
+    cellranger_mode = os.path.basename(cellranger_exe)
     # Input data
     sample_names = {}
     try:
@@ -729,7 +735,7 @@ def run_cellranger_count(fastq_dir,
     if not dry_run:
         if log_dir is None:
             log_dir = os.getcwd()
-        log_dir = get_numbered_subdir("cellranger_count",
+        log_dir = get_numbered_subdir("%s_count" % cellranger_mode,
                                       parent_dir=log_dir,
                                       full_path=True)
         mkdirs(log_dir)
@@ -750,17 +756,23 @@ def run_cellranger_count(fastq_dir,
                 print "-- %s: outputs exist, nothing to do" % sample
                 continue
             else:
-                print "-- %s: setting up cellranger count" % sample
+                print "-- %s: setting up %s count" % (sample,
+                                                      cellranger_mode)
             # Set up job for this sample
-            work_dir = os.path.abspath("tmp.cellranger_count.%s.%s" %
-                                       (project,sample))
+            work_dir = os.path.abspath("tmp.%s_count.%s.%s" %
+                                       (cellranger_mode,
+                                        project,sample))
             mkdirs(work_dir)
-            cmd = Command("cellranger","count",
+            cmd = Command(cellranger_exe,
+                          "count",
                           "--id",sample,
                           "--fastqs",os.path.abspath(fastq_dir),
-                          "--sample",sample,
-                          "--transcriptome",transcriptome,
-                          "--chemistry",chemistry)
+                          "--sample",sample)
+            if cellranger_mode == "cellranger":
+                cmd.add_args("--transcriptome",reference_data_path,
+                             "--chemistry",chemistry)
+            elif cellranger_mode == "cellranger-atac":
+                cmd.add_args("--reference",reference_data_path)
             add_cellranger_args(cmd,
                                 jobmode=cellranger_jobmode,
                                 mempercore=cellranger_mempercore,
@@ -771,8 +783,9 @@ def run_cellranger_count(fastq_dir,
             print "Running: %s" % cmd
             if not dry_run:
                 job = sched.submit(cmd,
-                                   name="cellranger_count.%s.%s" %
-                                   (project,
+                                   name="%s_count.%s.%s" %
+                                   (cellranger_mode,
+                                    project,
                                     sample),
                                    log_dir=log_dir,
                                    wd=work_dir)
