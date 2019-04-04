@@ -765,8 +765,15 @@ class PipelineParam(object):
     >>> p.set("assigned")
     >>> p.value
     "assigned"
+
+    If a ``name`` is supplied then this will be stored and
+    can be recovered via the ``name`` property:
+
+    >>> p = PipelineParam(name="user_name")
+    >>> p.name
+    "user_name"
     """
-    def __init__(self,value=None,type=None,default=None):
+    def __init__(self,value=None,type=None,default=None,name=None):
         """
         Create a new PipelineParam instance
 
@@ -779,12 +786,15 @@ class PipelineParam(object):
           default (function): optional, function which will
             return a default value if no explicit value is
             set (i.e. value is `None`)
+          name (str): optional, name to associate with the
+            instance
         """
         self._value = None
         self._type = type
         self._default = default
         if value is not None:
             self.set(value)
+        self._name = str(name)
     def set(self,newvalue):
         """
         Update the value assigned to the instance
@@ -817,6 +827,12 @@ class PipelineParam(object):
             return self._type(self._value)
         except TypeError:
             return self._value
+    @property
+    def name(self):
+        """
+        Return the name of the parameter (if supplied)
+        """
+        return self._name
 
 class FileCollector(Iterator):
     """

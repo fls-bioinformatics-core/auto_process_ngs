@@ -1477,6 +1477,14 @@ class TestPipelineParam(unittest.TestCase):
         p.set("abc")
         self.assertEqual(p.value,"abc")
 
+    def test_pipelineparam_with_name(self):
+        """
+        PipelineParam: name supplied
+        """
+        # Specify a name
+        p = PipelineParam(name="my_param")
+        self.assertEqual(p.name,"my_param")
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):
