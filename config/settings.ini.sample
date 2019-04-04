@@ -90,6 +90,7 @@ rsync = SimpleJobRunner
 icell8 = SimpleJobRunner
 icell8_contaminant_filter = SimpleJobRunner
 icell8_statistics = SimpleJobRunner
+icell8_report = SimpleJobRunner
 
 # Defaults for metadata
 [metadata]
