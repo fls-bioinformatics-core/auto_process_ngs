@@ -410,7 +410,7 @@ if __name__ == "__main__":
     # Execute the pipelines
     print "Running the final pipeline"
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
-                          default_runner=runners['default'],
+                          default_runner=default_runner,
                           runners=runners,
                           max_jobs=max_jobs,
                           verbose=args.verbose)
