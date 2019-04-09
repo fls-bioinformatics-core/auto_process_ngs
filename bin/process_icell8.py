@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_icell8.py: perform processing of Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 """
 process_icell8.py
@@ -28,9 +28,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.icell8.utils import ICell8WellList
 from auto_process_ngs.icell8.pipeline import ICell8QCFilter
 from auto_process_ngs.icell8.pipeline import ICell8FinalReporting
-from auto_process_ngs.qc.runqc import RunQC
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
+from auto_process_ngs.qc.pipeline import QCPipeline
 import auto_process_ngs.envmod as envmod
 
 # Fetch configuration settings
@@ -46,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     # Pipeline stages
-    stages = ('default','contaminant_filter','qc','statistics')
+    stages = ('default','contaminant_filter','qc','statistics','report')
     # Fetch defaults
     default_batch_size = __settings.icell8.batch_size
     default_aligner = __settings.icell8.aligner
@@ -148,6 +146,9 @@ if __name__ == "__main__":
     p.add_argument('--force',action='store_true',
                    dest='force',default=False,
                    help="force overwrite of existing outputs")
+    p.add_argument("-v","--verbose",action='store_true',
+                   dest="verbose",default=False,
+                   help="produce verbose output for diagnostics")
     p.add_argument("--no-quality-filter",action='store_true',
                    dest="no_quality_filter",
                    help="deprecated: kept for backwards compatibility "
@@ -392,8 +393,7 @@ if __name__ == "__main__":
                        do_contaminant_filter=do_contaminant_filter,
                        do_quality_filter=do_quality_filter,
                        do_clean_up=do_clean_up,
-                       nprocessors=nprocessors,
-                       runners=runners))
+                       nprocessors=nprocessors))
 
     # Final reporting
     print "Setting up a pipeline for final reporting"
@@ -410,8 +410,10 @@ if __name__ == "__main__":
     # Execute the pipelines
     print "Running the final pipeline"
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
-                          default_runner=runners['default'],
-                          max_jobs=max_jobs)
+                          default_runner=default_runner,
+                          runners=runners,
+                          max_jobs=max_jobs,
+                          verbose=args.verbose)
     if exit_status != 0:
         # Finished with error
         logger.critical("Pipeline failed: exit status %s" % exit_status)
@@ -419,43 +421,29 @@ if __name__ == "__main__":
 
     # Run the QC
     print "Running the QC"
-    # Set up conf file for strandedness determination
-    fastq_strand_conf = None
-    if analysis_project.info.organism:
-        print "Organisms: %s" % analysis_project.info.organism
-        fastq_strand_indexes = build_fastq_strand_conf(
-            analysis_project.info.organism.lower().split(','),
-            __settings.fastq_strand_indexes)
-        if fastq_strand_indexes:
-            print "Setting up conf file for strandedness determination"
-            fastq_strand_conf = os.path.join(analysis_project.dirn,
-                                             "fastq_strand.conf")
-            with open(fastq_strand_conf,'w') as fp:
-                fp.write("%s\n" % fastq_strand_indexes)
-        else:
-            print "No matching indexes for strandedness determination"
-    else:
-        print "No organisms specified"
-    # Set up the QC
-    illumina_qc = IlluminaQC(
-        protocol="singlecell",
-        nthreads=nprocessors['qc'],
-        fastq_screen_subset=default_fastq_screen_subset,
-        fastq_strand_conf=fastq_strand_conf)
-    runqc = RunQC()
+    runqc = QCPipeline()
     runqc.add_project(analysis_project,
+                      qc_protocol="singlecell",
                       fastq_dir="fastqs.samples",
                       qc_dir="qc.samples",
-                      illumina_qc=illumina_qc)
+                      multiqc=True)
     runqc.add_project(analysis_project,
+                      qc_protocol="singlecell",
                       fastq_dir="fastqs.barcodes",
                       qc_dir="qc.barcodes",
-                      illumina_qc=illumina_qc)
-    exit_status = runqc.run(multiqc=True,
-                            qc_runner=runners['qc'],
-                            report_runner=default_runner,
-                            max_jobs=max_jobs,
-                            batch_size=25)
+                      multiqc=False)
+    exit_status = runqc.run(max_jobs=max_jobs,
+                            batch_size=25,
+                            runners={
+                                'qc_runner': runners['qc'],
+                                'report_runner': default_runner,
+                                'verify_runner': default_runner
+                            },
+                            fastq_strand_indexes=
+                            __settings.fastq_strand_indexes,
+                            nthreads=nprocessors['qc'],
+                            default_runner=default_runner,
+                            verbose=args.verbose)
     if exit_status != 0:
         # Finished with error
         logger.critical("QC failed: exit status %s" % exit_status)

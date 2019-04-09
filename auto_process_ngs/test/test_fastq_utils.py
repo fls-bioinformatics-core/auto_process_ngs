@@ -14,6 +14,7 @@ from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.fastq_utils import get_read_count
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
+from auto_process_ngs.fastq_utils import remove_index_fastqs
 
 # Test data
 fastq_data = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
@@ -804,3 +805,48 @@ class TestGetReadCount(unittest.TestCase):
         """get_read_count: check read count for no Fastqs
         """
         self.assertEqual(get_read_count(list()),0)
+
+# remove_index_fastqs
+class TestRemoveIndexFastqs(unittest.TestCase):
+    """
+    Tests for the remove_index_fastqs function
+    """
+    def test_remove_index_fastqs_no_index_reads(self):
+        """remove_index_fastqs: list with no index Fastqs is unchanged
+        """
+        fastqs = ["PJB1_S1_R1_001.fastq.gz",
+                  "PJB1_S1_R2_001.fastq.gz",
+                  "PJB2_S2_R1_001.fastq.gz",
+                  "PJB2_S2_R2_001.fastq.gz",]
+        self.assertEqual(remove_index_fastqs(fastqs),fastqs)
+    def test_remove_index_fastqs_i1_removed(self):
+        """remove_index_fastqs: I1 index Fastqs are removed
+        """
+        fastqs_in = ["PJB1_S1_R1_001.fastq.gz",
+                     "PJB1_S1_R2_001.fastq.gz",
+                     "PJB1_S1_I1_001.fastq.gz",
+                     "PJB2_S2_R1_001.fastq.gz",
+                     "PJB2_S2_R2_001.fastq.gz",
+                     "PJB2_S2_I1_001.fastq.gz",]
+        fastqs_out = ["PJB1_S1_R1_001.fastq.gz",
+                      "PJB1_S1_R2_001.fastq.gz",
+                      "PJB2_S2_R1_001.fastq.gz",
+                      "PJB2_S2_R2_001.fastq.gz",]
+        self.assertEqual(remove_index_fastqs(fastqs_in),fastqs_out)
+    def test_remove_index_fastqs_i1_i2_pairs_removed(self):
+        """remove_index_fastqs: I1/I2 index Fastq pairs are removed
+        """
+        fastqs_in = ["PJB1_S1_R1_001.fastq.gz",
+                     "PJB1_S1_R2_001.fastq.gz",
+                     "PJB1_S1_I1_001.fastq.gz",
+                     "PJB1_S1_I2_001.fastq.gz",
+                     "PJB2_S2_R1_001.fastq.gz",
+                     "PJB2_S2_R2_001.fastq.gz",
+                     "PJB2_S2_I1_001.fastq.gz",
+                     "PJB2_S2_I2_001.fastq.gz",]
+        fastqs_out = ["PJB1_S1_R1_001.fastq.gz",
+                      "PJB1_S1_R2_001.fastq.gz",
+                      "PJB2_S2_R1_001.fastq.gz",
+                      "PJB2_S2_R2_001.fastq.gz",]
+        self.assertEqual(remove_index_fastqs(fastqs_in),fastqs_out)
+

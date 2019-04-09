@@ -1,5 +1,5 @@
 #     mockqc.py: module providing mock Illumina QC data for testing
-#     Copyright (C) University of Manchester 2016 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
 #
 ########################################################################
 
@@ -131,3 +131,16 @@ class MockQCOutputs(object):
         # Fake PNG
         with open(screen_basename+'png','wb') as fp:
             fp.write(base64.b64decode(mockqcdata.BASE64_PNG_DATA))
+
+    @classmethod
+    def fastq_strand_v0_0_4(self,fastq,qc_dir):
+        """
+        Create mock outputs from fastq_strand.py v0.0.4
+        """
+        # Basename for Fastq_strand products
+        basename = self.fastq_basename(fastq)
+        fastq_strand_txt = os.path.join(qc_dir,
+                                        "%s_fastq_strand.txt" %
+                                        basename)
+        with open(fastq_strand_txt,'w') as fp:
+            fp.write(mockqcdata.FASTQ_STRAND_V0_0_4['fastq_strand.txt'])

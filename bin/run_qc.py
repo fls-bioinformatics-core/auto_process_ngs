@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 #########################################################################
 #
@@ -21,20 +21,15 @@ import sys
 import os
 import argparse
 import logging
-from bcftbx.utils import mkdir
 from bcftbx.JobRunner import fetch_runner
 from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
-from auto_process_ngs.qc.runqc import RunQC
-from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
-from auto_process_ngs.utils import get_organism_list
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
+from auto_process_ngs.qc.pipeline import QCPipeline
 
 # QC protocols
-from auto_process_ngs.qc.illumina_qc import PROTOCOLS
+from auto_process_ngs.qc.constants import PROTOCOLS
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -47,10 +42,6 @@ try:
 except KeyError:
     # No environment modules specified
     __modulefiles = None
-
-#######################################################################
-# Classes
-#######################################################################
 
 #######################################################################
 # Functions
@@ -178,7 +169,12 @@ if __name__ == "__main__":
 
     # Job runners
     default_runner = __settings.general.default_runner
-    qc_runner = fetch_runner(args.runner)
+    if args.runner:
+        qc_runner = fetch_runner(args.runner)
+    else:
+        qc_runner = self._settings.runners.qc
+    verify_runner = default_runner
+    report_runner = default_runner
 
     # Load the project
     announce("Loading project data")
@@ -194,58 +190,24 @@ if __name__ == "__main__":
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
 
-    # Handle strand stats
-    fastq_strand_conf = None
-    if args.organism:
-        organism = args.organism
-    else:
-        organism = project.info.organism
-    if organism:
-        print "Organisms: %s" % organism
-        fastq_strand_indexes = build_fastq_strand_conf(
-            get_organism_list(organism),
-            __settings.fastq_strand_indexes)
-        if fastq_strand_indexes:
-            print "Setting up conf file for strandedness determination"
-            fastq_strand_conf = os.path.join(project.dirn,
-                                             "fastq_strand.conf")
-            with open(fastq_strand_conf,'w') as fp:
-                fp.write("%s\n" % fastq_strand_indexes)
-        else:
-            print "No matching indexes for strandedness determination"
-    else:
-        print "No organisms specified"
-
-    # Determine QC protocol
-    qc_protocol = args.qc_protocol
-    if qc_protocol is None:
-        qc_protocol = determine_qc_protocol(project)
-        print "QC protocol set to '%s'" % qc_protocol
-
-    # Set up QC script
-    illumina_qc = IlluminaQC(
-        protocol=qc_protocol,
-        nthreads=args.nthreads,
-        fastq_screen_subset=args.fastq_screen_subset,
-        fastq_strand_conf=fastq_strand_conf,
-        ungzip_fastqs=False)
-
-    # Run the QC
+    # Set up and run the QC pipeline
     announce("Running QC")
-    runqc = RunQC()
+    runqc = QCPipeline()
     runqc.add_project(project,
-                      fastq_dir=args.fastq_dir,
-                      sample_pattern=args.sample_pattern,
                       qc_dir=args.qc_dir,
-                      illumina_qc=illumina_qc)
-    status = runqc.run(report_html=out_file,
-                       multiqc=args.run_multiqc,
-                       qc_runner=qc_runner,
-                       verify_runner=default_runner,
-                       report_runner=default_runner,
+                      fastq_dir=args.fastq_dir,
+                      organism=args.organism,
+                      qc_protocol=args.qc_protocol)
+    status = runqc.run(nthreads=args.nthreads,
+                       fastq_subset=args.fastq_screen_subset,
+                       fastq_strand_indexes=
+                       __settings.fastq_strand_indexes,
                        max_jobs=args.max_jobs,
-                       batch_size=args.batch_size)
+                       runners={
+                           'qc_runner': qc_runner,
+                           'verify_runner': verify_runner,
+                           'report_runner': report_runner,
+                       })
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
-

@@ -26,6 +26,7 @@ Functions:
 
 - run_reference_id:
 - split_sample_name:
+- copy_analysis_project:
 """
 
 #######################################################################
@@ -461,7 +462,11 @@ class AnalysisProject:
         if fastq_dir is None:
             fastq_dir = self.info.primary_fastq_dir
         else:
-            if fastq_dir not in self.fastq_dirs:
+            if fastq_dir.startswith("%s%s" % (self.dirn,os.sep)):
+                fastq_dir_ = os.path.relpath(fastq_dir,self.dirn)
+            else:
+                fastq_dir_ = fastq_dir
+            if fastq_dir_ not in self.fastq_dirs:
                 logger.warning("Requested fastqs dir '%s' not in list "
                                "of possible dirs %s" %
                                (fastq_dir,
@@ -536,10 +541,19 @@ class AnalysisProject:
         the 'samples' metadata item for the project to be
         updated.
 
+        Relative paths are assumed to be subdirectories
+        of the project directory.
+
         Note that it doesn't change the active fastq set;
         use the 'use_fastq_dir' method to do this.
         """
-        if new_primary_fastq_dir in self.fastq_dirs:
+        if not os.path.isabs(new_primary_fastq_dir):
+            full_fastq_dir = os.path.join(self.dirn,
+                                          new_primary_fastq_dir)
+        else:
+            full_fastq_dir = new_primary_fastq_dir
+        if full_fastq_dir in [os.path.join(self.dirn,d)
+                              for d in self.fastq_dirs]:
             self.info['primary_fastq_dir'] = new_primary_fastq_dir
             self.info['samples'] = self.sample_summary()
             self.info.save(self.info_file)
@@ -553,7 +567,10 @@ class AnalysisProject:
         Switch fastq directory and repopulate
 
         Switch to a specified source fastq dir, or to the
-        primary fastq dir if none is supplied
+        primary fastq dir if none is supplied.
+
+        Relative paths are assumed to be subdirectories
+        of the project directory.
         """
         if fastq_dir is None:
             fastq_dir = self.info.primary_fastq_dir
@@ -564,7 +581,12 @@ class AnalysisProject:
                 fastq_dir = '.'
             else:
                 fastq_dir = self.fastq_dirs[0]
-        elif fastq_dir not in self.fastq_dirs:
+        if not os.path.isabs(fastq_dir):
+            full_fastq_dir = os.path.join(self.dirn,fastq_dir)
+        else:
+            full_fastq_dir = fastq_dir
+        if full_fastq_dir not in [os.path.join(self.dirn,d)
+                                  for d in self.fastq_dirs]:
             raise Exception("Fastq dir '%s' not found in "
                             "project '%s' (%s)" %
                             (fastq_dir,self.name,self.dirn))
@@ -1189,3 +1211,33 @@ def split_sample_name(s):
         if part.isdigit():
             parts[i] = int(part)
     return parts
+
+def copy_analysis_project(project,fastq_dir=None):
+    """
+    Make a copy of an AnalysisProject instance
+
+    Arguments:
+      project (AnalysisProject): project intance to copy
+      fastq_dir (str): if set then specifies the Fastq
+        subdirectory to use in the new instance
+
+    Returns:
+      AnalysisProject: new AnalysisProject instance which
+        is a copy of the one supplied on input.
+    """
+    if fastq_dir is None:
+        fastq_dir = project.fastq_dir
+    return AnalysisProject(project.name,
+                           project.dirn,
+                           user=project.info.user,
+                           PI=project.info.PI,
+                           library_type=project.info.library_type,
+                           single_cell_platform=
+                           project.info.single_cell_platform,
+                           organism=project.info.organism,
+                           run=project.info.run,
+                           comments=project.info.comments,
+                           platform=project.info.platform,
+                           fastq_dir=fastq_dir,
+                           fastq_attrs=
+                           project.fastq_attrs)

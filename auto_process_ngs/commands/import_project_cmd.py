@@ -89,8 +89,19 @@ def import_project(ap,project_dir):
                       % (project_name,ex))
         return
     if project.qc_dir is None:
-        print "No QC for %s" % project_name
+        print "No QC directory assigned for %s" % project_name
     else:
+        print "QC directory for %s: %s" % (project_name,
+                                           project.qc_dir)
+        qc_info = project.qc_info(project.qc_dir)
+        if qc_info.fastq_dir:
+            print "Updating stored Fastq directory for QC"
+            fastq_dir = os.path.join(project.dirn,
+                                     os.path.relpath(qc_info.fastq_dir,
+                                                     project_dir))
+            print "Updated Fastq directory: %s" % fastq_dir
+            qc_info['fastq_dir'] = fastq_dir
+            qc_info.save()
         if verify_qc(project,log_dir=ap.log_dir):
             try:
                 report_qc(project,
@@ -98,7 +109,9 @@ def import_project(ap,project_dir):
                           multiqc=True,
                           log_dir=ap.log_dir)
                 print "Updated QC report for %s" % project_name
-            except Exception, ex:
+            except Exception as ex:
                 raise Exception("Project '%s' imported but failed to "
                                 "generate QC report: %s" % (project_name,
                                                             ex))
+        else:
+            print "Failed to verify QC: report not updated"

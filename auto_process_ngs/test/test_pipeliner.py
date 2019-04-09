@@ -16,6 +16,7 @@ from auto_process_ngs.pipeliner import PipelineTask
 from auto_process_ngs.pipeliner import PipelineFunctionTask
 from auto_process_ngs.pipeliner import PipelineCommand
 from auto_process_ngs.pipeliner import PipelineCommandWrapper
+from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
@@ -101,6 +102,114 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(out_file))
         self.assertEqual(open(out_file,'r').read(),
                          "item1\nitem2\n")
+
+    def test_pipeline_with_multiple_commands(self):
+        """
+        Pipeline: define and run pipeline with multiple commands
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                self.add_output('files',list())
+            def setup(self):
+                for f,s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text to file",
+                            "echo",s,
+                            ">>",f))
+            def finish(self):
+                for f,s in self.args.s:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = EchoMany("Write items",
+                        ("out1.txt","item"),
+                        ("out2.txt","item"),)
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt","out2.txt")]
+        for out_file in out_files:
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(open(out_file,'r').read(),
+                             "item\n")
+
+    def test_pipeline_with_batched_commands(self):
+        """
+        Pipeline: define and run pipeline with batched commands
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                self.add_output('files',list())
+            def setup(self):
+                for f,s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text to file",
+                            "echo",s,
+                            ">>",f))
+            def finish(self):
+                for f,s in self.args.s:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        task = EchoMany("Write items",
+                        ("out1.txt","item"),
+                        ("out2.txt","item"),)
+        ppl.add_task(task)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              batch_size=2)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_files = [os.path.join(self.working_dir,f)
+                     for f in ("out1.txt","out2.txt")]
+        for out_file in out_files:
+            self.assertTrue(os.path.exists(out_file))
+            self.assertEqual(open(out_file,'r').read(),
+                             "item\n")
+
+    def test_pipeline_sets_pipelineparam_as_task_input(self):
+        """
+        Pipeline: handle PipelineParam passed as task input
+        """
+        # Define a task
+        # Echoes/appends text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Create a pipeline param instance
+        s = PipelineParam("hello")
+        self.assertEqual(s.value,"hello")
+        # Build the pipeline
+        ppl = Pipeline()
+        task = Echo("Write item1","out.txt",s)
+        ppl.add_task(task)
+        # Update the pipeline param
+        s.set("goodbye")
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        out_file = os.path.join(self.working_dir,"out.txt")
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"goodbye\n")
 
     def test_pipeline_with_external_scheduler(self):
         """
@@ -281,6 +390,218 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(task3_1.exit_code,None)
         self.assertEqual(task3_2.exit_code,None)
 
+    def test_pipeline_built_in_parameters(self):
+        """
+        Pipeline: test the built-in parameters are set
+        """
+        # Define a task to output values passed in
+        class OutputValues(PipelineTask):
+            def init(self,working_dir,batch_size,verbose):
+                self.add_output('builtins',dict())
+            def setup(self):
+                self.output.builtins['working_dir'] = self.args.working_dir
+                self.output.builtins['batch_size'] = self.args.batch_size
+                self.output.builtins['verbose'] = self.args.verbose
+        # Make a pipeline
+        ppl = Pipeline()
+        task = OutputValues("Output the built-in parameter values",
+                            working_dir=ppl.params.WORKING_DIR,
+                            batch_size=ppl.params.BATCH_SIZE,
+                            verbose=ppl.params.VERBOSE)
+        ppl.add_task(task)
+        self.assertTrue("WORKING_DIR" in ppl.params)
+        self.assertTrue("BATCH_SIZE" in ppl.params)
+        self.assertTrue("VERBOSE" in ppl.params)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              batch_size=100,
+                              verbose=True)
+        self.assertEqual(task.output.builtins['working_dir'],
+                         self.working_dir)
+        self.assertEqual(task.output.builtins['batch_size'],100)
+        self.assertEqual(task.output.builtins['verbose'],True)
+
+    def test_pipeline_add_param(self):
+        """
+        Pipeline: test the 'add_param' method
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a parameter
+        self.assertFalse('ncores' in ppl.params)
+        ppl.add_param('ncores',value=1,type=int)
+        self.assertTrue('ncores' in ppl.params)
+        self.assertTrue(isinstance(ppl.params.ncores,
+                                   PipelineParam))
+        self.assertEqual(ppl.params.ncores.value,1)
+
+    def test_pipeline_add_param_twice_raises_exception(self):
+        """
+        Pipeline: 'add_param' raises exception when parameter is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a parameter
+        self.assertFalse('ncores' in ppl.params)
+        ppl.add_param('ncores',value=1,type=int)
+        self.assertTrue('ncores' in ppl.params)
+        self.assertRaises(KeyError,
+                          ppl.add_param,
+                          'ncores')
+
+    def test_pipeline_param_passed_at_runtime(self):
+        """
+        Pipeline: check parameter is passed at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Build the pipeline with a parameter
+        ppl = Pipeline()
+        ppl.add_param('out_file')
+        task1 = Echo("Echo item1",
+                     f=ppl.params.out_file,
+                     s="item1")
+        task2 = Echo("Echo item2",
+                     f=ppl.params.out_file,
+                     s="item2")
+        ppl.add_task(task2,requires=(task1,))
+        # Check the parameter before setting a value
+        self.assertEqual(ppl.params.out_file.value,None)
+        # Run the pipeline setting the output file
+        out_file = os.path.join(self.working_dir,"out.txt")
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              params={ 'out_file': out_file, })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),
+                         "item1\nitem2\n")
+
+    def test_pipeline_add_runner(self):
+        """
+        Pipeline: test the 'add_runner' method
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a runner definition
+        self.assertFalse('test_runner' in ppl.runners)
+        ppl.add_runner('test_runner')
+        print ppl.runners
+        self.assertTrue('test_runner' in ppl.runners)
+        self.assertTrue(isinstance(ppl.runners['test_runner'],
+                                   PipelineParam))
+        self.assertTrue(isinstance(ppl.runners['test_runner'].value,
+                                   SimpleJobRunner))
+
+    def test_pipeline_add_runner_twice_raises_exception(self):
+        """
+        Pipeline: 'add_runner' raises exception when runner is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a runner definition
+        self.assertFalse('test_runner' in ppl.runners)
+        ppl.add_runner('test_runner')
+        self.assertTrue('test_runner' in ppl.runners)
+        self.assertRaises(KeyError,
+                          ppl.add_runner,
+                          'test_runner')
+
+    def test_pipeline_runner_passed_at_runtime(self):
+        """
+        Pipeline: check runner is passed at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Define custom runner for testing
+        class TestJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"out.txt")
+        ppl = Pipeline()
+        ppl.add_runner("test_runner")
+        task1 = Echo("Echo item1",
+                     f=out_file,
+                     s="item1")
+        ppl.add_task(task1,
+                     runner=ppl.runners["test_runner"])
+        # Run the pipeline setting the runner
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              runners={ 'test_runner':
+                                        TestJobRunner(), })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"item1\n")
+
+    def test_pipeline_runner_set_default_runner_at_runtime(self):
+        """
+        Pipeline: check setting default runner at runtime
+        """
+        # Define task to echoes/append text to a file
+        class Echo(PipelineTask):
+            def init(self,f,s):
+                self.add_output('file',f)
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text to file",
+                        "echo",self.args.s,
+                        ">>",self.args.f))
+        # Define custom runners for testing
+        class DefaultJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        class TestJobRunner(SimpleJobRunner):
+            def __init__(self,*args,**kws):
+                SimpleJobRunner.__init__(self,*args,**kws)
+        # Build the pipeline
+        out_file = os.path.join(self.working_dir,"out.txt")
+        ppl = Pipeline()
+        ppl.add_runner("test_runner1")
+        ppl.add_runner("test_runner2")
+        task1 = Echo("Echo item1",
+                     f=out_file,
+                     s="item1")
+        task2 = Echo("Echo item2",
+                     f=out_file,
+                     s="item2")
+        ppl.add_task(task1,
+                     runner=ppl.runners["test_runner1"])
+        ppl.add_task(task2,
+                     requires=(task1,),
+                     runner=ppl.runners["test_runner2"])
+        # Run the pipeline setting the default runner
+        # and only one of the two runners
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1,
+                              default_runner=DefaultJobRunner(),
+                              runners={ 'test_runner1':
+                                        TestJobRunner(), })
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(os.path.exists(out_file))
+        self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
+
     def test_pipeline_method_task_list(self):
         """
         Pipeline: test the 'task_list' method
@@ -411,6 +732,8 @@ class TestPipeline(unittest.TestCase):
                 self.output.list.append(self.args.s)
         # Make first pipeline
         ppl1 = Pipeline()
+        ppl1.add_param("param1")
+        ppl1.add_runner("runner1")
         task1 = Append("Append 1",(),"item1")
         task2 = Append("Append 2",task1.output.list,"item2")
         task3 = Append("Append 3",task1.output.list,"item3")
@@ -421,6 +744,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),4)
         # Make second pipeline
         ppl2 = Pipeline()
+        ppl2.add_param("param2")
+        ppl2.add_runner("runner2")
         task5 = Append("Append 5",task1.output.list,"item5")
         task6 = Append("Append 6",task3.output.list,"item6")
         task7 = Append("Append 7",task3.output.list,"item7")
@@ -432,7 +757,14 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),7)
         # Check requirements on first task of pipeline 2
         # have been updated
-        self.assertEqual(ppl1.get_task(task5.id())[1],[task4,])
+        self.assertEqual(sorted(ppl1.get_task(task5.id())[1]),
+                         sorted([task2,task4,]))
+        # Check params from both pipelines are defined
+        self.assertTrue('param1' in ppl1.params)
+        self.assertTrue('param2' in ppl1.params)
+        # Check runners from both pipelines are defined
+        self.assertTrue('runner1' in ppl1.runners)
+        self.assertTrue('runner2' in ppl1.runners)
 
     def test_pipeline_merge_pipeline(self):
         """
@@ -449,6 +781,8 @@ class TestPipeline(unittest.TestCase):
                 self.output.list.append(self.args.s)
         # Make first pipeline
         ppl1 = Pipeline()
+        ppl1.add_param("param1")
+        ppl1.add_runner("runner1")
         task1 = Append("Append 1",(),"item1")
         task2 = Append("Append 2",task1.output.list,"item2")
         task3 = Append("Append 3",task1.output.list,"item3")
@@ -459,6 +793,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(len(ppl1.task_list()),4)
         # Make second pipeline
         ppl2 = Pipeline()
+        ppl2.add_param("param2")
+        ppl2.add_runner("runner2")
         task5 = Append("Append 5",task1.output.list,"item5")
         task6 = Append("Append 6",task3.output.list,"item6")
         task7 = Append("Append 7",task3.output.list,"item7")
@@ -468,6 +804,12 @@ class TestPipeline(unittest.TestCase):
         # Merge second pipeline into the first
         ppl1.merge_pipeline(ppl2)
         self.assertEqual(len(ppl1.task_list()),7)
+        # Check params from both pipelines are defined
+        self.assertTrue('param1' in ppl1.params)
+        self.assertTrue('param2' in ppl1.params)
+        # Check runners from both pipelines are defined
+        self.assertTrue('runner1' in ppl1.runners)
+        self.assertTrue('runner2' in ppl1.runners)
 
 class TestPipelineTask(unittest.TestCase):
 
@@ -593,6 +935,24 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(task.args.c,"goodbye")
         self.assertEqual(task.args.d,12)
         self.assertEqual(task.args.e,True)
+        # Check task raises exception if init fails
+        # Define a task for testing
+        class FailInit(PipelineTask):
+            def init(self,a,b,c='hello',d=13,e=None):
+                raise Exception("Forced init to fail")
+            def setup(self):
+                result = "a=%s b=%s c=%s d=%s e=%s" \
+                         % (self.args.a,
+                            self.args.b,
+                            self.args.c,
+                            self.args.d,
+                            self.args.e)
+                self.output.results.append(result)
+        self.assertRaises(Exception,
+                          FailInit,
+                          "This will fail on init",
+                          "a",
+                          "b")
 
     def test_pipelinetask_no_commands(self):
         """
@@ -668,6 +1028,120 @@ class TestPipelineTask(unittest.TestCase):
         self.assertEqual(stdout[4],"Hello!")
         self.assertTrue(stdout[5].startswith("#### END "))
         self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_with_multiple_commands(self):
+        """
+        PipelineTask: run task with multiple shell commands
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                pass
+            def setup(self):
+                for s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",s))
+        # Make a task instance
+        task = EchoMany("Echo string","Hello!","Goodbye!")
+        # Check initial state
+        self.assertEqual(task.args.s,("Hello!","Goodbye!"))
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        # #### COMMAND Echo text
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Goodbye!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),15) # 15 = 14 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Echo text")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"Hello!")
+        self.assertTrue(stdout[5].startswith("#### END "))
+        self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[7],"#### COMMAND Echo text")
+        self.assertEqual(stdout[8],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[9],"#### USER %s" % self._user())
+        self.assertTrue(stdout[10].startswith("#### START "))
+        self.assertEqual(stdout[11],"Goodbye!")
+        self.assertTrue(stdout[12].startswith("#### END "))
+        self.assertEqual(stdout[13],"#### EXIT_CODE 0")
+
+    def test_pipelinetask_with_batched_commands(self):
+        """
+        PipelineTask: run task with batched shell commands
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class EchoMany(PipelineTask):
+            def init(self,*s):
+                pass
+            def setup(self):
+                for s in self.args.s:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Echo text","echo",s))
+        # Make a task instance
+        task = EchoMany("Echo string","Hello!","Goodbye!")
+        # Check initial state
+        self.assertEqual(task.args.s,("Hello!","Goodbye!"))
+        self.assertFalse(task.completed)
+        self.assertEqual(task.exit_code,None)
+        self.assertFalse(task.output)
+        # Run the task with batches
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 batch_size=2,
+                 async=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Batch commands for Echo string
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # Hello!
+        # Goodbye!
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
+        self.assertEqual(stdout[0],
+                         "#### COMMAND Batch commands for Echo string")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"Hello!")
+        self.assertEqual(stdout[5],"Goodbye!")
+        self.assertTrue(stdout[6].startswith("#### END "))
+        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_failing_command(self):
         """
@@ -786,7 +1260,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 poll_interval=0.2,
+                 poll_interval=0.5,
                  async=False)
         # Check final state
         self.assertTrue(task.completed)
@@ -939,6 +1413,77 @@ class TestPipelineCommandWrapper(unittest.TestCase):
         # Add argument and check updated command
         cmd.add_args("there")
         self.assertEqual(str(cmd.cmd()),"echo hello there")
+
+class TestPipelineParam(unittest.TestCase):
+
+    def test_pipelineparam_no_type(self):
+        """
+        PipelineParam: no type specified
+        """
+        # No initial value
+        p = PipelineParam()
+        self.assertEqual(p.value,None)
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+        p.set(123)
+        self.assertEqual(p.value,123)
+
+    def test_pipelineparam_with_initial_value(self):
+        """
+        PipelineParam: initial value supplied
+        """
+        # Specify an initial value
+        p = PipelineParam("abc")
+        self.assertEqual(p.value,"abc")
+        p = PipelineParam(value="def")
+        self.assertEqual(p.value,"def")
+
+    def test_pipelineparam_with_type(self):
+        """
+        PipelineParam: type function supplied
+        """
+        # Specify type function as 'str'
+        p = PipelineParam(type=str)
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+        p.set(123)
+        self.assertEqual(p.value,"123")
+        # Specify type function as 'int'
+        p = PipelineParam(type=int)
+        p.set(123)
+        self.assertEqual(p.value,123)
+        p.set("123")
+        self.assertEqual(p.value,123)
+        # Exception for bad value
+        p.set("abc")
+        self.assertRaises(ValueError,lambda: p.value)
+        # Specify type function as 'float'
+        p = PipelineParam(type=float)
+        p.set(1.23)
+        self.assertEqual(p.value,1.23)
+        p.set("1.23")
+        self.assertEqual(p.value,1.23)
+        # Exception for bad value
+        p.set("abc")
+        self.assertRaises(ValueError,lambda: p.value)
+
+    def test_pipelineparam_with_default(self):
+        """
+        PipelineParam: default function supplied
+        """
+        # Specify type function as 'str'
+        p = PipelineParam(default=lambda: "default")
+        self.assertEqual(p.value,"default")
+        p.set("abc")
+        self.assertEqual(p.value,"abc")
+
+    def test_pipelineparam_with_name(self):
+        """
+        PipelineParam: name supplied
+        """
+        # Specify a name
+        p = PipelineParam(name="my_param")
+        self.assertEqual(p.name,"my_param")
 
 class TestFileCollector(unittest.TestCase):
 

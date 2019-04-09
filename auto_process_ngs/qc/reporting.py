@@ -32,10 +32,10 @@ from ..metadata import AnalysisDirMetadata
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
-from .illumina_qc import IlluminaQC
-from .illumina_qc import fastqc_output
-from .illumina_qc import fastq_screen_output
-from .illumina_qc import fastq_strand_output
+from .outputs import fastqc_output
+from .outputs import fastq_screen_output
+from .outputs import fastq_strand_output
+from .outputs import expected_outputs
 from .plots import uscreenplot
 from .plots import ufastqcplot
 from .plots import uboxplot
@@ -50,7 +50,7 @@ logger = logging.getLogger(__name__)
 # Data
 #######################################################################
 
-from .illumina_qc import FASTQ_SCREENS
+from .constants import FASTQ_SCREENS
 
 QC_REPORT_CSS_STYLES = """/* General styles */
 html { font-family: DejaVu Serif, serif; }
@@ -202,7 +202,7 @@ class QCReporter(object):
     def samples(self):
         return self._samples
 
-    def verify(self,qc_dir=None,illumina_qc=None):
+    def verify(self,qc_dir=None,qc_protocol=None):
         """
         Check the QC outputs are correct for the project
 
@@ -210,8 +210,8 @@ class QCReporter(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project being checked.
-          illumina_qc (IlluminaQC): configured IlluminaQC
-            instance to use for verification (optional)
+          qc_protocol (str): QC protocol to verify against
+            (optional)
 
         Returns:
           Boolean: Returns True if all expected QC products
@@ -225,14 +225,25 @@ class QCReporter(object):
                 qc_dir = os.path.join(self._project.dirn,
                                       qc_dir)
         logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
+        for dirn in (self._project.dirn,qc_dir):
+            fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
+            if os.path.exists(fastq_strand_conf):
+                break
+            fastq_strand_conf = None
+        logger.debug("QCReporter.verify: fastq_strand conf file : %s" %
+                     fastq_strand_conf)
         verified = True
-        for sample in self._samples:
-            if not sample.verify(qc_dir,illumina_qc=illumina_qc):
+        for f in expected_outputs(self._project,qc_dir,
+                                  fastq_strand_conf,
+                                  qc_protocol=qc_protocol):
+            if not os.path.exists(f):
+                print "Missing: %s" % f
                 verified = False
+                ##break
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
-               illumina_qc=None,report_attrs=None,
+               qc_protocol=None,report_attrs=None,
                summary_fields=None,relative_links=False):
         """
         Report the QC for the project
@@ -244,8 +255,8 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
-          illumina_qc (IlluminaQC): configured IlluminaQC
-            instance to use for reporting (optional)
+          qc_protocol (str): QC protocol to report against
+            (optional)
           report_attrs (list): optional, list of elements to
             report for each Fastq pair
           summary_fields (list): optional, list of fields to
@@ -271,7 +282,7 @@ class QCReporter(object):
         report = QCReport(self._project,
                           title=title,
                           qc_dir=qc_dir,
-                          illumina_qc=illumina_qc,
+                          qc_protocol=qc_protocol,
                           report_attrs=report_attrs,
                           summary_fields=summary_fields,
                           relpath=relpath)
@@ -312,30 +323,6 @@ class QCSample(object):
     @property
     def fastq_pairs(self):
         return self._fastq_pairs
-
-    def verify(self,qc_dir,illumina_qc=None):
-        """
-        Check QC products for this sample
-
-        Checks that expected QC outputs for the sample
-        are present in the specified QC directory.
-
-        Arguments:
-          qc_dir (str): path to the QC output dir; relative
-            path will be treated as a subdirectory of the
-            project being checked.
-          illumina_qc (IlluminaQC): configured IlluminaQC
-            instance to use for verification (optional)
-
-        Returns:
-          Boolean: returns True if the QC products are
-            present, False otherwise.
-        """
-        logger.debug("QCSample.verify: qc_dir: %s" % qc_dir)
-        for fq_pair in self.fastq_pairs:
-            if not fq_pair.verify(qc_dir,illumina_qc=illumina_qc):
-                return False
-        return True
 
 class FastqSet(object):
     """
@@ -389,36 +376,6 @@ class FastqSet(object):
         return filter(lambda fq: fq is not None,
                       self._fastqs)
 
-    def verify(self,qc_dir,illumina_qc=None):
-        """
-        Check QC products for this Fastq pair
-
-        Checks that fastq_screens and FastQC files were found.
-        Returns True if the QC products are present, False
-        otherwise.
-
-        Arguments:
-          qc_dir (str): path to the location of the QC
-            output directory
-          illumina_qc (IlluminaQC): configured IlluminaQC
-            instance to use for verification (optional)
-
-        Returns:
-          Boolean: returns True if the QC products are
-            present, False otherwise.
-        """
-        logger.debug("FastqSet.verify: fastqs: %s" % (self._fastqs,))
-        logger.debug("FastqSet.verify: qc_dir: %s" % qc_dir)
-        if illumina_qc is None:
-            illumina_qc = IlluminaQC()
-        for fq in self._fastqs:
-            if fq is None:
-                continue
-            present,missing = illumina_qc.check_outputs(fq,qc_dir)
-            if missing:
-                return False
-        return True
-
 class QCReport(Document):
     """
     Create a QC report document for a project
@@ -453,7 +410,7 @@ class QCReport(Document):
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
     """
-    def __init__(self,project,title=None,qc_dir=None,illumina_qc=None,
+    def __init__(self,project,title=None,qc_dir=None,qc_protocol=None,
                  report_attrs=None,summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
@@ -465,8 +422,8 @@ class QCReport(Document):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
-          illumina_qc (IlluminaQC): configured IlluminaQC
-            instance to use for reporting (optional)
+          qc_protocol (str): QC protocol to report against
+            (optional)
           report_attrs (list): list of elements to report for
             each Fastq pair
           summary_fields (list): list of fields to report for
@@ -486,8 +443,6 @@ class QCReport(Document):
                                       qc_dir)
         self.qc_dir = qc_dir
         logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
-        if illumina_qc is None:
-            illumina_qc = IlluminaQC()
         # Detect outputs
         self._detect_outputs()
         if self.outputs:

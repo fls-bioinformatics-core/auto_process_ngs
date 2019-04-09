@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -20,6 +20,7 @@ Additional supporting classes:
 - PipelineFunctionTask: subclass of PipelineTask which enables Python
   functions to be run as external processes
 - PipelineCommandWrapper: shortcut alternative to PipelineCommand
+- PipelineParam: class for passing arbitrary values between tasks
 - FileCollector: returning collections of files based on glob patterns
 
 There are some underlying classes and functions that are intended for
@@ -207,7 +208,8 @@ are a number of implications:
 
 2. Outputs from tasks should be passed by object references (e.g.
    via a list or dictionary, which can be updated by the task after
-   being passed, or via specialised classes such as ``FileCollector``).
+   being passed, via specialised classes such as ``FileCollector``
+   or ``PipelineParam`` - see sections below).
 
 As an example, consider the following task which reverses the order of
 a list of items::
@@ -229,9 +231,22 @@ reference to the output list, which can then be passed to another task.
 The list will be populated when the reverse task runs, at which point
 the output will be available to the following tasks.
 
-The ``FileCollector`` class is a specialised class which enables
-the collection of files matching a glob-type pattern, and which can
-be used as an alternative where appropriate. For example::
+Specialised task input/output classes
+-------------------------------------
+
+There are currently two specialised classes which can be used to
+pass data from the output of one task into the input of another:
+
+``FileCollector``
+*****************
+
+The ``FileCollector`` class enables the collection of files matching
+a glob-type pattern. It behaves as an iterator, with the file collection
+being deferred until the iteration actually takes place; it can therefore
+be used as an output for tasks where a set of files are created but the
+precise number or names of the files are not known *a priori*.
+
+For example::
 
     class MakeFiles(PipelineTask):
         def init(self,d,filenames):
@@ -243,6 +258,31 @@ be used as an alternative where appropriate. For example::
             for f in self.args.filenames:
                 with open(os.path.join(self.args.d,f) as fp:
                     fp.write()
+
+``PipelineParam``
+*****************
+
+The ``PipelineParam`` class offers a way to pass strings or numerical
+types which would normally be immutable between tasks.
+
+For example::
+
+    import string
+    from random import choice
+
+    class RandomString(PipelineTask):
+        def init(self,n):
+            self.add_output('string',PipelineParam())
+        def setup(self):
+            # Create a random string of length 'n' characters
+            allchar = string.ascii_letters + string.punctuation + string.digits
+            s = "".join([choice(allchar) for x in range(self.args.n)])
+            # Assign the string to the output
+            self.output.string.set(s)
+
+If passed as input to a subsequent task, the ``PipelineParam``
+instance will behave as a static value when accessed via
+``self.args...``.
 
 Running Python functions as tasks
 ---------------------------------
@@ -348,6 +388,9 @@ used to configure the scheduler, specifically:
 
 * ``max_jobs``: this sets the maximum number of concurrent
   jobs that the scheduler will run (defaults to 1)
+* ``poll_interval``: the time interval that the scheduler will
+  used when checking the status of running jobs (defaults to
+  5 seconds)
 
 If more control is required over the scheduler then the calling
 subprogram can create and configure its own ``SimpleScheduler``
@@ -355,9 +398,66 @@ instance and pass this to the ``run`` method instead. Note that
 it is the responsibility of the subprogram to start and stop
 the scheduler that it provides.
 
-The ``run`` method also accepts a ``runner`` method which sets
-the default job runner that the pipeline will use. By default
-jobs are run using a ``SimpleJobRunner`` instance.
+Specifying job runners for tasks
+--------------------------------
+
+By default when a pipeline is executed then all jobs within
+its tasks will be run using the default job runner supplied
+via the ``default_runner`` argument of the pipeline's ``run``
+method.
+
+For example:
+
+::
+
+    ppl.run(default_runner=SpecialJobRunner())
+
+(If no default is supplied then a ``SimpleJobRunner`` is used
+as the default runner.)
+
+Typically it is desirable to be able to exercise more granular
+control over the job runners used within the pipeline. This is
+possible via the ``runner`` keyword of the ``add_task`` method
+of the ``Pipeline`` class, which allows a job runner to be
+specified which will then used when jobs in that task are
+executed.
+
+For example:
+
+::
+
+    ppl.add_task(my_task,runner=SimpleJobRunner())
+
+The ``Pipeline`` class also allows parameterisation of job
+runners when building a pipeline. Placeholders for job
+runners can be defined using the ``add_runner`` method,
+and accessed via the ``runners`` property to be associated
+with tasks.
+
+For example:
+
+::
+
+    # Define runner
+    ppl.add_runner('my_runner')
+    ...
+    # Associate runner with task
+    ppl.add_task(my_task,runner=ppl.runners['my_runner'])
+
+Job runners can then be set explicitly when the pipeline is
+executed, using the ``runners`` argument of the ``run``
+method to supply a mapping of runner names to job runner
+instances.
+
+For example:
+
+::
+
+    ppl.run(runners={ 'my_runner': SpecialJobRunner() })
+
+Any runner names that don't have associated job runner
+instances will use the default runner defined via the
+``default_runner`` argument.
 
 Dealing with stdout from tasks
 ------------------------------
@@ -416,6 +516,107 @@ For example::
 Note that regardless of how the failures are handled the
 pipeline will always return exit code 1 when one or more
 tasks fail.
+
+Executing pipeline commands in batches
+--------------------------------------
+
+By default when the pipeline executes the commands generated by
+a task, each command is sent to the scheduler as a single job.
+
+It is also possible to request the pipeline executes commands
+in batches, by specifying a non-zero size for the ``batch_size``
+option of the ``run`` method. In this case, commands are grouped
+together into batches of this size, and each batch is sent to
+the scheduler as a single job.
+
+Within a batch the commands are executed sequentially, and if
+one command fails then all subsequent commands in the batch
+won't run.
+
+Batch mode can also be requested on a per-task basis, by
+explicitly specifying ``batch_size`` as keyword when adding
+the task to the pipeline. For example::
+
+    ppl = Pipeline()
+    ...
+    ppl.add_task(my_task,batch_size=5)
+
+This will override any batch size set globally when the
+pipeline is run.
+
+Setting pipeline parameters at execution time
+---------------------------------------------
+
+When building pipelines, it is sometimes necessary or desirable
+a parameter into a task where the value of the parameter isn't
+known until execution time (via the ``run`` method).
+
+For example, a task in the pipeline might need to know the
+number of cores or the location of a temporary directory to be
+used, which only be set this at execution time.
+
+To handle these situations, it possible to define arbitrary
+parameters within the ``Pipeline`` class at build time and then
+set the values of these parameters at execution time.
+
+Use the ``add_param`` method is used to define a parameter, for
+example:
+
+::
+
+    ppl = Pipeline()
+    ppl.add_param('ncores',value=1,type=int)
+    ppl.add_param('tmpdir')
+
+This creates a new ``PipelineParam`` instance which is associated
+with the supplied name.
+
+The parameters can be accessed via the pipeline's ``params``
+property, and passed as input into tasks, for example:
+
+::
+
+    task = ExampleTask("This is an example",
+                       ncores=ppl.params.ncores,
+                       tmpdir=ppl.params.tmpdir)
+    ppl.add_task(task)
+
+The runtime values of parameters are then passed via the
+``params`` argument of the pipeline's ``run`` invocation:
+
+::
+
+    temporary_dir = tempfile.mkdtemp()
+    ppl.run(params={ 'ncores': 8,
+                     'tmpdir': temporary_dir, })
+
+Built-in parameters
+-------------------
+
+In addition to the custom parameters defined using the
+``add_param`` method and outlined in the previous section, a
+number of 'built-in' parameters are also available as properties
+of the ``Pipeline`` instance, for use when building a pipeline.
+
+Specifically these are:
+
+* ``WORKING_DIR``: the working directory used by the pipeline
+* ``BATCH_SIZE``: the batch size to be used when running jobs
+  within pipeline tasks
+* ``VERBOSE``: whether the pipeline is running in 'verbose'
+  mode
+
+These can be used in the same way as the custom parameters when
+setting up tasks, for example:
+
+::
+
+    task = ExampleTask("This is an example",
+                       ncores=ppl.params.ncores,
+                       tmpdir=ppl.params.WORKING_DIR)
+
+The values will be set when the pipeline's ``run`` method is
+invoked.
 
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
@@ -492,6 +693,7 @@ from collections import Iterator
 from cStringIO import StringIO
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
+from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.applications import Command
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.simple_scheduler import SchedulerReporter
@@ -506,7 +708,7 @@ logger.addHandler(logging.NullHandler())
 
 ALLOWED_CHARS = string.lowercase + string.digits + "._-"
 
-# JSE-drop job status codes
+# Pipeline failure modes
 class PipelineFailure(object):
     IMMEDIATE = 0
     DEFERRED = 1
@@ -514,6 +716,123 @@ class PipelineFailure(object):
 ######################################################################
 # Generic pipeline base classes
 ######################################################################
+
+class PipelineParam(object):
+    """
+    Class for passing arbitrary values between tasks
+
+    The PipelineParam class offers a way to dynamically assign
+    values for types which would otherwise be immutable (e.g.
+    strings).
+
+    A new PipelineParam is created using e.g.:
+
+    >>> p = PipelineParam()
+
+    In this form there will be no initial value, however
+    one can be assigned using the ``value`` argument, e.g.:
+
+    >>> p = PipelineParam(value="first")
+
+    The associated value can be returned using the ``value``
+    property:
+
+    >>> p.value
+    "first"
+
+    and updated using the ``set`` method, e.g.:
+
+    >>> p.set("last")
+    >>> p.value
+    "last"
+
+    The return type can be explicitly specified on object
+    instantiation using the ``type`` argument, for example
+    to force that a string is always returned:
+
+    >>> p = PipelineParam(type=str)
+    >>> p.set(123)
+    >>> p.value
+    "123"
+
+    If the ``default`` function is supplied then this will
+    be used to generate a value if the stored value is
+    ``None``:
+
+    >>> p = PipelineParam(default=lambda: "default")
+    >>> p.value
+    "default"
+    >>> p.set("assigned")
+    >>> p.value
+    "assigned"
+
+    If a ``name`` is supplied then this will be stored and
+    can be recovered via the ``name`` property:
+
+    >>> p = PipelineParam(name="user_name")
+    >>> p.name
+    "user_name"
+    """
+    def __init__(self,value=None,type=None,default=None,name=None):
+        """
+        Create a new PipelineParam instance
+
+        Arguments:
+          value (object): optional, initial value to assign
+            to the instance
+          type (function): optional, function used to convert
+            the stored value when fetched via the `value`
+            property
+          default (function): optional, function which will
+            return a default value if no explicit value is
+            set (i.e. value is `None`)
+          name (str): optional, name to associate with the
+            instance
+        """
+        self._value = None
+        self._type = type
+        self._default = default
+        if value is not None:
+            self.set(value)
+        self._name = str(name)
+    def set(self,newvalue):
+        """
+        Update the value assigned to the instance
+
+        Arguments:
+          newvalue (object): new value to assign
+        """
+        self._value = newvalue
+    @property
+    def value(self):
+        """
+        Return the assigned value
+
+        If a `default` function was specified on instance
+        creation then this will be used to generate the
+        value to return if the stored value is `None`.
+
+        If a `type` function was also specified on instance
+        creation then this will be used to convert the
+        assigned value before it is returned.
+        """
+        if self._value is None:
+            # Try to return default value
+            try:
+                return self._default()
+            except TypeError:
+                pass
+        # Return stored value
+        try:
+            return self._type(self._value)
+        except TypeError:
+            return self._value
+    @property
+    def name(self):
+        """
+        Return the name of the parameter (if supplied)
+        """
+        return self._name
 
 class FileCollector(Iterator):
     """
@@ -610,9 +929,45 @@ class Pipeline(object):
         self._finished = []
         self._failed = []
         self._removed = []
+        self._params = AttributeDictionary()
+        self._runners = dict()
         self._scheduler = None
         self._log_file = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
+        # Initialise default runner
+        self._runners['default'] = PipelineParam(value=SimpleJobRunner())
+        # Initialise built-in parameters
+        self.add_param("WORKING_DIR",type=str)
+        self.add_param("BATCH_SIZE",type=int)
+        self.add_param("VERBOSE",type=bool)
+
+    @property
+    def name(self):
+        """
+        Return the name of the pipeline
+        """
+        return self._name
+
+    @property
+    def params(self):
+        """
+        Access the parameters defined for the pipeline
+        """
+        return self._params
+
+    @property
+    def runners(self):
+        """
+        Access the runners defined for the pipeline
+
+        Returns the dictionary mapping runner names to
+        PipelineParam instances that store the runner
+        instances; so to get the runner associated with
+        a name do e.g.
+
+        >>> runner = ppl.runners['my_runner'].value
+        """
+        return dict(**self._runners)
 
     def report(self,s):
         """
@@ -685,6 +1040,58 @@ class Pipeline(object):
                 self.add_task(req,())
         return task
 
+    def add_param(self,name,value=None,type=None):
+        """
+        Define a new pipeline parameter
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied name.
+
+        Parameters can be accessed and set via the ``params``
+        property of the pipeline.
+
+        Arguments:
+          name (str): name for the new parameter
+          value (object): optional, initial value to assign
+            to the instance
+          type (function): optional, function used to convert
+            the stored value when fetched via the `value`
+            property
+        """
+        if name in self._params:
+            raise KeyError("Parameter '%s' already defined"
+                           % name)
+        self._params[name] = PipelineParam(type=type,
+                                           value=value)
+
+    def add_runner(self,name,param=None):
+        """
+        Define a new runner within the pipeline
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied runner name.
+
+        Runner instances can be accessed and set via the
+        ``params`` property of the pipeline, for example:
+
+        To access:
+
+        >>> runner = ppl.runners['my_runner'].value
+
+        To set:
+
+        >>> ppl.runners['my_runner'].set(SimpleJobRunner())
+
+        Arguments:
+          name (str): name for the new runner
+        """
+        if name in self._runners:
+            raise KeyError("Runner '%s' already defined" % name)
+        self.report("Defining new runner '%s'" % name)
+        self._runners[name] = PipelineParam(
+            name=name,
+            default=lambda: self.runners['default'].value)
+
     def append_pipeline(self,pipeline):
         """
         Append tasks from another pipeline
@@ -702,17 +1109,31 @@ class Pipeline(object):
           pipeline (Pipeline): pipeline instance with
             tasks to be appended
         """
-        # Get the final tasks from the current
-        # pipeline
-        ranks = self.rank_tasks()
-        if ranks:
-            final_tasks = [self.get_task(t)[0] for t in ranks[-1]]
-        else:
-            final_tasks = []
-        # Get the starting tasks from the new
-        # pipeline
+        self.report("Appending tasks from pipeline '%s'" % pipeline.name)
+        # Get the final tasks from the base pipeline
+        final_tasks = []
+        for task_id in self.task_list():
+            if not self.get_dependent_tasks(task_id):
+                final_tasks.append(self.get_task(task_id)[0])
+        self.report("Identified final tasks from base pipeline:")
+        for task in final_tasks:
+            self.report("-- %s" % task.name())
+        # Get the starting tasks from the new pipeline
         ranks = pipeline.rank_tasks()
         initial_tasks = ranks[0]
+        self.report("Identified initial tasks from appended pipeline:")
+        for task_id in initial_tasks:
+            self.report("-- %s" % pipeline.get_task(task_id)[0].name())
+        # Add parameters from the new pipeline
+        for p in pipeline.params:
+            if p not in self._params:
+                self.report("Adding parameter '%s' from appended pipeline"
+                            % p)
+                self._params[p] = pipeline.params[p]
+        # Add runner definitions from the new pipeline
+        for r in pipeline.runners:
+            if r not in self.runners:
+                self.add_runner(r)
         # Add the tasks from the new pipeline
         for task_id in pipeline.task_list():
             task,requirements,kws = pipeline.get_task(task_id)
@@ -721,7 +1142,14 @@ class Pipeline(object):
                     requirements = list(requirements).extend(final_tasks)
                 else:
                     requirements = list(final_tasks)
-            self.add_task(task,requirements,**kws)
+            # Update the runner for the task
+            if 'runner' in kws:
+                name = kws['runner'].name
+                self.report("Updating runner '%s' for task '%s'"
+                            % (name,task.name()))
+                kws['runner'] = self.runners[name]
+            # Add the task to the source pipeline
+            self.add_task(task,requires=requirements,**kws)
 
     def merge_pipeline(self,pipeline):
         """
@@ -740,8 +1168,21 @@ class Pipeline(object):
           pipeline (Pipeline): pipeline instance with
             tasks to be added
         """
+        # Add parameters from the new pipeline
+        for p in pipeline.params:
+            if p not in self._params:
+                self._params[p] = pipeline.params[p]
+        # Add runner definitions from the new pipeline
+        for r in pipeline.runners:
+            if r not in self.runners:
+                self.add_runner(r)
+        # Add the tasks
         for task_id in pipeline.task_list():
             task,requirements,kws = pipeline.get_task(task_id)
+            # Update the runner for the task
+            if 'runner' in kws:
+                name = kws['runner'].name
+                kws['runner'] = self.runners[name]
             self.add_task(task,requirements,**kws)
 
     def task_list(self):
@@ -822,8 +1263,8 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,verbose=False,
-            exit_on_failure=PipelineFailure.IMMEDIATE):
+            poll_interval=5,params=None,runners=None,batch_size=None,
+            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE):
         """
         Run the tasks in the pipeline
 
@@ -849,6 +1290,14 @@ class Pipeline(object):
             provided via the 'sched' argument), and to use
             for checking if tasks have completed (defaults
             to 5s)
+          params (mapping): a dictionary or mapping which
+            associates parameter names with values
+          runners (mapping): a dictionary or mapping which
+            associates runner names with job runners
+          batch_size (int): if set then run commands in
+            each task in batches, with each batch running
+            this many commands at a time (default is to run
+            one command per job)
           verbose (bool): if True then report additional
             information for diagnostics
           exit_on_failure (int): either IMMEDIATE (any
@@ -862,6 +1311,16 @@ class Pipeline(object):
         if working_dir is None:
             working_dir = os.getcwd()
         working_dir = os.path.abspath(working_dir)
+        # Deal with custom parameters
+        if params:
+            for p in params:
+                self.params[p].set(params[p])
+        # Deal with runners
+        if runners:
+            for r in runners:
+                self.runners[r].set(runners[r])
+        if default_runner:
+            self.runners['default'].set(default_runner)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -889,12 +1348,40 @@ class Pipeline(object):
                 os.remove(self._log_file)
         # How to handle task failure
         self._exit_on_failure = exit_on_failure
+        # Assign built-in parameters
+        self.params.WORKING_DIR.set(working_dir)
+        self.params.BATCH_SIZE.set(batch_size)
+        self.params.VERBOSE.set(verbose)
         # Execute the pipeline
         self.report("Started")
         self.report("-- working directory: %s" % working_dir)
         self.report("-- log directory    : %s" % log_dir)
         self.report("-- scripts directory: %s" % scripts_dir)
-        self.report("-- log file         : %s" % self._log_file)
+        self.report("-- log file         : %s" % ('<not set>'
+                                                  if self._log_file is None
+                                                  else self._log_file))
+        self.report("-- batch size       : %s" % ('<not set>'
+                                                  if batch_size is None
+                                                  else batch_size))
+        self.report("-- verbose output   : %s" % ('yes'
+                                                  if verbose
+                                                  else 'no'))
+        self.report("-- concurrent jobs  : %s" % max_jobs)
+        # Report parameter settings
+        if self.params:
+            self.report("Pipeline parameters:")
+            width = max([len(p) for p in self.params])
+            for p in sorted([p for p in self.params]):
+                self.report("-- %s%s: %s" % (p,
+                                             ' '*(width-len(p)),
+                                             self.params[p].value))
+        # Report runners
+        self.report("Runners:")
+        width = max([len(r) for r in self.runners])
+        for r in sorted(self.runners):
+            self.report("-- %s%s: %s" % (r,
+                                         ' '*(width-len(r)),
+                                         self.runners[r].value))
         # Sort the tasks and set up the pipeline
         self.report("Scheduling tasks...")
         for i,rank in enumerate(self.rank_tasks()):
@@ -902,13 +1389,18 @@ class Pipeline(object):
             for task_id in rank:
                 task,requires,kws = self.get_task(task_id)
                 self._pending.append((task,requires,kws))
-                self.report("-- %s (%s)" % (task.name(),
-                                            task.id()))
+                if verbose:
+                    self.report("-- %s (%s)" % (task.name(),
+                                                task.id()))
+                else:
+                    self.report("-- %s" % task.name())
         # Run while there are still pending or running tasks
         update = True
         while self._pending or self._running:
-            # Check for pending tasks that can start
             pending = []
+            running = []
+            failed = []
+            # Check for pending tasks that can start
             for task,requirements,kws in self._pending:
                 run_task = False
                 if not requirements:
@@ -922,25 +1414,42 @@ class Pipeline(object):
                                       (y.exit_code == 0),
                                       requirements,True)
                 if run_task:
-                    self.report("started '%s' (%s)" % (task.name(),
-                                                       task.id()))
+                    if verbose:
+                        self.report("started '%s' (%s)" % (task.name(),
+                                                           task.id()))
+                    else:
+                        self.report("started '%s'" % task.name())
+                    kws = dict(**kws)
                     if 'runner' not in kws:
                         kws['runner'] = default_runner
                     if 'working_dir' not in kws:
                         kws['working_dir'] = working_dir
+                    if 'log_dir' not in kws:
+                        kws['log_dir'] = log_dir
+                    if 'scripts_dir' not in kws:
+                        kws['scripts_dir'] = scripts_dir
+                    if 'batch_size' not in kws:
+                        kws['batch_size'] = batch_size
                     kws['log_file'] = self._log_file
+                    for k in kws:
+                        # If any keywords are actually PipelineParams
+                        # then replace with the actual values
+                        try:
+                            kws[k] = kws[k].value
+                            logger.debug("'%s' -> %s" % (k,kws[k]))
+                        except AttributeError:
+                            pass
                     try:
                         task.run(sched=sched,
-                                 log_dir=log_dir,
-                                 scripts_dir=scripts_dir,
                                  poll_interval=poll_interval,
                                  verbose=verbose,
                                  **kws)
                     except Exception as ex:
-                        self.report("Failed to start task '%s': %s" %
-                                    (task.id(),ex))
-                        logger.critical("Failed to start task '%s': %s" %
-                                        (task.id(),ex))
+                        # Exception trying to run the task
+                        task.fail(exit_code=1,
+                                  message="Exception trying to run task "
+                                  "'%s': %s\n%s" %
+                                  (task.id(),ex,traceback.format_exc(ex)))
                         failed.append(task)
                     self._running.append(task)
                     update = True
@@ -948,8 +1457,6 @@ class Pipeline(object):
                     pending.append((task,requirements,kws))
             self._pending = pending
             # Check for running tasks that have completed
-            running = []
-            failed = []
             for task in self._running:
                 if task.completed:
                     self.report("finished '%s'"
@@ -989,7 +1496,12 @@ class Pipeline(object):
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
-                        dependent_tasks = self.get_dependent_tasks(task.id())
+                        if verbose and task.stdout:
+                            self.report("Task stdout:\n%s" %
+                                        '\n>> '.join(
+                                            task.stdout.split('\n')))
+                        dependent_tasks = self.get_dependent_tasks(
+                            task.id())
                         pending = []
                         for t in self._pending:
                             if t[0].id() in dependent_tasks:
@@ -1106,13 +1618,25 @@ class PipelineTask(object):
             pass
         # Execute the init method
         self.invoke(self.init,self._args,self._kws)
+        if self._exit_code != 0:
+            raise Exception("Error running 'init' method for task '%s' "
+                            "(%s)" % (self._name,self.__class__))
 
     @property
     def args(self):
         """
         Fetch parameters supplied to the instance
         """
-        return AttributeDictionary(**self._callargs)
+        args = AttributeDictionary(**self._callargs)
+        for a in args:
+            try:
+                # If arg is a PipelineParam then convert it
+                # and store the final value instead of the
+                # PipelineParam instance
+                args[a] = args[a].value
+            except AttributeError:
+                pass
+        return args
 
     @property
     def completed(self):
@@ -1230,17 +1754,18 @@ class PipelineTask(object):
                     f()
                 else:
                     f(*args,**kws)
-            for line in output.stdout:
-                self.report("[%s] %s" % (f.__name__,line))
-            for line in output.stderr:
-                self.report("[%s] %s" % (f.__name__,line))
         except NotImplementedError:
             pass
         except Exception as ex:
             self.report("exception invoking '%s': %s" %
                         (f.__name__,ex))
-            traceback.print_exc(ex)
+            self.report(traceback.format_exc(ex))
             self._exit_code += 1
+        # Report stdout and stderr
+        for line in output.stdout:
+            self.report("[%s] %s" % (f.__name__,line))
+        for line in output.stderr:
+            self.report("[%s] %s" % (f.__name__,line))
         # Switch back to original directory
         if self._working_dir is not None:
             os.chdir(current_dir)
@@ -1319,7 +1844,7 @@ class PipelineTask(object):
 
     def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
             scripts_dir=None,log_file=None,wait_for=(),async=True,
-            poll_interval=5,verbose=False):
+            poll_interval=5,batch_size=None,verbose=False):
         """
         Run the task
 
@@ -1346,6 +1871,10 @@ class PipelineTask(object):
           poll_interval (float): interval between checks on task
             completion (in seconds) for non-async tasks (defaults
             to 5 seconds)
+          batch_size (int): if set then run commands in
+            each task in batches, with each batch running
+            this many commands at a time (default is to run
+            one command per job)
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -1363,14 +1892,44 @@ class PipelineTask(object):
         self.invoke(self.setup)
         # Generate commands to run
         cmds = []
-        for command in self._commands:
+        if not batch_size:
+            # No batching: one command per job
+            for command in self._commands:
+                if verbose:
+                    self.report("%s" % command.cmd())
+                script_file = command.make_wrapper_script(
+                    scripts_dir=scripts_dir)
+                cmd = Command('/bin/bash',script_file)
+                if verbose:
+                    self.report("wrapper script %s" % script_file)
+                cmds.append(cmd)
+        else:
+            # Batch multiple commands per job
             if verbose:
-                self.report("%s" % command.cmd())
-            script_file = command.make_wrapper_script(scripts_dir=scripts_dir)
-            cmd = Command('/bin/bash',script_file)
-            if verbose:
-                self.report("wrapper script %s" % script_file)
-            cmds.append(cmd)
+                self.report("Batching commands (%s commands per "
+                            "batch)" % batch_size)
+            remaining_cmds = self._commands
+            while remaining_cmds:
+                # Grab a batch of commands
+                batch = remaining_cmds[:batch_size]
+                # Combine batch into a single command
+                batch_cmd = PipelineCommandWrapper(
+                    "Batch commands for %s" % self.name(),
+                    *batch[0].cmd().command_line)
+                for cmd in batch[1:]:
+                    batch_cmd.add_args("&&",
+                                       "\\\n",
+                                       *cmd.cmd().command_line)
+                if verbose:
+                    self.report("%s" % batch_cmd.cmd())
+                script_file = batch_cmd.make_wrapper_script(
+                    scripts_dir=scripts_dir)
+                cmd = Command('/bin/bash',script_file)
+                if verbose:
+                    self.report("wrapper script %s" % script_file)
+                cmds.append(cmd)
+                # Update remaining commands to batch
+                remaining_cmds = remaining_cmds[batch_size:]
         # Run the commands
         if cmds:
             use_group = (len(cmds)!=1)

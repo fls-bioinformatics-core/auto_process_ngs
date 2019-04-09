@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2019 Peter Briggs
 #
 
 #######################################################################
@@ -16,10 +16,10 @@ from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
-from auto_process_ngs.qc.illumina_qc import determine_qc_protocol
+from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.reporting import QCReporter
-from auto_process_ngs.fastq_utils import pair_fastqs_by_name
+from auto_process_ngs.qc.outputs import expected_outputs
+from auto_process_ngs.qc.utils import determine_qc_protocol
 from auto_process_ngs import get_version
 
 __version__ = get_version()
@@ -35,40 +35,7 @@ auto_process pipeline.
 # Functions
 #######################################################################
 
-def verify_qc(project,qc_dir=None,illumina_qc=None):
-    """
-    Get list of fastqs in project failing verification
-
-    Arguments:
-      project (AnalysisProject): project object
-      qc_dir (str): optional name of subdirectory
-        containing QC outputs (defaults to default
-        QC subdir from the project)
-      illumina_qc (IlluminaQC): object to use for
-        QC output validation
-
-    Returns:
-      List: list of Fastqs (including path) which
-        don't pass the verification check.
-    """
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    if illumina_qc is None:
-        illumina_qc = IlluminaQC()
-    fastqs = []
-    for sample in project.samples:
-        for fq in sample.fastq:
-            present,missing = illumina_qc.check_outputs(fq,qc_dir)
-            if missing:
-                fastqs.append(fq)
-        for fq_pair in pair_fastqs_by_name(sample.fastq,
-                                           fastq_attrs=project.fastq_attrs):
-            present,missing = illumina_qc.check_outputs(fq_pair,qc_dir)
-            if missing:
-                fastqs.extend(fq_pair)
-    return sorted(list(set(fastqs)))
-
-def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
+def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
     """
     Create ZIP archive for a QC report
 
@@ -78,8 +45,8 @@ def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
       qc_dir (str): optional name of subdirectory
         containing QC outputs (defaults to default
         QC subdir from the project)
-      illumina_qc (IlluminaQC): object to use for
-        QC output validation
+      qc_protocol (str): QC protocol to gather
+        outputs from
 
     Returns:
       String: path to the output ZIP file.
@@ -104,18 +71,13 @@ def zip_report(project,report_html,qc_dir=None,illumina_qc=None):
     # Add the HTML report
     zip_file.add_file(report_html)
     # Add the QC outputs
-    if illumina_qc is None:
-        illumina_qc = IlluminaQC()
-    for sample in QCReporter(project).samples:
-        for fastqs in sample.fastq_pairs:
-            for fq in fastqs:
-                logging.debug("Adding QC outputs for %s" % fq)
-                for f in illumina_qc.expected_outputs(fq,qc_dir):
-                    if f.endswith('.zip'):
-                        # Exclude .zip file
-                        continue
-                    if os.path.exists(f):
-                        zip_file.add(f)
+    logging.debug("Adding QC outputs for %s" % project.name)
+    for f in expected_outputs(project,qc_dir,qc_protocol):
+        if f.endswith('.zip'):
+            # Exclude .zip file
+            continue
+        if os.path.exists(f):
+            zip_file.add(f)
     # MultiQC output
     multiqc = os.path.join(project.dirn,
                            "multi%s_report.html" %
@@ -135,15 +97,21 @@ def main():
                               version="%prog "+__version__,
                               description="Generate QC report for each directory "
                               "DIR")
-    p.add_option('--fastq_dir',
-                 action='store',dest='fastq_dir',default=None,
-                 help="explicitly specify subdirectory of DIRs with "
-                 "Fastq files to run the QC on.")
+    p.add_option('--protocol',
+                 action='store',dest='qc_protocol',default=None,
+                 help="explicitly specify QC protocol (must be one of "
+                 "%s). Default is to determine the protocol "
+                 "automatically (recommended)" %
+                 str(','.join(["'%s'" % pr for pr in PROTOCOLS])))
     p.add_option('--qc_dir',action='store',dest='qc_dir',default='qc',
                  help="explicitly specify QC output directory (nb if "
                  "supplied then the same QC_DIR will be used for each "
                  "DIR. Non-absolute paths are assumed to be relative to "
                  "DIR). Default: 'qc'")
+    p.add_option('--fastq_dir',
+                 action='store',dest='fastq_dir',default=None,
+                 help="explicitly specify subdirectory of DIRs with "
+                 "Fastq files to run the QC on")
     reporting = optparse.OptionGroup(p,'Reporting options')
     reporting.add_option('-t','--title',action='store',dest='title',
                          default=None,
@@ -155,9 +123,6 @@ def main():
     reporting.add_option('--zip',action='store_true',
                          dest='zip',default=False,
                          help="make ZIP archive for the QC report")
-    reporting.add_option('--strand_stats',action='store_true',
-                         dest='fastq_strand',default=False,
-                         help="include strand stats from fastq_strand")
     reporting.add_option('--multiqc',action='store_true',
                          dest='multiqc',default=False,
                          help="generate MultiQC report")
@@ -169,12 +134,19 @@ def main():
     verification = optparse.OptionGroup(p,'Verification options')
     verification.add_option('--verify',action='store_true',dest='verify',
                             help="verify the QC products only (don't "
-                            "write the report)")
-    verification.add_option('-l','--list-unverified',action='store_true',
-                            dest='list_unverified',default=False,
-                            help="list the Fastqs that failed "
-                            "verification")
+                            "write the report); returns exit code 0 "
+                            "if QC is verified, 1 if not")
     p.add_option_group(verification)
+    deprecated = optparse.OptionGroup(p,'Deprecated options')
+    deprecated.add_option('-l','--list-unverified',action='store_true',
+                          dest='list_unverified',default=False,
+                          help="deprecated: does nothing (Fastqs with "
+                          "missing QC outputs can no longer be listed)")
+    deprecated.add_option('--strand_stats',action='store_true',
+                          dest='fastq_strand',default=False,
+                          help="deprecated: does nothing (strand stats "
+                          "are automatically included if present)")
+    p.add_option_group(deprecated)
     opts,args = p.parse_args()
     if len(args) < 1:
         p.error("Need to supply at least one directory")
@@ -194,10 +166,9 @@ def main():
     for d in args:
         dir_path = os.path.abspath(d)
         project_name = os.path.basename(dir_path)
-        p = AnalysisProject(project_name,dir_path,
-                            fastq_dir=opts.fastq_dir)
-        print "Project: %s" % p.name
-        print "Fastqs : %s" % p.fastq_dir
+        p = AnalysisProject(project_name,dir_path)
+        print "Project           : %s" % p.name
+        print "Primary Fastqs dir: %s" % p.fastq_dir
         if opts.qc_dir is None:
             qc_dir = p.qc_dir
         else:
@@ -205,40 +176,54 @@ def main():
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(p.dirn,qc_dir)
         qc_base = os.path.basename(qc_dir)
-        # Warning if there is a mismatch
+        # QC metadata
         qc_info = p.qc_info(qc_dir)
-        if qc_info.fastq_dir is not None and \
-           os.path.join(p.dirn,qc_info.fastq_dir) != p.fastq_dir:
-            logging.warning("Stored fastq dir mismatch (%s != %s)" %
-                            (p.fastq_dir,qc_info.fastq_dir))
-        print "QC output dir: %s" % qc_dir
+        print "QC output dir     : %s" % qc_dir
+        print "...stored protocol: %s" % qc_info.protocol
+        print "...stored Fastqdir: %s" % qc_info.fastq_dir
+        # Set QC protocol
+        if opts.qc_protocol is None:
+            protocol = qc_info.protocol
+            if protocol is None:
+                protocol = determine_qc_protocol(p)
+        else:
+            protocol = opts.qc_protocol
+        print "QC protocol: %s" % protocol
+        # Fastq subdirectory
+        if opts.fastq_dir is None:
+            fastq_dir = qc_info.fastq_dir
+            if fastq_dir is None:
+                fastq_dir = p.fastq_dir
+        else:
+            fastq_dir = opts.fastq_dir
+            if qc_info.fastq_dir is not None:
+                if os.path.join(p.dirn,qc_info.fastq_dir) != fastq_dir:
+                    logging.warning("Stored fastq dir mismatch "
+                                    "(%s != %s)" % (fastq_dir,
+                                                    qc_info.fastq_dir))
+        p.use_fastq_dir(fastq_dir)
+        print "Fastqs dir        : %s" % p.fastq_dir
         print "-"*(len('Project: ')+len(p.name))
         print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
-        # Determine QC protocol
-        protocol = qc_info.protocol
-        if protocol is None:
-            print "No stored QC protocol"
-            protocol = determine_qc_protocol(p)
-        else:
-            print "Stored QC protocol: %s" % protocol
-        print "QC protocol: %s" % protocol
-        # Create QC object for verification
-        illumina_qc = IlluminaQC(protocol=protocol,
-                                 fastq_strand_conf=opts.fastq_strand)
+        # Setup reporter
+        qc_reporter = QCReporter(p)
         # Verification step
-        try:
-            unverified = verify_qc(p,qc_dir,illumina_qc)
-        except Exception as ex:
-            print "Verification failed: %s" % ex
-            sys.exit(1)
-        if unverified:
-            if opts.list_unverified:
-                for fq in unverified:
-                    print fq
+        if len(p.fastqs) == 0:
+            logging.critical("No Fastqs!")
+            verified = False
+        else:
+            try:
+                verified = qc_reporter.verify(qc_dir,protocol)
+            except Exception as ex:
+                logging.critical("Error: %s" % ex)
+                verified = False
+        if not verified:
             print "Verification: FAILED"
             retval = 1
             if not opts.force:
                 continue
+            else:
+                print "--force specified, ignoring previous errors"
         else:
             print "Verification: OK"
             if opts.verify:
@@ -285,17 +270,21 @@ def main():
         if not os.path.isabs(out_file):
             out_file = os.path.join(p.dirn,out_file)
         print "Writing QC report to %s" % out_file
-        report_html= QCReporter(p).report(qc_dir=qc_dir,
-                                          illumina_qc=illumina_qc,
-                                          title=opts.title,
-                                          filename=out_file,
-                                          relative_links=True)
+        report_html= qc_reporter.report(qc_dir=qc_dir,
+                                        qc_protocol=protocol,
+                                        title=opts.title,
+                                        filename=out_file,
+                                        relative_links=True)
         # Generate ZIP archive
         if opts.zip:
             report_zip = zip_report(p,report_html,qc_dir,
-                                    illumina_qc=illumina_qc)
+                                    qc_protocol=protocol)
             print "ZIP archive: %s" % report_zip
     # Finish with appropriate exit code
+    print "%s completed: exit code %s (%s)" % \
+        (os.path.basename(sys.argv[0]),
+         retval,
+         ('ok' if retval == 0 else 'error'))
     sys.exit(retval)
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.pipeline.py: pipeline components for ICELL8 data
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 
 """
@@ -122,7 +122,7 @@ class ICell8QCFilter(Pipeline):
                  do_contaminant_filter=True,
                  do_quality_filter=False,
                  do_clean_up = True,
-                 nprocessors=None,runners=None):
+                 nprocessors=None):
         """
         Arguments:
           outdir (str): path to output directory
@@ -159,11 +159,14 @@ class ICell8QCFilter(Pipeline):
             (default: True)
           nprocessors (dict): number of processors to
             use for specific pipeline stages
-          runners (dict): runners to use for specific
-            pipeline stages
         """
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="ICELL8: QC filter")
+
+        # Define runners
+        self.add_runner("statistics")
+        self.add_runner("contaminant_filter")
+        self.add_runner("qc")
 
         ###################
         # Do internal setup
@@ -219,8 +222,9 @@ class ICell8QCFilter(Pipeline):
                                        unassigned=True,
                                        nprocs=nprocessors['statistics'],
                                        temp_dir=self.tmp_dir)
-        self.add_task(initial_stats,runner=runners['statistics'],
-                      requires=(setup_dirs,))
+        self.add_task(initial_stats,
+                      requires=(setup_dirs,),
+                      runner=self.runners['statistics'])
 
         # Split fastqs into batches
         pair_fastqs_for_batching = PairFastqs(
@@ -289,7 +293,7 @@ class ICell8QCFilter(Pipeline):
                                       temp_dir=self.tmp_dir)
         self.add_task(filter_stats,requires=(initial_stats,
                                             collect_filtered_fastqs),
-                     runner=runners['statistics'])
+                     runner=self.runners['statistics'])
 
         # Use cutadapt to find reads with poly-G regions
         pair_fastqs_for_poly_g = PairFastqs(
@@ -317,7 +321,7 @@ class ICell8QCFilter(Pipeline):
                                            temp_dir=self.tmp_dir)
         self.add_task(poly_g_stats,
                       requires=(collect_poly_g_fastqs,filter_stats),
-                      runner=runners['statistics'])
+                      runner=self.runners['statistics'])
 
         # Set up the cutadapt jobs as a group
         pair_fastqs_for_trimming = PairFastqs(
@@ -345,7 +349,7 @@ class ICell8QCFilter(Pipeline):
                                     temp_dir=self.tmp_dir)
         self.add_task(trim_stats,requires=(collect_trimmed_fastqs,
                                            poly_g_stats),
-                      runner=runners['statistics'])
+                      runner=self.runners['statistics'])
 
         # Set up the contaminant filter jobs as a group
         if do_contaminant_filter:
@@ -367,7 +371,7 @@ class ICell8QCFilter(Pipeline):
                 threads=nprocessors['contaminant_filter'])
             self.add_task(contaminant_filter,
                           requires=(pair_fastqs_for_contaminant_filtering,),
-                          runner=runners['contaminant_filter'])
+                          runner=self.runners['contaminant_filter'])
             collect_contaminant_filtered = CollectFiles(
                 "Collect contaminant-filtered fastqs",
                 contaminant_filter_dir,
@@ -387,7 +391,7 @@ class ICell8QCFilter(Pipeline):
             self.add_task(final_stats,
                           requires=(collect_contaminant_filtered,
                                     trim_stats),
-                          runner=runners['statistics'])
+                          runner=self.runners['statistics'])
             fastqs_in = collect_contaminant_filtered.output.files
             split_barcodes_requires = (collect_contaminant_filtered,)
         else:
@@ -480,7 +484,7 @@ class ICell8QCFilter(Pipeline):
                                             trim_stats,)
         self.add_task(final_barcode_stats,
                       requires=final_barcode_stats_requires,
-                      runner=runners['statistics'])
+                      runner=self.runners['statistics'])
 
         # Verify that barcodes are okay
         check_barcodes = CheckICell8Barcodes(
@@ -562,6 +566,8 @@ class ICell8FinalReporting(Pipeline):
         """
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="ICELL8: final reporting")
+        # Define runners
+        self.add_runner("report")
         # Reset primary fastq dir (if working in a project)
         if project is not None:
             update_project_data = UpdateProjectData(
@@ -572,7 +578,8 @@ class ICell8FinalReporting(Pipeline):
         # Final report
         final_report = ReportProcessing("Generate processing report",
                                         outdir)
-        self.add_task(final_report)
+        self.add_task(final_report,
+                      runner=self.runners['report'])
 
 ######################################################################
 # ICELL8 pipeline command classes

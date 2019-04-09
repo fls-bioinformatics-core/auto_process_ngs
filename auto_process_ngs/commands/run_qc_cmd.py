@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 #########################################################################
 
@@ -12,10 +12,9 @@
 import os
 import logging
 from ..applications import Command
-from ..qc.illumina_qc import IlluminaQC
-from ..qc.illumina_qc import determine_qc_protocol
-from ..qc.runqc import RunQC
+from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
+from ..qc.utils import determine_qc_protocol
 from ..utils import get_organism_list
 from bcftbx.JobRunner import fetch_runner
 
@@ -77,13 +76,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       Integer: UNIX-style integer returncode where 0 = successful
         termination, non-zero indicates an error.
     """
-    # Set up QC script
-    compatible_versions = ('1.3.2','1.3.3')
-    version = IlluminaQC().version()
-    if version not in compatible_versions:
-        logger.error("QC script version is %s, needs %s" %
-                     (version,'/'.join(compatible_versions)))
-        return 1
     # Process project pattern matching
     if projects is None:
         project_pattern = '*'
@@ -107,45 +99,35 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     else:
         qc_runner = ap.settings.runners.qc
     # Get scheduler parameters
+    if max_jobs is None:
+        max_jobs = ap.settings.general.max_concurrent_jobs
     if poll_interval is None:
         poll_interval = ap.settings.general.poll_interval
+    # Set up a master log directory and file
+    ap.set_log_dir(ap.get_log_subdir('run_qc'))
+    log_file = os.path.join(ap.log_dir,"run_qc.log")
     # Set up the QC for each project
-    runqc = RunQC()
+    runqc = QCPipeline()
     for project in projects:
         # Determine the QC protocol
         protocol = determine_qc_protocol(project)
-        # Set up conf file for strandedness determination
-        try:
-            organisms = get_organism_list(project.info.organism)
-        except AttributeError:
-            organisms = None
-        fastq_strand_indexes = build_fastq_strand_conf(
-            organisms,
-            ap.settings.fastq_strand_indexes)
-        if fastq_strand_indexes:
-            fastq_strand_conf = os.path.join(project.dirn,
-                                             "fastq_strand.conf")
-            with open(fastq_strand_conf,'w') as fp:
-                fp.write("%s\n" % fastq_strand_indexes)
-        else:
-            fastq_strand_conf = None
-        # Set up the QC command generator
-        illumina_qc = IlluminaQC(protocol=protocol,
-                                 nthreads=nthreads,
-                                 fastq_screen_subset=fastq_screen_subset,
-                                 fastq_strand_conf=fastq_strand_conf,
-                                 ungzip_fastqs=ungzip_fastqs)
-        # Add the project
         runqc.add_project(project,
-                          fastq_dir=fastq_dir,
-                          sample_pattern=sample_pattern,
                           qc_dir=qc_dir,
-                          illumina_qc=illumina_qc)
+                          fastq_dir=fastq_dir,
+                          organism=project.info.organism,
+                          qc_protocol=protocol,
+                          sample_pattern=sample_pattern,
+                          multiqc=True)
     # Run the QC
-    status = runqc.run(multiqc=True,
-                       qc_runner=qc_runner,
-                       verify_runner=default_runner,
-                       report_runner=default_runner,
+    status = runqc.run(nthreads=nthreads,
+                       fastq_strand_indexes=
+                       ap.settings.fastq_strand_indexes,
+                       log_file=log_file,
+                       poll_interval=poll_interval,
                        max_jobs=max_jobs,
-                       poll_interval=poll_interval)
+                       runners={
+                           'qc_runner': qc_runner,
+                           'verify_runner': default_runner,
+                           'report_runner': default_runner,
+                       })
     return status

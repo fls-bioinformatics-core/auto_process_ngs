@@ -15,7 +15,6 @@ import string
 import ast
 import auto_process_ngs.fileops as fileops
 from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.qc.illumina_qc import IlluminaQC
 from auto_process_ngs.qc.utils import verify_qc
 from auto_process_ngs.qc.utils import report_qc
 from ..docwriter import Document
@@ -247,13 +246,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             if qc_protocol is None:
                 qc_protocol = "standardPE"
                 print "...assuming QC protocol '%s'" % qc_protocol
-            # Set up IlluminaQC instance
-            illumina_qc = IlluminaQC(protocol=qc_protocol)
             # Verify the QC and check for report
             verified = verify_qc(
                 project,
+                fastq_dir=fastq_dir,
                 qc_dir=os.path.join(project.dirn,qc_dir),
-                illumina_qc=illumina_qc,
+                qc_protocol=qc_protocol,
                 log_dir=ap.log_dir)
             if verified:
                 print "...%s: verified QC" % qc_dir
@@ -473,6 +471,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
                 qc_base = "%s_report" % qc_dir
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
+                if fastq_dir.startswith("%s%s" % (project.dirn,os.sep)):
+                    fastq_dir = os.path.relpath(fastq_dir,project.dirn)
                 if fastq_dir != project.info.primary_fastq_dir:
                     fastq_set = fastq_dir
                 else:
