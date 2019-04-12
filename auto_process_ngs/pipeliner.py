@@ -1710,6 +1710,11 @@ class PipelineTask(object):
         or 'finish' methods, to terminate the task and
         indicate that it has failed.
 
+        NB when using the 'fail' method it is recommended that
+        the method that it was invoked from should return
+        immediately afterwards, to avoid any unexpected side
+        effects
+
         Arguments:
           exit_code (int): optional, specifies the exit code
             to return (defaults to 1)

@@ -1248,9 +1248,6 @@ class TestPipelineTask(unittest.TestCase):
             def setup(self):
                 self.fail(message="Invoked fail method",
                           exit_code=123)
-                self.add_cmd(
-                    PipelineCommandWrapper(
-                        "Echo message","echo","should not execute"))
         # Make a task instance
         task = FailingTask("This will fail")
         # Check initial state
