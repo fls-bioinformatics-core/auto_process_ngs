@@ -1724,8 +1724,8 @@ class PipelineTask(object):
         if message:
             self.report("failed: %s" % message)
         self.report("failed: exit code set to %s" % exit_code)
-        self._completed = True
         self._exit_code = exit_code
+        self._completed = True
 
     def report(self,s):
         """
