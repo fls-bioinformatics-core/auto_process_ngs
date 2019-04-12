@@ -1491,8 +1491,6 @@ class Pipeline(object):
                 elif self._exit_on_failure == PipelineFailure.DEFERRED:
                     # Remove any tasks waiting on the failures
                     # but defer pipeline termination
-                    self.report("There are failed tasks but pipeline exit "
-                                "will be deferred")
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
@@ -1513,6 +1511,8 @@ class Pipeline(object):
                                 pending.append(t)
                         self._pending = pending
                     self._failed.extend(failed)
+                    self.report("There are failed tasks but pipeline exit "
+                                "will be deferred")
             # Report the current running and pending tasks
             if update:
                 if self._running:
