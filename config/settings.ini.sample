@@ -73,7 +73,7 @@ cellranger_localcores = 1
 # Assign organism name to path to cellranger
 # scATAC-seq reference data to use for that
 # organism in single library analysis
-[10xgenomics_atac_references]
+[10xgenomics_atac_genome_references]
 #human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
 #mouse = /data/cellranger/refdata-cellranger-atac-mm10-1.0.1
 
