@@ -471,13 +471,13 @@ class TestNormalizeSampleNameFunction(unittest.TestCase):
         self.assertEqual(normalize_sample_name("Neg Ctrl"),"Neg_Ctrl")
         self.assertEqual(normalize_sample_name("S1/S2"),"S1_S2")
 
-class TestGetBasesMaskFunctionIcell8(unittest.TestCase):
+class TestGetBasesMaskIcell8Function(unittest.TestCase):
     """
     Tests for the get_bases_mask_icell8 function
     """
     def setUp(self):
         # Temporary working dir
-        self.wd = tempfile.mkdtemp(suffix='.GetICell8BasesMask')
+        self.wd = tempfile.mkdtemp(suffix='.GetBasesMaskICell8')
 
     def tearDown(self):
         # Remove temporary working dir
