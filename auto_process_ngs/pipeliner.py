@@ -2081,7 +2081,12 @@ class PipelineFunctionTask(PipelineTask):
         try:
             for d in self._dispatchers:
                 result.append(d.get_result())
-        except Exception:
+        except Exception as ex:
+            logger.critical("'%s': exception collecting results from "
+                            "dispatchers (%s)" % (self.name(),self.id()))
+            self.report("'%s': exception collecting results from "
+                        "dispatchers (%s)" % (self.name(),self.id()))
+            self.report("Exception: %s" % ex)
             self._completed = True
             self._exit_code = 1
             result = None
