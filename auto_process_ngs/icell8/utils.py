@@ -23,7 +23,7 @@ Functions:
 - get_batch_size: get optimal size for batches of reads
 - batch_fastqs: split reads into batches
 - normalize_sample_name: replace special characters in well list sample names
-- get_icell8_bases_mask: generate bases mask for ICELL8 run
+- get_bases_mask_icell8: generate bases mask for ICELL8 run
 """
 
 #######################################################################
@@ -214,7 +214,7 @@ def normalize_sample_name(s):
             name.append(c)
     return ''.join(name)
 
-def get_icell8_bases_mask(bases_mask,sample_sheet=None):
+def get_bases_mask_icell8(bases_mask,sample_sheet=None):
     """
     Reset the supplied bases mask string so that only the
     bases containing the inline barcode and UMIs are kept,

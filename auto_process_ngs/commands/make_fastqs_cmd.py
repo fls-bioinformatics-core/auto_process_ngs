@@ -323,13 +323,13 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if protocol == 'icell8':
             # ICell8 data
             # Update bcl2fastq settings appropriately
-            print "Updating read trimming and masking for ICell8"
+            print "Updating read trimming and masking for ICELL8"
             minimum_trimmed_read_length = 21
             mask_short_adapter_reads = 0
             # Reset the default bases mask
             bases_mask = IlluminaData.IlluminaRunInfo(
                 illumina_run.runinfo_xml).bases_mask
-            bases_mask = get_icell8_bases_mask(bases_mask,
+            bases_mask = get_bases_mask_icell8(bases_mask,
                                                sample_sheet=sample_sheet)
             if not bases_mask_is_valid(bases_mask):
                 raise Exception("Invalid bases mask: '%s'" %

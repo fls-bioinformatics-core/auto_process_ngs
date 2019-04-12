@@ -16,7 +16,7 @@ from auto_process_ngs.icell8.utils import ICell8Stats
 from auto_process_ngs.icell8.utils import get_batch_size
 from auto_process_ngs.icell8.utils import batch_fastqs
 from auto_process_ngs.icell8.utils import normalize_sample_name
-from auto_process_ngs.icell8.utils import get_icell8_bases_mask
+from auto_process_ngs.icell8.utils import get_bases_mask_icell8
 from auto_process_ngs.icell8.utils import pass_quality_filter
 
 well_list_data = """Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
@@ -469,9 +469,9 @@ class TestNormalizeSampleNameFunction(unittest.TestCase):
         self.assertEqual(normalize_sample_name("Neg Ctrl"),"Neg_Ctrl")
         self.assertEqual(normalize_sample_name("S1/S2"),"S1_S2")
 
-class TestGetIcell8BasesMaskFunction(unittest.TestCase):
+class TestGetBasesMaskFunctionIcell8(unittest.TestCase):
     """
-    Tests for the get_icell8_bases_mask function
+    Tests for the get_bases_mask_icell8 function
     """
     def setUp(self):
         # Temporary working dir
@@ -482,20 +482,20 @@ class TestGetIcell8BasesMaskFunction(unittest.TestCase):
         if os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
 
-    def test_get_icell8_bases_mask(self):
+    def test_get_bases_mask_icell8(self):
         """
-        get_icell8_bases_mask: reset bases mask
+        get_bases_mask_icell8: reset bases mask
         """
-        self.assertEqual(get_icell8_bases_mask("y101,I7,y101"),
+        self.assertEqual(get_bases_mask_icell8("y101,I7,y101"),
                          "y25n76,I7,y101")
-        self.assertEqual(get_icell8_bases_mask("y250,I8,I8,y250"),
+        self.assertEqual(get_bases_mask_icell8("y250,I8,I8,y250"),
                          "y25n225,I8,I8,y250")
-        self.assertEqual(get_icell8_bases_mask("y25,I8,I8,y250"),
+        self.assertEqual(get_bases_mask_icell8("y25,I8,I8,y250"),
                          "y25,I8,I8,y250")
 
-    def test_get_icell8_bases_mask_with_sample_sheet(self):
+    def test_get_bases_mask_icell8_with_sample_sheet(self):
         """
-        get_icell8_bases_mask: reset bases mask with sample sheet
+        get_bases_mask_icell8: reset bases mask with sample sheet
         """
         sample_sheet_content = """[Header]
 IEMFileVersion,4
@@ -524,17 +524,17 @@ AB2,AB2,,,D702,ATTCAG,AB,
         with open(sample_sheet,'w') as fp:
             fp.write(sample_sheet_content)
         self.assertEqual(
-            get_icell8_bases_mask("y101,I7,y101",
+            get_bases_mask_icell8("y101,I7,y101",
                                   sample_sheet=sample_sheet),
             "y25n76,I6n,y101")
         self.assertEqual(
-            get_icell8_bases_mask("y250,I8,I8,y250",
+            get_bases_mask_icell8("y250,I8,I8,y250",
                                   sample_sheet=sample_sheet),
             "y25n225,I6nn,nnnnnnnn,y250")
 
-    def test_get_icell8_bases_mask_with_sample_sheet_no_barcodes(self):
+    def test_get_bases_mask_icell8_with_sample_sheet_no_barcodes(self):
         """
-        get_icell8_bases_mask: reset bases mask with sample sheet (no barcodes)
+        get_bases_mask_icell8: reset bases mask with sample sheet (no barcodes)
         """
         sample_sheet_content = """[Header]
 IEMFileVersion,4
@@ -562,11 +562,11 @@ AB1,AB1,,,,,AB,
         with open(sample_sheet,'w') as fp:
             fp.write(sample_sheet_content)
         self.assertEqual(
-            get_icell8_bases_mask("y101,I7,y101",
+            get_bases_mask_icell8("y101,I7,y101",
                                   sample_sheet=sample_sheet),
             "y25n76,nnnnnnn,y101")
         self.assertEqual(
-            get_icell8_bases_mask("y250,I8,I8,y250",
+            get_bases_mask_icell8("y250,I8,I8,y250",
                                   sample_sheet=sample_sheet),
             "y25n225,nnnnnnnn,nnnnnnnn,y250")
 
