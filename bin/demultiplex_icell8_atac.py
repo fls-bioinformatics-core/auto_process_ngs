@@ -1,13 +1,15 @@
 #!/usr/bin/env python2
 #
-#     demultiplex_icell8_atac.py: split ICELL8 scATAC-seq Fastqs by sample or barcode
+#     demultiplex_icell8_atac.py: demultiplex reads from ICELL8 scATAC-seq
 #     Copyright (C) University of Manchester 2019 Peter Briggs
 #
 """
 demultiplex_icell8_atac.py
 
-Utility to split single-cell ATAC-seq Fastqs from Takara's ICELL8 platform
-by sample or barcode.
+Utility to demultiplex reads from single-cell ATAC-seq Fastqs produced
+by Takara's ICELL8 platform.
+
+Demultiplexing can be specified at the level of samples or barcodes.
 """
 
 ######################################################################
@@ -25,7 +27,6 @@ from itertools import izip
 from collections import defaultdict
 from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
-from bcftbx.TabFile import TabFile
 from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.ngsutils import getreads
 from auto_process_ngs.applications import Command
@@ -174,6 +175,9 @@ def assign_reads(args):
     - I2 Fastq: path to I2 Fastq file
     - well list: path to the well list file
     - mode: either 'samples' or 'barcodes'
+    - swap_i1_and_i2: boolean indicating whether I1 and I2
+      Fastqs should be swapped for matching
+    - reverse_complement: either None, 'i1', 'i2' or both
     - working_dir: working directory to write batches to
     - unassigned: basename for output files
 
@@ -190,7 +194,7 @@ def assign_reads(args):
         undetermined_barcodes_file).
     """
     # Unpack arguments
-    fastq_r1,fastq_r2,fastq_i1,fastq_i2,well_list_file,mode,working_dir,unassigned = args
+    fastq_r1,fastq_r2,fastq_i1,fastq_i2,well_list_file,mode,swap_i1_and_i2,reverse_complement_index,working_dir,unassigned = args
     # Batch ID is the trailing part of the name
     batch_id = AnalysisFastq(fastq_i1).extras.strip('_')
     # Label is sample name plus batch name
@@ -201,10 +205,14 @@ def assign_reads(args):
     report("[%s] -- R2: %s" % (label,os.path.basename(fastq_r2)))
     report("[%s] -- I1: %s" % (label,os.path.basename(fastq_i1)))
     report("[%s] -- I2: %s" % (label,os.path.basename(fastq_i2)))
+    report("[%s] -- Well list: %s" % (label,os.path.basename(well_list_file)))
     report("[%s] Mode is '%s'" % (label,mode))
+    if swap_i1_and_i2:
+        report("[%s] Swapping I1 and I2 Fastqs for matching to well list" %
+               label)
     # Check mode
     if mode not in ("samples","barcodes"):
-        report("Unrecognised mode!",fp=sys.stderr)
+        report("[%s] Unrecognised mode!" % label,fp=sys.stderr)
     # Working directory
     if working_dir is None:
         working_dir = os.getcwd()
@@ -220,6 +228,21 @@ def assign_reads(args):
         sample = well_list.sample(barcode)
         sample_lookup[barcode] = sample
         barcode_lookup[sample].append(barcode)
+    # Generate adjusted versions of barcodes for matching
+    # against barcodes derived from Fastqs
+    fastq_barcode_lookup = defaultdict(lambda: None)
+    for barcode in barcodes:
+        i1,i2 = barcode.split('+')
+        if reverse_complement_index:
+            if reverse_complement_index in ('i1','both'):
+                # Reverse complement the I1 part of each barcode
+                i1 = reverse_complement(i1)
+            if reverse_complement_index in ('i2','both'):
+                # Reverse complement the I2 part of each barcode
+                i2 = reverse_complement(i2)
+        if swap_i1_and_i2:
+            i2,i1 = i1,i2
+        fastq_barcode_lookup["%s+%s" % (i1,i2)] = barcode
     # File to write undetermined barcodes to
     undetermined_barcodes_file = os.path.join(working_dir,
                                               batch_id,
@@ -265,8 +288,11 @@ def assign_reads(args):
                                     getreads(fastq_r2),
                                     getreads(fastq_i1),
                                     getreads(fastq_i2)):
-                # Get barcode
-                barcode = "%s+%s" % (i1[1],i2[1])
+                # Get barcodes to match against adjusted
+                # versions from well list
+                fastq_barcode = "%s+%s" % (i1[1],i2[1])
+                # Get "real" barcode
+                barcode = fastq_barcode_lookup[fastq_barcode]
                 # Add to counts
                 try:
                     barcode_counts[barcode] += 1
@@ -279,9 +305,9 @@ def assign_reads(args):
                 fpp.write("%s_R2" % sample,'\n'.join(r2))
                 fpp.write("%s_I1" % sample,'\n'.join(i1))
                 fpp.write("%s_I2" % sample,'\n'.join(i2))
-                # Write unassigned barcode to file
+                # Write Fastq version of unassigned barcode to file
                 if sample == unassigned:
-                    fp.write("%s\n" % barcode)
+                    fp.write("%s\n" % fastq_barcode)
                 # Report progress
                 ii += 1
                 if progress.check(ii):
@@ -293,8 +319,11 @@ def assign_reads(args):
                                     getreads(fastq_r2),
                                     getreads(fastq_i1),
                                     getreads(fastq_i2)):
-                # Get barcode
-                barcode = "%s+%s" % (i1[1],i2[1])
+                # Get barcodes to match against adjusted
+                # versions from well list
+                fastq_barcode = "%s+%s" % (i1[1],i2[1])
+                # Get "real" barcode
+                barcode = fastq_barcode_lookup[fastq_barcode]
                 # Add to counts
                 try:
                     barcode_counts[barcode] += 1
@@ -304,7 +333,7 @@ def assign_reads(args):
                 sample = sample_lookup[barcode]
                 # Write the reads to the appropriate destinations
                 if sample != unassigned:
-                    # Assign to sample
+                    # Assign to sample and barcode
                     fpp.write("%s_%s_R1" % (sample,barcode),'\n'.join(r1))
                     fpp.write("%s_%s_R2" % (sample,barcode),'\n'.join(r2))
                     fpp.write("%s_%s_I1" % (sample,barcode),'\n'.join(i1))
@@ -315,8 +344,8 @@ def assign_reads(args):
                     fpp.write("%s_R2" % sample,'\n'.join(r2))
                     fpp.write("%s_I1" % sample,'\n'.join(i1))
                     fpp.write("%s_I2" % sample,'\n'.join(i2))
-                    # Write unassigned barcode to file
-                    fp.write("%s\n" % barcode)
+                    # Write Fastq version of unassigned barcode to file
+                    fp.write("%s\n" % fastq_barcode)
                 # Report progress
                 ii += 1
                 if progress.check(ii):
@@ -362,10 +391,12 @@ def concat_fastqs(args):
     # Unpack arguments
     sample,index,barcode,read,batches,working_dir,final_dir = args
     label = "%s:%s" % (sample,read)
-    report("[%s] Concatenating batched %s Fastqs for sample '%s'" %
-           (label,read,sample))
-    if barcode is not None:
-        report("[%s] Only handling barcode '%s'" % (label,barcode))
+    if barcode:
+        report("[%s] Concatenating batched %s Fastqs for sample '%s' (%s)" %
+               (label,read,sample,barcode))
+    else:
+        report("[%s] Concatenating batched %s Fastqs for sample '%s'" %
+               (label,read,sample))
     # Name of output file
     fastq = os.path.join(final_dir,
                          "%s_S%d_%s%s_001.fastq.gz" % 
@@ -395,14 +426,16 @@ def concat_fastqs(args):
         cmd.add_args('|','gzip','-')
         # Run the command via a script
         script_file = os.path.join(working_dir,
-                                   "concat_gzip_%s_%s.sh" %
-                                   (sample,read))
+                                   "concat_gzip_%s%s_%s.sh" %
+                                   (sample,
+                                    "%s_" % barcode if barcode else "",
+                                    read))
         cmd.make_wrapper_script(shell='/bin/bash',
                                 filen=script_file,
                                 quote_spaces=True)
         status = Command("/bin/bash",
                          script_file).run_subprocess(
-                             log=fastq,
+                             log="%s.part" % fastq,
                              working_dir=working_dir)
         os.remove(script_file)
         # Check return status
@@ -410,6 +443,8 @@ def concat_fastqs(args):
             report("[%s] Failed to concatenate and compress batches" % label,
                    fp=sys.stderr)
         else:
+            # Move Fastq to final location
+            os.rename("%s.part" % fastq,fastq)
             report("[%s] Wrote %s" % (label,fastq))
     # Remove original files
     for fq in fastqs:
@@ -481,16 +516,29 @@ if __name__ == "__main__":
                 fastq_r1 = fastq
             else:
                 fastq_r2 = fastq
-    # Swap I1 and I2?
-    if args.swap_i1_and_i2:
-        report("Swapping I1 and I2 Fastqs")
-        fastq_i1,fastq_i2 = fastq_i2,fastq_i1
     # Report assignments
     report("Assigned Fastqs:")
     report("-- R1: %s" % fastq_r1)
     report("-- R2: %s" % fastq_r2)
     report("-- I1: %s" % fastq_i1)
     report("-- I2: %s" % fastq_i2)
+
+    # Well list file
+    well_list_file = os.path.abspath(args.well_list)
+    report("Well list: %s" % well_list_file)
+
+    # Report settings
+    if args.reverse_complement:
+        report("%s barcode%s from well list will be reverse complemented when "
+               "matching to Fastqs" % (("Both I1 and I2"
+                                        if args.reverse_complement == 'both'
+                                        else args.reverse_complement.upper()),
+                                       ('s'
+                                        if args.reverse_complement == 'both'
+                                        else '')))
+    if args.swap_i1_and_i2:
+        report("I1 and I2 barcode components will be swapped when matching to "
+               "Fastqs")
 
     # Set up output directory
     output_dir = os.path.abspath(args.output_dir)
@@ -505,29 +553,6 @@ if __name__ == "__main__":
     tmp_dir = tempfile.mkdtemp(prefix="__demultiplex.",dir=os.getcwd())
     report("Created temporary working directory: %s" % tmp_dir)
 
-    # Make temporary well list file
-    well_list_file = os.path.join(tmp_dir,
-                                  os.path.basename(args.well_list))
-    well_list = TabFile(args.well_list,first_line_is_header=True)
-    if args.reverse_complement:
-        if args.reverse_complement in ('i1','both'):
-            # Reverse complement the I1 part of each barcode
-            report("Reverse-complementing I1 barcodes in well list")
-            for line in well_list:
-                barcode = line['Barcode']
-                i1,i2 = barcode.split('+')
-                line['Barcode'] = "%s+%s" % (reverse_complement(i1),i2)
-        if args.reverse_complement in ('i2','both'):
-            # Reverse complement the I2 part of each barcode
-            report("Reverse-complementing I2 barcodes in well list")
-            for line in well_list:
-                barcode = line['Barcode']
-                i1,i2 = barcode.split('+')
-                line['Barcode'] = "%s+%s" % (i1,reverse_complement(i2))
-    well_list.write(well_list_file,
-                    include_header=True,no_hash=True)
-    report("Wrote new well list file %s" % well_list_file)
-
     # Load the data from the well list
     report("Reading data from %s" % well_list_file)
     well_list = ICell8WellList(well_list_file)
@@ -538,7 +563,6 @@ if __name__ == "__main__":
     batched_fastqs_dir = os.path.join(tmp_dir,"batched_fastqs")
     os.mkdir(batched_fastqs_dir)
     fastqs = []
-    barcodes = well_list.barcodes()
     inputs = list()
     for fastq in (fastq_r1,fastq_r2,fastq_i1,fastq_i2):
         inputs.append((fastq,
@@ -556,7 +580,6 @@ if __name__ == "__main__":
 
     # Build barcode list
     report("Assigning reads to barcodes and samples")
-    barcodes = well_list.barcodes()
     inputs = list()
     for fastq_r1,fastq_r2,fastq_i1,fastq_i2 in izip(fastqs[0],
                                                     fastqs[1],
@@ -566,6 +589,8 @@ if __name__ == "__main__":
                        fastq_i1,fastq_i2,
                        well_list_file,
                        args.mode,
+                       args.swap_i1_and_i2,
+                       args.reverse_complement,
                        tmp_dir,
                        UNASSIGNED,))
     if args.nprocs > 1:
@@ -602,25 +627,25 @@ if __name__ == "__main__":
     # Report number of reads assigned to each (known) barcode
     barcode_counts_file = os.path.join(tmp_dir,"barcode_counts.txt")
     with open(barcode_counts_file,'w') as fp:
-        tf = TabFile(args.well_list,first_line_is_header=True)
-        fp.write("#Sample\tBarcode\tBarcode[fixed]\tNreads\n")
-        for line in tf:
+        fp.write("#Sample\tWell list barcode\tFastq barcode\tNreads\n")
+        for barcode in well_list.barcodes():
             lineout = list()
             # Sample
-            sample = line['Sample']
+            sample = well_list.sample(barcode)
             lineout.append(sample)
             # Original (well list) barcode
-            barcode = line['Barcode']
             lineout.append(barcode)
-            # Transformed barcode
+            # Equivalent 'raw' barcode from the Fastqs
+            i1,i2 = barcode.split('+')
             if args.reverse_complement:
-                i1,i2 = barcode.split('+')
                 if args.reverse_complement in ('i1','both'):
                     i1 = reverse_complement(i1)
                 if args.reverse_complement in ('i2','both'):
                     i2 = reverse_complement(i2)
-                barcode = "%s+%s" % (i1,i2)
-            lineout.append(barcode)
+            if args.swap_i1_and_i2:
+                i1,i2 = i2,i1
+            fastq_barcode = "%s+%s" % (i1,i2)
+            lineout.append(fastq_barcode)
             # Count
             try:
                 count = barcode_counts[barcode]
@@ -629,7 +654,7 @@ if __name__ == "__main__":
             lineout.append(count)
             # Output to file
             fp.write("%s\n" % '\t'.join([str(x) for x in lineout]))
-    report("Barcode counts written to %s" % barcode_counts_file)
+    report("Counts for assigned barcodes written to %s" % barcode_counts_file)
 
     # Report number of reads assigned to each sample
     samples = well_list.samples()
@@ -685,7 +710,7 @@ if __name__ == "__main__":
     wb = XLSWorkBook("ICELL8 scATAC-seq")
     # Summary
     ws = wb.add_work_sheet("summary","Summary")
-    ws.insert_block_data("Command line\t%s" % '\t'.join(sys.argv[1:]))
+    ws.insert_block_data("Command line: %s" % ' '.join(sys.argv[1:]))
     ws.append_row(["Swap I1/I2 fastqs",
                    "%s" % ('YES' if args.swap_i1_and_i2 else 'NO',)])
     ws.append_row(["Reverse complement",
