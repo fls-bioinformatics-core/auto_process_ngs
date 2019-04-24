@@ -274,46 +274,6 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
 
     def __repr__(self):
         """Implement __repr__ built-in
-
-        """
-        # Reconstruct name
-        fq = ["%s" % self.sample_name]
-        if self.sample_number is not None:
-            fq.append("S%d" % self.sample_number)
-        if self.barcode_sequence is not None:
-            fq.append("%s" % self.barcode_sequence)
-        if self.lane_number is not None:
-            fq.append("L%03d" % self.lane_number)
-        if self.read_number is not None:
-            if self.delimiter == '.':
-                fq.append("r%d" % self.read_number)
-            elif self.is_index_read:
-                fq.append("I%d" % self.read_number)
-            else:
-                fq.append("R%d" % self.read_number)
-            for f in field.split('-'):
-                for c in f:
-                    is_tag = is_tag and c in 'ACGTN'
-            if is_tag:
-                self.barcode_sequence = field
-                fields = fields[:-1]
-                ##logger.debug("Identified barcode sequence as %s" % self.barcode_sequence)
-            else:
-                # Alternatively might be the sample number
-                if field.startswith('S'):
-                    try:
-                        if field[1:].isdigit():
-                            self.sample_number = int(field[1:])
-                            fields = fields[:-1]
-                    except IndexError:
-                        pass
-        # What's left is the name
-        ##logger.debug("Remaining fields: %s" % fields)
-        self.sample_name = '_'.join(fields)
-        assert(self.sample_name != '')
-
-    def __repr__(self):
-        """Implement __repr__ built-in
         """
         # Reconstruct name
         fq = ["%s" % self.sample_name]
