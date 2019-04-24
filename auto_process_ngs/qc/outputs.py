@@ -22,7 +22,7 @@ import os
 from bcftbx.qc.report import strip_ngs_extensions
 import logging
 from .constants import FASTQ_SCREENS
-from ..fastq_utils import pair_fastqs_by_name
+from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 
 # Module specific logger
@@ -180,14 +180,14 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         # No conf file, nothing to check
         return list()
     fastq_pairs = set()
-    for fq_pair in pair_fastqs_by_name(
+    for fq_group in group_fastqs_by_name(
             remove_index_fastqs(project.fastqs,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Strand stats output
         if qc_protocol == 'singlecell':
             # Strand stats output based on R2
-            fq_pair = (fq_pair[1],)
+            fq_pair = (fq_group[1],)
         output = os.path.join(qc_dir,
                               fastq_strand_output(fq_pair[0]))
         if not os.path.exists(output):
@@ -244,7 +244,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                         for f in fastq_screen_output(fastq,screen)]:
                 outputs.add(output)
     if fastq_strand_conf and os.path.exists(fastq_strand_conf):
-        for fq_pair in pair_fastqs_by_name(
+        for fq_group in group_fastqs_by_name(
                 remove_index_fastqs(project.fastqs,
                                     project.fastq_attrs),
                 fastq_attrs=project.fastq_attrs):
@@ -252,10 +252,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
             if qc_protocol == 'singlecell':
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
-                                      fastq_strand_output(fq_pair[1]))
+                                      fastq_strand_output(fq_group[1]))
             else:
                 # Strand stats output based on R1
                 output = os.path.join(qc_dir,
-                                      fastq_strand_output(fq_pair[0]))
+                                      fastq_strand_output(fq_group[0]))
             outputs.add(output)
     return sorted(list(outputs))
