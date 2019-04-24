@@ -192,9 +192,16 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         if qc_protocol == '10x_scATAC':
             # Strand stats output based on R1/R3 pair
             fq_pair = (fq_group[0],fq_group[2])
-        if qc_protocol == 'singlecell':
+        elif qc_protocol == 'singlecell':
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
+        else:
+            # All other protocols use R1 (single-end)
+            # or R1/R2 (paired-end)
+            if len(fq_group) > 1:
+                fq_pair = (fq_group[0],fq_group[1])
+            else:
+                fq_pair = (fq_group[0],)
         output = os.path.join(qc_dir,
                               fastq_strand_output(fq_pair[0]))
         if not os.path.exists(output):
