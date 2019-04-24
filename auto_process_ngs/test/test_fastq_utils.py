@@ -14,6 +14,7 @@ from auto_process_ngs.fastq_utils import get_read_number
 from auto_process_ngs.fastq_utils import get_read_count
 from auto_process_ngs.fastq_utils import pair_fastqs
 from auto_process_ngs.fastq_utils import pair_fastqs_by_name
+from auto_process_ngs.fastq_utils import group_fastqs_by_name
 from auto_process_ngs.fastq_utils import remove_index_fastqs
 
 # Test data
@@ -717,6 +718,121 @@ class TestPairFastqsByNameFunction(unittest.TestCase):
                          [("/data/PJB1_S1_R1_001.fastq.gz",
                            "/data/PJB1_S1_R2_001.fastq.gz"),
                           ("/data/PJB2_S2_R2_001.fastq.gz",)])
+
+# group_fastqs_by_name
+class TestGroupFastqsByNameFunction(unittest.TestCase):
+    """
+    Tests for the group_fastqs_by_name function
+    """
+    def test_group_fastqs_by_name_SE(self):
+        """
+        group_fastqs_by_name: single-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",]])
+
+    def test_group_fastqs_by_name_PE(self):
+        """
+        group_fastqs_by_name: paired-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz"]])
+
+    def test_group_fastqs_by_name_PE_with_index_read(self):
+        """
+        group_fastqs_by_name: paired-end fastqs with index reads
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB1_S1_I1_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz",
+                  "/data/PJB2_S2_I1_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz",
+                           "/data/PJB1_S1_I1_001.fastq.gz",],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz",
+                           "/data/PJB2_S2_I1_001.fastq.gz",]])
+
+    def test_group_fastqs_by_name_PE_with_index_read_pair(self):
+        """
+        group_fastqs_by_name: paired-end fastqs with index read pair
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB1_S1_I1_001.fastq.gz",
+                  "/data/PJB1_S1_I2_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz",
+                  "/data/PJB2_S2_I1_001.fastq.gz",
+                  "/data/PJB2_S2_I2_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz",
+                           "/data/PJB1_S1_I1_001.fastq.gz",
+                           "/data/PJB1_S1_I2_001.fastq.gz",],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz",
+                           "/data/PJB2_S2_I1_001.fastq.gz",
+                           "/data/PJB2_S2_I2_001.fastq.gz",]])
+
+    def test_group_fastqs_by_name_with_R3_and_index_read(self):
+        """
+        group_fastqs_by_name: R1, R2 and R3 fastqs with index reads
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB1_S1_R3_001.fastq.gz",
+                  "/data/PJB1_S1_I1_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R3_001.fastq.gz",
+                  "/data/PJB2_S2_I1_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz",
+                           "/data/PJB1_S1_R3_001.fastq.gz",
+                           "/data/PJB1_S1_I1_001.fastq.gz",],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",
+                           "/data/PJB2_S2_R2_001.fastq.gz",
+                           "/data/PJB2_S2_R3_001.fastq.gz",
+                           "/data/PJB2_S2_I1_001.fastq.gz",]])
+
+    def test_group_fastqs_by_name_mixed_SE_and_PE(self):
+        """
+        group_fastqs_by_name: mixture of single- and paired-end fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R1_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"],
+                          ["/data/PJB2_S2_R1_001.fastq.gz",]])
+
+    def test_group_fastqs_by_name_unpaired_R2(self):
+        """
+        group_fastqs_by_name: handle unpaired R2 fastqs
+        """
+        fastqs = ("/data/PJB1_S1_R1_001.fastq.gz",
+                  "/data/PJB1_S1_R2_001.fastq.gz",
+                  "/data/PJB2_S2_R2_001.fastq.gz")
+        self.assertEqual(group_fastqs_by_name(fastqs),
+                         [["/data/PJB1_S1_R1_001.fastq.gz",
+                           "/data/PJB1_S1_R2_001.fastq.gz"],
+                          ["/data/PJB2_S2_R2_001.fastq.gz",]])
 
 # get_read_number
 class TestGetReadNumber(unittest.TestCase):

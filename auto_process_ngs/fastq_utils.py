@@ -21,6 +21,9 @@ Utility classes and functions for operating on Fastq files:
 - get_read_count: count total reads across one or more Fastqs
 - pair_fastqs: automagically pair up FASTQ files
 - pair_fastqs_by_name: pair up FASTQ files based on their names
+- group_fastqs_by_name: group FASTQ files based on their names
+  (more general version of 'pair_fastqs_by_name' which can handle
+  arbitrary collections of read IDs)
 - remove_index_fastqs: remove index (I1/I2) Fastqs from a list
 """
 
@@ -584,6 +587,71 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
             pairs.append((fqr2,))
     pairs = sorted(pairs,cmp=lambda x,y: cmp(x[0],y[0]))
     return pairs
+
+def group_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
+    """
+    Group Fastq files based on their name
+
+    Grouping is based on the read number and type for the
+    supplied Fastq files being present in the file names; the
+    file contents are not examined.
+
+    Unpaired Fastqs (i.e. those for which a mate cannot be
+    found) are returned as a "pair" where the equivalent R1
+    or R2 mate is missing.
+
+    Arguments:
+      fastqs (list): list of Fastqs to pair
+      fastq_attrs (BaseFastqAttrs): optional, class to use
+        for extracting data from the filename (default:
+        IlluminaFastqAttrs)
+
+    Returns:
+      List: list of tuples (R1,R2) with the R1/R2 pairs,
+        or (R1,) or (R2,) for unpaired files.
+    """
+    # Get reads and put into groups by read ID
+    reads = set()
+    index_reads = set()
+    fastq_sets = dict()
+    for fastq in fastqs:
+        fq = fastq_attrs(fastq)
+        if not fq.is_index_read:
+            read = "r%d" % fq.read_number
+            reads.add(read)
+        else:
+            read = "i%d" % fq.read_number
+            index_reads.add(read)
+        try:
+            fastq_sets[read].append(fastq)
+        except KeyError:
+            fastq_sets[read] = [fastq]
+    reads = sorted(list(reads)) + sorted(list(index_reads))
+    # Rearrange into groups
+    groups = []
+    for ii,read in enumerate(reads):
+        for fastq in fastq_sets[read]:
+            # Create reference Fastq name
+            fq_ref = fastq_attrs(fastq)
+            fq_ref.is_index_read = False
+            fq_ref.read_number = 1
+            # Initialise a new group
+            group = [fastq]
+            # Look for matches
+            for r in reads[ii+1:]:
+                unmatched_fastqs = list()
+                for fastq1 in fastq_sets[r]:
+                    fq1_ref = fastq_attrs(fastq1)
+                    fq1_ref.is_index_read = False
+                    fq1_ref.read_number = 1
+                    if str(fq1_ref) == str(fq_ref):
+                        group.append(fastq1)
+                    else:
+                        unmatched_fastqs.append(fastq1)
+                fastq_sets[r] = unmatched_fastqs
+            groups.append(group)
+    groups = sorted(groups,cmp=lambda x,y: cmp(x[0],y[0]))
+    return groups
 
 def remove_index_fastqs(fastqs,fastq_attrs=IlluminaFastqAttrs):
     """
