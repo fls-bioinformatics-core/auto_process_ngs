@@ -204,8 +204,9 @@ class BufferedOutputFiles(OutputFiles):
     'bufsize' argument which can be used to set the
     buffer size to use.
     """
-    def __init__(self,base_dir=None,bufsize=DEFAULT_BUFFER_SIZE):
-        """Create a new OutputFiles instance
+    def __init__(self,base_dir=None,bufsize=DEFAULT_BUFFER_SIZE,
+                 max_open_files=MAX_OPEN_FILES):
+        """Create a new BufferedOutputFiles instance
 
         Arguments:
           base_dir (str): optional 'base' directory
@@ -213,12 +214,15 @@ class BufferedOutputFiles(OutputFiles):
           bufsize (int): optional buffer size; when
             data exceeds this size then it will be
             written to disk
-
+          max_open_files (int): optional limit on the
+            number of files that the instance can
+            keep open internally at any one time
         """
         OutputFiles.__init__(self,base_dir=base_dir)
         self._bufsize = bufsize
         self._buffer = dict()
         self._mode = dict()
+        self._max_open_files = max_open_files
 
     def open(self,name,filen=None,append=False):
         """Open a new output file
@@ -261,8 +265,11 @@ class BufferedOutputFiles(OutputFiles):
         except KeyError:
             # Close a file we have too many open at once
             # (to avoid IOError [Errno 24])
-            if len(self._fp) == MAX_OPEN_FILES:
+            if len(self._fp) == self._max_open_files:
                 self.close(self._fp.keys()[0])
+                # Reset the mode to 'append', in case
+                # the file is reopened again later
+                self._mode[name] = 'a'
             if self._file[name].endswith('.gz'):
                 open_func = gzip.open
             else:
