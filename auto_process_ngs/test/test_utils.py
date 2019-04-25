@@ -282,6 +282,49 @@ class TestBufferedOutputFiles(unittest.TestCase):
                          "Some test text\nSome extra test text\n")
         self.assertEqual(open(out.file_name('test2'),'r').read(),
                          "Some different\ntest text\n")
+    def test_bufferedoutputfiles_exceed_maximum_open_files(self):
+        # Only allow 2 open files at once internally
+        # (and with an artifically small buffer size)
+        out = BufferedOutputFiles(base_dir=self.wd,
+                                  bufsize=2,
+                                  max_open_files=2)
+        # Declare 4 output files
+        out.open('test1','test1.txt')
+        out.open('test2','test2.txt')
+        out.open('test3','test3.txt')
+        out.open('test4','test4.txt')
+        # Write content to each
+        out.write('test1','test text')
+        out.write('test2','different\ntest text')
+        out.write('test3','more test text')
+        out.write('test4','yet more\ntest text')
+        out.write('test1','and a bit more')
+        out.write('test2','more but different')
+        out.write('test3','different again')
+        out.write('test4','and even more different\ntest text')
+        out.write('test1','plus some final\ntext')
+        out.write('test2','and a last bit')
+        out.write('test3','plus a coda')
+        out.write('test4','et\nFIN')
+        # Close everything
+        out.close()
+        # Check the contents for each file
+        self.assertEqual(open(out.file_name('test1'),'r').read(),
+                         "test text\n"
+                         "and a bit more\n"
+                         "plus some final\ntext\n")
+        self.assertEqual(open(out.file_name('test2'),'r').read(),
+                         "different\ntest text\n"
+                         "more but different\n"
+                         "and a last bit\n")
+        self.assertEqual(open(out.file_name('test3'),'r').read(),
+                         "more test text\n"
+                         "different again\n"
+                         "plus a coda\n")
+        self.assertEqual(open(out.file_name('test4'),'r').read(),
+                         "yet more\ntest text\n"
+                         "and even more different\ntest text\n"
+                         "et\nFIN\n")
 
 class TestShowProgressChecker(unittest.TestCase):
     """
