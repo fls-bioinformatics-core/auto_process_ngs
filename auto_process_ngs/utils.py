@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes & funcs for auto_process_ngs module
-#     Copyright (C) University of Manchester 2013-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -266,10 +266,14 @@ class BufferedOutputFiles(OutputFiles):
             # Close a file we have too many open at once
             # (to avoid IOError [Errno 24])
             if len(self._fp) == self._max_open_files:
-                self.close(self._fp.keys()[0])
-                # Reset the mode to 'append', in case
-                # the file is reopened again later
-                self._mode[name] = 'a'
+                # Arbitrarily close file attached to first
+                # handle in the list of keys
+                name0 = self._fp.keys()[0]
+                self.close(name0)
+                # Reset the mode to 'append', so the contents
+                # aren't clobbered if the file is reopened
+                # again later
+                self._mode[name0] = 'a'
             if self._file[name].endswith('.gz'):
                 open_func = gzip.open
             else:
