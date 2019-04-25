@@ -10,6 +10,8 @@ tenx_genomics_utils.py
 Utility classes and functions for processing the outputs from 10xGenomics's
 Chromium SC 3'v2 system:
 
+- MetricSummary
+- AtacSummary
 - flow_cell_id
 - has_chromium_sc_indices
 - cellranger_info
@@ -34,6 +36,7 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from .applications import Command
@@ -161,6 +164,41 @@ class MetricsSummary(object):
         Return the estimated number of cells
         """
         return self._data['Estimated Number of Cells']
+
+class AtacSummary(TabFile):
+    """
+    Extract data from summary.csv file for scATAC-seq
+
+    Utility class for extracting data from a 'summary.csv'
+    file output from running 'cellranger-atac count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+    """
+    def __init__(self,f):
+        """
+        Create a new AtacSummary instance
+
+        Arguments:
+          f (str): path to the 'summary.csv' file
+        """
+        TabFile.__init__(self,
+                         filen=f,
+                         first_line_is_header=True,
+                         delimiter=',')
+    @property
+    def cells_detected(self):
+        """
+        Return the number of cells detected
+        """
+        return self[0]['cells_detected']
+    @property
+    def annotated_cells(self):
+        """
+        Return the number of annotated cells
+        """
+        return self[0]['annotated_cells']
 
 #######################################################################
 # Functions
@@ -362,10 +400,13 @@ def set_cell_count_for_project(project_dir):
     Set the total number of cells for a project
 
     Sums the number of cells for each sample in a project
-    (as determined from 'cellranger count', and extracted
-    from the 'metrics_summary.csv' file) and writes this
-    to the 'number_of_cells' metadata item for the
-    project.
+    (as determined from 'cellranger count' and extracted
+    from the 'metrics_summary.csv' file for scRNA-seq, or
+    from 'cellranger-atac count' and extracted from the
+    'summary.csv' file for scATAC-seq).
+
+    The final count is written to the 'number_of_cells'
+    metadata item for the project.
 
     Arguments:
       project_dir (str): path to the project directory
@@ -377,21 +418,38 @@ def set_cell_count_for_project(project_dir):
     project = AnalysisProject(project_dir,
                               os.path.basename(project_dir))
     number_of_cells = 0
-    for sample in project.samples:
-        try:
-            metrics_summary_csv = os.path.join(
-                project_dir,
-                "cellranger_count",
-                sample.name,
-                "outs",
-                "metrics_summary.csv")
-            metrics = MetricsSummary(
-                open(metrics_summary_csv,'r').read())
-            number_of_cells += metrics.estimated_number_of_cells
-        except Exception as ex:
-            logger.critical("Failed to add cell count for sample "
-                            "'%s': %s" % (sample.name,ex))
-            return 1
+    if project.info.library_type == 'scRNA-seq':
+        # Single cell RNA-seq
+        for sample in project.samples:
+            try:
+                metrics_summary_csv = os.path.join(
+                    project_dir,
+                    "cellranger_count",
+                    sample.name,
+                    "outs",
+                    "metrics_summary.csv")
+                metrics = MetricsSummary(
+                    open(metrics_summary_csv,'r').read())
+                number_of_cells += metrics.estimated_number_of_cells
+            except Exception as ex:
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': %s" % (sample.name,ex))
+                return 1
+    elif project.info.library_type == 'scATAC-seq':
+        # Single cell ATAC-seq
+        for sample in project.samples:
+            try:
+                summary_csv = os.path.join(
+                    project_dir,
+                    "cellranger_count",
+                    sample.name,
+                    "outs",
+                    "summary.csv")
+                number_of_cells += AtacSummary(summary_csv).annotated_cells
+            except Exception as ex:
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': %s" % (sample.name,ex))
+                return 1
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
@@ -705,6 +763,7 @@ def run_cellranger_count(fastq_dir,
     """
     # Cellranger mode
     cellranger_mode = os.path.basename(cellranger_exe)
+    print "Cellranger mode: %s" % cellranger_mode
     # Input data
     sample_names = {}
     try:
@@ -738,6 +797,7 @@ def run_cellranger_count(fastq_dir,
         log_dir = get_numbered_subdir("%s_count" % cellranger_mode,
                                       parent_dir=log_dir,
                                       full_path=True)
+        print "Log directory: %s" % log_dir
         mkdirs(log_dir)
 
     # Submit the cellranger count jobs
@@ -763,6 +823,7 @@ def run_cellranger_count(fastq_dir,
                                        (cellranger_mode,
                                         project,sample))
             mkdirs(work_dir)
+            print "Working directory: %s" % work_dir
             cmd = Command(cellranger_exe,
                           "count",
                           "--id",sample,
@@ -818,8 +879,9 @@ def run_cellranger_count(fastq_dir,
                              sample))
             mkdirs(count_dir)
             # Copy the cellranger count outputs
-            outs_dir = os.path.join("tmp.cellranger_count.%s.%s"
-                                    % (project,sample),
+            outs_dir = os.path.join("tmp.%s_count.%s.%s"
+                                    % (cellranger_mode,
+                                       project,sample),
                                     sample,
                                     "outs")
             if not summary_only:
@@ -828,9 +890,13 @@ def run_cellranger_count(fastq_dir,
                 shutil.copytree(outs_dir,count_dir)
             else:
                 # Only collect the web and csv summaries
+                if cellranger_mode == 'cellranger':
+                    files = ("web_summary.html","metrics_summary.csv")
+                elif cellranger_mode == 'cellranger-atac':
+                    files = ("web_summary.html","summary.csv")
                 count_dir = os.path.join(count_dir,"outs")
                 mkdirs(count_dir)
-                for f in ("web_summary.html","metrics_summary.csv"):
+                for f in files:
                     path = os.path.join(outs_dir,f)
                     if not os.path.exists(path):
                         logger.warning("%s: not found in %s" % (f,outs_dir))
@@ -889,8 +955,9 @@ def run_cellranger_count(fastq_dir,
     return retval
 
 def run_cellranger_count_for_project(project_dir,
-                                     transcriptome,
+                                     reference_data_path,
                                      chemistry='auto',
+                                     cellranger_exe='cellranger',
                                      cellranger_jobmode='local',
                                      cellranger_maxjobs=None,
                                      cellranger_mempercore=None,
@@ -912,9 +979,10 @@ def run_cellranger_count_for_project(project_dir,
     Arguments:
       project_dir (str): path to the analysis project
         containing Fastq files
-      transcriptome (str): path to the cellranger
+      reference_data_path (str): path to the cellranger
         compatible transcriptome reference data
-        directory
+        directory (for scRNA-seq) or ATAC reference
+        genome data (for scATAC-seq)
       chemistry (str): assay configuration (set to
         'auto' to let cellranger determine this
         automatically)
@@ -955,8 +1023,9 @@ def run_cellranger_count_for_project(project_dir,
     # Run the count procedure
     retval = run_cellranger_count(
         fastq_dir,
-        transcriptome,
+        reference_data_path,
         chemistry=chemistry,
+        cellranger_exe=cellranger_exe,
         cellranger_jobmode=cellranger_jobmode,
         cellranger_maxjobs=cellranger_maxjobs,
         cellranger_mempercore=cellranger_mempercore,
