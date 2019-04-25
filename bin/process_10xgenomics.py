@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_10xgenomics.py: processing of 10xGenomics Chromium SC data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
 #
 """
 process_10genomics.py
@@ -180,6 +180,35 @@ def update_project_metadata(unaligned_dir,
     # Save
     project_metadata.save(filen)
 
+def get_reference_data(organism,references):
+    """
+    Return reference data matching organism name
+
+    Looks up reference data in supplied mapping of organism
+    names to reference data.
+
+    Arguments:
+      organism (str): name of the organism
+      references (mapping): mapping of organism names
+        to reference data sets
+
+    Returns:
+      String: reference data set corresponding to the
+        supplied organism.
+    """
+    if not organism:
+        raise Exception("Can't look up reference "
+                        " (no organism specified)")
+    organisms = get_organism_list(organism)
+    if len(organisms) > 1:
+        raise Exception("Can't look up reference "
+                        " (multiple organisms)")
+    try:
+        return references[organisms[0]]
+    except KeyError:
+        raise Exception("No reference found for "
+                        "organism '%s'" % organism)
+
 ######################################################################
 # Main
 ######################################################################
@@ -241,6 +270,28 @@ if __name__ == "__main__":
                               "count' (default: only collect the "
                               "'web_summary.html' and 'metrics_summary.csv' "
                               "files)")
+    # 'count-atac' parser
+    count_atac_parser = subparsers.add_parser("count-atac",
+                                              help="run 'cellranger-atac count'")
+    count_atac_parser.add_argument("projects",metavar="PROJECT",
+                                   nargs="*",
+                                   help="project directory to run "
+                                   "'cellranger-atac count' on")
+    count_atac_parser.add_argument("-u","--unaligned",
+                                   dest="unaligned_dir",default="bcl2fastq",
+                                   help="'unaligned' dir with output from "
+                                   "bcl2fastq (nb ignored if one or more "
+                                   "projects are supplied)")
+    count_atac_parser.add_argument("-r","--reference",
+                                   dest="atac_genome_reference",default=None,
+                                   help="path to the cellranger ATAC "
+                                   "compatible genome reference")
+    count_atac_parser.add_argument("-a","--all-outputs",
+                                   action="store_true",
+                                   help="collect all outputs from 'cellranger-atac "
+                                   "count' (default: only collect the "
+                                   "'web_summary.html' and 'metrics_summary.csv' "
+                                   "files)")
     # 'update_projects' parser
     update_projects_parser = subparsers.add_parser(
         "update_projects",
@@ -258,7 +309,7 @@ if __name__ == "__main__":
                                         "metadata file (default: "
                                         "'projects.info')")
     # Add generic options
-    for p in (mkfastq_parser,count_parser):
+    for p in (mkfastq_parser,count_parser,count_atac_parser):
         p.add_argument("--jobmode",
                        dest="job_mode",
                        default=__settings['10xgenomics'].cellranger_jobmode,
@@ -311,7 +362,7 @@ if __name__ == "__main__":
     print "command: %s" % args.command
 
     # Deal with environment modules
-    if args.command in ("mkfastq","count"):
+    if args.command in ("mkfastq","count","count-atac"):
         modulefiles = args.modulefiles
         if modulefiles is None:
             try:
@@ -354,44 +405,45 @@ if __name__ == "__main__":
                            dry_run=args.dry_run,
                            log_dir='logs',
                            project_metadata_file='projects.info')
-    elif args.command == "count":
-        # Run cellranger count over the samples
+    elif args.command in ("count","count-atac"):
+        # Run cellranger[-atac] count over the samples
+        if args.command == "count-atac":
+            cellranger_exe = "cellranger-atac"
+        else:
+            cellranger_exe = "cellranger"
         if args.projects:
             for project in args.projects:
-                # Fetch transcriptome for project
                 print "Project: %s" % project
-                transcriptome = args.transcriptome
-                if transcriptome is None:
-                    try:
-                        organisms = get_organism_list(
+                if cellranger_exe == "cellranger":
+                    # Fetch transcriptome for project
+                    reference_data = args.transcriptome
+                    if reference_data is None:
+                        reference_data = get_reference_data(
                             AnalysisProject(
                                 os.path.basename(project),
-                                project).info.organism)
-                    except AttributeError:
-                        organisms = None
-                    if not organisms:
-                        raise Exception("%s: can't look up transcriptome "
-                                        " (no organism specified); use "
-                                        " -t/--transcriptome option" %
-                                        project)
-                    elif len(organisms) > 1:
-                        raise Exception("%s: can't look up transcriptome "
-                                        " (multiple organisms); use "
-                                        " -t/--transcriptome option" %
-                                        project)
-                    try:
-                        transcriptome = __settings['10xgenomics_transcriptomes']\
-                                        [organisms[0]]
-                    except KeyError:
-                        raise Exception("%s: no transcriptome found for "
-                                        "organism '%s'; use -t/--transcriptome"
-                                        "option" % (project,organisms[0]))
-                print "Transcriptome: %s" % transcriptome
+                                project).info.organism,
+                            __settings['10xgenomics_transcriptomes'])
+                    print "Transcriptome: %s" % reference_data
+                    # Handle chemistry argument
+                    chemistry = args.chemistry
+                elif cellranger_exe == "cellranger-atac":
+                    # Fetch reference genome data for project
+                    reference_data = args.atac_genome_reference
+                    if reference_data is None:
+                        reference_data = get_reference_data(
+                            AnalysisProject(
+                                os.path.basename(project),
+                                project).info.organism,
+                            __settings['10xgenomics_atac_genome_references'])
+                    print "ATAC genome reference: %s" % reference_data
+                    # Don't supply chemistry argument
+                    chemistry = None
                 # Run single library analysis
                 run_cellranger_count_for_project(
                     project,
-                    transcriptome,
-                    chemistry=args.chemistry,
+                    reference_data,
+                    chemistry=chemistry,
+                    cellranger_exe=cellranger_exe,
                     cellranger_jobmode=args.job_mode,
                     cellranger_maxjobs=args.max_jobs,
                     cellranger_mempercore=args.mem_per_core,
@@ -405,6 +457,7 @@ if __name__ == "__main__":
             run_cellranger_count(args.unaligned_dir,
                                  args.transcriptome,
                                  chemistry=args.chemistry,
+                                 cellranger_exe=cellranger_exe,
                                  cellranger_jobmode=args.job_mode,
                                  cellranger_maxjobs=args.max_jobs,
                                  cellranger_mempercore=args.mem_per_core,
