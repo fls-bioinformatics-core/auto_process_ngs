@@ -203,6 +203,7 @@ if __name__ == "__main__":
                        fastq_strand_indexes=
                        __settings.fastq_strand_indexes,
                        max_jobs=args.max_jobs,
+                       batch_size=args.batch_size,
                        runners={
                            'qc_runner': qc_runner,
                            'verify_runner': verify_runner,
