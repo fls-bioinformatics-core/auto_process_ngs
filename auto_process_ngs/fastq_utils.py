@@ -192,8 +192,12 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
                 field = fields[-1]
             if len(fields) > 1:
                 # Barcode sequence
+                # Determine separator for dual index barcodes ('-' or '+')
+                for sep in ('-','+'):
+                    if sep in field:
+                        break
                 is_tag = True
-                for f in field.split('-'):
+                for f in field.split(sep):
                     for c in f:
                         is_tag = is_tag and c in 'ACGTN'
                 if is_tag:
@@ -253,8 +257,12 @@ class IlluminaFastqAttrs(BaseFastqAttrs):
         if len(fields) > 1:
             # This mustn't be the last field: if it is then it's
             # not the tag - it's the name
+            # Determine separator for dual index barcodes ('-' or '+')
+            for sep in ('-','+'):
+                if sep in field:
+                    break
             is_tag = True
-            for f in field.split('-'):
+            for f in field.split(sep):
                 for c in f:
                     is_tag = is_tag and c in 'ACGTN'
             if is_tag:
