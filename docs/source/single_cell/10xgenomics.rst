@@ -6,13 +6,16 @@ Background
 
 The 10xGenomics Chromium SC 3'v2 system prepares single cell (SC) samples
 which are then sequenced as part of an Illumina sequencing run. 10xGenomics
-provide the ``cellranger`` software package to perform Fastq generation
-and subsequent analyses.
+provide the ``cellranger`` and ``cellranger-atac`` software packages to
+perform Fastq generation and subsequent analyses:
+
+* ``cellranger`` is used for single cell RNA-seq data
+* ``cellranger-atac`` is used for single cell ATAC-seq data
 
 The auto-process package currently provides a utility script called
 ``process_10xgenomics.py`` which wraps a subset of the ``cellranger``
-commands whilst also providing a degree of integration with the
-``auto_process`` pipeline.
+and ``cellranger-atac`` commands, whilst also providing a degree of
+integration with the ``auto_process`` pipeline.
 
 Processing protocol for 10xGenomics Chromium data
 -------------------------------------------------
@@ -20,7 +23,8 @@ Processing protocol for 10xGenomics Chromium data
 The recommended steps are:
 
 1. Generate the Fastqs as described in
-   :ref:`make_fastqs-10x_chromium_sc-protocol`
+   :ref:`make_fastqs-10x_chromium_sc-protocol` or
+   :ref:`make_fastqs-10x_chromium_sc_atac-protocol`
 2. Set up analysis directories and run initial QC as per the standard
    protocol
 3. Perform initial single library analysis by running the
@@ -32,11 +36,20 @@ The recommended steps are:
 Perform initial single-library analysis
 ---------------------------------------
 
-Initial single-library analysis can be performed by using the
-``process_10xgenomics.py count`` wrapper to run ``cellranger count``
-on all the samples in the Chromium-based projects.
+Initial single-library analysis can be performed by using
+``process_10xgenomics.py count`` (for scRNA-seq data) or
+``process_10xgenomics.py count-atac`` (for scATAC-seq data) commands.
+These are wrappers which run ``cellranger count`` or
+``cellranger-atac count`` on all the samples in the Chromium-based
+projects.
 
-The general invocation is:
+.. _10xgenomics-count-options:
+
+Single-library analysis for scRNA-seq data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The general invocation for running the single-library analysis on
+single cell RNA-seq data is:
 
 ::
 
@@ -45,12 +58,17 @@ The general invocation is:
 	   PROJECT1 [ PROJECT2 ... ]
 
 where ``PROJECT1`` etc represent the projects with Chromium
-datasets.
+RNA-seq datasets.
 
-.. note::
+The ``count`` command supports the following options::
 
-   See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
-   for more details on the single-library analysis.
+    -u : specify the name of the output directory from 'mkfastq'
+    -t : specify the path to the directory with the appropriate
+         10xGenomics transcriptome data
+    -c : specify the assay configuration (aka chemistry)
+
+in addition to the options outlined in the section
+:ref:`10xgenomics-additional-options`.
 
 .. note::
 
@@ -60,19 +78,45 @@ datasets.
    instead the matching reference data will be used automatically
    for the single-library analysis.
 
-.. _10xgenomics-count-options:
+See https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/using/count
+for more details on the single-library analysis for scRNA-seq.
 
-Command line options for 'count'
-********************************
+.. _10xgenomics-count-atac-options:
 
-The ``count`` command supports the following options::
+Single-library analysis for sATAC-seq data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The general invocation for running the single-library analysis on
+single cell ATAC-seq data is:
+
+::
+
+       process_10xgenomics.py count-atac \
+           -r /path/to/refdata-cellranger-atac-mm10-1.0.1
+	   PROJECT1 [ PROJECT2 ... ]
+
+where ``PROJECT1`` etc represent the projects with Chromium
+ATAC-seq datasets.
+
+The ``count-atac`` command supports the following options::
 
     -u : specify the name of the output directory from 'mkfastq'
-    -t : specify the path to the directory with the appropriate
-         10xGenomics transcriptome data
-    -c : specify the assay configuration (aka chemistry)
+    -r : specify the path to the directory with the appropriate
+         10xGenomics ATAC genome reference data
 
-See also :ref:`10xgenomics-additional-options`.
+in addition to the options outlined in the section
+:ref:`10xgenomics-additional-options`.
+
+.. note::
+
+   If a project metadata defines an organism name which matches one
+   of the entries in the ``10xgenomics_atac_genome_references``
+   section of the configuration file then the ``-r`` option isn't
+   required; instead the matching reference data will be used
+   automatically for the single-library analysis.
+
+See https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/using/count
+for more details on the single-library analysis for scATAC-seq.
 
 .. _10xgenomics-additional-options:
 
