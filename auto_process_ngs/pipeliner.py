@@ -1491,8 +1491,6 @@ class Pipeline(object):
                 elif self._exit_on_failure == PipelineFailure.DEFERRED:
                     # Remove any tasks waiting on the failures
                     # but defer pipeline termination
-                    self.report("There are failed tasks but pipeline exit "
-                                "will be deferred")
                     for task in failed:
                         self.report("Task failed: '%s' (%s)" %
                                     (task.name(),task.id()))
@@ -1513,6 +1511,8 @@ class Pipeline(object):
                                 pending.append(t)
                         self._pending = pending
                     self._failed.extend(failed)
+                    self.report("There are failed tasks but pipeline exit "
+                                "will be deferred")
             # Report the current running and pending tasks
             if update:
                 if self._running:
@@ -1710,6 +1710,11 @@ class PipelineTask(object):
         or 'finish' methods, to terminate the task and
         indicate that it has failed.
 
+        NB when using the 'fail' method it is recommended that
+        the method that it was invoked from should return
+        immediately afterwards, to avoid any unexpected side
+        effects
+
         Arguments:
           exit_code (int): optional, specifies the exit code
             to return (defaults to 1)
@@ -1719,8 +1724,8 @@ class PipelineTask(object):
         if message:
             self.report("failed: %s" % message)
         self.report("failed: exit code set to %s" % exit_code)
-        self._completed = True
         self._exit_code = exit_code
+        self._completed = True
 
     def report(self,s):
         """
@@ -2076,7 +2081,12 @@ class PipelineFunctionTask(PipelineTask):
         try:
             for d in self._dispatchers:
                 result.append(d.get_result())
-        except Exception:
+        except Exception as ex:
+            logger.critical("'%s': exception collecting results from "
+                            "dispatchers (%s)" % (self.name(),self.id()))
+            self.report("'%s': exception collecting results from "
+                        "dispatchers (%s)" % (self.name(),self.id()))
+            self.report("Exception: %s" % ex)
             self._completed = True
             self._exit_code = 1
             result = None
