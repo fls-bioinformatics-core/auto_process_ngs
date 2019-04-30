@@ -1066,7 +1066,8 @@ class MockCellrangerExe(object):
 
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
-               platform=None,assert_bases_mask=None):
+               platform=None,assert_bases_mask=None,
+               reads=None):
         """
         Create a "mock" cellranger executable
 
@@ -1083,6 +1084,12 @@ class MockCellrangerExe(object):
           platform (str): platform for primary
             data (if it cannot be determined from
             the directory/instrument name)
+          assert_bases_mask (str): if set then
+            check that the supplied bases mask
+            matches this value (not implemented)
+          reads (list): list of 'reads' that
+            will be created (default: ``('R1','R2',
+            'I1',)``)
         """
         path = os.path.abspath(path)
         print "Building mock executable: %s" % path
@@ -1095,14 +1102,16 @@ from auto_process_ngs.mock import MockCellrangerExe
 sys.exit(MockCellrangerExe(path=sys.argv[0],
                            exit_code=%s,
                            platform=%s,
-                           assert_bases_mask=%s).main(sys.argv[1:]))
+                           assert_bases_mask=%s,
+                           reads=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    ("\"%s\"" % platform
                     if platform is not None
                     else None),
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
-                    else None)))
+                    else None),
+                   reads))
             os.chmod(path,0775)
         with open(path,'r') as fp:
             print "cellranger:"
@@ -1112,7 +1121,8 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
     def __init__(self,path=None,
                  exit_code=0,
                  platform=None,
-                 assert_bases_mask=None):
+                 assert_bases_mask=None,
+                 reads=None):
         """
         Internal: configure the mock cellranger
         """
@@ -1121,6 +1131,10 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        if reads is None:
+            self._reads = ('R1','R2','I1',)
+        else:
+            self._reads = tuple(reads)
 
     def _write_qc_summary_json(self,path,run_dir,out_dir,
                                sample_sheet,samples,lanes):
@@ -1310,13 +1324,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # NB Would like to use the 'add_undetermined'
             # method but this doesn't play well with using
             # the predictor-based approach above
-            reads = (1,2)
-            for r in reads:
+            for r in self._reads:
                 for lane in lanes:
                     output.add_fastq(
                         "Undetermined_indices",
                         "undetermined",
-                        "Undetermined_S0_L%03d_R%d_001.fastq.gz"
+                        "Undetermined_S0_L%03d_%s_001.fastq.gz"
                         % (lane,r))
             # Build the output directory
             output.create()

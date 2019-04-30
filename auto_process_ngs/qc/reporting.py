@@ -13,6 +13,7 @@ import os
 import logging
 import time
 import ast
+from collections import defaultdict
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import cmp_sample_names
 from bcftbx.TabFile import TabFile
@@ -20,7 +21,9 @@ from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
 from bcftbx.utils import extract_prefix
 from bcftbx.utils import extract_index
+from ..analysis import AnalysisFastq
 from ..analysis import run_reference_id
+from ..analysis import split_sample_name
 from ..docwriter import Document
 from ..docwriter import Section
 from ..docwriter import Table
@@ -29,6 +32,7 @@ from ..docwriter import Link
 from ..docwriter import Target
 from ..docwriter import List
 from ..metadata import AnalysisDirMetadata
+from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
@@ -167,9 +171,9 @@ class QCReporter(object):
 
     name: project name
     paired_end: True if project is paired-end
-    samples: list of QCSample instances
+    samples: list of sample names
 
-    Provides the follow methods:
+    Provides the following methods:
 
     verify: checks the QC outputs for the project
     report: generate a HTML report for the project
@@ -182,13 +186,7 @@ class QCReporter(object):
            project (AnalysisProject): project to report QC for
         """
         self._project = project
-        self._samples = []
         self._parent_dir = os.path.dirname(self._project.dirn)
-        for sample in self._project.samples:
-            self._samples.append(QCSample(sample))
-        self._samples = sorted(self._samples,
-                               cmp=lambda x,y: cmp_sample_names(x.name,y.name))
-        logger.debug("Found %d samples" % len(self._samples))
 
     @property
     def name(self):
@@ -197,10 +195,6 @@ class QCReporter(object):
     @property
     def paired_end(self):
         return self._project.info.paired_end
-
-    @property
-    def samples(self):
-        return self._samples
 
     def verify(self,qc_dir=None,qc_protocol=None):
         """
@@ -239,7 +233,6 @@ class QCReporter(object):
             if not os.path.exists(f):
                 print "Missing: %s" % f
                 verified = False
-                ##break
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
@@ -292,37 +285,6 @@ class QCReporter(object):
         report.write(filename)
         # Return the output filename
         return filename
-
-class QCSample(object):
-    """
-    Class describing QC results for an AnalysisSample
-
-    Provides the follow properties:
-
-    name: sample name
-    fastq_pairs: list of FastqSet instances
-
-    Provides the follow methods:
-
-    verify: checks that QC outputs are present
-    """
-    def __init__(self,sample):
-        """
-        Initialise a new QCSample instance
-
-        Arguments:
-           sample (AnalysisSample): sample instance
-        """
-        self._sample = sample
-        self._fastq_pairs = get_fastq_pairs(sample)
-
-    @property
-    def name(self):
-        return self._sample.name
-
-    @property
-    def fastq_pairs(self):
-        return self._fastq_pairs
 
 class FastqSet(object):
     """
@@ -394,12 +356,9 @@ class QCReport(Document):
     - fastqs: Fastq R1/R2 names
     - reads: number of reads
     - read_lengths: length of reads
-    - fastqc_r1: FastQC mini-plot for R1
-    - boxplot_r1: FastQC per-base-quality mini-boxplot' for R1
-    - screens_r1: FastQScreen mini-plots for R1
-    - fastqc_r2: FastQC mini-plot for R2
-    - boxplot_r2: FastQC per-base-quality mini-boxplot' for R2
-    - screens_r2: FastQScreen mini-plots for R2
+    - fastqc_[read]: FastQC mini-plot for [read] (r1,r2,...)
+    - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
+    - screens_[read]: FastQScreen mini-plots for [read]
     - strandedness: 'forward', 'reverse' or 'unstranded' for pair
 
     To control the elements written to the reports for each Fastq
@@ -443,8 +402,25 @@ class QCReport(Document):
                                       qc_dir)
         self.qc_dir = qc_dir
         logger.debug("QCReport: qc_dir (final): %s" % self.qc_dir)
+        # How to read Fastq names
+        self.fastq_attrs = self.project.fastq_attrs
         # Detect outputs
         self._detect_outputs()
+        if self.samples:
+            print "Samples found:"
+            for sample in self.samples:
+                print "\t- %s" % sample
+        else:
+            logger.warning("No samples found")
+        if self.fastqs:
+            print "Fastqs referenced:"
+            for fastq in self.fastqs:
+                print "\t- %s" % fastq
+            print "Reads found:"
+            for read in self.reads:
+                print "\t- %s" % read
+        else:
+            logger.warning("No Fastqs referenced")
         if self.outputs:
             print "Available QC outputs:"
             for output in self.outputs:
@@ -479,7 +455,7 @@ class QCReport(Document):
         # Field descriptions for summary table
         self.field_descriptions = { 'sample': 'Sample',
                                     'fastq' : 'Fastq',
-                                    'fastqs': 'Fastqs (R1/R2)',
+                                    'fastqs': 'Fastqs',
                                     'reads': '#reads',
                                     'read_lengths': 'Length',
                                     'fastqc_r1': 'FastQC[R1]',
@@ -488,24 +464,25 @@ class QCReport(Document):
                                     'fastqc_r2': 'FastQC[R2]',
                                     'boxplot_r2': 'Boxplot[R2]',
                                     'screens_r2': 'Screens[R2]',
+                                    'fastqc_r3': 'FastQC[R3]',
+                                    'boxplot_r3': 'Boxplot[R3]',
+                                    'screens_r3': 'Screens[R3]',
                                     'strandedness': 'Strand', }
         # Fields to report in summary table
         if not summary_fields:
-            if self.project.info.paired_end:
-                reads = ('r1','r2')
+            if len(self.reads) > 1:
                 summary_fields = ['sample',
                                   'fastqs',
                                   'reads',
                                   'read_lengths',]
             else:
-                reads = ('r1',)
                 summary_fields = ['sample',
                                   'fastq',
                                   'reads',
                                   'read_lengths',]
             if 'strandedness' in self.outputs:
                 summary_fields.append('strandedness')
-            for read in reads:
+            for read in self.reads:
                 if ('fastqc_%s' % read) in self.outputs:
                     summary_fields.append('fastqc_%s' % read)
                     summary_fields.append('boxplot_%s' % read)
@@ -531,13 +508,8 @@ class QCReport(Document):
         print "Building the report..."
         self.report_metadata()
         self.report_software()
-        for sample in self.project.samples:
-            try:
-                self.report_sample(sample)
-            except Exception as ex:
-                logger.error("Exception for sample '%s': %s"
-                             % (sample.name,ex))
-                raise ex
+        for sample in self.samples:
+            self.report_sample(sample)
 
     def _init_metadata_table(self):
         """
@@ -627,23 +599,12 @@ class QCReport(Document):
         """
         Internal: determine which QC outputs are present
         """
-        outputs = []
+        outputs = set()
         software = {}
         print "Scanning contents of %s" % self.qc_dir
         files = os.listdir(self.qc_dir)
         print "\t- %d objects found" % len(files)
-        fastqs = [strip_ngs_extensions(os.path.basename(fq))
-                  for fq in self.project.fastqs]
-        fastqs_r1 = filter(lambda f:
-                           self.project.fastq_attrs(f).read_number == 1,
-                           fastqs)
-        fastqs_r2 = filter(lambda f:
-                           self.project.fastq_attrs(f).read_number == 2,
-                           fastqs)
         logger.debug("files: %s" % files)
-        logger.debug("fastqs: %s" % fastqs)
-        logger.debug("fastqs R1: %s" % fastqs_r1)
-        logger.debug("fastqs R2: %s" % fastqs_r2)
         # Look for screen files
         screens = filter(lambda f:
                          f.endswith("_screen.txt") or
@@ -651,19 +612,18 @@ class QCReport(Document):
                          files)
         logger.debug("Screens: %s" % screens)
         print "\t- %d fastq_screen files" % len(screens)
+        fastq_names = set()
         if screens:
-            for fq in fastqs_r1:
-                if filter(lambda s: s.startswith(fq),screens):
-                    outputs.append("screens_r1")
-                    break
-            for fq in fastqs_r2:
-                if filter(lambda s: s.startswith(fq),screens):
-                    outputs.append("screens_r2")
-                    break
             versions = set()
+            # Pull out the Fastq names from the .txt files
             for screen in filter(lambda s:
                                  s.endswith("_screen.txt"),
                                  screens):
+                fq = self.fastq_attrs(os.path.splitext(screen)[0])
+                fastq_names.add(fq.canonical_name)
+                outputs.add("screens_%s%s" % (('i' if fq.is_index_read
+                                               else 'r'),
+                                              fq.read_number))
                 versions.add(Fastqscreen(
                     os.path.join(self.qc_dir,screen)).version)
             if versions:
@@ -673,19 +633,17 @@ class QCReport(Document):
         logger.debug("Fastqc: %s" % fastqcs)
         print "\t- %d fastqc files" % len(fastqcs)
         if fastqcs:
-            for fq in fastqs_r1:
-                if filter(lambda f: f.startswith(fq),fastqcs):
-                    outputs.append("fastqc_r1")
-                    break
-            for fq in fastqs_r2:
-                if filter(lambda f: f.startswith(fq),fastqcs):
-                    outputs.append("fastqc_r2")
-                    break
             versions = set()
-            for f in fastqcs:
-                d = os.path.splitext(f)[0]
+            # Pull out the Fastq names from the Fastqc files
+            for fastqc in fastqcs:
+                fastqc = os.path.splitext(fastqc)[0]
+                fq = self.fastq_attrs(fastqc)
+                fastq_names.add(fq.canonical_name)
+                outputs.add("fastqc_%s%s" % (('i' if fq.is_index_read
+                                              else 'r'),
+                                             fq.read_number))
                 versions.add(Fastqc(
-                    os.path.join(self.qc_dir,d)).version)
+                    os.path.join(self.qc_dir,fastqc)).version)
             if versions:
                 software['fastqc'] = sorted(list(versions))
         # Look for fastq_strand outputs
@@ -693,9 +651,11 @@ class QCReport(Document):
         logger.debug("fastq_strand: %s" % fastq_strand)
         print "\t- %d fastq_strand files" % len(fastq_strand)
         if fastq_strand:
-            outputs.append("strandedness")
+            outputs.add("strandedness")
             versions = set()
             for f in fastq_strand:
+                fq = self.fastq_attrs(os.path.splitext(f)[0])
+                fastq_names.add(fq.canonical_name)
                 versions.add(Fastqstrand(
                     os.path.join(self.qc_dir,f)).version)
             if versions:
@@ -706,8 +666,29 @@ class QCReport(Document):
                                       "multi%s_report.html"
                                       % os.path.basename(self.qc_dir))
         if os.path.isfile(multiqc_report):
-            outputs.append("multiqc")
-        self.outputs = outputs
+            outputs.add("multiqc")
+        # Fastqs sorted by sample name
+        self.fastqs = sorted(list(fastq_names),
+                             key=lambda fq: split_sample_name(
+                                 self.fastq_attrs(fq).sample_name))
+        # Determine reads
+        reads = set()
+        for fastq in self.fastqs:
+            fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                reads.add("i%s" % fq.read_number)
+            else:
+                reads.add("r%s" % fq.read_number)
+        self.reads = sorted(list(reads))
+        # Samples
+        samples = set([self.fastq_attrs(fq).sample_name
+                       for fq in self.fastqs] +
+                      self.project.samples)
+        self.samples = sorted(list(samples),
+                              key=lambda s: split_sample_name(s))
+        # QC outputs
+        self.outputs = sorted(list(outputs))
+        # Software versions
         self.software = software
         return self.outputs
 
@@ -814,6 +795,7 @@ class QCReport(Document):
                     try:
                         cellranger = ast.literal_eval(
                             self.run_metadata.cellranger_software)
+                        software_names['cellranger'] = cellranger[1].title()
                         value = cellranger[2]
                     except ValueError:
                         continue
@@ -838,92 +820,103 @@ class QCReport(Document):
         detailed reports to the document.
 
         Arguments:
-          sample (AnalysisSample): sample to report
+          sample (str): name of sample to report
         """
-        sample = QCSample(sample)
-        # Create a new section for the sample
         sample_report = self.add_section(
-            "Sample: %s" % sample.name,
-            name="sample_%s" % sample.name,
+            "Sample: %s" % sample,
+            name="sample_%s" % sample,
             css_classes=('sample',))
+        # Get Fastq groups
+        fastqs = sorted(filter(lambda fq:
+                               self.fastq_attrs(fq).sample_name == sample,
+                               self.fastqs))
+        fastq_groups = group_fastqs_by_name(fastqs,self.fastq_attrs)
         # Number of fastqs
-        if self.project.info.paired_end:
+        if len(self.reads) > 1:
             sample_report.add("%d fastq R1/R2 pairs" %
-                              len(sample.fastq_pairs))
+                              len(fastq_groups))
         else:
             sample_report.add("%d fastqs" %
-                              len(sample.fastq_pairs))
-        # Report each Fastq/Fastq pair
-        sample_name = sample.name
-        for fq_pair in sample.fastq_pairs:
+                              len(fastq_groups))
+        # Report each Fastq group
+        for fastqs in fastq_groups:
             # Report Fastq pair
-            fastq_pair = QCReportFastqPair(fq_pair.r1,
-                                           fq_pair.r2,
-                                           self.qc_dir)
-            fastq_pair.report(sample_report,
-                              attrs=self.report_attrs,
-                              relpath=self.relpath)
+            fastq_group = QCReportFastqGroup(fastqs,
+                                             qc_dir=self.qc_dir,
+                                             fastq_attrs=self.fastq_attrs)
+            fastq_group.report(sample_report,
+                               attrs=self.report_attrs,
+                               relpath=self.relpath)
             # Add line in summary table
-            if sample_name is not None:
-                idx = self.summary_table.add_row(sample=Link(sample_name,
+            if sample is not None:
+                idx = self.summary_table.add_row(sample=Link(sample,
                                                              sample_report))
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
-            fastq_pair.update_summary_table(self.summary_table,idx=idx,
-                                            fields=self.summary_fields,
-                                            relpath=self.relpath)
+            fastq_group.update_summary_table(self.summary_table,idx=idx,
+                                             fields=self.summary_fields,
+                                             relpath=self.relpath)
 
-class QCReportFastqPair(object):
+class QCReportFastqGroup(object):
     """
-    Utility class for reporting the QC for a Fastq pair
+    Utility class for reporting the QC for a Fastq group
 
     Provides the following properties:
 
-    r1: QCReportFastq instance for R1 Fastq
-    r2: QCReportFastq instance for R2 Fastq
+    reads: list of read ids e.g. ['r1','r2']
+    fastqs: dictionary mapping read ids to Fastq paths
+    reporters: dictionary mapping read ids to QCReportFastq
+      instances
+    paired_end: whether FastqGroup is paired end
+    fastq_strand_txt: location of associated Fastq_strand
+      output
 
     Provides the following methods:
 
-    report: 
+    strandedness: fetch strandedness data for this group
+    ustrandplot: return mini-strand stats summary plot
+    report_strandedness: write report for strandedness
+    report: write report for the group
+    update_summary_table: add line to summary table for
+      the group
     """
-    def __init__(self,fastqr1,fastqr2,qc_dir):
+    def __init__(self,fastqs,qc_dir,fastq_attrs=AnalysisFastq):
         """
-        Create a new QCReportFastqPair
+        Create a new QCReportFastqGroup
 
         Arguments:
-          fastqr1 (str): R1 Fastq file
-          fastqr2 (str): R2 Fastq file (None if 'pair' is
-            single-ended)
+          fastqs (list): list of paths to Fastqs in the
+            group
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          fastq_attrs (BaseFastqAttrs): class for extracting
+            data from Fastq names
         """
-        self.fastqr1 = fastqr1
-        self.fastqr2 = fastqr2
         self.qc_dir = qc_dir
+        self.fastq_attrs = fastq_attrs
+        # Assign fastqs to reads
+        self.fastqs = defaultdict(lambda: None)
+        self.reporters = defaultdict(lambda: None)
+        self.reads = set()
+        for fastq in fastqs:
+            fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                read = 'i'
+            else:
+                read = 'r'
+            read = "%s%d" % (read,fq.read_number)
+            self.fastqs[read] = fastq
+            self.reporters[read] = QCReportFastq(fastq,self.qc_dir)
+            self.reads.add(read)
+        self.reads = sorted(list(self.reads))
 
     @property
     def paired_end(self):
         """
         True if pair consists of R1/R2 files
         """
-        return (self.fastqr2 is not None)
-
-    @property
-    def r1(self):
-        """
-        QCReportFastq instance for R1 Fastq
-        """
-        return QCReportFastq(self.fastqr1,self.qc_dir)
-
-    @property
-    def r2(self):
-        """
-        QCReportFastq instance for R2 Fastq (None if not paired end)
-        """
-        if self.fastqr2 is not None:
-            return QCReportFastq(self.fastqr2,self.qc_dir)
-        return None
+        return ('r1' in self.fastqs and 'r2' in self.fastqs)
 
     @property
     def fastq_strand_txt(self):
@@ -931,7 +924,7 @@ class QCReportFastqPair(object):
         Locate output from fastq_strand (None if not found)
         """
         fastq_strand_txt = None
-        for fq in (self.fastqr1,self.fastqr2):
+        for fq in (self.fastqs['r1'],self.fastqs['r2']):
             if fq is not None:
                 fastq_strand_txt = os.path.join(
                     self.qc_dir,
@@ -984,7 +977,7 @@ class QCReportFastqPair(object):
         """
         strandedness_report = document.add_subsection(
             "Strandedness",
-            name="strandedness_%s" % self.r1.safe_name)
+            name="strandedness_%s" % self.reporters['r1'].safe_name)
         strandedness_report.add_css_classes("strandedness")
         # Locate strandedness
         txt = self.fastq_strand_txt
@@ -1059,7 +1052,8 @@ class QCReportFastqPair(object):
         # Add container section for Fastq pair
         fastqs_report = sample_report.add_subsection(css_classes=('fastqs',))
         # Create sections for individual Fastqs
-        for fq in (self.r1,self.r2):
+        for read in self.reads:
+            fq = self.reporters[read]
             if fq is None:
                 continue
             fq_report = fastqs_report.add_subsection(fq.name,
@@ -1093,11 +1087,11 @@ class QCReportFastqPair(object):
     def update_summary_table(self,summary_table,idx=None,fields=None,
                              relpath=None):
         """
-        Add a line to a summary table reporting a Fastq pair
+        Add a line to a summary table reporting a Fastq group
 
         Creates a new line in 'summary_table' (or updates an
         existing line) for the Fastq pair, adding content for
-        each specied field.
+        each specified field.
 
         The following fields can be reported for each Fastq
         pair:
@@ -1108,10 +1102,13 @@ class QCReportFastqPair(object):
         - read_lengths
         - boxplot_r1
         - boxplot_r2
+        - boxplot_r3
         - fastqc_r1
         - fastqc_r2
+        - fastqc_r3
         - screens_r1
         - screens_r2
+        - screens_r3
         - strandedness
 
         Arguments:
@@ -1148,67 +1145,46 @@ class QCReportFastqPair(object):
                 if field == "sample":
                     logger.debug("'sample' ignored")
                     continue
-                elif field == "fastq":
-                    value = Link(self.r1.name,"#%s" % self.r1.safe_name)
-                elif field == "fastqs":
-                    value = "%s<br />%s" % \
-                            (Link(self.r1.name,
-                                  "#%s" % self.r1.safe_name),
-                             Link(self.r2.name,
-                                  "#%s" % self.r2.safe_name))
+                elif field == "fastq" or field == "fastqs":
+                    value = []
+                    for read in self.reads:
+                        value.append(Link(self.reporters[read].name,
+                                          "#%s" % self.reporters[read].safe_name))
+                    value = "<br />".join([str(x) for x in value])
                 elif field == "reads":
                     value = pretty_print_reads(
-                        self.r1.fastqc.data.basic_statistics(
+                        self.reporters[self.reads[0]].fastqc.data.basic_statistics(
                             'Total Sequences'))
                 elif field == "read_lengths":
-                    read_lengths_r1 = Link(
-                        self.r1.fastqc.data.basic_statistics(
-                            'Sequence length'),
-                        self.r1.fastqc.summary.link_to_module(
-                            'Sequence Length Distribution',
-                            relpath=relpath))
-                    if self.paired_end:
-                        read_lengths_r2 = Link(
-                            self.r2.fastqc.data.basic_statistics(
+                    value = []
+                    for read in self.reads:
+                        value.append(Link(
+                            self.reporters[read].fastqc.data.basic_statistics(
                                 'Sequence length'),
-                            self.r2.fastqc.summary.link_to_module(
+                            self.reporters[read].fastqc.summary.link_to_module(
                                 'Sequence Length Distribution',
-                                relpath=relpath))
-                        read_lengths = "%s<br />%s" % (read_lengths_r1,
-                                                       read_lengths_r2)
-                    else:
-                        read_lengths = "%s" % read_lengths_r1
-                    value = read_lengths
-                elif field == "boxplot_r1":
-                    value = Img(self.r1.uboxplot(),
+                                relpath=relpath)))
+                    value = "<br />".join([str(x) for x in value])
+                elif field.startswith("boxplot_"):
+                    read = field.split('_')[-1]
+                    value = Img(self.reporters[read].uboxplot(),
                                 href="#boxplot_%s" %
-                                self.r1.safe_name)
-                elif field == "boxplot_r2":
-                    value = Img(self.r2.uboxplot(),
-                                href="#boxplot_%s" %
-                                self.r2.safe_name)
-                elif field == "fastqc_r1":
-                    value = Img(self.r1.ufastqcplot(),
+                                self.reporters[read].safe_name)
+                elif field.startswith("fastqc_"):
+                    read = field.split('_')[-1]
+                    value = Img(self.reporters[read].ufastqcplot(),
                                 href="#fastqc_%s" %
-                                self.r1.safe_name,
-                                title=self.r1.fastqc_summary())
-                elif field == "fastqc_r2":
-                    value = Img(self.r2.ufastqcplot(),
-                                href="#fastqc_%s" %
-                                self.r2.safe_name,
-                                title=self.r2.fastqc_summary())
-                elif field == "screens_r1":
-                    value = Img(self.r1.uscreenplot(),
+                                self.reporters[read].safe_name,
+                                title=self.reporters[read].fastqc_summary())
+                elif field.startswith("screens_"):
+                    read = field.split('_')[-1]
+                    value = Img(self.reporters[read].uscreenplot(),
                                 href="#fastq_screens_%s" %
-                                self.r1.safe_name)
-                elif field == "screens_r2":
-                    value = Img(self.r2.uscreenplot(),
-                                href="#fastq_screens_%s" %
-                                self.r2.safe_name)
+                                self.reporters[read].safe_name)
                 elif field == "strandedness":
                     value = Img(self.ustrandplot(),
                                 href="#strandedness_%s" %
-                                self.r1.safe_name,
+                                self.reporters[self.reads[0]].safe_name,
                                 title=self.strandedness())
                 else:
                     raise KeyError("'%s': unrecognised field for summary "
@@ -1222,15 +1198,13 @@ class QCReportFastqPair(object):
             except Exception as ex:
                 # Encountered an exception trying to acquire the value
                 # for the field
-                if self.paired_end:
-                    fastqs = "pair %s/%s" % (self.r1.name,
-                                             self.r2.name)
-                else:
-                    fastqs = "%s" % self.r1.name
+                fastqs = ", ".join([self.reporters[r].name
+                                    for r in self.reads])
                 logger.error("Exception setting '%s' in summary table "
-                              "for Fastq %s: %s" % (field,
-                                                    fastqs,
-                                                    ex))
+                              "for Fastq group { %s }: %s (ignored)"
+                             % (field,
+                                fastqs,
+                                ex))
                 # Put error value into the table
                 summary_table.set_value(idx,field,"<b>ERROR</b>")
 
@@ -1472,35 +1446,6 @@ class QCReportFastq(object):
 #######################################################################
 # Functions
 #######################################################################
-
-def get_fastq_pairs(sample):
-    """
-    Return pairs of Fastqs for an AnalysisSample instance
-
-    Arguments:
-       sample (AnalysisSample): sample to get Fastq pairs for
-
-    Returns:
-       list: list of FastqSet instances, sorted by R1 names
-    """
-    pairs = []
-    fastqs_r1 = sample.fastq_subset(read_number=1)
-    fastqs_r2 = sample.fastq_subset(read_number=2)
-    for fqr1 in fastqs_r1:
-        # Split up R1 name
-        logger.debug("fqr1 %s" % os.path.basename(fqr1))
-        dir_path = os.path.dirname(fqr1)
-        # Generate equivalent R2 file
-        fqr2 = sample.fastq_attrs(fqr1)
-        fqr2.read_number = 2
-        fqr2 = os.path.join(dir_path,"%s%s" % (fqr2,fqr2.extension))
-        logger.debug("fqr2 %s" % os.path.basename(fqr2))
-        if fqr2 in fastqs_r2:
-            pairs.append(FastqSet(fqr1,fqr2))
-        else:
-            pairs.append(FastqSet(fqr1))
-    pairs = sorted(pairs,cmp=lambda x,y: cmp(x.r1,y.r1))
-    return pairs
 
 def pretty_print_reads(n):
     """

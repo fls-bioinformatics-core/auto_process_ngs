@@ -269,12 +269,12 @@ def main():
             out_file = opts.filename
         if not os.path.isabs(out_file):
             out_file = os.path.join(p.dirn,out_file)
-        print "Writing QC report to %s" % out_file
         report_html= qc_reporter.report(qc_dir=qc_dir,
                                         qc_protocol=protocol,
                                         title=opts.title,
                                         filename=out_file,
                                         relative_links=True)
+        print "Wrote QC report to %s" % out_file
         # Generate ZIP archive
         if opts.zip:
             report_zip = zip_report(p,report_html,qc_dir,

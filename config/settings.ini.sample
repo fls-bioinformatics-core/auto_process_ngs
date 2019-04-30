@@ -69,6 +69,14 @@ cellranger_localcores = 1
 #human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
 #mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
 
+# 10xGenomics scATAC-seq genome references
+# Assign organism name to path to cellranger
+# scATAC-seq reference data to use for that
+# organism in single library analysis
+[10xgenomics_atac_genome_references]
+#human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
+#mouse = /data/cellranger/refdata-cellranger-atac-mm10-1.0.1
+
 # Platform specific settings
 # Make sections [platform:NAME] and add parameters to
 # override the default bcl2fastq settings (i.e. number of

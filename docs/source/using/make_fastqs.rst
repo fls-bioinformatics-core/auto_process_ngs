@@ -18,14 +18,17 @@ The general invocation of the command is:
 The ``--protocol`` option should be chosen according to the type
 of data that is being processed:
 
-=================== =====================================
-Protocol option     Used for
-=================== =====================================
-``standard``        Standard Illumina sequencing data
-                    (default)
-``icell8``          ICELL8 single-cell data
-``10x_chromium_sc`` 10xGenomics Chromium single-cell data
-=================== =====================================
+======================== =====================================
+Protocol option          Used for
+======================== =====================================
+``standard``             Standard Illumina sequencing data
+                         (default)
+``icell8``               ICELL8 single-cell RNA-seq data
+``10x_chromium_sc``      10xGenomics Chromium single-cell
+                         RNA-seq data
+``10x_chromium_sc_atac`` 10xGenomics Chromium single-cell
+                         ATAC-seq data
+======================== =====================================
 
 By default ``make_fastqs`` performs the following steps:
 
@@ -109,11 +112,11 @@ in the section :ref:`make_fastqs-outputs`.
 
 .. _make_fastqs-icell8-protocol:
 
-Fastq generation for ICELL8 single-cell data (``--protocol=icell8``)
---------------------------------------------------------------------
+Fastq generation for ICELL8 single-cell RNA-seq data (``--protocol=icell8``)
+----------------------------------------------------------------------------
 
-Initial Fastqs can be generated from ICELL8 single-cell8 data using the
-``--protocol=icell8`` option:
+Initial Fastqs can be generated from ICELL8 single-cell8 RNA-seq data
+using the ``--protocol=icell8`` option:
 
 ::
 
@@ -142,11 +145,11 @@ the Fastqs.
 
 .. _make_fastqs-10x_chromium_sc-protocol:
 
-Fastq generation for 10xGenomics Chromium single-cell data (``--protocol=10x_chromium_sc``)
--------------------------------------------------------------------------------------------
+Fastq generation for 10xGenomics Chromium single-cell RNA-seq data (``--protocol=10x_chromium_sc``)
+---------------------------------------------------------------------------------------------------
 
 Fastq generation can be performed for 10xGenomics Chromium
-single-cell data by using the ``--protocol=10x_chromium_sc``
+single-cell RNA-seq data by using the ``--protocol=10x_chromium_sc``
 option:
 
 ::
@@ -163,6 +166,31 @@ This will generate the Fastqs in the specified output directory
 
    ``make_fastqs`` offers various options for controlling the
    behaviour of ``cellranger mkfastqs``, for example setting the
+   jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-10x_chromium_sc_atac-protocol:
+
+Fastq generation for 10xGenomics Chromium single-cell ATAC-seq data (``--protocol=10x_chromium_sc_atac``)
+---------------------------------------------------------------------------------------------------------
+
+Fastq generation can be performed for 10xGenomics Chromium
+single-cell ATAC-seq data by using the ``--protocol=10x_chromium_sc_atac``
+option:
+
+::
+
+    auto_process.py make_fastqs --protocol=10x_chromium_sc_atac ...
+
+which fetches the data and runs ``cellranger-atac mkfastq``.
+
+This will generate the Fastqs in the specified output directory
+(e.g. ``bcl2fastq``) along with an HTML report derived from the
+``cellranger-atac`` JSON QC summary file, statistics for the Fastqs.
+
+.. note::
+
+   ``make_fastqs`` offers various options for controlling the
+   behaviour of ``cellranger-atac mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
 .. _make_fastqs-mixed-protocols:

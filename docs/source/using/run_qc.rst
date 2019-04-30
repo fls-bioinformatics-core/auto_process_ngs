@@ -22,7 +22,8 @@ QC protocol    Used for
 ============== ========================
 ``standardPE`` Standard paired-end data i.e. R1/R2 Fastq pairs
 ``standardSE`` Standard single-end data i.e. R1 Fastqs only
-``singlecell`` Data from single-cell platforms (ICELL8, 10xGenomics)
+``singlecell`` Single cell RNA-seq data from ICELL8 and 10xGenomics platforms
+``10x_scATAC`` 10xGenomics single cell ATAC-seq
 ============== ========================
 
 The protocol is determined automatically for each project.

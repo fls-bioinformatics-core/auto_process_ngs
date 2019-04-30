@@ -10,6 +10,8 @@ tenx_genomics_utils.py
 Utility classes and functions for processing the outputs from 10xGenomics's
 Chromium SC 3'v2 system:
 
+- MetricSummary
+- AtacSummary
 - flow_cell_id
 - has_chromium_sc_indices
 - cellranger_info
@@ -34,7 +36,9 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import split_run_name_full
 from bcftbx.JobRunner import SimpleJobRunner
+from bcftbx.TabFile import TabFile
 from bcftbx.utils import mkdirs
+from bcftbx.utils import find_program
 from .applications import Command
 from .simple_scheduler import SchedulerJob
 from .simple_scheduler import SimpleScheduler
@@ -44,6 +48,7 @@ from .docwriter import List
 from .docwriter import Link
 from .docwriter import Table
 from .analysis import AnalysisProject
+from .bcl2fastq_utils import get_bases_mask
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
 import css_rules
@@ -160,6 +165,41 @@ class MetricsSummary(object):
         """
         return self._data['Estimated Number of Cells']
 
+class AtacSummary(TabFile):
+    """
+    Extract data from summary.csv file for scATAC-seq
+
+    Utility class for extracting data from a 'summary.csv'
+    file output from running 'cellranger-atac count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+    """
+    def __init__(self,f):
+        """
+        Create a new AtacSummary instance
+
+        Arguments:
+          f (str): path to the 'summary.csv' file
+        """
+        TabFile.__init__(self,
+                         filen=f,
+                         first_line_is_header=True,
+                         delimiter=',')
+    @property
+    def cells_detected(self):
+        """
+        Return the number of cells detected
+        """
+        return self[0]['cells_detected']
+    @property
+    def annotated_cells(self):
+        """
+        Return the number of annotated cells
+        """
+        return self[0]['annotated_cells']
+
 #######################################################################
 # Functions
 #######################################################################
@@ -195,6 +235,12 @@ def has_chromium_sc_indices(sample_sheet):
 
     e.g. 'SI-GA-B11'
 
+    For scATAC-seq the indices are of the form:
+
+    SI-NA-[A-H][1-12]
+
+    e.g. 'SI-NA-G9'
+
     Arguments:
       sample_sheet (str): path to the sample sheet CSV
         file to check
@@ -203,12 +249,50 @@ def has_chromium_sc_indices(sample_sheet):
       Boolean: True if the sample sheet contains at least
         one Chromium SC index, False if not.
     """
-    index_pattern = re.compile(r"SI-GA-[A-H](1[1-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[1-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         if index_pattern.match(line['index']):
             return True
     return False
+
+def get_bases_mask_10x_atac(runinfo_xml):
+    """
+    Acquire a bases mask for 10xGenomics scATAC-seq
+
+    Generates an initial bases mask based on the run
+    contents, and then updates this so that:
+
+    1. Only the first 8 bases of the first index read
+       are actually used, and
+    2. The second index read is converted to a data
+       read.
+
+    For example: if the initial bases mask is
+    'Y50,I16,I16,Y50' then the scATAC-seq bases mask
+    will be 'Y50,I8nnnnnnnn,Y16,Y50'.
+
+    Arguments:
+      runinfo_xml (str): path to the RunInfo.xml for
+        the sequencing run
+
+    Returns:
+      String: 10xGenomics scATAC-seq bases mask string
+    """
+    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    # First read
+    r1_mask = bases_mask[0]
+    # Update first index to restrict to 8 bases
+    num_cycles = int(bases_mask[1][1:])
+    if num_cycles < 8:
+        raise Exception("Index read < 8 bases")
+    i1_mask = "I8%s" % ('n'*(num_cycles-8),)
+    # Update second index to second read
+    r2_mask = bases_mask[2].replace('i','y')
+    # Keep last read as is
+    r3_mask = bases_mask[3]
+    # Reassemble and return
+    return ','.join((r1_mask,i1_mask,r2_mask,r3_mask,))
 
 def make_qc_summary_html(json_file,html_file):
     """
@@ -316,10 +400,13 @@ def set_cell_count_for_project(project_dir):
     Set the total number of cells for a project
 
     Sums the number of cells for each sample in a project
-    (as determined from 'cellranger count', and extracted
-    from the 'metrics_summary.csv' file) and writes this
-    to the 'number_of_cells' metadata item for the
-    project.
+    (as determined from 'cellranger count' and extracted
+    from the 'metrics_summary.csv' file for scRNA-seq, or
+    from 'cellranger-atac count' and extracted from the
+    'summary.csv' file for scATAC-seq).
+
+    The final count is written to the 'number_of_cells'
+    metadata item for the project.
 
     Arguments:
       project_dir (str): path to the project directory
@@ -331,27 +418,44 @@ def set_cell_count_for_project(project_dir):
     project = AnalysisProject(project_dir,
                               os.path.basename(project_dir))
     number_of_cells = 0
-    for sample in project.samples:
-        try:
-            metrics_summary_csv = os.path.join(
-                project_dir,
-                "cellranger_count",
-                sample.name,
-                "outs",
-                "metrics_summary.csv")
-            metrics = MetricsSummary(
-                open(metrics_summary_csv,'r').read())
-            number_of_cells += metrics.estimated_number_of_cells
-        except Exception as ex:
-            logger.critical("Failed to add cell count for sample "
-                            "'%s': %s" % (sample.name,ex))
-            return 1
+    if project.info.library_type == 'scRNA-seq':
+        # Single cell RNA-seq
+        for sample in project.samples:
+            try:
+                metrics_summary_csv = os.path.join(
+                    project_dir,
+                    "cellranger_count",
+                    sample.name,
+                    "outs",
+                    "metrics_summary.csv")
+                metrics = MetricsSummary(
+                    open(metrics_summary_csv,'r').read())
+                number_of_cells += metrics.estimated_number_of_cells
+            except Exception as ex:
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': %s" % (sample.name,ex))
+                return 1
+    elif project.info.library_type == 'scATAC-seq':
+        # Single cell ATAC-seq
+        for sample in project.samples:
+            try:
+                summary_csv = os.path.join(
+                    project_dir,
+                    "cellranger_count",
+                    sample.name,
+                    "outs",
+                    "summary.csv")
+                number_of_cells += AtacSummary(summary_csv).annotated_cells
+            except Exception as ex:
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': %s" % (sample.name,ex))
+                return 1
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
     return 0
 
-def cellranger_info(path=None):
+def cellranger_info(path=None,name=None):
     """
     Retrieve information on the cellranger software
 
@@ -365,8 +469,10 @@ def cellranger_info(path=None):
     If no version is identified then the script path is still
     returned, but without any version info.
 
-    In all cases the package package name will be returned as
-    'cellranger'.
+    If a 'path' is supplied then the package name will be taken
+    from the basename; otherwise the package name can be supplied
+    via the 'name' argument. If neither are supplied then the
+    package name defaults to 'cellranger'.
 
     Returns:
       Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
@@ -377,20 +483,25 @@ def cellranger_info(path=None):
     """
     # Initialise
     cellranger_path = ''
-    package_name = 'cellranger'
+    if name is None:
+        if path:
+            name = os.path.basename(path)
+        else:
+            name = 'cellranger'
+    package_name = name
     package_version = ''
     # Locate the core script
     if not path:
-        cellranger_path = find_program('cellranger')
+        cellranger_path = find_program(package_name)
     else:
         cellranger_path = os.path.abspath(path)
     # Identify the version
-    if os.path.basename(cellranger_path) == 'cellranger':
+    if os.path.basename(cellranger_path) == package_name:
         # Run the program to get the version
         version_cmd = Command(cellranger_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
         for line in output.split('\n'):
-            if line.startswith('cellranger'):
+            if line.startswith(package_name):
                 # Extract version from line of the form
                 # cellranger  (2.0.1)
                 try:
@@ -411,6 +522,7 @@ def run_cellranger_mkfastq(sample_sheet,
                            lanes=None,
                            bases_mask=None,
                            ignore_dual_index=False,
+                           cellranger_exe='cellranger',
                            cellranger_jobmode='local',
                            cellranger_maxjobs=None,
                            cellranger_mempercore=None,
@@ -427,6 +539,11 @@ def run_cellranger_mkfastq(sample_sheet,
     generate Fastqs from bcl files for Chromium single-cell
     data.
 
+    To run the 'mkfastq' command using a different version
+    of cellranger (e.g. cellranger-atac), specify the
+    cellranger executable using the 'cellranger_exe'
+    argument.
+
     Arguments:
       sample_sheet (str): path to input samplesheet with
         10xGenomics barcode indices
@@ -442,6 +559,8 @@ def run_cellranger_mkfastq(sample_sheet,
       ignore_dual_index (bool): optional, on a dual-indexed
         flowcell where the second index was not used for
         the 10x sample, ignore it
+      cellranger_exe (str): optional, name or path to
+        cellranger executable (default: "cellranger")
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -492,7 +611,8 @@ def run_cellranger_mkfastq(sample_sheet,
             logger.warning("Removing existing mro file: %s" % mro_file)
             os.remove(mro_file)
     # Construct the cellranger command
-    cmd = Command("cellranger","mkfastq",
+    cmd = Command(cellranger_exe,
+                  "mkfastq",
                   "--samplesheet",sample_sheet,
                   "--run",primary_data_dir,
                   "--output-dir",output_dir,
@@ -570,8 +690,9 @@ def run_cellranger_mkfastq(sample_sheet,
         return exit_code
 
 def run_cellranger_count(fastq_dir,
-                         transcriptome,
+                         reference_data_path,
                          chemistry='auto',
+                         cellranger_exe='cellranger',
                          cellranger_jobmode='local',
                          cellranger_maxjobs=None,
                          cellranger_mempercore=None,
@@ -598,12 +719,15 @@ def run_cellranger_count(fastq_dir,
         from 'cellranger mkfastq', or the output folder
         from 'bcl2fastq' (or with a similar structure),
         or any folder containing Fastq files
-      transcriptome (str): path to the cellranger
+      reference_data_path (str): path to the cellranger
         compatible transcriptome reference data
-        directory
+        directory (for scRNA-seq) or ATAC reference
+        genome data (for scATAC-seq)
       chemistry (str): assay configuration (set to
         'auto' to let cellranger determine this
-        automatically)
+        automatically; ignored if not scRNA-seq)
+      cellranger_exe (str): optional, name or path to
+        cellranger executable (default: "cellranger")
       cellranger_jobmode (str): specify the job mode to
         pass to cellranger (default: "local")
       cellranger_maxjobs (int): specify the maximum
@@ -637,6 +761,9 @@ def run_cellranger_count(fastq_dir,
     Returns:
       Integer: exit code from the cellranger command.
     """
+    # Cellranger mode
+    cellranger_mode = os.path.basename(cellranger_exe)
+    print "Cellranger mode: %s" % cellranger_mode
     # Input data
     sample_names = {}
     try:
@@ -667,9 +794,10 @@ def run_cellranger_count(fastq_dir,
     if not dry_run:
         if log_dir is None:
             log_dir = os.getcwd()
-        log_dir = get_numbered_subdir("cellranger_count",
+        log_dir = get_numbered_subdir("%s_count" % cellranger_mode,
                                       parent_dir=log_dir,
                                       full_path=True)
+        print "Log directory: %s" % log_dir
         mkdirs(log_dir)
 
     # Submit the cellranger count jobs
@@ -688,17 +816,24 @@ def run_cellranger_count(fastq_dir,
                 print "-- %s: outputs exist, nothing to do" % sample
                 continue
             else:
-                print "-- %s: setting up cellranger count" % sample
+                print "-- %s: setting up %s count" % (sample,
+                                                      cellranger_mode)
             # Set up job for this sample
-            work_dir = os.path.abspath("tmp.cellranger_count.%s.%s" %
-                                       (project,sample))
+            work_dir = os.path.abspath("tmp.%s_count.%s.%s" %
+                                       (cellranger_mode,
+                                        project,sample))
             mkdirs(work_dir)
-            cmd = Command("cellranger","count",
+            print "Working directory: %s" % work_dir
+            cmd = Command(cellranger_exe,
+                          "count",
                           "--id",sample,
                           "--fastqs",os.path.abspath(fastq_dir),
-                          "--sample",sample,
-                          "--transcriptome",transcriptome,
-                          "--chemistry",chemistry)
+                          "--sample",sample)
+            if cellranger_mode == "cellranger":
+                cmd.add_args("--transcriptome",reference_data_path,
+                             "--chemistry",chemistry)
+            elif cellranger_mode == "cellranger-atac":
+                cmd.add_args("--reference",reference_data_path)
             add_cellranger_args(cmd,
                                 jobmode=cellranger_jobmode,
                                 mempercore=cellranger_mempercore,
@@ -709,8 +844,9 @@ def run_cellranger_count(fastq_dir,
             print "Running: %s" % cmd
             if not dry_run:
                 job = sched.submit(cmd,
-                                   name="cellranger_count.%s.%s" %
-                                   (project,
+                                   name="%s_count.%s.%s" %
+                                   (cellranger_mode,
+                                    project,
                                     sample),
                                    log_dir=log_dir,
                                    wd=work_dir)
@@ -743,8 +879,9 @@ def run_cellranger_count(fastq_dir,
                              sample))
             mkdirs(count_dir)
             # Copy the cellranger count outputs
-            outs_dir = os.path.join("tmp.cellranger_count.%s.%s"
-                                    % (project,sample),
+            outs_dir = os.path.join("tmp.%s_count.%s.%s"
+                                    % (cellranger_mode,
+                                       project,sample),
                                     sample,
                                     "outs")
             if not summary_only:
@@ -753,9 +890,13 @@ def run_cellranger_count(fastq_dir,
                 shutil.copytree(outs_dir,count_dir)
             else:
                 # Only collect the web and csv summaries
+                if cellranger_mode == 'cellranger':
+                    files = ("web_summary.html","metrics_summary.csv")
+                elif cellranger_mode == 'cellranger-atac':
+                    files = ("web_summary.html","summary.csv")
                 count_dir = os.path.join(count_dir,"outs")
                 mkdirs(count_dir)
-                for f in ("web_summary.html","metrics_summary.csv"):
+                for f in files:
                     path = os.path.join(outs_dir,f)
                     if not os.path.exists(path):
                         logger.warning("%s: not found in %s" % (f,outs_dir))
@@ -814,8 +955,9 @@ def run_cellranger_count(fastq_dir,
     return retval
 
 def run_cellranger_count_for_project(project_dir,
-                                     transcriptome,
+                                     reference_data_path,
                                      chemistry='auto',
+                                     cellranger_exe='cellranger',
                                      cellranger_jobmode='local',
                                      cellranger_maxjobs=None,
                                      cellranger_mempercore=None,
@@ -837,9 +979,10 @@ def run_cellranger_count_for_project(project_dir,
     Arguments:
       project_dir (str): path to the analysis project
         containing Fastq files
-      transcriptome (str): path to the cellranger
+      reference_data_path (str): path to the cellranger
         compatible transcriptome reference data
-        directory
+        directory (for scRNA-seq) or ATAC reference
+        genome data (for scATAC-seq)
       chemistry (str): assay configuration (set to
         'auto' to let cellranger determine this
         automatically)
@@ -880,8 +1023,9 @@ def run_cellranger_count_for_project(project_dir,
     # Run the count procedure
     retval = run_cellranger_count(
         fastq_dir,
-        transcriptome,
+        reference_data_path,
         chemistry=chemistry,
+        cellranger_exe=cellranger_exe,
         cellranger_jobmode=cellranger_jobmode,
         cellranger_maxjobs=cellranger_maxjobs,
         cellranger_mempercore=cellranger_mempercore,

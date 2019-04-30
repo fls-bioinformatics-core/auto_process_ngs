@@ -17,7 +17,8 @@ Provides the following constants for the QC pipeline:
 # QC protocols
 PROTOCOLS = ('standardPE',
              'standardSE',
-             'singlecell')
+             'singlecell',
+             '10x_scATAC')
 
 # Screen names
 FASTQ_SCREENS = ('model_organisms',

@@ -40,12 +40,19 @@ def determine_qc_protocol(project):
     Return:
       String: QC protocol for the project
     """
+    # Standard protocols
     if project.info.paired_end:
         protocol = "standardPE"
     else:
         protocol = "standardSE"
+    # Single cell protocols
     if project.info.single_cell_platform is not None:
+        # Default
         protocol = "singlecell"
+        # 10xGenomics scATAC-seq
+        if project.info.single_cell_platform == "10xGenomics Chromium 3'v2" \
+           and project.info.library_type == "scATAC-seq":
+            protocol = "10x_scATAC"
     return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
