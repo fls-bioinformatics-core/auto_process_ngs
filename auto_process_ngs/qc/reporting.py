@@ -683,7 +683,7 @@ class QCReport(Document):
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs] +
-                      self.project.samples)
+                      [s.name for s in self.project.samples])
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
         # QC outputs
