@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -30,6 +30,7 @@ Classes:
 #######################################################################
 
 import os
+import uuid
 import logging
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
@@ -218,10 +219,16 @@ class MetadataDict(bcf_utils.AttributeDictionary):
             attr = self.__attributes[key]
             # Store in the file
             metadata.append(data=(attr,value))
-        # Write the file
+        # Write data to temporary file
         if filen is not None:
             self.__filen = filen
-        metadata.write(self.__filen)
+        tmp_filen = os.path.join(
+            os.path.dirname(self.__filen),
+            "%s.%s.tmp" % (os.path.basename(self.__filen),
+                           uuid.uuid4()))
+        metadata.write(tmp_filen)
+        # Move to final destination
+        os.rename(tmp_filen,self.__filen)
 
     def null_items(self):
         """
