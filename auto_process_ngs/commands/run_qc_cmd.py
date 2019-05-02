@@ -16,7 +16,6 @@ from ..qc.pipeline import QCPipeline
 from ..qc.fastq_strand import build_fastq_strand_conf
 from ..qc.utils import determine_qc_protocol
 from ..utils import get_organism_list
-from bcftbx.JobRunner import fetch_runner
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -57,8 +56,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         (default: 100000)
       nthreads (int): specify number of threads to run the QC jobs
         with (default: 1)
-      runner (str): specify a non-default job runner to use for
-        the QC jobs
+      runner (JobRunner): specify a non-default job runner to use
+        for the QC jobs
       fastq_dir (str): specify the subdirectory to take the
         Fastq files from; will be used for all projects that are
         processed (default: 'fastqs')
@@ -94,9 +93,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         return 1
     # Set up runners
     default_runner = ap.settings.general.default_runner
-    if runner is not None:
-        qc_runner = fetch_runner(runner)
-    else:
+    if runner is None:
         qc_runner = ap.settings.runners.qc
     # Get scheduler parameters
     if max_jobs is None:
