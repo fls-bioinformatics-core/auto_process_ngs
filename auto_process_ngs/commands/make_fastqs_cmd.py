@@ -512,9 +512,7 @@ def get_primary_data(ap,runner=None):
     data_dir = ap.params.data_dir
     ap.params["primary_data_dir"] = ap.add_directory('primary_data')
     # Set up runner
-    if runner is not None:
-        runner = fetch_runner(runner)
-    else:
+    if runner is None:
         runner = ap.settings.runners.rsync
     runner.set_log_dir(ap.log_dir)
     # Run rsync command
@@ -706,9 +704,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     print "Min trimmed read len  : %s" % minimum_trimmed_read_length
     print "Mask short adptr reads: %s" % mask_short_adapter_reads
     # Set up runner
-    if runner is not None:
-        runner = fetch_runner(runner)
-    else:
+    if runner is None:
         runner = ap.settings.runners.bcl2fastq
     runner.set_log_dir(ap.log_dir)
     # Run bcl2fastq
@@ -1003,9 +999,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
             report_processing_qc(ap,processing_qc_html)
             return
     # Set up runner
-    if runner is not None:
-        runner = fetch_runner(runner)
-    else:
+    if runner is None:
         runner = ap.settings.runners.stats
     runner.set_log_dir(ap.log_dir)
     # Number of cores
