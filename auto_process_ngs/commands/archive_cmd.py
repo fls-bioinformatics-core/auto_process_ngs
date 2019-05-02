@@ -17,7 +17,6 @@ import auto_process_ngs.applications as applications
 import auto_process_ngs.fileops as fileops
 import auto_process_ngs.simple_scheduler as simple_scheduler
 import auto_process_ngs.tenx_genomics_utils as tenx_genomics_utils
-from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import format_file_size
 
 # Module specific logger
@@ -232,9 +231,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             log_dir += '_dry_run'
         ap.set_log_dir(ap.get_log_subdir(log_dir))
         # Set up runner
-        if runner is not None:
-            runner = fetch_runner(runner)
-        else:
+        if runner is None:
             runner = ap.settings.runners.rsync
         runner.set_log_dir(ap.log_dir)
         # Setup a scheduler for multiple rsync jobs
