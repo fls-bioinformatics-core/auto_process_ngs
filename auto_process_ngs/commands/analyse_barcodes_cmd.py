@@ -136,9 +136,7 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     # Log dir
     ap.set_log_dir(ap.get_log_subdir('analyse_barcodes'))
     # Set up runner
-    if runner is not None:
-        runner = fetch_runner(runner)
-    else:
+    if runner is None:
         runner = ap.settings.general.default_runner
     runner.set_log_dir(ap.log_dir)
     # Schedule the jobs needed to do counting
