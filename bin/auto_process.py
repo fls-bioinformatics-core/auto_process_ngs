@@ -74,6 +74,7 @@ from bcftbx.cmdparse import add_no_save_option
 from bcftbx.cmdparse import add_dry_run_option
 from bcftbx.cmdparse import add_nprocessors_option
 from bcftbx.cmdparse import add_runner_option
+from bcftbx.JobRunner import fetch_runner
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -987,13 +988,18 @@ if __name__ == "__main__":
             # Deal with --skip-... for fastq generation
             skip_fastq_generation = (options.skip_fastq_generation or
                                      options.skip_bcl2fastq)
+            # Handle job runner specification
+            if options.runner is not None:
+                runner = fetch_runner(options.runner)
+            else:
+                runner = None
             # Do the make_fastqs step
             try:
                 d.make_fastqs(
                     protocol=options.protocol,
                     skip_rsync=options.skip_rsync,
                     nprocessors=options.nprocessors,
-                    runner=options.runner,
+                    runner=runner,
                     remove_primary_data=options.remove_primary_data,
                     ignore_missing_bcl=options.ignore_missing_bcl,
                     ignore_missing_stats=options.ignore_missing_stats,
@@ -1027,25 +1033,38 @@ if __name__ == "__main__":
                                output_dir=options.output_dir,
                                dry_run=options.dry_run)
         elif cmd == 'update_fastq_stats':
+            # Handle job runner specification
+            if options.runner is not None:
+                runner = fetch_runner(options.runner)
+            else:
+                runner = None
+            # Do the updated
             d.update_fastq_stats(
                 unaligned_dir=options.unaligned_dir,
                 stats_file=options.stats_file,
                 per_lane_stats_file=options.per_lane_stats_file,
                 add_data=options.add_data,
                 nprocessors=options.nprocessors,
-                runner=options.runner)
+                runner=runner)
         elif cmd == 'analyse_barcodes':
+            # Deal with --lanes
             if options.lanes is not None:
                 lanes = bcf_utils.parse_lanes(options.lanes)
             else:
                 lanes = None
+            # Handle job runner specification
+            if options.runner is not None:
+                runner = fetch_runner(options.runner)
+            else:
+                runner = None
+            # Do barcode analysis
             d.analyse_barcodes(unaligned_dir=options.unaligned_dir,
                                lanes=lanes,
                                mismatches=options.mismatches,
                                cutoff=options.cutoff,
                                sample_sheet=options.sample_sheet,
                                barcode_analysis_dir=options.barcode_analysis_dir,
-                               runner=options.runner,
+                               runner=runner,
                                force=options.force)
         elif cmd == 'setup_analysis_dirs':
             d.setup_analysis_dirs(unaligned_dir=options.unaligned_dir,
@@ -1055,7 +1074,12 @@ if __name__ == "__main__":
                                   short_fastq_names=options.short_fastq_names,
                                   link_to_fastqs=options.link_to_fastqs)
         elif cmd == 'run_qc':
-            # Do the make_fastqs step
+            # Handle job runner specification
+            if options.runner is not None:
+                runner = fetch_runner(options.runner)
+            else:
+                runner = None
+            # Do the run_qc step
             retcode = d.run_qc(projects=options.project_pattern,
                                max_jobs=options.max_jobs,
                                ungzip_fastqs=options.ungzip_fastqs,
@@ -1064,7 +1088,7 @@ if __name__ == "__main__":
                                fastq_dir=options.fastq_dir,
                                qc_dir=options.qc_dir,
                                report_html=options.html_file,
-                               runner=options.runner)
+                               runner=runner)
             sys.exit(retcode)
         elif cmd == 'samplesheet':
             # Sample sheet operations
