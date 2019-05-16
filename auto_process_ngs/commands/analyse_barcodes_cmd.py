@@ -37,11 +37,21 @@ logger = logging.getLogger(__name__)
 
 class BarcodeAnalysis(Pipeline):
     """
+    Analyse the barcodes for Fastqs in a sequencing run
+
+    Pipeline to perform barcode analysis on the Fastqs
+    produced by bcl2fastq from a sequencing run.
     """
     def __init__(self,unaligned_dir=None):
+        """
+        Create a new BarcodeAnalysis instance
 
+        Arguments:
+          unaligned_dir (str): path to the directory
+            with outputs from bcl2fastq
+        """
         # Initialise the pipeline superclass
-        Pipeline.__init__(self)
+        Pipeline.__init__(self,name="Barcode Analysis")
 
         # Define parameters
         self.add_param('barcode_analysis_dir',type=str)
@@ -74,7 +84,7 @@ class BarcodeAnalysis(Pipeline):
         ####################
 
         # Setup barcode analysis and counts directories
-        setup_barcode_analysis_dir = SetupBarcodeAnalysisDir(
+        setup_barcode_analysis_dir = SetupBarcodeAnalysisDirs(
             "Setup barcode analysis directory",
             self.params.barcode_analysis_dir,
             self.params.counts_dir,
@@ -108,8 +118,7 @@ class BarcodeAnalysis(Pipeline):
         # List the counts files
         list_counts_files = ListBarcodeCountFiles(
             "Fetch the barcode counts files",
-            self.params.counts_dir,
-            lanes=self.params.lanes)
+            self.params.counts_dir)
         self.add_task(list_counts_files,
                       requires=count_tasks)
 
@@ -162,6 +171,43 @@ class BarcodeAnalysis(Pipeline):
             working_dir=None,log_file=None,batch_size=None,max_jobs=1,
             poll_interval=5,runner=None,verbose=False):
         """
+        Run the tasks in the pipeline
+
+        Arguments:
+          barcode_analysis_dir (str): path to the directory
+            to write the analysis results to
+          lanes (list): optional, list of lanes to restrict
+            the analysis to
+          mismatches (int): optional, explicitly specify the
+            number of mismatches to allow (default: determine
+            number of mismatches automatically)
+          bases_mask (str): optional, bases mask used for
+            Fastq generation and demultiplexing
+          cutoff (float): optional, don't report barcodes with
+            a fraction of associated reads below this value
+            (e.g. '0.001' excludes barcodes with < 0.1% of
+            reads) (default: don't apply a cutoff)
+          sample_sheet (str): optional, sample sheet to check
+            barcode sequences against
+          force (bool): if True then force regeneration of
+            counts (default: re-use existing counts)
+          working_dir (str): optional path to a working
+            directory (defaults: temporary directory in the
+            current directory)
+          log_file (str): path to write log file to (default:
+            don't write a log file)
+          batch_size (int): if set then run commands in each
+            task in batches, with each batch running this many
+            commands at a time (default: run one command per
+            job)
+          max_jobs (int): optional maximum number of
+            concurrent jobs in scheduler (default: 1)
+          poll_interval (float): optional polling interval
+            (seconds) to set in scheduler (default: 5s)
+          runner (JobRunner): JobRunner instance to use to
+             run jobs
+          verbose (bool): if True then report additional
+            information for diagnostics
         """
         # Working directory
         clean_up_on_completion = False
@@ -218,8 +264,20 @@ class BarcodeAnalysis(Pipeline):
         # Return pipeline status
         return status
 
-class SetupBarcodeAnalysisDir(PipelineTask):
+class SetupBarcodeAnalysisDirs(PipelineTask):
+    """
+    Set up the output directories
+    """
     def init(self,barcode_analysis_dir,counts_dir,force=False):
+        """
+        Initialise the SetupBarcodeAnalysisDirs task
+
+        Arguments:
+          barcode_analysis_dir (str): final output directory
+          counts_dir (str): directory to write counts files to
+          force (bool): if True then remove existing counts
+            files
+        """
         pass
     def setup(self):
         # Create barcode analysis dir
@@ -235,7 +293,24 @@ class SetupBarcodeAnalysisDir(PipelineTask):
             os.mkdir(self.args.counts_dir)
 
 class CountBarcodes(PipelineTask):
+    """
+    Generate barcode counts for a project
+    """
     def init(self,project,counts_dir,lanes=None,use_project_name=None):
+        """
+        Initialise the CountBarcodes task
+
+        Arguments:
+          project (IlluminaProject): project with Fastqs
+            to get barcode codes from
+          counts_dir (str): directory to write counts
+            files to
+          lanes (list): optional list of lanes to restrict
+            counts generation to
+          use_project_name (str): optional alternative name
+            for project to use in counts file names (default
+            is to use the name from the supplied project)
+        """
         pass
     def setup(self):
         # Project name to use
@@ -277,7 +352,21 @@ class CountBarcodes(PipelineTask):
             self.add_cmd(cmd)
 
 class ListBarcodeCountFiles(PipelineTask):
-    def init(self,counts_dir,lanes=None):
+    """
+    Collect counts files from a directory
+    """
+    def init(self,counts_dir):
+        """
+        Initialise the ListBarcodeCountFiles task
+
+        Arguments:
+          counts_dir (str): directory holding the
+            counts files
+
+        Outputs:
+          counts_files (list): list of counts
+            files
+        """
         self.add_output('counts_files',list())
     def setup(self):
         for f in os.listdir(self.args.counts_dir):
@@ -286,7 +375,26 @@ class ListBarcodeCountFiles(PipelineTask):
                     os.path.join(self.args.counts_dir,f))
 
 class DetermineMismatches(PipelineTask):
+    """
+    Determine the number of mismatches to allow
+    """
     def init(self,mismatches,bases_mask,example_fastq):
+        """
+        Initialise the DetermineMismatches task
+
+        Arguments:
+          mismatches (int): supplied number of
+            mismatches (will be returned if set)
+          bases_mask (str): bases mask used for
+            Fastq generation and demultiplexing
+          example_fastq (str): path to a Fastq
+            file to extract the index sequence
+            lengths from
+
+        Outputs:
+          mismatches (int): number of mismatches
+            to allow when comparing barcodes
+        """
         self.add_output('mismatches',PipelineParam(type=int))
     def setup(self):
         if self.args.mismatches is not None:
@@ -311,8 +419,33 @@ class DetermineMismatches(PipelineTask):
         self.output.mismatches.set(self.args.mismatches)
 
 class ReportBarcodeAnalysis(PipelineTask):
+    """
+    Perform analysis and reporting of barcode counts
+    """
     def init(self,counts_files,barcode_analysis_dir,lanes=None,
              mismatches=None,cutoff=None,sample_sheet=None):
+        """
+        Initialise the ReportBarcodeAnalysis task
+
+        Arguments:
+          counts_files (list): counts files to include
+            in the analysis
+          barcode_analysis_dir (str): path to the directory
+            to write the analysis results to
+          lanes (list): optional list of lanes to restrict
+            the analysis to
+          mismatches (int): optional number of mismatches
+            to allow when comparing barcodes
+          cutoff (float): optional fraction of total barcodes
+            below which indexes won't be reported
+          sample_sheet (str): optional, sample sheet to check
+            barcode sequences against
+
+        Outputs:
+          report_file (str): path to the report file
+          xls_file (str): path to the XLS report
+          html_file (str): path to the HTML report
+        """
         self.add_output('report_file',PipelineParam(type=str))
         self.add_output('xls_file',PipelineParam(type=str))
         self.add_output('html_file',PipelineParam(type=str))
