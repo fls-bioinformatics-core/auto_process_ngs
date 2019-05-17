@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     simple_scheduler.py: provide basic scheduler capability
-#     Copyright (C) University of Manchester 2013-14 Peter Briggs
+#     Copyright (C) University of Manchester 2013-19 Peter Briggs
 #
 ########################################################################
 #
@@ -778,10 +778,6 @@ class SchedulerJob(Job):
             working_dir = os.path.abspath(working_dir)
         Job.__init__(self,runner,name,working_dir,args[0],args[1:])
         self._restarts = 0
-
-    @property 
-    def name(self):
-        return self.job_name
 
     @property
     def is_running(self):
