@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     stats.py: utilities for generating run-related statistics
-#     Copyright (C) University of Manchester 2016-17 Peter Briggs
+#     Copyright (C) University of Manchester 2016-19 Peter Briggs
 #
 #########################################################################
 
@@ -29,7 +29,9 @@ import time
 from multiprocessing import Pool
 import bcftbx.utils as bcf_utils
 from bcftbx.IlluminaData import IlluminaFastq
+from bcftbx.IlluminaData import SampleSheet
 from bcftbx.TabFile import TabFile
+from bcftbx.TabFile import TabDataLine
 from .fastq_utils import FastqReadCounter
 
 # Initialise logging
@@ -299,7 +301,8 @@ class FastqStatistics:
         if fp is None and out_file is not None:
             fpp.close()
 
-    def report_per_lane_sample_stats(self,out_file=None,fp=None):
+    def report_per_lane_sample_stats(self,out_file=None,fp=None,
+                                     samplesheet=None):
         """
         Report of reads per sample in each lane
 
@@ -321,6 +324,8 @@ class FastqStatistics:
           fp (File): File-like object open for writing
             (defaults to stdout if 'out_file' also not
             supplied)
+          samplesheet (str): optional sample sheet file
+            to get additional data from
         """
         # Determine output stream
         if fp is None:
@@ -330,6 +335,26 @@ class FastqStatistics:
                 fpp = open(out_file,'w')
         else:
             fpp = fp
+        # Get data from samplesheet
+        expected_samples = {}
+        if samplesheet:
+            s = SampleSheet(samplesheet)
+            ncol = s.sample_id_column
+            pcol = s.sample_project_column
+            for data in s:
+                if s.has_lanes:
+                    lanes = ['L%d' % data['Lane']]
+                else:
+                    lanes = self.lane_names
+                sample = {
+                    'Project': data[pcol],
+                    'Sample': data[ncol],
+                }
+                for lane in lanes:
+                    try:
+                        expected_samples[lane].append(sample)
+                    except KeyError:
+                        expected_samples[lane] = [sample,]
         # Report
         lanes = self.lane_names
         for lane in lanes:
@@ -337,6 +362,26 @@ class FastqStatistics:
             samples = filter(lambda x:
                              x['Read_number'] == 1 and bool(x[lane]),
                              self._stats)
+            # Additional samples from samplesheet
+            if lane in expected_samples:
+                for sample in expected_samples[lane]:
+                    found_sample = False
+                    for smpl in samples:
+                        if smpl['Sample'] == sample['Sample'] and \
+                           smpl['Project'] == sample['Project']:
+                            found_sample = True
+                            break
+                    if not found_sample:
+                        # Add the expected sample with zero reads
+                        # for the lane being examined
+                        samples.append(
+                            TabDataLine(
+                                line="%s\t%s\t0" % (sample['Project'],
+                                                    sample['Sample']),
+                                column_names=('Project','Sample',lane)))
+                # Sort into order
+                samples = sorted(samples,
+                                 key=lambda x: (x['Project'],x['Sample']))
             try:
                 total_reads = sum([int(s[lane]) for s in samples])
             except Exception as ex:
@@ -354,9 +399,13 @@ class FastqStatistics:
                 sample_name = "%s/%s" % (sample['Project'],
                                          sample['Sample'])
                 nreads = float(sample[lane])
-                fpp.write("- %s\t%d\t%.1f%%\n" % (sample_name,
-                                                  nreads,
-                                                  nreads/total_reads*100.0))
+                if total_reads > 0:
+                    frac_reads = "%.1f%%" % (nreads/total_reads*100.0)
+                else:
+                    frac_reads = "n/a"
+                fpp.write("- %s\t%d\t%s\n" % (sample_name,
+                                              nreads,
+                                              frac_reads))
         # Close file
         if fp is None and out_file is not None:
             fpp.close()
