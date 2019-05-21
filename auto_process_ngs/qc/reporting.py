@@ -125,9 +125,10 @@ table.summary { border: solid 1px grey;
 table.summary th { background-color: grey;
                    color: white;
                    padding: 2px 5px; }
-table.summary td { text-align: right;
+table.summary td { text-align: center;
                    padding: 2px 5px;
                    border-bottom: solid 1px lightgray; }
+table.summary tr td:first-child { text-align: right; }
 table.fastq_summary tr td:first-child {
           background-color: grey;
           color: white;
@@ -158,6 +159,8 @@ table th { border-bottom: solid 1px lightgray; }
 .no_print { display: none; }
 }
 """
+
+WARNING_ICON_BASE64_DATA = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/////pQD/oAD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhiaUkEOAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wUVDTo2Eegz4gAAALhJREFUSMftlbEOwzAIRI2RIlmRMnb1F/j/f69Sp9Q5jnM6NjciXgz2QUp5NGtU+6h2LX+3L9UUaHbRToGXQY2YqBYorM6I1gnM1GvCOeJZ5+DcnpQVx8L3QMjGeyfBwCUYcXrBLHobGRrSmLkCPzCvPEiC3LjkriGuD7HkMQEB68iN1oVNO8cOOmPoO/77uphGBiBtefVZumAlYkpxF4hSfHHxQ6+FnZ+0WfboeXV+SD/lph/wf3oDTpUGaaZabmgAAAAASUVORK5CYII='
 
 #######################################################################
 # Classes
@@ -982,7 +985,7 @@ class QCReportFastqGroup(object):
         txt = self.fastq_strand_txt
         # No file found
         if txt is None:
-            strandedness_report.add("!!!No strandedness data available!!!")
+            strandedness_report.add(warning_icon(),"No strandedness data available")
         else:
             strandedness = Fastqstrand(txt)
             strandedness_report.add("Strandedness statistics from "
@@ -1205,7 +1208,10 @@ class QCReportFastqGroup(object):
                                 fastqs,
                                 ex))
                 # Put error value into the table
-                summary_table.set_value(idx,field,"<b>ERROR</b>")
+                summary_table.set_value(idx,field,
+                                        warning_icon("Unable to get value for "
+                                                     "%s for %s" % (field,fastqs),
+                                                     size=25))
 
 class QCReportFastq(object):
     """
@@ -1271,7 +1277,7 @@ class QCReportFastq(object):
         if self.fastqc is not None:
             fastqc_version = self.fastqc.version
         else:
-            fastqc_version = '?'
+            fastqc_version = warning_icon(size=20)
         self.program_versions['fastqc'] = fastqc_version
         fastq_screen_versions = list(
             set([self.fastq_screen[s].version
@@ -1279,7 +1285,7 @@ class QCReportFastq(object):
         if fastq_screen_versions:
             fastq_screen_versions = ','.join(sorted(fastq_screen_versions))
         else:
-            fastq_screen_versions = '?'
+            fastq_screen_versions = warning_icon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
 
     def report_fastqc(self,document,relpath=None):
@@ -1322,7 +1328,7 @@ class QCReportFastq(object):
                                                   fastqc_html_report),
                                              self.name))
         else:
-            fastqc_report.add("!!!No FastQC data available!!!")
+            fastqc_report.add(warning_icon(),"No FastQC data available")
         return fastqc_report
 
     def report_fastq_screens(self,document,relpath=None):
@@ -1342,7 +1348,7 @@ class QCReportFastq(object):
                                                  name="fastq_screens_%s" %
                                                  self.safe_name)
         if not self.fastq_screen.names:
-            screens_report.add("No screens found")
+            screens_report.add(warning_icon(),"No screens found")
             return screens_report
         raw_data = list()
         for name in self.fastq_screen.names:
@@ -1468,3 +1474,16 @@ def pretty_print_reads(n):
         n = n[3:]
     if n: n0.append(n)
     return (','.join(n0))[::-1]
+
+def warning_icon(title=None,size=50):
+    """
+    Return an image tag with an inline warning icon
+
+    Arguments:
+      title (str): optional title string to associate
+        with the warning
+      size (int): optional height/width specifier for
+        the icon (defaults to 50px)
+    """
+    return Img("data:image/png;base64,%s" % WARNING_ICON_BASE64_DATA,
+               title=title,height=size,width=size)
