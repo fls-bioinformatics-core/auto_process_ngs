@@ -1,16 +1,16 @@
 #######################################################################
-# Tests for barcode_analysis.py module
+# Tests for barcodes/analysis.py module
 #######################################################################
 
 import os
 import unittest
 import tempfile
 import shutil
-from auto_process_ngs.barcode_analysis import BarcodeCounter
-from auto_process_ngs.barcode_analysis import BarcodeGroup
-from auto_process_ngs.barcode_analysis import SampleSheetBarcodes
-from auto_process_ngs.barcode_analysis import Reporter
-from auto_process_ngs.barcode_analysis import report_barcodes
+from auto_process_ngs.barcodes.analysis import BarcodeCounter
+from auto_process_ngs.barcodes.analysis import BarcodeGroup
+from auto_process_ngs.barcodes.analysis import SampleSheetBarcodes
+from auto_process_ngs.barcodes.analysis import Reporter
+from auto_process_ngs.barcodes.analysis import report_barcodes
 
 # BarcodeCounter
 class TestBarcodeCounter(unittest.TestCase):

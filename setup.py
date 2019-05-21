@@ -2,7 +2,7 @@
 
 Setup script to install auto_process_ngs
 
-Copyright (C) University of Manchester 2013-18 Peter Briggs
+Copyright (C) University of Manchester 2013-19 Peter Briggs
 
 """
 
@@ -39,6 +39,7 @@ setup(name = "auto_process_ngs",
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
       packages = ['auto_process_ngs',
+                  'auto_process_ngs.barcodes',
                   'auto_process_ngs.commands',
                   'auto_process_ngs.icell8',
                   'auto_process_ngs.qc',],

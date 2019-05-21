@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
-#     barcode_analysis.py: classes and functions for analysing barcodes
-#     Copyright (C) University of Manchester 2016 Peter Briggs
+#     barcodes/analysis.py: classes and functions for analysing barcodes
+#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
 #
 ########################################################################
 #
@@ -10,13 +10,14 @@
 #########################################################################
 
 """
-barcode_analysis.py
-
 Classes and functions for analysing barcodes (i.e. index sequences) from
 FASTQ read headers:
 
 - BarcodeCounter: utility class for counting barcode sequences
-
+- BarcodeGroup: class for sorting groups of related barcodes
+- SampleSheetBarcode: class for handling barcode information from a
+  sample sheet
+- Reporter: class for generating reports of barcode statistics
 """
 
 #######################################################################
@@ -31,10 +32,10 @@ from bcftbx.IlluminaData import normalise_barcode
 from bcftbx.utils import AttributeDictionary
 from bcftbx.simple_xls import XLSWorkBook
 from bcftbx.simple_xls import XLSStyle
-from .docwriter import Document
-from .docwriter import Table
-from .docwriter import List
-from .docwriter import Link
+from ..docwriter import Document
+from ..docwriter import Table
+from ..docwriter import List
+from ..docwriter import Link
 
 #######################################################################
 # Classes
@@ -615,7 +616,7 @@ class BarcodeGroup(object):
 
 class SampleSheetBarcodes(object):
     """
-    Class for index sequence information from a sample sheet
+    Class for handling index sequence information from a sample sheet
 
     Given a SampleSheet.csv file this class can extract
     the index sequences (aka barcodes) corresponding to

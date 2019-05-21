@@ -20,9 +20,9 @@ from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import parse_lanes
-from auto_process_ngs.barcode_analysis import BarcodeCounter
-from auto_process_ngs.barcode_analysis import Reporter
-from auto_process_ngs.barcode_analysis import report_barcodes
+from auto_process_ngs.barcodes.analysis import BarcodeCounter
+from auto_process_ngs.barcodes.analysis import Reporter
+from auto_process_ngs.barcodes.analysis import report_barcodes
 
 __version__ = "0.0.1"
 
