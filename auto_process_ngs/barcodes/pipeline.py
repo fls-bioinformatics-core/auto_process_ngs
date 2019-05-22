@@ -144,7 +144,7 @@ class AnalyseBarcodes(Pipeline):
 
         # Analyse counts and report the results
         report_barcodes = ReportBarcodeAnalysis(
-            "Reporting barcode analysis",
+            "Report barcode analysis",
             list_counts_files.output.counts_files,
             self.params.barcode_analysis_dir,
             sample_sheet=self.params.sample_sheet,
