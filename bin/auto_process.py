@@ -460,6 +460,18 @@ def add_make_fastqs_command(cmdparser):
                           help="don't generate statistics file; use 'update_fastq_stats' "
                           "command to (re)generate statistics")
     p.add_option_group(statistics)
+    # Barcode analysis
+    barcodes = optparse.OptionGroup(p,'Barcode analysis')
+    barcodes.add_option('--barcode-analysis-dir',action="store",
+                        dest="barcode_analysis_dir",default=None,
+                        help="specify subdirectory where barcode analysis will "
+                        "be performed and outputs will be written")
+    barcodes.add_option('--no-barcode-analysis',action='store_true',
+                        dest='no_barcode_analysis',default=False,
+                        help="don't perform barcode analysis; use "
+                        "'analyse_barcodes' command to run barcode "
+                        "analysis separately")
+    p.add_option_group(barcodes)
     # Deprecated options
     deprecated = optparse.OptionGroup(p,'Deprecated/defunct options')
     deprecated.add_option('--keep-primary-data',action='store_true',
@@ -1004,6 +1016,7 @@ if __name__ == "__main__":
                     ignore_missing_bcl=options.ignore_missing_bcl,
                     ignore_missing_stats=options.ignore_missing_stats,
                     generate_stats=(not options.no_stats),
+                    analyse_barcodes=(not options.no_barcode_analysis),
                     require_bcl2fastq_version=options.bcl2fastq_version,
                     unaligned_dir=options.unaligned_dir,
                     sample_sheet=options.sample_sheet,
@@ -1015,6 +1028,7 @@ if __name__ == "__main__":
                     mask_short_adapter_reads=options.mask_short_adapter_reads,
                     stats_file=options.stats_file,
                     per_lane_stats_file=options.per_lane_stats_file,
+                    barcode_analysis_dir=options.barcode_analysis_dir,
                     skip_fastq_generation=skip_fastq_generation,
                     only_fetch_primary_data=options.only_fetch_primary_data,
                     create_empty_fastqs=create_empty_fastqs,

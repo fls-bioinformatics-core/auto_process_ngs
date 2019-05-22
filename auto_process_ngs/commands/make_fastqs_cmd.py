@@ -22,6 +22,7 @@ from ..bcl2fastq_utils import bcl_to_fastq_info
 from ..bcl2fastq_utils import get_required_samplesheet_format
 from ..bcl2fastq_utils import get_nmismatches
 from ..bcl2fastq_utils import check_barcode_collisions
+from ..barcodes.pipeline import AnalyseBarcodes
 from ..icell8.utils import get_icell8_bases_mask
 from ..tenx_genomics_utils import has_chromium_sc_indices
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
@@ -62,6 +63,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 mask_short_adapter_reads=None,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
+                analyse_barcodes=True,barcode_analysis_dir=None,
                 skip_fastq_generation=False,
                 only_fetch_primary_data=False,
                 create_empty_fastqs=None,runner=None,
@@ -113,6 +115,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         the end of bcl2fastq conversion (default is to keep it)
       generate_stats (bool): if True then (re)generate statistics file
         for fastqs
+      analyse_barcodes (bool): if True then (re)analyse barcodes for
+        fastqs
       require_bcl2fastq_version (str): (optional) specify bcl2fastq
         version to use. Should be a string of the form '1.8.4' or
         '>2.0'. Set to None to automatically determine required
@@ -132,6 +136,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         per-fastq stats file.
       per_lane_stats_file (str): if set then use this as the name of
         the output per-lane stats file.
+      barcode_analysis_dir (str): if set then specifies path to the
+        output directory for barcode analysis
       skip_fastq_generation (bool): if True then don't perform fastq
         generation
       only_fetch_primary_data (bool): if True then fetch primary data,
@@ -250,7 +256,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         skip_rsync = True
         skip_fastq_generation = True
     # Check if there's anything to do
-    if (skip_rsync and skip_fastq_generation) and not generate_stats:
+    if (skip_rsync and skip_fastq_generation) and \
+       not (generate_stats or analyse_barcodes):
         print "Nothing to do"
         return
     # Log dir
@@ -484,6 +491,40 @@ def make_fastqs(ap,protocol='standard',platform=None,
                          unaligned_dir=ap.params.unaligned_dir,
                          nprocessors=nprocessors,
                          runner=runner)
+    # Run barcode analysis
+    if analyse_barcodes:
+        # Determine output directory
+        if barcode_analysis_dir is not None:
+            ap.params['barcode_analysis_dir'] = barcode_analysis_dir
+        elif ap.params.barcode_analysis_dir is None:
+            ap.params['barcode_analysis_dir'] = 'barcode_analysis'
+        barcode_analysis_dir = ap.params.barcode_analysis_dir
+        if not os.path.isabs(barcode_analysis_dir):
+            barcode_analysis_dir = os.path.join(ap.params.analysis_dir,
+                                                barcode_analysis_dir)
+        # Log file
+        log_file = os.path.join(ap.log_dir,"analyse_barcodes.log")
+        # Set up runner
+        if runner is None:
+            runner = ap.settings.general.default_runner
+        runner.set_log_dir(ap.log_dir)
+        # Get scheduler parameters
+        max_jobs = ap.settings.general.max_concurrent_jobs
+        poll_interval = ap.settings.general.poll_interval
+        # Create and run barcode analysis pipeline
+        barcode_analysis = AnalyseBarcodes(
+            os.path.join(
+                ap.params.analysis_dir,
+                ap.params.unaligned_dir))
+        barcode_analysis.run(
+            barcode_analysis_dir,
+            lanes=lanes,
+            sample_sheet=sample_sheet,
+            log_file=log_file,
+            runner=runner,
+            max_jobs=max_jobs,
+            poll_interval=poll_interval,
+            verbose=False)
     # Make a 'projects.info' metadata file
     if lanes:
         ap.update_project_metadata_file()
