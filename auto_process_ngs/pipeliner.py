@@ -1367,6 +1367,9 @@ class Pipeline(object):
                                                   if verbose
                                                   else 'no'))
         self.report("-- concurrent jobs  : %s" % max_jobs)
+        self.report("-- polling interval : %ss" % ('<not set>'
+                                                   if poll_interval is None
+                                                   else poll_interval))
         # Report parameter settings
         if self.params:
             self.report("Pipeline parameters:")
@@ -1374,7 +1377,9 @@ class Pipeline(object):
             for p in sorted([p for p in self.params]):
                 self.report("-- %s%s: %s" % (p,
                                              ' '*(width-len(p)),
-                                             self.params[p].value))
+                                             ('<not set>'
+                                              if self.params[p].value is None
+                                              else self.params[p].value)))
         # Report runners
         self.report("Runners:")
         width = max([len(r) for r in self.runners])
