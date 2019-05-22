@@ -356,8 +356,11 @@ class CountBarcodes(PipelineTask):
                                        "%s.%s.counts" %
                                        (project_name,fq))
             if os.path.exists(counts_file):
-                # Already exists
-                continue
+                if (os.path.getmtime(counts_file) >
+                    os.path.getmtime(fastq)):
+                    # Counts file already exists and is newer
+                    # than Fastq
+                    continue
             # Build count command
             cmd = PipelineCommandWrapper(
                 "Run analyse_barcodes.py -c for %s" % fq,
