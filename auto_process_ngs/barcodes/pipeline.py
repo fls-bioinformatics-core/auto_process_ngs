@@ -31,6 +31,8 @@ from ..analysis import AnalysisFastq
 from ..applications import Command
 from ..bcl2fastq_utils import get_nmismatches
 from ..bcl2fastq_utils import bases_mask_is_valid
+from ..bcl2fastq_utils import check_barcode_collisions
+from ..tenx_genomics_utils import has_chromium_sc_indices
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineCommandWrapper
@@ -136,7 +138,8 @@ class AnalyseBarcodes(Pipeline):
             "Determine mismatches",
             self.params.mismatches,
             self.params.bases_mask,
-            example_fastq)
+            example_fastq,
+            self.params.sample_sheet)
         self.add_task(get_n_mismatches)
 
         # Analyse counts and report the results
@@ -391,7 +394,7 @@ class DetermineMismatches(PipelineTask):
     """
     Determine the number of mismatches to allow
     """
-    def init(self,mismatches,bases_mask,example_fastq):
+    def init(self,mismatches,bases_mask,example_fastq,sample_sheet=None):
         """
         Initialise the DetermineMismatches task
 
@@ -403,6 +406,9 @@ class DetermineMismatches(PipelineTask):
           example_fastq (str): path to a Fastq
             file to extract the index sequence
             lengths from
+          sample_sheet (str): path to a sample
+            sheet to use for barcode collision
+            detection
 
         Outputs:
           mismatches (int): number of mismatches
@@ -428,6 +434,13 @@ class DetermineMismatches(PipelineTask):
                     mismatches = 1
                 else:
                     mismatches = 0
+            # Check for barcode collisions and adjust accordingly
+            if self.args.sample_sheet and \
+               not has_chromium_sc_indices(self.args.sample_sheet):
+                while mismatches and check_barcode_collisions(
+                        self.args.sample_sheet,mismatches):
+                    mismatches = mismatches - 1
+        print("Allowed mismatches: %s" % mismatches)
         # Set the mismatches output value
         self.output.mismatches.set(self.args.mismatches)
 
