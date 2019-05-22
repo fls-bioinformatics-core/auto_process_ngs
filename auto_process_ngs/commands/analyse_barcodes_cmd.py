@@ -86,6 +86,9 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     if runner is None:
         runner = ap.settings.general.default_runner
     runner.set_log_dir(ap.log_dir)
+    # Get scheduler parameters
+    max_jobs = ap.settings.general.max_concurrent_jobs
+    poll_interval = ap.settings.general.poll_interval
     # Run the pipeline
     status = barcode_analysis.run(
         barcode_analysis_dir,
@@ -96,6 +99,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
         force=force,
         log_file=log_file,
         runner=runner,
+        max_jobs=max_jobs,
+        poll_interval=poll_interval,
         verbose=False)
     # Finish
     if status == 0:
