@@ -255,6 +255,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 log_dir=ap.log_dir)
             if verified:
                 print "...%s: verified QC" % qc_dir
+            else:
+                print "...%s: failed to verify QC" % qc_dir
+            if verified or force:
                 # Check for an existing report
                 qc_zip = os.path.join(
                     project.dirn,
@@ -278,9 +281,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     qc_artefacts['qc_zip'] = qc_zip
                 else:
                     print "...%s: missing QC report" % qc_dir
-            else:
-                # Not verified
-                print "...%s: failed to verify QC" % qc_dir
             if legacy:
                 # MultiQC report
                 multiqc_report = os.path.join(project.dirn,
