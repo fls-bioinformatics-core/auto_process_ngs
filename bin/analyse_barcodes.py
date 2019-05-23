@@ -126,6 +126,10 @@ if __name__ == '__main__':
     p.add_option('-f','--html',
                  action='store',dest='html_file',default=None,
                  help="write HTML version of report to HTML_FILE")
+    p.add_option('-t','--title',
+                 action='store',dest='title',default=None,
+                 help="title for HTML report (default: 'Barcodes "
+                 "Report')")
     p.add_option('-n','--no-report',
                  action='store_true',dest='no_report',default=None,
                  help="suppress reporting (overrides --report)")
@@ -184,15 +188,15 @@ if __name__ == '__main__':
                                 reporter=reporter)
         if opts.report_file is not None:
             print "Writing report to %s" % opts.report_file
-            reporter.write(filen=opts.report_file)
+            reporter.write(filen=opts.report_file,title=opts.title)
         else:
-            reporter.write()
+            reporter.write(title=opts.title)
         if opts.xls_file is not None:
             print "Writing XLS to %s" % opts.xls_file
-            reporter.write_xls(opts.xls_file)
+            reporter.write_xls(opts.xls_file,title=opts.title)
         if opts.html_file is not None:
             print "Writing HTML to %s" % opts.html_file
-            reporter.write_html(opts.html_file)
+            reporter.write_html(opts.html_file,title=opts.title)
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)

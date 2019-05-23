@@ -847,16 +847,19 @@ class Reporter(object):
         for line in content.split('\n'):
             self._content.append((line,dict(**kws)))
 
-    def write(self,fp=None,filen=None):
+    def write(self,fp=None,filen=None,title=None):
         """
         Write the report to a file or stream
 
         """
+        if title is None:
+            title = "Barcodes Report"
         if fp is None:
             if filen is None:
                 fp = sys.stdout
             else:
                 fp = open(filen,'w')
+        fp.write("%s\n\n" % make_title(title,'*'))
         for item in self._content:
             content = item[0]
             attrs = item[1]
@@ -866,12 +869,14 @@ class Reporter(object):
         if filen is not None:
             fp.close()
 
-    def write_xls(self,xls_file):
+    def write_xls(self,xls_file,title=None):
         """
         Write the report to an XLS file
 
         """
-        wb = XLSWorkBook("Barcodes Report")
+        if title is None:
+            title = "Barcodes Report"
+        wb = XLSWorkBook(title)
         ws = wb.add_work_sheet("barcodes")
         for item in self._content:
             content = item[0]
