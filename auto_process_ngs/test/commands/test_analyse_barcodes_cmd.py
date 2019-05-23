@@ -80,6 +80,16 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         mockdir.create(no_project_dirs=True)
         # Add data to Fastq files
         self._insert_fastq_reads(mockdir.dirn)
+        # Populate the samplesheet
+        sample_sheet = os.path.join(mockdir.dirn,"custom_SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write("""
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
+AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
+CDE3,CDE3,,,D701,GACCTGAA,D501,CGTGTAGG,CDE,
+CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
+""")
         # Analyse barcodes
         ap = AutoProcess(mockdir.dirn,
                          settings=self.settings)
@@ -130,6 +140,16 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         mockdir.create(no_project_dirs=True)
         # Add data to Fastq files
         self._insert_fastq_reads(mockdir.dirn)
+        # Populate the samplesheet
+        sample_sheet = os.path.join(mockdir.dirn,"custom_SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write("""
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
+AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
+CDE3,CDE3,,,D701,GACCTGAA,D501,CGTGTAGG,CDE,
+CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
+""")
         # Analyse barcodes
         ap = AutoProcess(mockdir.dirn,
                          settings=self.settings)
