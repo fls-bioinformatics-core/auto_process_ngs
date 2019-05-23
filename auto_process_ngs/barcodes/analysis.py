@@ -36,6 +36,7 @@ from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import List
 from ..docwriter import Link
+from ..docwriter import Img
 
 #######################################################################
 # Classes
@@ -891,6 +892,9 @@ class Reporter(object):
                                  bgcolor='gray25')
             elif attrs.get('strong',False):
                 style = XLSStyle(bold=True)
+            elif attrs.get('warning',False):
+                style = XLSStyle(bold=True,
+                                 color='red')
             ws.append_row(data=content.split('\t'),style=style)
         wb.save_as_xls(xls_file)
 
@@ -923,13 +927,21 @@ class Reporter(object):
                     section.add(table)
                 else:
                     # Append to existing table
+                    if attrs.get('warning',False):
+                        items[0] = Warning(items[0],size=20)
                     table.add_row(**dict(zip(header,items)))
             else:
                 # Not a table
                 if attrs.get('title',False):
                     # New section with title
                     section = html.add_section(title=content)
-                    toc_list.add_item(Link(section.title,section))
+                    if attrs.get('warning',False):
+                        toc_list.add_item(Warning(Link(section.title,section)))
+                    else:
+                        toc_list.add_item(Link(section.title,section))
+                    continue
+                if attrs.get('warning',False):
+                    section.add(Warning(content,css_classes=('warning',)))
                     continue
                 if table is not None:
                     # New section after table (no title)
@@ -951,15 +963,55 @@ class Reporter(object):
                               "     border-bottom-right-radius: 20px; }")
             html.add_css_rule("table { border: solid 1px grey;\n"
                               "        font-size: 80%;\n"
-                              "        font-family: sans-serif; }")
+                              "        font-family: sans-serif;\n"
+                              "        margin: 5px; }")
             html.add_css_rule("table th { background-color: grey;\n"
                               "           color: white;\n"
                               "           padding: 2px 5px; }")
             html.add_css_rule("table td { text-align: right;\n"
                               "           padding: 2px 5px;\n"
                               "           border-bottom: solid 1px lightgray; }")
+            html.add_css_rule("div .warning { padding: 2px;\n"
+                              "               color: red;\n"
+                              "               font-weight: bold; }")
+            html.add_css_rule("img { vertical-align: middle; }")
         # Write to file
         html.write(html_file)
+
+class Warning(object):
+    """
+    Create content marked with an inline warning icon
+    """
+    def __init__(self,content,size=25,css_classes=None):
+        """
+        Create new Warning instance
+
+        Arguments:
+          content (object): content to mark with the warning
+          size (int): optional height/width specifier for
+            the icon (defaults to 25px)
+          css_classes (list): optional list of CSS class
+            names to associate with the content
+        """
+        self._content = content
+        self._size = size
+        self._css_classes = css_classes
+        self._base64_data = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/////pQD/oAD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhiaUkEOAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wUVDTo2Eegz4gAAALhJREFUSMftlbEOwzAIRI2RIlmRMnb1F/j/f69Sp9Q5jnM6NjciXgz2QUp5NGtU+6h2LX+3L9UUaHbRToGXQY2YqBYorM6I1gnM1GvCOeJZ5+DcnpQVx8L3QMjGeyfBwCUYcXrBLHobGRrSmLkCPzCvPEiC3LjkriGuD7HkMQEB68iN1oVNO8cOOmPoO/77uphGBiBtefVZumAlYkpxF4hSfHHxQ6+FnZ+0WfboeXV+SD/lph/wf3oDTpUGaaZabmgAAAAASUVORK5CYII='
+
+    def html(self):
+        try:
+            content = self._content.html()
+        except AttributeError:
+            content = self._content
+        if self._css_classes:
+            css_classes = "class='%s'" % ' '.join(self._css_classes)
+        else:
+            css_classes = ""
+        return "<div %s>%s %s</div>" % (
+            css_classes,
+            Img("data:image/png;base64,%s" % self._base64_data,
+                height=self._size,width=self._size).html(),
+            content)
 
 #######################################################################
 # Functions
@@ -989,22 +1041,75 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         results to for reporting (optional, default is to
         write to stdout)
 
+    Returns:
+      Reporter: Reporter instance
     """
     # Initialise report content
     if reporter is None:
         reporter = Reporter()
-    # Add separator line if the reporter already has content
-    if reporter:
-        reporter.add('')
-    # Check lanes
-    if lane is not None:
-        reporter.add("Barcode analysis for lane #%d" % lane,title=True)
-    else:
-        reporter.add("Barcode analysis for all lanes",title=True)
     # Get analysis
     analysis = counts.analyse(lane=lane,cutoff=cutoff,
                               sample_sheet=sample_sheet,
                               mismatches=mismatches)
+    # Check for overrepresented sequences, and missing and
+    # underrepresented samples
+    underrepresented = []
+    overrepresented = []
+    missing = []
+    if sample_sheet is not None:
+        sample_sheet = SampleSheetBarcodes(sample_sheet)
+        found_samples = filter(lambda s: s is not None,
+                               [analysis.counts[bc].sample
+                                for bc in analysis.barcodes])
+        # Get the underrepresented and missing sample names
+        for sample in sample_sheet.samples(lane):
+            if sample not in found_samples:
+                barcode = sample_sheet.lookup_barcode(sample,lane)
+                try:
+                    underrepresented.append(
+                        {
+                            'name': sample,
+                            'barcode': barcode,
+                            'counts': counts.counts(barcode,lane),
+                        })
+                except KeyError:
+                    missing(
+                        {
+                            'name': sample,
+                            'barcode': barcode,
+                        })
+        # Get the overrepresented barcodes not associated
+        # with a sample name
+        lowest_ranked_sample = None
+        unassigned_indexes = {}
+        for i,barcode in enumerate(analysis.barcodes):
+            sample_name = analysis.counts[barcode].sample
+            if sample_name is not None:
+                lowest_ranked_sample = i
+            else:
+                unassigned_indexes[barcode] = i
+        if lowest_ranked_sample is not None:
+            for barcode in unassigned_indexes:
+                if unassigned_indexes[barcode] < lowest_ranked_sample:
+                    overrepresented.append(
+                        {
+                            'barcode': barcode,
+                            'rank': unassigned_indexes[barcode],
+                            'counts': counts.counts(barcode,lane),
+                        })
+    # Add separator line if the reporter already has content
+    if reporter:
+        reporter.add('')
+    # Check lanes
+    warning = (missing or underrepresented or overrepresented)
+    if lane is not None:
+        reporter.add("Barcode analysis for lane #%d" % lane,
+                     title=True,
+                     warning=warning)
+    else:
+        reporter.add("Barcode analysis for all lanes",
+                     title=True,
+                     warning=warning)
     # Report settings
     if cutoff is not None:
         reporter.add("Barcodes which cover less than %.1f%% of reads "
@@ -1020,8 +1125,16 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                       ('' if mismatches == 1 else 'es')))
     # Check there are results
     if analysis.total_reads == 0:
-        reporter.add("No barcodes counted")
+        reporter.add("No barcodes counted",warning=True)
         return reporter
+    # Warning about specific problems
+    if underrepresented:
+        reporter.add("There are underrepresented samples",warning=True)
+    if missing:
+        reporter.add("There are missing samples",warning=True)
+    if overrepresented:
+        reporter.add("There are unassigned barcodes which are "
+                     "overrepresented",warning=True)
     # Report information on the top barcodes
     cumulative_reads = 0
     reporter.add("")
@@ -1037,67 +1150,68 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         sample_name = analysis.counts[barcode].sample
         if sample_name is None:
             sample_name = ''
-        reporter.add("%s" % '\t'.join(
-            [str(x) for x in
-             ('% 5d' % (i+1),
-              barcode,
-              sample_name,
-              analysis.counts[barcode].sequences,
-              analysis.counts[barcode].reads,
-              '%.1f%%' % (percent(analysis.counts[barcode].reads,analysis['total_reads'])),
-              '(%.1f%%)' % (percent(cumulative_reads,
-                                    analysis['total_reads'])))]))
-    # Report "missing" samples
-    if sample_sheet is not None:
-        sample_sheet = SampleSheetBarcodes(sample_sheet)
-        found_samples = filter(lambda s: s is not None,
-                               [analysis.counts[bc].sample
-                                for bc in analysis.barcodes])
-        missing = []
-        missing_no_counts = []
-        for sample in sample_sheet.samples(lane):
-            if sample not in found_samples:
-                barcode = sample_sheet.lookup_barcode(sample,lane)
-                try:
-                    missing.append({'name': sample,
-                                    'barcode': barcode,
-                                    'counts': counts.counts(barcode,lane)
-                                })
-                except KeyError:
-                    missing_no_counts.append({'name': sample,
-                                              'barcode': barcode,
-                                          })
-        if missing:
-            # Sort into order of highest to lowest counts
-            missing = sorted(missing,
-                             key=lambda x: x['counts'],
-                             reverse=True)
-            # Report
-            reporter.add("")
-            reporter.add("The following samples had too few counts to "
-                         "appear in the results:",strong=True)
-            reporter.add("")
-            reporter.add("\t#Sample\tIndex\tN_reads\t%reads",heading=True)
-            for sample in missing:
-                reporter.add("\t%s\t%s\t%d\t%.2f%%" %
-                             (sample['name'],
-                              sample['barcode'],
-                              sample['counts'],
-                              percent(sample['counts'],
-                                      analysis['total_reads'])))
-        if missing_no_counts:
-            # Sort into alphabetical order
-            missing_no_counts = sorted(missing_no_counts,
-                                       key=lambda x: x['name'])
-            # Report
-            reporter.add("")
-            reporter.add("The following samples had no counts:",
-                         strong=True)
-            reporter.add("")
-            reporter.add("\t#Sample\tIndex",heading=True)
-            for sample in missing_no_counts:
-                reporter.add("\t%s\t%s" % (sample['name'],
-                                           sample['barcode']))
+        reporter.add(
+            "%s" % '\t'.join(
+                [
+                    str(x) for x in
+                    ('% 5d' % (i+1),
+                     barcode,
+                     sample_name,
+                     analysis.counts[barcode].sequences,
+                     analysis.counts[barcode].reads,
+                     '%.1f%%' % (percent(analysis.counts[barcode].reads,
+                                         analysis['total_reads'])),
+                     '(%.1f%%)' % (percent(cumulative_reads,
+                                           analysis['total_reads'])))
+                ]),
+            warning=(barcode in [b['barcode'] for b in overrepresented]))
+    # Report underrepresented samples
+    if underrepresented:
+        # Sort into order of highest to lowest counts
+        underrepresented = sorted(underrepresented,
+                                  key=lambda x: x['counts'],
+                                  reverse=True)
+        # Report
+        reporter.add("")
+        reporter.add("The following samples had too few counts to "
+                     "appear in the results:",warning=True)
+        reporter.add("")
+        reporter.add("\t#Sample\tIndex\tN_reads\t%reads",heading=True)
+        for sample in underrepresented:
+            reporter.add("\t%s\t%s\t%d\t%.2f%%" %
+                         (sample['name'],
+                          sample['barcode'],
+                          sample['counts'],
+                          percent(sample['counts'],
+                                  analysis['total_reads'])))
+    # Report missing samples
+    if missing:
+        # Sort into alphabetical order
+        missing = sorted(missing,
+                         key=lambda x: x['name'])
+        # Report
+        reporter.add("")
+        reporter.add("The following samples had no counts:",
+                     warning=True)
+        reporter.add("")
+        reporter.add("\t#Sample\tIndex",heading=True)
+        for sample in missing:
+            reporter.add("\t%s\t%s" % (sample['name'],
+                                       sample['barcode']))
+    # Report overrepresented sequences
+    if overrepresented:
+        reporter.add("")
+        reporter.add("The following unassigned barcodes are "
+                     "overrepresented compared to the assigned "
+                     "barcodes:",
+                     warning=True)
+        reporter.add("#Index\tN_reads\t%reads",heading=True)
+        for barcode in overrepresented:
+            reporter.add("%s\t%d\t%.2f%%" %
+                         (barcode['barcode'],
+                          barcode['counts'],
+                          percent(barcode['counts'],
+                                  analysis['total_reads'])))
     return reporter
 
 def make_title(text,underline="="):
