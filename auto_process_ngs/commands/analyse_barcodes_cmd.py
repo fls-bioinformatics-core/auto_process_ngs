@@ -76,6 +76,8 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     if not os.path.isabs(barcode_analysis_dir):
         barcode_analysis_dir = os.path.join(ap.params['analysis_dir'],
                                             barcode_analysis_dir)
+    # Report title
+    title = "Barcode analysis for %s" % ap.metadata.run_name
     # Create a pipeline for barcode analysis
     barcode_analysis = AnalyseBarcodes(os.path.join(
         ap.params['analysis_dir'],ap.params['unaligned_dir']))
@@ -92,6 +94,7 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     # Run the pipeline
     status = barcode_analysis.run(
         barcode_analysis_dir,
+        title=title,
         lanes=lanes,
         mismatches=mismatches,
         cutoff=cutoff,

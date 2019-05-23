@@ -67,6 +67,7 @@ class AnalyseBarcodes(Pipeline):
         # Define parameters
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
+        self.add_param('title',type=bool,value=False)
         self.add_param('lanes',type=list)
         self.add_param('sample_sheet',type=str)
         self.add_param('bases_mask',type=str)
@@ -151,6 +152,7 @@ class AnalyseBarcodes(Pipeline):
             lanes=self.params.lanes,
             mismatches=get_n_mismatches.output.mismatches,
             cutoff=self.params.cutoff,
+            title=self.params.title
         )
         self.add_task(report_barcodes,
                       requires=(list_counts_files,
@@ -178,16 +180,17 @@ class AnalyseBarcodes(Pipeline):
         """
         return self._output
 
-    def run(self,barcode_analysis_dir,lanes=None,mismatches=None,
-            bases_mask=None,cutoff=None,sample_sheet=None,force=False,
-            working_dir=None,log_file=None,batch_size=None,max_jobs=1,
-            poll_interval=5,runner=None,verbose=False):
+    def run(self,barcode_analysis_dir,title=None,lanes=None,
+            mismatches=None,bases_mask=None,cutoff=None,sample_sheet=None,
+            force=False,working_dir=None,log_file=None,batch_size=None,
+            max_jobs=1,poll_interval=5,runner=None,verbose=False):
         """
         Run the tasks in the pipeline
 
         Arguments:
           barcode_analysis_dir (str): path to the directory
             to write the analysis results to
+          title (str): optional, title for output reports
           lanes (list): optional, list of lanes to restrict
             the analysis to
           mismatches (int): optional, explicitly specify the
@@ -251,6 +254,7 @@ class AnalyseBarcodes(Pipeline):
                               params={
                                   'barcode_analysis_dir': barcode_analysis_dir,
                                   'counts_dir': counts_dir,
+                                  'title': title,
                                   'lanes': lanes,
                                   'bases_mask': bases_mask,
                                   'mismatches': mismatches,
@@ -452,7 +456,8 @@ class ReportBarcodeAnalysis(PipelineTask):
     Perform analysis and reporting of barcode counts
     """
     def init(self,counts_files,barcode_analysis_dir,lanes=None,
-             mismatches=None,cutoff=None,sample_sheet=None):
+             mismatches=None,cutoff=None,sample_sheet=None,
+             title=None):
         """
         Initialise the ReportBarcodeAnalysis task
 
@@ -469,6 +474,7 @@ class ReportBarcodeAnalysis(PipelineTask):
             below which indexes won't be reported
           sample_sheet (str): optional, sample sheet to check
             barcode sequences against
+          title (str): optional, title for output reports
 
         Outputs:
           report_file (str): path to the report file
@@ -521,6 +527,8 @@ class ReportBarcodeAnalysis(PipelineTask):
             cmd.add_args('--cutoff',self.args.cutoff)
         if self.args.mismatches:
             cmd.add_args('--mismatches',self.args.mismatches)
+        if self.args.title:
+            cmd.add_args('--title',self.args.title)
         cmd.add_args('-c')
         cmd.add_args(*self.args.counts_files)
         self.add_cmd(cmd)

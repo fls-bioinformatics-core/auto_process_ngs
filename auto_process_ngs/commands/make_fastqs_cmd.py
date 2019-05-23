@@ -502,6 +502,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if not os.path.isabs(barcode_analysis_dir):
             barcode_analysis_dir = os.path.join(ap.params.analysis_dir,
                                                 barcode_analysis_dir)
+        # Report title
+        title = "Barcode analysis for %s" % ap.metadata.run_name
         # Log file
         log_file = os.path.join(ap.log_dir,"analyse_barcodes.log")
         # Set up runner
@@ -518,6 +520,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 ap.params.unaligned_dir))
         barcode_analysis.run(
             barcode_analysis_dir,
+            title=title,
             lanes=lanes,
             sample_sheet=sample_sheet,
             log_file=log_file,
