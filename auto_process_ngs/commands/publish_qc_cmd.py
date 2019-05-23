@@ -21,6 +21,7 @@ from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
 from ..docwriter import Para
+from ..barcodes.analysis import Warning
 import bcftbx.utils as bcf_utils
 from auto_process_ngs import get_version
 
@@ -194,6 +195,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         barcode_analysis_dir = os.path.join(ap.analysis_dir,
                                             barcode_analysis_dir)
     barcodes_files = []
+    barcodes_warnings = False
     if os.path.exists(barcode_analysis_dir):
         print "...found barcode analysis dir: %s" % barcode_analysis_dir
         for filen in ('barcodes.report',
@@ -203,6 +205,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             if os.path.exists(filen):
                 print "...found %s" % os.path.basename(filen)
                 barcodes_files.append(filen)
+        # Check for warnings
+        with open(os.path.join(barcode_analysis_dir,'barcodes.report')) \
+             as fp:
+            for line in fp:
+                if "There are warnings" in line:
+                    barcodes_warnings = True
+                    break
+        if barcodes_warnings:
+            print "...barcode analysis contains warnings"
     if not barcodes_files:
         print "...no barcode analysis found"
     # Collect 10xGenomics cellranger QC summaries
@@ -398,6 +409,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if barcodes_files:
         # Create section
         barcodes = index_page.add_section("Barcode Analysis")
+        if barcodes_warnings:
+            barcodes.add(
+                Para(Warning("Barcode analysis detected some issues")))
         barcodes.add(
             Para("Plain text report:",
                  Link("barcodes.report","barcodes/barcodes.report"),

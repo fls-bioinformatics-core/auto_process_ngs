@@ -834,6 +834,17 @@ class Reporter(object):
             text.append("%s" % content)
         return '\n'.join(text)
 
+    @property
+    def has_warnings(self):
+        """
+        Report whether warnings were found in analysis
+        """
+        for item in self._content:
+            attrs = item[1]
+            if attrs.get('warning',False):
+                return True
+        return False
+
     def add(self,content,**kws):
         """
         Add content to the report
@@ -861,6 +872,9 @@ class Reporter(object):
             else:
                 fp = open(filen,'w')
         fp.write("%s\n\n" % make_title(title,'*'))
+        if self.has_warnings:
+            fp.write("*** There are warnings for one or more "
+                     "lanes ***\n\n")
         for item in self._content:
             content = item[0]
             attrs = item[1]
@@ -905,6 +919,10 @@ class Reporter(object):
         if title is None:
             title = "Barcodes Report"
         html = Document(title)
+        if self.has_warnings:
+            warnings = html.add_section()
+            warnings.add("*** There are warnings for one or more "
+                         "lanes ***")
         toc = html.add_section(title="Contents",name="toc")
         toc_list = List()
         toc.add(toc_list)
