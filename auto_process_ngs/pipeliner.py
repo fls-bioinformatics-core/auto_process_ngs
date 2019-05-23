@@ -868,11 +868,11 @@ class FileCollector(Iterator):
 # only handled stdout)
 # Usage:
 # >>> with Capturing() as output:
-# ...     print "Hello!"
+# ...     print("Hello!")
 # >>> for line in output.stdout:
-# ...     print "Line: %s" % line
+# ...     print("Line: %s" % line)
 # >>> for line in output.stderr:
-# ...     print "Err: %s" % line
+# ...     print("Err: %s" % line)
 class Capturing(object):
     def __init__(self):
         self.stdout = list()
@@ -978,7 +978,7 @@ class Pipeline(object):
         if self._log_file:
             with open(self._log_file,'a') as log:
                 log.write("%s\n" % (s,))
-        print s
+        print(s)
 
     def terminate(self):
         """
@@ -1367,6 +1367,9 @@ class Pipeline(object):
                                                   if verbose
                                                   else 'no'))
         self.report("-- concurrent jobs  : %s" % max_jobs)
+        self.report("-- polling interval : %ss" % ('<not set>'
+                                                   if poll_interval is None
+                                                   else poll_interval))
         # Report parameter settings
         if self.params:
             self.report("Pipeline parameters:")
@@ -1374,7 +1377,9 @@ class Pipeline(object):
             for p in sorted([p for p in self.params]):
                 self.report("-- %s%s: %s" % (p,
                                              ' '*(width-len(p)),
-                                             self.params[p].value))
+                                             ('<not set>'
+                                              if self.params[p].value is None
+                                              else self.params[p].value)))
         # Report runners
         self.report("Runners:")
         width = max([len(r) for r in self.runners])
@@ -1736,7 +1741,7 @@ class PipelineTask(object):
         if self._log_file:
             with open(self._log_file,'a') as log:
                 log.write("%s\n" % (s,))
-        print s
+        print(s)
 
     def invoke(self,f,args=None,kws=None):
         """
@@ -2335,7 +2340,7 @@ class Dispatcher(object):
             # Note that functions are pickled by 'fully qualified'
             # name reference, not by value i.e. only the function
             # name and the name of the parent module are pickled
-            print "Failed to load unpickled function: %s" % ex
+            print("Failed to load unpickled function: %s" % ex)
             return 1
         args = self._unpickle_object(pkl_args_file)
         kwds = self._unpickle_object(pkl_kwds_file)
