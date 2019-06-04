@@ -67,7 +67,7 @@ class AnalyseBarcodes(Pipeline):
         # Define parameters
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
-        self.add_param('title',type=bool,value=False)
+        self.add_param('title',type=str)
         self.add_param('lanes',type=list)
         self.add_param('sample_sheet',type=str)
         self.add_param('bases_mask',type=str)
