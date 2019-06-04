@@ -163,13 +163,18 @@ if __name__ == '__main__':
         cutoff = None
     else:
         cutoff = opts.cutoff
+    # Deal with samplesheet
+    if opts.sample_sheet:
+        sample_sheet = os.path.abspath(opts.sample_sheet)
+    else:
+        sample_sheet = None
     # Report the counts
     if not opts.no_report:
         reporter = Reporter()
         if lanes is None:
             report_barcodes(counts,
                             cutoff=cutoff,
-                            sample_sheet=opts.sample_sheet,
+                            sample_sheet=sample_sheet,
                             mismatches=opts.mismatches,
                             reporter=reporter)
         else:
@@ -183,7 +188,7 @@ if __name__ == '__main__':
                 report_barcodes(counts,
                                 lane=lane,
                                 cutoff=cutoff,
-                                sample_sheet=opts.sample_sheet,
+                                sample_sheet=sample_sheet,
                                 mismatches=opts.mismatches,
                                 reporter=reporter)
         if opts.report_file is not None:
