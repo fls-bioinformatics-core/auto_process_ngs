@@ -527,8 +527,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc_atac"),
-                       "bcl2fastq",
-                       "barcode_analysis",):
+                       "bcl2fastq",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -1073,8 +1072,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc"),
                        "bcl2fastq",
-                       "HGXXXX",
-                       "barcode_analysis",):
+                       "HGXXXX",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)

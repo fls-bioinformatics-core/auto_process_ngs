@@ -409,6 +409,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
             except Exception as ex:
                 raise Exception("'cellranger mkfastq' stage failed: "
                                 "'%s'" % ex)
+            # Turn off barcode analysis
+            analyse_barcodes = False
         elif protocol == '10x_chromium_sc_atac':
             # 10xGenomics Chromium scATAC-seq
             exit_code = bcl_to_fastq_10x_chromium_sc_atac(
@@ -426,6 +428,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localmem=cellranger_localmem,
                 log_dir=ap.log_dir
             )
+            # Turn off barcode analysis
+            analyse_barcodes = False
         else:
             # Unknown protocol
             raise Exception("Unknown protocol '%s'" % protocol)
