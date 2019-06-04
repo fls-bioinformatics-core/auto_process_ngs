@@ -1110,14 +1110,18 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
             if sample not in found_samples:
                 barcode = sample_sheet.lookup_barcode(sample,lane)
                 try:
+                    count = counts.counts(barcode,lane)
+                except KeyError:
+                    count = 0
+                if count > 0:
                     underrepresented.append(
                         {
                             'name': sample,
                             'barcode': barcode,
-                            'counts': counts.counts(barcode,lane),
+                            'counts': count,
                         })
-                except KeyError:
-                    missing(
+                else:
+                    missing.append(
                         {
                             'name': sample,
                             'barcode': barcode,
