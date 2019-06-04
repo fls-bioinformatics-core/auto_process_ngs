@@ -945,7 +945,7 @@ class Reporter(object):
             is_tabular = (len(content.split('\t')) > 1)
             if is_tabular:
                 # Deal with table data
-                items = content.split('\t')
+                items = content.lstrip('\t').split('\t')
                 if table is None:
                     # New table
                     header = items
