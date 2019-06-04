@@ -22,6 +22,7 @@ from ..docwriter import Table
 from ..docwriter import Link
 from ..docwriter import Para
 from ..barcodes.analysis import Warning
+from ..barcodes.analysis import detect_barcodes_warnings
 import bcftbx.utils as bcf_utils
 from auto_process_ngs import get_version
 
@@ -206,12 +207,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 print "...found %s" % os.path.basename(filen)
                 barcodes_files.append(filen)
         # Check for warnings
-        with open(os.path.join(barcode_analysis_dir,'barcodes.report')) \
-             as fp:
-            for line in fp:
-                if "There are warnings" in line:
-                    barcodes_warnings = True
-                    break
+        barcodes_warnings = detect_barcodes_warnings(
+            os.path.join(barcode_analysis_dir,'barcodes.report'))
         if barcodes_warnings:
             print "...barcode analysis contains warnings"
     if not barcodes_files:

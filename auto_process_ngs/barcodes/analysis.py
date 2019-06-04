@@ -18,6 +18,10 @@ FASTQ read headers:
 - SampleSheetBarcode: class for handling barcode information from a
   sample sheet
 - Reporter: class for generating reports of barcode statistics
+- report_barcodes: populate Reporter with analysis of barcode stats
+- detect_barcodes_warnings: check whether reports include warnings
+- make_title: turn a string into a Markdown/rst title
+- percent: return values as percentage
 """
 
 #######################################################################
@@ -37,6 +41,12 @@ from ..docwriter import Table
 from ..docwriter import List
 from ..docwriter import Link
 from ..docwriter import Img
+
+#######################################################################
+# Data
+#######################################################################
+
+PROBLEMS_DETECTED_TEXT = "One or more lanes have problems"
 
 #######################################################################
 # Classes
@@ -873,7 +883,7 @@ class Reporter(object):
                 fp = open(filen,'w')
         fp.write("%s\n\n" % make_title(title,'*'))
         if self.has_warnings:
-            fp.write("*** One or more lanes have problems ***\n\n")
+            fp.write("*** %s ***\n\n" % PROBLEMS_DETECTED_TEXT)
         for item in self._content:
             content = item[0]
             attrs = item[1]
@@ -920,8 +930,7 @@ class Reporter(object):
         html = Document(title)
         if self.has_warnings:
             warnings = html.add_section(css_classes=('warnings',))
-            warnings.add(Warning("One or more lanes have problems",
-                                 size=50))
+            warnings.add(Warning(PROBLEMS_DETECTED_TEXT,size=50))
         toc = html.add_section(title="Contents",name="toc")
         toc_list = List()
         toc.add(toc_list)
@@ -1249,8 +1258,46 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                   analysis['total_reads'])))
     return reporter
 
+def detect_barcodes_warnings(report_file):
+    """
+    Look for warning text in barcode.report file
+
+    Arguments:
+      report_file (str): path to barcode report file
+
+    Returns:
+      Boolean: True if warnings were found, False if not.
+    """
+    with open(report_file) as fp:
+        for line in fp:
+            if PROBLEMS_DETECTED_TEXT in line:
+                return True
+                break
+    return False
+
 def make_title(text,underline="="):
+    """
+    Turn a string into a Markdown/rst title
+
+    Arguments:
+      text (str): text to make into title
+      underline (str): underline character (defaults to
+        '=')
+
+    Returns:
+      String: title text.
+    """
     return "%s\n%s" % (text,underline*len(text))
 
 def percent(num,denom):
+    """
+    Return values as percentage
+
+    Arguments:
+      num (float): number to express as percentage
+      denom (float): denominator
+
+    Returns:
+      Float: value expressed as a percentage.
+    """
     return float(num)/float(denom)*100.0
