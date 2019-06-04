@@ -873,8 +873,7 @@ class Reporter(object):
                 fp = open(filen,'w')
         fp.write("%s\n\n" % make_title(title,'*'))
         if self.has_warnings:
-            fp.write("*** There are warnings for one or more "
-                     "lanes ***\n\n")
+            fp.write("*** One or more lanes have problems ***\n\n")
         for item in self._content:
             content = item[0]
             attrs = item[1]
@@ -920,14 +919,15 @@ class Reporter(object):
             title = "Barcodes Report"
         html = Document(title)
         if self.has_warnings:
-            warnings = html.add_section()
-            warnings.add("*** There are warnings for one or more "
-                         "lanes ***")
+            warnings = html.add_section(css_classes=('warnings',))
+            warnings.add(Warning("One or more lanes have problems",
+                                 size=50))
         toc = html.add_section(title="Contents",name="toc")
         toc_list = List()
         toc.add(toc_list)
         section = None
         table = None
+        lst = None
         for item in self._content:
             content = item[0]
             attrs = item[1]
@@ -948,13 +948,22 @@ class Reporter(object):
                     if attrs.get('warning',False):
                         items[0] = Warning(items[0],size=20)
                     table.add_row(**dict(zip(header,items)))
+            elif content.startswith(" * "):
+                # List
+                item = content[3:]
+                if lst is None:
+                    # New list
+                    lst = List()
+                    section.add(lst)
+                lst.add_item(item)
             else:
-                # Not a table
+                # Not a table or a list
                 if attrs.get('title',False):
                     # New section with title
                     section = html.add_section(title=content)
                     if attrs.get('warning',False):
-                        toc_list.add_item(Warning(Link(section.title,section)))
+                        toc_list.add_item(Warning(Link(section.title,section),
+                                                  size=20))
                     else:
                         toc_list.add_item(Link(section.title,section))
                     continue
@@ -965,6 +974,9 @@ class Reporter(object):
                     # New section after table (no title)
                     section = html.add_section()
                     table = None
+                if lst is not None:
+                    # Clear list
+                    lst = None
                 if content:
                     section.add(content)
         # Add styles
@@ -992,6 +1004,11 @@ class Reporter(object):
             html.add_css_rule("div .warning { padding: 2px;\n"
                               "               color: red;\n"
                               "               font-weight: bold; }")
+            html.add_css_rule("div.warnings { padding: 2px;\n"
+                              "               border: solid 3px red;\n"
+                              "               color: red;\n"
+                              "               font-weight: bold;\n"
+                              "               margin: 10px; }")
             html.add_css_rule("img { vertical-align: middle; }")
         # Write to file
         html.write(html_file)
@@ -1146,13 +1163,16 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("No barcodes counted",warning=True)
         return reporter
     # Warning about specific problems
-    if underrepresented:
-        reporter.add("There are underrepresented samples",warning=True)
-    if missing:
-        reporter.add("There are missing samples",warning=True)
-    if overrepresented:
-        reporter.add("There are unassigned barcodes which are "
-                     "overrepresented",warning=True)
+    if underrepresented or missing or overrepresented:
+        reporter.add("")
+        reporter.add("Problems detected:",warning=True)
+        if underrepresented:
+            reporter.add(" * Underrepresented samples")
+        if missing:
+            reporter.add(" * Missing samples")
+        if overrepresented:
+            reporter.add(" * Overrepresented barcodes not "
+                         "assigned to any samples")
     # Report information on the top barcodes
     cumulative_reads = 0
     reporter.add("")
@@ -1191,8 +1211,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                                   reverse=True)
         # Report
         reporter.add("")
-        reporter.add("The following samples had too few counts to "
-                     "appear in the results:",warning=True)
+        reporter.add("The following samples are underrepresented:")
         reporter.add("")
         reporter.add("\t#Sample\tIndex\tN_reads\t%reads",heading=True)
         for sample in underrepresented:
@@ -1209,8 +1228,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                          key=lambda x: x['name'])
         # Report
         reporter.add("")
-        reporter.add("The following samples had no counts:",
-                     warning=True)
+        reporter.add("The following samples had no counts:")
         reporter.add("")
         reporter.add("\t#Sample\tIndex",heading=True)
         for sample in missing:
@@ -1221,8 +1239,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("")
         reporter.add("The following unassigned barcodes are "
                      "overrepresented compared to the assigned "
-                     "barcodes:",
-                     warning=True)
+                     "barcodes:")
         reporter.add("#Index\tN_reads\t%reads",heading=True)
         for barcode in overrepresented:
             reporter.add("%s\t%d\t%.2f%%" %
