@@ -48,9 +48,9 @@ other lanes.
 
 In extreme cases where the assigned percentages are very low these
 plots might indicate that there is a problem with the barcode
-sequences used in demultiplexing; the
-:doc:`analyse_barcodes <../using/analyse_barcodes>` command can be
-used to investigate this in more depth.
+sequences used in demultiplexing; in this case the
+:doc:`barcode analysis report <barcode_analysis>` may provide more
+insight into any issues with barcode assignments..
 
 .. _processing_qc_per_lane_statistics_by_sample:
 

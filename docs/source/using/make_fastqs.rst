@@ -40,7 +40,9 @@ By default ``make_fastqs`` performs the following steps:
   sample sheet
 * Generates statistics for the Fastq data and produces a report on the
   analysing the numbers of reads assigned to each sample, lane and
-  project (``processing.html``).
+  project (``processing.html``)
+* Analyses the barcode index sequences to look for issues with
+  demultiplexing (``standard`` protocol only)
 
 Various options are available to skip or control each of these stages;
 more detail on the different usage modes can be found in the
@@ -88,6 +90,9 @@ Some of the most commonly used options are:
   from the instrument name it can be explicitly specified using
   this option (see :ref:`config_sequencer_platforms` for how to
   associate sequencers and platforms in the configuration)
+* ``--no-barcode-analysis`` skips the barcode analysis for
+  standard runs (helpful when handling runs requiring multiple
+  rounds of processing; see :ref:`make_fastqs-mixed-protocols`)
 * ``--no-stats`` skips the generation of statistics and processing
   QC reporting (helpful when handling runs requiring multiple
   rounds of processing; see :ref:`make_fastqs-mixed-protocols`)
@@ -108,7 +113,10 @@ of the form:
    auto_process.py make_fastqs ...
 
 The outputs produced on successful completion are described below
-in the section :ref:`make_fastqs-outputs`.
+in the section :ref:`make_fastqs-outputs`; it is recommended to check
+the :doc:`processing QC <../output/processing_qc>` and
+:doc:`barcode analysis <../output/barcode_analysis>` reports which
+will highlight issues with the demultiplexing.
 
 .. _make_fastqs-icell8-protocol:
 
@@ -236,6 +244,7 @@ would be processed first:
             --lanes=1-4,7-8 \
 	    --sample-sheet=SampleSheet.updated.csv \
             --output-dir=bcl2fastq.L123478 \
+            --no-barcode-analysis \
 	    --no-stats
 
 The ``--lanes`` option restricts the lanes to just those with
@@ -252,6 +261,7 @@ samples in lanes 5 and 6 had different barcode lengths:
             --lanes=5-6 \
             --output-dir=bcl2fastq.L56 \
             --use-bases-mask=auto \
+            --no-barcode-analysis \
 	    --no-stats
 
 Alternatively if the data in these lanes were 10xGenomics
@@ -283,11 +293,19 @@ merged data use the ``update_fastq_stats`` command:
 
    auto_process.py update_fastq_stats
 
+To perform the barcode analysis for the merged data use the
+``analyse_barcodes`` command:
+
+::
+
+   auto_process.py analyse_barcodes
+
 See the appropriate sections of the command reference for
 the full set of available options:
 
 * :ref:`commands_merge_fastq_dirs`
 * :ref:`commands_update_fastq_stats`
+* :ref:`commands_analyse_barcodes`
 
 .. _make_fastqs-outputs:
 
@@ -305,6 +323,12 @@ On completion the ``make_fastqs`` command will produce:
 * A ``projects.info`` metadata file which is used for setting up
   analysis project directories (see
   :doc:`Setting up project directories <setup_analysis_dirs>`)
+
+For standard runs there will additional outputs:
+
+* A directory called ``barcode_analysis`` which will contain
+  reports with analysis of the barcode index sequences (see the
+  section on :doc:`Barcode analysis <../output/barcode_analysis>`)
 
 If the run included 10xGenomics Chromium 3'v2 data then there will
 be some additional outputs:
