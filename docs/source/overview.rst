@@ -54,7 +54,7 @@ Additional helper commands are available:
   allows the metadata associated with an analysis
   directory to be viewed and updated.
 
-* :doc:`auto_process.py analyse_barcodes <commands_analyse_barcodes>`
+* :ref:`auto_process.py analyse_barcodes <commands_analyse_barcodes>`
   (re)analyses the barcode sequences in the Fastqs produced
   by ``make_fastqs``.
 
