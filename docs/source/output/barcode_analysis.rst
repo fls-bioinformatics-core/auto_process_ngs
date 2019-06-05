@@ -1,17 +1,23 @@
-Barcode analysis reports
+Barcode Analysis Reports
 ========================
 
-Index sequence (aka barcode) analysis is run as part of the
-:doc:`auto_process make_fastqs <../using/make_fastqs>` command (for
-standard sequencing runs); it can also be run as a separate operation
-using the
-:doc:`auto_process.py analyse_barcodes <commands_analyse_barcodes>`
-command. It can be useful for diagnosing and understanding various
-problems with the demultiplexing, for example if there are errors in
-the sample sheet resulting in low or zero reads being assigned to
-one or more samples.
+The demultiplexing stage of processing assigns reads to different
+samples by matching the index sequence (aka "barcode index") of each
+read against the reference index sequence for the samples, as defined
+in the input ``SampleSheet.csv`` file. Reads which cannot be matched
+against any sample are assigned to the "undetermined" category.
 
-Barcode anlysis can identify the following issues:
+Typically the percentage of these undetermined reads should be low
+compared to the total number of reads. However in cases where
+demultiplexing hasn't worked well, the number of undetermined reads
+may be unusually high (typically corresponding with an unexpectedly
+low number of reads assigned to one or more samples). This can
+happen artifically because of errors in the sample sheet, or because
+of errors in the sequencing.
+
+In these cases the barcode analysis report can be useful for diagnosing
+and understanding various problems with the demultiplexing, by
+identifying the following issues:
 
  * **Underrepresented and missing samples**: samples which have
    extremely low (underrepresented) or zero (missing) numbers of
@@ -19,6 +25,13 @@ Barcode anlysis can identify the following issues:
  * **Overrepresented unassigned index sequences**: barcodes which
    have high numbers of associated reads but which aren't assigned
    to a sample in the sample sheet.
+
+Barcode analysis is normally run automatically as part of the
+:doc:`auto_process make_fastqs <../using/make_fastqs>` command (for
+standard sequencing runs). It can also be run as a separate operation
+using the
+:ref:`auto_process.py analyse_barcodes <commands_analyse_barcodes>`
+command.
 
 The analysis counts the reads associated with each barcode sequence
 in each lane across all the FASTQs generated for those lanes. It then
@@ -95,3 +108,86 @@ The raw counts are also cached in files in the
 ``barcode_analysis/counts/`` subdirectory. This means that the analysis
 can be rerun quickly with different parameters (for example a different
 sample sheet or cut-off) if desired.
+
+Tuning the reporting
+--------------------
+
+The ``analyse_barcodes`` command supports a number of options to allow
+"tuning" of the analysis and reporting:
+
+ * ``--cutoff``: by default barcodes are excluded from the analysis if
+   they are associated with fewer than 0.1% of all the reads counted.
+   Use this option to adjust the read limit to report more or fewer
+   barcodes.
+
+ * ``--mismatches``: by default only exact matches to barcode sequences
+   are considered (i.e. zero mismatches). If the number of mismatches
+   (as specified by this option) are more than zero then similar barcodes
+   will be grouped together.
+
+ * ``--lanes``: by default all barcodes and counts are combined and
+   analysed together. Use this option to restrict analysis to a subset
+   of lanes.
+
+ * ``--sample-sheet``: by default the sample names and corresponding
+   reference barcodes are taked from the sample sheet used in the
+   ``make_fastqs`` stage; this option can be used to specify a different
+   sample sheet file to use.
+
+.. note::
+
+   When ``--cutoff`` is used with ``--mismatches`` then the read cutoff
+   is applied **after** the grouping.
+
+Running analyse_barcodes.py directly
+------------------------------------
+
+The ``analyse_barcodes.py`` utility can be run directly, either using
+the cached counts produced by the ``analyse_barcodes`` command, or from
+scratch, to perform more nuanced analyses of the barcode sequences if
+required.
+
+``analyse_barcodes.py`` operates in two stages:
+
+ 1. Counting the frequency of each index sequence in the target FASTQs
+
+ 2. Analysis of these raw counts to determine groups of similar barcode
+    sequences (optionally), and report the most numerous barcodes (or
+    groups) matched against reference sequences from a sample sheet.
+
+The first stage can be very time consuming so the counts can be output to an
+intermediate ``counts`` file using the ``-o`` option::
+
+    analyse_barcodes.py ... -o SAMPLE.counts SAMPLE.fq
+
+.. note::
+
+   To suppress analysis and reporting when generating counts
+   use the ``--no-report`` option.
+
+Multiple analyses can be performed using the cached counts, which are
+reloaded into the program using the ``-c`` option::
+
+    analyse_barcodes.py ... -c SAMPLE.counts
+
+Multiple counts files can be combined via the ``-c`` option::
+
+    analyse_barcodes.py ... -c SAMPLE_1.counts SAMPLE_2.counts ...
+
+.. note::
+
+   The ``analyse_barcodes`` command generates counts files for each
+   FASTQ file, in the ``barcode_analysis/counts/`` directory, using
+   the naming convention of ``FASTQ.counts``.
+
+By default the results of the analysis are written to stdout; use
+the ``-r`` option to specify an output file instead.
+
+Analysing undetermined barcodes only
+------------------------------------
+
+Currently this can be done by running the ``analyse_barcodes.py`` utility
+directly on the cached counts for just the "undetermined" FASTQ files,
+for example::
+
+    analyse_barcodes.py -c barcode_analysis/Undetermined*.counts
