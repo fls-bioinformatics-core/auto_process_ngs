@@ -67,7 +67,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 	     
    Analysis and project directories <output/analysis_dirs>
    Processing QC <output/processing_qc>
-   Barcode analysis reports <output/barcode_analysis>
+   Barcode analysis <output/barcode_analysis>
    QC reports <output/qc_reports>
 
 .. _reference-docs:
