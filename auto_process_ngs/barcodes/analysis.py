@@ -1032,7 +1032,7 @@ class Reporter(object):
             html.add_css_rule("table { border: solid 1px grey;\n"
                               "        font-size: 80%;\n"
                               "        font-family: sans-serif;\n"
-                              "        margin: 5px; }")
+                              "        margin: 5px 5px 20px 20px; }")
             html.add_css_rule("table th { background-color: grey;\n"
                               "           color: white;\n"
                               "           padding: 2px 5px; }")
@@ -1189,17 +1189,19 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                      warning=warning)
     # Report settings
     if cutoff is not None:
-        reporter.add("Barcodes which cover less than %.1f%% of reads "
+        reporter.add(" * Barcodes which cover less than %.1f%% of reads "
                      "have been excluded" % (cutoff*100.0))
-        reporter.add("Reported barcodes cover %.1f%% of the data "
+        reporter.add(" * Reported barcodes cover %.1f%% of the data "
                      "(%d/%d)" % (percent(analysis.coverage,
                                           analysis.total_reads),
                                   analysis.coverage,
                                   analysis.total_reads))
     if mismatches:
-        reporter.add("Barcodes have been grouped by allowing %d mismatch%s" %
-                     (mismatches,
-                      ('' if mismatches == 1 else 'es')))
+        reporter.add(" * Barcodes have been grouped by allowing %d "
+                     "mismatch%s" % (mismatches,
+                                     ('' if mismatches == 1 else 'es')))
+    else:
+        reporter.add(" * No mismatches were allowed (exact matches only)")
     # Check there are results
     if analysis.total_reads == 0:
         reporter.add("No barcodes counted",warning=True)

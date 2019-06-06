@@ -911,9 +911,12 @@ Some words""")
         reporter.add("Test Document",title=True)
         reporter.add("Lorem ipsum")
         report_file = os.path.join(self.wd,"report.txt")
-        reporter.write(filen=report_file)
+        reporter.write(filen=report_file,title="My Report")
         self.assertTrue(os.path.isfile(report_file))
-        expected_contents = """Test Document
+        expected_contents = """My Report
+*********
+
+Test Document
 =============
 Lorem ipsum
 """
@@ -1047,7 +1050,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(str(reporter),
                          """Barcode analysis for lane #1
 ============================
-Barcodes have been grouped by allowing 2 mismatches
+ * Barcodes have been grouped by allowing 2 mismatches
 
 #Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
     1	GCTGCGCGGTC	SMPL2	1	325394	51.5%	(51.5%)
@@ -1063,4 +1066,5 @@ Barcodes have been grouped by allowing 2 mismatches
         self.assertEqual(str(reporter),
                          """Barcode analysis for all lanes
 ==============================
+ * No mismatches were allowed (exact matches only)
 No barcodes counted""")
