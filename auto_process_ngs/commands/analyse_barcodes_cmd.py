@@ -66,7 +66,9 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
     bases_mask = ap.params['bases_mask']
     if sample_sheet is None:
         sample_sheet = ap.params.sample_sheet
-    sample_sheet = os.path.abspath(sample_sheet)
+    if not os.path.isabs(sample_sheet):
+        sample_sheet = os.path.join(ap.params['analysis_dir'],
+                                    sample_sheet)
     # Handle barcode analysis subdirectory
     if barcode_analysis_dir is not None:
         # Create a subdirectory for barcode analysis
