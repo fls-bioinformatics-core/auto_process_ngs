@@ -104,6 +104,11 @@ class TestBarcodeCounter(unittest.TestCase):
         self.assertEqual(bc.nreads(1),116)
         self.assertEqual(bc.nreads(2),142)
         self.assertEqual(bc.nreads(3),152)
+        # Lengths
+        self.assertEqual(bc.barcode_lengths(),[16])
+        self.assertEqual(bc.barcode_lengths(1),[16])
+        self.assertEqual(bc.barcode_lengths(2),[16])
+        self.assertEqual(bc.barcode_lengths(3),[16])
 
     def test_filter_barcodes(self):
         """BarcodeCounter: check filtering by lane and cutoff
@@ -848,8 +853,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGATTCTTTCCC")
         self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGATCTTTCCC")
 
-    def test_non_existent_lane_raises_exception(self):
-        """SampleSheetBarcodes: request non-existent lane raises KeyError
+    def test_request_non_existent_lane(self):
+        """SampleSheetBarcodes: handle request for non-existent lane
         """
         # Bad lane for sample sheet with lanes
         s = SampleSheetBarcodes(self.dual_index_with_lanes)
@@ -857,8 +862,15 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertRaises(KeyError,s.samples,5)
         # Any lane for sample sheet with no lanes
         s = SampleSheetBarcodes(self.dual_index_no_lanes)
-        self.assertRaises(KeyError,s.barcodes,1)
-        self.assertRaises(KeyError,s.samples,1)
+        self.assertEqual(s.barcodes(1),
+                         ["AGGCAGAATCTTACGC",
+                          "CGTACTAGTCTTACGC",
+                          "GGACTCCTTCTTACGC",
+                          "TAAGGCGATCTTACGC",
+                          "TAGGCATGTCTTACGC",
+                          "TCCTGAGCTCTTACGC"])
+        self.assertEqual(s.samples(1),
+                         ["SW1","SW2","SW3","SW4","SW5","SW6"])
 
 # Reporter
 class TestReporter(unittest.TestCase):

@@ -153,6 +153,23 @@ class BarcodeCounter(object):
         except KeyError:
             self._seqs_all[barcode] = incr
 
+    def barcode_lengths(self,lane=None):
+        """
+        Return lengths of barcode sequences
+
+        Returns a list of the barcode sequence lengths.
+
+        Arguments:
+          lane (int): if specified then restricts the
+            list to barcodes that appear in the named
+            lane (default is to get lengths from all
+            barcodes in all lanes)
+        """
+        lengths = set()
+        for barcode in self.barcodes(lane=lane):
+            lengths.add(len(normalise_barcode(barcode)))
+        return sorted(list(lengths))
+
     @property
     def lanes(self):
         """
@@ -700,6 +717,9 @@ class SampleSheetBarcodes(object):
             to get all barcode sequences
 
         """
+        if not self._sample_sheet.has_lanes:
+            # Special case: sample sheet doesn't define any lanes
+            lane = None
         if lane in self._lanes:
             barcodes = self._sample_lookup[lane].keys()
         elif lane is None:
@@ -724,6 +744,9 @@ class SampleSheetBarcodes(object):
             None to get all sample names
 
         """
+        if not self._sample_sheet.has_lanes:
+            # Special case:sample sheet doesn't define any lanes
+            lane = None
         if lane in self._lanes:
             samples = self._barcode_lookup[lane].keys()
         elif lane is None:
@@ -745,6 +768,9 @@ class SampleSheetBarcodes(object):
             matching sample in
 
         """
+        if not self._sample_sheet.has_lanes:
+            # Special case:sample sheet doesn't define any lanes
+            lane = None
         if lane in self._lanes:
             return self._sample_lookup[lane][barcode]
         elif lane is None:
@@ -770,6 +796,9 @@ class SampleSheetBarcodes(object):
             matching barcode in
 
         """
+        if not self._sample_sheet.has_lanes:
+            # Special case:sample sheet doesn't define any lanes
+            lane = None
         if lane in self._lanes:
             return self._barcode_lookup[lane][sample]
         elif lane is None:
