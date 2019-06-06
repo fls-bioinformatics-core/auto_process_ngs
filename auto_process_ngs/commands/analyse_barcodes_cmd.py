@@ -41,7 +41,7 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
         (default is to include all lanes)
       mismatches (int): (optional) maximum number of mismatches to
         consider when grouping similar barcodes; default is to determine
-        it automatically from the bases mask
+        it automatically
       cutoff (float): (optional) exclude barcodes with a smaller fraction
         of associated reads than specified cutoff from reporting (e.g.
         '0.001' excludes barcodes with < 0.1% of reads); default is to

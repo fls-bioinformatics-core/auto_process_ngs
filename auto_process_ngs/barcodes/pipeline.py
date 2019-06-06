@@ -134,15 +134,6 @@ class AnalyseBarcodes(Pipeline):
         self.add_task(list_counts_files,
                       requires=count_tasks)
 
-        # Determine mismatches
-        get_n_mismatches = DetermineMismatches(
-            "Determine mismatches",
-            self.params.mismatches,
-            self.params.bases_mask,
-            example_fastq,
-            self.params.sample_sheet)
-        self.add_task(get_n_mismatches)
-
         # Analyse counts and report the results
         report_barcodes = ReportBarcodeAnalysis(
             "Report barcode analysis",
@@ -150,13 +141,12 @@ class AnalyseBarcodes(Pipeline):
             self.params.barcode_analysis_dir,
             sample_sheet=self.params.sample_sheet,
             lanes=self.params.lanes,
-            mismatches=get_n_mismatches.output.mismatches,
+            mismatches=self.params.mismatches,
             cutoff=self.params.cutoff,
             title=self.params.title
         )
         self.add_task(report_barcodes,
-                      requires=(list_counts_files,
-                                get_n_mismatches))
+                      requires=(list_counts_files,))
 
         # Add final outputs to the pipeline
         self.add_output('report_file',report_barcodes.output.report_file)
@@ -396,60 +386,6 @@ class ListBarcodeCountFiles(PipelineTask):
             if f.endswith(".counts"):
                 self.output.counts_files.append(
                     os.path.join(self.args.counts_dir,f))
-
-class DetermineMismatches(PipelineTask):
-    """
-    Determine the number of mismatches to allow
-    """
-    def init(self,mismatches,bases_mask,example_fastq,sample_sheet=None):
-        """
-        Initialise the DetermineMismatches task
-
-        Arguments:
-          mismatches (int): supplied number of
-            mismatches (will be returned if set)
-          bases_mask (str): bases mask used for
-            Fastq generation and demultiplexing
-          example_fastq (str): path to a Fastq
-            file to extract the index sequence
-            lengths from
-          sample_sheet (str): path to a sample
-            sheet to use for barcode collision
-            detection
-
-        Outputs:
-          mismatches (int): number of mismatches
-            to allow when comparing barcodes
-        """
-        self.add_output('mismatches',PipelineParam(type=int))
-    def setup(self):
-        if self.args.mismatches is not None:
-            # Use the supplied value
-            mismatches = self.args.mismatches
-        else:
-            # Try to determine number of mismatches from bases mask
-            bases_mask = self.args.bases_mask
-            if bases_mask_is_valid(bases_mask):
-                mismatches = get_nmismatches(bases_mask)
-            else:
-                # Not a valid bases mask
-                # Extract from example Fastq file
-                for r in FastqIterator(self.args.example_fastq):
-                    seq_id = r.seqid
-                    break
-                if len(seq_id.index_sequence) >= 6:
-                    mismatches = 1
-                else:
-                    mismatches = 0
-            # Check for barcode collisions and adjust accordingly
-            if self.args.sample_sheet and \
-               not has_chromium_sc_indices(self.args.sample_sheet):
-                while mismatches and check_barcode_collisions(
-                        self.args.sample_sheet,mismatches):
-                    mismatches = mismatches - 1
-        print("Allowed mismatches: %s" % mismatches)
-        # Set the mismatches output value
-        self.output.mismatches.set(self.args.mismatches)
 
 class ReportBarcodeAnalysis(PipelineTask):
     """

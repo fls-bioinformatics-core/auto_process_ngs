@@ -16,15 +16,21 @@ missing or which have very low counts.
 import optparse
 import sys
 import os
+import tempfile
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
+from bcftbx.IlluminaData import SampleSheet
+from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import parse_lanes
 from auto_process_ngs.barcodes.analysis import BarcodeCounter
 from auto_process_ngs.barcodes.analysis import Reporter
 from auto_process_ngs.barcodes.analysis import report_barcodes
+from auto_process_ngs.bcl2fastq_utils import make_custom_sample_sheet
+from auto_process_ngs.bcl2fastq_utils import check_barcode_collisions
+from auto_process_ngs.tenx_genomics_utils import has_chromium_sc_indices
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 #######################################################################
 # Functions
@@ -104,9 +110,11 @@ if __name__ == '__main__':
                  "can be specified using ranges (e.g. '2-3'), comma-"
                  "separated list ('5,7') or a mixture ('2-3,5,7')")
     p.add_option('-m','--mismatches',action='store',dest='mismatches',
-                 default=0,type='int',
+                 default=None,type='int',
                  help="maximum number of mismatches to use when "
-                 "grouping similar barcodes (default is 0)")
+                 "grouping similar barcodes (will be determined "
+                 "automatically if samplesheet is supplied, otherwise "
+                 "defaults to 0)")
     p.add_option('--cutoff',action='store',dest='cutoff',
                  default=0.001,type='float',
                  help="exclude barcodes with a smaller fraction of "
@@ -143,11 +151,8 @@ if __name__ == '__main__':
             p.error("Needs at least one barcode counts file")
         else:
             p.error("Needs at least one FASTQ file, or a bcl2fastq directory")
-    # Determine subset of lanes to examine
-    if opts.lanes is not None:
-        lanes = parse_lanes(opts.lanes)
-    else:
-        lanes = None
+    # Set default return value
+    retval = 0
     # Determine mode
     if opts.use_counts:
         # Read counts from counts file(s)
@@ -158,6 +163,11 @@ if __name__ == '__main__':
     else:
         # Generate counts from fastq files
         counts = count_barcodes(args)
+    # Determine subset of lanes to examine
+    if opts.lanes is not None:
+        lanes = parse_lanes(opts.lanes)
+    else:
+        lanes = counts.lanes
     # Deal with cutoff
     if opts.cutoff == 0.0:
         cutoff = None
@@ -171,26 +181,72 @@ if __name__ == '__main__':
     # Report the counts
     if not opts.no_report:
         reporter = Reporter()
-        if lanes is None:
+        for lane in lanes:
+            # Report for each lane
+            if lane not in counts.lanes:
+                logging.error("Requested analysis for lane %d but "
+                              "only have counts for lanes %s" %
+                              (lane,
+                               ','.join([str(l) for l in counts.lanes])))
+                retval = 1
+                continue
+            mismatches = opts.mismatches
+            # Deal with sample sheet if supplied
+            if sample_sheet:
+                with tempfile.NamedTemporaryFile() as fp:
+                    # Make a temporary sample sheet with just the
+                    # requested lane
+                    s = SampleSheet(sample_sheet)
+                    if s.has_lanes:
+                        use_lanes = (lane,)
+                        s = make_custom_sample_sheet(sample_sheet,
+                                                     fp.name,
+                                                     lanes=(lane,))
+                    else:
+                        s = make_custom_sample_sheet(sample_sheet,
+                                                     fp.name)
+                    if has_chromium_sc_indices(fp.name):
+                        logging.warning("Lane %s has 10xGenomics Chromium "
+                                        "indices in sample sheet; not "
+                                        "matching against samplesheet for "
+                                        "this lane" % lane)
+                        continue
+                    # If mismatches not set then determine from
+                    # the barcode lengths in the temporary
+                    # samplesheet
+                    if mismatches is None:
+                        barcode_length = None
+                        for line in s:
+                            length = len(samplesheet_index_sequence(line))
+                            if barcode_length is None:
+                                barcode_length = length
+                            elif length != barcode_length:
+                                logging.error("Lane %s has a mixture of "
+                                              "barcode lengths" % lane)
+                                barcode_length = min(barcode_length,length)
+                        if barcode_length >= 6:
+                            mismatches = 1
+                        else:
+                            mismatches = 0
+                        # Check for collisions
+                        while mismatches and check_barcode_collisions(
+                                fp.name,mismatches):
+                            mismatches = mismatches - 1
+            # Check mismatches
+            if mismatches is None:
+                # Set according to barcode lengths found in counts
+                barcode_length = min(counts.barcode_lengths(lane=lane))
+                if barcode_length >= 6:
+                    mismatches = 1
+                else:
+                    mismatches = 0
+            # Report the analysis
             report_barcodes(counts,
+                            lane=lane,
                             cutoff=cutoff,
                             sample_sheet=sample_sheet,
-                            mismatches=opts.mismatches,
+                            mismatches=mismatches,
                             reporter=reporter)
-        else:
-            for lane in lanes:
-                if lane not in counts.lanes:
-                    logging.error("Requested analysis for lane %d but "
-                                  "only have counts for lanes %s" %
-                                  (lane,
-                                   ','.join([str(l) for l in counts.lanes])))
-                    sys.exit(1)
-                report_barcodes(counts,
-                                lane=lane,
-                                cutoff=cutoff,
-                                sample_sheet=sample_sheet,
-                                mismatches=opts.mismatches,
-                                reporter=reporter)
         if opts.report_file is not None:
             print "Writing report to %s" % opts.report_file
             reporter.write(filen=opts.report_file,title=opts.title)
@@ -205,3 +261,5 @@ if __name__ == '__main__':
     # Output counts if requested
     if opts.counts_file_out is not None:
         counts.write(opts.counts_file_out)
+    # Finish
+    sys.exit(retval)
