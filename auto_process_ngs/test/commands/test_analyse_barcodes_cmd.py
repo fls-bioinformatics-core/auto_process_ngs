@@ -83,7 +83,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         # Populate the samplesheet
         sample_sheet = os.path.join(mockdir.dirn,"custom_SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
-            fp.write("""
+            fp.write("""[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
 AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
@@ -143,7 +143,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
         # Populate the samplesheet
         sample_sheet = os.path.join(mockdir.dirn,"custom_SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
-            fp.write("""
+            fp.write("""[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
 AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
