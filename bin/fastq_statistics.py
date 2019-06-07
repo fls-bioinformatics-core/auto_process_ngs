@@ -64,6 +64,10 @@ if __name__ == '__main__':
                  default="Unaligned",
                  help="specify an alternative name for the 'Unaligned' "
                  "directory containing the fastq.gz files")
+    p.add_option("--sample-sheet",action="store",dest="sample_sheet",
+                 default="None",
+                 help="specify a sample sheet file to get additional "
+                 "information from")
     p.add_option('-o','--output',action="store",dest="stats_file",
                  default='statistics.info',
                  help="name of output file for per-file statistics (default "
@@ -105,6 +109,9 @@ if __name__ == '__main__':
     # Report settings etc
     print "Source directory      : %s" % args[0]
     print "Unaligned subdirectory: %s" % options.unaligned_dir
+    print "Samplesheet file      : %s" % (options.sample_sheet
+                                          if options.sample_sheet is not None
+                                          else '')
     print "Basic stats file      : %s" % options.stats_file
     print "Full stats file       : %s" % options.full_stats_file
     print "Update existing stats?: %s" % ('yes' if options.update else 'no')
@@ -147,7 +154,8 @@ if __name__ == '__main__':
     print "Full statistics written to %s" % options.full_stats_file
     stats.report_basic_stats(options.stats_file)
     print "Basic statistics written to %s" % options.stats_file
-    stats.report_per_lane_sample_stats(options.per_lane_sample_stats_file)
+    stats.report_per_lane_sample_stats(options.per_lane_sample_stats_file,
+                                       samplesheet=options.sample_sheet)
     print "Per-lane sample statistics written to %s" % \
         options.per_lane_sample_stats_file
     stats.report_per_lane_summary_stats(options.per_lane_stats_file)

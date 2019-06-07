@@ -971,8 +971,8 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
         include_sample_dir=include_sample_dir)
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
-                     unaligned_dir=None,add_data=False,nprocessors=None,
-                     runner=None):
+                     unaligned_dir=None,sample_sheet=None,add_data=False,
+                     nprocessors=None,runner=None):
     """Generate statistics for Fastq files
 
     Generates statistics for all Fastq files found in the
@@ -990,6 +990,8 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         unless over-ridden by local settings)
       unaligned_dir (str): output directory for bcl-to-fastq
         conversion
+      sample_sheet (str): path to sample sheet file used in
+        bcl-to-fastq conversion
       add_data (bool): if True then add stats to the existing
         stats files (default is to overwrite existing stats
         files)
@@ -1016,6 +1018,9 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         unaligned_dir = ap.params.unaligned_dir
     if not os.path.exists(os.path.join(ap.params.analysis_dir,unaligned_dir)):
         logger.error("Unaligned dir '%s' not found" % unaligned_dir)
+    # Check for sample sheet
+    if sample_sheet is None:
+        sample_sheet = ap.params['sample_sheet']
     # Check if any Fastqs are newer than stats files
     newest_mtime = 0
     for f in (stats_file,per_lane_stats_file,):
@@ -1057,6 +1062,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     fastq_statistics_cmd = Command(
         'fastq_statistics.py',
         '--unaligned',unaligned_dir,
+        '--sample-sheet',sample_sheet,
         '--output',os.path.join(ap.params.analysis_dir,stats_file),
         '--per-lane-stats',os.path.join(ap.params.analysis_dir,
                                         per_lane_stats_file),
