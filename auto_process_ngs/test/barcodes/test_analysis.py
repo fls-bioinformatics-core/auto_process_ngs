@@ -1,16 +1,16 @@
 #######################################################################
-# Tests for barcode_analysis.py module
+# Tests for barcodes/analysis.py module
 #######################################################################
 
 import os
 import unittest
 import tempfile
 import shutil
-from auto_process_ngs.barcode_analysis import BarcodeCounter
-from auto_process_ngs.barcode_analysis import BarcodeGroup
-from auto_process_ngs.barcode_analysis import SampleSheetBarcodes
-from auto_process_ngs.barcode_analysis import Reporter
-from auto_process_ngs.barcode_analysis import report_barcodes
+from auto_process_ngs.barcodes.analysis import BarcodeCounter
+from auto_process_ngs.barcodes.analysis import BarcodeGroup
+from auto_process_ngs.barcodes.analysis import SampleSheetBarcodes
+from auto_process_ngs.barcodes.analysis import Reporter
+from auto_process_ngs.barcodes.analysis import report_barcodes
 
 # BarcodeCounter
 class TestBarcodeCounter(unittest.TestCase):
@@ -104,6 +104,11 @@ class TestBarcodeCounter(unittest.TestCase):
         self.assertEqual(bc.nreads(1),116)
         self.assertEqual(bc.nreads(2),142)
         self.assertEqual(bc.nreads(3),152)
+        # Lengths
+        self.assertEqual(bc.barcode_lengths(),[16])
+        self.assertEqual(bc.barcode_lengths(1),[16])
+        self.assertEqual(bc.barcode_lengths(2),[16])
+        self.assertEqual(bc.barcode_lengths(3),[16])
 
     def test_filter_barcodes(self):
         """BarcodeCounter: check filtering by lane and cutoff
@@ -848,8 +853,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGATTCTTTCCC")
         self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGATCTTTCCC")
 
-    def test_non_existent_lane_raises_exception(self):
-        """SampleSheetBarcodes: request non-existent lane raises KeyError
+    def test_request_non_existent_lane(self):
+        """SampleSheetBarcodes: handle request for non-existent lane
         """
         # Bad lane for sample sheet with lanes
         s = SampleSheetBarcodes(self.dual_index_with_lanes)
@@ -857,8 +862,15 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertRaises(KeyError,s.samples,5)
         # Any lane for sample sheet with no lanes
         s = SampleSheetBarcodes(self.dual_index_no_lanes)
-        self.assertRaises(KeyError,s.barcodes,1)
-        self.assertRaises(KeyError,s.samples,1)
+        self.assertEqual(s.barcodes(1),
+                         ["AGGCAGAATCTTACGC",
+                          "CGTACTAGTCTTACGC",
+                          "GGACTCCTTCTTACGC",
+                          "TAAGGCGATCTTACGC",
+                          "TAGGCATGTCTTACGC",
+                          "TCCTGAGCTCTTACGC"])
+        self.assertEqual(s.samples(1),
+                         ["SW1","SW2","SW3","SW4","SW5","SW6"])
 
 # Reporter
 class TestReporter(unittest.TestCase):
@@ -899,9 +911,12 @@ Some words""")
         reporter.add("Test Document",title=True)
         reporter.add("Lorem ipsum")
         report_file = os.path.join(self.wd,"report.txt")
-        reporter.write(filen=report_file)
+        reporter.write(filen=report_file,title="My Report")
         self.assertTrue(os.path.isfile(report_file))
-        expected_contents = """Test Document
+        expected_contents = """My Report
+*********
+
+Test Document
 =============
 Lorem ipsum
 """
@@ -1035,7 +1050,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(str(reporter),
                          """Barcode analysis for lane #1
 ============================
-Barcodes have been grouped by allowing 2 mismatches
+ * Barcodes have been grouped by allowing 2 mismatches
 
 #Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
     1	GCTGCGCGGTC	SMPL2	1	325394	51.5%	(51.5%)
@@ -1051,4 +1066,5 @@ Barcodes have been grouped by allowing 2 mismatches
         self.assertEqual(str(reporter),
                          """Barcode analysis for all lanes
 ==============================
+ * No mismatches were allowed (exact matches only)
 No barcodes counted""")

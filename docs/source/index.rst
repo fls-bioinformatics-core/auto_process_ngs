@@ -39,7 +39,6 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 
    Starting an analysis <using/setup>
    Fastq generation <using/make_fastqs>
-   Analysing barcodes <using/analyse_barcodes>
    Setting up projects <using/setup_analysis_dirs>
    Running QC <using/run_qc>
    Publishing QC <using/publish_qc>
@@ -68,6 +67,7 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
 	     
    Analysis and project directories <output/analysis_dirs>
    Processing QC <output/processing_qc>
+   Barcode analysis <output/barcode_analysis>
    QC reports <output/qc_reports>
 
 .. _reference-docs:

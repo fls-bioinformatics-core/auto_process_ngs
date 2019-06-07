@@ -96,7 +96,8 @@ poll_interval = 0.5
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -150,7 +151,8 @@ poll_interval = 0.5
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -216,7 +218,8 @@ AB1,AB1,,,,,AB,
                                     "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -311,7 +314,8 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -366,7 +370,8 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -443,7 +448,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -521,7 +527,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                                     "171020_SN7001250_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc_atac"),
-                       "bcl2fastq"):
+                       "bcl2fastq",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -587,7 +593,8 @@ AB1,AB1,,,,,icell8,
                                     "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -711,7 +718,8 @@ AB1,AB1,,,,,icell8,
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -766,7 +774,7 @@ AB1,AB1,,,,,icell8,
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -850,7 +858,8 @@ AB1,AB1,,,,,icell8,
                                     "171020_UNKNOWN_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -907,7 +916,8 @@ AB1,AB1,,,,,icell8,
                                     "171020_UNKNOWN_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq"):
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -1062,7 +1072,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc"),
                        "bcl2fastq",
-                       "HGXXXX"):
+                       "HGXXXX",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)

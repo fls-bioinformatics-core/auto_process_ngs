@@ -15,13 +15,9 @@ like:
   (BCL files) into Fastqs files. It is a wrapper around
   Illumina's ``bcl2fastq`` (for 10xGenomics single cell
   data it wraps ``cellranger``) with additional
-  functionality to fetch data, detect errors, generate
-  statistics, and handle special cases.
-
-* :doc:`auto_process.py analyse_barcodes <using/analyse_barcodes>`
-  analyses the barcode sequences in the Fastqs produced
-  by ``make_fastqs``. This can help for example if
-  demultiplexing has failed due to mislabeling of samples.
+  functionality to fetch data, detect errors, analyse
+  barcodes and generate statistics, and handle special
+  cases.
 
 * :doc:`auto_process.py setup_analysis_dirs <using/setup_analysis_dirs>`
   sets up individual project directories for each of the
@@ -57,6 +53,10 @@ Additional helper commands are available:
 * :ref:`auto_process.py metadata <commands_metadata>`
   allows the metadata associated with an analysis
   directory to be viewed and updated.
+
+* :ref:`auto_process.py analyse_barcodes <commands_analyse_barcodes>`
+  (re)analyses the barcode sequences in the Fastqs produced
+  by ``make_fastqs``.
 
 * :ref:`auto_process.py merge_fastq_dirs <commands_merge_fastq_dirs>`
   merges together data outputs from multiple ``make_fastqs``
