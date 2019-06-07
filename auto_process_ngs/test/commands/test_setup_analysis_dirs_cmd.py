@@ -153,3 +153,27 @@ CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Ecclesto
             for fq in projects[project]:
                 fastq = os.path.join(fastqs_dir,fq)
                 self.assertTrue(os.path.exists(fastq))
+
+    def test_setup_analysis_dirs_bad_single_cell_platform(self):
+        """
+        setup_analysis_dirs: raise exception for bad single cell platform
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        # Add required metadata to 'projects.info'
+        projects_info = os.path.join(mockdir.dirn,"projects.info")
+        with open(projects_info,"w") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+AB\tAB1,AB2\tAlan Brown\tRNA-seq\t.\tHuman\tAudrey Benson\t1% PhiX
+CDE\tCDE3,CDE4\tClive David Edwards\tscRNA-seq\t11xGenomics Chromium 5'v0\tMouse\tClaudia Divine Eccleston\t1% PhiX
+""")
+        # Attempt to set up the project dirs
+        ap = AutoProcess(analysis_dir=mockdir.dirn)
+        self.assertRaises(Exception,
+                          setup_analysis_dirs,ap)
