@@ -75,9 +75,6 @@ class AnalyseBarcodes(Pipeline):
         self.add_param('cutoff',type=float)
         self.add_param('force',type=bool,value=False)
 
-        # Output
-        self._output = AttributeDictionary()
-
         # Load data from bcl2fastq output
         if not os.path.exists(unaligned_dir):
             raise OSError("'%s': not found" % unaligned_dir)
@@ -152,23 +149,6 @@ class AnalyseBarcodes(Pipeline):
         self.add_output('report_file',report_barcodes.output.report_file)
         self.add_output('xls_file',report_barcodes.output.xls_file)
         self.add_output('html_file',report_barcodes.output.html_file)
-
-    def add_output(self,name,value):
-        """
-        Add an output to the pipeline
-
-        Arguments:
-          name (str): name for the output
-          value (object): associated object
-        """
-        self._output[name] = value
-
-    @property
-    def output(self):
-        """
-        Return the output object
-        """
-        return self._output
 
     def run(self,barcode_analysis_dir,title=None,lanes=None,
             mismatches=None,bases_mask=None,cutoff=None,sample_sheet=None,
@@ -254,18 +234,12 @@ class AnalyseBarcodes(Pipeline):
                               },
                               max_jobs=max_jobs,
                               default_runner=runner,
+                              finalize_outputs=False,
                               verbose=verbose)
 
         # Clean up working dir
         if status == 0 and clean_up_on_completion:
             shutil.rmtree(working_dir)
-
-        # Update the outputs
-        for name in self._output:
-            try:
-                self._output[name] = self._output[name].value
-            except AttributeError:
-                pass
 
         # Return pipeline status
         return status

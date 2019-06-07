@@ -618,6 +618,42 @@ setting up tasks, for example:
 The values will be set when the pipeline's ``run`` method is
 invoked.
 
+Defining outputs from a pipeline
+--------------------------------
+
+It is possible to define outputs for a ``Pipeline`` instance in
+the same way that outputs can be defined for individual tasks.
+
+The ``add_output`` method of the ``Pipeline`` class allows an
+arbitrary output to be defined, for example:
+
+::
+
+    ppl = Pipeline()
+    ...
+    ppl.add_output('final_result',result)
+    ppl.run()
+
+This can be accessed via the pipeline's ``output`` property:
+
+::
+    print("The result is '%s'" % ppl.output.result)
+
+It is possible that pipeline outputs are defined as
+``PipelineParam`` instances (for example, if a pipeline output is
+taken from an output from one of its constituent tasks). By
+default, on pipeline completion the outputs are "finalized" by
+substituting the ``PipelineParam``s for their actual values. To
+prevent this behaviour, set the ``finalize_outputs`` argument of
+the pipeline's ``run`` method to ``False``. For example:
+
+::
+
+    ppl = Pipeline()
+    ppl.add_output('final_result',PipelineParam())
+    ...
+    ppl.run(finalize_outputs=False)
+
 PipelineCommand versus PipelineCommandWrapper
 ---------------------------------------------
 
@@ -940,6 +976,8 @@ class Pipeline(object):
         self.add_param("WORKING_DIR",type=str)
         self.add_param("BATCH_SIZE",type=int)
         self.add_param("VERBOSE",type=bool)
+        # Initialise pipeline output
+        self._output = AttributeDictionary()
 
     @property
     def name(self):
@@ -968,6 +1006,13 @@ class Pipeline(object):
         >>> runner = ppl.runners['my_runner'].value
         """
         return dict(**self._runners)
+
+    @property
+    def output(self):
+        """
+        Return the output object
+        """
+        return self._output
 
     def report(self,s):
         """
@@ -1091,6 +1136,16 @@ class Pipeline(object):
         self._runners[name] = PipelineParam(
             name=name,
             default=lambda: self.runners['default'].value)
+
+    def add_output(self,name,value):
+        """
+        Add an output to the pipeline
+
+        Arguments:
+          name (str): name for the output
+          value (object): associated object
+        """
+        self._output[name] = value
 
     def append_pipeline(self,pipeline):
         """
@@ -1264,7 +1319,8 @@ class Pipeline(object):
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
             poll_interval=5,params=None,runners=None,batch_size=None,
-            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE):
+            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE,
+            finalize_outputs=True):
         """
         Run the tasks in the pipeline
 
@@ -1306,6 +1362,9 @@ class Pipeline(object):
             DEFERRED (the pipeline execution continues
             and only raises an error when all tasks
             have finished running)
+          finalize_outputs (bool): if True then convert any
+            pipeline outputs from PipelineParams to an
+            actual value (this is the default)
         """
         # Deal with working directory
         if working_dir is None:
@@ -1541,6 +1600,14 @@ class Pipeline(object):
                 # Pause before checking again
                 time.sleep(poll_interval)
         # Finished
+        if finalize_outputs:
+            # Finalize the outputs
+            self.report("Finalizing outputs")
+            for name in self._output:
+                try:
+                    self._output[name] = self._output[name].value
+                except AttributeError:
+                    pass
         if self._failed:
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
