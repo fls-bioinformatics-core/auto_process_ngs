@@ -602,6 +602,66 @@ class TestPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(out_file))
         self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
 
+    def test_pipeline_define_outputs(self):
+        """
+        Pipeline: test defining pipeline outputs
+        """
+        # Define a reusable task
+        # Appends item to a string
+        class AppendString(PipelineTask):
+            def init(self,s1,s2):
+                self.add_output('string',PipelineParam(type=str))
+            def setup(self):
+                self.output.string.set(str(self.args.s1) + str(self.args.s2))
+        # Build the pipeline
+        ppl = Pipeline()
+        task1 = AppendString("Append 1","This ","is ")
+        task2 = AppendString("Append 2",task1.output.string,"the full string")
+        ppl.add_task(task2,requires=(task1,))
+        # Define outputs
+        ppl.add_output('result',task2.output.string)
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(isinstance(task1.output.string,PipelineParam))
+        self.assertEqual(task1.output.string.value,"This is ")
+        self.assertTrue(isinstance(task2.output.string,PipelineParam))
+        self.assertEqual(task2.output.string.value,"This is the full string")
+        self.assertEqual(ppl.output.result,"This is the full string")
+
+    def test_pipeline_dont_finalize_outputs(self):
+        """
+        Pipeline: test not finalizing pipeline outputs
+        """
+        # Define a reusable task
+        # Appends item to a string
+        class AppendString(PipelineTask):
+            def init(self,s1,s2):
+                self.add_output('string',PipelineParam(type=str))
+            def setup(self):
+                self.output.string.set(str(self.args.s1) + str(self.args.s2))
+        # Build the pipeline
+        ppl = Pipeline()
+        task1 = AppendString("Append 1","This ","is ")
+        task2 = AppendString("Append 2",task1.output.string,"the full string")
+        ppl.add_task(task2,requires=(task1,))
+        # Define outputs
+        ppl.add_output('result',task2.output.string)
+        # Run the pipeline with output finalization turned off
+        exit_status = ppl.run(finalize_outputs=False,
+                              working_dir=self.working_dir,
+                              poll_interval=0.1)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+        self.assertTrue(isinstance(task1.output.string,PipelineParam))
+        self.assertEqual(task1.output.string.value,"This is ")
+        self.assertTrue(isinstance(task2.output.string,PipelineParam))
+        self.assertEqual(task2.output.string.value,"This is the full string")
+        self.assertTrue(isinstance(ppl.output.result,PipelineParam))
+        self.assertEqual(ppl.output.result.value,"This is the full string")
+
     def test_pipeline_method_task_list(self):
         """
         Pipeline: test the 'task_list' method
