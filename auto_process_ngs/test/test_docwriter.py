@@ -14,7 +14,9 @@ from auto_process_ngs.docwriter import Img
 from auto_process_ngs.docwriter import Link
 from auto_process_ngs.docwriter import Target
 from auto_process_ngs.docwriter import Para
+from auto_process_ngs.docwriter import WarningIcon
 from auto_process_ngs.docwriter import sanitize_css_string
+from auto_process_ngs.docwriter import WARNING_ICON_BASE64
 
 # Unit tests
 
@@ -629,6 +631,25 @@ class TestPara(unittest.TestCase):
         self.assertFalse(p)
         p.add("some text")
         self.assertTrue(p)
+
+class TestWarningIcon(unittest.TestCase):
+    """
+    Tests for the WarningIcon class
+    """
+    def test_warningicon(self):
+        w = WarningIcon()
+        self.assertEqual(w.html(),
+                         "<img src='data:image/png;base64,%s' height='25' width='25' />" % WARNING_ICON_BASE64)
+
+    def test_warningicon_with_title(self):
+        w = WarningIcon(title="This is a warning")
+        self.assertEqual(w.html(),
+                         "<img src='data:image/png;base64,%s' height='25' width='25' title='This is a warning' />" % WARNING_ICON_BASE64)
+
+    def test_warningicon_change_size(self):
+        w = WarningIcon(size=12)
+        self.assertEqual(w.html(),
+                         "<img src='data:image/png;base64,%s' height='12' width='12' />" % WARNING_ICON_BASE64)
 
 class TestSanitizeCssStringFunction(unittest.TestCase):
     """
