@@ -21,7 +21,7 @@ from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
 from ..docwriter import Para
-from ..barcodes.analysis import Warning
+from ..docwriter import WarningIcon
 from ..barcodes.analysis import detect_barcodes_warnings
 import bcftbx.utils as bcf_utils
 from auto_process_ngs import get_version
@@ -408,7 +408,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         barcodes = index_page.add_section("Barcode Analysis")
         if barcodes_warnings:
             barcodes.add(
-                Para(Warning("Barcode analysis detected some issues")))
+                Para(WarningIcon(),"Barcode analysis detected some issues"))
         barcodes.add(
             Para("Plain text report:",
                  Link("barcodes.report","barcodes/barcodes.report"),
