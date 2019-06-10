@@ -492,8 +492,7 @@ class QCReport(Document):
         # Attributes to report for each sample
         if report_attrs is None:
             report_attrs = ['fastqc',
-                            'fastq_screen',
-                            'program_versions']
+                            'fastq_screen',]
             if 'strandedness' in self.outputs:
                 report_attrs.append('strandedness')
         self.report_attrs = report_attrs
