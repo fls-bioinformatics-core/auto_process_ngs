@@ -335,7 +335,9 @@ class FastqStatistics:
         for lane in lanes:
             lane_number = int(lane[1:])
             samples = filter(lambda x:
-                             x['Read_number'] == 1 and bool(x[lane]),
+                             x['Read_number'] == 1
+                             and not IlluminaFastq(x['Fastq']).is_index_read
+                             and bool(x[lane]),
                              self._stats)
             try:
                 total_reads = sum([int(s[lane]) for s in samples])
