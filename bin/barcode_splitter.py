@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcode_splitter.py: split reads into fastq files
-#     Copyright (C) University of Manchester 2014-15 Peter Briggs
+#     Copyright (C) University of Manchester 2014-15,2019 Peter Briggs
 #
 #########################################################################
 #
@@ -27,7 +27,7 @@ For each barcode there will be an output file called BARCODE.fastq
 
 """
 
-__version__ = "0.0.6"
+__version__ = "0.0.7"
 
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.FASTQFile as FASTQFile
@@ -38,7 +38,7 @@ from auto_process_ngs.utils import OutputFiles
 #########################################################################
 
 import itertools
-class HammingMetrics:
+class HammingMetrics(object):
     """Calculate Hamming distances between two strings
     
     http://en.wikipedia.org/wiki/Hamming_distance
@@ -73,7 +73,7 @@ class HammingMetrics:
         return sum((ch1 != ch2 or ch1 == 'N' or ch2 == 'N') \
                    for ch1, ch2 in itertools.izip(s1, s2))
 
-class HammingLookup:
+class HammingLookup(object):
     """
     """
     def __init__(self,hamming_func=HammingMetrics.hamming_distance):
@@ -92,7 +92,7 @@ class HammingLookup:
         self._distances[s1][s2] = self._hamming(s1,s2)
         return self._distances[s1][s2]
 
-class BarcodeMatcher:
+class BarcodeMatcher(object):
     """
     """
     def __init__(self,index_seqs,max_dist=0):
