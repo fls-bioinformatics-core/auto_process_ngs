@@ -41,6 +41,8 @@ from ..docwriter import Table
 from ..docwriter import List
 from ..docwriter import Link
 from ..docwriter import Img
+from ..docwriter import Para
+from ..docwriter import WarningIcon
 
 #######################################################################
 # Data
@@ -959,7 +961,7 @@ class Reporter(object):
         html = Document(title)
         if self.has_warnings:
             warnings = html.add_section(css_classes=('warnings',))
-            warnings.add(Warning(PROBLEMS_DETECTED_TEXT,size=50))
+            warnings.add(Para(WarningIcon(size=50),PROBLEMS_DETECTED_TEXT))
         toc = html.add_section(title="Contents",name="toc")
         toc_list = List()
         toc.add(toc_list)
@@ -984,7 +986,7 @@ class Reporter(object):
                 else:
                     # Append to existing table
                     if attrs.get('warning',False):
-                        items[0] = Warning(items[0],size=20)
+                        items[0] = Para(WarningIcon(size=20),items[0])
                     table.add_row(**dict(zip(header,items)))
             elif content.startswith(" * "):
                 # List
@@ -1000,13 +1002,16 @@ class Reporter(object):
                     # New section with title
                     section = html.add_section(title=content)
                     if attrs.get('warning',False):
-                        toc_list.add_item(Warning(Link(section.title,section),
-                                                  size=20))
+                        toc_list.add_item(WarningIcon(size=20),
+                                          Link(section.title,section))
                     else:
                         toc_list.add_item(Link(section.title,section))
                     continue
                 if attrs.get('warning',False):
-                    section.add(Warning(content,css_classes=('warning',)))
+                    section.add_subsection(
+                        css_classes=('warning',)).add(
+                            WarningIcon(),
+                            content)
                     continue
                 if table is not None:
                     # New section after table (no title)
@@ -1050,41 +1055,6 @@ class Reporter(object):
             html.add_css_rule("img { vertical-align: middle; }")
         # Write to file
         html.write(html_file)
-
-class Warning(object):
-    """
-    Create content marked with an inline warning icon
-    """
-    def __init__(self,content,size=25,css_classes=None):
-        """
-        Create new Warning instance
-
-        Arguments:
-          content (object): content to mark with the warning
-          size (int): optional height/width specifier for
-            the icon (defaults to 25px)
-          css_classes (list): optional list of CSS class
-            names to associate with the content
-        """
-        self._content = content
-        self._size = size
-        self._css_classes = css_classes
-        self._base64_data = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/////pQD/oAD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhiaUkEOAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wUVDTo2Eegz4gAAALhJREFUSMftlbEOwzAIRI2RIlmRMnb1F/j/f69Sp9Q5jnM6NjciXgz2QUp5NGtU+6h2LX+3L9UUaHbRToGXQY2YqBYorM6I1gnM1GvCOeJZ5+DcnpQVx8L3QMjGeyfBwCUYcXrBLHobGRrSmLkCPzCvPEiC3LjkriGuD7HkMQEB68iN1oVNO8cOOmPoO/77uphGBiBtefVZumAlYkpxF4hSfHHxQ6+FnZ+0WfboeXV+SD/lph/wf3oDTpUGaaZabmgAAAAASUVORK5CYII='
-
-    def html(self):
-        try:
-            content = self._content.html()
-        except AttributeError:
-            content = self._content
-        if self._css_classes:
-            css_classes = "class='%s'" % ' '.join(self._css_classes)
-        else:
-            css_classes = ""
-        return "<div %s>%s %s</div>" % (
-            css_classes,
-            Img("data:image/png;base64,%s" % self._base64_data,
-                height=self._size,width=self._size).html(),
-            content)
 
 #######################################################################
 # Functions
