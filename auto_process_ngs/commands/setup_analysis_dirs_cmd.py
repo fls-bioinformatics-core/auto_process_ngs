@@ -93,6 +93,18 @@ def setup_analysis_dirs(ap,
         else:
             logger.error("Missing project metadata")
             raise Exception("Missing project metadata")
+    # Validate the single cell data
+    for line in project_metadata:
+        sc_platform = line['SC_Platform']
+        if sc_platform:
+            if sc_platform not in ('.',
+                                   '10xGenomics Chromium 3\'v2',
+                                   '10xGenomics Chromium 3\'v3',
+                                   '10xGenomics Single Cell ATAC',
+                                   'ICELL8',):
+                logger.error("Unknown single cell platform for '%s': "
+                             "'%s'" % (line['Project'],sc_platform))
+                raise Exception("Unknown single cell platform")
     # Create the projects
     n_projects = 0
     for line in project_metadata:

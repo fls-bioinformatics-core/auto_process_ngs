@@ -50,7 +50,7 @@ def determine_qc_protocol(project):
         # Default
         protocol = "singlecell"
         # 10xGenomics scATAC-seq
-        if project.info.single_cell_platform == "10xGenomics Chromium 3'v2" \
+        if project.info.single_cell_platform == "10xGenomics Single Cell ATAC" \
            and project.info.library_type == "scATAC-seq":
             protocol = "10x_scATAC"
     return protocol

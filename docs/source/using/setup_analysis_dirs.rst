@@ -43,8 +43,12 @@ organism names. However the QC strandedness determination looks up
 available ``STAR`` indexes in the configuration based on the organism
 names, so these should be consistent.
 
-The single-cell platform should be one of either "ICELL8" or
-"10xGenomics Chromium 3'v2".
+If set then the single-cell platform must be one of:
+
+* ``ICELL8``
+* ``10xGenomics Chromium 3'v2``
+* ``10xGenomics Chromium 3'v3``
+* ``10xGenomics Single Cell ATAC``
 
 .. note::
 
