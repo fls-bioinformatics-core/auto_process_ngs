@@ -151,7 +151,7 @@ class AnalysisFastq(BaseFastqAttrs):
         else:
             return self.basename
 
-class AnalysisDir:
+class AnalysisDir(object):
     """Class describing an analysis directory
 
     Conceptually an analysis directory maps onto a sequencing run.
@@ -307,7 +307,7 @@ class AnalysisDir:
                               projects)
         return projects
         
-class AnalysisProject:
+class AnalysisProject(object):
     """Class describing an analysis project
 
     Conceptually an analysis project consists of a set of samples
@@ -964,7 +964,7 @@ class AnalysisProject:
         """
         return bcf_utils.pretty_print_names(self.samples)
 
-class AnalysisSample:
+class AnalysisSample(object):
     """Class describing an analysis sample
 
     An analysis sample consists of a set of fastqs file corresponding

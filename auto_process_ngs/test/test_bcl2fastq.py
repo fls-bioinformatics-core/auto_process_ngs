@@ -13,7 +13,7 @@ from auto_process_ngs.bcl2fastq_utils import *
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
-class MockBcl2fastq:
+class MockBcl2fastq(object):
     """
     Class for setting up fake bcl2fastq conversion installs
 

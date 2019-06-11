@@ -565,7 +565,7 @@ class SimpleScheduler(threading.Thread):
             # Wait before going round again
             time.sleep(self.__poll_interval)
 
-class SchedulerGroup:
+class SchedulerGroup(object):
     """Class providing an interface to schedule a group of jobs
 
     SchedulerGroup instances should normally be returned by a
@@ -923,7 +923,7 @@ class SchedulerJob(Job):
         """
         return ' '.join([str(x) for x in ([self.script,] + self.args)])
 
-class SchedulerCallback:
+class SchedulerCallback(object):
     """Class providing an interface to scheduled callbacks
 
     SchedulerJob instances should normally be returned by a
@@ -950,7 +950,7 @@ class SchedulerCallback:
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
 
-class SchedulerReporter:
+class SchedulerReporter(object):
     """Class to report on scheduler operations
 
     SimpleScheduler calls methods of the SchedulerReporter when
