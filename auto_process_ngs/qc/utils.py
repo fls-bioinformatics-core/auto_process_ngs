@@ -110,7 +110,7 @@ def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
 
 def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
               report_html=None,zip_outputs=True,multiqc=False,
-              runner=None,log_dir=None):
+              force=False,runner=None,log_dir=None):
     """
     Generate report for the QC run for a project
 
@@ -129,6 +129,8 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         archive with the report and QC outputs
       multiqc (bool): if True then also generate MultiQC
         report
+      force (bool): if True then force generation of
+        QC report even if verification fails
       runner (JobRunner): optional, job runner to use
         for running the reporting
       log_dir (str): optional, specify a directory to
@@ -177,6 +179,8 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         report_cmd.add_args("--multiqc")
     if zip_outputs:
         report_cmd.add_args("--zip")
+    if force:
+        report_cmd.add_args("--force")
     report_cmd.add_args(project.dirn)
     # Run the command
     report = SchedulerJob(runner,
