@@ -53,6 +53,7 @@ td.param { background-color: grey;
            color: white;
            padding: 2px 5px;
            font-weight: bold; }
+img      { vertical-align: middle; }
 div.footer { font-style: italic;
              font-size: 70%; }
 """
@@ -230,11 +231,13 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if projects:
         ap.set_log_dir(ap.get_log_subdir('publish_qc'))
     project_qc = {}
+    status = {}
     for project in projects:
         # Check qc subdirectories
         print "Checking project '%s':" % project.name
         project_qc[project.name] = bcf_utils.AttributeDictionary()
         project_qc[project.name]['qc_dirs'] = {}
+        status[project.name] = {}
         if not project.qc_dirs:
             print "...no QC directories found"
         for qc_dir in project.qc_dirs:
@@ -265,6 +268,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 print "...%s: verified QC" % qc_dir
             else:
                 print "...%s: failed to verify QC" % qc_dir
+            status[project.name][qc_dir] = verified
             if verified or force:
                 # Check for an existing report
                 qc_zip = os.path.join(
@@ -278,6 +282,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     report_status = report_qc(project,
                                               qc_dir=qc_dir,
                                               multiqc=True,
+                                              force=force,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
                         print "...%s: (re)generated report" % qc_dir
@@ -289,6 +294,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     qc_artefacts['qc_zip'] = qc_zip
                 else:
                     print "...%s: missing QC report" % qc_dir
+                    status[project.name][qc_dir] = False
             if legacy:
                 # MultiQC report
                 multiqc_report = os.path.join(project.dirn,
@@ -480,6 +486,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             report_html = Para()
             for qc_dir in project_qc[project.name].qc_dirs:
                 qc_artefacts = project_qc[project.name].qc_dirs[qc_dir]
+                if not qc_artefacts:
+                    report_html.add(WarningIcon(),"QC reports not available")
+                elif not status[project.name][qc_dir]:
+                    # Indicate a problem
+                    report_html.add(WarningIcon())
                 qc_base = "%s_report" % qc_dir
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
                 if fastq_dir.startswith("%s%s" % (project.dirn,os.sep)):
@@ -551,9 +562,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 except AttributeError:
                     # No MultiQC report
                     pass
-            # Check there is something to add
-            if not report_html:
-                report_html.add("QC reports not available")
             # ICell8 pipeline report
             try:
                 icell8_zip = project_qc[project.name].icell8_zip
