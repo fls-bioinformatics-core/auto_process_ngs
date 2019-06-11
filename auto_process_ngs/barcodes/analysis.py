@@ -1049,6 +1049,7 @@ class Reporter(object):
                               "               font-weight: bold; }")
             html.add_css_rule("div.warnings { padding: 2px;\n"
                               "               border: solid 3px red;\n"
+                              "               background-color: F5BCA9;\n"
                               "               color: red;\n"
                               "               font-weight: bold;\n"
                               "               margin: 10px; }")
