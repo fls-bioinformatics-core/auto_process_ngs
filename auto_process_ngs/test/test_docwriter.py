@@ -614,6 +614,9 @@ class TestPara(unittest.TestCase):
         self.assertEqual(p.html(),"<p>some text that was added</p>")
         p = Para("some text","that was added")
         self.assertEqual(p.html(),"<p>some text that was added</p>")
+        p = Para()
+        p.add("some text","that was added")
+        self.assertEqual(p.html(),"<p>some text that was added</p>")
 
     def test_para_with_mixture_of_types(self):
         img = Img("picture.png")
