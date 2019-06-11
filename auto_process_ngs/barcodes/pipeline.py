@@ -234,7 +234,7 @@ class AnalyseBarcodes(Pipeline):
                               },
                               max_jobs=max_jobs,
                               default_runner=runner,
-                              finalize_outputs=False,
+                              finalize_outputs=True,
                               verbose=verbose)
 
         # Clean up working dir
