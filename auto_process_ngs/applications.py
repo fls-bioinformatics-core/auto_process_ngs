@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-17 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17,2019 Peter Briggs
 #
 ########################################################################
 #
@@ -39,7 +39,7 @@ the 'run_subprocess' method of the Command object, e.g:
 # Module metadata
 #######################################################################
 
-__version__ = "0.0.8"
+__version__ = "0.0.9"
 
 #######################################################################
 # Import modules that this module depends on
@@ -56,7 +56,7 @@ from bcftbx.utils import find_program
 # Classes
 #######################################################################
 
-class Command:
+class Command(object):
     """Class for creating and executing command lines
 
     The Command class is intended to help with building and
@@ -290,7 +290,7 @@ class Command:
                 fp.write(script)
         return script
 
-class bcl2fastq:
+class bcl2fastq(object):
     """Bcl to fastq conversion line applications
  
     Provides static methods to create Command instances for command line
@@ -454,7 +454,7 @@ class bcl2fastq:
             bcl2fastq_cmd.add_args('-w',writing_threads)
         return bcl2fastq_cmd
 
-class general:
+class general(object):
     """General command line applications (e.g. rsync, make)
  
     Provides static methods to create Command instances for a class of

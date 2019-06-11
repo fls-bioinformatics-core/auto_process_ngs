@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 # Classes
 #######################################################################
 
-class FastqStatistics:
+class FastqStatistics(object):
     """
     Class for collecting and reporting stats on Illumina FASTQs
 
@@ -488,7 +488,7 @@ class FastqStatistics:
         if fp is None and out_file is not None:
             fpp.close()
 
-class FastqStats:
+class FastqStats(object):
     """Container for storing data about a FASTQ file
 
     This is a convenience wrapper for holding together data

@@ -4,7 +4,7 @@
 from bcftbx.FASTQFile import FastqIterator
 from .fastqc import FastqcData
 
-class FastqQualityStats:
+class FastqQualityStats(object):
     """
     Class for storing per-base quality stats from a FASTQ
 

@@ -42,7 +42,7 @@ from .utils import split_user_host_dir
 # These are classes and functions that should be
 # considered for incorporation into nebulizer.libraries
 
-class LibraryFolder:
+class LibraryFolder(object):
     # FIXME: rename to Folder
     # FIXME: move to nebulizer.libraries
     def __init__(self,folder_data):
@@ -51,7 +51,7 @@ class LibraryFolder:
         self.type = folder_data['type']
         self.url = folder_data['url']
 
-class LibraryDataset:
+class LibraryDataset(object):
     # FIXME: rename to Dataset
     # FIXME: move to nebulizer.libraries
     def __init__(self,dataset_data):
