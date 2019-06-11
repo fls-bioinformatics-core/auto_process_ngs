@@ -47,6 +47,7 @@ The full list of available classes are:
 - Link: embed references to other documents/items
 - Target: create anchor for referencing via a link
 - Para: wrap heterogeneous items into a single block
+- WarningIcon: create an inline warning icon image
 """
 
 #######################################################################
@@ -60,6 +61,8 @@ from bcftbx.htmlpagewriter import HTMLPageWriter
 #######################################################################
 
 VALID_CSS_ID_CHARS = "-_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+
+WARNING_ICON_BASE64 = r'iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAkFBMVEX/oAD/////pQD/ogD/rC//587/nwD/3Kr/7Mz/pwD//PX/nQD/9+n/szX/+O3///3/4rr/1Zr/4rf/v2P/xnX/89//5r//tUH/79j/+fL/rSf/sC7/w23/0I//2qb/vFf/yXz/zYT/t07/uVr/yYb/rAf/s0P/5cT/1pj/3q//t0j/zJH/vlz/yHj/157/qhjbULfEAAAAAXRSTlMAQObYZgAAAAFiS0dEAIgFHUgAAAAJcEhZcwAACxMAAAsTAQCanBgAAAAHdElNRQfjBgsMGw801p5CAAAAcklEQVRIx+3VMQ6AMAxD0fIvwv1vicSABIpI7BYGqOe8oVIatzZzDUfU+aIiiAzuEagGVAOqOQ0sexJDRladkDwkInQTKoT3CTXCJF8kyScu7dgzJFxlRv9K51w4xDh9gek8yuPKwqkkp/iserVK/FfZAOKECZLQoDSVAAAAAElFTkSuQmCC'
 
 #######################################################################
 # Classes
@@ -933,6 +936,26 @@ class Para(object):
         Para instance is True if has content, False otherwise
         """
         return bool(self._content)
+
+class WarningIcon(Img):
+    """
+    Create image with an inline warning icon
+    """
+    def __init__(self,title=None,size=25):
+        """
+        Create new WarningIcon instance
+
+        Arguments:
+          title (str): optional, content to mark with
+            the warning
+          size (int): optional height/width specifier for
+            the icon (defaults to 25)
+        """
+        Img.__init__(self,
+                     "data:image/png;base64,%s" % WARNING_ICON_BASE64,
+                     title=title,
+                     height=size,
+                     width=size)
 
 #######################################################################
 # Functions

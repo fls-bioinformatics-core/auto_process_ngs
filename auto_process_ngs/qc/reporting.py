@@ -31,6 +31,8 @@ from ..docwriter import Img
 from ..docwriter import Link
 from ..docwriter import Target
 from ..docwriter import List
+from ..docwriter import Para
+from ..docwriter import WarningIcon
 from ..metadata import AnalysisDirMetadata
 from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
@@ -106,13 +108,12 @@ div.summary { margin: 10 10;
 .strandedness { border: 2px solid lightgray;
                 padding: 5px;
                 margin: 5px;float: left; }
-.clear { clear: both; }
 /* Metadata table */
 table.metadata {
           margin: 10 10;
           border: solid 1px grey;
           background-color: white;
-         font-size: 90%; }
+          font-size: 90%; }
 table.metadata tr td:first-child {
           background-color: grey;
           color: white;
@@ -125,9 +126,10 @@ table.summary { border: solid 1px grey;
 table.summary th { background-color: grey;
                    color: white;
                    padding: 2px 5px; }
-table.summary td { text-align: right;
+table.summary td { text-align: center;
                    padding: 2px 5px;
                    border-bottom: solid 1px lightgray; }
+table.summary tr td:first-child { text-align: right; }
 table.fastq_summary tr td:first-child {
           background-color: grey;
           color: white;
@@ -135,6 +137,19 @@ table.fastq_summary tr td:first-child {
 table.fastq_summary tr td:first-child a {
           color: white;
           font-weight: bold; }
+/* Warnings section */
+.warnings { padding: 2px;
+            border: solid 3px red;
+            color: red;
+            background-color: #F5BCA9;
+            font-weight: bold;
+            margin: 10px; }
+.warnings p   { color: red;
+                font-size: 120%; }
+.warnings img { vertical-align: middle; }
+/* Display control elements */
+.clear { clear: both; }
+.hide  { display: none; }
 /* FastQC summary table */
 table.fastqc_summary span.PASS { font-weight: bold;
                                  color: green; }
@@ -391,6 +406,8 @@ class QCReport(Document):
             relative to 'relpath'
         """
         logger.debug("QCReport: qc_dir (initial): %s" % qc_dir)
+        # Status of report
+        self.status = True
         # Store project
         self.project = project
         # Sort out target QC dir
@@ -502,6 +519,7 @@ class QCReport(Document):
         self.summary_table = self._init_summary_table()
         # Initialise report sections
         self.preamble = self._init_preamble_section()
+        self.warnings = self._init_warnings_section()
         self.summary = self._init_summary_section()
         # Build the report
         print "Building the report..."
@@ -509,6 +527,8 @@ class QCReport(Document):
         self.report_software()
         for sample in self.samples:
             self.report_sample(sample)
+        # Report the status
+        self.report_status()
 
     def _init_metadata_table(self):
         """
@@ -593,6 +613,17 @@ class QCReport(Document):
                                                 len(self.project.fastqs)))
         summary.add(self.summary_table)
         return summary
+
+    def _init_warnings_section(self):
+        """
+        Internal: creates a section which is displayed if there
+        are warnings
+        """
+        warnings = self.add_section(name='warnings',
+                                    css_classes=("warnings",))
+        warnings.add(Para(WarningIcon(size=50),
+                          "There are issues with this project"))
+        return warnings
 
     def _detect_outputs(self):
         """
@@ -852,9 +883,22 @@ class QCReport(Document):
                                                              sample_report))
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
-            fastq_group.update_summary_table(self.summary_table,idx=idx,
-                                             fields=self.summary_fields,
-                                             relpath=self.relpath)
+            status = fastq_group.update_summary_table(
+                self.summary_table,idx=idx,
+                fields=self.summary_fields,
+                relpath=self.relpath)
+            if not status:
+                # Update flag to indicate problems with the
+                # report
+                self.status = False
+
+    def report_status(self):
+        """
+        Set the visibility of the "warnings" section
+        """
+        if self.status:
+            # Turn off display of warnings section
+            self.warnings.add_css_classes("hide")
 
 class QCReportFastqGroup(object):
     """
@@ -982,7 +1026,8 @@ class QCReportFastqGroup(object):
         txt = self.fastq_strand_txt
         # No file found
         if txt is None:
-            strandedness_report.add("!!!No strandedness data available!!!")
+            strandedness_report.add(WarningIcon(),
+                                    "No strandedness data available")
         else:
             strandedness = Fastqstrand(txt)
             strandedness_report.add("Strandedness statistics from "
@@ -1075,7 +1120,6 @@ class QCReportFastqGroup(object):
                 else:
                     raise KeyError("'%s': unrecognised reporting element "
                                    % attr)
-                    fq.report_program_versions(fq_report)
         # Sections for pairwise data
         if "strandedness" in attrs:
             # Strandedness
@@ -1118,7 +1162,13 @@ class QCReportFastqGroup(object):
           fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
+
+        Returns:
+          Boolean: True if report didn't contain any issues,
+            False otherwise.
         """
+        # Flag indicating issues
+        has_problems = False
         # Fields to report
         if fields is None:
             if self.paired_end:
@@ -1205,7 +1255,15 @@ class QCReportFastqGroup(object):
                                 fastqs,
                                 ex))
                 # Put error value into the table
-                summary_table.set_value(idx,field,"<b>ERROR</b>")
+                summary_table.set_value(idx,field,
+                                        WarningIcon("Unable to get value for "
+                                                    "%s for %s" % (field,
+                                                                   fastqs),
+                                                     size=25))
+                # Update flag
+                has_problems = True
+        # Return the status
+        return (not has_problems)
 
 class QCReportFastq(object):
     """
@@ -1271,7 +1329,7 @@ class QCReportFastq(object):
         if self.fastqc is not None:
             fastqc_version = self.fastqc.version
         else:
-            fastqc_version = '?'
+            fastqc_version = WarningIcon(size=20)
         self.program_versions['fastqc'] = fastqc_version
         fastq_screen_versions = list(
             set([self.fastq_screen[s].version
@@ -1279,7 +1337,7 @@ class QCReportFastq(object):
         if fastq_screen_versions:
             fastq_screen_versions = ','.join(sorted(fastq_screen_versions))
         else:
-            fastq_screen_versions = '?'
+            fastq_screen_versions = WarningIcon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
 
     def report_fastqc(self,document,relpath=None):
@@ -1322,7 +1380,7 @@ class QCReportFastq(object):
                                                   fastqc_html_report),
                                              self.name))
         else:
-            fastqc_report.add("!!!No FastQC data available!!!")
+            fastqc_report.add(WarningIcon(),"No FastQC data available")
         return fastqc_report
 
     def report_fastq_screens(self,document,relpath=None):
@@ -1342,7 +1400,7 @@ class QCReportFastq(object):
                                                  name="fastq_screens_%s" %
                                                  self.safe_name)
         if not self.fastq_screen.names:
-            screens_report.add("No screens found")
+            screens_report.add(WarningIcon(),"No screens found")
             return screens_report
         raw_data = list()
         for name in self.fastq_screen.names:

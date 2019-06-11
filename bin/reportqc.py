@@ -219,8 +219,8 @@ def main():
                 verified = False
         if not verified:
             print "Verification: FAILED"
-            retval = 1
             if not opts.force:
+                retval = 1
                 continue
             else:
                 print "--force specified, ignoring previous errors"
