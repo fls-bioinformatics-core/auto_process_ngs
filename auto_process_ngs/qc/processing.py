@@ -315,5 +315,26 @@ def report_processing_qc(analysis_dir,html_file):
     # Set the visibility of the warning header
     if status:
         warnings.add_css_classes("hide")
+    # Add an non-visible section that the publisher can
+    # read to determine if there were problems
+    s = processing_qc.add_section(name="status",css_classes=("hide",))
+    s.add("Status: %s" % ('OK' if status else 'WARNINGS',))
     # Write the processing QC summary file
     processing_qc.write(html_file)
+
+def detect_processing_qc_warnings(html_file):
+    """
+    Look for warning text in processing_qc.html file
+
+    Arguments:
+      html_file (str): path to HTML report file
+
+    Returns:
+      Boolean: True if warnings were found, False if not.
+    """
+    with open(html_file) as fp:
+        for line in fp:
+            if "Status: WARNINGS" in line:
+                return True
+                break
+    return False
