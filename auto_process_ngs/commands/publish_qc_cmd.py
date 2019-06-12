@@ -23,6 +23,7 @@ from ..docwriter import Link
 from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..barcodes.analysis import detect_barcodes_warnings
+from ..qc.processing import detect_processing_qc_warnings
 import bcftbx.utils as bcf_utils
 from auto_process_ngs import get_version
 
@@ -182,8 +183,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     print "Checking for processing QC report"
     processing_qc_html = os.path.join(ap.analysis_dir,
                                       "processing_qc.html")
+    processing_qc_warnings = False
     if os.path.exists(processing_qc_html):
         print "...found %s" % os.path.basename(processing_qc_html)
+        # Check for warnings
+        processing_qc_warnings = detect_processing_qc_warnings(
+            processing_qc_html)
+        if processing_qc_warnings:
+            print "...processing QC report contains warnings"
     else:
         print "...no processing QC report found"
         processing_qc_html = None
@@ -406,6 +413,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if processing_qc_html:
         fileops.copy(processing_qc_html,dirn)
         processing_stats = index_page.add_section("Processing Statistics")
+        if processing_qc_warnings:
+            processing_stats.add(
+                Para(WarningIcon(),"Processing QC detected some issues"))
         processing_stats.add(Link("Processing QC report",
                                   os.path.basename(processing_qc_html)))
     # Barcode analysis

@@ -629,6 +629,13 @@ class TestPara(unittest.TestCase):
                          "<a href='http://example.com'>"
                          "http://example.com</a></p>")
 
+    def test_para_with_css_classes(self):
+        p = Para("some text",css_classes=('cls1','cls2'))
+        self.assertEqual(p.html(),"<p class='cls1 cls2'>some text</p>")
+        p.add_css_classes("cls3","cls4")
+        self.assertEqual(p.html(),
+                         "<p class='cls1 cls2 cls3 cls4'>some text</p>")
+
     def test_para_non_zero(self):
         p = Para()
         self.assertFalse(p)
