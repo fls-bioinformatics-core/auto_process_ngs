@@ -1008,10 +1008,8 @@ class Reporter(object):
                         toc_list.add_item(Link(section.title,section))
                     continue
                 if attrs.get('warning',False):
-                    section.add_subsection(
-                        css_classes=('warning',)).add(
-                            WarningIcon(),
-                            content)
+                    section = html.add_section(css_classes=('warning',))
+                    section.add(Para(WarningIcon(),content))
                     continue
                 if table is not None:
                     # New section after table (no title)
@@ -1044,14 +1042,21 @@ class Reporter(object):
             html.add_css_rule("table td { text-align: right;\n"
                               "           padding: 2px 5px;\n"
                               "           border-bottom: solid 1px lightgray; }")
-            html.add_css_rule("div .warning { padding: 2px;\n"
-                              "               color: red;\n"
-                              "               font-weight: bold; }")
-            html.add_css_rule("div.warnings { padding: 2px;\n"
-                              "               border: solid 3px red;\n"
+            html.add_css_rule("div.warning  { padding: 5px;\n"
+                              "               border: solid 1px red;\n"
+                              "               background-color: F5BCA9;\n"
                               "               color: red;\n"
                               "               font-weight: bold;\n"
-                              "               margin: 10px; }")
+                              "               border-radius: 10px;\n"
+                              "               display: inline-block; }")
+            html.add_css_rule("div.warnings { padding: 2px;\n"
+                              "               border: solid 3px red;\n"
+                              "               background-color: F5BCA9;\n"
+                              "               color: red;\n"
+                              "               font-weight: bold;\n"
+                              "               margin: 10px;\n"
+                              "               border-radius: 10px;\n"
+                              "               display: inline-block; }")
             html.add_css_rule("img { vertical-align: middle; }")
         # Write to file
         html.write(html_file)
