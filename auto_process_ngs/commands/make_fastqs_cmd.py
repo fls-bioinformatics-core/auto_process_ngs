@@ -472,8 +472,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
                         ap.settings.platform[ap.metadata.platform].\
                         create_empty_fastqs
                 except (KeyError,AttributeError):
-                    create_empty_fastqs = \
-                        ap.settings.bcl2fastq.create_empty_fastqs
+                    pass
+            if create_empty_fastqs is None:
+                create_empty_fastqs = \
+                    ap.settings.bcl2fastq.create_empty_fastqs
             if create_empty_fastqs:
                 logger.warning("Making 'empty' placeholder Fastqs")
                 for fq in missing_fastqs:
