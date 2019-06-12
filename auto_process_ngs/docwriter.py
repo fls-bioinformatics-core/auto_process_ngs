@@ -892,17 +892,41 @@ class Para(object):
     assembled Para HTML is enclosed in <p>...</p>.
     """
 
-    def __init__(self,*items):
+    def __init__(self,*items,**kws):
         """
         Create a new Para instance
 
         Arguments:
           items (sequence): optional, set of
             items to add to the block
+          css_classes (list): list or iterable with
+            names of CSS classes to associate with
+            the section
         """
         self._content = [x for x in items]
         self._delimiter = " "
         self._tag = "p"
+        self._css_classes = []
+        for kw in kws:
+            if kw == 'css_classes':
+                css_classes = kws['css_classes']
+                if css_classes:
+                    self.add_css_classes(*css_classes)
+            else:
+                raise TypeError("__init__() got an unexpected "
+                                "keyword argument '%s'" % kw)
+
+    def add_css_classes(self,*classes):
+        """
+        Associate CSS classes with the paragraph
+
+        Arguments:
+          classes (str): the names of one or
+            more CSS classes to associate with
+            the section when it is rendered
+        """
+        for css_class in classes:
+            self._css_classes.append(css_class)
 
     def add(self,*items):
         """
@@ -927,9 +951,14 @@ class Para(object):
                 html.append(content.html())
             except AttributeError,ex:
                 html.append("%s" % str(content))
-        return "<%s>%s</%s>" % (self._tag,
-                                self._delimiter.join(html),
-                                self._tag)
+        if self._css_classes:
+            classes = " class='%s'" % ' '.join(self._css_classes)
+        else:
+            classes = ''
+        return "<%s%s>%s</%s>" % (self._tag,
+                                  classes,
+                                  self._delimiter.join(html),
+                                  self._tag)
 
     def __nonzero__(self):
         """
