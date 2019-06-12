@@ -9,7 +9,9 @@ from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import List
 from ..docwriter import Link
+from ..docwriter import Para
 from ..docwriter import Img
+from ..docwriter import WarningIcon
 from .. import css_rules
 from .reporting import pretty_print_reads
 from .plots import ustackedbar
@@ -54,10 +56,33 @@ def report_processing_qc(analysis_dir,html_file):
     processing_qc.add_css_rule("table { font-size: 80%;\n"
                                "        font-family: sans-serif; }")
     processing_qc.add_css_rule("td { text-align: right; }")
+    processing_qc.add_css_rule("p.warning { padding: 5px;\n"
+                               "            border: solid 1px red;\n"
+                               "            background-color: F5BCA9;\n"
+                               "            color: red;\n"
+                               "            font-weight: bold;\n"
+                               "            border-radius: 10px;\n"
+                               "            display: inline-block; }")
+    processing_qc.add_css_rule(".warnings { padding: 2px;\n"
+                               "            border: solid 3px red;\n"
+                               "            background-color: F5BCA9;\n"
+                               "            color: red;\n"
+                               "            font-weight: bold;\n"
+                               "            margin: 10px;\n"
+                               "            border-radius: 10px;\n"
+                               "            display: inline-block; }")
+    processing_qc.add_css_rule("img { vertical-align: middle; }")
+    processing_qc.add_css_rule(".hide { display: none; }")
     # Add table of contents
     toc = processing_qc.add_section("Contents",name="toc")
     toc_list = List()
     toc.add(toc_list)
+    # Add warnings section
+    # This will be hidden if there are no issues
+    status = True
+    warnings = processing_qc.add_section(css_classes=("warnings",))
+    warnings.add(Para(WarningIcon(size=50),
+                      "There are issues with one or more lanes or samples"))
     # Per-lane statistics
     per_lane_stats_file = analysis_dir.params.per_lane_stats_file
     if per_lane_stats_file is None:
@@ -127,10 +152,29 @@ def report_processing_qc(analysis_dir,html_file):
                 "Lane %d" % lane,
                 name="per_lane_sample_stats_lane%d" % lane
             )
-            lane_toc_list.add_item(Link("Lane %d" % lane,s))
+            # Check for problems
+            has_warnings = False
             if not data['samples']:
                 # No samples reported
-                s.add("No samples reported for this lane")
+                s.add(Para(WarningIcon(),
+                           "No samples reported for this lane",
+                           css_classes=('warning',)))
+                has_warnings = True
+            elif min([d['nreads'] for d in data['samples']]) == 0:
+                # There are samples with no reads
+                s.add(Para(WarningIcon(),
+                           "One or more samples with no reads",
+                           css_classes=('warning',)))
+                has_warnings = True
+            # Add link to lane for lane ToC
+            link = Link("Lane %d" % lane,s)
+            if not has_warnings:
+                lane_toc_list.add_item(link)
+            else:
+                lane_toc_list.add_item(WarningIcon(),link)
+                status = False
+            # Write out the data, if there is any
+            if not data['samples']:
                 continue
             max_reads = max([d['nreads'] for d in data['samples']])
             total_reads = data['total_reads']
@@ -163,6 +207,8 @@ def report_processing_qc(analysis_dir,html_file):
                                       colors=('black','lightgrey'),
                                       bbox=False,
                                       inline=True)
+                if nreads == 0:
+                    sname = Para(WarningIcon(),sname)
                 tbl.add_row(pname=pname,
                             sname=sname,
                             nreads=pretty_print_reads(nreads),
@@ -170,6 +216,7 @@ def report_processing_qc(analysis_dir,html_file):
                             barplot=Img(barplot))
             tbl.add_row(pname="Total reads for lane %d" % lane,
                         nreads=pretty_print_reads(total_reads))
+        # Add link to section from main ToC
         toc_list.add_item(Link("Per-lane statistics by sample",
                                per_lane_sample_stats),
                           lane_toc_list)
@@ -208,7 +255,24 @@ def report_processing_qc(analysis_dir,html_file):
                 "%s" % project,
                 name="per_file_stats_%s" % project
             )
-            project_toc_list.add_item(Link("%s" % project,s))
+            # Check for problems
+            has_warnings = False
+            for line in subset:
+                nreads = filter(lambda n: n != '',
+                                [line[l] for l in subset_lanes])
+                if not nreads or min(nreads) == 0:
+                    s.add(Para(WarningIcon(),"One or more Fastqs with zero "
+                               "read counts in one or lanes",
+                               css_classes=('warning',)))
+                    has_warnings = True
+                    break
+            # Add link to project from ToC
+            link = Link("%s" % project,s)
+            if not has_warnings:
+                project_toc_list.add_item(link)
+            else:
+                project_toc_list.add_item(WarningIcon(),link)
+                status = False
             # Build the data of data
             tbl = Table(columns=('Sample','Fastq','Size'))
             if subset_lanes:
@@ -234,6 +298,10 @@ def report_processing_qc(analysis_dir,html_file):
                                 [line[l] for l in subset_lanes])
                 if not nreads:
                     nreads = [0,]
+                if min(nreads) == 0:
+                    # Add warning icon to Fastq with no reads in
+                    # at least one lane
+                    data['Fastq'] = Para(WarningIcon(),data['Fastq'])
                 barplot = ustackedbar(nreads,
                                       length=100,height=10,
                                       colors=('grey','lightgrey'),
@@ -244,5 +312,8 @@ def report_processing_qc(analysis_dir,html_file):
         toc_list.add_item(Link("Per-file statistics by project",
                                per_file_stats),
                           project_toc_list)
+    # Set the visibility of the warning header
+    if status:
+        warnings.add_css_classes("hide")
     # Write the processing QC summary file
     processing_qc.write(html_file)
