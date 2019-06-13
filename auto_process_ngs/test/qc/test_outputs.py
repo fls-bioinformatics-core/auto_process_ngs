@@ -89,10 +89,10 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         self.assertEqual(cellranger_count_output(project),
-                         ('cellranger_counts/PJB1/outs/metrics_summary.csv',
-                          'cellranger_counts/PJB1/outs/web_summary.html',
-                          'cellranger_counts/PJB2/outs/metrics_summary.csv',
-                          'cellranger_counts/PJB2/outs/web_summary.html'))
+                         ('cellranger_count/PJB1/outs/metrics_summary.csv',
+                          'cellranger_count/PJB1/outs/web_summary.html',
+                          'cellranger_count/PJB2/outs/metrics_summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
 
     def test_cellranger_count_output(self):
         """cellranger_count_output: check for project and sample
@@ -100,8 +100,8 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
         self.assertEqual(cellranger_count_output(project,
                                                  sample_name="PJB2"),
-                         ('cellranger_counts/PJB2/outs/metrics_summary.csv',
-                          'cellranger_counts/PJB2/outs/web_summary.html'))
+                         ('cellranger_count/PJB2/outs/metrics_summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """

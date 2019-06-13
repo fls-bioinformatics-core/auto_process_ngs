@@ -123,11 +123,11 @@ def cellranger_count_output(project,sample_name=None):
     for sample in project.samples:
         if sample_name and sample_name != sample.name:
             continue
-        sample_counts_dir = os.path.join("cellranger_counts",
-                                         sample.name)
+        sample_count_dir = os.path.join("cellranger_count",
+                                        sample.name)
         for f in ("metrics_summary.csv",
                   "web_summary.html"):
-            outputs.append(os.path.join(sample_counts_dir,
+            outputs.append(os.path.join(sample_count_dir,
                                         "outs",f))
     return tuple(outputs)
 
