@@ -16,6 +16,7 @@ from auto_process_ngs.qc.outputs import fastq_strand_output
 from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
+from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
 from auto_process_ngs.qc.outputs import expected_outputs
 
 # Set to False to keep test output dirs
@@ -443,6 +444,58 @@ class TestCheckFastqStrandOutputs(unittest.TestCase):
                                                     fastq_strand_conf,
                                                     qc_protocol="singlecell"),
                          [])
+
+class TestCheckCellrangerCountOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_cellranger_count_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckCellrangerCountOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_cellranger_count_outputs_singlecell_missing(self):
+        """
+        check_cellranger_count_outputs: cellranger count output missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="singlecell",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_count_outputs_singlecell_present(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="singlecell",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
 
 class TestExpectedOutputs(unittest.TestCase):
     """

@@ -244,6 +244,28 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
             fastq_pairs.add(fq_pair)
     return sorted(list(fastq_pairs))
 
+def check_cellranger_count_outputs(project):
+    """
+    Return samples missing outputs from 'cellranger count'
+
+    Returns a list of the samples from a project for which
+    one or more associated outputs from `fastq_strand.py`
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+
+    Returns:
+      List: list of sample names with missing outputs
+    """
+    samples = set()
+    for sample in project.samples:
+        for output in cellranger_count_output(project,sample.name):
+            if not os.path.exists(os.path.join(project.dirn,output)):
+                samples.add(sample.name)
+    return sorted(list(samples))
+
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                      qc_protocol=None):
     """
