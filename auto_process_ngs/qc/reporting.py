@@ -38,6 +38,7 @@ from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
 from .fastq_strand import Fastqstrand
+from .cellranger import CellrangerCount
 from .outputs import fastqc_output
 from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
@@ -375,6 +376,7 @@ class QCReport(Document):
     - boxplot_[read]: FastQC per-base-quality mini-boxplot' for [read]
     - screens_[read]: FastQScreen mini-plots for [read]
     - strandedness: 'forward', 'reverse' or 'unstranded' for pair
+    - cellranger_count: 'cellranger count' outputs for each sample
 
     To control the elements written to the reports for each Fastq
     pair, specify a list of element names via the 'report_attrs'
@@ -470,21 +472,24 @@ class QCReport(Document):
             relpath = os.path.normpath(os.path.abspath(relpath))
         self.relpath = relpath
         # Field descriptions for summary table
-        self.field_descriptions = { 'sample': 'Sample',
-                                    'fastq' : 'Fastq',
-                                    'fastqs': 'Fastqs',
-                                    'reads': '#reads',
-                                    'read_lengths': 'Length',
-                                    'fastqc_r1': 'FastQC[R1]',
-                                    'boxplot_r1': 'Boxplot[R1]',
-                                    'screens_r1': 'Screens[R1]',
-                                    'fastqc_r2': 'FastQC[R2]',
-                                    'boxplot_r2': 'Boxplot[R2]',
-                                    'screens_r2': 'Screens[R2]',
-                                    'fastqc_r3': 'FastQC[R3]',
-                                    'boxplot_r3': 'Boxplot[R3]',
-                                    'screens_r3': 'Screens[R3]',
-                                    'strandedness': 'Strand', }
+        self.field_descriptions = {
+            'sample': 'Sample',
+            'fastq' : 'Fastq',
+            'fastqs': 'Fastqs',
+            'reads': '#reads',
+            'read_lengths': 'Length',
+            'fastqc_r1': 'FastQC[R1]',
+            'boxplot_r1': 'Boxplot[R1]',
+            'screens_r1': 'Screens[R1]',
+            'fastqc_r2': 'FastQC[R2]',
+            'boxplot_r2': 'Boxplot[R2]',
+            'screens_r2': 'Screens[R2]',
+            'fastqc_r3': 'FastQC[R3]',
+            'boxplot_r3': 'Boxplot[R3]',
+            'screens_r3': 'Screens[R3]',
+            'strandedness': 'Strand',
+            'cellranger_count': 'Cellranger count',
+        }
         # Fields to report in summary table
         if not summary_fields:
             if len(self.reads) > 1:
@@ -505,6 +510,8 @@ class QCReport(Document):
                     summary_fields.append('boxplot_%s' % read)
                 if ('screens_%s' % read) in self.outputs:
                     summary_fields.append('screens_%s' % read)
+            if 'cellranger_count' in self.outputs:
+                summary_fields.append('cellranger_count')
         self.summary_fields = summary_fields
         # Attributes to report for each sample
         if report_attrs is None:
@@ -696,6 +703,19 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,f)).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
+        # Look for cellranger_count outputs
+        cellranger_count_dir = os.path.join(self.project.dirn,
+                                             "cellranger_count")
+        cellranger_samples = []
+        if os.path.isdir(cellranger_count_dir):
+            print(os.listdir(cellranger_count_dir))
+            for d in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
+                    os.listdir(cellranger_count_dir)):
+                cellranger_samples.append(d)
+            if cellranger_samples:
+                outputs.add("cellranger_count")
         # Look for MultiQC report
         print "Checking for MultiQC report in %s" % self.project.dirn
         multiqc_report = os.path.join(self.project.dirn,
@@ -720,6 +740,8 @@ class QCReport(Document):
         samples = set([self.fastq_attrs(fq).sample_name
                        for fq in self.fastqs] +
                       [s.name for s in self.project.samples])
+        for s in cellranger_samples:
+            samples.add(s)
         self.samples = sorted(list(samples),
                               key=lambda s: split_sample_name(s))
         # QC outputs
@@ -956,7 +978,10 @@ class QCReportFastqGroup(object):
                 read = 'r'
             read = "%s%d" % (read,fq.read_number)
             self.fastqs[read] = fastq
-            self.reporters[read] = QCReportFastq(fastq,self.qc_dir)
+            self.reporters[read] = QCReportFastq(fastq,
+                                                 self.qc_dir,
+                                                 fastq_attrs=
+                                                 self.fastq_attrs)
             self.reads.add(read)
         self.reads = sorted(list(self.reads))
 
@@ -1159,6 +1184,7 @@ class QCReportFastqGroup(object):
         - screens_r2
         - screens_r3
         - strandedness
+        - cellranger_count
 
         Arguments:
           summary_table (Table): table to add the summary to
@@ -1241,6 +1267,10 @@ class QCReportFastqGroup(object):
                                 href="#strandedness_%s" %
                                 self.reporters[self.reads[0]].safe_name,
                                 title=self.strandedness())
+                elif field == "cellranger_count":
+                    value = Link(
+                        self.reporters[read].cellranger_count.sample_name,
+                        self.reporters[read].cellranger_count.web_summary)
                 else:
                     raise KeyError("'%s': unrecognised field for summary "
                                    "table" % field)
@@ -1280,6 +1310,7 @@ class QCReportFastq(object):
     name: basename of the Fastq
     path: path to the Fastq
     safe_name: name suitable for use in HTML links etc
+    sample_name: sample name derived from the Fastq basename
     fastqc: Fastqc instance
     fastq_screen.names: list of FastQScreen names
     fastq_screen.SCREEN.description: description of SCREEN
@@ -1287,6 +1318,8 @@ class QCReportFastq(object):
     fastq_screen.SCREEN.txt: associated TXT file for SCREEN
     fastq_screen.SCREEN.version: associated version for SCREEN
     program_versions.NAME: version of package NAME
+    cellranger_count.web_summary: path to cellranger count web_summary.html
+    cellranger_count.metrics_cvs: path to cellranger count metrics.csv
 
     Provides the following methods:
 
@@ -1297,18 +1330,23 @@ class QCReportFastq(object):
     ufastqcplot
     uscreenplot
     """
-    def __init__(self,fastq,qc_dir):
+    def __init__(self,fastq,qc_dir,fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastq instance
 
         Arguments:
           fastq (str): path to Fastq file
           qc_dir (str): path to QC directory
+          fastq_attrs (BaseFastqAttrs): class for extracting
+            data from Fastq names
         """
         # Source data
         self.name = os.path.basename(fastq)
         self.path = os.path.abspath(fastq)
         self.safe_name = strip_ngs_extensions(self.name)
+        self.fastq_attrs = fastq_attrs
+        # Sample name
+        self.sample_name = fastq_attrs(self.name).sample_name
         # FastQC
         try:
             self.fastqc = Fastqc(os.path.join(
@@ -1345,6 +1383,11 @@ class QCReportFastq(object):
         else:
             fastq_screen_versions = WarningIcon(size=20)
         self.program_versions['fastq_screen'] = fastq_screen_versions
+        # Cellranger count outputs
+        self.cellranger_count = CellrangerCount(
+            os.path.join(os.path.dirname(qc_dir),
+                         "cellranger_count",
+                         self.sample_name))
 
     def report_fastqc(self,document,relpath=None):
         """
