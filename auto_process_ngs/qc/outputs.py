@@ -312,4 +312,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
+    if qc_protocol == 'singlecell' and \
+       project.info.single_cell_platform in ('10xGenomics Chromium 3\'v2',
+                                             '10xGenomics Chromium 3\'v3',):
+        # Cellranger count output
+        for output in cellranger_count_output(project):
+            outputs.add(os.path.join(project.dirn,output))
     return sorted(list(outputs))
