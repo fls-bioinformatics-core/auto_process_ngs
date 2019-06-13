@@ -13,6 +13,7 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
+from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
 from auto_process_ngs.qc.outputs import expected_outputs
@@ -65,6 +66,42 @@ class TestFastqStrandOutputFunction(unittest.TestCase):
         self.assertEqual(fastq_strand_output(
             '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
                          'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
+
+class TestCellrangerCountOutputFunction(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCellrangerCountOutput')
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_cellranger_count_output(self):
+        """cellranger_count_output: check for project
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_count_output(project),
+                         ('cellranger_counts/PJB1/outs/metrics_summary.csv',
+                          'cellranger_counts/PJB1/outs/web_summary.html',
+                          'cellranger_counts/PJB2/outs/metrics_summary.csv',
+                          'cellranger_counts/PJB2/outs/web_summary.html'))
+
+    def test_cellranger_count_output(self):
+        """cellranger_count_output: check for project and sample
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_count_output(project,
+                                                 sample_name="PJB2"),
+                         ('cellranger_counts/PJB2/outs/metrics_summary.csv',
+                          'cellranger_counts/PJB2/outs/web_summary.html'))
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """

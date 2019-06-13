@@ -95,6 +95,42 @@ def fastq_strand_output(fastq):
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
 
+def cellranger_count_output(project,sample_name=None):
+    """
+    Generate list of 'cellranger count' outputs
+
+    Given an AnalysisProject, the outputs from 'cellranger
+    count' will look like:
+
+    - cellranger_count/{SAMPLE_n}/outs/metrics_summary.csv
+    - cellranger_count/{SAMPLE_n}/outs/web_summary.html
+
+    for each SAMPLE_n in the project.
+
+    If a sample name is supplied then outputs are limited
+    to those for that sample
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      sample_name (str): sample to limit outputs to
+
+    Returns:
+       tuple: cellranger count outputs (without leading paths)
+    """
+    outputs = []
+    # Metrics and web summary files
+    for sample in project.samples:
+        if sample_name and sample_name != sample.name:
+            continue
+        sample_counts_dir = os.path.join("cellranger_counts",
+                                         sample.name)
+        for f in ("metrics_summary.csv",
+                  "web_summary.html"):
+            outputs.append(os.path.join(sample_counts_dir,
+                                        "outs",f))
+    return tuple(outputs)
+
 def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
     """
     Return Fastqs missing QC outputs from illumina_qc.sh
