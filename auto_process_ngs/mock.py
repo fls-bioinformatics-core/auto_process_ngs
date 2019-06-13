@@ -708,12 +708,13 @@ class UpdateAnalysisProject(DirectoryUpdater):
         self.add_file("cellranger_count_report.html")
         self.add_subdir("cellranger_count")
         for sample in self._project.samples:
-            sample_dir = os.path.join("cellranger_count",sample.name)
+            sample_dir = os.path.join(self._project.dirn,
+                                      "cellranger_count",
+                                      sample.name)
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
-            self.add_file(os.path.join(sample_dir,
-                                       "outs",
-                                       "web_summary.html"))
+            for f in ("web_summary.html","metrics_summary.csv"):
+                self.add_file(os.path.join(sample_dir,"outs",f))
         # Build ZIP archive
         analysis_dir = os.path.basename(self._parent_dir())
         cellranger_zip = os.path.join(self._project.dirn,
