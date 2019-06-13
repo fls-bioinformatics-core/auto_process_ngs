@@ -11,6 +11,11 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
+- cellranger_count_output: get names for cellranger count output
+- check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
+- check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
+- check_cellranger_count_outputs: fetch sample names without cellranger
+  count outputs
 - expected_outputs: return expected QC outputs for a project
 """
 
@@ -181,10 +186,10 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
 def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                                qc_protocol=None):
     """
-    Return Fastqs missing QC outputs from illumina_qc.sh
+    Return Fastqs missing QC outputs from fastq_strand.py
 
     Returns a list of the Fastqs from a project for which
-    one or more associated outputs from `illumina_qc.sh`
+    one or more associated outputs from `fastq_strand.py`
     don't exist in the specified QC directory.
 
     Arguments:
