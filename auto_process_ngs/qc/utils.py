@@ -170,7 +170,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         "--filename",out_file,
         "--title",title)
     if qc_protocol is not None:
-        verify_cmd.add_args("--protocol",qc_protocol)
+        report_cmd.add_args("--protocol",qc_protocol)
     if qc_dir is not None:
         report_cmd.add_args("--qc_dir",qc_dir)
     if fastq_dir is not None:
