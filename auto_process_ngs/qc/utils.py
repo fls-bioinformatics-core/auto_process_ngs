@@ -20,8 +20,8 @@ Provides the following functions:
 import os
 import logging
 from ..applications import Command
-from auto_process_ngs.settings import Settings
-from auto_process_ngs.simple_scheduler import SchedulerJob
+from ..settings import Settings
+from ..simple_scheduler import SchedulerJob
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
