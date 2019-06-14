@@ -44,3 +44,17 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","metrics_summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
+    def test_cellrangercount(self):
+        """
+        CellrangerCount: handle missing directory
+        """
+        # Do tests
+        count_dir = os.path.join(self.project.dirn,"cellranger_count","PJB1")
+        cellranger_count = CellrangerCount(count_dir)
+        self.assertRaises(OSError,
+                          getattr,cellranger_count,'dir')
+        self.assertEqual(cellranger_count.sample_name,None)
+        self.assertRaises(OSError,
+                          getattr,cellranger_count,'metrics_csv')
+        self.assertRaises(OSError,
+                          getattr,cellranger_count,'web_summary')
