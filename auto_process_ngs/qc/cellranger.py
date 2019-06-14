@@ -22,7 +22,10 @@ class CellrangerCount(object):
         """
         self._cellranger_count_dir = os.path.abspath(
             cellranger_count_dir)
-        self._sample_name = os.path.basename(self.dir)
+        try:
+            self._sample_name = os.path.basename(self.dir)
+        except OSError:
+            self._sample_name = None
         try:
             self._metrics_csv = os.path.join(self.dir,
                                              "outs",
