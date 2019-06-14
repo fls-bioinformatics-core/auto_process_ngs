@@ -44,7 +44,7 @@ class TestCellrangerCount(unittest.TestCase):
                          os.path.join(count_dir,"outs","metrics_summary.csv"))
         self.assertEqual(cellranger_count.web_summary,
                          os.path.join(count_dir,"outs","web_summary.html"))
-    def test_cellrangercount(self):
+    def test_cellrangercount_missing_directory(self):
         """
         CellrangerCount: handle missing directory
         """
