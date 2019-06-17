@@ -8,8 +8,11 @@ import os
 import shutil
 from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import RunInfoXml
+from bcftbx.utils import mkdirs
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
+from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.tenx_genomics_utils import *
 
@@ -476,3 +479,55 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(os.path.isdir("HGXXXX_34"))
         self.assertTrue(os.path.isfile("cellranger_qc_summary_34.html"))
         self.assertTrue(os.path.isdir(output_dir))
+
+class TestSetCellCountForProject(unittest.TestCase):
+    """
+    Tests for the 'set_cell_count_for_project' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestSetCellCountForProject')
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def _make_mock_analysis_project(self,single_cell_platform,library_type):
+        # Create a mock AnalysisProject
+        m = MockAnalysisProject('PJB',
+                                fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
+                                             "PJB1_S1_L001_R2_001.fastq.gz",),
+                                metadata={'Single cell platform':
+                                          single_cell_platform,
+                                          'Library type': library_type,})
+        m.create(top_dir=self.wd)
+        return os.path.join(self.wd,'PJB')
+    def test_set_cell_count_for_project(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "scRNA-seq")
+        # Add metrics_summart.csv
+        counts_dir = os.path.join(project_dir,
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)

@@ -415,8 +415,8 @@ def set_cell_count_for_project(project_dir):
       Integer: exit code, non-zero values indicate problems
         were encountered.
     """
-    project = AnalysisProject(project_dir,
-                              os.path.basename(project_dir))
+    project = AnalysisProject(os.path.basename(project_dir),
+                              project_dir)
     number_of_cells = 0
     if project.info.library_type == 'scRNA-seq':
         # Single cell RNA-seq
