@@ -708,7 +708,6 @@ class QCReport(Document):
                                              "cellranger_count")
         cellranger_samples = []
         if os.path.isdir(cellranger_count_dir):
-            print(os.listdir(cellranger_count_dir))
             for d in filter(
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
@@ -1268,9 +1267,14 @@ class QCReportFastqGroup(object):
                                 self.reporters[self.reads[0]].safe_name,
                                 title=self.strandedness())
                 elif field == "cellranger_count":
+                    web_summary = self.reporters[read].\
+                                  cellranger_count.web_summary
+                    if relpath:
+                        web_summary = os.path.relpath(web_summary,
+                                                      relpath)
                     value = Link(
                         self.reporters[read].cellranger_count.sample_name,
-                        self.reporters[read].cellranger_count.web_summary)
+                        web_summary)
                 else:
                     raise KeyError("'%s': unrecognised field for summary "
                                    "table" % field)
