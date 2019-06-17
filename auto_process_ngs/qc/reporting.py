@@ -895,6 +895,10 @@ class QCReport(Document):
         else:
             sample_report.add("%d fastqs" %
                               len(fastq_groups))
+        # Keep track of the first line in the summary
+        # table, as per-sample metrics (and name)
+        # should only be reported on the first line
+        first_line = True
         # Report each Fastq group
         for fastqs in fastq_groups:
             # Report Fastq pair
@@ -906,18 +910,29 @@ class QCReport(Document):
                                relpath=self.relpath)
             # Add line in summary table
             if sample is not None:
-                idx = self.summary_table.add_row(sample=Link(sample,
-                                                             sample_report))
+                if first_line:
+                    # Only display sample name on first line
+                    idx = self.summary_table.add_row(
+                        sample=Link(sample,
+                                    sample_report))
+                else:
+                    # Don't display sample name for subsequent
+                    # lines in summary table
+                    idx = self.summary_table.add_row(sample="&nbsp;")
             else:
                 idx = self.summary_table.add_row(sample="&nbsp;")
             status = fastq_group.update_summary_table(
                 self.summary_table,idx=idx,
                 fields=self.summary_fields,
-                relpath=self.relpath)
+                relpath=self.relpath,
+                skip_sample_metrics=(not first_line))
             if not status:
                 # Update flag to indicate problems with the
                 # report
                 self.status = False
+            # Update flag to indicate no longer on
+            # first line for this sample
+            first_line = False
 
     def report_status(self):
         """
@@ -1158,7 +1173,7 @@ class QCReportFastqGroup(object):
         clear = fastqs_report.add_subsection(css_classes=("clear",))
 
     def update_summary_table(self,summary_table,idx=None,fields=None,
-                             relpath=None):
+                             relpath=None,skip_sample_metrics=False):
         """
         Add a line to a summary table reporting a Fastq group
 
@@ -1193,6 +1208,9 @@ class QCReportFastqGroup(object):
           fields (list): list of custom fields to report
           relpath (str): if set then make link paths
             relative to 'relpath'
+          skip_sample_metrics (bool): if True then don't report
+            values for 'sample-level' metrics (e.g. cellranger
+            count outputs)
 
         Returns:
           Boolean: True if report didn't contain any issues,
@@ -1267,14 +1285,17 @@ class QCReportFastqGroup(object):
                                 self.reporters[self.reads[0]].safe_name,
                                 title=self.strandedness())
                 elif field == "cellranger_count":
-                    web_summary = self.reporters[read].\
-                                  cellranger_count.web_summary
-                    if relpath:
-                        web_summary = os.path.relpath(web_summary,
-                                                      relpath)
-                    value = Link(
-                        self.reporters[read].cellranger_count.sample_name,
-                        web_summary)
+                    if skip_sample_metrics:
+                        value = "&nbsp;"
+                    else:
+                        web_summary = self.reporters[read].\
+                                      cellranger_count.web_summary
+                        if relpath:
+                            web_summary = os.path.relpath(web_summary,
+                                                          relpath)
+                        value = Link(
+                            self.reporters[read].cellranger_count.sample_name,
+                            web_summary)
                 else:
                     raise KeyError("'%s': unrecognised field for summary "
                                    "table" % field)
