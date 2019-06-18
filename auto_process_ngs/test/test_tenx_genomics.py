@@ -14,6 +14,7 @@ from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
+from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.tenx_genomics_utils import *
 
 # Set to False to keep test output dirs
@@ -287,12 +288,9 @@ class TestAtacSummary(unittest.TestCase):
     def test_atac_summary(self):
         """AtacSummary: check detected/annotated numbers of cells are extracted
         """
-        summary = """annotated_cells,bc_q30_bases_fract,cellranger-atac_version,cells_detected,frac_cut_fragments_in_peaks,frac_fragments_nfr,frac_fragments_nfr_or_nuc,frac_fragments_nuc,frac_fragments_overlapping_peaks,frac_fragments_overlapping_targets,frac_mapped_confidently,frac_waste_chimeric,frac_waste_duplicate,frac_waste_lowmapq,frac_waste_mitochondrial,frac_waste_no_barcode,frac_waste_non_cell_barcode,frac_waste_overall_nondup,frac_waste_total,frac_waste_unmapped,median_fragments_per_cell,median_per_cell_unique_fragments_at_30000_RRPC,median_per_cell_unique_fragments_at_50000_RRPC,num_fragments,r1_q30_bases_fract,r2_q30_bases_fract,si_q30_bases_fract,total_usable_fragments,tss_enrichment_score
-5682,0.925226023701,1.0.1,6748,0.512279447992,0.392368676637,0.851506103882,0.459137427245,0.556428090013,0.575082094792,0.534945791083,0.00123066129161,0.160515305655,0.0892973647982,0.00899493352094,0.352907229061,0.0135851297269,0.471714266123,0.632229571777,0.00569894772443,16119.5,5769.94794925,8809.29425158,366582587,0.947387774999,0.941378123188,0.962708567847,134818235,6.91438390781
-"""
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
-            fp.write(summary)
+            fp.write(ATAC_SUMMARY)
         s = AtacSummary(summary_csv)
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
@@ -531,3 +529,33 @@ class TestSetCellCountForProject(unittest.TestCase):
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          2272)
+    def test_set_cell_count_for_atac_project(self):
+        """
+        set_cell_count_for_project: test for scATAC-seq
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "scATAC-seq")
+        # Add metrics_summart.csv
+        counts_dir = os.path.join(project_dir,
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                            "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         5682)
