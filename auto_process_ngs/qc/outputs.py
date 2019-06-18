@@ -12,10 +12,13 @@ Provides the following functions:
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
 - cellranger_count_output: get names for cellranger count output
+- cellranger_atac_count_output: get names for cellranger-atac count output
 - check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
   count outputs
+- check_cellranger_atac_count_outputs: fetch sample names without
+  cellranger-atac count outputs
 - expected_outputs: return expected QC outputs for a project
 """
 
@@ -131,6 +134,42 @@ def cellranger_count_output(project,sample_name=None):
         sample_count_dir = os.path.join("cellranger_count",
                                         sample.name)
         for f in ("metrics_summary.csv",
+                  "web_summary.html"):
+            outputs.append(os.path.join(sample_count_dir,
+                                        "outs",f))
+    return tuple(outputs)
+
+def cellranger_atac_count_output(project,sample_name=None):
+    """
+    Generate list of 'cellranger-atac count' outputs
+
+    Given an AnalysisProject, the outputs from 'cellranger-atac
+    count' will look like:
+
+    - cellranger_count/{SAMPLE_n}/outs/summary.csv
+    - cellranger_count/{SAMPLE_n}/outs/web_summary.html
+
+    for each SAMPLE_n in the project.
+
+    If a sample name is supplied then outputs are limited
+    to those for that sample
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      sample_name (str): sample to limit outputs to
+
+    Returns:
+       tuple: cellranger count outputs (without leading paths)
+    """
+    outputs = []
+    # Metrics and web summary files
+    for sample in project.samples:
+        if sample_name and sample_name != sample.name:
+            continue
+        sample_count_dir = os.path.join("cellranger_count",
+                                        sample.name)
+        for f in ("summary.csv",
                   "web_summary.html"):
             outputs.append(os.path.join(sample_count_dir,
                                         "outs",f))
@@ -254,7 +293,7 @@ def check_cellranger_count_outputs(project):
     Return samples missing outputs from 'cellranger count'
 
     Returns a list of the samples from a project for which
-    one or more associated outputs from `fastq_strand.py`
+    one or more associated outputs from `cellranger count`
     don't exist in the specified QC directory.
 
     Arguments:
@@ -267,6 +306,28 @@ def check_cellranger_count_outputs(project):
     samples = set()
     for sample in project.samples:
         for output in cellranger_count_output(project,sample.name):
+            if not os.path.exists(os.path.join(project.dirn,output)):
+                samples.add(sample.name)
+    return sorted(list(samples))
+
+def check_cellranger_atac_count_outputs(project):
+    """
+    Return samples missing outputs from 'cellranger-atac count'
+
+    Returns a list of the samples from a project for which
+    one or more associated outputs from `cellranger-atac count`
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+
+    Returns:
+      List: list of sample names with missing outputs
+    """
+    samples = set()
+    for sample in project.samples:
+        for output in cellranger_atac_count_output(project,sample.name):
             if not os.path.exists(os.path.join(project.dirn,output)):
                 samples.add(sample.name)
     return sorted(list(samples))
@@ -344,5 +405,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                              '10xGenomics Chromium 3\'v3',):
         # Cellranger count output
         for output in cellranger_count_output(project):
+            outputs.add(os.path.join(project.dirn,output))
+    elif qc_protocol == '10x_scATAC':
+        for output in cellranger_atac_count_output(project):
             outputs.add(os.path.join(project.dirn,output))
     return sorted(list(outputs))
