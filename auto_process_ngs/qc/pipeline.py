@@ -19,6 +19,10 @@ Pipeline task classes:
 - SetupFastqStrandConf
 - CheckFastqStrandOutputs
 - RunFastqStrand
+- GetCellrangerReferenceData
+- CheckCellrangerCountOutputs
+- RunCellrangerCount
+- SetCellCountFromCellrangerCount
 - ReportQC
 """
 
@@ -32,6 +36,8 @@ import tempfile
 import shutil
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
+from bcftbx.utils import mkdirs
+from bcftbx.utils import find_program
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
@@ -44,6 +50,8 @@ from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
+from ..tenx_genomics_utils import add_cellranger_args
+from ..tenx_genomics_utils import set_cell_count_for_project
 from ..utils import get_organism_list
 from .constants import FASTQ_SCREENS
 from .outputs import fastqc_output
@@ -51,6 +59,8 @@ from .outputs import fastq_screen_output
 from .outputs import fastq_strand_output
 from .outputs import check_illumina_qc_outputs
 from .outputs import check_fastq_strand_outputs
+from .outputs import check_cellranger_count_outputs
+from .outputs import check_cellranger_atac_count_outputs
 from .outputs import expected_outputs
 from .utils import determine_qc_protocol
 from .fastq_strand import build_fastq_strand_conf
@@ -87,10 +97,19 @@ class QCPipeline(Pipeline):
         self.add_param('nthreads',type=int,value=1)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
+        self.add_param('cellranger_transcriptomes',type=dict)
+        self.add_param('cellranger_atac_references',type=dict)
+        self.add_param('cellranger_jobmode',type=str,value='local')
+        self.add_param('cellranger_maxjobs',type=int)
+        self.add_param('cellranger_mempercore',type=int)
+        self.add_param('cellranger_jobinterval',type=int)
+        self.add_param('cellranger_localcores',type=int)
+        self.add_param('cellranger_localmem',type=int)
 
         # Define runners
         self.add_runner('verify_runner')
         self.add_runner('qc_runner')
+        self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
@@ -165,6 +184,8 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
+        report_requires = []
+
         # Set up QC dirs
         setup_qc_dirs = SetupQCDirs(
             "%s: set up QC directories" % project_name,
@@ -212,6 +233,7 @@ class QCPipeline(Pipeline):
                       requires=(check_illumina_qc,),
                       runner=self.runners['qc_runner'],
                       log_dir=log_dir)
+        report_requires.append(run_illumina_qc)
 
         # Set up fastq_strand.conf file
         setup_fastq_strand_conf = SetupFastqStrandConf(
@@ -256,6 +278,75 @@ class QCPipeline(Pipeline):
                       requires=(check_fastq_strand,),
                       runner=self.runners['qc_runner'],
                       log_dir=log_dir)
+        report_requires.append(run_fastq_strand)
+
+        if (qc_protocol == "singlecell" and
+            project.info.single_cell_platform in
+            ('10xGenomics Chromium 3\'v2',
+             '10xGenomics Chromium 3\'v3',)) or \
+            qc_protocol == "10x_scATAC":
+
+            # Get reference data for cellranger
+            get_cellranger_reference_data = GetCellrangerReferenceData(
+                "%s: get 'cellranger count' reference data" %
+                project_name,
+                project,
+                organism=organism,
+                transcriptomes=self.params.cellranger_transcriptomes,
+                atac_references=self.params.cellranger_atac_references,
+                qc_protocol=qc_protocol
+            )
+            self.add_task(get_cellranger_reference_data,
+                          runner=self.runners['verify_runner'],
+                          log_dir=log_dir,
+                          verbose=True)
+
+            # Check outputs for cellranger count
+            check_cellranger_count = CheckCellrangerCountOutputs(
+                "%s: check single library analysis (cellranger)" %
+                project_name,
+                project,
+                fastq_dir=fastq_dir,
+                qc_protocol=qc_protocol,
+                verbose=self.params.VERBOSE
+            )
+            self.add_task(check_cellranger_count,
+                          runner=self.runners['verify_runner'],
+                          log_dir=log_dir)
+
+            # Run cellranger count
+            run_cellranger_count = RunCellrangerCount(
+                "%s: run single library analysis (cellranger count)" %
+                project_name,
+                check_cellranger_count.output.samples,
+                check_cellranger_count.output.fastq_dir,
+                get_cellranger_reference_data.output.reference_data_path,
+                project.dirn,
+                working_dir=self.params.WORKING_DIR,
+                cellranger_jobmode=self.params.cellranger_jobmode,
+                cellranger_maxjobs=self.params.cellranger_maxjobs,
+                cellranger_mempercore=self.params.cellranger_mempercore,
+                cellranger_jobinterval=self.params.cellranger_jobinterval,
+                cellranger_localcores=self.params.cellranger_localcores,
+                cellranger_localmem=self.params.cellranger_localmem,
+                qc_protocol=qc_protocol
+            )
+            self.add_task(run_cellranger_count,
+                          requires=(get_cellranger_reference_data,
+                                    check_cellranger_count,),
+                          runner=self.runners['cellranger_runner'],
+                          log_dir=log_dir,
+                          verbose=True)
+
+            # Set cell count
+            set_cellranger_cell_count = SetCellCountFromCellrangerCount(
+                "%s: set cell count from single library analysis" %
+                project_name,
+                project
+            )
+            self.add_task(set_cellranger_cell_count,
+                          requires=(run_cellranger_count,),)
+            report_requires.append(set_cellranger_cell_count)
 
         # Make QC report
         report_qc = ReportQC(
@@ -265,15 +356,18 @@ class QCPipeline(Pipeline):
             multiqc=multiqc
         )
         self.add_task(report_qc,
-                      requires=(run_illumina_qc,
-                                run_fastq_strand,),
+                      requires=report_requires,
                       runner=self.runners['report_runner'],
                       log_dir=log_dir)
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
-            fastq_subset=None,working_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,poll_interval=5,
-            runners=None,default_runner=None,verbose=False):
+            fastq_subset=None,cellranger_transcriptomes=None,
+            cellranger_atac_references=None,cellranger_jobmode='local',
+            cellranger_maxjobs=None,cellranger_mempercore=None,
+            cellranger_jobinterval=None,cellranger_localcores=None,
+            cellranger_localmem=None,working_dir=None,log_file=None,
+            batch_size=None,max_jobs=1,poll_interval=5,runners=None,
+            default_runner=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -284,6 +378,28 @@ class QCPipeline(Pipeline):
             IDs to directories with STAR index
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
+          cellranger_transcriptomes (mapping): mapping of
+            organism names to reference transcriptome data
+            for cellranger
+          cellranger_atac_references (mapping): mapping of
+            organism names to ATAC-seq reference genome data
+            for cellranger-atac
+          cellranger_jobmode (str): specify the job mode to
+            pass to cellranger (default: "local")
+          cellranger_maxjobs (int): specify the maximum
+            number of jobs to pass to cellranger (default:
+            None)
+          cellranger_mempercore (int): specify the memory
+            per core (in Gb) to pass to cellranger (default:
+            None)
+          cellranger_jobinterval (int): specify the interval
+            between launching jobs (in ms) to pass to
+            cellranger (default: None)
+          cellranger_localcores (int): maximum number of cores
+            cellranger can request in jobmode 'local'
+            (default: None)
+          cellranger_localmem (int): maximum memory cellranger
+            can request in jobmode 'local' (default: None)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -299,7 +415,8 @@ class QCPipeline(Pipeline):
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
             instances; valid names are 'qc_runner',
-            'report_runner','verify_runner','default'
+            'report_runner','cellranger_runner',
+            'verify_runner','default'
           default_runner (JobRunner): optional default
             job runner to use
           verbose (bool): if True then report additional
@@ -320,6 +437,12 @@ class QCPipeline(Pipeline):
         log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
 
+        # Runners
+        if runners is None:
+            runners = dict()
+        if 'cellranger_runner' not in runners:
+            runners['cellranger_runner'] = SimpleJobRunner()
+
         # Execute the pipeline
         status = Pipeline.run(self,
                               working_dir=working_dir,
@@ -332,6 +455,16 @@ class QCPipeline(Pipeline):
                                   'nthreads': nthreads,
                                   'fastq_subset': fastq_subset,
                                   'fastq_strand_indexes': fastq_strand_indexes,
+                                  'cellranger_transcriptomes':
+                                  cellranger_transcriptomes,
+                                  'cellranger_atac_references':
+                                  cellranger_atac_references,
+                                  'cellranger_jobmode': cellranger_jobmode,
+                                  'cellranger_maxjobs': cellranger_maxjobs,
+                                  'cellranger_mempercore': cellranger_mempercore,
+                                  'cellranger_jobinterval': cellranger_jobinterval,
+                                  'cellranger_localcores': cellranger_localcores,
+                                  'cellranger_localmem': cellranger_localmem
                               },
                               max_jobs=max_jobs,
                               runners=runners,
@@ -730,6 +863,284 @@ class RunFastqStrand(PipelineTask):
             cmd.add_args(*fastq_pair)
             # Add the command
             self.add_cmd(cmd)
+
+class GetCellrangerReferenceData(PipelineFunctionTask):
+    """
+    """
+    def init(self,project,organism=None,transcriptomes=None,
+             atac_references=None,qc_protocol=None):
+        """
+        Initialise the GetCellrangerReferenceData task
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          organism (str): if supplied then must be a
+            string with the names of one or more organisms,
+            with multiple organisms separated by spaces
+            (defaults to the organisms associated with
+            the project)
+          transcriptomes (mapping): mapping of organism names
+            to reference transcriptome data for cellranger
+          atac_references (mapping): mapping of organism names
+            to reference genome data for cellranger-atac
+          qc_protocol (str): QC protocol to use
+
+        Outputs:
+          reference_data_path (PipelineParam): pipeline
+            parameter instance which resolves to a string
+            with the path to the reference data set
+            corresponding to the supplied organism.
+        """
+        self.add_output('reference_data_path',Param(type=str))
+    def setup(self):
+        # Set the references we're going to use
+        if self.args.qc_protocol == "singlecell":
+            references = self.args.transcriptomes
+        elif self.args.qc_protocol == "10x_scATAC":
+            references = self.args.atac_references
+        else:
+            self.fail(message="Don't know which reference "
+                      "dataset to use for protocol '%s'" %
+                      self.args.qc_protocol)
+            return
+        if references is None:
+            references = {}
+        # Get organism name
+        organism = self.args.organism
+        if organism is None:
+            organism = self.args.project.info.organism
+        if not organism:
+            self.fail(message="No organism specified")
+            return
+        organisms = get_organism_list(organism)
+        if len(organisms) > 1:
+            self.fail(message="Can't handle multiple organisms")
+            return
+        # Look up reference
+        try:
+            self.output.reference_data_path.set(
+                references[organisms[0]])
+        except KeyError:
+            # No reference data available
+            self.report("No reference data available for '%s'"
+                        % organism)
+        except Exception as ex:
+            # Some other problem
+            self.fail(message="Failed to get reference data for "
+                      "'%s': %s" % (organism,ex))
+
+class CheckCellrangerCountOutputs(PipelineFunctionTask):
+    """
+    Check the outputs from cellranger(-atac) count
+    """
+    def init(self,project,fastq_dir=None,qc_protocol=None,
+             verbose=False):
+        """
+        Initialise the CheckCellrangerCountOutputs task.
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          fastq_dir (str): directory holding Fastq files
+            (defaults to current fastq_dir in project)
+          qc_protocol (str): QC protocol to use
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          fastq_dir (PipelineParam): pipeline parameter
+            instance that resolves to a string with the
+            path to directory with Fastq files
+          samples (list): list of sample names that have
+            missing outputs from 'cellranger count'
+        """
+        self.add_output('fastq_dir',Param(type=str))
+        self.add_output('samples',list())
+    def setup(self):
+        if self.args.qc_protocol == "singlecell":
+            check_outputs = check_cellranger_count_outputs
+        elif self.args.qc_protocol == "10x_scATAC":
+            check_outputs = check_cellranger_atac_count_outputs
+        self.add_call("Check cellranger count outputs for %s"
+                      % self.args.project.name,
+                      check_outputs,
+                      self.args.project)
+    def finish(self):
+        # Collect the sample names with missing outputs
+        for result in self.result():
+            self.output.samples.extend(result)
+        if self.output.samples:
+            if self.args.verbose:
+                print("Samples with missing outputs from "
+                      "cellranger count:")
+                for sample in self.output.samples:
+                    print("-- %s" % sample)
+            else:
+                print("%s samples with missing outputs from "
+                      "cellranger count" %
+                      len(self.output.samples))
+        else:
+            print("No samples with missing outputs from "
+                  "cellranger count")
+        # Set the fastq_dir that these are found in
+        self.output.fastq_dir.set(self.args.project.fastq_dir)
+
+class RunCellrangerCount(PipelineTask):
+    """
+    Run 'cellranger count'
+    """
+    def init(self,samples,fastq_dir,reference_data_path,
+             out_dir,chemistry='auto',cellranger_jobmode='local',
+             cellranger_maxjobs=None,cellranger_mempercore=None,
+             cellranger_jobinterval=None,cellranger_localcores=None,
+             cellranger_localmem=None,qc_protocol=None,
+             working_dir=None):
+        """
+        Initialise the RunCellrangerCount task.
+
+        Arguments:
+          samples (list): list of sample names to run
+            cellranger count on (it is expected that this
+            list will come from the
+            CheckCellrangerCountsOutputs task)
+          fastq_dir (str): path to directory holding the
+            Fastq files
+          reference_data_path (str): path to the cellranger
+            compatible transcriptome reference data
+            directory (for scRNA-seq) or ATAC reference
+            genome data (for scATAC-seq)
+          out_dir (str): top-level directory to put final
+            'count' into
+          chemistry (str): assay configuration (set to
+            'auto' to let cellranger determine this
+            automatically; ignored if not scRNA-seq)
+          cellranger_jobmode (str): specify the job mode to
+            pass to cellranger (default: "local")
+          cellranger_maxjobs (int): specify the maximum
+            number of jobs to pass to cellranger (default:
+            None)
+          cellranger_mempercore (int): specify the memory
+            per core (in Gb) to pass to cellranger (default:
+            None)
+          cellranger_jobinterval (int): specify the interval
+            between launching jobs (in ms) to pass to
+            cellranger (default: None)
+          cellranger_localcores (int): maximum number of cores
+            cellranger can request in jobmode 'local'
+            (default: None)
+          cellranger_localmem (int): maximum memory cellranger
+            can request in jobmode 'local' (default: None)
+          qc_protocol (str): QC protocol to use
+        """
+        # Internal: top-level working directory
+        self._working_dir = None
+    def setup(self):
+        # Check if there's anything to do
+        if not self.args.samples:
+            print("No samples: nothing to do")
+            return
+        if not self.args.reference_data_path:
+            print("No reference data available: nothing to do")
+            return
+        # Top-level working directory
+        self._working_dir = self.args.working_dir
+        # Determine the cellranger executable to use
+        if self.args.qc_protocol == '10x_scATAC':
+            cellranger_exe = "cellranger-atac"
+        else:
+            cellranger_exe = "cellranger"
+        # Check that the cellranger software is available
+        if not find_program(cellranger_exe):
+            self.fail(message="Can't locate %s" % cellranger_exe)
+            return
+        # Run cellranger for each sample
+        for sample in self.args.samples:
+            work_dir = os.path.join(self._working_dir,
+                                    "tmp.count.%s" % sample)
+            cmd = PipelineCommandWrapper(
+                "Run %s count for %s" % (cellranger_exe,sample),
+                "mkdir","-p",work_dir,
+                "&&",
+                "cd",work_dir,
+                "&&",
+                cellranger_exe,
+                "count",
+                "--id",sample,
+                "--fastqs",self.args.fastq_dir,
+                "--sample",sample)
+            if cellranger_exe == "cellranger":
+                cmd.add_args("--transcriptome",self.args.reference_data_path)
+                cmd.add_args("--chemistry",self.args.chemistry)
+            elif cellranger_exe == "cellranger-atac":
+                cmd.add_args("--reference",self.args.reference_data_path)
+            add_cellranger_args(cmd,
+                                jobmode=self.args.cellranger_jobmode,
+                                mempercore=self.args.cellranger_mempercore,
+                                maxjobs=self.args.cellranger_maxjobs,
+                                jobinterval=self.args.cellranger_jobinterval,
+                                localcores=self.args.cellranger_localcores,
+                                localmem=self.args.cellranger_localmem)
+            self.add_cmd(cmd)
+    def finish(self):
+        # Handle outputs from cellranger count
+        if self.args.qc_protocol == "singlecell":
+            files = ("web_summary.html","metrics_summary.csv")
+        elif self.args.qc_protocol == "10x_scATAC":
+            files = ("web_summary.html","summary.csv")
+        has_errors = False
+        for sample in self.args.samples:
+            # Check outputs
+            outs_dir = os.path.join(self._working_dir,
+                                    "tmp.count.%s" % sample,
+                                    sample,
+                                    "outs")
+            missing_files = []
+            for f in files:
+                path = os.path.join(outs_dir,f)
+                if not os.path.exists(path):
+                    print("Missing: %s" % path)
+                    missing_files.append(path)
+            if missing_files:
+                # Skip this sample
+                has_errors = True
+            else:
+                # Copy to final destination
+                count_dir = os.path.abspath(
+                    os.path.join(self.args.out_dir,
+                                 "cellranger_count",
+                                 sample,
+                                 "outs"))
+                mkdirs(count_dir)
+                for f in files:
+                    path = os.path.join(outs_dir,f)
+                    print("Copying %s from %s to %s" % (f,
+                                                        outs_dir,
+                                                        count_dir))
+                    shutil.copy(path,count_dir)
+        if has_errors:
+            self.fail(message="Some outputs missing from cellranger "
+                      "count")
+            return
+
+class SetCellCountFromCellrangerCount(PipelineTask):
+    """
+    Update the number of cells in the project metadata from
+    'cellranger count' output
+    """
+    def init(self,project):
+        """
+        Initialise the SetCellCountFromCellrangerCount task.
+
+        Arguments:
+          project (AnalysisProject): project to update the number
+            of cells for
+        """
+        pass
+    def setup(self):
+        # Extract and store the cell count from the cellranger
+        # metric file
+        set_cell_count_for_project(self.args.project.dirn)
 
 class ReportQC(PipelineFunctionTask):
     """
