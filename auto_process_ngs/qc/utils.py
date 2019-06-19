@@ -20,8 +20,8 @@ Provides the following functions:
 import os
 import logging
 from ..applications import Command
-from auto_process_ngs.settings import Settings
-from auto_process_ngs.simple_scheduler import SchedulerJob
+from ..settings import Settings
+from ..simple_scheduler import SchedulerJob
 
 # Module-specific logger
 logger = logging.getLogger(__name__)
@@ -170,7 +170,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
         "--filename",out_file,
         "--title",title)
     if qc_protocol is not None:
-        verify_cmd.add_args("--protocol",qc_protocol)
+        report_cmd.add_args("--protocol",qc_protocol)
     if qc_dir is not None:
         report_cmd.add_args("--qc_dir",qc_dir)
     if fastq_dir is not None:
