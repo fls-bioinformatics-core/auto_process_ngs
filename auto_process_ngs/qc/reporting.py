@@ -690,7 +690,8 @@ class QCReport(Document):
             for f in fastq_strand:
                 fq = self.fastq_attrs(os.path.splitext(f)[0])
                 fastq_names.add(
-                    os.path.basename(fastq_strand)[:-len("_fastq_strand")])
+                    os.path.basename(
+                        os.path.splitext(f)[0])[:-len("_fastq_strand")])
                 versions.add(Fastqstrand(
                     os.path.join(self.qc_dir,f)).version)
             if versions:
