@@ -649,11 +649,15 @@ class QCReport(Document):
             for screen in filter(lambda s:
                                  s.endswith("_screen.txt"),
                                  screens):
-                fq = self.fastq_attrs(os.path.splitext(screen)[0])
-                fastq_names.add(fq.canonical_name)
-                outputs.add("screens_%s%s" % (('i' if fq.is_index_read
-                                               else 'r'),
-                                              fq.read_number))
+                screen_base = os.path.splitext(screen)[0]
+                fq = self.fastq_attrs(screen)
+                s = os.path.basename(screen_base)[:-len("_screen")]
+                for name in FASTQ_SCREENS:
+                    if s.endswith("_%s" % name):
+                        outputs.add("screens_%s%s" % (('i' if fq.is_index_read
+                                                       else 'r'),
+                                                      fq.read_number))
+                        fastq_names.add(s[:-len("_%s" % name)])
                 versions.add(Fastqscreen(
                     os.path.join(self.qc_dir,screen)).version)
             if versions:
@@ -668,7 +672,7 @@ class QCReport(Document):
             for fastqc in fastqcs:
                 fastqc = os.path.splitext(fastqc)[0]
                 fq = self.fastq_attrs(fastqc)
-                fastq_names.add(fq.canonical_name)
+                fastq_names.add(os.path.basename(fastqc)[:-len("_fastqc")])
                 outputs.add("fastqc_%s%s" % (('i' if fq.is_index_read
                                               else 'r'),
                                              fq.read_number))
@@ -685,7 +689,8 @@ class QCReport(Document):
             versions = set()
             for f in fastq_strand:
                 fq = self.fastq_attrs(os.path.splitext(f)[0])
-                fastq_names.add(fq.canonical_name)
+                fastq_names.add(
+                    os.path.basename(fastq_strand)[:-len("_fastq_strand")])
                 versions.add(Fastqstrand(
                     os.path.join(self.qc_dir,f)).version)
             if versions:
