@@ -370,7 +370,8 @@ class MockAnalysisProject(object):
         os.mkdir(project_dir)
         # Create fastqs subdirectory
         fqs_dir = os.path.join(project_dir,self.fastq_dir)
-        os.mkdir(fqs_dir)
+        if not os.path.exists(fqs_dir):
+            os.mkdir(fqs_dir)
         # Add Fastq files
         for fq in self.fastq_names:
             fq = os.path.basename(fq)
