@@ -746,6 +746,7 @@ class MockAnalysisDirFactory(object):
                    run_name,platform,
                    paired_end=True,
                    no_lane_splitting=True,
+                   reads=None,
                    top_dir=None,
                    metadata=None,
                    project_metadata=None,
@@ -769,10 +770,10 @@ class MockAnalysisDirFactory(object):
                               project_metadata=project_metadata,
                               include_stats_files=include_stats_files,
                               top_dir=top_dir)
-        mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
-        mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
-        mad.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=lanes)
-        mad.add_fastq_batch('CDE','CDE4','CDE4_S4',lanes=lanes)
+        mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('CDE','CDE4','CDE4_S4',lanes=lanes,reads=reads)
         return mad
 
     @classmethod
