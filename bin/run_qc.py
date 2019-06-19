@@ -190,6 +190,16 @@ if __name__ == "__main__":
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
 
+    # Cellranger data and parameters
+    cellranger_settings = __settings['10xgenomics']
+    cellranger_jobmode = cellranger_settings.cellranger_jobmode
+    cellranger_mempercore = cellranger_settings.cellranger_mempercore
+    cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
+    cellranger_localcores = cellranger_settings.cellranger_localcores
+    cellranger_localmem = cellranger_settings.cellranger_localmem
+    cellranger_transcriptomes = __settings['10xgenomics_transcriptomes']
+    cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
+
     # Set up and run the QC pipeline
     announce("Running QC")
     runqc = QCPipeline()
@@ -203,6 +213,14 @@ if __name__ == "__main__":
                        fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=
                        __settings.fastq_strand_indexes,
+                       cellranger_transcriptomes=cellranger_transcriptomes,
+                       cellranger_atac_references=cellranger_atac_references,
+                       cellranger_jobmode=cellranger_jobmode,
+                       cellranger_maxjobs=max_jobs,
+                       cellranger_mempercore=cellranger_mempercore,
+                       cellranger_jobinterval=cellranger_jobinterval,
+                       cellranger_localcores=cellranger_localcores,
+                       cellranger_localmem=cellranger_localmem,
                        max_jobs=args.max_jobs,
                        batch_size=args.batch_size,
                        runners={
