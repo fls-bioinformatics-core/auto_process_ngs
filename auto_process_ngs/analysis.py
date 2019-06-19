@@ -585,7 +585,8 @@ class AnalysisProject(object):
             full_fastq_dir = os.path.join(self.dirn,fastq_dir)
         else:
             full_fastq_dir = fastq_dir
-        if full_fastq_dir not in [os.path.join(self.dirn,d)
+        full_fastq_dir = os.path.normpath(full_fastq_dir)
+        if full_fastq_dir not in [os.path.normpath(os.path.join(self.dirn,d))
                                   for d in self.fastq_dirs]:
             raise Exception("Fastq dir '%s' not found in "
                             "project '%s' (%s)" %

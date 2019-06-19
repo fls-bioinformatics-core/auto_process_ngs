@@ -717,6 +717,38 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.qc_dir,
                          os.path.join(project.dirn,'qc.new'))
 
+    def test_analysis_project_handle_no_fastq_dir(self):
+        """Check AnalysisProject with no top-level Fastqs dir
+        """
+        # Construct test project with no fastq subdirectory
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',),
+            fastq_dir='.')
+        # Load and check AnalysisProject: default fastqs dir
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,project.dirn)
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(project.fastq_dirs,['.'])
+        self.assertEqual(project.info.primary_fastq_dir,'.')
+        # Check we can switch fastq dir to '.'
+        project.use_fastq_dir('.')
+        self.assertEqual(project.fastq_dir,project.dirn)
+        # Check we can switch fastq dir to full path
+        project.use_fastq_dir(project.dirn)
+        self.assertEqual(project.fastq_dir,project.dirn)
+        # Check we can switch fastq dir to primary fastq dir
+        project.use_fastq_dir()
+        self.assertEqual(project.fastq_dir,project.dirn)
+
     def test_sample_summary_single_ended(self):
         """AnalysisProject: sample_summary works for SE data
         """
