@@ -125,7 +125,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 if key in self.__attributes:
                     self.__key_order.append(key)
                 else:
-                    raise KeyError,"Key '%s' not defined in attributes"
+                    raise KeyError("Key '%s' not defined in attributes")
             # Append keys not explicitly listed in the order
             extra_keys = []
             for key in self.__attributes:
