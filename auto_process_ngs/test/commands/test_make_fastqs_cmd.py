@@ -1086,3 +1086,30 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    def test_make_fastqs_unknown_protocol(self):
+        """make_fastqs: fails with unknown protocol
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger executables
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        self.assertRaises(Exception,
+                          make_fastqs,
+                          ap,
+                          protocol="undefined_protocol")
