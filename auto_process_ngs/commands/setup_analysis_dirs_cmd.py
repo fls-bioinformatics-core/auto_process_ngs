@@ -101,7 +101,8 @@ def setup_analysis_dirs(ap,
                                    '10xGenomics Chromium 3\'v2',
                                    '10xGenomics Chromium 3\'v3',
                                    '10xGenomics Single Cell ATAC',
-                                   'ICELL8',):
+                                   'ICELL8',
+                                   'ICELL8 ATAC'):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
