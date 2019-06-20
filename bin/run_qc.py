@@ -197,7 +197,8 @@ if __name__ == "__main__":
                       qc_dir=args.qc_dir,
                       fastq_dir=args.fastq_dir,
                       organism=args.organism,
-                      qc_protocol=args.qc_protocol)
+                      qc_protocol=args.qc_protocol,
+                      multiqc=args.run_multiqc)
     status = runqc.run(nthreads=args.nthreads,
                        fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=
