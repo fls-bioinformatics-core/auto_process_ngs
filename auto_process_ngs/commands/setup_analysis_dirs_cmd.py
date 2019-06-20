@@ -10,6 +10,7 @@
 #######################################################################
 
 import os
+import shutil
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.analysis as analysis
@@ -150,6 +151,20 @@ def setup_analysis_dirs(ap,
         except IlluminaData.IlluminaDataError as ex:
             logger.warning("Failed to create project '%s': %s" %
                            (project_name,ex))
+            continue
+        # Copy in additional data files
+        if single_cell_platform == "ICELL8 ATAC":
+            # Copy across the XLSX report file
+            xlsx_report = os.path.join(illumina_data.unaligned_dir,
+                                       "Reports",
+                                       "icell8_atac_stats.xlsx")
+            print("Copying %s to %s" % (os.path.basename(xlsx_report),
+                                        project.dirn))
+            try:
+                shutil.copy2(xlsx_report,project.dirn)
+            except Exception as ex:
+                logger.warning("Failed to copy %s to project '%s': %s"
+                               % (xlsx_report,project_name,ex))
     # Tell us how many were made
     print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
     # Also set up analysis directory for undetermined reads
