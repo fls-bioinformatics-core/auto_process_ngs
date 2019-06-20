@@ -361,7 +361,6 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if projects:
         # Make log directory and set up scheduler
         # to farm out the intensive operations to
-        ap.set_log_dir(ap.get_log_subdir('publish_qc'))
         runner = ap.settings.general.default_runner
         runner.set_log_dir(ap.log_dir)
         sched = SimpleScheduler(
