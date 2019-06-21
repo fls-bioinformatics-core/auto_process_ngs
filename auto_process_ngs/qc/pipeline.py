@@ -280,11 +280,8 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
 
-        if (qc_protocol == "singlecell" and
-            project.info.single_cell_platform in
-            ('10xGenomics Chromium 3\'v2',
-             '10xGenomics Chromium 3\'v3',)) or \
-            qc_protocol == "10x_scATAC":
+        if (qc_protocol == "10x_scRNAseq" or
+            qc_protocol == "10x_scATAC"):
 
             # Get reference data for cellranger
             get_cellranger_reference_data = GetCellrangerReferenceData(
@@ -633,8 +630,9 @@ class RunIlluminaQC(PipelineTask):
             if self.args.fastq_screen_subset is not None:
                 cmd.add_args('--subset',self.args.fastq_screen_subset)
             # No screens for R1 reads for single cell
-            if self.args.qc_protocol == 'singlecell' and \
-               self.args.fastq_attrs(fastq).read_number == 1:
+            if (self.args.qc_protocol == 'singlecell' or
+                self.args.qc_protocol == '10x_scRNAseq') and \
+                self.args.fastq_attrs(fastq).read_number == 1:
                 cmd.add_args('--no-screens')
             # Add the command
             self.add_cmd(cmd)
@@ -650,8 +648,9 @@ class RunIlluminaQC(PipelineTask):
         if fastq_screen_subset is not None:
             cmd.add_args('--subset',fastq_screen_subset)
         # No screens for for in single cell
-        if qc_protocol == 'singlecell' and \
-           fastq_attrs(fastq).read_number == 1:
+        if (qc_protocol == 'singlecell' or
+            qc_protocol == '10x_scRNAseq') and \
+            fastq_attrs(fastq).read_number == 1:
             cmd.add_args('--no-screens')
         # Execute the command
         status = cmd.run_subprocess(working_dir=qc_dir)
@@ -665,8 +664,9 @@ class RunIlluminaQC(PipelineTask):
             if not os.path.exists(output):
                 failed = True
         # Check the Fastq_screen outputs
-        if qc_protocol == 'singlecell' and \
-           fastq_attrs(fastq).read_number == 1:
+        if (qc_protocol == 'singlecell' or
+            qc_protocol == '10x_scRNAseq') and \
+            fastq_attrs(fastq).read_number == 1:
             # No screens for R1 for single cell
             pass
         else:
@@ -893,7 +893,7 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         self.add_output('reference_data_path',Param(type=str))
     def setup(self):
         # Set the references we're going to use
-        if self.args.qc_protocol == "singlecell":
+        if self.args.qc_protocol == "10x_scRNAseq":
             references = self.args.transcriptomes
         elif self.args.qc_protocol == "10x_scATAC":
             references = self.args.atac_references
@@ -956,7 +956,7 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         self.add_output('fastq_dir',Param(type=str))
         self.add_output('samples',list())
     def setup(self):
-        if self.args.qc_protocol == "singlecell":
+        if self.args.qc_protocol == "10x_scRNAseq":
             check_outputs = check_cellranger_count_outputs
         elif self.args.qc_protocol == "10x_scATAC":
             check_outputs = check_cellranger_atac_count_outputs
@@ -1082,7 +1082,7 @@ class RunCellrangerCount(PipelineTask):
             self.add_cmd(cmd)
     def finish(self):
         # Handle outputs from cellranger count
-        if self.args.qc_protocol == "singlecell":
+        if self.args.qc_protocol == "10x_scRNAseq":
             files = ("web_summary.html","metrics_summary.csv")
         elif self.args.qc_protocol == "10x_scATAC":
             files = ("web_summary.html","summary.csv")

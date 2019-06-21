@@ -211,7 +211,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
             if not os.path.exists(output):
                 fastqs.add(fastq)
         # Fastq_screen
-        if qc_protocol == 'singlecell':
+        if qc_protocol == 'singlecell' or \
+           qc_protocol == '10x_scRNAseq':
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -272,7 +273,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         if qc_protocol == '10x_scATAC':
             # Strand stats output based on R1/R3 pair
             fq_pair = (fq_group[0],fq_group[2])
-        elif qc_protocol == 'singlecell':
+        elif qc_protocol == 'singlecell' or \
+             qc_protocol == '10x_scRNAseq':
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -377,8 +379,9 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                        for f in fastqc_output(fastq)]:
             outputs.add(output)
         # Fastq_screen
-        if qc_protocol == 'singlecell' and \
-           project.fastq_attrs(fastq).read_number == 1:
+        if (qc_protocol == 'singlecell' or
+            qc_protocol == '10x_scRNAseq') and \
+            project.fastq_attrs(fastq).read_number == 1:
             # No screens for R1 for single cell
             continue
         for screen in FASTQ_SCREENS:
@@ -391,7 +394,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                     project.fastq_attrs),
                 fastq_attrs=project.fastq_attrs):
             # Strand stats output
-            if qc_protocol == 'singlecell':
+            if qc_protocol == 'singlecell' or \
+               qc_protocol == '10x_scRNAseq':
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))
@@ -400,10 +404,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
-    if qc_protocol == 'singlecell' and \
-       project.info.single_cell_platform in ('10xGenomics Chromium 3\'v2',
-                                             '10xGenomics Chromium 3\'v3',):
-        # Cellranger count output
+    # Cellranger count output
+    if qc_protocol == '10x_scRNAseq':
         for output in cellranger_count_output(project):
             outputs.add(os.path.join(project.dirn,output))
     elif qc_protocol == '10x_scATAC':

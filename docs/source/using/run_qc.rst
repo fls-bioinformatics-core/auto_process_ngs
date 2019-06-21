@@ -17,14 +17,15 @@ can be used to run the QC pipeline on an arbitrary subdirectory.
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
 
-============== ========================
-QC protocol    Used for
-============== ========================
-``standardPE`` Standard paired-end data i.e. R1/R2 Fastq pairs
-``standardSE`` Standard single-end data i.e. R1 Fastqs only
-``singlecell`` Single cell RNA-seq data from ICELL8 and 10xGenomics platforms
-``10x_scATAC`` 10xGenomics single cell ATAC-seq
-============== ========================
+================ ========================
+QC protocol      Used for
+================ ========================
+``standardPE``   Standard paired-end data i.e. R1/R2 Fastq pairs
+``standardSE``   Standard single-end data i.e. R1 Fastqs only
+``10x_scATAC``   10xGenomics single cell ATAC-seq
+``10x_scRNAseq`` 10xGenomics single cell RNA-seq
+``singlecell``   ICELL8 single cell RNA-seq
+================ ========================
 
 The protocol is determined automatically for each project.
 
@@ -39,7 +40,7 @@ each Fastq file in the project:
    or on R1 (for single-end data), to determine the strandedness
    of the sequence data
 
-For the single-cell data from ICELL8 and 10xGenomics Chromium
+For the single-cell RNA-seq data from ICELL8 and 10xGenomics Chromium
 platforms:
 
  * `fastqc`_ is run for each Fastq file
@@ -49,6 +50,14 @@ platforms:
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _fastq_strand: https://genomics-bcftbx.readthedocs.io/en/latest/reference/qc_pipeline.html#fastq-strand
+
+In addition for 10xGenomics scRNA-seq and scATAC data:
+
+ * Single library analysis is run using the ``count`` command of
+   either `cellranger`_ or `cellranger_atac`_ (as appropriate)
+
+.. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
+.. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
 
 `multiQC`_ is also run to summarise the QC from all the Fastqs in the
 project.

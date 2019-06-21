@@ -538,6 +538,45 @@ class TestCheckCellrangerCountOutputs(unittest.TestCase):
         # Check the outputs
         self.assertEqual(check_cellranger_count_outputs(project),[])
 
+    def test_check_cellranger_count_outputs_10x_scRNAseq_missing(self):
+        """
+        check_cellranger_count_outputs: cellranger count output missing (10x_scRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3", })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_count_outputs_10x_scRNAseq_present(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present (10x_scRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
+
 class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
     """
     Tests for the 'check_cellranger_atac_count_outputs' function
@@ -551,7 +590,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
 
-    def test_check_cellranger_atac_count_outputs_singlecell_missing(self):
+    def test_check_cellranger_atac_count_outputs_10x_scATAC_missing(self):
         """
         check_cellranger_atac_count_outputs: cellranger-atac count output missing (10x_scATAC)
         """
@@ -570,7 +609,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
         # Check the outputs
         self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
 
-    def test_check_cellranger_atac_count_outputs_singlecell_present(self):
+    def test_check_cellranger_atac_count_outputs_10x_scATAC_present(self):
         """
         check_cellranger_atac_count_outputs: cellranger-atac count output present (10x_scATAC)
         """
@@ -841,9 +880,9 @@ class TestExpectedOutputs(unittest.TestCase):
         for r in reference_outputs:
             self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
 
-    def test_expected_outputs_singlecell_with_cellranger(self):
+    def test_expected_outputs_10x_scRNA_seq_with_cellranger(self):
         """
-        expected_outputs: single-cell with cellranger
+        expected_outputs: 10xGenomics scRNA-seq with cellranger
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
@@ -878,7 +917,7 @@ class TestExpectedOutputs(unittest.TestCase):
                                                                  p.name)),
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
-                                    qc_protocol="singlecell")
+                                    qc_protocol="10x_scRNAseq")
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -888,9 +927,9 @@ class TestExpectedOutputs(unittest.TestCase):
             self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
                             "%s not found in expected" % r)
 
-    def test_expected_outputs_scATAC_with_cellranger_atac(self):
+    def test_expected_outputs_10x_scATAC_with_cellranger_atac(self):
         """
-        expected_outputs: scATAC-seq with cellranger-atac
+        expected_outputs: 10xGenomics scATAC-seq with cellranger-atac
         """
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",

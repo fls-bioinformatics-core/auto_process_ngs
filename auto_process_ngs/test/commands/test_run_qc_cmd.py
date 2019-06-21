@@ -342,10 +342,12 @@ mouse = /data/genomeIndexes/mm10/STAR
             metadata={ "instrument_datestamp": "170901" },
             project_metadata={ "AB": { "Organism": "human",
                                        "Single cell platform":
-                                       "10xGenomics Chromium 3'v3", },
+                                       "10xGenomics Chromium 3'v3",
+                                       "Library type": "scRNA-seq", },
                                "CDE": { "Organism": "mouse",
                                         "Single cell platform":
-                                        "10xGenomics Chromium 3'v3", } },
+                                        "10xGenomics Chromium 3'v3",
+                                        "Library type": "scRNA-seq", } },
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with fastq_strand indexes and
