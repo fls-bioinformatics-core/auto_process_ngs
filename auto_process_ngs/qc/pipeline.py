@@ -298,8 +298,7 @@ class QCPipeline(Pipeline):
             )
             self.add_task(get_cellranger_reference_data,
                           runner=self.runners['verify_runner'],
-                          log_dir=log_dir,
-                          verbose=True)
+                          log_dir=log_dir)
 
             # Check outputs for cellranger count
             check_cellranger_count = CheckCellrangerCountOutputs(
@@ -335,8 +334,7 @@ class QCPipeline(Pipeline):
                           requires=(get_cellranger_reference_data,
                                     check_cellranger_count,),
                           runner=self.runners['cellranger_runner'],
-                          log_dir=log_dir,
-                          verbose=True)
+                          log_dir=log_dir)
 
             # Set cell count
             set_cellranger_cell_count = SetCellCountFromCellrangerCount(
