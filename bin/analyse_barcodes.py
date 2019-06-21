@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analyse_barcodes.py: analyse index sequences from Illumina FASTQs
-#     Copyright (C) University of Manchester 2016 Peter Briggs
+#     Copyright (C) University of Manchester 2016,2019 Peter Briggs
 #
 """
 analyse_barcodes.py
@@ -30,7 +30,8 @@ from auto_process_ngs.bcl2fastq_utils import make_custom_sample_sheet
 from auto_process_ngs.bcl2fastq_utils import check_barcode_collisions
 from auto_process_ngs.tenx_genomics_utils import has_chromium_sc_indices
 
-__version__ = "0.1.0"
+from auto_process_ngs import get_version
+__version__ = get_version()
 
 #######################################################################
 # Functions
@@ -141,10 +142,10 @@ if __name__ == '__main__':
     p.add_option('-n','--no-report',
                  action='store_true',dest='no_report',default=None,
                  help="suppress reporting (overrides --report)")
-    # Report name and version
-    p.print_version()
     # Process command line
     opts,args = p.parse_args()
+    # Report name and version
+    p.print_version()
     # Anything to do?
     if len(args) == 0:
         if opts.use_counts:
