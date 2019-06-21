@@ -376,6 +376,7 @@ if __name__ == "__main__":
     ws.append_row(["Sample","Nreads"])
     for sample in data:
         ws.append_row([sample,data[sample]])
+    ws.freeze_panes = 'A2'
     # Reads per barcode
     data = json_data['reads_per_barcode']
     ws = wb.add_work_sheet("barcodes","Reads per barcode")
@@ -385,6 +386,7 @@ if __name__ == "__main__":
                        data[barcode]['barcode'],
                        data[barcode]['fastq_barcode'],
                        data[barcode]['assigned_reads']])
+    ws.freeze_panes = 'A2'
     # Undetermined barcodes
     data = json_data['undetermined_barcodes']
     ws = wb.add_work_sheet("undetermined","Undetermined barcodes")
@@ -393,6 +395,7 @@ if __name__ == "__main__":
     for barcode in data['barcodes']:
         ws.append_row([barcode,
                        data['barcodes'][barcode]])
+    ws.freeze_panes = 'A3'
     wb.save_as_xlsx(xlsx_stats_file)
     report("Wrote %s" % xlsx_stats_file)
 
