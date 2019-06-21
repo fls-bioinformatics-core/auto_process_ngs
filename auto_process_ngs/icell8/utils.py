@@ -120,7 +120,7 @@ def get_batch_size(fastqs,min_batches=1,
 
     # Assert that all reads are covered with none left over
     # with no remainder
-    assert(batch_size*nbatches >= nreads,"Batches won't cover all reads")
+    assert(batch_size*nbatches >= nreads),"Batches won't cover all reads"
     return (batch_size,nbatches)
 
 def batch_fastqs(fastqs,batch_size,basename="batched",

@@ -170,7 +170,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if protocol not in MAKE_FASTQS_PROTOCOLS:
         raise Exception("Unknown protocol: '%s' (must be one of "
                         "%s)" % (protocol,
-                                 ','.join([MAKE_FASTQS_PROTOCOLS])))
+                                 ','.join(MAKE_FASTQS_PROTOCOLS)))
     # Unaligned dir
     if unaligned_dir is not None:
         ap.params['unaligned_dir'] = unaligned_dir
