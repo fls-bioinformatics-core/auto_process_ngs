@@ -360,28 +360,39 @@ if __name__ == "__main__":
     wb = XLSWorkBook("ICELL8 scATAC-seq")
     # Summary
     ws = wb.add_work_sheet("summary","Summary")
-    ws.insert_block_data("Command line: %s" % ' '.join(sys.argv[1:]))
+    data = json_data['summary']
+    ws.insert_block_data("Command line: %s" % data['command_line'])
     ws.append_row(["Swap I1/I2 fastqs",
-                   "%s" % ('YES' if args.swap_i1_and_i2 else 'NO',)])
+                   "%s" % ('YES' if data['swap_i1_and_i2'] else 'NO',)])
     ws.append_row(["Reverse complement",
-                   "%s" % (args.reverse_complement.upper()
-                           if args.reverse_complement else '',)])
+                   "%s" % (data['reverse_complement'].upper()
+                           if data['reverse_complement'] else '',)])
+    ws.append_row(["Number of cells",data['number_of_barcodes']])
+    ws.append_row(["Number of cells with reads",
+                   data['number_of_barcodes_with_reads']])
     # Reads per sample
+    data = json_data['reads_per_sample']
     ws = wb.add_work_sheet("samples","Reads per sample")
-    with open(sample_counts_file,'r') as fp:
-        ws.insert_block_data(fp.read())
+    ws.append_row(["Sample","Nreads"])
+    for sample in data:
+        ws.append_row([sample,data[sample]])
     # Reads per barcode
+    data = json_data['reads_per_barcode']
     ws = wb.add_work_sheet("barcodes","Reads per barcode")
-    with open(barcode_counts_file,'r') as fp:
-        ws.insert_block_data(fp.read())
+    ws.append_row(["Sample","Well list barcode","Fastq barcode","Nreads"])
+    for barcode in data:
+        ws.append_row([data[barcode]['sample'],
+                       data[barcode]['barcode'],
+                       data[barcode]['fastq_barcode'],
+                       data[barcode]['assigned_reads']])
     # Undetermined barcodes
+    data = json_data['undetermined_barcodes']
     ws = wb.add_work_sheet("undetermined","Undetermined barcodes")
-    with open(undetermined_counts_file,'r') as fp:
-        ws.append_row(data=("Top 100 undetermined barcodes",))
-        for i,line in enumerate(fp):
-            ws.append_row(data=line.rstrip('\n').split('\t'))
-            if i == 100:
-                break
+    ws.append_row(["Top %d unassigned barcodes" % data['number_reported'],])
+    ws.append_row(["Barcode","Nreads"])
+    for barcode in data['barcodes']:
+        ws.append_row([barcode,
+                       data['barcodes'][barcode]])
     wb.save_as_xlsx(xlsx_stats_file)
     report("Wrote %s" % xlsx_stats_file)
 
