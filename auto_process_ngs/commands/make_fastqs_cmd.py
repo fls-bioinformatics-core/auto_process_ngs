@@ -1108,9 +1108,11 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
         mkdirs(os.path.join(bcl2fastq_dir,d))
     project = illumina_data.projects[0]
     mkdirs(os.path.join(bcl2fastq_dir,project.name))
-    # Copy the reports
-    os.link(os.path.join(tmp_demultiplex_dir,'icell8_atac_stats.xlsx'),
-            os.path.join(bcl2fastq_dir,'Reports','icell8_atac_stats.xlsx'))
+    # Copy the reports and JSON file
+    for f in ('icell8_atac_stats.xlsx',
+              'icell8_atac_stats.json'):
+        os.link(os.path.join(tmp_demultiplex_dir,f),
+                os.path.join(bcl2fastq_dir,'Reports',f))
     # Copy fastqs to final location
     for f in os.listdir(tmp_demultiplex_dir):
         if f.endswith(".fastq.gz"):
