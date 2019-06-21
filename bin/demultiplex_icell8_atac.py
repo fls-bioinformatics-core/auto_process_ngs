@@ -20,6 +20,7 @@ import sys
 import os
 import tempfile
 import shutil
+import json
 from argparse import ArgumentParser
 from itertools import izip
 from multiprocessing import Pool
@@ -48,7 +49,9 @@ UNASSIGNED = "Undetermined"
 if __name__ == "__main__":
 
     # Set up parser
-    p = ArgumentParser()
+    p = ArgumentParser(description="Assign reads from ICELL8 ATAC "
+                       "R1/R2/I1/I2 Fastq set to barcodes and samples "
+                       "in a well list file")
     p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
     p.add_argument("fastq_r1",metavar="FASTQ_R1",help="FASTQ R1")
     p.add_argument("fastq_r2",metavar="FASTQ_R2",help="FASTQ R2")
@@ -291,6 +294,65 @@ if __name__ == "__main__":
     os.remove(log_file)
     report("Undetermined barcode counts written to %s" %
            undetermined_counts_file)
+
+    # Generate a JSON file with key data
+    json_data = dict()
+    json_data['summary'] = dict()
+    json_data['summary']['command_line'] = ' '.join(sys.argv)
+    json_data['summary']['command_line_arguments'] = sys.argv[1:]
+    json_data['summary']['swap_i1_and_i2'] = args.swap_i1_and_i2
+    json_data['summary']['reverse_complement'] = args.reverse_complement
+    json_data['summary']['well_list_file'] = well_list_file
+    json_data['summary']['number_of_barcodes'] = len(well_list.barcodes())
+    with open(barcode_counts_file,'r') as fp:
+        number_of_barcodes_with_reads = 0
+        for line in fp:
+            if line.startswith('#'):
+                continue
+            sample,barcode,fastq_barcode,count = line.strip().split('\t')
+            count = int(count)
+            if count > 0:
+                number_of_barcodes_with_reads += 1
+        json_data['summary']['number_of_barcodes_with_reads'] = \
+                                        number_of_barcodes_with_reads
+    json_data['summary']['number_of_samples'] = len(well_list.samples())
+    json_data['reads_per_sample'] = dict()
+    for sample in well_list.samples():
+        json_data['reads_per_sample'][sample] = sample_counts[sample]
+    json_data['reads_per_sample'][UNASSIGNED] = sample_counts[UNASSIGNED]
+    json_data['reads_per_barcode'] = dict()
+    with open(barcode_counts_file,'r') as fp:
+        number_of_barcodes_with_reads = 0
+        for line in fp:
+            if line.startswith('#'):
+                continue
+            sample,barcode,fastq_barcode,count = line.strip().split('\t')
+            count = int(count)
+            json_data['reads_per_barcode'][barcode] = {
+                'sample': sample,
+                'barcode': barcode,
+                'fastq_barcode': fastq_barcode,
+                'assigned_reads': count,
+            }
+    json_data['undetermined_barcodes'] = dict()
+    json_data['undetermined_barcodes']['barcodes'] = dict()
+    with open(undetermined_counts_file,'r') as fp:
+        n_reported = 0
+        for line in fp:
+            if line.startswith('#'):
+                continue
+            barcode,count=line.rstrip('\n').split('\t')
+            json_data['undetermined_barcodes']['barcodes'][barcode] = int(count)
+            n_reported += 1
+            if n_reported == 100:
+                break
+        json_data['undetermined_barcodes']['number_reported'] = n_reported
+
+    # Write data to JSON file
+    json_file = os.path.join(output_dir,"icell8_atac_stats.json")
+    with open(json_file,'w') as fp:
+        json.dump(json_data,fp,indent=2)
+    report("Wrote JSON file: %s" % json_file)
 
     # Write stats to XLSX file
     report("Making XLSX file with statistics")
