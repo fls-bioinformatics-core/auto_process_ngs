@@ -408,6 +408,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
             except Exception as ex:
                 raise Exception("ICELL8 scATAC-seq Fastq generation failed: "
                                 "'%s'" % ex)
+            # Turn off barcode analysis
+            analyse_barcodes = False
         elif protocol == '10x_chromium_sc':
             # 10xGenomics Chromium SC
             if bases_mask == 'auto':
