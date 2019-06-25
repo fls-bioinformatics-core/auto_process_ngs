@@ -1040,8 +1040,15 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
     if nprocessors is None:
         nprocessors = ap.settings.bcl2fastq.nprocessors
     # Do Fastq generation to a temporary directory
-    tmp_bcl2fastq = os.path.join(ap.analysis_dir,
-                                 "__icell8.bcl2fastq")
+    icell8_tmp = os.path.join(ap.analysis_dir,"__icell8")
+    if os.path.exists(icell8_tmp):
+        # Remove existing working directory
+        logger.warning("Found existing working directory '%s '"
+                       "(will be removed)" % icell8_tmp)
+        shutil.rmtree(icell8_tmp)
+    mkdirs(icell8_tmp)
+    icell8_unaligned = os.path.join("__icell8","bcl2fastq")
+    tmp_bcl2fastq = os.path.join(ap.analysis_dir,icell8_unaligned)
     if not os.path.exists(tmp_bcl2fastq):
         exit_code = bcl_to_fastq(
             ap,
@@ -1061,15 +1068,17 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
     # Load data from the temporary directory and get Fastqs
     illumina_data = IlluminaData.IlluminaData(
             ap.analysis_dir,
-            unaligned_dir="__icell8.bcl2fastq")
+            unaligned_dir=icell8_unaligned)
     fastqs = []
     for project in illumina_data.projects:
         for sample in project.samples:
             for fq in sample.fastq:
                 fastqs.append(os.path.join(sample.dirn,fq))
+    if not fastqs:
+        logger.error("No Fastqs were produced, cannot proceed")
+        return 1
     # Do demultiplexing into samples based on well list
-    tmp_demultiplex_dir = os.path.join(ap.analysis_dir,
-                                       "__icell8.demultiplexed")
+    tmp_demultiplex_dir = os.path.join(icell8_tmp,"demultiplexed")
     if not os.path.exists(tmp_demultiplex_dir):
         demultiplexer = Command('demultiplex_icell8_atac.py',
                                 '--mode=samples',
@@ -1126,7 +1135,8 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
     print "Moving %s to final destination: %s" % (bcl2fastq_dir,
                                                   unaligned_dir)
     os.rename(bcl2fastq_dir,unaligned_dir)
-    # !!!!FIXME Remove the intermediates!!!
+    # Remove the intermediate directories
+    shutil.rmtree(icell8_tmp)
     # Finish
     return 0
 
