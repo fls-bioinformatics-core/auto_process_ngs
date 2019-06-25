@@ -741,9 +741,6 @@ def add_report_command(cmdparser):
                    default=False,
                    help="print tab-delimited line (one per project) "
                    "suitable for injection into a spreadsheet")
-    p.add_argument('--full',action='store_true',dest='full',
-                   default=False,
-                   help="print summary report suitable for record-keeping")
     p.add_argument('--fields',action='store',dest='fields',default=None,
                    help="fields to report")
     p.add_argument('--template',action='store',dest='template',
@@ -1203,9 +1200,6 @@ def report(args):
         mode = ReportingMode.SUMMARY
     elif args.projects:
         mode = ReportingMode.PROJECTS
-    elif args.full:
-        logging.critical("--full option no longer supported")
-        sys.exit(1)
     else:
         mode = None
     if args.fields:
