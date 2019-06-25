@@ -93,27 +93,6 @@ __settings = Settings()
 # Functions
 #######################################################################
 
-# Supporting functions
-
-def add_modulefiles_option(p,dest='modulefiles',default=None):
-    """
-    Add a --modulefiles argument to a parser instance
-
-    The values can be accessed via the 'modulefiles' property of the
-    parser.
-    """
-    add_arg(p,'--modulefiles',action='store',
-            dest=dest,default=default,
-            help="Specify comma-separated list of environment "
-            "modules to load before executing commands (overrides "
-            "any modules specified in the global settings)")
-
-def set_debug(debug_flag):
-    """
-    Turn on debug output
-    """
-    if debug_flag: logging.getLogger().setLevel(logging.DEBUG)
-
 # Command line parsers
 
 def add_setup_command(cmdparser):
@@ -945,6 +924,444 @@ def add_update_fastq_stats_command(cmdparser):
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
 
+# Commands
+
+def config(args):
+    """
+    Implement functionality for 'config' command
+    """
+    if args.init:
+        # Create new settings file and reload
+        settings_file = locate_settings_file(create_from_sample=True)
+        settings = Settings(settings_file=settings_file)
+    else:
+        settings = __settings
+    if args.key_value or args.new_section:
+        if args.new_section is not None:
+            # Add new sections
+            for new_section in args.new_section:
+                try:
+                    new_section = new_section.strip("'").strip('"')
+                    print("Adding section '%s'" % new_section)
+                    settings.add_section(new_section)
+                except ValueError:
+                    logging.error("Can't process '%s'" % args.section)
+        if args.key_value is not None:
+            # Update parameters
+            for key_value in args.key_value:
+                try:
+                    i = key_value.index('=')
+                    key = key_value[:i]
+                    value = key_value[i+1:].strip("'").strip('"')
+                    print("Setting '%s' to '%s'" % (key,value))
+                    settings.set(key,value)
+                except ValueError:
+                    logging.error("Can't process '%s'" % args.key_value)
+        # Save the updated settings to file
+        settings.save()
+    elif not args.init:
+        # Report the current configuration settings
+        paginate(settings.report_settings())
+
+def setup(args):
+    """
+    Implement functionality for 'setup' command
+    """
+    d = AutoProcess()
+    if args.unaligned_dir is None:
+        d.setup(args.run_dir,
+                analysis_dir=args.analysis_dir,
+                sample_sheet=args.sample_sheet,
+                unaligned_dir=args.unaligned_dir)
+
+def params(args):
+    """
+    Implement functionality for 'params' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir,allow_save_params=False)
+    # Update the project-specific parameters
+    if args.key_value is not None:
+        for key_value in args.key_value:
+            try:
+                i = key_value.index('=')
+                key = key_value[:i]
+                value = key_value[i+1:].strip("'").strip('"')
+                d.set_param(key,value)
+            except ValueError:
+                logging.error("Can't process '%s'" % args.key_value)
+            d.save_parameters(force=True)
+    else:
+        d.print_params()
+
+def metadata(args):
+    """
+    Implement functionality for 'metadata' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir,allow_save_params=False)
+    # Update the metadata associated with the analysis
+    if args.update:
+        d.update_metadata()
+    if args.key_value is not None:
+        for key_value in args.key_value:
+            try:
+                i = key_value.index('=')
+                key = key_value[:i]
+                value = key_value[i+1:].strip("'").strip('"')
+                d.set_metadata(key,value)
+            except ValueError:
+                logging.error("Can't process '%s'" % args.key_value)
+    if args.key_value or args.update:
+        # Save updates to file
+        d.save_metadata(force=True)
+    else:
+        # Only print values
+        d.print_metadata()
+
+def samplesheet(args):
+    """
+    Implement functionality for 'samplesheet' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    # Sample sheet operations
+    if args.edit:
+        # Manually edit the sample sheet
+        d.edit_samplesheet()
+    else:
+        # Predict the outputs
+        paginate(predict_outputs(
+            sample_sheet_file=d.params.sample_sheet))
+
+def make_fastqs(args):
+    """
+    Implement functionality for 'make_fastqs' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    # Deal with --no-lane-splitting
+    if args.no_lane_splitting and args.use_lane_splitting:
+        raise Exception("--no-lane-splitting and --use-lane-splitting "
+                        "are mutually exclusive")
+    elif args.no_lane_splitting:
+        no_lane_splitting = True
+    elif args.use_lane_splitting:
+        no_lane_splitting = False
+    else:
+        no_lane_splitting = None
+    # Deal with --[no-]create-empty-fastqs
+    if args.create_empty_fastqs and args.no_create_empty_fastqs:
+        raise Exception("--create-empty-fastqs and --no-create-empty-fastqs "
+                        "are mutually exclusive")
+    elif args.create_empty_fastqs:
+        create_empty_fastqs = True
+    elif args.no_create_empty_fastqs:
+        create_empty_fastqs = False
+    else:
+        create_empty_fastqs = None
+    # Deal with --lanes
+    if args.lanes is not None:
+        lanes = bcf_utils.parse_lanes(args.lanes)
+    else:
+        lanes = None
+    # Deal with --skip-... for fastq generation
+    skip_fastq_generation = (args.skip_fastq_generation or
+                             args.skip_bcl2fastq)
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the make_fastqs step
+    d.make_fastqs(
+        protocol=args.protocol,
+        skip_rsync=args.skip_rsync,
+        nprocessors=args.nprocessors,
+        runner=runner,
+        remove_primary_data=args.remove_primary_data,
+        ignore_missing_bcl=args.ignore_missing_bcl,
+        ignore_missing_stats=args.ignore_missing_stats,
+        generate_stats=(not args.no_stats),
+        analyse_barcodes=(not args.no_barcode_analysis),
+        require_bcl2fastq_version=args.bcl2fastq_version,
+        unaligned_dir=args.unaligned_dir,
+        sample_sheet=args.sample_sheet,
+        bases_mask=args.bases_mask,
+        lanes=lanes,
+        platform=args.platform,
+        no_lane_splitting=no_lane_splitting,
+        minimum_trimmed_read_length=args.minimum_trimmed_read_length,
+        mask_short_adapter_reads=args.mask_short_adapter_reads,
+        stats_file=args.stats_file,
+        per_lane_stats_file=args.per_lane_stats_file,
+        barcode_analysis_dir=args.barcode_analysis_dir,
+        skip_fastq_generation=skip_fastq_generation,
+        only_fetch_primary_data=args.only_fetch_primary_data,
+        create_empty_fastqs=create_empty_fastqs,
+        cellranger_jobmode=args.job_mode,
+        cellranger_mempercore=args.mem_per_core,
+        cellranger_maxjobs=args.max_jobs,
+        cellranger_jobinterval=args.job_interval,
+        cellranger_localcores=args.local_cores,
+        cellranger_localmem=args.local_mem,
+        cellranger_ignore_dual_index=args.ignore_dual_index)
+
+def setup_analysis_dirs(args):
+    """
+    Implement functionality for 'setup_analysis_dirs' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    d.setup_analysis_dirs(unaligned_dir=args.unaligned_dir,
+                          ignore_missing_metadata=
+                          args.ignore_missing_metadata,
+                          undetermined_project=args.undetermined,
+                          short_fastq_names=args.short_fastq_names,
+                          link_to_fastqs=args.link_to_fastqs)
+
+def run_qc(args):
+    """
+    Implement functionality for 'run_qc' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the run_qc step
+    retcode = d.run_qc(projects=args.project_pattern,
+                       max_jobs=args.max_jobs,
+                       ungzip_fastqs=args.ungzip_fastqs,
+                       fastq_screen_subset=args.subset,
+                       nthreads=args.nthreads,
+                       fastq_dir=args.fastq_dir,
+                       qc_dir=args.qc_dir,
+                       report_html=args.html_file,
+                       runner=runner)
+    sys.exit(retcode)
+
+def publish_qc(args):
+    """
+    Implement functionality for 'publish_qc' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    d.publish_qc(projects=args.project_pattern,
+                 location=args.qc_dir,
+                 use_hierarchy=(args.use_hierarchy == 'yes'),
+                 exclude_zip_files=(args.exclude_zip_files == 'yes'),
+                 ignore_missing_qc=args.ignore_missing_qc,
+                 regenerate_reports=args.regenerate_reports,
+                 force=args.force,legacy=args.legacy_mode)
+
+def archive(args):
+    """
+    Implement functionality for 'archive' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    retcode = d.archive(archive_dir=args.archive_dir,
+                        platform=args.platform,
+                        year=args.year,
+                        group=args.group,
+                        perms=args.permissions,
+                        final=args.final,
+                        force=args.force,
+                        dry_run=args.dry_run)
+    sys.exit(retcode)
+
+def report(args):
+    """
+    Implement functionality for 'report' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir,allow_save_params=False)
+    if args.logging:
+        mode = ReportingMode.CONCISE
+    elif args.summary:
+        mode = ReportingMode.SUMMARY
+    elif args.projects:
+        mode = ReportingMode.PROJECTS
+    elif args.full:
+        logging.critical("--full option no longer supported")
+        sys.exit(1)
+    else:
+        mode = None
+    if args.fields:
+        fields = str(args.fields).split(',')
+    elif args.template:
+        try:
+            fields = str(__settings.reporting_templates[args.template]).split(',')
+        except KeyError:
+            print("Template '%s' not in list of custom templates:" %
+                  args.template)
+            if __settings.reporting_templates:
+                for template in __settings.reporting_templates:
+                    print("- %s" % template)
+                else:
+                    print("- (no templates defined)")
+                logging.critical("--template: unrecognised template '%s'"
+                                 % args.template)
+                sys.exit(1)
+    else:
+        fields = None
+    d.report(mode=mode,fields=fields,out_file=args.out_file)
+
+def readme(args):
+    """
+    Implement functionality for 'readme' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    if args.init:
+        d.init_readme()
+    else:
+        if d.readme_file is None:
+            print("No README file for %s" % d.analysis_dir)
+        else:
+            if args.message:
+                message = '\n'.join(
+                    bcf_utils.split_into_lines(
+                        "[%s]\n%s" % (time.ctime(),
+                                      str(args.message)),
+                        80,sympathetic=True))
+                with open(d.readme_file,'a') as fp:
+                    fp.write("\n%s\n" % message)
+            elif args.edit:
+                d.edit_readme()
+            else:
+                print(d.readme_file)
+                if args.view:
+                    paginate(open(d.readme_file,'r').read())
+
+def clone(args):
+    """
+    Implement functionality for 'clone' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir,allow_save_params=False)
+    d.clone(args.clone_dir,
+            copy_fastqs=args.copy_fastqs,
+            exclude_projects=args.exclude_projects)
+
+def analyse_barcodes(args):
+    """
+    Implement functionality for 'analyse_barcodes' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    # Deal with --lanes
+    if args.lanes is not None:
+        lanes = bcf_utils.parse_lanes(args.lanes)
+    else:
+        lanes = None
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do barcode analysis
+    d.analyse_barcodes(unaligned_dir=args.unaligned_dir,
+                       lanes=lanes,
+                       mismatches=args.mismatches,
+                       cutoff=args.cutoff,
+                       sample_sheet=args.sample_sheet,
+                       barcode_analysis_dir=args.barcode_analysis_dir,
+                       runner=runner,
+                       force=args.force)
+
+def merge_fastq_dirs(args):
+    """
+    Implement functionality for 'merge_fastq_dirs' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    d.merge_fastq_dirs(args.unaligned_dir,
+                       output_dir=args.output_dir,
+                       dry_run=args.dry_run)
+
+def import_project(args):
+    """
+    Implement functionality for 'import_project' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    d.import_project(args.project_dir)
+
+def update_fastq_stats(args):
+    """
+    Implement functionality for 'update_fastq_stats' command
+    """
+    analysis_dir = args.analysis_dir
+    if not analysis_dir:
+        analysis_dir = os.getcwd()
+    d = AutoProcess(analysis_dir)
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the update
+    d.update_fastq_stats(
+        unaligned_dir=args.unaligned_dir,
+        stats_file=args.stats_file,
+        per_lane_stats_file=args.per_lane_stats_file,
+        add_data=args.add_data,
+        nprocessors=args.nprocessors,
+        runner=runner)
+
+# Supporting functions
+
+def add_modulefiles_option(p,dest='modulefiles',default=None):
+    """
+    Add a --modulefiles argument to a parser instance
+
+    The values can be accessed via the 'modulefiles' property of the
+    parser.
+    """
+    add_arg(p,'--modulefiles',action='store',
+            dest=dest,default=default,
+            help="Specify comma-separated list of environment "
+            "modules to load before executing commands (overrides "
+            "any modules specified in the global settings)")
+
+def set_debug(debug_flag):
+    """
+    Turn on debug output
+    """
+    if debug_flag: logging.getLogger().setLevel(logging.DEBUG)
+
 # Main function
 
 def main():
@@ -955,6 +1372,7 @@ def main():
         description="Automated processing & QC for Illumina sequencing data",
         version="%prog "+__version__,
         subparser=argparse.ArgumentParser)
+
     # Add commands
     add_config_command(p)
     add_setup_command(p)
@@ -973,8 +1391,29 @@ def main():
     add_merge_fastq_dirs_command(p)
     add_import_project_command(p)
     add_update_fastq_stats_command(p)
+
+    # Map commands to functions
+    commands = {
+        'config': config,
+        'setup': setup,
+        'params': params,
+        'metadata': metadata,
+        'samplesheet': samplesheet,
+        'make_fastqs': make_fastqs,
+        'setup_analysis_dirs': setup_analysis_dirs,
+        'run_qc': run_qc,
+        'publish_qc': publish_qc,
+        'archive': archive,
+        'report': report,
+        'readme': readme,
+        'clone': clone,
+        'analyse_barcodes': analyse_barcodes,
+        'merge_fastq_dirs': merge_fastq_dirs,
+        'import_project': import_project,
+        'update_fastq_stats': update_fastq_stats,
+    }
     
-    # Process remaining command line
+    # Process command line
     cmd,args = p.parse_args()
 
     # Report name and version
@@ -1005,314 +1444,8 @@ def main():
         for modulefile in modulefiles.split(','):
             envmod_load(modulefile)
 
-    # Setup the processing object and run the requested command
-    if cmd == 'config':
-        if args.init:
-            # Create new settings file and reload
-            settings_file = locate_settings_file(create_from_sample=True)
-            settings = Settings(settings_file=settings_file)
-        else:
-            settings = __settings
-        if args.key_value or args.new_section:
-            if args.new_section is not None:
-                # Add new sections
-                for new_section in args.new_section:
-                    try:
-                        new_section = new_section.strip("'").strip('"')
-                        print "Adding section '%s'" % new_section
-                        settings.add_section(new_section)
-                    except ValueError:
-                        logging.error("Can't process '%s'" % args.section)
-            if args.key_value is not None:
-                # Update parameters
-                for key_value in args.key_value:
-                    try:
-                        i = key_value.index('=')
-                        key = key_value[:i]
-                        value = key_value[i+1:].strip("'").strip('"')
-                        print "Setting '%s' to '%s'" % (key,value)
-                        settings.set(key,value)
-                    except ValueError:
-                        logging.error("Can't process '%s'" % args.key_value)
-            # Save the updated settings to file
-            settings.save()
-        elif not args.init:
-            # Report the current configuration settings
-            paginate(settings.report_settings())
-    elif cmd == 'setup':
-        d = AutoProcess()
-        if args.unaligned_dir is None:
-            d.setup(args.run_dir,
-                    analysis_dir=args.analysis_dir,
-                    sample_sheet=args.sample_sheet,
-                    unaligned_dir=args.unaligned_dir)
-    elif cmd == 'clone':
-        analysis_dir = args.analysis_dir
-        if not analysis_dir:
-            analysis_dir = os.getcwd()
-        d = AutoProcess(analysis_dir,allow_save_params=False)
-        d.clone(args.clone_dir,
-                copy_fastqs=args.copy_fastqs,
-                exclude_projects=args.exclude_projects)
-    elif cmd == 'import_project':
-        analysis_dir = args.analysis_dir
-        if not analysis_dir:
-            analysis_dir = os.getcwd()
-        d = AutoProcess(analysis_dir)
-        d.import_project(args.project_dir)
-    else:
-        # For other options check if an analysis
-        # directory was specified
-        analysis_dir = args.analysis_dir
-        if not analysis_dir:
-            analysis_dir = os.getcwd()
-        # Turn off allow save for specific commands
-        if cmd in ('params','metadata','report'):
-            allow_save = False
-        # Run the specified stage
-        d = AutoProcess(analysis_dir,allow_save_params=allow_save)
-        if cmd == 'make_fastqs':
-            # Deal with --no-lane-splitting
-            if args.no_lane_splitting and args.use_lane_splitting:
-                p.error("--no-lane-splitting and --use-lane-splitting "
-                        "are mutually exclusive")
-            elif args.no_lane_splitting:
-                no_lane_splitting = True
-            elif args.use_lane_splitting:
-                no_lane_splitting = False
-            else:
-                no_lane_splitting = None
-            # Deal with --[no-]create-empty-fastqs
-            if args.create_empty_fastqs and args.no_create_empty_fastqs:
-                p.error("--create-empty-fastqs and --no-create-empty-fastqs "
-                        "are mutually exclusive")
-            elif args.create_empty_fastqs:
-                create_empty_fastqs = True
-            elif args.no_create_empty_fastqs:
-                create_empty_fastqs = False
-            else:
-                create_empty_fastqs = None
-            # Deal with --lanes
-            if args.lanes is not None:
-                lanes = bcf_utils.parse_lanes(args.lanes)
-            else:
-                lanes = None
-            # Deal with --skip-... for fastq generation
-            skip_fastq_generation = (args.skip_fastq_generation or
-                                     args.skip_bcl2fastq)
-            # Handle job runner specification
-            if args.runner is not None:
-                runner = fetch_runner(args.runner)
-            else:
-                runner = None
-            # Do the make_fastqs step
-            try:
-                d.make_fastqs(
-                    protocol=args.protocol,
-                    skip_rsync=args.skip_rsync,
-                    nprocessors=args.nprocessors,
-                    runner=runner,
-                    remove_primary_data=args.remove_primary_data,
-                    ignore_missing_bcl=args.ignore_missing_bcl,
-                    ignore_missing_stats=args.ignore_missing_stats,
-                    generate_stats=(not args.no_stats),
-                    analyse_barcodes=(not args.no_barcode_analysis),
-                    require_bcl2fastq_version=args.bcl2fastq_version,
-                    unaligned_dir=args.unaligned_dir,
-                    sample_sheet=args.sample_sheet,
-                    bases_mask=args.bases_mask,
-                    lanes=lanes,
-                    platform=args.platform,
-                    no_lane_splitting=no_lane_splitting,
-                    minimum_trimmed_read_length=args.minimum_trimmed_read_length,
-                    mask_short_adapter_reads=args.mask_short_adapter_reads,
-                    stats_file=args.stats_file,
-                    per_lane_stats_file=args.per_lane_stats_file,
-                    barcode_analysis_dir=args.barcode_analysis_dir,
-                    skip_fastq_generation=skip_fastq_generation,
-                    only_fetch_primary_data=args.only_fetch_primary_data,
-                    create_empty_fastqs=create_empty_fastqs,
-                    cellranger_jobmode=args.job_mode,
-                    cellranger_mempercore=args.mem_per_core,
-                    cellranger_maxjobs=args.max_jobs,
-                    cellranger_jobinterval=args.job_interval,
-                    cellranger_localcores=args.local_cores,
-                    cellranger_localmem=args.local_mem,
-                    cellranger_ignore_dual_index=args.ignore_dual_index)
-            except Exception as ex:
-                logging.fatal("make_fastqs: %s" % ex)
-                sys.exit(1)
-        elif cmd == 'merge_fastq_dirs':
-            d.merge_fastq_dirs(args.unaligned_dir,
-                               output_dir=args.output_dir,
-                               dry_run=args.dry_run)
-        elif cmd == 'update_fastq_stats':
-            # Handle job runner specification
-            if args.runner is not None:
-                runner = fetch_runner(args.runner)
-            else:
-                runner = None
-            # Do the updated
-            d.update_fastq_stats(
-                unaligned_dir=args.unaligned_dir,
-                stats_file=args.stats_file,
-                per_lane_stats_file=args.per_lane_stats_file,
-                add_data=args.add_data,
-                nprocessors=args.nprocessors,
-                runner=runner)
-        elif cmd == 'analyse_barcodes':
-            # Deal with --lanes
-            if args.lanes is not None:
-                lanes = bcf_utils.parse_lanes(args.lanes)
-            else:
-                lanes = None
-            # Handle job runner specification
-            if args.runner is not None:
-                runner = fetch_runner(args.runner)
-            else:
-                runner = None
-            # Do barcode analysis
-            d.analyse_barcodes(unaligned_dir=args.unaligned_dir,
-                               lanes=lanes,
-                               mismatches=args.mismatches,
-                               cutoff=args.cutoff,
-                               sample_sheet=args.sample_sheet,
-                               barcode_analysis_dir=args.barcode_analysis_dir,
-                               runner=runner,
-                               force=args.force)
-        elif cmd == 'setup_analysis_dirs':
-            d.setup_analysis_dirs(unaligned_dir=args.unaligned_dir,
-                                  ignore_missing_metadata=
-                                  args.ignore_missing_metadata,
-                                  undetermined_project=args.undetermined,
-                                  short_fastq_names=args.short_fastq_names,
-                                  link_to_fastqs=args.link_to_fastqs)
-        elif cmd == 'run_qc':
-            # Handle job runner specification
-            if args.runner is not None:
-                runner = fetch_runner(args.runner)
-            else:
-                runner = None
-            # Do the run_qc step
-            retcode = d.run_qc(projects=args.project_pattern,
-                               max_jobs=args.max_jobs,
-                               ungzip_fastqs=args.ungzip_fastqs,
-                               fastq_screen_subset=args.subset,
-                               nthreads=args.nthreads,
-                               fastq_dir=args.fastq_dir,
-                               qc_dir=args.qc_dir,
-                               report_html=args.html_file,
-                               runner=runner)
-            sys.exit(retcode)
-        elif cmd == 'samplesheet':
-            # Sample sheet operations
-            if args.edit:
-                # Manually edit the sample sheet
-                d.edit_samplesheet()
-            else:
-                # Predict the outputs
-                paginate(predict_outputs(
-                    sample_sheet_file=d.params.sample_sheet))
-        elif cmd == 'params':
-            # Update the project-specific parameters
-            if args.key_value is not None:
-                for key_value in args.key_value:
-                    try:
-                        i = key_value.index('=')
-                        key = key_value[:i]
-                        value = key_value[i+1:].strip("'").strip('"')
-                        d.set_param(key,value)
-                    except ValueError:
-                        logging.error("Can't process '%s'" % args.key_value)
-                d.save_parameters(force=True)
-            else:
-                d.print_params()
-        elif cmd == 'metadata':
-            # Update the metadata associated with the analysis
-            if args.update:
-                d.update_metadata()
-            if args.key_value is not None:
-                for key_value in args.key_value:
-                    try:
-                        i = key_value.index('=')
-                        key = key_value[:i]
-                        value = key_value[i+1:].strip("'").strip('"')
-                        d.set_metadata(key,value)
-                    except ValueError:
-                        logging.error("Can't process '%s'" % args.key_value)
-            if args.key_value or args.update:
-                # Save updates to file
-                d.save_metadata(force=True)
-            else:
-                # Only print values
-                d.print_metadata()
-        elif cmd == 'readme':
-            if args.init:
-                d.init_readme()
-            else:
-                if d.readme_file is None:
-                    print "No README file for %s" % d.analysis_dir
-                else:
-                    if args.message:
-                        message = '\n'.join(
-                            bcf_utils.split_into_lines(
-                                "[%s]\n%s" % (time.ctime(),
-                                              str(args.message)),
-                                80,sympathetic=True))
-                        with open(d.readme_file,'a') as fp:
-                            fp.write("\n%s\n" % message)
-                    elif args.edit:
-                        d.edit_readme()
-                    else:
-                        print d.readme_file
-                        if args.view:
-                            paginate(open(d.readme_file,'r').read())
-        elif cmd == 'archive':
-            retcode = d.archive(archive_dir=args.archive_dir,
-                                platform=args.platform,
-                                year=args.year,
-                                group=args.group,
-                                perms=args.permissions,
-                                final=args.final,
-                                force=args.force,
-                                dry_run=args.dry_run)
-            sys.exit(retcode)
-        elif cmd == 'publish_qc':
-            d.publish_qc(projects=args.project_pattern,
-                         location=args.qc_dir,
-                         use_hierarchy=(args.use_hierarchy == 'yes'),
-                         exclude_zip_files=(args.exclude_zip_files == 'yes'),
-                         ignore_missing_qc=args.ignore_missing_qc,
-                         regenerate_reports=args.regenerate_reports,
-                         force=args.force,legacy=args.legacy_mode)
-        elif cmd == 'report':
-            if args.logging:
-                mode = ReportingMode.CONCISE
-            elif args.summary:
-                mode = ReportingMode.SUMMARY
-            elif args.projects:
-                mode = ReportingMode.PROJECTS
-            elif args.full:
-                logging.critical("--full option no longer supported")
-                sys.exit(1)
-            else:
-                mode = None
-            if args.fields:
-                fields = str(args.fields).split(',')
-            elif args.template:
-                try:
-                    fields = str(__settings.reporting_templates[args.template]).split(',')
-                except KeyError:
-                    print "Template '%s' not in list of custom " \
-                        "templates:" % args.template
-                    if __settings.reporting_templates:
-                        for template in __settings.reporting_templates:
-                            print "- %s" % template
-                    else:
-                        print "- (no templates defined)"
-                    logging.critical("--template: unrecognised template '%s'"
-                                     % args.template)
-                    sys.exit(1)
-            else:
-                fields = None
-            d.report(mode=mode,fields=fields,out_file=args.out_file)
+    # Locate and run the requested command
+    try:
+        commands[cmd](args)
+    except KeyError:
+        raise Exception("Unrecognised command: '%s'" % cmd)
