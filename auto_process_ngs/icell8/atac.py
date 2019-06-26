@@ -24,6 +24,7 @@ import glob
 import time
 from itertools import izip
 from collections import defaultdict
+from bcftbx.FASTQFile import SequenceIdentifier
 from bcftbx.ngsutils import getreads
 from ..applications import Command
 from ..analysis import AnalysisFastq
@@ -71,6 +72,25 @@ def reverse_complement(s):
     for c in s[::-1]:
         s1 += REVERSE_COMPLEMENTS[c]
     return s1
+
+def update_fastq_read_index(read,index_sequence):
+    """
+    Update the index sequence (aka barcode) in a Fastq read
+
+    Arguments:
+      read (list): Fastq read to be updated, as a list
+        of lines (with the first element/line being the
+        sequence identifier line)
+      index_sequence (str): the index sequence to put
+        into the read header
+
+    Returns:
+      List: the updated Fastq read, as a list of lines.
+    """
+    seq_id = SequenceIdentifier(read[0])
+    seq_id.index_sequence = index_sequence
+    read[0] = str(seq_id)
+    return read
 
 def split_fastq(args):
     """
@@ -171,6 +191,9 @@ def assign_reads(args):
     - swap_i1_and_i2: boolean indicating whether I1 and I2
       Fastqs should be swapped for matching
     - reverse_complement: either None, 'i1', 'i2' or both
+    - rewrite_fastq_headers: boolean indicating whether to
+      write the matching ICELL8 barcodes into the Fastq
+      read headers on output
     - working_dir: working directory to write batches to
     - unassigned: basename for output files
 
@@ -187,7 +210,7 @@ def assign_reads(args):
         undetermined_barcodes_file).
     """
     # Unpack arguments
-    fastq_r1,fastq_r2,fastq_i1,fastq_i2,well_list_file,mode,swap_i1_and_i2,reverse_complement_index,working_dir,unassigned = args
+    fastq_r1,fastq_r2,fastq_i1,fastq_i2,well_list_file,mode,swap_i1_and_i2,reverse_complement_index,rewrite_fastq_headers,working_dir,unassigned = args
     # Batch ID is the trailing part of the name
     batch_id = AnalysisFastq(fastq_i1).extras.strip('_')
     # Label is sample name plus batch name
@@ -203,6 +226,9 @@ def assign_reads(args):
     if swap_i1_and_i2:
         report("[%s] Swapping I1 and I2 Fastqs for matching to well list" %
                label)
+    if rewrite_fastq_headers:
+        report("[%s] Rewriting Fastq read headers to include well list "
+               "barcodes")
     # Check mode
     if mode not in ("samples","barcodes"):
         report("[%s] Unrecognised mode!" % label,fp=sys.stderr)
@@ -293,6 +319,12 @@ def assign_reads(args):
                     barcode_counts[unassigned] += 1
                 # Determine sample
                 sample = sample_lookup[barcode]
+                # Rewrite read headers to include well list barcode
+                if rewrite_fastq_headers and barcode:
+                    r1 = update_fastq_read_index(r1,barcode)
+                    r2 = update_fastq_read_index(r2,barcode)
+                    i1 = update_fastq_read_index(i1,barcode)
+                    i2 = update_fastq_read_index(i2,barcode)
                 # Write the reads to the appropriate destinations
                 fpp.write("%s_R1" % sample,'\n'.join(r1))
                 fpp.write("%s_R2" % sample,'\n'.join(r2))
@@ -324,6 +356,12 @@ def assign_reads(args):
                     barcode_counts[unassigned] += 1
                 # Determine sample
                 sample = sample_lookup[barcode]
+                # Rewrite read headers to include well list barcode
+                if rewrite_fastq_headers and barcode:
+                    r1 = update_fastq_read_index(r1,barcode)
+                    r2 = update_fastq_read_index(r2,barcode)
+                    i1 = update_fastq_read_index(i1,barcode)
+                    i2 = update_fastq_read_index(i2,barcode)
                 # Write the reads to the appropriate destinations
                 if sample != unassigned:
                     # Assign to sample and barcode

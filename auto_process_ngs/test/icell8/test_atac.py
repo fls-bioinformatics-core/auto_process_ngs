@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import gzip
 from auto_process_ngs.icell8.atac import reverse_complement
+from auto_process_ngs.icell8.atac import update_fastq_read_index
 from auto_process_ngs.icell8.atac import split_fastq
 from auto_process_ngs.icell8.atac import assign_reads
 from auto_process_ngs.icell8.atac import concat_fastqs
@@ -271,6 +272,26 @@ class TestReverseComplementFunction(unittest.TestCase):
         """
         self.assertEqual(reverse_complement("ATGCN"),"NGCAT")
 
+# update_fastq_read_index
+class TestUpdateFastqReadIndexFunction(unittest.TestCase):
+    """
+    Tests for the update_fastq_read_index function
+    """
+    def test_update_fastq_read_index(self):
+        """
+        update_fastq_read_index: check index sequence is updated
+        """
+        read_in = ["@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1",
+                   "TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA",
+                   "+",
+                   "AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E'"]
+        read_out = update_fastq_read_index(read_in,"TAACCAAG+TAAGGCGA")
+        self.assertEqual(read_out,
+                         ["@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:TAACCAAG+TAAGGCGA",
+                          "TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA",
+                          "+",
+                          "AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E'"])
+
 # split_fastq
 class TestSplitFastqFunction(unittest.TestCase):
     """
@@ -406,6 +427,7 @@ class TestAssignReadsFunction(unittest.TestCase):
                                'samples',
                                True,
                                'i1',
+                               False,
                                self.wd,
                                "unassigned",))
         # Check the returned data
@@ -675,6 +697,290 @@ GCCACGTC
 +
 AAAAAEEE
 """)
+    def test_assign_reads_to_samples_update_index_sequences(self):
+        """
+        assign_reads: assigns reads to samples and update index sequences
+        """
+        # NB for these data I1 and I2 have to be flipped and
+        # I1 has to be reverse complemented
+        result = assign_reads((self.fastqs[0],
+                               self.fastqs[1],
+                               self.fastqs[2],
+                               self.fastqs[3],
+                               self.well_list,
+                               'samples',
+                               True,
+                               'i1',
+                               True,
+                               self.wd,
+                               "unassigned",))
+        # Check the returned data
+        batch_id,barcode_counts,undetermined_barcodes_file = result
+        self.assertEqual(batch_id,"B002")
+        for barcode in self.expected_barcode_counts:
+            self.assertEqual(barcode_counts[barcode],
+                             self.expected_barcode_counts[barcode])
+        self.assertEqual(undetermined_barcodes_file,
+                         os.path.join(self.wd,
+                                      "B002",
+                                      "undetermined_barcodes.txt"))
+        # Check the output files
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "1_S1_R1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
+TTTCTGTAGTGTGGCGTGTTGGTGTNGNCNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEE#A#E########E
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 1:N:0:CAGCAACG+GCTACGCT
+AAATATGGCGAGGAAAACTGAAAAAGGNGNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEA#/########E
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:AATCTACA+CATCCTGT
+CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "1_S1_R2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
+AACGTGCTCCTTCTATCCGGGCAACACCAACACGCCA
++
+AAAAAEEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEA
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 2:N:0:CAGCAACG+GCTACGCT
+TCCTACAGTGGACTTTTCTAAATTTTCCACCTTTTTCA
++
+AAAAAEEEEEAEEEEAEEEEEEEEEE//<EAAAAEEAE
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 2:N:0:AATCTACA+CATCCTGT
+CTGAAGGGACTTGGGCCATGATAGAAAGTGAGAATTTA
++
+AAAAAEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "1_S1_I1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
+TAAGGCGA
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 1:N:0:CAGCAACG+GCTACGCT
+GCTACGCT
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:AATCTACA+CATCCTGT
+CATCCTGT
++
+AAAAAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "1_S1_I2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
+CTTGGTTA
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 2:N:0:CAGCAACG+GCTACGCT
+CGTTGCTG
++
+6AAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 2:N:0:AATCTACA+CATCCTGT
+TGTAGATT
++
+AAAAAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "2_S2_R1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
+ACTCTCTTCTAATGGAGGACTGTGTNANANNNNNNNNT
++
+AAAAAEEEEEEEEEEEEEEEEEEEE#E#E########E
+@NB500968:115:HWJNYBGX9:1:11101:3460:1059 1:N:0:TTCGTGCA+GATCCAAA
+GTGTGGTGGTGTGTACTCCTCCAATCCCAGNNNNTNC
++
+AAAAAEEEEEEEEEAEEEEEEEEEAEEA/E####<#E
+@NB500968:115:HWJNYBGX9:1:11101:22996:1060 1:N:0:CGATAGGG+TTCCATAT
+GACATACTAGGAGACCCAGACAACTACATACCNGCTAA
++
+AAAAAEEEEEEE/EEAEEAEAEEAEEEEEAE/#/EEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "2_S2_R2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
+ACCCTATTGTGTAATGTGCATGACATATGGCATACTAA
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+@NB500968:115:HWJNYBGX9:1:11101:3460:1059 2:N:0:TTCGTGCA+GATCCAAA
+ATATAGACCAGGGGGCATCTGCTGGGATTGGAGGAGTA
++
+AAAAAE6EEEE/EEEEEEEEEEEEEAAEEEEEEE/<EE
+@NB500968:115:HWJNYBGX9:1:11101:22996:1060 2:N:0:CGATAGGG+TTCCATAT
+GTGTTTAGTGGATTAGCTGGTATGTAGTTGTCTGGGT
++
+AAAAAEAEEEEEEEEE/EE6EEEEEEEEEEEEEEEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "2_S2_I1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
+CGAGGCTG
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:3460:1059 1:N:0:TTCGTGCA+GATCCAAA
+GATCCAAA
++
+A/A/////
+@NB500968:115:HWJNYBGX9:1:11101:22996:1060 1:N:0:CGATAGGG+TTCCATAT
+TTCCATAT
++
+AAAAAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "2_S2_I2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
+CCCTATCG
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:3460:1059 2:N:0:TTCGTGCA+GATCCAAA
+TGCACGAA
++
+AAAAAEE/
+@NB500968:115:HWJNYBGX9:1:11101:22996:1060 2:N:0:CGATAGGG+TTCCATAT
+CCCTATCG
++
+AAAAAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "3_S3_R1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
+ACAAAAAATTGCTCCCCTATCAATTNTNANNNNNNNNT
++
+AAAAAEEEEEEEEEEEEEEEEE/EE#E#E########E
+@NB500968:115:HWJNYBGX9:1:11101:12602:1058 1:N:0:TGATGAAA+CAATCTTA
+CAGCTAAGAGCATCGAGGGGGCGCCGAGAGNNNNNNGG
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######EE
+@NB500968:115:HWJNYBGX9:1:11101:1239:1059 1:N:0:AAGGAGTA+AAGAGGCA
+AGATATAGCATTCCCACGAATAAATAATATNANNTNTT
++
+AAAAA6EE/A/A///AEEAEEAEEEEEEEE#/##E#AE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "3_S3_R2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
+ATTGCTAATATTCATCCTATGTGGGCAATTGATGAATA
++
+AAAAAEEEE<EEEEEEEEEEEEEEEEEEEEAEEEEEE/
+@NB500968:115:HWJNYBGX9:1:11101:12602:1058 2:N:0:TGATGAAA+CAATCTTA
+TCTTGGGAGCGGGCGGGCGGTCCGCCGCGAGGCGAGC
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEAEEEEAEE
+@NB500968:115:HWJNYBGX9:1:11101:1239:1059 2:N:0:AAGGAGTA+AAGAGGCA
+CTATTGATGATGCTAGTAGAAGGAGAAATGATGGTGGT
++
+6AAAAE/AE/A<AAE//EEAEE/EEEEEEEEEE/EEE/
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "3_S3_I1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
+AAGAGGCA
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:12602:1058 1:N:0:TGATGAAA+CAATCTTA
+CAATCTTA
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:1239:1059 1:N:0:AAGGAGTA+AAGAGGCA
+AAGAGGCA
++
+AA6A66AA
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "3_S3_I2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
+TACTCCTT
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:12602:1058 2:N:0:TGATGAAA+CAATCTTA
+TTTCATCA
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:1239:1059 2:N:0:AAGGAGTA+AAGAGGCA
+TACTCCTT
++
+AA/AAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "10_S4_R1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
+TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
++
+AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 1:N:0:CCTGCGGG+ATCACTCG
+AGTCTGAGATGTCTGAATCTGATCTTCNAANNNNNNAT
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######EE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 1:N:0:GACGTGGC+AGTAGATT
+CAGCTGTTCTCATCATGATCTTTATAATTTNNNNNNC
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######E
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "10_S4_R2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
+TTTCCACCCAGAAGGATGGGAGCAGATGTTAATAAC
++
+AAAAAAEEEEEEAEEEEEAAEEEEE/EEEAEEAAEE
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 2:N:0:CCTGCGGG+ATCACTCG
+GAATTCTGTAGTCTGAGCCACCTGTCCAGTGAGCCCGG
++
+AAAAAEEEEEEEEEEEEEEAEEEEEEEEEEEEEEEEEE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 2:N:0:GACGTGGC+AGTAGATT
+ATATGGTGGAGGGCAGCCATGAAGTCATTCTAAATTTG
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "10_S4_I1_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
+AGTAGATT
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 1:N:0:CCTGCGGG+ATCACTCG
+ATCACTCG
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 1:N:0:GACGTGGC+AGTAGATT
+AGTAGATT
++
+AAAAAEEE
+""")
+        self.assertEqual(open(os.path.join(self.wd,
+                                           "B002",
+                                           "10_S4_I2_001.fastq")).read(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
+GCCACGTC
++
+AAA/AEEE
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 2:N:0:CCTGCGGG+ATCACTCG
+CCCGCAGG
++
+AAAAAEEE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 2:N:0:GACGTGGC+AGTAGATT
+GCCACGTC
++
+AAAAAEEE
+""")
     def test_assign_reads_to_barcodes(self):
         """
         assign_reads: assigns reads to barcodes
@@ -689,6 +995,7 @@ AAAAAEEE
                                'barcodes',
                                True,
                                'i1',
+                               False,
                                self.wd,
                                "unassigned",))
         # Check the returned data
