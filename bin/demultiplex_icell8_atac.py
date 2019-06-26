@@ -79,6 +79,11 @@ if __name__ == "__main__":
                    dest="reverse_complement",
                    help="reverse complement one or both of the "
                    "indices from the well list file")
+    p.add_argument("-u","--update-read-headers",
+                   dest="update_read_headers",default=False,
+                   help="update read headers in the output Fastqs "
+                   "to include the matching index sequence (i.e. "
+                   "barcode) from the well list file")
     p.add_argument("--no-demultiplexing",action='store_true',
                    dest="no_demultiplexing",
                    help="don't generate demultiplexed Fastqs "
@@ -182,6 +187,7 @@ if __name__ == "__main__":
                        args.mode,
                        args.swap_i1_and_i2,
                        args.reverse_complement,
+                       args.update_read_headers,
                        tmp_dir,
                        UNASSIGNED,))
     if args.nprocs > 1:
