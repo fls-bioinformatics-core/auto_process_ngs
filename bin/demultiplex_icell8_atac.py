@@ -79,7 +79,7 @@ if __name__ == "__main__":
                    dest="reverse_complement",
                    help="reverse complement one or both of the "
                    "indices from the well list file")
-    p.add_argument("-u","--update-read-headers",
+    p.add_argument("-u","--update-read-headers",action='store_true',
                    dest="update_read_headers",default=False,
                    help="update read headers in the output Fastqs "
                    "to include the matching index sequence (i.e. "
