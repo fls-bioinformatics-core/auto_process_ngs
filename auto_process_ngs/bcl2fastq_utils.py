@@ -266,6 +266,9 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
     # Fix other problems
     sample_sheet.fix_illegal_names()
     sample_sheet.fix_duplicated_names()
+    # Put data into lane order (if lanes specified)
+    if sample_sheet.has_lanes:
+        sample_sheet.data.sort(lambda line: line['Lane'])
     # Select subset of lanes if requested
     if lanes is not None:
         logging.debug("Updating to include only specified lanes: %s" %
