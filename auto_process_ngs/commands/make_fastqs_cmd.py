@@ -1085,8 +1085,9 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
         demultiplexer = Command('demultiplex_icell8_atac.py',
                                 '--mode=samples',
                                 '--output-dir',tmp_demultiplex_dir,
-                                '-n',nprocessors,
                                 '--update-read-headers')
+        if nprocessors:
+            demultiplexer.add_args('-n',nprocessors)
         if swap_i1_and_i2:
             demultiplexer.add_args('--swap-i1-i2')
         if reverse_complement:
