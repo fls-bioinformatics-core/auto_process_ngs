@@ -11,6 +11,10 @@ Functions:
 
 - report: write a timestamped message
 - reverse_complement: get reverse complement of a sequence
+- update_fastq_read_index: rewrite index sequence in Fastq read header
+- split_fastq: split Fastq into batches
+- assign_reads: assign reads to samples from batched ICELL8 ATAC Fastqs
+- concat_fastqs: concatenate Fastqs for a sample across batches
 
 """
 
@@ -228,7 +232,7 @@ def assign_reads(args):
                label)
     if rewrite_fastq_headers:
         report("[%s] Rewriting Fastq read headers to include well list "
-               "barcodes")
+               "barcodes" % label)
     # Check mode
     if mode not in ("samples","barcodes"):
         report("[%s] Unrecognised mode!" % label,fp=sys.stderr)
