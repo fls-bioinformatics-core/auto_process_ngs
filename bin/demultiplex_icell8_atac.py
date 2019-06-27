@@ -25,6 +25,7 @@ from argparse import ArgumentParser
 from itertools import izip
 from multiprocessing import Pool
 from bcftbx.simple_xls import XLSWorkBook
+from auto_process_ngs import get_version
 from auto_process_ngs.applications import Command
 from auto_process_ngs.analysis import AnalysisFastq
 from auto_process_ngs.icell8.utils import ICell8WellList
@@ -42,6 +43,8 @@ BATCH_SIZE = 50000000
 BUF_SIZE = 1024*16
 UNASSIGNED = "Undetermined"
 
+__version__ = get_version()
+
 ######################################################################
 # Main
 ######################################################################
@@ -51,7 +54,8 @@ if __name__ == "__main__":
     # Set up parser
     p = ArgumentParser(description="Assign reads from ICELL8 ATAC "
                        "R1/R2/I1/I2 Fastq set to barcodes and samples "
-                       "in a well list file")
+                       "in a well list file",
+                       version="%(prog)s "+__version__)
     p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
     p.add_argument("fastq_r1",metavar="FASTQ_R1",help="FASTQ R1")
     p.add_argument("fastq_r2",metavar="FASTQ_R2",help="FASTQ R2")
@@ -62,7 +66,8 @@ if __name__ == "__main__":
                    help="path to demultiplexed output")
     p.add_argument("-b","--batch_size",metavar="N",
                    dest="batch_size",type=int,default=BATCH_SIZE,
-                   help="batch size for splitting index read Fastqs")
+                   help="batch size for splitting index read Fastqs "
+                   "(default: %d)" % BATCH_SIZE)
     p.add_argument("-n","--nprocessors",metavar="N",
                    dest="nprocs",type=int,default=1,
                    help="number of processors to use")
@@ -89,6 +94,9 @@ if __name__ == "__main__":
                    help="don't generate demultiplexed Fastqs "
                    "(only the stats)")
     args = p.parse_args()
+
+    # Report name and version
+    print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
 
     # Sort out the supplied Fastqs
     fastqs = (args.fastq_r1,
@@ -124,6 +132,7 @@ if __name__ == "__main__":
     report("Well list: %s" % well_list_file)
 
     # Report settings
+    report("Using %d processors" % args.nprocs)
     if args.reverse_complement:
         report("%s barcode%s from well list will be reverse complemented when "
                "matching to Fastqs" % (("Both I1 and I2"
@@ -361,7 +370,6 @@ if __name__ == "__main__":
     report("Wrote JSON file: %s" % json_file)
 
     # Write stats to XLSX file
-    report("Making XLSX file with statistics")
     xlsx_stats_file = os.path.join(output_dir,"icell8_atac_stats.xlsx")
     wb = XLSWorkBook("ICELL8 scATAC-seq")
     # Summary
@@ -403,7 +411,7 @@ if __name__ == "__main__":
                        data['barcodes'][barcode]])
     ws.freeze_panes = 'A3'
     wb.save_as_xlsx(xlsx_stats_file)
-    report("Wrote %s" % xlsx_stats_file)
+    report("Wrote XLSX file: %s" % xlsx_stats_file)
 
     # If no demultiplexing was requested then clean up
     # and finish
