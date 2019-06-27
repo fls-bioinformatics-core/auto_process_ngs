@@ -1,0 +1,32 @@
+Test data and scripts for Takara ICELL8 ATAC processing
+=======================================================
+
+Test data
+---------
+
+The test data comprises of an R1/R2/I1/I2 quartet of FASTQ files with the
+following associated barcodes and numbers of read pairs:
+
+CAGCAACG+GCTACGCT: 1 read pair  (sample 1)
+TAACCAAG+TAAGGCGA: 1 read pair  (sample 1)
+AATCTACA+CATCCTGT: 1 read pair  (sample 1)
+TTCGTGCA+GATCCAAA: 1 read pair  (sample 2)
+CGATAGGG+TTCCATAT: 1 read pair  (sample 2)
+CGATAGGG+CGAGGCTG: 1 read pair  (sample 2)
+TGATGAAA+CAATCTTA: 1 read pair  (sample 3)
+AAGGAGTA+AAGAGGCA: 2 read pairs (sample 3)
+CCTGCGGG+ATCACTCG: 1 read pair  (sample 10)
+GACGTGGC+AGTAGATT: 2 read pairs (sample 10)
+
+There is also a small "well list" file for these barcodes.
+
+**Note that this data set requires that the I1 barcodes be reverse
+complemented and subsequently that the I1 and I2 barcode sequences
+be swapped**
+
+Test scripts
+------------
+
+The `icell8_atac_demultiplexing.sh` script runs the demultiplexer on the
+test data files in various configurations.
+
