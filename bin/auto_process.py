@@ -384,6 +384,11 @@ def add_make_fastqs_command(cmdparser):
                             "demultiplexing step (turn off using "
                             "--create-empty-fastqs)%s"
                             % default_no_create_empty_fastqs)
+    # Fastqs for index reads
+    bcl_to_fastq.add_option('--create-fastq-for-index-reads',
+                            action='store_true',
+                            dest='create_fastq_for_index_reads',default=False,
+                            help="also create FASTQs for index reads")
     # Number of processors
     default_nprocessors = []
     for platform in __settings.platform:
@@ -401,6 +406,25 @@ def add_make_fastqs_command(cmdparser):
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     p.add_option_group(bcl_to_fastq)
+    # ICELL8 options
+    icell8 = optparse.OptionGroup(p,'ICELL8 options (ICELL8 data only)')
+    icell8.add_option("--well-list",
+                      dest="icell8_well_list",
+                      default=None,
+                      help="specify ICELL8 well list file")
+    icell8.add_option('--swap-i1-and-i2',
+                      action='store_true',
+                      dest="icell8_swap_i1_and_i2",
+                      help="swap supplied I1 and I2 Fastqs when matching "
+                      "ATAC barcodes against well list")
+    icell8.add_option('--reverse-complement',type='choice',
+                      choices=['i1','i2','both'],
+                      dest="icell8_reverse_complement",
+                      default=None,
+                      help="can be 'i1','i2', or 'both'; reverse complement "
+                      "the specified indices from the well list when "
+                      "matching ATAC barcodes against well list")
+    p.add_option_group(icell8)
     # Cellranger (10xgenomics Chromium SC 3') options
     cellranger = optparse.OptionGroup(p,'Cellranger options (10xGenomics '
                                       'Chromium SC 3\' data only)')
@@ -1022,10 +1046,14 @@ if __name__ == "__main__":
                     sample_sheet=options.sample_sheet,
                     bases_mask=options.bases_mask,
                     lanes=lanes,
+                    icell8_well_list=options.icell8_well_list,
+                    icell8_swap_i1_and_i2=options.icell8_swap_i1_and_i2,
+                    icell8_reverse_complement=options.icell8_reverse_complement,
                     platform=options.platform,
                     no_lane_splitting=no_lane_splitting,
                     minimum_trimmed_read_length=options.minimum_trimmed_read_length,
                     mask_short_adapter_reads=options.mask_short_adapter_reads,
+                    create_fastq_for_index_reads=options.create_fastq_for_index_reads,
                     stats_file=options.stats_file,
                     per_lane_stats_file=options.per_lane_stats_file,
                     barcode_analysis_dir=options.barcode_analysis_dir,

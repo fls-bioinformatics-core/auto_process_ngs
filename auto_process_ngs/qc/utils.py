@@ -49,10 +49,14 @@ def determine_qc_protocol(project):
     if project.info.single_cell_platform is not None:
         # Default
         protocol = "singlecell"
-        # 10xGenomics scATAC-seq
-        if project.info.single_cell_platform == "10xGenomics Single Cell ATAC" \
-           and project.info.library_type == "scATAC-seq":
-            protocol = "10x_scATAC"
+        if project.info.library_type == "scATAC-seq":
+            single_cell_platform = project.info.single_cell_platform
+            if single_cell_platform == "10xGenomics Single Cell ATAC":
+                # 10xGenomics scATAC-seq
+                protocol = "10x_scATAC"
+            elif single_cell_platform == "ICELL8":
+                # ICELL8 scATAC-seq
+                protocol = "ICELL8_scATAC"
     return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,

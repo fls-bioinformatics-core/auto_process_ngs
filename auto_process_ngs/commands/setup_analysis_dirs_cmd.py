@@ -10,6 +10,8 @@
 #######################################################################
 
 import os
+import shutil
+import json
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import auto_process_ngs.analysis as analysis
@@ -101,7 +103,8 @@ def setup_analysis_dirs(ap,
                                    '10xGenomics Chromium 3\'v2',
                                    '10xGenomics Chromium 3\'v3',
                                    '10xGenomics Single Cell ATAC',
-                                   'ICELL8',):
+                                   'ICELL8',
+                                   'ICELL8 ATAC'):
                 logger.error("Unknown single cell platform for '%s': "
                              "'%s'" % (line['Project'],sc_platform))
                 raise Exception("Unknown single cell platform")
@@ -149,6 +152,45 @@ def setup_analysis_dirs(ap,
         except IlluminaData.IlluminaDataError as ex:
             logger.warning("Failed to create project '%s': %s" %
                            (project_name,ex))
+            continue
+        # Copy in additional data files
+        if single_cell_platform == "ICELL8 ATAC":
+            # Copy across the ATAC report files
+            for f in ("icell8_atac_stats.xlsx",
+                      "icell8_atac_stats.json"):
+                f = os.path.join(illumina_data.unaligned_dir,
+                                 "Reports",f)
+                print("-- copying %s to %s" % (os.path.basename(f),
+                                               project.dirn))
+                try:
+                    shutil.copy2(f,project.dirn)
+                except Exception as ex:
+                    logger.warning("Failed to copy %s to project '%s': %s"
+                                   % (f,project_name,ex))
+            # Copy extra files and set additional metadata
+            try:
+                json_file = os.path.join(project.dirn,
+                                         "icell8_atac_stats.json")
+                with open(json_file,'r') as fp:
+                    json_data = json.load(fp)
+                    json_summary = json_data['summary']
+                    # Well list file
+                    well_list = json_summary['well_list_file']
+                    print("-- copying %s to %s" % (os.path.basename(well_list),
+                                                   project.dirn))
+                    shutil.copy2(well_list,project.dirn)
+                    project.info['icell8_well_list'] = \
+                                os.path.basename(well_list)
+                    # Cell counts
+                    number_of_cells = \
+                                json_summary['number_of_barcodes_with_reads']
+                    print("-- setting cell count for project '%s': %s" %
+                          (project_name,number_of_cells))
+                    project.info['number_of_cells'] = number_of_cells
+                    project.info.save()
+            except Exception as ex:
+                logger.warning("Failed to finish setup for project '%s': "
+                               "%s" % (project_name,ex))
     # Tell us how many were made
     print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
     # Also set up analysis directory for undetermined reads

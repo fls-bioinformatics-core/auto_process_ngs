@@ -24,6 +24,7 @@ Protocol option          Used for
 ``standard``             Standard Illumina sequencing data
                          (default)
 ``icell8``               ICELL8 single-cell RNA-seq data
+``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ``10x_chromium_sc``      10xGenomics Chromium single-cell
                          RNA-seq data
 ``10x_chromium_sc_atac`` 10xGenomics Chromium single-cell
@@ -50,7 +51,9 @@ subsequent sections:
 
 * :ref:`make_fastqs-standard-protocol`
 * :ref:`make_fastqs-icell8-protocol`
+* :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
+* :ref:`make_fastqs-10x_chromium_sc_atac-protocol`
 * :ref:`make_fastqs-mixed-protocols`
 
 Information on other commonly used options can be found
@@ -132,7 +135,7 @@ using the ``--protocol=icell8`` option:
 
 Subsequently the read pairs must be processed using the
 ``process_icell8.py`` utility described in the
-:ref:`icell8_qc_and_filtering_protocol` section, to post-process
+:ref:`icell8_scRNA-seq_qc_and_filtering_protocol` section, to post-process
 the Fastqs.
 
 .. note::
@@ -150,6 +153,27 @@ the Fastqs.
    This is recommended to stop unintentional trimming of UMI sequences
    (which are mostly random) from the R1, should they happen to match
    part of an adapter sequence.
+
+.. _make_fastqs-icell8-atac-protocol:
+
+Fastq generation for ICELL8 single-cell ATAC-seq data (``--protocol=icell8_atac``)
+----------------------------------------------------------------------------------
+
+Initial Fastqs can be generated from ICELL8 single-cell8 ATAC-seq data
+using the ``--protocol=icell8_atac`` option:
+
+::
+
+    auto_process.py make_fastqs --protocol=icell8_atac --well-list=WELL_LIST_FILE...
+
+This runs bcl2fastq to perform initial standard demultiplexing based on
+the samples defined in the sample sheet, followed by a second round of
+demultiplexing into ICELL8 samples based on the contents of the well list
+file which must be supplied via the mandatory ``--well-list`` argument.
+
+.. warning::
+
+   This protocol is still under development.
 
 .. _make_fastqs-10x_chromium_sc-protocol:
 

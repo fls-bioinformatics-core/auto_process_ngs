@@ -1,0 +1,11 @@
+Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
+0	57	True	True	1	TAACCAAG+TAAGGCGA	Good	1	0	105		33		3465		1		1	1	1	1	10	10	A1		Pos9_1-Hoechst_A10.tif	Pos9_3-Texas Red_A10.tif
+2	27	True	True	1	CAGCAACG+GCTACGCT	Good	1	0	96		23		2208		1		1	1	1	1	28	34	A1		Pos4_1-Hoechst_A05.tif	Pos4_3-Texas Red_A05.tif
+11	34	True	True	2	CGATAGGG+CGAGGCTG	Good	1	0	101		23		2323		1		0.97	0.97	1	3	35	41	B1		Pos17_1-Hoechst_B06.tif	Pos17_3-Texas Red_B06.tif
+20	1	True	True	3	AAGGAGTA+AAGAGGCA	Good	1	0	97		18		1746		1		1	1	1	5	26	32	C1		Pos36_1-Hoechst_D01.tif	Pos36_3-Texas Red_D01.tif
+24	2	True	True	3	TGATGAAA+CAATCTTA	Good	1	0	83		13		1079		1		1	1	1	5	55	67	C1		Pos48_1-Hoechst_E01.tif	Pos48_3-Texas Red_E01.tif
+41	51	True	True	1	AATCTACA+CATCCTGT	Good	1	0	98		24		2352		1		0.98	0.98	1	1	163	206	A1		Pos80_1-Hoechst_G09.tif	Pos80_3-Texas Red_G09.tif
+46	34	True	True	2	CGATAGGG+TTCCATAT	Good	1	0	94		18		1692		1		0.97	0.97	1	3	129	159	B1		Pos89_1-Hoechst_H06.tif	Pos89_3-Texas Red_H06.tif
+52	27	True	True	2	TTCGTGCA+GATCCAAA	Good	1	0	93		18		1674		1		1	1	1	3	192	236	B1		Pos100_1-Hoechst_I05.tif	Pos100_3-Texas Red_I05.tif
+65	66	True	True	10	GACGTGGC+AGTAGATT	Good	1	0	105		41		4305		1		0.8611708	0.8611708	1	8	136	169	D2		Pos131_1-Hoechst_K12.tif	Pos131_3-Texas Red_K12.tif
+66	22	True	True	10	CCTGCGGG+ATCACTCG	Good	1	0	195		21		4095		1		0.97	0.97	1	8	153	192	D2		Pos135_1-Hoechst_L04.tif	Pos135_3-Texas Red_L04.tif

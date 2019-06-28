@@ -23,7 +23,8 @@ Functions:
 - get_batch_size: get optimal size for batches of reads
 - batch_fastqs: split reads into batches
 - normalize_sample_name: replace special characters in well list sample names
-- get_icell8_bases_mask: generate bases mask for ICELL8 run
+- get_bases_mask_icell8: generate bases mask for ICELL8 run
+- get_bases_mask_icell8_atac: generate bases mask for ICELL8 ATAC-seq run
 """
 
 #######################################################################
@@ -42,6 +43,7 @@ from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import fix_bases_mask
 from bcftbx.TabFile import TabFile
 from ..applications import Command
+from ..bcl2fastq_utils import get_bases_mask
 from ..fastq_utils import FastqReadCounter
 from ..fastq_utils import pair_fastqs
 from ..fastq_utils import get_read_count
@@ -214,7 +216,7 @@ def normalize_sample_name(s):
             name.append(c)
     return ''.join(name)
 
-def get_icell8_bases_mask(bases_mask,sample_sheet=None):
+def get_bases_mask_icell8(bases_mask,sample_sheet=None):
     """
     Reset the supplied bases mask string so that only the
     bases containing the inline barcode and UMIs are kept,
@@ -252,6 +254,37 @@ def get_icell8_bases_mask(bases_mask,sample_sheet=None):
             index_seq = ""
         bases_mask = fix_bases_mask(bases_mask,index_seq)
     return bases_mask
+
+def get_bases_mask_icell8_atac(runinfo_xml):
+    """
+    Acquire a bases mask for ICELL8 scATAC-seq
+
+    Generates an initial bases mask based on the run
+    contents, and then updates this so that only the
+    first 8 bases of each of index reads are used.
+
+    Arguments:
+      runinfo_xml (str): path to the RunInfo.xml for
+        the sequencing run
+
+    Returns:
+      String: ICELL8 scATAC-seq bases mask string
+    """
+    # Get initial bases mask from run
+    bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    # First read
+    new_bases_mask = [bases_mask[0]]
+    # Assume barcode is dual-index (8bp plus 8bp)
+    # Update first index and second indices to restrict to 8 bases
+    for index_mask in bases_mask[1:3]:
+        num_cycles = int(index_mask[1:])
+        if num_cycles < 8:
+            raise Exception("Index read < 8 bases")
+        new_bases_mask.append("I8%s" % ('n'*(num_cycles-8),))
+    # Keep last read as is
+    new_bases_mask.append(bases_mask[3])
+    # Reassemble and return
+    return ','.join(new_bases_mask)
 
 def pass_quality_filter(s,cutoff):
     """

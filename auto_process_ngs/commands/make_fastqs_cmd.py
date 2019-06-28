@@ -23,7 +23,9 @@ from ..bcl2fastq_utils import get_required_samplesheet_format
 from ..bcl2fastq_utils import get_nmismatches
 from ..bcl2fastq_utils import check_barcode_collisions
 from ..barcodes.pipeline import AnalyseBarcodes
-from ..icell8.utils import get_icell8_bases_mask
+from ..icell8.utils import get_bases_mask_icell8
+from ..icell8.utils import get_bases_mask_icell8_atac
+from ..icell8.utils import ICell8WellList
 from ..tenx_genomics_utils import has_chromium_sc_indices
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import cellranger_info
@@ -46,6 +48,7 @@ logger = logging.getLogger(__name__)
 
 MAKE_FASTQS_PROTOCOLS = ('standard',
                          'icell8',
+                         'icell8_atac',
                          '10x_chromium_sc',
                          '10x_chromium_sc_atac')
 
@@ -55,18 +58,22 @@ MAKE_FASTQS_PROTOCOLS = ('standard',
 
 def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,lanes=None,
+                icell8_well_list=None,
                 ignore_missing_bcl=False,ignore_missing_stats=False,
                 skip_rsync=False,remove_primary_data=False,
                 nprocessors=None,require_bcl2fastq_version=None,
                 bases_mask=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
+                create_fastq_for_index_reads=False,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
                 skip_fastq_generation=False,
                 only_fetch_primary_data=False,
                 create_empty_fastqs=None,runner=None,
+                icell8_swap_i1_and_i2=False,
+                icell8_reverse_complement=None,
                 cellranger_jobmode=None,
                 cellranger_mempercore=None,
                 cellranger_maxjobs=None,
@@ -104,6 +111,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
       lanes (list): (optional) specify a list of lane numbers to
         use in the processing; lanes not in the list will be excluded
         (default is to include all lanes)
+      icell8_well_list (str): well list file for ICELL8 platforms
+        (required for ICELL8 processing protocols)
       nprocessors (int) : number of processors to run bclToFastq.py with
       ignore_missing_bcl (bool): if True then run bcl2fastq with
         --ignore-missing-bcl
@@ -132,6 +141,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
         length of ACGT bases that must be present in a read after
         adapter trimming for it not to be masked completely
         with Ns.
+      create_fastq_for_index_reads (boolean): if True then also create
+        Fastq files for index reads (default, don't create index read
+        Fastqs)
       stats_file (str): if set then use this as the name of the output
         per-fastq stats file.
       per_lane_stats_file (str): if set then use this as the name of
@@ -147,6 +159,13 @@ def make_fastqs(ap,protocol='standard',platform=None,
         (must have completed with zero exit status)
       runner (JobRunner): (optional) specify a non-default job runner
         to use for fastq generation
+      icell8_swap_i1_and_i2 (bool): if True then swap I1 and I2 reads
+        when matching to barcodes in the ICELL8 well list (ICELL8 ATAC
+        data only)
+      icell8_reverse_complement (str): one of 'i1', 'i2', 'both', or
+        None; if set then the specified index reads will be reverse
+        complemented when matching to barcodes in the ICELL8 well list
+        (ICELL8 ATAC data only)
       cellranger_jobmode (str): (optional) job mode to run cellranger in
         (10xGenomics Chromium SC data only)
       cellranger_mempercore (int): (optional) memory assumed per core
@@ -250,6 +269,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if verify_fastq_generation(
             ap,
             unaligned_dir=ap.params.unaligned_dir,
+            icell8_well_list=icell8_well_list,
             lanes=lanes,
             include_sample_dir=verify_include_sample_dir):
         print "Expected Fastq outputs already present"
@@ -306,7 +326,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
             ap.params['bases_mask'] = bases_mask
         bases_mask = ap.params.bases_mask
         print "Bases mask setting    : %s" % bases_mask
-        if protocol not in ('10x_chromium_sc',
+        if protocol not in ('icell8_atac',
+                            '10x_chromium_sc',
                             '10x_chromium_sc_atac',):
             if bases_mask == "auto":
                 print "Determining bases mask from RunInfo.xml"
@@ -315,23 +336,24 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        # Do fastq generation according to protocol
+        # Update for variants of standard protocol
         if protocol == 'icell8':
-            # ICell8 data
+            # ICELL8 single-cell RNA-seq
             # Update bcl2fastq settings appropriately
-            print "Updating read trimming and masking for ICell8"
+            print "Updating read trimming and masking for ICELL8"
             minimum_trimmed_read_length = 21
             mask_short_adapter_reads = 0
             # Reset the default bases mask
             bases_mask = IlluminaData.IlluminaRunInfo(
                 illumina_run.runinfo_xml).bases_mask
-            bases_mask = get_icell8_bases_mask(bases_mask,
+            bases_mask = get_bases_mask_icell8(bases_mask,
                                                sample_sheet=sample_sheet)
             if not bases_mask_is_valid(bases_mask):
                 raise Exception("Invalid bases mask: '%s'" %
                                 bases_mask)
             # Switch to standard protocol
             protocol = 'standard'
+        # Do fastq generation according to protocol
         if protocol == 'standard':
             # Standard protocol
             try:
@@ -347,10 +369,47 @@ def make_fastqs(ap,protocol='standard',platform=None,
                     no_lane_splitting=no_lane_splitting,
                     minimum_trimmed_read_length=minimum_trimmed_read_length,
                     mask_short_adapter_reads=mask_short_adapter_reads,
+                    create_fastq_for_index_reads=create_fastq_for_index_reads,
                     nprocessors=nprocessors,
                     runner=runner)
             except Exception as ex:
                 raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+        elif protocol == 'icell8_atac':
+            # ICELL8 single-cell ATAC-seq
+            # Check for well list
+            if icell8_well_list is None:
+                raise Exception("Need to provide an ICELL8 well list "
+                                "file")
+            # Reset the default bases mask
+            if bases_mask == "auto":
+                bases_mask = get_bases_mask_icell8_atac(
+                    illumina_run.runinfo_xml)
+            print "Bases mask for ICELL8 ATAC: %s" % bases_mask
+            if not bases_mask_is_valid(bases_mask):
+                raise Exception("Invalid bases mask: '%s'" %
+                                bases_mask)
+            # Perform bcl to fastq conversion and demultiplexing
+            try:
+                exit_code = bcl_to_fastq_icell8_atac(
+                    ap,unaligned_dir=ap.params.unaligned_dir,
+                    sample_sheet=sample_sheet,
+                    well_list=icell8_well_list,
+                    primary_data_dir=primary_data_dir,
+                    bases_mask=bases_mask,
+                    ignore_missing_bcl=ignore_missing_bcl,
+                    ignore_missing_stats=ignore_missing_stats,
+                    no_lane_splitting=no_lane_splitting,
+                    minimum_trimmed_read_length=minimum_trimmed_read_length,
+                    mask_short_adapter_reads=mask_short_adapter_reads,
+                    swap_i1_and_i2=icell8_swap_i1_and_i2,
+                    reverse_complement=icell8_reverse_complement,
+                    nprocessors=nprocessors,
+                    runner=runner)
+            except Exception as ex:
+                raise Exception("ICELL8 scATAC-seq Fastq generation failed: "
+                                "'%s'" % ex)
+            # Turn off barcode analysis
+            analyse_barcodes = False
         elif protocol == '10x_chromium_sc':
             # 10xGenomics Chromium SC
             if bases_mask == 'auto':
@@ -440,6 +499,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if not verify_fastq_generation(
                 ap,
                 lanes=lanes,
+                icell8_well_list=icell8_well_list,
                 include_sample_dir=verify_include_sample_dir):
             # Check failed
             logger.error("Failed to verify output Fastqs against "
@@ -620,8 +680,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
                  require_bcl2fastq=None,bases_mask=None,
                  ignore_missing_bcl=False,ignore_missing_stats=False,
                  no_lane_splitting=None,minimum_trimmed_read_length=None,
-                 mask_short_adapter_reads=None,nprocessors=None,
-                 runner=None):
+                 mask_short_adapter_reads=None,
+                 create_fastq_for_index_reads=False,
+                 nprocessors=None,runner=None):
     """
     Generate FASTQ files from the raw BCL files
 
@@ -652,6 +713,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
         via --minimum-trimmed-read-length
       mask_short_adapter_reads (int): if set then supply to bcl2fastq via
         --mask-short-adapter-reads
+      create_fastq_for_index_reads (boolean): if True then also create
+        Fastq files for index reads (default, don't create index read
+        Fastqs)
       nprocessors (int): number of processors to run bclToFastq.py with
       runner (JobRunner): (optional) specify a non-default job runner to
         use for fastq generation
@@ -753,6 +817,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     print "No lane splitting     : %s" % no_lane_splitting
     print "Min trimmed read len  : %s" % minimum_trimmed_read_length
     print "Mask short adptr reads: %s" % mask_short_adapter_reads
+    print "Create index Fastqs   : %s" % create_fastq_for_index_reads
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.bcl2fastq
@@ -775,6 +840,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     if mask_short_adapter_reads is not None:
         bcl2fastq.add_args('--mask-short-adapter-reads',
                            mask_short_adapter_reads)
+    if create_fastq_for_index_reads:
+        bcl2fastq.add_args('--create-fastq-for-index-reads')
     bcl2fastq.add_args('--platform',
                        ap.metadata.platform,
                        '--bcl2fastq_path',
@@ -921,7 +988,164 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
         raise Exception("'cellranger-atac mkfastq' failed: "
                         "'%s'" % ex)
 
+def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
+                             well_list,primary_data_dir,
+                             bases_mask=None,
+                             ignore_missing_bcl=False,
+                             ignore_missing_stats=False,
+                             no_lane_splitting=None,
+                             minimum_trimmed_read_length=None,
+                             mask_short_adapter_reads=None,
+                             swap_i1_and_i2=False,
+                             reverse_complement=None,
+                             nprocessors=None,runner=None):
+    """
+    Generate FASTQ files for ICELL8 scATAC-seq data
+
+    Performs FASTQ generation from raw BCL files produced by an Illumina
+    sequencer from ICELL8 scATAC-seq samples.
+
+    Arguments:
+      ap (AutoProcessor): autoprocessor pointing to the analysis
+        directory to create Fastqs for
+      unaligned_dir (str): output directory for bcl-to-fastq conversion
+      sample_sheet (str): path to input sample sheet file
+      well_list (str): path to the ICELL8 well list file to use
+      primary_data_dir (str): path to the top-level directory holding
+        the sequencing data
+      bases_mask (str): if set then use this as an alternative bases mask
+        setting
+      ignore_missing_bcl (bool): if True then run bcl2fastq with
+        --ignore-missing-bcl
+      ignore_missing_stats (bool): if True then run bcl2fastq with
+        --ignore-missing-stats
+      no_lane_splitting (bool): if True then run bcl2fastq with
+        --no-lane-splitting
+      minimum_trimmed_read_length (int): if set then supply to bcl2fastq
+        via --minimum-trimmed-read-length
+      mask_short_adapter_reads (int): if set then supply to bcl2fastq via
+        --mask-short-adapter-reads
+      swap_i1_and_i2 (bool): if True then swap I1 and I2 reads when
+        matching to barcodes in the ICELL8 well list
+      reverse_complement (str): one of 'i1', 'i2', 'both', or None; if
+        set then the specified index reads will be reverse complemented
+        when matching to barcodes in the ICELL8 well list
+      nprocessors (int): number of processors to run bclToFastq.py with
+      runner (JobRunner): (optional) specify a non-default job runner to
+        use for fastq generation
+    """
+    # Set up runner
+    if runner is None:
+        runner = ap.settings.runners.bcl2fastq
+    runner.set_log_dir(ap.log_dir)
+    # Number of cores
+    if nprocessors is None:
+        nprocessors = ap.settings.bcl2fastq.nprocessors
+    # Do Fastq generation to a temporary directory
+    icell8_tmp = os.path.join(ap.analysis_dir,"__icell8")
+    if os.path.exists(icell8_tmp):
+        # Remove existing working directory
+        logger.warning("Found existing working directory '%s '"
+                       "(will be removed)" % icell8_tmp)
+        shutil.rmtree(icell8_tmp)
+    mkdirs(icell8_tmp)
+    icell8_unaligned = os.path.join("__icell8","bcl2fastq")
+    tmp_bcl2fastq = os.path.join(ap.analysis_dir,icell8_unaligned)
+    if not os.path.exists(tmp_bcl2fastq):
+        exit_code = bcl_to_fastq(
+            ap,
+            unaligned_dir=tmp_bcl2fastq,
+            sample_sheet=sample_sheet,
+            primary_data_dir=primary_data_dir,
+            require_bcl2fastq=">=2",
+            bases_mask=bases_mask,
+            ignore_missing_bcl=ignore_missing_bcl,
+            ignore_missing_stats=ignore_missing_stats,
+            no_lane_splitting=no_lane_splitting,
+            minimum_trimmed_read_length=minimum_trimmed_read_length,
+            mask_short_adapter_reads=mask_short_adapter_reads,
+            create_fastq_for_index_reads=True,
+            nprocessors=nprocessors,
+            runner=runner)
+    # Load data from the temporary directory and get Fastqs
+    illumina_data = IlluminaData.IlluminaData(
+            ap.analysis_dir,
+            unaligned_dir=icell8_unaligned)
+    fastqs = []
+    for project in illumina_data.projects:
+        for sample in project.samples:
+            for fq in sample.fastq:
+                fastqs.append(os.path.join(sample.dirn,fq))
+    if not fastqs:
+        logger.error("No Fastqs were produced, cannot proceed")
+        return 1
+    # Do demultiplexing into samples based on well list
+    tmp_demultiplex_dir = os.path.join(icell8_tmp,"demultiplexed")
+    if not os.path.exists(tmp_demultiplex_dir):
+        demultiplexer = Command('demultiplex_icell8_atac.py',
+                                '--mode=samples',
+                                '--output-dir',tmp_demultiplex_dir,
+                                '--update-read-headers')
+        if nprocessors:
+            demultiplexer.add_args('-n',nprocessors)
+        if swap_i1_and_i2:
+            demultiplexer.add_args('--swap-i1-i2')
+        if reverse_complement:
+            demultiplexer.add_args('--reverse-complement=%s' %
+                                   reverse_complement)
+        demultiplexer.add_args(well_list)
+        demultiplexer.add_args(*fastqs)
+        print "Running %s" % demultiplexer
+        demultiplexer_job = SchedulerJob(runner,
+                                         demultiplexer.command_line,
+                                         name='demultiplex_icell8',
+                                         working_dir=os.getcwd())
+        demultiplexer_job.start()
+        try:
+            demultiplexer_job.wait(
+                poll_interval=ap.settings.general.poll_interval
+            )
+        except KeyboardInterrupt,ex:
+            logger.warning("Keyboard interrupt, terminating demultiplexer")
+            demultiplexer_job.terminate()
+            raise ex
+        exit_code = demultiplexer_job.exit_code
+        print "demultiplexer completed: exit code %s" % exit_code
+        if exit_code != 0:
+            logger.error("demultiplexer exited with an error")
+            return exit_code
+    # Build bcl2fastq2-style output dir
+    bcl2fastq_dir = os.path.join(ap.tmp_dir,"bcl2fastq")
+    print "Building temporary output dir: %s" % bcl2fastq_dir
+    for d in ('Stats','Reports',):
+        mkdirs(os.path.join(bcl2fastq_dir,d))
+    project = illumina_data.projects[0]
+    mkdirs(os.path.join(bcl2fastq_dir,project.name))
+    # Copy the reports and JSON file
+    for f in ('icell8_atac_stats.xlsx',
+              'icell8_atac_stats.json'):
+        os.link(os.path.join(tmp_demultiplex_dir,f),
+                os.path.join(bcl2fastq_dir,'Reports',f))
+    # Copy fastqs to final location
+    for f in os.listdir(tmp_demultiplex_dir):
+        if f.endswith(".fastq.gz"):
+            # Undetermined goes to top level
+            if f.startswith("Undetermined_S0_"):
+                os.link(os.path.join(tmp_demultiplex_dir,f),
+                        os.path.join(bcl2fastq_dir,f))
+            else:
+                os.link(os.path.join(tmp_demultiplex_dir,f),
+                        os.path.join(bcl2fastq_dir,project.name,f))
+    print "Moving %s to final destination: %s" % (bcl2fastq_dir,
+                                                  unaligned_dir)
+    os.rename(bcl2fastq_dir,unaligned_dir)
+    # Remove the intermediate directories
+    shutil.rmtree(icell8_tmp)
+    # Finish
+    return 0
+
 def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
+                            icell8_well_list=None,
                             include_sample_dir=False):
     """Check that generated Fastqs match sample sheet predictions
 
@@ -932,9 +1156,11 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
         directory to check
       lanes (list): specify a list of lane numbers (integers) to
         check (others will be ignored)
+      icell8_well_list (str): path to the ICELL8 well list file to
+        verify against, instead of samplesheet (for ICELL8 data)
       include_sample_dir (bool): if True then include a
         'sample_name' directory level when checking for
-         bcl2fastq2 outputs, even if one shouldn't be present
+        bcl2fastq2 outputs, even if one shouldn't be present
 
      Returns:
        True if outputs match sample sheet, False otherwise.
@@ -956,6 +1182,26 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
     make_custom_sample_sheet(ap.params.sample_sheet,
                              tmp_sample_sheet,
                              lanes=lanes)
+    # Verify against ICELL8 well list file
+    if icell8_well_list is not None:
+        # Get the project name from the sample sheet
+        sample_sheet = IlluminaData.SampleSheet(tmp_sample_sheet)
+        project = sample_sheet.data[0][sample_sheet.sample_project_column]
+        # Check Fastqs for each sample
+        missing_fastqs = list()
+        for ii,sample in enumerate(ICell8WellList(icell8_well_list).samples(),
+                                   start=1):
+            for read in ('R1','R2','I1','I2'):
+                fq = os.path.join(bcl_to_fastq_dir,
+                                  project,
+                                  "%s_S%d_%s_001.fastq.gz" % (sample,
+                                                              ii,
+                                                              read))
+                if not os.path.exists(fq):
+                    logger.warning("Missing: %s" % fq)
+                    missing_fastqs.append(fq)
+        # Return status of verification
+        return (len(missing_fastqs) == 0)
     # Try to create an IlluminaData object
     try:
         illumina_data = IlluminaData.IlluminaData(

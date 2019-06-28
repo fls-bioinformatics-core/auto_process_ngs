@@ -374,6 +374,7 @@ class bcl2fastq(object):
                    no_lane_splitting=False,
                    minimum_trimmed_read_length=None,
                    mask_short_adapter_reads=None,
+                   create_fastq_for_index_reads=False,
                    loading_threads=None,
                    demultiplexing_threads=None,
                    processing_threads=None,
@@ -407,6 +408,9 @@ class bcl2fastq(object):
           mask_short_adapter_reads: optional, specify the minimum length
             of ACGT bases that must be present in a read after adapter
             trimming for it not to be masked completely with Ns.
+          create_fastq_for_index_reads: optional, if True then also create
+            Fastq files for index reads (default, don't create index read
+            Fastqs) (--create-fastq-for-index-reads)
           loading_threads: optional, specify number of threads to use
             for loading bcl data (--loading-threads)
           demultiplexing_threads: optional, specify number of threads to
@@ -444,6 +448,8 @@ class bcl2fastq(object):
         if mask_short_adapter_reads is not None:
             bcl2fastq_cmd.add_args('--mask-short-adapter-reads',
                                    mask_short_adapter_reads)
+        if create_fastq_for_index_reads:
+            bcl2fastq_cmd.add_args('--create-fastq-for-index-read')
         if loading_threads is not None:
             bcl2fastq_cmd.add_args('-r',loading_threads)
         if demultiplexing_threads is not None:

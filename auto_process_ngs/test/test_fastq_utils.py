@@ -125,6 +125,22 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertFalse(fq.is_index_read)
         self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG-GTTCAC_L003_R2_001')
 
+    def test_full_name_dual_index_with_plus(self):
+        """IlluminaFastqAttrs: full Illumina-style fastq name with dual index using '+'
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq_Gli1')
+        self.assertEqual(fq.basename,
+                         'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG+GTTCAC')
+        self.assertEqual(fq.lane_number,3)
+        self.assertEqual(fq.read_number,2)
+        self.assertEqual(fq.set_number,1)
+        self.assertFalse(fq.is_index_read)
+        self.assertEqual(str(fq),'NH1_ChIP-seq_Gli1_ACAGTG+GTTCAC_L003_R2_001')
+
     def test_full_name_blc2fastq2(self):
         """IlluminaFastqAttrs: Illumina fastq name from bcl2fastq2
         """
@@ -342,6 +358,30 @@ class TestIlluminaFastqAttrs(unittest.TestCase):
         self.assertEqual(fq.extension,'')
         self.assertEqual(fq.sample_number,None)
         self.assertEqual(fq.barcode_sequence,'ACAGTG')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+
+    def test_non_standard_sample_name_and_dual_barcode(self):
+        """IlluminaFastqAttrs: non-standard Fastq names with sample name and dual barcode
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq.ACAGTG-GTTCAC.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG-GTTCAC.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG-GTTCAC')
+        self.assertEqual(fq.lane_number,None)
+        self.assertEqual(fq.read_number,2)
+
+    def test_non_standard_sample_name_and_dual_barcode_with_plus(self):
+        """IlluminaFastqAttrs: non-standard Fastq names with sample name and dual barcode using '+'
+        """
+        fq = IlluminaFastqAttrs('NH1_ChIP-seq.ACAGTG+GTTCAC.r2')
+        self.assertEqual(fq.sample_name,'NH1_ChIP-seq')
+        self.assertEqual(fq.basename,'NH1_ChIP-seq.ACAGTG+GTTCAC.r2')
+        self.assertEqual(fq.extension,'')
+        self.assertEqual(fq.sample_number,None)
+        self.assertEqual(fq.barcode_sequence,'ACAGTG+GTTCAC')
         self.assertEqual(fq.lane_number,None)
         self.assertEqual(fq.read_number,2)
 

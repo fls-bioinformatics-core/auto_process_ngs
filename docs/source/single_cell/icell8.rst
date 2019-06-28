@@ -7,6 +7,16 @@ Background
 The Takara Bio ICELL8 system prepares single-cell (SC) samples which
 are then sequenced as part of an Illumina sequencing run.
 
+Two protocols are available:
+
+ * :ref:`icell8_single_cell_RNA-seq`
+ * :ref:`icell8_single_cell_ATAC-seq`
+
+.. _icell8_single_cell_RNA-seq:
+
+ICELL8 single cell RNA-seq
+--------------------------
+
 Initial processing of the sequencing data produces a single Fastq file
 R1/R2 pair, where the R1 reads hold an inline barcode and a unique
 molecular identifier (UMI) for the read pair:
@@ -26,10 +36,10 @@ cell. The mapping of barcodes to well/cell are given in the
 The corresponding R2 read contains the actual sequence data
 corresponding to the cell and UMI referenced by its R1 partner.
 
-.. _icell8_processing_protocol:
+.. _icell8_scRNA-seq_processing_protocol:
 
-Processing protocol for ICELL8 data
------------------------------------
+Processing protocol for ICELL8 scRNA-seq data
+*********************************************
 
 The recommended steps are:
 
@@ -39,15 +49,15 @@ The recommended steps are:
    protocol
 3. Perform ICELL8-specific filtering and additional QC on the reads
    by running the ``process_icell8.py`` utility, as described in
-   :ref:`icell8_qc_and_filtering_protocol`
+   :ref:`icell8_scRNA-seq_qc_and_filtering_protocol`
 4. Manually update the sample name information in the ``project.info``
    and ``README.info`` files as described in
-   :ref:`icell8_updating_sample_lists`
+   :ref:`icell8_scRNA-seq_updating_sample_lists`
 
-..  _icell8_qc_and_filtering_protocol:
+..  _icell8_scRNA-seq_qc_and_filtering_protocol:
 
 ICELL8 QC and filtering protocol
---------------------------------
+********************************
 
 The ``process_icell8.py`` utility script performs initial filtering
 and QC according to the protocol described below. The utility also splits
@@ -113,7 +123,7 @@ The following steps are performed:
    data from a non-mammalian organism.
 
 Reorganisation by barcode and sample
-------------------------------------
+************************************
 
 At the end of the QC and filter pipeline the read pairs are
 reorganised in two different ways:
@@ -141,7 +151,7 @@ The standard QC procedure is run on each set of FastqS (barcodes and
 samples) and QC reports are generated for each.
 
 Outputs and reports
--------------------
+*******************
 
 The pipeline directory will contain the following output
 directories:
@@ -187,6 +197,20 @@ The final report summarises information on the following:
  * Number of reads assigned and filtered at each stage by sample
  * Poly-G region counts and distribution
 
+.. _icell8_single_cell_ATAC-seq:
+
+ICELL8 single cell ATAC-seq
+---------------------------
+
+Initial processing of the sequencing data produces a set of R1/R2
+and I1/I2 Fastq file pairs for each sample defined in the
+:ref:`icell8_well_list_file`. The R1 and R2 reads are the actual
+data for each sample, and the I1 and I2 reads correspond to barcodes
+in the well list file.
+
+There is currently no subsequent processing pipeline or QC for these
+data.
+
 .. _icell8_well_list_file:
 
 Well list file
@@ -209,7 +233,7 @@ or by setting the appropriate parameters options in the ``settings.ini``
 configuration file.
 
 Reference data and quality filtering
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+************************************
 
  * **Mammalian genome panel**: ``fastq_screen`` conf file with the
    indices for "mammalian" genomes, to use in the contamination
@@ -237,7 +261,7 @@ Reference data and quality filtering
    parameter in the configuration file).
 
 Runtime environment
-~~~~~~~~~~~~~~~~~~~
+*******************
 
  * **Environment modules**: specify a list of environment modules
    (separated with commas) to load before running the pipeline.
@@ -259,7 +283,7 @@ Runtime environment
    environment.)
 
 Fastq batching
-~~~~~~~~~~~~~~
+**************
 
  * **Read batch size**: number of reads to assign to each "batch"
    when splitting Fastqs for processing.
@@ -272,7 +296,7 @@ Fastq batching
    ``[icell8] batch_size``.
 
 Job control
-~~~~~~~~~~~
+***********
 
  * **Maximum number of concurrent jobs**: limits the number of
    processes that the pipeline will attempt to run at any one
@@ -285,7 +309,7 @@ Job control
 ..  _job_runners_and_processors:
 
 Job runners and processors
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+**************************
 
 Job runners and numbers of processors can be explicitly defined
 for different "stages" of the pipeline, where a stage is
@@ -317,7 +341,7 @@ Via the configuration file::
     [runners]
     icell8_statistics = GEJobRunner(-pe smp.pe 4)
 
-.. _icell8_updating_sample_lists:
+.. _icell8_scRNA-seq_updating_sample_lists:
 
 Appendix: manually updating sample lists
 ----------------------------------------
