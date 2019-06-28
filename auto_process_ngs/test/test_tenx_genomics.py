@@ -8,8 +8,13 @@ import os
 import shutil
 from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import RunInfoXml
+from bcftbx.utils import mkdirs
+from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
+from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock10xdata import METRICS_SUMMARY
+from auto_process_ngs.mock10xdata import ATAC_SUMMARY
 from auto_process_ngs.tenx_genomics_utils import *
 
 # Set to False to keep test output dirs
@@ -264,10 +269,7 @@ class TestMetricsSummary(unittest.TestCase):
     def test_metrics_summary(self):
         """MetricsSummary: check estimated number of cells is extracted
         """
-        metrics_summary = """Estimated Number of Cells,Mean Reads per Cell,Median Genes per Cell,Number of Reads,Valid Barcodes,Reads Mapped Confidently to Transcriptome,Reads Mapped Confidently to Exonic Regions,Reads Mapped Confidently to Intronic Regions,Reads Mapped Confidently to Intergenic Regions,Reads Mapped Antisense to Gene,Sequencing Saturation,Q30 Bases in Barcode,Q30 Bases in RNA Read,Q30 Bases in Sample Index,Q30 Bases in UMI,Fraction Reads in Cells,Total Genes Detected,Median UMI Counts per Cell
-"2,272","107,875","1,282","245,093,084",98.3%,69.6%,71.9%,6.1%,3.2%,4.4%,51.3%,98.5%,79.2%,93.6%,98.5%,12.0%,"16,437","2,934"
-"""
-        m = MetricsSummary(metrics_summary)
+        m = MetricsSummary(METRICS_SUMMARY)
         self.assertEqual(m.estimated_number_of_cells,2272)
 
 class TestAtacSummary(unittest.TestCase):
@@ -286,12 +288,9 @@ class TestAtacSummary(unittest.TestCase):
     def test_atac_summary(self):
         """AtacSummary: check detected/annotated numbers of cells are extracted
         """
-        summary = """annotated_cells,bc_q30_bases_fract,cellranger-atac_version,cells_detected,frac_cut_fragments_in_peaks,frac_fragments_nfr,frac_fragments_nfr_or_nuc,frac_fragments_nuc,frac_fragments_overlapping_peaks,frac_fragments_overlapping_targets,frac_mapped_confidently,frac_waste_chimeric,frac_waste_duplicate,frac_waste_lowmapq,frac_waste_mitochondrial,frac_waste_no_barcode,frac_waste_non_cell_barcode,frac_waste_overall_nondup,frac_waste_total,frac_waste_unmapped,median_fragments_per_cell,median_per_cell_unique_fragments_at_30000_RRPC,median_per_cell_unique_fragments_at_50000_RRPC,num_fragments,r1_q30_bases_fract,r2_q30_bases_fract,si_q30_bases_fract,total_usable_fragments,tss_enrichment_score
-5682,0.925226023701,1.0.1,6748,0.512279447992,0.392368676637,0.851506103882,0.459137427245,0.556428090013,0.575082094792,0.534945791083,0.00123066129161,0.160515305655,0.0892973647982,0.00899493352094,0.352907229061,0.0135851297269,0.471714266123,0.632229571777,0.00569894772443,16119.5,5769.94794925,8809.29425158,366582587,0.947387774999,0.941378123188,0.962708567847,134818235,6.91438390781
-"""
         summary_csv = os.path.join(self.wd,"summary.csv")
         with open(summary_csv,'w') as fp:
-            fp.write(summary)
+            fp.write(ATAC_SUMMARY)
         s = AtacSummary(summary_csv)
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
@@ -478,3 +477,85 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertTrue(os.path.isdir("HGXXXX_34"))
         self.assertTrue(os.path.isfile("cellranger_qc_summary_34.html"))
         self.assertTrue(os.path.isdir(output_dir))
+
+class TestSetCellCountForProject(unittest.TestCase):
+    """
+    Tests for the 'set_cell_count_for_project' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestSetCellCountForProject')
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def _make_mock_analysis_project(self,single_cell_platform,library_type):
+        # Create a mock AnalysisProject
+        m = MockAnalysisProject('PJB',
+                                fastq_names=("PJB1_S1_L001_R1_001.fastq.gz",
+                                             "PJB1_S1_L001_R2_001.fastq.gz",),
+                                metadata={'Single cell platform':
+                                          single_cell_platform,
+                                          'Library type': library_type,})
+        m.create(top_dir=self.wd)
+        return os.path.join(self.wd,'PJB')
+    def test_set_cell_count_for_project(self):
+        """
+        set_cell_count_for_project: test for scRNA-seq
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Chromium 3'v3",
+            "scRNA-seq")
+        # Add metrics_summart.csv
+        counts_dir = os.path.join(project_dir,
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        metrics_summary_file = os.path.join(counts_dir,
+                                            "metrics_summary.csv")
+        with open(metrics_summary_file,'w') as fp:
+            fp.write(METRICS_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         2272)
+    def test_set_cell_count_for_atac_project(self):
+        """
+        set_cell_count_for_project: test for scATAC-seq
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "scATAC-seq")
+        # Add metrics_summart.csv
+        counts_dir = os.path.join(project_dir,
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                            "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         5682)

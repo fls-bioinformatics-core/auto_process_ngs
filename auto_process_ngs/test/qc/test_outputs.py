@@ -13,8 +13,12 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
+from auto_process_ngs.qc.outputs import cellranger_count_output
+from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
+from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
+from auto_process_ngs.qc.outputs import check_cellranger_atac_count_outputs
 from auto_process_ngs.qc.outputs import expected_outputs
 
 # Set to False to keep test output dirs
@@ -65,6 +69,81 @@ class TestFastqStrandOutputFunction(unittest.TestCase):
         self.assertEqual(fastq_strand_output(
             '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
                          'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
+
+class TestCellrangerCountOutputFunction(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCellrangerCountOutput')
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_cellranger_count_output(self):
+        """cellranger_count_output: check for project
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_count_output(project),
+                         ('cellranger_count/PJB1/outs/metrics_summary.csv',
+                          'cellranger_count/PJB1/outs/web_summary.html',
+                          'cellranger_count/PJB2/outs/metrics_summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
+
+    def test_cellranger_count_output(self):
+        """cellranger_count_output: check for project and sample
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_count_output(project,
+                                                 sample_name="PJB2"),
+                         ('cellranger_count/PJB2/outs/metrics_summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
+
+class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCellrangerAtacCountOutput')
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB1_S1_R3_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",
+                                       "PJB2_S2_R3_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_cellranger_atac_count_output(self):
+        """cellranger_atac_count_output: check for project
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_atac_count_output(project),
+                         ('cellranger_count/PJB1/outs/summary.csv',
+                          'cellranger_count/PJB1/outs/web_summary.html',
+                          'cellranger_count/PJB2/outs/summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
+
+    def test_cellranger_atac_count_output(self):
+        """cellranger_atac_count_output: check for project and sample
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(cellranger_atac_count_output(project,
+                                                 sample_name="PJB2"),
+                         ('cellranger_count/PJB2/outs/summary.csv',
+                          'cellranger_count/PJB2/outs/web_summary.html'))
+
 
 class TestCheckIlluminaQcOutputs(unittest.TestCase):
     """
@@ -407,6 +486,149 @@ class TestCheckFastqStrandOutputs(unittest.TestCase):
                                                     qc_protocol="singlecell"),
                          [])
 
+class TestCheckCellrangerCountOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_cellranger_count_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckCellrangerCountOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_cellranger_count_outputs_singlecell_missing(self):
+        """
+        check_cellranger_count_outputs: cellranger count output missing (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="singlecell",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_count_outputs_singlecell_present(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present (singlecell)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="singlecell",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
+
+    def test_check_cellranger_count_outputs_10x_scRNAseq_missing(self):
+        """
+        check_cellranger_count_outputs: cellranger count output missing (10x_scRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3", })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_count_outputs_10x_scRNAseq_present(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present (10x_scRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
+
+class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_cellranger_atac_count_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckCellrangerAtacCountOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_cellranger_atac_count_outputs_10x_scATAC_missing(self):
+        """
+        check_cellranger_atac_count_outputs: cellranger-atac count output missing (10x_scATAC)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell ATAC" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scATAC",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_atac_count_outputs_10x_scATAC_present(self):
+        """
+        check_cellranger_atac_count_outputs: cellranger-atac count output present (10x_scATAC)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell ATAC" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_scATAC",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),[])
+
 class TestExpectedOutputs(unittest.TestCase):
     """
     Tests for the 'expected_outputs' function
@@ -657,4 +879,111 @@ class TestExpectedOutputs(unittest.TestCase):
             self.assertTrue(os.path.basename(e) in reference_outputs)
         for r in reference_outputs:
             self.assertTrue(os.path.join(self.wd,p.name,"qc",r) in expected)
+
+    def test_expected_outputs_10x_scRNA_seq_with_cellranger(self):
+        """
+        expected_outputs: 10xGenomics scRNA-seq with cellranger
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_fastqc",
+                             "qc/PJB1_S1_R2_001_fastqc.html",
+                             "qc/PJB1_S1_R2_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_fastq_strand.txt",
+                             "cellranger_count/PJB1/outs/metrics_summary.csv",
+                             "cellranger_count/PJB1/outs/web_summary.html",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    qc_protocol="10x_scRNAseq")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
+
+    def test_expected_outputs_10x_scATAC_with_cellranger_atac(self):
+        """
+        expected_outputs: 10xGenomics scATAC-seq with cellranger-atac
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB1_S1_R3_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Single Cell ATAC" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R1_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R1_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R1_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R1_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R1_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R1_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R1_001_fastq_strand.txt",
+                             "qc/PJB1_S1_R3_001_fastqc",
+                             "qc/PJB1_S1_R3_001_fastqc.html",
+                             "qc/PJB1_S1_R3_001_fastqc.zip",
+                             "qc/PJB1_S1_R3_001_fastqc",
+                             "qc/PJB1_S1_R3_001_fastqc.html",
+                             "qc/PJB1_S1_R3_001_fastqc.zip",
+                             "qc/PJB1_S1_R3_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R3_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R3_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R3_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R3_001_rRNA_screen.txt",
+                             "cellranger_count/PJB1/outs/summary.csv",
+                             "cellranger_count/PJB1/outs/web_summary.html",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    qc_protocol="10x_scATAC")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)
 

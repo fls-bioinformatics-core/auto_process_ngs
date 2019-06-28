@@ -93,6 +93,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     explicit links for each project for the following (where
     appropriate):
 
+    - cellranger count outputs
     - MultiQC report
 
     (These reports should now be accessible from the per-project
@@ -321,13 +322,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             print "...%s: found ICell8 pipeline report" % project.name
             project_qc[project.name]['icell8_zip'] = icell8_zip
         # Cellranger count report
-        cellranger_zip = os.path.join(project.dirn,
-                                      "cellranger_count_report.%s.%s.zip" %
-                                      (project.name,
-                                       os.path.basename(ap.analysis_dir)))
-        if os.path.exists(cellranger_zip):
-            print "...%s: found cellranger count report" % project.name
-            project_qc[project.name]['cellranger_zip'] = cellranger_zip
+        if legacy:
+            cellranger_zip = os.path.join(project.dirn,
+                                          "cellranger_count_report.%s.%s.zip" %
+                                          (project.name,
+                                           os.path.basename(ap.analysis_dir)))
+            if os.path.exists(cellranger_zip):
+                print "...%s: found cellranger count report" % project.name
+                project_qc[project.name]['cellranger_zip'] = cellranger_zip
     # Projects with no QC
     no_qc_projects = filter(lambda p: not project_qc[p.name].qc_dirs,
                             projects)
@@ -631,10 +633,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     if copy_job.exit_status or unzip_job.exit_status:
                         raise Exception("copy and/or unzip job failed")
                     if exclude_zip_files:
-                            print "Removing %s from server" % cellranger_zip
-                            fileops.remove_file(os.path.join(
-                                dirn,
-                                os.path.basename(cellranger_zip)))
+                        print "Removing %s from server" % cellranger_zip
+                        fileops.remove_file(os.path.join(
+                            dirn,
+                            os.path.basename(cellranger_zip)))
                     # Append info to the index page
                     report_html.add(
                         Link("[Cellranger count]",

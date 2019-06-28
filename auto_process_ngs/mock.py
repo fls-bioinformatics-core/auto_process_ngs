@@ -708,12 +708,13 @@ class UpdateAnalysisProject(DirectoryUpdater):
         self.add_file("cellranger_count_report.html")
         self.add_subdir("cellranger_count")
         for sample in self._project.samples:
-            sample_dir = os.path.join("cellranger_count",sample.name)
+            sample_dir = os.path.join(self._project.dirn,
+                                      "cellranger_count",
+                                      sample.name)
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
-            self.add_file(os.path.join(sample_dir,
-                                       "outs",
-                                       "web_summary.html"))
+            for f in ("web_summary.html","metrics_summary.csv"):
+                self.add_file(os.path.join(sample_dir,"outs",f))
         # Build ZIP archive
         analysis_dir = os.path.basename(self._parent_dir())
         cellranger_zip = os.path.join(self._project.dirn,
@@ -745,6 +746,7 @@ class MockAnalysisDirFactory(object):
                    run_name,platform,
                    paired_end=True,
                    no_lane_splitting=True,
+                   reads=None,
                    top_dir=None,
                    metadata=None,
                    project_metadata=None,
@@ -768,10 +770,10 @@ class MockAnalysisDirFactory(object):
                               project_metadata=project_metadata,
                               include_stats_files=include_stats_files,
                               top_dir=top_dir)
-        mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
-        mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
-        mad.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=lanes)
-        mad.add_fastq_batch('CDE','CDE4','CDE4_S4',lanes=lanes)
+        mad.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('CDE','CDE3','CDE3_S3',lanes=lanes,reads=reads)
+        mad.add_fastq_batch('CDE','CDE4','CDE4_S4',lanes=lanes,reads=reads)
         return mad
 
     @classmethod
@@ -1254,6 +1256,8 @@ cellranger%s (%s)
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,cmd,self._version)
+        # Get executable name
+        cellranger_exe = os.path.basename(self._path)
         # Handle version request or no args
         print header
         if cmd == " --version" or not cmd:
@@ -1277,6 +1281,22 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--maxjobs",action="store")
         mkfastq.add_argument("--jobinterval",action="store")
         mkfastq.add_argument("--disable-ui",action="store_true")
+        # count subparser
+        count = sp.add_parser("count")
+        count.add_argument("--id",action="store")
+        count.add_argument("--fastqs",action="store")
+        count.add_argument("--sample",action="store")
+        if cellranger_exe == "cellranger":
+            count.add_argument("--transcriptome",action="store")
+            count.add_argument("--chemistry",action="store")
+        elif cellranger_exe == "cellranger-atac":
+            count.add_argument("--reference",action="store")
+        count.add_argument("--jobmode",action="store")
+        count.add_argument("--localcores",action="store")
+        count.add_argument("--localmem",action="store")
+        count.add_argument("--mempercore",action="store")
+        count.add_argument("--maxjobs",action="store")
+        count.add_argument("--jobinterval",action="store")
         # Process command line
         args = p.parse_args()
         if args.command == "mkfastq":
@@ -1352,6 +1372,25 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 json_file = os.path.join(outs_dir,"qc_summary.json")
                 with open(json_file,'w') as fp:
                     fp.write(mock10xdata.QC_SUMMARY_JSON)
+        elif args.command == "count":
+            ###############
+            # count command
+            ###############
+            top_dir = str(args.id)
+            os.mkdir(top_dir)
+            outs_dir = os.path.join(top_dir,"outs")
+            os.mkdir(outs_dir)
+            if cellranger_exe == "cellranger":
+                metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
+                with open(metrics_file,'w') as fp:
+                    fp.write(mock10xdata.METRICS_SUMMARY)
+            elif cellranger_exe == "cellranger-atac":
+                summary_file = os.path.join(outs_dir,"summary.csv")
+                with open(summary_file,'w') as fp:
+                    fp.write(mock10xdata.ATAC_SUMMARY)
+            web_summary_file = os.path.join(outs_dir,"web_summary.html")
+            with open(web_summary_file,'w') as fp:
+                fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
         else:
             print "%s: not implemented" % command
         print "Return exit code: %s" % self._exit_code

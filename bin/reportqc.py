@@ -51,6 +51,10 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
     Returns:
       String: path to the output ZIP file.
     """
+    print("Making ZIP file:")
+    print("-- Protocol            : %s" % qc_protocol)
+    print("-- QC dir              : %s" % qc_dir)
+    print("-- Single cell platform: %s" % project.info.single_cell_platform)
     # Name for ZIP file
     basename = os.path.splitext(os.path.basename(report_html))[0]
     analysis_dir = os.path.basename(os.path.dirname(project.dirn))
@@ -72,12 +76,17 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
     zip_file.add_file(report_html)
     # Add the QC outputs
     logging.debug("Adding QC outputs for %s" % project.name)
-    for f in expected_outputs(project,qc_dir,qc_protocol):
+    for f in expected_outputs(project,qc_dir,
+                              fastq_strand_conf=
+                              os.path.join(qc_dir,"fastq_strand.conf"),
+                              qc_protocol=qc_protocol):
         if f.endswith('.zip'):
             # Exclude .zip file
             continue
         if os.path.exists(f):
             zip_file.add(f)
+        else:
+            logging.warning("ZIP: missing file '%s'" % f)
     # MultiQC output
     multiqc = os.path.join(project.dirn,
                            "multi%s_report.html" %

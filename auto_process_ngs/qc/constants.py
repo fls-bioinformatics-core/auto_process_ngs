@@ -18,6 +18,7 @@ Provides the following constants for the QC pipeline:
 PROTOCOLS = ('standardPE',
              'standardSE',
              'singlecell',
+             '10x_scRNAseq',
              '10x_scATAC',
              'ICELL8_scATAC',)
 

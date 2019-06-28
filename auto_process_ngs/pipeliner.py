@@ -1494,6 +1494,8 @@ class Pipeline(object):
                         kws['scripts_dir'] = scripts_dir
                     if 'batch_size' not in kws:
                         kws['batch_size'] = batch_size
+                    if 'verbose' not in kws:
+                        kws['verbose'] = verbose
                     kws['log_file'] = self._log_file
                     for k in kws:
                         # If any keywords are actually PipelineParams
@@ -1506,7 +1508,6 @@ class Pipeline(object):
                     try:
                         task.run(sched=sched,
                                  poll_interval=poll_interval,
-                                 verbose=verbose,
                                  **kws)
                     except Exception as ex:
                         # Exception trying to run the task
