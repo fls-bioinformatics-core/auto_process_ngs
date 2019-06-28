@@ -22,6 +22,7 @@ import os
 import argparse
 import logging
 from bcftbx.JobRunner import fetch_runner
+from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.analysis import AnalysisProject
 import auto_process_ngs
 import auto_process_ngs.settings
@@ -177,6 +178,11 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    p.add_argument('--local',action='store_true',
+                   dest='local',default=False,
+                   help="run the QC on the local system (overrides "
+                   "any runners defined in the configuration or on "
+                   "the command line")
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
@@ -212,19 +218,32 @@ if __name__ == "__main__":
             envmodules[name] = None
 
     # Job runners
-    if args.runner is None:
-        default_runner = __settings.general.default_runner
+    if args.local:
+        # Force implicit use of local runner
+        print("Running locally (overriding configuration and "
+              "ignoring command line settings)")
+        default_runner = SimpleJobRunner()
         runners = {
-            'cellranger_runner': __settings.runners.cellranger,
-            'qc_runner': __settings.runners.qc,
+            'cellranger_runner': default_runner,
+            'qc_runner': default_runner,
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
-    else:
+    elif args.runner is not None:
+        # Runner explicitly supplied on the command line
         default_runner = fetch_runner(args.runner)
         runners = {
             'cellranger_runner': default_runner,
             'qc_runner': default_runner,
+            'verify_runner': default_runner,
+            'report_runner': default_runner,
+        }
+    else:
+        # Runners from configuration
+        default_runner = __settings.general.default_runner
+        runners = {
+            'cellranger_runner': __settings.runners.cellranger,
+            'qc_runner': __settings.runners.qc,
             'verify_runner': default_runner,
             'report_runner': default_runner,
         }
