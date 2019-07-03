@@ -216,7 +216,7 @@ if __name__ == "__main__":
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_atac_references=cellranger_atac_references,
                        cellranger_jobmode=cellranger_jobmode,
-                       cellranger_maxjobs=max_jobs,
+                       cellranger_maxjobs=args.max_jobs,
                        cellranger_mempercore=cellranger_mempercore,
                        cellranger_jobinterval=cellranger_jobinterval,
                        cellranger_localcores=cellranger_localcores,
