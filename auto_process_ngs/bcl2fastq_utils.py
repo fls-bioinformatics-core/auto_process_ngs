@@ -508,7 +508,8 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
                       ignore_missing_control=False,
                       working_dir=None,
                       log_dir=None,
-                      runner=None):
+                      runner=None,
+                      bcl2fastq_exe=None):
     """
     Wrapper for running the CASAVA/bcl2fastq 1.8.* pipeline
 
@@ -550,6 +551,8 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
         current working directory)
       runner (JobRunner): optional, specify job runner to use
         (defaults to SimpleJobRunner)
+      bcl2fastq_exe (str): optional, path to the bcl2fastq executable
+        or configureBclToFastq.pl script to use
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -567,7 +570,8 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
         force=force,
         ignore_missing_bcl=ignore_missing_bcl,
         ignore_missing_stats=ignore_missing_stats,
-        ignore_missing_control=ignore_missing_control
+        ignore_missing_control=ignore_missing_control,
+        configureBclToFastq_exe=bcl2fastq_exe
     )
     # Check the executable exists
     if not configure_cmd.has_exe:
@@ -678,7 +682,8 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
                     writing_threads=None,
                     working_dir=None,
                     log_dir=None,
-                    runner=None):
+                    runner=None,
+                    bcl2fastq_exe=None):
     """
     Wrapper for running bcl2fastq 2.*
 
@@ -728,6 +733,8 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
         current working directory)
       runner (JobRunner): optional, specify job runner to use
         (defaults to SimpleJobRunner)
+      bcl2fastq_exe (str): optional, path to the bcl2fastq executable
+        to use
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -749,7 +756,8 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
         loading_threads=loading_threads,
         demultiplexing_threads=demultiplexing_threads,
         processing_threads=processing_threads,
-        writing_threads=writing_threads
+        writing_threads=writing_threads,
+        bcl2fastq_exe=bcl2fastq_exe
     )
     # Check the executable exists
     if not bcl2fastq2_cmd.has_exe:
