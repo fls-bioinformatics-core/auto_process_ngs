@@ -22,6 +22,10 @@ from ..bcl2fastq_utils import bcl_to_fastq_info
 from ..bcl2fastq_utils import get_required_samplesheet_format
 from ..bcl2fastq_utils import get_nmismatches
 from ..bcl2fastq_utils import check_barcode_collisions
+from ..bcl2fastq_utils import bcl_to_fastq_info
+from ..bcl2fastq_utils import run_bcl2fastq_1_8
+from ..bcl2fastq_utils import run_bcl2fastq_2_17
+from ..bcl2fastq_utils import run_bcl2fastq_2_20
 from ..barcodes.pipeline import AnalyseBarcodes
 from ..icell8.utils import get_bases_mask_icell8
 from ..icell8.utils import get_bases_mask_icell8_atac
@@ -51,6 +55,8 @@ MAKE_FASTQS_PROTOCOLS = ('standard',
                          'icell8_atac',
                          '10x_chromium_sc',
                          '10x_chromium_sc_atac')
+
+BCL2FASTQ_VERSIONS = ('1.8','2.17','2.20',)
 
 #######################################################################
 # Command functions
@@ -700,6 +706,9 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             pass
         if no_lane_splitting is None:
             no_lane_splitting = ap.settings.bcl2fastq.no_lane_splitting
+    # Load data
+    illumina_run = IlluminaData.IlluminaRun(primary_data_dir,
+                                            ap.metadata.platform)
     # Determine which bcl2fastq software to use
     if require_bcl2fastq is None:
         try:
@@ -719,6 +728,18 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
         bcl2fastq_info = bcl_to_fastq_info(bcl2fastq_exe)
     else:
         raise Exception("No appropriate bcl2fastq software located")
+    # Check that bcl2fastq version is known
+    known_version = None
+    for version in BCL2FASTQ_VERSIONS:
+        if bcl2fastq_info[2].startswith("%s." % version):
+            known_version = version
+            break
+    if known_version:
+        print("Bcl2fastq software matches known version '%s'" %
+              known_version)
+    else:
+        raise Exception("Don't know how to run bcl2fastq version %s" %
+                        bcl2fastq_info[2])
     # Store info on bcl2fastq package
     ap.metadata['bcl2fastq_software'] = bcl2fastq_info
     # Generate temporary sample sheet with required format
@@ -763,6 +784,10 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     else:
         print "No barcode collisions detected using %d mismatches" % \
             nmismatches
+    # Working directory (set to analysis dir)
+    working_dir = ap.analysis_dir
+    # Log directory
+    log_dir = ap.log_dir
     # Report values and settings
     print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
     print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
@@ -777,53 +802,105 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     print "Min trimmed read len  : %s" % minimum_trimmed_read_length
     print "Mask short adptr reads: %s" % mask_short_adapter_reads
     print "Create index Fastqs   : %s" % create_fastq_for_index_reads
+    print "Working directory     : %s" % working_dir
+    print "Log directory         : %s" % log_dir
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.bcl2fastq
     runner.set_log_dir(ap.log_dir)
-    # Run bcl2fastq
-    bcl2fastq = Command('bclToFastq.py',
-                        '--nprocessors',nprocessors,
-                        '--use-bases-mask',bases_mask,
-                        '--nmismatches',nmismatches,
-                        '--ignore-missing-control')
-    if ignore_missing_bcl:
-        bcl2fastq.add_args('--ignore-missing-bcl')
-    if ignore_missing_stats:
-        bcl2fastq.add_args('--ignore-missing-stats')
-    if no_lane_splitting:
-        bcl2fastq.add_args('--no-lane-splitting')
-    if minimum_trimmed_read_length is not None:
-        bcl2fastq.add_args('--minimum-trimmed-read-length',
-                           minimum_trimmed_read_length)
-    if mask_short_adapter_reads is not None:
-        bcl2fastq.add_args('--mask-short-adapter-reads',
-                           mask_short_adapter_reads)
-    if create_fastq_for_index_reads:
-        bcl2fastq.add_args('--create-fastq-for-index-reads')
-    bcl2fastq.add_args('--platform',
-                       ap.metadata.platform,
-                       '--bcl2fastq_path',
-                       bcl2fastq_exe,
-                       primary_data_dir,
-                       bcl2fastq_dir,
-                       tmp_sample_sheet)
-
-    print "Running %s" % bcl2fastq
-    bcl2fastq_job = SchedulerJob(runner,
-                                 bcl2fastq.command_line,
-                                 name='bclToFastq',
-                                 working_dir=os.getcwd())
-    bcl2fastq_job.start()
-    try:
-        bcl2fastq_job.wait(
-            poll_interval=ap.settings.general.poll_interval
+    # Run bcl to fastq conversion based on version
+    if known_version in ('1.8',):
+        # 1.8.* pipeline
+        exit_code = run_bcl2fastq_1_8(
+            illumina_run.basecalls_dir,
+            tmp_sample_sheet,
+            output_dir=bcl2fastq_dir,
+            mismatches=nmismatches,
+            bases_mask=bases_mask,
+            nprocessors=nprocessors,
+            force=True,
+            ignore_missing_bcl=ignore_missing_bcl,
+            ignore_missing_stats=ignore_missing_stats,
+            ignore_missing_control=ignore_missing_control,
+            runner=runner,
+            working_dir=working_dir,
+            log_dir=log_dir
         )
-    except KeyboardInterrupt,ex:
-        logger.warning("Keyboard interrupt, terminating bcl2fastq")
-        bcl2fastq_job.terminate()
-        raise ex
-    exit_code = bcl2fastq_job.exit_code
+    elif known_version in ('2.17',):
+        # bcl2fastq 2.17.*
+        if nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            loading_threads=min(4,nprocessors)
+            writing_threads=min(4,nprocessors)
+            demultiplexing_threads=max(int(float(nprocessors)*0.2),
+                                       nprocessors)
+            processing_threads=nprocessors
+            print "Explicitly setting number of threads for each stage:"
+            print "Loading (-r)       : %d" % loading_threads
+            print "Demultiplexing (-d): %d" % demultiplexing_threads
+            print "Processing (-p)    : %d" % processing_threads
+            print "Writing (-w)       : %d" % writing_threads
+        else:
+            # Use the defaults
+            loading_threads = None
+            demultiplexing_threads = None
+            processing_threads = None
+            writing_threads = None
+        # Run the bcl to fastq conversion
+        exit_code = run_bcl2fastq_2_17(
+            illumina_run.run_dir,
+            tmp_sample_sheet,
+            output_dir=bcl2fastq_dir,
+            mismatches=nmismatches,
+            bases_mask=bases_mask,
+            ignore_missing_bcl=ignore_missing_bcl,
+            no_lane_splitting=no_lane_splitting,
+            minimum_trimmed_read_length=minimum_trimmed_read_length,
+            mask_short_adapter_reads=mask_short_adapter_reads,
+            create_fastq_for_index_reads=create_fastq_for_index_reads,
+            loading_threads=loading_threads,
+            demultiplexing_threads=demultiplexing_threads,
+            processing_threads=processing_threads,
+            writing_threads=writing_threads,
+            runner=runner,
+            working_dir=working_dir,
+            log_dir=log_dir
+        )
+    elif known_version in ('2.20',):
+        # bcl2fastq 2.20.*
+        if nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            loading_threads=min(4,nprocessors)
+            writing_threads=min(4,nprocessors)
+            processing_threads=nprocessors
+            print "Explicitly setting number of threads for each stage:"
+            print "Loading (-r)       : %d" % loading_threads
+            print "Processing (-p)    : %d" % processing_threads
+            print "Writing (-w)       : %d" % writing_threads
+        else:
+            # Use the defaults
+            loading_threads = None
+            processing_threads = None
+            writing_threads = None
+        # Run the bcl to fastq conversion
+        exit_code = run_bcl2fastq_2_20(
+            illumina_run.run_dir,
+            tmp_sample_sheet,
+            output_dir=bcl2fastq_dir,
+            mismatches=nmismatches,
+            bases_mask=bases_mask,
+            ignore_missing_bcl=ignore_missing_bcl,
+            no_lane_splitting=no_lane_splitting,
+            minimum_trimmed_read_length=minimum_trimmed_read_length,
+            mask_short_adapter_reads=mask_short_adapter_reads,
+            create_fastq_for_index_reads=create_fastq_for_index_reads,
+            loading_threads=loading_threads,
+            processing_threads=processing_threads,
+            writing_threads=writing_threads,
+            runner=runner,
+            working_dir=working_dir,
+            log_dir=log_dir
+        )
     print "bcl2fastq completed: exit code %s" % exit_code
     if exit_code != 0:
         logger.error("bcl2fastq exited with an error")
