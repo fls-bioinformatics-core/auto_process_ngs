@@ -976,7 +976,21 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
       bases_mask (str): if set then use this as an alternative bases
         mask setting (default is to acquire from the autoprocessor
         parameters)
-      ...TBD...
+      lanes (list): if set then specifies the lanes to include
+        (default is to include all lanes)
+      cellranger_jobmode (str): specify the job mode to pass to
+        cellranger (default: 'local')
+      cellranger_maxjobs (int): specify the maximum number of jobs to
+        pass to cellranger (default: None)
+      cellranger_mempercore (int): specify the memory per core (in Gb)
+        to pass to cellranger (default: None)
+      cellranger_jobinterval (int): specify the interval between
+        launching jobs (in ms) to pass to cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores cellranger
+        can request in jobmode 'local' (default: None)
+      cellranger_localmem (int): maximum memory cellranger can request
+        in jobmode 'local' (default: None)
+      log_dir (str): optional path to directory to write log files to
     """
     # Load run data
     illumina_run = IlluminaData.IlluminaRun(primary_data_dir,
@@ -1037,7 +1051,7 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
                                               bcl2fastq_info[2])
     print "Sample sheet           : %s" % os.path.basename(sample_sheet)
     print "Bases mask             : %s" % bases_mask
-    print "Cellranger jobmode     : %s" %cellranger_jobmode
+    print "Cellranger jobmode     : %s" % cellranger_jobmode
     print "Cellranger maxjobs     : %s" % cellranger_maxjobs
     print "Cellranger mempercore  : %s" % cellranger_mempercore
     print "Cellranger jobinterval : %s" % cellranger_jobinterval
