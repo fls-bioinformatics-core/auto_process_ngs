@@ -33,9 +33,12 @@ Utility functions for bcl to fastq conversion operations:
 import os
 import re
 import logging
-import auto_process_ngs.applications as applications
+from .applications import Command
+from .applications import bcl2fastq as bcl2fastq_apps
+from .applications import general as general_apps
 from .simple_scheduler import SchedulerJob
-import auto_process_ngs.utils as utils
+from .utils import find_executables
+from .utils import parse_version
 from .samplesheet_utils import barcode_is_10xgenomics
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
@@ -140,11 +143,11 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
       List: full paths to bcl2fastq converter executables.
 
     """
-    return utils.find_executables(('bcl2fastq',
-                                   'configureBclToFastq.pl'),
-                                  info_func=bcl_to_fastq_info,
-                                  reqs=reqs,
-                                  paths=paths)
+    return find_executables(('bcl2fastq',
+                             'configureBclToFastq.pl'),
+                            info_func=bcl_to_fastq_info,
+                            reqs=reqs,
+                            paths=paths)
 
 def bcl_to_fastq_info(path=None):
     """
@@ -201,7 +204,7 @@ def bcl_to_fastq_info(path=None):
     elif os.path.basename(bcl2fastq_path) == 'bcl2fastq':
         # Found bcl2fastq v2.*
         # Run the program to get the version
-        version_cmd = applications.Command(bcl2fastq_path,'--version')
+        version_cmd = Command(bcl2fastq_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
         for line in output.split('\n'):
             if line.startswith('bcl2fastq'):
@@ -303,12 +306,12 @@ def get_required_samplesheet_format(bcl2fastq_version):
         etc).
 
     """
-    version = utils.parse_version(bcl2fastq_version)
+    version = parse_version(bcl2fastq_version)
     major,minor = version[0:2]
-    if (major,minor) == utils.parse_version('1.8')[0:2]:
+    if (major,minor) == parse_version('1.8')[0:2]:
         # Version 1.8.*
         return 'CASAVA'
-    elif major == utils.parse_version('2')[0]:
+    elif major == parse_version('2')[0]:
         # Version 2.*
         return 'IEM'
     else:
@@ -555,7 +558,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
 
     """
     # Set up and run configureBclToFastq
-    configure_cmd = applications.bcl2fastq.configureBclToFastq(
+    configure_cmd = bcl2fastq_apps.configureBclToFastq(
         basecalls_dir,
         sample_sheet,
         output_dir=output_dir,
@@ -612,9 +615,9 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
         logging.error("Makefile not found in %s" % output_dir)
         return -1
     # Set up and run make command
-    make_cmd = applications.general.make(makefile=makefile,
-                                         working_dir=output_dir,
-                                         nprocessors=nprocessors)
+    make_cmd = general_apps.make(makefile=makefile,
+                                 working_dir=output_dir,
+                                 nprocessors=nprocessors)
     if not make_cmd.has_exe:
         logging.error("'%s' missing, cannot run" % make_cmd.command)
         return -1
@@ -732,7 +735,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
       was non-zero.
     """
     # Set up and run bcl2fastq2
-    bcl2fastq2_cmd = applications.bcl2fastq.bcl2fastq2(
+    bcl2fastq2_cmd = bcl2fastq_apps.bcl2fastq2(
         basecalls_dir,
         sample_sheet,
         output_dir=output_dir,
