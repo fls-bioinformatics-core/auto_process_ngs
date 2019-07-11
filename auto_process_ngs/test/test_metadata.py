@@ -300,10 +300,8 @@ class TestProjectMetadataFile(unittest.TestCase):
                              organism="Mouse",
                              PI="Harley",
                              comments="Squeak!")
-        for project in metadata:
-            print "%s" % project
-            print "%s" % type(project['Project'])
-            self.assertTrue(isinstance(project['Project'],str))
+        self.assertEqual(metadata[0]['Project'],"1234")
+        self.assertEqual(metadata[1]['Project'],"56.78")
 
     def test_refuse_to_add_duplicate_projects(self):
         """Refuse to add duplicated project names
