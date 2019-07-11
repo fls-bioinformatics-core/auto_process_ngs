@@ -34,11 +34,13 @@ import os
 import re
 import logging
 import auto_process_ngs.applications as applications
+from .simple_scheduler import SchedulerJob
 import auto_process_ngs.utils as utils
 from .samplesheet_utils import barcode_is_10xgenomics
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.platforms as platforms
 import bcftbx.utils as bcf_utils
+from bcftbx.JobRunner import SimpleJobRunner
 
 #######################################################################
 # Functions
@@ -139,7 +141,7 @@ def available_bcl2fastq_versions(reqs=None,paths=None):
 
     """
     return utils.find_executables(('bcl2fastq',
-                                  'configureBclToFastq.pl'),
+                                   'configureBclToFastq.pl'),
                                   info_func=bcl_to_fastq_info,
                                   reqs=reqs,
                                   paths=paths)
@@ -500,7 +502,10 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
                       force=False,
                       ignore_missing_bcl=False,
                       ignore_missing_stats=False,
-                      ignore_missing_control=False):
+                      ignore_missing_control=False,
+                      working_dir=None,
+                      log_dir=None,
+                      runner=None):
     """
     Wrapper for running the CASAVA/bcl2fastq 1.8.* pipeline
 
@@ -536,6 +541,12 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
         when *.stats files are missing (default is False)
       ignore_missing_control: optional, if True then interpret missing
         control files as not-set control bits (default is False)
+      working_dir (str): path to a directory to use as the working
+        directory (default: current working directory)
+      log_dir (str): path to a directory to write logs (default:
+        current working directory)
+      runner (JobRunner): optional, specify job runner to use
+        (defaults to SimpleJobRunner)
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -559,12 +570,39 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     if not configure_cmd.has_exe:
         logging.error("'%s' missing, cannot run" % configure_cmd.command)
         return -1
-    print "Running command: %s" % configure_cmd
-    returncode = configure_cmd.run_subprocess()
-    # Check returncode
-    if returncode != 0:
+    # Sort out the runner to use
+    if runner is None:
+        runner = SimpleJobRunner(join_logs=True)
+    # Sort out the working directory
+    if working_dir is None:
+        working_dir = os.getcwd()
+    else:
+        working_dir = os.path.abspath(working_dir)
+    # Make a log directory
+    if log_dir is None:
+        log_dir = os.getcwd()
+    else:
+        log_dir = os.path.abspath(log_dir)
+    # Run the configure command
+    print "Running %s" % configure_cmd
+    configure_job = SchedulerJob(
+        SimpleJobRunner(join_logs=True),
+        configure_cmd.command_line,
+        name=os.path.basename(configure_cmd.command),
+        working_dir=working_dir,
+        log_dir=log_dir)
+    configure_job.start()
+    try:
+        configure_job.wait()
+    except KeyboardInterrupt,ex:
+        logger.warning("Keyboard interrupt, terminating configure")
+        configure_job.terminate()
+        raise ex
+    exit_code = configure_job.exit_code
+    # Check exit code
+    if exit_code != 0:
         logging.error("configureToBclFastq.pl returned %s" % returncode)
-        return returncode
+        return exit_code
     # Check outputs (directory and makefile)
     if not os.path.isdir(output_dir):
         logging.error("Output directory '%s' not found" % output_dir)
@@ -580,12 +618,25 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     if not make_cmd.has_exe:
         logging.error("'%s' missing, cannot run" % make_cmd.command)
         return -1
-    print "Running command: %s" % make_cmd
-    returncode = make_cmd.run_subprocess()
-    # Check returncode
-    if returncode != 0:
-        logging.error("make returned %s" % returncode)
-    return returncode
+    print "Running %s" % make_cmd
+    make_job = SchedulerJob(
+        runner,
+        make_cmd.command_line,
+        name=os.path.basename(make_cmd.command),
+        working_dir=output_dir,
+        log_dir=log_dir)
+    make_job.start()
+    try:
+        make_job.wait()
+    except KeyboardInterrupt,ex:
+        logger.warning("Keyboard interrupt, terminating make")
+        make_job.terminate()
+        raise ex
+    exit_code = make_job.exit_code
+    # Check exit code
+    if exit_code != 0:
+        logging.error("make returned %s" % exit_code)
+    return exit_code
 
 def run_bcl2fastq_2_17(*args,**kws):
     """
@@ -621,7 +672,10 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
                     loading_threads=None,
                     demultiplexing_threads=None,
                     processing_threads=None,
-                    writing_threads=None):
+                    writing_threads=None,
+                    working_dir=None,
+                    log_dir=None,
+                    runner=None):
     """
     Wrapper for running bcl2fastq 2.*
 
@@ -665,6 +719,12 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
         for processing (--processing-threads)
       writing_threads: optional, specify number of threads to use for
         writing FASTQ data (--writing-threads)
+      working_dir (str): path to a directory to use as the working
+        directory (default: current working directory)
+      log_dir (str): path to a directory to write logs (default:
+        current working directory)
+      runner (JobRunner): optional, specify job runner to use
+        (defaults to SimpleJobRunner)
 
     Returns:
       0 on success; if a problem is encountered then returns -1 for
@@ -692,14 +752,41 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     if not bcl2fastq2_cmd.has_exe:
         logging.error("'%s' missing, cannot run" % bcl2fastq2_cmd.command)
         return -1
-    print "Running command: %s" % bcl2fastq2_cmd
-    returncode = bcl2fastq2_cmd.run_subprocess()
-    # Check returncode
-    if returncode != 0:
+    # Sort out the runner to use
+    if runner is None:
+        runner = SimpleJobRunner(join_logs=True)
+    # Sort out the working directory
+    if working_dir is None:
+        working_dir = os.getcwd()
+    else:
+        working_dir = os.path.abspath(working_dir)
+    # Make a log directory
+    if log_dir is None:
+        log_dir = os.getcwd()
+    else:
+        log_dir = os.path.abspath(log_dir)
+    # Run the command
+    print "Running %s" % bcl2fastq2_cmd
+    bcl2fastq_job = SchedulerJob(
+        runner,
+        bcl2fastq2_cmd.command_line,
+        name=os.path.basename(bcl2fastq2_cmd.command),
+        working_dir=working_dir,
+        log_dir=log_dir)
+    bcl2fastq_job.start()
+    try:
+        bcl2fastq_job.wait()
+    except KeyboardInterrupt,ex:
+        logger.warning("Keyboard interrupt, terminating bcl2fastq")
+        bcl2fastq_job.terminate()
+        raise ex
+    exit_code = bcl2fastq_job.exit_code
+    # Check exit code
+    if exit_code != 0:
         logging.error("bcl2fastq returned %s" % returncode)
-        return returncode
-    # Check outputs (directory and makefile)
+        return exit_code
+    # Check output directory
     if not os.path.isdir(output_dir):
         logging.error("Output directory '%s' not found" % output_dir)
         return -1
-    return returncode
+    return exit_code
