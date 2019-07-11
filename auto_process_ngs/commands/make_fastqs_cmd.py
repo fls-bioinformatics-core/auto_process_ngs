@@ -412,62 +412,21 @@ def make_fastqs(ap,protocol='standard',platform=None,
             analyse_barcodes = False
         elif protocol == '10x_chromium_sc':
             # 10xGenomics Chromium SC
-            if bases_mask == 'auto':
-                bases_mask = None
-            try:
-                # Check we have cellranger
-                cellranger = find_program('cellranger')
-                if not cellranger:
-                    raise Exception("No cellranger package found")
-                cellranger_software_info = cellranger_info(cellranger)
-                print "Using cellranger %s: %s" % \
-                    (cellranger_software_info[-1],
-                     cellranger)
-                # Check we have bcl2fastq
-                bcl2fastq = find_program('bcl2fastq')
-                if not bcl2fastq:
-                    raise Exception("No bcl2fastq package found")
-                bcl2fastq = available_bcl2fastq_versions(
-                    paths=(os.path.dirname(bcl2fastq),),
-                    reqs='>=2.17')
-                if not bcl2fastq:
-                    raise Exception("No appropriate bcl2fastq software "
-                                    "located")
-                bcl2fastq = bcl2fastq[0]
-                bcl2fastq_info = bcl_to_fastq_info(bcl2fastq)
-                print "Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
-                                                  bcl2fastq)
-                # Store info on bcl2fastq package
-                ap.metadata['bcl2fastq_software'] = bcl2fastq_info
-                # Store info on cellranger package
-                ap.metadata['cellranger_software'] = cellranger_software_info
-                # Put a copy of sample sheet in the log directory
-                shutil.copy(sample_sheet,ap.log_dir)
-                # Determine output directory absolute path
-                output_dir = ap.params.unaligned_dir
-                if not os.path.isabs(output_dir):
-                    output_dir = os.path.join(ap.analysis_dir,
-                                              output_dir)
-                # Run cellranger mkfastq
-                exit_code = run_cellranger_mkfastq(
-                    sample_sheet=sample_sheet,
-                    primary_data_dir=primary_data_dir,
-                    output_dir=output_dir,
-                    lanes=(None if lanes is None
-                           else ','.join([str(l) for l in lanes])),
-                    bases_mask=bases_mask,
-                    cellranger_exe=cellranger,
-                    cellranger_jobmode=cellranger_jobmode,
-                    cellranger_maxjobs=cellranger_maxjobs,
-                    cellranger_mempercore=cellranger_mempercore,
-                    cellranger_jobinterval=cellranger_jobinterval,
-                    cellranger_localcores=cellranger_localcores,
-                    cellranger_localmem=cellranger_localmem,
-                    working_dir=ap.analysis_dir,
-                    log_dir=ap.log_dir)
-            except Exception as ex:
-                raise Exception("'cellranger mkfastq' stage failed: "
-                                "'%s'" % ex)
+            exit_code = bcl_to_fastq_10x_chromium_sc(
+                ap,
+                output_dir=ap.params.unaligned_dir,
+                sample_sheet=sample_sheet,
+                primary_data_dir=primary_data_dir,
+                lanes=lanes,
+                bases_mask=bases_mask,
+                cellranger_jobmode=cellranger_jobmode,
+                cellranger_maxjobs=cellranger_maxjobs,
+                cellranger_mempercore=cellranger_mempercore,
+                cellranger_jobinterval=cellranger_jobinterval,
+                cellranger_localcores=cellranger_localcores,
+                cellranger_localmem=cellranger_localmem,
+                log_dir=ap.log_dir
+            )
             # Turn off barcode analysis
             analyse_barcodes = False
         elif protocol == '10x_chromium_sc_atac':
@@ -869,6 +828,126 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     if exit_code != 0:
         logger.error("bcl2fastq exited with an error")
     return exit_code
+
+def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
+                                 primary_data_dir,lanes=None,
+                                 bases_mask=None,
+                                 cellranger_jobmode='local',
+                                 cellranger_maxjobs=None,
+                                 cellranger_mempercore=None,
+                                 cellranger_jobinterval=None,
+                                 cellranger_localcores=None,
+                                 cellranger_localmem=None,
+                                 log_dir=None):
+    """
+    Generate FASTQ files for 10xGenomics single-cell Chromium run
+
+    Performs FASTQ generation from raw BCL files produced by an
+    Illumina sequencer using the 10xGenomics Chromium single-cell
+    (sc) RNA-seq protocol, by running 'cellranger mkfastq'.
+
+    Arguments:
+      ap (AutoProcessor): autoprocessor pointing to the analysis
+        directory to create Fastqs for
+      output_dir (str): output directory for bcl-to-fastq conversion
+      sample_sheet (str): path to input sample sheet file
+      primary_data_dir (str): path to the top-level directory holding
+        the sequencing data
+      lanes (list): if set then specifies the lanes to include
+        (default is to include all lanes)
+      bases_mask (str): if set then use this as an alternative bases
+        mask setting (default is to acquire from the autoprocessor
+        parameters)
+      cellranger_jobmode (str): specify the job mode to pass to
+        cellranger (default: 'local')
+      cellranger_maxjobs (int): specify the maximum number of jobs to
+        pass to cellranger (default: None)
+      cellranger_mempercore (int): specify the memory per core (in Gb)
+        to pass to cellranger (default: None)
+      cellranger_jobinterval (int): specify the interval between
+        launching jobs (in ms) to pass to cellranger (default: None)
+      cellranger_localcores (int): maximum number of cores cellranger
+        can request in jobmode 'local' (default: None)
+      cellranger_localmem (int): maximum memory cellranger can request
+        in jobmode 'local' (default: None)
+      log_dir (str): optional path to directory to write log files to
+    """
+    # Deal with bases mask
+    if bases_mask == 'auto':
+        bases_mask = None
+    # Check we have cellranger
+    cellranger = find_program('cellranger')
+    if not cellranger:
+        raise Exception("No cellranger package found")
+    cellranger_package_info = cellranger_info(cellranger)
+    print "Using cellranger %s: %s" % \
+        (cellranger_package_info[-1],
+         cellranger)
+    # Check we have bcl2fastq
+    bcl2fastq = find_program('bcl2fastq')
+    if not bcl2fastq:
+        raise Exception("No bcl2fastq package found")
+    bcl2fastq = available_bcl2fastq_versions(
+        paths=(os.path.dirname(bcl2fastq),),
+        reqs='>=2.17')
+    if not bcl2fastq:
+        raise Exception("No appropriate bcl2fastq software "
+                        "located")
+    bcl2fastq = bcl2fastq[0]
+    bcl2fastq_info = bcl_to_fastq_info(bcl2fastq)
+    print "Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
+                                      bcl2fastq)
+    # Store info on bcl2fastq package
+    ap.metadata['bcl2fastq_software'] = bcl2fastq_info
+    # Store info on cellranger package
+    ap.metadata['cellranger_software'] = cellranger_package_info
+    # Put a copy of sample sheet in the log directory
+    shutil.copy(sample_sheet,ap.log_dir)
+    # Determine output directory absolute path
+    output_dir = ap.params.unaligned_dir
+    if not os.path.isabs(output_dir):
+        output_dir = os.path.join(ap.analysis_dir,
+                                  output_dir)
+    # Working directory (set to analysis dir)
+    working_dir = ap.analysis_dir
+    # Report values and settings
+    print "Cellranger exe        : %s" % cellranger
+    print "Cellranger version    : %s %s" % (cellranger_package_info[1],
+                                             cellranger_package_info[2])
+    print "Bcl-to-fastq exe      : %s" % bcl2fastq
+    print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
+                                             bcl2fastq_info[2])
+    print "Sample sheet          : %s" % os.path.basename(sample_sheet)
+    print "Bases mask            : %s" % bases_mask
+    print "Cellranger jobmode    : %s" % cellranger_jobmode
+    print "Cellranger maxjobs    : %s" % cellranger_maxjobs
+    print "Cellranger mempercore : %s" % cellranger_mempercore
+    print "Cellranger jobinterval: %s" % cellranger_jobinterval
+    print "Cellranger localcores : %s" % cellranger_localcores
+    print "Cellranger localmem   : %s" % cellranger_localmem
+    print "Working directory     : %s" % working_dir
+    print "Log directory         : %s" % log_dir
+    # Run cellranger mkfastq
+    try:
+        return run_cellranger_mkfastq(
+            sample_sheet=sample_sheet,
+            primary_data_dir=primary_data_dir,
+            output_dir=output_dir,
+            lanes=(None if lanes is None
+                   else ','.join([str(l) for l in lanes])),
+            bases_mask=bases_mask,
+            cellranger_exe=cellranger,
+            cellranger_jobmode=cellranger_jobmode,
+            cellranger_maxjobs=cellranger_maxjobs,
+            cellranger_mempercore=cellranger_mempercore,
+            cellranger_jobinterval=cellranger_jobinterval,
+            cellranger_localcores=cellranger_localcores,
+            cellranger_localmem=cellranger_localmem,
+            working_dir=working_dir,
+            log_dir=log_dir)
+    except Exception as ex:
+        raise Exception("'cellranger mkfastq' stage failed: "
+                        "'%s'" % ex)
 
 def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
                                       primary_data_dir,lanes=None,
