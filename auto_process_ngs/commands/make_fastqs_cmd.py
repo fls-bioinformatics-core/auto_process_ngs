@@ -119,7 +119,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         (default is to include all lanes)
       icell8_well_list (str): well list file for ICELL8 platforms
         (required for ICELL8 processing protocols)
-      nprocessors (int) : number of processors to run bclToFastq.py with
+      nprocessors (int) : number of processors to use
       ignore_missing_bcl (bool): if True then run bcl2fastq with
         --ignore-missing-bcl
       ignore_missing_stats (bool): if True then run bcl2fastq with
@@ -652,8 +652,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
     Generate FASTQ files from the raw BCL files
 
     Performs FASTQ generation from raw BCL files produced by an Illumina
-    sequencer, by running the external 'bclToFastq.py' program (which
-    wraps the 'configureBclToFastq' and 'make' steps).
+    sequencer, by running the appropriate external bcl-to-fastq software.
 
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the analysis
@@ -681,7 +680,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
       create_fastq_for_index_reads (boolean): if True then also create
         Fastq files for index reads (default, don't create index read
         Fastqs)
-      nprocessors (int): number of processors to run bclToFastq.py with
+      nprocessors (int): number of processors to use
       runner (JobRunner): (optional) specify a non-default job runner to
         use for fastq generation
     """
@@ -1200,7 +1199,7 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
       reverse_complement (str): one of 'i1', 'i2', 'both', or None; if
         set then the specified index reads will be reverse complemented
         when matching to barcodes in the ICELL8 well list
-      nprocessors (int): number of processors to run bclToFastq.py with
+      nprocessors (int): number of processors to use
       runner (JobRunner): (optional) specify a non-default job runner to
         use for fastq generation
     """
