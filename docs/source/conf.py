@@ -323,7 +323,6 @@ are available:
 """)
 for utility in ("analyse_barcodes.py",
                 "audit_projects.py",
-                "bclToFastq.py",
                 "download_fastqs.py",
                 "demultiplex_icell8_atac.py",
                 "export_to_galaxy.py",
