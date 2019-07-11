@@ -45,6 +45,9 @@ import bcftbx.platforms as platforms
 import bcftbx.utils as bcf_utils
 from bcftbx.JobRunner import SimpleJobRunner
 
+# Module specific logger
+logger = logging.getLogger(__name__)
+
 #######################################################################
 # Functions
 #######################################################################
@@ -85,22 +88,22 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
                 flow_cell_prefix,flow_cell_id = \
                     IlluminaData.split_run_name_full(dirn)
         except Exception as ex:
-            logging.warning("Unable to extract instrument name: "
-                            "%s" % ex)
+            logger.warning("Unable to extract instrument name: "
+                           "%s" % ex)
     if instrument and settings:
         print "Identifying platform from instrument name"
         try:
             return settings.sequencers[instrument]
         except KeyError:
             # Instrument not listed in the settings
-            logging.warning("Instrument name '%s' not found in "
-                            "configuration file" % instrument)
+            logger.warning("Instrument name '%s' not found in "
+                           "configuration file" % instrument)
     # Fall back to old method
     print "Identifying platform from data directory name"
     platform = platforms.get_sequencer_platform(dirn)
     if platform is None:
-        logging.warning("Unable to identify platform from "
-                        "directory name")
+        logger.warning("Unable to identify platform from "
+                       "directory name")
     return platform
 
 def available_bcl2fastq_versions(reqs=None,paths=None):
@@ -214,12 +217,12 @@ def bcl_to_fastq_info(path=None):
                 try:
                     package_version = line.split()[1][1:]
                 except ex:
-                    logging.warning("Unable to get version from '%s': %s" %
-                                    (line,ex))
+                    logger.warning("Unable to get version from '%s': %s" %
+                                   (line,ex))
     else:
         # No package supplied or located
-        logging.warning("Unable to identify bcl-to-fastq conversion package "
-                        "from '%s'" % bcl2fastq_path)
+        logger.warning("Unable to identify bcl-to-fastq conversion package "
+                       "from '%s'" % bcl2fastq_path)
     # Return what we found
     return (bcl2fastq_path,package_name,package_version)
 
@@ -276,13 +279,13 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
         sample_sheet.data.sort(lambda line: line['Lane'])
     # Select subset of lanes if requested
     if lanes is not None:
-        logging.debug("Updating to include only specified lanes: %s" %
-                      ','.join([str(l) for l in lanes]))
+        logger.debug("Updating to include only specified lanes: %s" %
+                     ','.join([str(l) for l in lanes]))
         i = 0
         while i < len(sample_sheet):
             line = sample_sheet[i]
             if line['Lane'] in lanes:
-                logging.debug("Keeping %s" % line)
+                logger.debug("Keeping %s" % line)
                 i += 1
             else:
                 del(sample_sheet[i])
@@ -575,7 +578,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     )
     # Check the executable exists
     if not configure_cmd.has_exe:
-        logging.error("'%s' missing, cannot run" % configure_cmd.command)
+        logger.error("'%s' missing, cannot run" % configure_cmd.command)
         return -1
     # Sort out the runner to use
     if runner is None:
@@ -608,22 +611,22 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     exit_code = configure_job.exit_code
     # Check exit code
     if exit_code != 0:
-        logging.error("configureToBclFastq.pl returned %s" % returncode)
+        logger.error("configureToBclFastq.pl returned %s" % returncode)
         return exit_code
     # Check outputs (directory and makefile)
     if not os.path.isdir(output_dir):
-        logging.error("Output directory '%s' not found" % output_dir)
+        logger.error("Output directory '%s' not found" % output_dir)
         return -1
     makefile = os.path.join(output_dir,'Makefile')
     if not os.path.isfile(makefile):
-        logging.error("Makefile not found in %s" % output_dir)
+        logger.error("Makefile not found in %s" % output_dir)
         return -1
     # Set up and run make command
     make_cmd = general_apps.make(makefile=makefile,
                                  working_dir=output_dir,
                                  nprocessors=nprocessors)
     if not make_cmd.has_exe:
-        logging.error("'%s' missing, cannot run" % make_cmd.command)
+        logger.error("'%s' missing, cannot run" % make_cmd.command)
         return -1
     print "Running %s" % make_cmd
     make_job = SchedulerJob(
@@ -642,7 +645,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     exit_code = make_job.exit_code
     # Check exit code
     if exit_code != 0:
-        logging.error("make returned %s" % exit_code)
+        logger.error("make returned %s" % exit_code)
     return exit_code
 
 def run_bcl2fastq_2_17(*args,**kws):
@@ -761,7 +764,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     )
     # Check the executable exists
     if not bcl2fastq2_cmd.has_exe:
-        logging.error("'%s' missing, cannot run" % bcl2fastq2_cmd.command)
+        logger.error("'%s' missing, cannot run" % bcl2fastq2_cmd.command)
         return -1
     # Sort out the runner to use
     if runner is None:
@@ -794,10 +797,10 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     exit_code = bcl2fastq_job.exit_code
     # Check exit code
     if exit_code != 0:
-        logging.error("bcl2fastq returned %s" % returncode)
+        logger.error("bcl2fastq returned %s" % returncode)
         return exit_code
     # Check output directory
     if not os.path.isdir(output_dir):
-        logging.error("Output directory '%s' not found" % output_dir)
+        logger.error("Output directory '%s' not found" % output_dir)
         return -1
     return exit_code
