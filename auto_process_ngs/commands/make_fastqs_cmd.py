@@ -823,7 +823,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             ignore_missing_control=ignore_missing_control,
             runner=runner,
             working_dir=working_dir,
-            log_dir=log_dir
+            log_dir=log_dir,
+            bcl2fastq_exe=bcl2fastq_exe
         )
     elif known_version in ('2.17',):
         # bcl2fastq 2.17.*
@@ -863,7 +864,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             writing_threads=writing_threads,
             runner=runner,
             working_dir=working_dir,
-            log_dir=log_dir
+            log_dir=log_dir,
+            bcl2fastq_exe=bcl2fastq_exe
         )
     elif known_version in ('2.20',):
         # bcl2fastq 2.20.*
@@ -898,7 +900,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             writing_threads=writing_threads,
             runner=runner,
             working_dir=working_dir,
-            log_dir=log_dir
+            log_dir=log_dir,
+            bcl2fastq_exe=bcl2fastq_exe
         )
     print "bcl2fastq completed: exit code %s" % exit_code
     if exit_code != 0:
