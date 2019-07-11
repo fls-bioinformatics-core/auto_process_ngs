@@ -97,68 +97,93 @@ class TestBcl2Fastq(unittest.TestCase):
     def test_configure_bcl_to_fastq(self):
         """Construct 'configureBclToFastq.pl' command lines
         """
-        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
-                                                       'SampleSheet.csv').command_line,
+        self.assertEqual(bcl2fastq.configureBclToFastq(
+            'Data/Intensities/Basecalls',
+            'SampleSheet.csv').command_line,
                          ['configureBclToFastq.pl',
                           '--input-dir','Data/Intensities/Basecalls',
                           '--output-dir','Unaligned',
                           '--sample-sheet','SampleSheet.csv',
                           '--fastq-cluster-count','-1'])
-        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
-                                                       'SampleSheet.csv',
-                                                       output_dir='run/bcl2fastq').command_line,
+        self.assertEqual(bcl2fastq.configureBclToFastq(
+            'Data/Intensities/Basecalls',
+            'SampleSheet.csv',
+            output_dir='run/bcl2fastq').command_line,
                          ['configureBclToFastq.pl',
                           '--input-dir','Data/Intensities/Basecalls',
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv',
                           '--fastq-cluster-count','-1'])
-        self.assertEqual(bcl2fastq.configureBclToFastq('Data/Intensities/Basecalls',
-                                                       'SampleSheet.csv',
-                                                       output_dir='run/bcl2fastq',
-                                                       ignore_missing_bcl=True).command_line,
+        self.assertEqual(bcl2fastq.configureBclToFastq(
+            'Data/Intensities/Basecalls',
+            'SampleSheet.csv',
+            output_dir='run/bcl2fastq',
+            ignore_missing_bcl=True).command_line,
                          ['configureBclToFastq.pl',
                           '--input-dir','Data/Intensities/Basecalls',
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv',
                           '--fastq-cluster-count','-1',
                           '--ignore-missing-bcl'])
+        self.assertEqual(bcl2fastq.configureBclToFastq(
+            'Data/Intensities/Basecalls',
+            'SampleSheet.csv',
+            configureBclToFastq_exe=
+            "/opt/bin/configureBclToFastq.pl").command_line,
+                         ['/opt/bin/configureBclToFastq.pl',
+                          '--input-dir','Data/Intensities/Basecalls',
+                          '--output-dir','Unaligned',
+                          '--sample-sheet','SampleSheet.csv',
+                          '--fastq-cluster-count','-1'])
 
     def test_bcl2fastq(self):
         """Construct 'bcl2fastq' command lines for bcl2fastq v2.*
         """
-        self.assertEqual(bcl2fastq.bcl2fastq2('/runs/150107_NB123000_0001_ABCX',
-                                              'SampleSheet.csv').command_line,
+        self.assertEqual(bcl2fastq.bcl2fastq2(
+            '/runs/150107_NB123000_0001_ABCX',
+            'SampleSheet.csv').command_line,
                          ['bcl2fastq',
                           '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','Unaligned',
                           '--sample-sheet','SampleSheet.csv'])
-        self.assertEqual(bcl2fastq.bcl2fastq2('/runs/150107_NB123000_0001_ABCX',
-                                              'SampleSheet.csv',
-                                              output_dir='run/bcl2fastq').command_line,
+        self.assertEqual(bcl2fastq.bcl2fastq2(
+            '/runs/150107_NB123000_0001_ABCX',
+            'SampleSheet.csv',
+            output_dir='run/bcl2fastq').command_line,
                          ['bcl2fastq',
                           '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv'])
-        self.assertEqual(bcl2fastq.bcl2fastq2('/runs/150107_NB123000_0001_ABCX',
-                                              'SampleSheet.csv',
-                                              output_dir='run/bcl2fastq',
-                                              ignore_missing_bcl=True).command_line,
+        self.assertEqual(bcl2fastq.bcl2fastq2(
+            '/runs/150107_NB123000_0001_ABCX',
+            'SampleSheet.csv',
+            output_dir='run/bcl2fastq',
+            ignore_missing_bcl=True).command_line,
                          ['bcl2fastq',
                           '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv',
                           '--ignore-missing-bcls'])
-        self.assertEqual(bcl2fastq.bcl2fastq2('/runs/150107_NB123000_0001_ABCX',
-                                              'SampleSheet.csv',
-                                              output_dir='run/bcl2fastq',
-                                              mismatches=1,
-                                              no_lane_splitting=True).command_line,
+        self.assertEqual(bcl2fastq.bcl2fastq2(
+            '/runs/150107_NB123000_0001_ABCX',
+            'SampleSheet.csv',
+            output_dir='run/bcl2fastq',
+            mismatches=1,
+            no_lane_splitting=True).command_line,
                          ['bcl2fastq',
                           '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
                           '--output-dir','run/bcl2fastq',
                           '--sample-sheet','SampleSheet.csv',
                           '--barcode-mismatches','1',
                           '--no-lane-splitting'])
+        self.assertEqual(bcl2fastq.bcl2fastq2(
+            '/runs/150107_NB123000_0001_ABCX',
+            'SampleSheet.csv',
+            bcl2fastq_exe='/opt/bin/bcl2fastq').command_line,
+                         ['/opt/bin/bcl2fastq',
+                          '--runfolder-dir','/runs/150107_NB123000_0001_ABCX',
+                          '--output-dir','Unaligned',
+                          '--sample-sheet','SampleSheet.csv'])
 
 class TestGeneral(unittest.TestCase):
 

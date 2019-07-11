@@ -308,7 +308,8 @@ class bcl2fastq(object):
                             force=False,
                             ignore_missing_bcl=False,
                             ignore_missing_stats=False,
-                            ignore_missing_control=False):
+                            ignore_missing_control=False,
+                            configureBclToFastq_exe=None):
         """Generate Command instance for 'configureBclToFastq.pl' script
 
         Creates a Command instance to run the CASAVA 'configureBclToFastq.pl'
@@ -338,12 +339,16 @@ class bcl2fastq(object):
             when *.stats files are missing (default is False)
           ignore_missing_control: optional, if True then interpret missing
             control files as not-set control bits (default is False)
+          configureBclToFastq_exe: optional, if set then will be taken
+            as the name/path for the 'configureBclToFastq.pl' script
 
         Returns:
           Command object.
 
         """
-        configure_cmd = Command('configureBclToFastq.pl',
+        if configureBclToFastq_exe is None:
+            configureBclToFastq_exe = 'configureBclToFastq.pl'
+        configure_cmd = Command(configureBclToFastq_exe,
                                 '--input-dir',basecalls_dir,
                                 '--output-dir',output_dir,
                                 '--sample-sheet',sample_sheet,
@@ -378,7 +383,8 @@ class bcl2fastq(object):
                    loading_threads=None,
                    demultiplexing_threads=None,
                    processing_threads=None,
-                   writing_threads=None):
+                   writing_threads=None,
+                   bcl2fastq_exe=None):
         """
         Generate Command instance for 'bcl2fastq' program (v2.*)
 
@@ -419,13 +425,16 @@ class bcl2fastq(object):
             use for processing (--processing-threads)
           writing_threads: optional, specify number of threads to
             use for writing FASTQ data (--writing-threads)
+          bcl2fastq_exe: optional, if set then specifies the name/path
+            of the bcl2fastq executable to use
 
         Returns:
           Command object.
 
         """
-
-        bcl2fastq_cmd = Command('bcl2fastq',
+        if bcl2fastq_exe is None:
+            bcl2fastq_exe = 'bcl2fastq'
+        bcl2fastq_cmd = Command(bcl2fastq_exe,
                                 '--runfolder-dir',run_dir,
                                 '--output-dir',output_dir,
                                 '--sample-sheet',sample_sheet)
