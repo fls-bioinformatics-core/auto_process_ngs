@@ -37,6 +37,8 @@ import bcftbx.Md5sum as md5sum
 import auto_process_ngs.utils as utils
 import auto_process_ngs.applications as applications
 from auto_process_ngs.analysis import AnalysisDir
+from auto_process_ngs.fileops import exists
+from auto_process_ngs.fileops import copy
 from auto_process_ngs import get_version
 
 #######################################################################
@@ -120,34 +122,39 @@ def copy_to_dest(f,dirn,chksum=None):
         to match against the copy
     
     """
-    if not os.path.exists(f):
-        raise Exception("File %s doesn't exist" % f)
-    user,host,dest = utils.split_user_host_dir(dirn)
-    remote = (host is not None)
-    if not remote:
-        # Local copy
-        shutil.copy(f,dirn)
-        if chksum is not None:
-            if md5sum.md5sum(f) != chksum:
-                raise Exception("MD5 checksum failed for copy of %s" % f)
-    else:
-        # Remote copy
-        try:
-            scp = applications.general.scp(user,host,f,dest)
-            print("Running %s" % scp)
-            scp.run_subprocess()
-            # Run md5sum -c on the remote system
+    if not exists(f):
+        raise Exception("'%s': not found" % f)
+    if not exists(dirn):
+        raise Exception("'%s': destination not found" % dirn)
+    # Copy the file
+    copy(f,dirn)
+    if chksum is not None:
+        user,host,dest = utils.split_user_host_dir(dirn)
+        remote = (host is not None)
+        if not remote:
+            # Check local copy
+            copy(f,dirn)
             if chksum is not None:
-                md5sum_check = applications.general.ssh_command(
-                    user,host,
-                    ('echo',
-                     '"%s  %s"' % (chksum,
-                                   os.path.join(dest,os.path.basename(f))),
-                    '|','md5sum','-c'))
-                print("Running %s" % md5sum_check)
-                md5sum_check.run_subprocess()
-        except Exception, ex:
-            raise Exception("Failed to copy %s to %s: %s" % (f,dirn,ex))
+                if md5sum.md5sum(f) != chksum:
+                    raise Exception("MD5 checksum failed for "
+                                    "copy of %s" % f)
+        else:
+            # Check remote copy
+            try:
+                # Run md5sum -c on the remote system
+                if chksum is not None:
+                    md5sum_check = applications.general.ssh_command(
+                        user,host,
+                        ('echo',
+                         '"%s  %s"' % (chksum,
+                                       os.path.join(dest,
+                                                    os.path.basename(f))),
+                         '|','md5sum','-c'))
+                    print("Running %s" % md5sum_check)
+                    md5sum_check.run_subprocess()
+            except Exception as ex:
+                raise Exception("Failed to copy %s to %s: %s" %
+                                (f,dirn,ex))
 
 #######################################################################
 # Main program
