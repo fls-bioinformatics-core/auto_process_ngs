@@ -24,6 +24,7 @@ from urllib2 import urlopen
 import re
 import sys
 import os
+import io
 try:
     import hashlib
 except ImportError:
@@ -43,7 +44,7 @@ BLOCKSIZE = 1024*1024
 def download_file(url,dest):
     # See http://stackoverflow.com/a/22776/579925
     u = urlopen(url)
-    f = open(dest,'wb')
+    f = io.open(dest,'wb')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
     print "Downloading: %s Bytes: %s" % (dest, file_size)
@@ -65,7 +66,7 @@ def check_md5sum(filen,md5):
         c = hashlib.md5()
     except NameError:
         c = md5.new()
-    f = open(filen,'rb')
+    f = io.open(filen,'rb')
     for block in iter(lambda: f.read(BLOCKSIZE),''):
         c.update(block)
     c = c.digest()
@@ -118,7 +119,7 @@ if __name__ == "__main__":
     download_file(os.path.join(args.url,chksum_file),chksum_file)
     # Get file list and checksums
     chksums = dict()
-    with open(chksum_file,'r') as fp:
+    with io.open(chksum_file,'rt') as fp:
         for line in fp:
             chksum,filen = line.strip('\n').split()
             chksums[filen] = chksum
