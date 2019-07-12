@@ -20,7 +20,6 @@ Utility to download Fastq files from web server.
 
 import argparse
 import tempfile
-from urllib2 import urlopen
 import re
 import sys
 import os
@@ -30,6 +29,11 @@ try:
 except ImportError:
     # hashlib not available, use deprecated md5 module
     import md5
+try:
+    from urllib.request import urlopen
+except ImportError:
+    # Failed to get Python3 urlopen, fallback to Python2
+    from urllib2 import urlopen
 
 #######################################################################
 # Constants
@@ -51,7 +55,7 @@ def download_file(url,dest):
     u = urlopen(url)
     f = io.open(dest,'wb')
     meta = u.info()
-    file_size = int(meta.getheaders("Content-Length")[0])
+    file_size = int(meta.get("Content-Length"))
     print_("Downloading: %s Bytes: %s " % (dest, file_size))
     file_size_dl = 0
     block_sz = 8192
@@ -74,10 +78,15 @@ def check_md5sum(filen,md5):
     except NameError:
         c = md5.new()
     f = io.open(filen,'rb')
-    for block in iter(lambda: f.read(BLOCKSIZE),''):
+    for block in iter(lambda: f.read(BLOCKSIZE),b''):
         c.update(block)
     c = c.digest()
-    chksum = ("%02x"*len(c)) % tuple(map(ord,c))
+    try:
+        # Py3 method
+        chksum = ("%02x"*len(c)) % tuple(map(int,c))
+    except ValueError:
+        # Fallback to Py2 method
+        chksum = ("%02x"*len(c)) % tuple(map(ord,c))
     return (chksum == md5)
 
 #######################################################################
@@ -103,14 +112,14 @@ if __name__ == "__main__":
     print_("Moving to %s" % dest_dir)
     try:
         os.chdir(dest_dir)
-    except Exception,ex:
+    except Exception as ex:
         if not os.path.isdir(dest_dir):
             sys.stderr.write("ERROR directory doesn't exist?\n")
         else:
             sys.stderr.write("ERROR %s\n" % ex)
         sys.exit(1)
     print_("Fetching index from %s" % args.url)
-    index_page = urlopen(args.url).read()
+    index_page = str(urlopen(args.url).read())
     print_("Locating chksum file",end='')
     for line in index_page.split('\n'):
         chksum_file = re.search('[A-Za-z0-9_]*\.chksums',line)
@@ -130,8 +139,7 @@ if __name__ == "__main__":
         for line in fp:
             chksum,filen = line.strip('\n').split()
             chksums[filen] = chksum
-    file_list = chksums.keys()
-    file_list.sort()
+    file_list = sorted(list(chksums.keys()))
     # Flag for checking MD5 sums
     checksum_errors = False
     # Download the files
