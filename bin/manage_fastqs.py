@@ -27,6 +27,7 @@ Functionality includes:
 
 import sys
 import os
+import io
 import argparse
 import shutil
 import tempfile
@@ -93,7 +94,7 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
 
     """
     if filen:
-        fp = open(md5file,'w')
+        fp = io.open(md5file,'wt')
     else:
         fp = sys.stdout
     for sample_name,fastq,fq in get_fastqs(project,pattern=pattern):
@@ -292,7 +293,7 @@ if __name__ == "__main__":
             copy_to_dest(md5file,dest)
             # Load checksums into dictionary
             chksums = dict()
-            with open(md5file,'r') as fp:
+            with io.open(md5file,'rt') as fp:
                 for line in fp:
                     chksum,filen = line.strip('\n').split()
                     chksums[filen] = chksum
