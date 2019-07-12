@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     manage_runs.py: utility for managing fastq files from auto_process
-#     Copyright (C) University of Manchester 2014 Peter Briggs
+#     Copyright (C) University of Manchester 2014,2019 Peter Briggs
 #
 #########################################################################
 #
@@ -239,8 +239,6 @@ if __name__ == "__main__":
     # Filter fastqs on pattern
     if options.pattern is not None:
         print("Filtering fastqs using pattern '%s'" % options.pattern)
-    #    fastqs = [fq for fq in fastqs
-    #              if fnmatch.fnmatch(os.path.basename(fq[2]),options.pattern)]
     # Check for a command
     try:
         cmd = args[2]
