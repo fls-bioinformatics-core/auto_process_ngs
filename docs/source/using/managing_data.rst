@@ -7,9 +7,12 @@ they are outlined here.
 
  * :ref:`manage_fastqs`
  * :ref:`download_fastqs`
- * :ref:`export_to_galaxy`
  * :ref:`update_project_metadata`
  * :ref:`audit_projects`
+
+There are no specific utilities for exporting Fastqs to a Galaxy data
+library, but suggestions on how to do this can be found in the section
+:ref:`exporting_to_galaxy`.
 
 .. _manage_fastqs:
 
@@ -93,35 +96,6 @@ the Linux ``md5sum`` program to verify the integrity of the downloads.
 
    This utility is stand-alone so it can be sent to end users and
    used independently of other components of the autoprocess package.
-
-.. _export_to_galaxy:
-
-``export_to_galaxy.py``: export Fastqs to a data library in a local Galaxy instance
-***********************************************************************************
-
-The ``export_to_galaxy.py`` utility will upload Fastq files from a run into
-a data library on a local Galaxy instance::
-
-    export_to_galaxy.py http://localhost:8080 "MISeq Data" /mnt/galaxy-data ANALYSIS_DIR
-
-The script performs the following actions:
-
- * Copy uncompressed versions of the Fastq files from ``ANALYSIS_DIR`` to a
-   ``RUN/PROJECT`` directory structure under the target directory (e.g.
-   ``/mnt/galaxy-data``)
- * Make a new folder for the run in the target data library (e.g.
-   ``MISeq Data``) with subfolders for each project linked to the
-   uncompressed Fastq files created in the previous step.
-
-.. note::
-
-   The destination directory must be mounted locally from both where the
-   ``export_to_galaxy.py`` utility is being run, and the Galaxy server
-   itself.
-
-.. note::
-
-   The target data library must already exist on the Galaxy server.
 
 .. _update_project_metadata:
 
@@ -213,3 +187,60 @@ There is also a summary of the amount of space used for storing the
    ``du`` program, for various reasons including using a different block
    size (e.g. ``du`` uses 1024-byte blocks). So the returned values should
    not be treated as absolutes.
+
+.. _exporting_to_galaxy:
+
+Exporting Fastqs to a data library in a local Galaxy instance
+*************************************************************
+
+Upload of Fastq files from a run into a data library on a Galaxy instance
+can be performed using the ``nebulizer`` utility.
+
+.. note::
+
+   You will need access to an admin account on the target Galaxy
+   server to create and add to the data libraries.
+
+The ``create_library`` and ``create_library_folder`` commands can be used
+to make the target data library and folder, if these don't already exist -
+for example:
+
+::
+
+    nebulizer create_library MyGalaxy "MISEQ_190626#26" \
+        --description "Data from MISEQ run 26 datestamp 190626"
+    nebulizer create_library_folder MyGalaxy "MISEQ_190626#26/Fastqs"
+
+would create a data library called *MISEQ_190626#26* on the *MyGalaxy*
+instance, and a new folder called *Fastqs* within that library.
+
+Then the ``add_library_datasets`` command can be used to upload Fastqs
+to the library.
+
+To upload files from the local system to the server:
+
+::
+
+    nebulizer add_library_datasets MyGalaxy /path/to/fastqs/PB_S1_R1_001.fastq.gz ...
+
+If the files are on the same system as the Galaxy server then the
+``--server`` option can be used, for example:
+
+::
+
+    nebulizer add_library_datasets mygalaxy --server Data_Library/Fastqs /path/to/fastqs/on/server/PB_S1_R1_001.fastq.gz ...
+
+It is possible in this case to get Galaxy to create links to the Fastqs
+(rather than making copies) which can potentially save time and disk
+space, by including the ``--link`` option:
+
+::
+
+    nebulizer add_library_datasets mygalaxy --server --link Data_Library/Fastqs /path/to/fastqs/on/server/PB_S1_R1_001.fastq
+
+.. warning::
+
+   Making links only seems to work for uncompressed Fastq files.
+
+For information on ``nebulizer`` see
+https://nebulizer.readthedocs.io/en/latest/
