@@ -27,7 +27,7 @@ Functionality includes:
 
 import sys
 import os
-import optparse
+import argparse
 import shutil
 import tempfile
 import zipfile
@@ -156,20 +156,28 @@ def copy_to_dest(f,dirn,chksum=None):
 if __name__ == "__main__":
 
     # Command line
-    p = optparse.OptionParser(usage="\n\t%prog DIR\n\t%prog DIR PROJECT\n\t%prog DIR PROJECT copy [[user@]host:]DEST\n\t%prog DIR PROJECT md5\n\t%prog DIR PROJECT zip",
-                              description="Fastq management utility. If only DIR is "
-                              "supplied then list the projects; if PROJECT is supplied "
-                              "then list the fastqs; 'copy' command copies fastqs for the "
-                              "specified PROJECT to DEST on a local or remote server; 'md5' "
-                              "command generates checksums for the fastqs; 'zip' command "
-                              "creates a zip file with the fastq files.",
-                              version="%prog "+get_version())
-    p.add_option('--filter',action='store',dest='pattern',default=None,
-                 help="filter file names for reporting and copying based on PATTERN")
-    p.add_option('--fastq_dir',action='store',dest='fastq_dir',default=None,
-                 help="explicitly specify subdirectory of DIR with "
-                 "Fastq files to run the QC on.")
-    options,args = p.parse_args()
+    p = argparse.ArgumentParser(
+        usage="\n\t%(prog)s DIR"
+        "\n\t%(prog)s DIR PROJECT"
+        "\n\t%(prog)s DIR PROJECT copy [[user@]host:]DEST"
+        "\n\t%(prog)s DIR PROJECT md5"
+        "\n\t%(prog)s DIR PROJECT zip",
+        description="Fastq management utility. If only DIR is "
+        "supplied then list the projects; if PROJECT is supplied "
+        "then list the fastqs; 'copy' command copies fastqs for the "
+        "specified PROJECT to DEST on a local or remote server; 'md5' "
+        "command generates checksums for the fastqs; 'zip' command "
+        "creates a zip file with the fastq files.",
+        version="%(prog)s "+get_version())
+    p.add_argument('--filter',action='store',dest='pattern',
+                   default=None,
+                   help="filter file names for reporting and copying "
+                   "based on PATTERN")
+    p.add_argument('--fastq_dir',action='store',dest='fastq_dir',
+                   default=None,
+                   help="explicitly specify subdirectory of DIR with "
+                   "Fastq files to run the QC on.")
+    options,args = p.parse_known_args()
     # Get analysis dir
     try:
         dirn = args[0]
