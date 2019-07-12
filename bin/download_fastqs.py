@@ -41,13 +41,18 @@ BLOCKSIZE = 1024*1024
 # Functions
 #######################################################################
 
+def print_(s,end='\n'):
+    # Implement a local version of 'print' function which
+    # mimics the 'end' argument from Python3
+    sys.stdout.write(u"%s%s" % (s,end))
+
 def download_file(url,dest):
     # See http://stackoverflow.com/a/22776/579925
     u = urlopen(url)
     f = io.open(dest,'wb')
     meta = u.info()
     file_size = int(meta.getheaders("Content-Length")[0])
-    print "Downloading: %s Bytes: %s" % (dest, file_size)
+    print_("Downloading: %s Bytes: %s " % (dest, file_size))
     file_size_dl = 0
     block_sz = 8192
     while True:
@@ -56,10 +61,12 @@ def download_file(url,dest):
             break
         file_size_dl += len(buffer)
         f.write(buffer)
-        status = r"%10d  [%3.2f%%]" % (file_size_dl, file_size_dl * 100. / file_size)
+        status = r"% 10d  [%3.2f%%]" % (file_size_dl,
+                                        file_size_dl*100.0/file_size)
         status = status + chr(8)*(len(status)+1)
-        print status,
+        print_(status,end='')
     f.close()
+    print_("")
 
 def check_md5sum(filen,md5):
     try:
@@ -93,7 +100,7 @@ if __name__ == "__main__":
         dest_dir = os.path.abspath(args.dir)
     else:
         dest_dir = os.getcwd()
-    print "Moving to %s" % dest_dir
+    print_("Moving to %s" % dest_dir)
     try:
         os.chdir(dest_dir)
     except Exception,ex:
@@ -102,9 +109,9 @@ if __name__ == "__main__":
         else:
             sys.stderr.write("ERROR %s\n" % ex)
         sys.exit(1)
-    print "Fetching index from %s" % args.url
+    print_("Fetching index from %s" % args.url)
     index_page = urlopen(args.url).read()
-    print "Locating chksum file",
+    print_("Locating chksum file",end='')
     for line in index_page.split('\n'):
         chksum_file = re.search('[A-Za-z0-9_]*\.chksums',line)
         if chksum_file:
@@ -112,10 +119,10 @@ if __name__ == "__main__":
     if not chksum_file:
         sys.stderr.write("ERROR failed to find a chksum file\n")
         sys.exit(1)
-    print chksum_file.group(0)
+    print_(chksum_file.group(0))
     chksum_file = chksum_file.group(0)
     # Download chksum file
-    print "Fetching %s" % chksum_file
+    print_("Fetching %s" % chksum_file)
     download_file(os.path.join(args.url,chksum_file),chksum_file)
     # Get file list and checksums
     chksums = dict()
@@ -128,20 +135,20 @@ if __name__ == "__main__":
     # Flag for checking MD5 sums
     checksum_errors = False
     # Download the files
-    print "Downloading %d files" % len(file_list)
+    print_("Downloading %d files" % len(file_list))
     for f in file_list:
         if os.path.exists(f):
-            print "%s: file exists, skipping download" % f
+            print_("%s: file exists, skipping download" % f)
         else:
             download_file(os.path.join(args.url,f),f)
         if check_md5sum(f,chksums[f]):
-            print "%s: checksum OK" % f
+            print_("%s: checksum OK" % f)
         else:
-            print "%s: checksum FAILED" % f
+            print_("%s: checksum FAILED" % f)
             checksum_errors = True
     if checksum_errors:
         sys.stderr.write("ERROR one or more checksums failed, see above\n")
         sys.exit(1)
     else:
-        print "All checksums verified ok"
+        print_("All checksums verified ok")
 
