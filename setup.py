@@ -19,8 +19,7 @@ install_requires = ['pillow',
                     'pandas',
                     'cloudpickle',
                     'psutil',
-                    'genomics-bcftbx',
-                    'nebulizer']
+                    'genomics-bcftbx']
 # If we're on ReadTheDocs then we can reduce this
 # to a smaller set (to avoid build timeouts)
 import os
