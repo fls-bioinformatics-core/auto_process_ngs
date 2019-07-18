@@ -11,10 +11,18 @@ Provides the following functions:
 - fastq_screen_output: get names for fastq_screen outputs
 - fastqc_output: get names for FastQC outputs
 - fastq_strand_output: get name for fastq_strand.py output
+- rseqc_gene_body_coverage_output: get names for RSeQC
+  geneBody_coverage.py outputs
+- rseqc_inner_distance_outputs: get names for RSeQC inner_distance.py
+  outputs
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
 - check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
+- check_rseqc_gene_body_coverage_outputs: fetch Fastqs without RSeQC
+  geneBody_coverage.py outputs
+- check_rseqc_inner_distance_outputs: fetch Fastqs without RSeQC
+  inner_distance.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
   count outputs
 - check_cellranger_atac_count_outputs: fetch sample names without
@@ -102,6 +110,88 @@ def fastq_strand_output(fastq):
     """
     return "%s_fastq_strand.txt" % strip_ngs_extensions(
         os.path.basename(fastq))
+
+def rseqc_gene_body_coverage_output(project,organism=None,
+                                    include_heatmap=False):
+    """
+    Generate list of RSeQC geneBody_coverage.py outputs
+
+    Given an AnalysisProject, the outputs from RSeQC's
+    geneBody_coverage.py utility will look like:
+
+    - {PREFIX}.geneBodyCoverage.txt
+    - {PREFIX}.geneBodyCoverage.r
+    - {PREFIX}.geneBodyCoverage.curves.png
+
+    Optionally a heatmap will also be produced, if there are
+    more than 3 input Fastqs/Fastq pairs:
+
+    - {PREFIX}.geneBodyCoverage.heatMap.png
+
+    'PREFIX' is generated as the project name, with the
+    organism appended with a dot (if supplied), e.g.
+    'PJB' or 'PJB.mouse'.
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      organism (str): optional organism name
+      include_heatmap (bool): if true then include the
+        heatmap in the list of outputs
+
+    Returns:
+       tuple: RSeQC geneBody_coverage.py outputs (without
+         leading paths)
+
+    """
+    prefix = project.name
+    if organism:
+        prefix += "." + organism
+    outputs = ["%s.geneBodyCoverage.txt" % prefix,
+               "%s.geneBodyCoverage.r" % prefix,
+               "%s.geneBodyCoverage.curves.png" % prefix]
+    if include_heatmap:
+        outputs.append("%s.geneBodyCoverage.heatMap.png" % prefix)
+    return tuple(outputs)
+
+def rseqc_inner_distance_output(fastq,organism=None):
+    """
+    Generate list of RSeQC inner_distance.py outputs
+
+    Given a Fastq file name, the output from inner_distance.py
+    will look like:
+
+    - {PREFIX}_inner_distance.txt
+    - {PREFIX}_inner_distance_plot.r
+    - {PREFIX}_inner_distance_plot_png.r
+    - {PREFIX}_inner_distance_freq.txt
+    - {PREFIX}_inner_distance_plot.pdf
+    - {PREFIX}_inner_distance_plot.png
+
+    'PREFIX' is generated as the basename for the Fastq file,
+    with the organism appended with a dot (if supplied), e.g.
+    'PJB_S1_R1_000' or 'PJB_S1_R1_000.mouse'.
+
+    Arguments:
+      fastq (str): name of Fastq file
+      organism (str): optional organism name
+
+    Returns:
+       tuple: fastq_strand.py output (without leading paths)
+
+    """
+    prefix = os.path.basename(fastq)
+    while prefix.split('.')[-1] in ('fastq','gz'):
+        prefix = '.'.join(prefix.split('.')[:-1])
+    if organism:
+        prefix += "." + organism
+    outputs = ["%s.inner_distance.txt" % prefix,
+               "%s.inner_distance_plot.r" % prefix,
+               "%s.inner_distance_plot_png.r" % prefix,
+               "%s.inner_distance_freq.txt" % prefix,
+               "%s.inner_distance_plot.pdf" % prefix,
+               "%s.inner_distance_plot.png" % prefix]
+    return tuple(outputs)
 
 def cellranger_count_output(project,sample_name=None):
     """
@@ -292,6 +382,72 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
             fastq_pairs.add(fq_pair)
     return sorted(list(fastq_pairs))
 
+def check_rseqc_gene_body_coverage_outputs(project,qc_dir,
+                                           organism=None):
+    """
+    Return Fastqs missing QC outputs from geneBody_coverage.py
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from RSeqC's
+    `geneBody_coverage.py` utility don't exist in the specified
+    QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      organism (str): optional organism name
+
+    Returns:
+      List: list of Fastq files with missing outputs.
+
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    for output in rseqc_gene_body_coverage_output(project,
+                                                  organism=organism):
+        if not os.path.exists(os.path.join(qc_dir,output)):
+            return project.fastqs
+    return list()
+
+def check_rseqc_inner_distance_outputs(project,qc_dir=None,organism=None):
+    """
+    Return Fastqs missing QC outputs from inner_distance.py
+
+    Returns a list of the Fastqs from a project for which
+    one or more associated outputs from RSeqC's
+    `inner_distance.py` utility don't exist in the specified
+    QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to the QC directory (relative
+        path is assumed to be a subdirectory of the
+        project)
+      organism (str): optional organism name
+
+    Returns:
+      List: list of Fastq (R1,R2) file pairs which have
+        missing outputs.
+
+    """
+    if not os.path.isabs(qc_dir):
+        qc_dir = os.path.join(project.dirn,qc_dir)
+    fastq_pairs = list()
+    for fq_group in group_fastqs_by_name(
+            remove_index_fastqs(project.fastqs,
+                                project.fastq_attrs),
+            fastq_attrs=project.fastq_attrs):
+        for output in rseqc_inner_distance_output(fq_group[0],
+                                                  organism=organism):
+            if not os.path.exists(os.path.join(qc_dir,output)):
+                fastq_pairs.append(tuple(fq_group))
+                break
+    return sorted(list(fastq_pairs))
+
 def check_cellranger_count_outputs(project,qc_dir=None):
     """
     Return samples missing QC outputs from 'cellranger count'
@@ -422,6 +578,24 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
+    # RSeQC
+    if project.info.library_type == 'RNA-seq':
+        for organism in get_organism_list(project.info.organism):
+            # Gene body coverage
+            outputs.add(os.path.join(qc_dir,
+                                     rseqc_gene_body_coverage_output(
+                                         project.name,
+                                         organism)))
+            # Inner distance
+            for fq_group in group_fastqs_by_name(
+                    remove_index_fastqs(project.fastqs,
+                                        project.fastq_attrs),
+                    fastq_attrs=project.fastq_attrs):
+                        outputs.add(
+                            os.path.join(qc_dir,
+                                         rseqc_inner_distance_output(
+                                             fq_group[0],
+                                             organism)))
     # Cellranger count output
     if qc_protocol in ('10x_scRNAseq','10x_snRNAseq',) and \
        cellranger_refdata is not None:

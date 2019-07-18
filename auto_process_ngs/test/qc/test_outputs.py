@@ -13,10 +13,14 @@ from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.outputs import fastq_screen_output
 from auto_process_ngs.qc.outputs import fastqc_output
 from auto_process_ngs.qc.outputs import fastq_strand_output
+from auto_process_ngs.qc.outputs import rseqc_gene_body_coverage_output
+from auto_process_ngs.qc.outputs import rseqc_inner_distance_output
 from auto_process_ngs.qc.outputs import cellranger_count_output
 from auto_process_ngs.qc.outputs import cellranger_atac_count_output
 from auto_process_ngs.qc.outputs import check_illumina_qc_outputs
 from auto_process_ngs.qc.outputs import check_fastq_strand_outputs
+from auto_process_ngs.qc.outputs import check_rseqc_gene_body_coverage_outputs
+from auto_process_ngs.qc.outputs import check_rseqc_inner_distance_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_count_outputs
 from auto_process_ngs.qc.outputs import check_cellranger_atac_count_outputs
 from auto_process_ngs.qc.outputs import expected_outputs
@@ -70,6 +74,58 @@ class TestFastqStrandOutputFunction(unittest.TestCase):
             '/data/PB/PB1_ATTAGG_L001_R1_001.fastq.gz'),
                          'PB1_ATTAGG_L001_R1_001_fastq_strand.txt')
 
+class TestRseqcGeneBodyCoverageOutputFunction(unittest.TestCase):
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestRseqcGeneBodyCoverageOutput')
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_rseqc_gene_body_coverage_output(self):
+        """rseqc_gene_body_coverage_output: check for project
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(rseqc_gene_body_coverage_output(project,
+                                                         "human"),
+                         ('PJB.human.geneBodyCoverage.txt',
+                          'PJB.human.geneBodyCoverage.r',
+                          'PJB.human.geneBodyCoverage.curves.png'))
+
+    def test_rseqc_gene_body_coverage_output_with_heatmap(self):
+        """rseqc_gene_body_coverage_output: include heatmap
+        """
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        self.assertEqual(rseqc_gene_body_coverage_output(project,
+                                                         "human",
+                                                         include_heatmap=True),
+                         ('PJB.human.geneBodyCoverage.txt',
+                          'PJB.human.geneBodyCoverage.r',
+                          'PJB.human.geneBodyCoverage.curves.png',
+                          'PJB.human.geneBodyCoverage.heatMap.png'))
+
+class TestRseqcInnerDistanceOutputFunction(unittest.TestCase):
+    def test_rseqc_inner_distance_output(self):
+        """rseqc_inner_distance_output: check outputs
+        """
+        self.assertEqual(rseqc_inner_distance_output(
+            "PJB1_S1_R1_001.fastq.gz",
+            "human"),('PJB1_S1_R1_001.human.inner_distance.txt',
+                      'PJB1_S1_R1_001.human.inner_distance_plot.r',
+                      'PJB1_S1_R1_001.human.inner_distance_plot_png.r',
+                      'PJB1_S1_R1_001.human.inner_distance_freq.txt',
+                      'PJB1_S1_R1_001.human.inner_distance_plot.pdf',
+                      'PJB1_S1_R1_001.human.inner_distance_plot.png'))
+
 class TestCellrangerCountOutputFunction(unittest.TestCase):
     def setUp(self):
         # Create a temp working dir
@@ -97,7 +153,7 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/metrics_summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_count_output(self):
+    def test_cellranger_count_output_with_sample(self):
         """cellranger_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -135,7 +191,7 @@ class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_atac_count_output(self):
+    def test_cellranger_atac_count_output_with_sample(self):
         """cellranger_atac_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -485,6 +541,123 @@ class TestCheckFastqStrandOutputs(unittest.TestCase):
                                                     fastq_strand_conf,
                                                     qc_protocol="singlecell"),
                          [])
+
+class TestCheckRseqcGeneBodyCoverageOutputs(unittest.TestCase):
+    """
+    Tests for the 'rseqc_gene_body_coverage_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(
+            suffix='TestCheckRseqcGeneBodyCoverageOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_rseqc_gene_body_coverage_outputs_standardPE_missing(self):
+        """
+        check_rseqc_gene_body_coverage_outputs: outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check the outputs
+        self.assertEqual(check_rseqc_gene_body_coverage_outputs(
+            project,
+            "qc",
+            "human"),[os.path.join(project.fastq_dir,
+                                   "PJB1_S1_R1_001.fastq.gz"),
+                      os.path.join(project.fastq_dir,
+                                   "PJB1_S1_R2_001.fastq.gz"),])
+
+    def test_check_rseqc_gene_body_coverage_outputs_standardPE_present(self):
+        """
+        check_rseqc_gene_body_coverage_outputs: outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Add mock outputs
+        qc_dir = os.path.join(self.wd,"PJB","qc")
+        os.mkdir(qc_dir)
+        for f in ("PJB.human.geneBodyCoverage.txt",
+                  "PJB.human.geneBodyCoverage.r",
+                  "PJB.human.geneBodyCoverage.curves.png",
+                  ):
+            with open(os.path.join(qc_dir,f),'w') as fp:
+                fp.write("")
+        # Check the outputs
+        self.assertEqual(check_rseqc_gene_body_coverage_outputs(
+            project,
+            "qc",
+            "human"),[])
+
+class TestCheckRseqcInnerDistanceOutputs(unittest.TestCase):
+    """
+    Tests for the 'check_rseqc_inner_distance_outputs' function
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestCheckRseqcInnerDistanceOutputs')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_check_fastq_strand_outputs_standardPE_missing(self):
+        """
+        check_rseqc_inner_distance_outputs: outputs missing (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Check the outputs
+        self.assertEqual(check_rseqc_inner_distance_outputs(
+            project,
+            "qc",
+            "human"),[(os.path.join(project.fastq_dir,
+                                    "PJB1_S1_R1_001.fastq.gz"),
+                       os.path.join(project.fastq_dir,
+                                   "PJB1_S1_R2_001.fastq.gz")),])
+
+    def test_check_fastq_strand_outputs_standardPE_present(self):
+        """
+        check_rseqc_inner_distance_outputs: outputs present (standardPE)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human' })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        # Add mock outputs
+        qc_dir = os.path.join(self.wd,"PJB","qc")
+        os.mkdir(qc_dir)
+        for f in ("PJB1_S1_R1_001.human.inner_distance.txt",
+                  "PJB1_S1_R1_001.human.inner_distance_plot.r",
+                  "PJB1_S1_R1_001.human.inner_distance_plot_png.r",
+                  "PJB1_S1_R1_001.human.inner_distance_freq.txt",
+                  "PJB1_S1_R1_001.human.inner_distance_plot.pdf",
+                  "PJB1_S1_R1_001.human.inner_distance_plot.png",):
+            with open(os.path.join(qc_dir,f),'w') as fp:
+                fp.write("")
+        # Check the outputs
+        self.assertEqual(check_rseqc_inner_distance_outputs(
+            project,
+            "qc",
+            "human"),[])
 
 class TestCheckCellrangerCountOutputs(unittest.TestCase):
     """
