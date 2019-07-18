@@ -582,20 +582,19 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
     if project.info.library_type == 'RNA-seq':
         for organism in get_organism_list(project.info.organism):
             # Gene body coverage
-            outputs.add(os.path.join(qc_dir,
-                                     rseqc_gene_body_coverage_output(
-                                         project.name,
-                                         organism)))
+            for output in rseqc_gene_body_coverage_output(
+                    project.name,
+                    organism):
+                outputs.add(os.path.join(qc_dir,output))
             # Inner distance
             for fq_group in group_fastqs_by_name(
                     remove_index_fastqs(project.fastqs,
                                         project.fastq_attrs),
                     fastq_attrs=project.fastq_attrs):
-                        outputs.add(
-                            os.path.join(qc_dir,
-                                         rseqc_inner_distance_output(
-                                             fq_group[0],
-                                             organism)))
+                for output in rseqc_inner_distance_output(
+                        fq_group[0],
+                        organism):
+                    outputs.add(os.path.join(qc_dir,output))
     # Cellranger count output
     if qc_protocol in ('10x_scRNAseq','10x_snRNAseq',) and \
        cellranger_refdata is not None:
