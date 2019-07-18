@@ -461,6 +461,7 @@ class QCPipeline(Pipeline):
                                   'cellranger_localcores': cellranger_localcores,
                                   'cellranger_localmem': cellranger_localmem
                               },
+                              poll_interval=poll_interval,
                               max_jobs=max_jobs,
                               runners=runners,
                               default_runner=default_runner,
