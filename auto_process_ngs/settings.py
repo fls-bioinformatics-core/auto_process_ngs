@@ -153,6 +153,13 @@ class Settings(object):
                 self.fastq_strand_indexes[genome] = conf_file
         except NoSectionError:
             logging.debug("No strand stats conf files defined")
+        # Gene reference model files (RSeQC)
+        self.add_section('rseqc_gene_reference_files')
+        try:
+            for genome,bed_file in config.items('rseqc_gene_reference_files'):
+                self.rseqc_gene_reference_files[genome] = bed_file
+        except NoSectionError:
+            logging.debug("No RSeQC gene reference files defined")
         # Sequencers
         self.add_section('sequencers')
         try:

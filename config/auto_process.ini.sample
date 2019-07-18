@@ -46,6 +46,13 @@ fastq_screen_subset = 100000
 #human = /data/genomeIndexes/hg38/STAR/
 #mouse = /data/genomeIndexes/mm10/STAR/
 
+# RSeQC gene reference models
+# Assign orgnism name to path to BED file to use
+# for that organism in RSeQC
+[rseqc_gene_reference_files]
+#human = /data/genomeIndexes/hg38/gene_reference_model.hg38.bed
+#mouse = /data/genomeIndexes/mm10/gene_reference_model.mm10.bed
+
 # icell8 settings
 [icell8]
 aligner = None
