@@ -102,7 +102,7 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
             name = os.path.basename(fq)
         else:
             name = fq
-        fp.write("%s  %s\n" % (md5sum.md5sum(fq),name))
+        fp.write(u"%s  %s\n" % (md5sum.md5sum(fq),name))
     if filen:
         fp.close()
 
