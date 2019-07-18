@@ -120,9 +120,9 @@ class QCPipeline(Pipeline):
         self.add_envmodules('cellranger')
         self.add_envmodules('report_qc')
 
-    def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
-                    qc_protocol=None,multiqc=False,
-                    sample_pattern=None,log_dir=None):
+    def add_project(self,project,qc_dir=None,library_type=None,
+                    organism=None,fastq_dir=None,qc_protocol=None,
+                    multiqc=False,sample_pattern=None,log_dir=None):
         """
         Add a project to the QC pipeline
 
@@ -131,6 +131,9 @@ class QCPipeline(Pipeline):
             QC for
           qc_dir (str): directory for QC outputs (defaults
             to subdirectory 'qc' of project directory)
+          library_type (str): library type for project
+            (defaults to the library type defined in
+            project metadata)
           organism (str): organism(s) for project
             (defaults to organism defined in project
             metadata)
@@ -172,17 +175,19 @@ class QCPipeline(Pipeline):
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(project.dirn,qc_dir)
 
-        # Sort out other parameters
+        # Metadata
         if organism is None:
             organism = project.info.organism
+        if library_type is None:
+            library_type = project.info.library_type
 
         # Report details
-        self.report("-- Protocol  : %s" % qc_protocol)
-        self.report("-- Directory : %s" % project.dirn)
-        self.report("-- Fastqs dir: %s" % project.fastq_dir)
-        self.report("-- QC dir    : %s" % qc_dir)
-        self.report("-- Library   : %s" % project.info.library_type)
-        self.report("-- Organism  : %s" % organism)
+        self.report("-- Protocol    : %s" % qc_protocol)
+        self.report("-- Directory   : %s" % project.dirn)
+        self.report("-- Organism    : %s" % organism)
+        self.report("-- Library type: %s" % library_type)
+        self.report("-- Fastqs dir  : %s" % project.fastq_dir)
+        self.report("-- QC dir      : %s" % qc_dir)
 
         ####################
         # Build the pipeline

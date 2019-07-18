@@ -104,6 +104,10 @@ if __name__ == "__main__":
                    help="explicitly specify organism (e.g. 'human', "
                    "'mouse'). Multiple organisms should be separated "
                    "by commas (e.g. 'human,mouse')")
+    p.add_argument('--library_type',metavar='LIBRARY_TYPE',
+                   action='store',dest='library_type',default=None,
+                   help="explicitly specify libray type (e.g. "
+                   "'RNA-seq'")
     p.add_argument('--fastq_screen_subset',metavar='SUBSET',
                    action='store',dest='fastq_screen_subset',
                    default=__settings.qc.fastq_screen_subset,type=int,
@@ -258,6 +262,7 @@ if __name__ == "__main__":
                       qc_dir=args.qc_dir,
                       fastq_dir=args.fastq_dir,
                       organism=args.organism,
+                      library_type=args.library_type,
                       qc_protocol=args.qc_protocol,
                       multiqc=args.run_multiqc)
     status = runqc.run(nthreads=args.nthreads,

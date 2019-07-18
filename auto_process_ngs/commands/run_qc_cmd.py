@@ -151,6 +151,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                           qc_dir=qc_dir,
                           fastq_dir=fastq_dir,
                           organism=project.info.organism,
+                          library_type=project.info.library_type,
                           qc_protocol=protocol,
                           sample_pattern=sample_pattern,
                           multiqc=True)
