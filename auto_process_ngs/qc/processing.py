@@ -262,7 +262,7 @@ def report_processing_qc(analysis_dir,html_file):
                                 [line[l] for l in subset_lanes])
                 if not nreads or min(nreads) == 0:
                     s.add(Para(WarningIcon(),"One or more Fastqs with zero "
-                               "read counts in one or lanes",
+                               "read counts in one or more lanes",
                                css_classes=('warning',)))
                     has_warnings = True
                     break
