@@ -271,6 +271,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
                             "'%s' has been specified; use an "
                             "appropriate '10x_...' protocol for these "
                             "indices" % protocol)
+    # Turn off barcode analysis where appropriate
+    if analyse_barcodes and protocol in ('icell8_atac',
+                                         '10x_chromium_sc',
+                                         '10x_chromium_sc_atac',):
+        print("Turning off barcode analysis for '%s'" % protocol)
+        analyse_barcodes = False
     # Check for pre-existing Fastq outputs
     if verify_fastq_generation(
             ap,
@@ -414,8 +420,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
             except Exception as ex:
                 raise Exception("ICELL8 scATAC-seq Fastq generation failed: "
                                 "'%s'" % ex)
-            # Turn off barcode analysis
-            analyse_barcodes = False
         elif protocol == '10x_chromium_sc':
             # 10xGenomics Chromium SC
             exit_code = bcl_to_fastq_10x_chromium_sc(
@@ -433,8 +437,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localmem=cellranger_localmem,
                 log_dir=ap.log_dir
             )
-            # Turn off barcode analysis
-            analyse_barcodes = False
         elif protocol == '10x_chromium_sc_atac':
             # 10xGenomics Chromium scATAC-seq
             exit_code = bcl_to_fastq_10x_chromium_sc_atac(
@@ -452,8 +454,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_localmem=cellranger_localmem,
                 log_dir=ap.log_dir
             )
-            # Turn off barcode analysis
-            analyse_barcodes = False
         else:
             # Unknown protocol
             raise Exception("Unknown protocol '%s'" % protocol)

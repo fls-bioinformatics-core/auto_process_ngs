@@ -17,6 +17,7 @@ import argparse
 import sys
 import os
 import tempfile
+import logging
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
 from bcftbx.IlluminaData import SampleSheet
