@@ -55,6 +55,21 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 3,smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
 4,smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
 """
+        self.sample_sheet_with_chromium_indices_A10 = """[Header]
+IEMFileVersion,4
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-GA-A10,10xGenomics,
+"""
         self.sample_sheet_with_atac_indices = """[Header]
 IEMFileVersion,4
 
@@ -128,6 +143,13 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_chromium_indices)
+        self.assertTrue(has_chromium_sc_indices(s))
+    def test_sample_sheet_with_star10_chromium_sc_3_v2_index(self):
+        """
+        has_chromium_indices: sample sheet with '*10' Chromium SC 3'v2 index
+        """
+        s = self._make_sample_sheet(
+            self.sample_sheet_with_chromium_indices_A10)
         self.assertTrue(has_chromium_sc_indices(s))
     def test_sample_sheet_all_sc_atac_indices(self):
         """

@@ -249,7 +249,7 @@ def has_chromium_sc_indices(sample_sheet):
       Boolean: True if the sample sheet contains at least
         one Chromium SC index, False if not.
     """
-    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[1-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[0-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         if index_pattern.match(line['index']):
