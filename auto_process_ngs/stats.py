@@ -122,13 +122,18 @@ class FastqStatistics(object):
                                             'Nreads',
                                             'Paired_end',
                                             'Read_number'))
-        # Split result sets into R1 and R2
-        results_r1 = filter(lambda f: f.read_number == 1,results)
-        results_r2 = filter(lambda f: f.read_number == 2,results)
+        # Determine read numbers
+        read_numbers = sorted(list(set([f.read_number for f in results])))
+        # Split result sets into R1...R[n]
+        results_r = dict()
+        for read_number in read_numbers:
+            results_r[read_number] = filter(lambda f:
+                                            f.read_number == read_number,
+                                            results)
         # Determine which lanes are present and append
         # columns for each
         lanes = set()
-        for fastq in results_r1:
+        for fastq in results_r[1]:
             logger.debug("-- %s: lanes %s" %
                          (fastq.name,
                           ','.join([str(l) for l in fastq.lanes])))
@@ -160,18 +165,20 @@ class FastqStatistics(object):
                     except:
                         data.append('')
                 self._stats.append(data=data)
-        # Copy reads per lane from R1 FASTQs into R2
-        for r2_fastq in results_r2:
-            # Get corresponding R1 name
-            logger.debug("-- Fastq R2: %s" % r2_fastq.name)
-            r1_fastq_name = IlluminaFastq(r2_fastq.name)
-            r1_fastq_name.read_number = 1
-            r1_fastq_name = str(r1_fastq_name)
-            logger.debug("--    -> R1: %s" % r1_fastq_name)
-            # Locate corresponding data
-            r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
-                              results_r1)[0]
-            r2_fastq.reads_by_lane = dict(r1_fastq.reads_by_lane)
+        # Copy reads per lane from R1 FASTQs into other reads
+        for read_number in read_numbers:
+            for fastq in results_r[read_number]:
+                # Get corresponding R1 name
+                logger.debug("-- Fastq R%d: %s" % (read_number,
+                                                   fastq.name))
+                r1_fastq_name = IlluminaFastq(fastq.name)
+                r1_fastq_name.read_number = 1
+                r1_fastq_name = str(r1_fastq_name)
+                logger.debug("--    -> R1: %s" % r1_fastq_name)
+                # Locate corresponding data
+                r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
+                                  results_r[1])[0]
+                fastq.reads_by_lane = dict(r1_fastq.reads_by_lane)
         # Write the data into the tabfile
         paired_end = ('Y' if self._illumina_data.paired_end else 'N')
         for fastq in results:
@@ -549,8 +556,8 @@ def collect_fastq_data(fqstats):
       where keys are lane numbers and values are
       read counts
 
-    Note that if the FASTQ file is an R2 file then the
-    reads per lane will not be set.
+    Note that if the FASTQ file is an R2 (or higher) file
+    then the reads per lane will not be set.
 
     Arguments:
       fqstats (FastqStats): FastqStats instance
@@ -580,7 +587,7 @@ def collect_fastq_data(fqstats):
         fqs.nreads = sum([fqs.reads_by_lane[x]
                           for x in fqs.lanes])
     else:
-        # Only get total reads for R2 fastqs
+        # Only get total reads for non-R1 fastqs
         fqs.nreads = FastqReadCounter.zcat_wc(fastq)
     fqs.fsize = os.path.getsize(fastq)
     print "- %s: finished" % fastq_name
