@@ -7,8 +7,10 @@ import tempfile
 import shutil
 import time
 import os
+import io
 import getpass
 import platform
+import auto_process_ngs.envmod as envmod
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
@@ -601,6 +603,102 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         self.assertTrue(os.path.exists(out_file))
         self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_with_modules_environment(self):
+        """
+        Pipeline: define and run pipeline with 'modules' environment
+        """
+        # Set up mock Fastqc
+        bin_dir = os.path.join(self.working_dir,"apps","bin")
+        os.mkdir(os.path.join(self.working_dir,"apps"))
+        os.mkdir(bin_dir)
+        with io.open(os.path.join(bin_dir,"fastqc"),'wt') as fp:
+            fp.write(u"""#!/bin/bash
+echo $1
+exit 0
+""")
+        os.chmod(os.path.join(bin_dir,"fastqc"),0775)
+        # Set up mock environment module
+        modules_dir = os.path.join(self.working_dir,"modulefiles")
+        os.mkdir(modules_dir)
+        modules = ('apps/fastqc/1.0',)
+        os.mkdir(os.path.join(modules_dir,"apps"))
+        os.mkdir(os.path.join(modules_dir,"apps","fastqc"))
+        with io.open(os.path.join(modules_dir,"apps","fastqc","1.0"),'wt') \
+             as fp:
+            fp.write(u"""#%%Module1.0
+prepend-path PATH %s
+""" % bin_dir)
+        os.environ['MODULEPATH'] = modules_dir
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_modules_env("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     modules=ppl.modules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              modules={
+                                  'fastqc': modules,
+                              },
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_fails_with_missing_modules_environment(self):
+        """
+        Pipeline: check pipeline fails for missing 'modules' environment
+        """
+        # Missing module file
+        modules = ('apps/fastqc/1.0',)
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_modules_env("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     modules=ppl.modules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              modules={
+                                  'fastqc': modules,
+                              },
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the pipeline failed (non-zero exit)
+        self.assertNotEqual(exit_status,0)
 
     def test_pipeline_define_outputs(self):
         """

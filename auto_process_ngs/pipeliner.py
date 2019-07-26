@@ -967,6 +967,7 @@ class Pipeline(object):
         self._removed = []
         self._params = AttributeDictionary()
         self._runners = dict()
+        self._modules = dict()
         self._scheduler = None
         self._log_file = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
@@ -1006,6 +1007,20 @@ class Pipeline(object):
         >>> runner = ppl.runners['my_runner'].value
         """
         return dict(**self._runners)
+
+    @property
+    def modules(self):
+        """
+        Access the modules environments defined for the pipeline
+
+        Returns the dictionary mapping modules environment
+        names to PipelineParam instances that store the
+        module lists; so to get the list of modules associated
+        with an environment name do e.g.
+
+        >>> modules = ppl.modules['my_env'].value
+        """
+        return dict(**self._modules)
 
     @property
     def output(self):
@@ -1136,6 +1151,35 @@ class Pipeline(object):
         self._runners[name] = PipelineParam(
             name=name,
             default=lambda: self.runners['default'].value)
+
+    def add_modules_env(self,name):
+        """
+        Define a new environment defined by modules
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied mrunner name.
+
+        Runner instances can be accessed and set via the
+        ``modules`` property of the pipeline, for example:
+
+        To access:
+
+        >>> env_modules = ppl.modules['my_runner'].value
+
+        To set:
+
+        >>> ppl.modules['my_env'].set("")
+
+        Arguments:
+          name (str): name for the new runner
+        """
+        if name in self._modules:
+            raise KeyError("Modules environment '%s' already defined"
+                           % name)
+        self.report("Defining new modules environment '%s'" % name)
+        self._modules[name] = PipelineParam(
+            name=name,
+            value=list())
 
     def add_output(self,name,value):
         """
@@ -1318,8 +1362,9 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,params=None,runners=None,batch_size=None,
-            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE,
+            poll_interval=5,params=None,runners=None,modules=None,
+            batch_size=None,verbose=False,
+            exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
         Run the tasks in the pipeline
@@ -1350,6 +1395,9 @@ class Pipeline(object):
             associates parameter names with values
           runners (mapping): a dictionary or mapping which
             associates runner names with job runners
+          modules (mapping): a dictionary or mapping which
+            associates module environments with lists of
+            module names
           batch_size (int): if set then run commands in
             each task in batches, with each batch running
             this many commands at a time (default is to run
@@ -1380,6 +1428,10 @@ class Pipeline(object):
                 self.runners[r].set(runners[r])
         if default_runner:
             self.runners['default'].set(default_runner)
+        # Deal with module environments
+        if modules:
+            for m in modules:
+                self.modules[m].value.append(modules[m])
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -1446,6 +1498,19 @@ class Pipeline(object):
             self.report("-- %s%s: %s" % (r,
                                          ' '*(width-len(r)),
                                          self.runners[r].value))
+        # Report modules environments
+        if self.modules:
+            self.report("Modules environments:")
+            width = max([len(m) for m in self.modules])
+            for m in sorted(self.modules):
+                self.report("-- %s%s: %s" % (m,
+                                             ' '*(width-len(m)),
+                                             ('<not set>'
+                                              if self.modules[m].value is None
+                                              else
+                                              ','.join(
+                                                  [str(x) for x in
+                                                   self.modules[m].value]))))
         # Sort the tasks and set up the pipeline
         self.report("Scheduling tasks...")
         for i,rank in enumerate(self.rank_tasks()):
@@ -1920,9 +1985,9 @@ class PipelineTask(object):
         """
         return self._output
 
-    def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
-            scripts_dir=None,log_file=None,wait_for=(),async=True,
-            poll_interval=5,batch_size=None,verbose=False):
+    def run(self,sched=None,runner=None,modules=None,working_dir=None,
+            log_dir=None,scripts_dir=None,log_file=None,wait_for=(),
+            async=True,poll_interval=5,batch_size=None,verbose=False):
         """
         Run the task
 
@@ -1934,6 +1999,8 @@ class PipelineTask(object):
           sched (SimpleScheduler): scheduler to submit jobs to
           runner (JobRunner): job runner to use when running
             jobs via the scheduler
+          modules (list): list of environment modules to load when
+            running jobs in the task
           working_dir (str): path to the working directory to use
             (defaults to the current working directory)
           log_dir (str): path to the directory to write logs to
@@ -1976,8 +2043,12 @@ class PipelineTask(object):
                 if verbose:
                     self.report("%s" % command.cmd())
                 script_file = command.make_wrapper_script(
-                    scripts_dir=scripts_dir)
-                cmd = Command('/bin/bash',script_file)
+                    scripts_dir=scripts_dir,
+                    modules=modules)
+                cmd = Command('/bin/bash')
+                if modules:
+                    cmd.add_args('-l')
+                cmd.add_args(script_file)
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
@@ -2001,8 +2072,12 @@ class PipelineTask(object):
                 if verbose:
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
-                    scripts_dir=scripts_dir)
-                cmd = Command('/bin/bash',script_file)
+                    scripts_dir=scripts_dir,
+                    modules=modules)
+                cmd = Command('/bin/bash')
+                if modules:
+                    cmd.add_args('-l')
+                cmd.add_args(script_file)
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
