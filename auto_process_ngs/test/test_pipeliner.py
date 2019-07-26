@@ -1456,6 +1456,46 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### EXIT_CODE $exit_code\"\n"
                          "exit $exit_code")
 
+    def test_pipelinecommand_with_modules(self):
+        """
+        PipelineCommand: check command and wrapper script with modules
+        """
+        # Subclass PipelineCommand
+        class EchoCmd(PipelineCommand):
+            def init(self,txt):
+                self._txt = txt
+            def cmd(self):
+                return Command(
+                    "echo",
+                    self._txt)
+        # Make an instance
+        cmd = EchoCmd("hello there")
+        # Check name
+        self.assertEqual(cmd.name(),"echocmd")
+        # Check command
+        self.assertEqual(str(cmd.cmd()),"echo hello there")
+        # Check wrapper script file
+        script_file = cmd.make_wrapper_script(
+            scripts_dir=self.working_dir,
+            modules=('apps/fastq-screen/0.13.0',
+                     'apps/fastqc/0.11.8',))
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        self.assertEqual(open(script_file,'r').read(),
+                         "#!/bin/bash --login\n"
+                         "echo \"#### COMMAND EchoCmd\"\n"
+                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                         "echo \"#### USER $USER\"\n"
+                         "echo \"#### START $(date)\"\n"
+                         "module load apps/fastq-screen/0.13.0\n"
+                         "module load apps/fastqc/0.11.8\n"
+                         "echo 'hello there'\n"
+                         "exit_code=$?\n"
+                         "echo \"#### END $(date)\"\n"
+                         "echo \"#### EXIT_CODE $exit_code\"\n"
+                         "exit $exit_code")
+
 class TestPipelineCommandWrapper(unittest.TestCase):
 
     def test_piplinecommandwrapper(self):
