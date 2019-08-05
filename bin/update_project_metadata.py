@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     update_project_metadata.py: update data associated with a project
-#     Copyright (C) University of Manchester 2015 Peter Briggs
+#     Copyright (C) University of Manchester 2015,2019 Peter Briggs
 #
 """
 Update the metadata associated with project(s) in an Illumina run analysis
@@ -12,7 +12,7 @@ Update the metadata associated with project(s) in an Illumina run analysis
 # Imports
 #######################################################################
 
-import optparse
+import argparse
 import fnmatch
 import os
 import sys
@@ -25,39 +25,41 @@ from auto_process_ngs.analysis import AnalysisDir
 #######################################################################
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="%prog DIR [PROJECT]")
-    p.add_option("-i","--init",action="store_true",dest="init",default=False,
-                 help="initialise metadata file for the selected project (nb can "
-                 "only be applied to one project at a time)")
-    p.add_option("-u","--update",action="append",dest="update",
-                 help="update the metadata in the selected project by specifying "
-                 "key=value pairs e.g. user='Peter Briggs' (nb can only be applied "
-                 "to one project at a time)")
-    opts,args = p.parse_args()
-    if not args or len(args) > 2:
-        p.error("Need to supply a run directory and an optional project name")
+    p = argparse.ArgumentParser()
+    p.add_argument("-i","--init",
+                   action="store_true",dest="init",default=False,
+                   help="initialise metadata file for the selected project "
+                   "(nb can only be applied to one project at a time)")
+    p.add_argument("-u","--update",
+                   action="append",dest="update",
+                   help="update the metadata in the selected project by "
+                   "specifying key=value pairs e.g. user='Peter Briggs' "
+                   "(nb can only be applied to one project at a time)")
+    p.add_argument("dir",metavar="DIR",
+                   help="analysis directory to update metadata for")
+    p.add_argument("project",metavar="PROJECT",
+                   help="project within the analysis directory to update "
+                   "metadata for")
+    args = p.parse_args()
     # Try and load the data
     try:
-        run = AnalysisDir(args[0])
-        print "Loaded data from %s" % args[0]
+        run = AnalysisDir(args.dir)
+        print "Loaded data from %s" % args.dir
         print "Found %d projects" % run.n_projects
         if run.undetermined is not None:
             print "Found 'undetermined' analysis"
         print "Found %d sequencing data directories" % run.n_sequencing_data
-    except Exception,ex:
-        sys.stderr.write("Failed to load data for %s: %s\n" % (args[0],ex))
+    except Exception as ex:
+        sys.stderr.write("Failed to load data for %s: %s\n" % (args.dir,ex))
         sys.exit(1)
     # Aquire the projects
-    try:
-        target_project = args[1]
-    except IndexError:
-        target_project = None
+    target_project = args.project
     projects = run.get_projects(pattern=target_project)
     if not projects:
         print "No projects found"
         sys.exit(1)
     print "%d projects selected" % len(projects)
-    if (opts.update or opts.init) and len(projects) > 1:
+    if (args.update or args.init) and len(projects) > 1:
         sys.stderr.write("-i/-u can't be used for multiple projects\n")
         sys.exit(1)
     # Check metadata for the projects
@@ -68,9 +70,9 @@ if __name__ == "__main__":
         if not has_metadata_file:
             # No metadata file
             print "%s: missing metadata file '%s'" % (p.name,p.info_file)
-            if opts.init:
+            if args.init:
                 print "Initialising metadata file"
-                run_name = os.path.basename(os.path.abspath(args[0]))
+                run_name = os.path.basename(os.path.abspath(args.dir))
                 if run_name.endswith('_analysis'):
                     run_name = run_name[:-9]
                 platform = platforms.get_sequencer_platform(run_name)
@@ -91,11 +93,11 @@ if __name__ == "__main__":
             else:
                 print "%s: ok" % p.name
         # Do updates
-        if opts.update:
+        if args.update:
             if not has_metadata_file:
                 sys.stderr.write("No metadata file: use -i/--init to create one first\n")
                 sys.exit(1)
-            for pair in opts.update:
+            for pair in args.update:
                 try:
                     key = pair.split('=')[0]
                     value = '='.join(pair.split('=')[1:]).strip("'\"")
