@@ -62,11 +62,11 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Summarise the disk usage "
                                 "for runs that have been processed using "
                                 "auto_process. The supplied DIRs are "
-                                "directories holding the top-level analysis "
-                                "directories corresponding to different runs. "
-                                "The program reports total disk usage for "
-                                "projects assigned to each PI across "
-                                "all DIRs.")
+                                "directories holding one or more top-level "
+                                "analysis directories corresponding to "
+                                "different runs. The program reports total "
+                                "disk usage for projects assigned to each "
+                                "PI across all DIRs.")
     p.add_argument("--pi",
                    action='store',dest="pi_name",default=None,
                    help="list data for PI(s) matching PI_NAME (can use "
@@ -75,14 +75,19 @@ if __name__ == "__main__":
                    action='store_true',dest="unassigned",default=False,
                    help="list data for projects where PI is not assigned")
     p.add_argument("dir",metavar="DIR",
-                   nargs="+",
-                   help="analysis directory to include in the auditing")
+                   nargs="*",
+                   help="directory to search for analysis directories for "
+                   "auditing")
     args = p.parse_args()
     # Collect data
     audit_data = {}
     unassigned = []
     undetermined = []
-    for d in args:
+    if not args.dir:
+        dirs = ['.']
+    else:
+        dirs = args.dir
+    for d in dirs:
         for dirn in utils.list_dirs(d):
             dirn = os.path.join(d,dirn)
             #print "Examining %s" % dirn
