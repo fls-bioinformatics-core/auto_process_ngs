@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     audit_projects.py: summarise disk usage for sequencing projects
-#     Copyright (C) University of Manchester 2015 Peter Briggs
+#     Copyright (C) University of Manchester 2015,2019 Peter Briggs
 #
 """
 Summarise the disk usage for runs processed using 'auto_process'
@@ -12,7 +12,7 @@ Summarise the disk usage for runs processed using 'auto_process'
 # Imports
 #######################################################################
 
-import optparse
+import argparse
 import fnmatch
 import os
 import sys
@@ -59,19 +59,25 @@ def get_blocks(f):
 #######################################################################
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="%prog DIR [DIR...]",
-                              description="Summarise the disk usage for runs that have "
-                              "been processed using auto_process. The supplied DIRs are "
-                              "directories holding the top-level analysis directories "
-                              "corresponding to different runs. The program reports "
-                              "total disk usage for projects assigned to each PI across "
-                              "all DIRs.")
-    p.add_option("--pi",action='store',dest="pi_name",default=None,
-                 help="List data for PI(s) matching PI_NAME (can use glob-style "
-                 "patterns)")
-    p.add_option("--unassigned",action='store_true',dest="unassigned",default=False,
-                 help="List data for projects where PI is not assigned")
-    opts,args = p.parse_args()
+    p = argparse.ArgumentParser(description="Summarise the disk usage "
+                                "for runs that have been processed using "
+                                "auto_process. The supplied DIRs are "
+                                "directories holding the top-level analysis "
+                                "directories corresponding to different runs. "
+                                "The program reports total disk usage for "
+                                "projects assigned to each PI across "
+                                "all DIRs.")
+    p.add_argument("--pi",
+                   action='store',dest="pi_name",default=None,
+                   help="list data for PI(s) matching PI_NAME (can use "
+                   "glob-style patterns)")
+    p.add_argument("--unassigned",
+                   action='store_true',dest="unassigned",default=False,
+                   help="list data for projects where PI is not assigned")
+    p.add_argument("dir",metavar="DIR",
+                   nargs="+",
+                   help="analysis directory to include in the auditing")
+    args = p.parse_args()
     # Collect data
     audit_data = {}
     unassigned = []
@@ -92,8 +98,8 @@ if __name__ == "__main__":
                         p.info['run'] = os.path.basename(dirn)
                         unassigned.append(p)
                         continue
-                    elif opts.pi_name is not None:
-                        if not fnmatch.fnmatch(pi,opts.pi_name):
+                    elif args.pi_name is not None:
+                        if not fnmatch.fnmatch(pi,args.pi_name):
                             # Skip non-matching name
                             continue
                     #print "\t%s: %s" % (p.name,pi)
@@ -124,7 +130,7 @@ if __name__ == "__main__":
     pi_list = sorted(pi_list,key=lambda x: sum([y[1] for y in audit_data[x]]),
                      reverse=True)
     # Report the unassigned projects, if requested
-    if opts.unassigned:
+    if args.unassigned:
         print "%d unassigned projects:" % len(unassigned)
         unassigned = sorted(unassigned,key=lambda x: str(x).split('_')[0])
         for project in unassigned:
