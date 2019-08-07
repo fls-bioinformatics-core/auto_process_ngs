@@ -322,6 +322,7 @@ are available:
 
 """)
 for utility in ("analyse_barcodes.py",
+                "assign_barcodes.py",
                 "audit_projects.py",
                 "download_fastqs.py",
                 "demultiplex_icell8_atac.py",
