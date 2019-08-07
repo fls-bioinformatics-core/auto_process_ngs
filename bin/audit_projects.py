@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     audit_projects.py: summarise disk usage for sequencing projects
-#     Copyright (C) University of Manchester 2015 Peter Briggs
+#     Copyright (C) University of Manchester 2015,2019 Peter Briggs
 #
 """
 Summarise the disk usage for runs processed using 'auto_process'
@@ -12,7 +12,7 @@ Summarise the disk usage for runs processed using 'auto_process'
 # Imports
 #######################################################################
 
-import optparse
+import argparse
 import fnmatch
 import os
 import sys
@@ -59,27 +59,38 @@ def get_blocks(f):
 #######################################################################
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="%prog DIR [DIR...]",
-                              description="Summarise the disk usage for runs that have "
-                              "been processed using auto_process. The supplied DIRs are "
-                              "directories holding the top-level analysis directories "
-                              "corresponding to different runs. The program reports "
-                              "total disk usage for projects assigned to each PI across "
-                              "all DIRs.")
-    p.add_option("--pi",action='store',dest="pi_name",default=None,
-                 help="List data for PI(s) matching PI_NAME (can use glob-style "
-                 "patterns)")
-    p.add_option("--unassigned",action='store_true',dest="unassigned",default=False,
-                 help="List data for projects where PI is not assigned")
-    opts,args = p.parse_args()
+    p = argparse.ArgumentParser(description="Summarise the disk usage "
+                                "for runs that have been processed using "
+                                "auto_process. The supplied DIRs are "
+                                "directories holding one or more top-level "
+                                "analysis directories corresponding to "
+                                "different runs. The program reports total "
+                                "disk usage for projects assigned to each "
+                                "PI across all DIRs.")
+    p.add_argument("--pi",
+                   action='store',dest="pi_name",default=None,
+                   help="list data for PI(s) matching PI_NAME (can use "
+                   "glob-style patterns)")
+    p.add_argument("--unassigned",
+                   action='store_true',dest="unassigned",default=False,
+                   help="list data for projects where PI is not assigned")
+    p.add_argument("dir",metavar="DIR",
+                   nargs="*",
+                   help="directory to search for analysis directories for "
+                   "auditing")
+    args = p.parse_args()
     # Collect data
     audit_data = {}
     unassigned = []
     undetermined = []
-    for d in args:
+    if not args.dir:
+        dirs = ['.']
+    else:
+        dirs = args.dir
+    for d in dirs:
         for dirn in utils.list_dirs(d):
             dirn = os.path.join(d,dirn)
-            #print "Examining %s" % dirn
+            #print("Examining %s" % dirn)
             try:
                 run = AnalysisDir(dirn)
                 for p in run.get_projects():
@@ -92,11 +103,11 @@ if __name__ == "__main__":
                         p.info['run'] = os.path.basename(dirn)
                         unassigned.append(p)
                         continue
-                    elif opts.pi_name is not None:
-                        if not fnmatch.fnmatch(pi,opts.pi_name):
+                    elif args.pi_name is not None:
+                        if not fnmatch.fnmatch(pi,args.pi_name):
                             # Skip non-matching name
                             continue
-                    #print "\t%s: %s" % (p.name,pi)
+                    #(print "\t%s: %s" % (p.name,pi))
                     if pi not in audit_data:
                         audit_data[pi] = []
                     # Acquire size of data
@@ -110,57 +121,57 @@ if __name__ == "__main__":
                                 #if os.path.islink(fq):
                                 #    s = utils.Symlink(fq)
                                 #    size += get_size(s.resolve_target())
-                            except Exception,ex:
-                                print "Failed to get size for fastq file: %s" % fq
-                                print "%s" % ex
+                            except Exception as ex:
+                                print("Failed to get size for fastq file: "
+                                      "%s" % fq)
+                                print("%s" % ex)
                                 sys.exit(1)
                     # Add to list of projects
                     audit_data[pi].append((p,size))
-            except Exception,ex:
-                print "Failed to load as run: %s" % ex
-                pass
+            except Exception as ex:
+                print("Failed to load as run: %s" % ex)
     # Sort into order by disk usage
     pi_list = audit_data.keys()
     pi_list = sorted(pi_list,key=lambda x: sum([y[1] for y in audit_data[x]]),
                      reverse=True)
     # Report the unassigned projects, if requested
-    if opts.unassigned:
-        print "%d unassigned projects:" % len(unassigned)
+    if args.unassigned:
+        print("%d unassigned projects:" % len(unassigned))
         unassigned = sorted(unassigned,key=lambda x: str(x).split('_')[0])
         for project in unassigned:
-            print "%s: %s" % (project.name,project.info.run)
+            print("%s: %s" % (project.name,project.info.run))
         sys.exit(0)
     # Report if no PIs were found
     if len(pi_list) == 0:
-        print "No projects assigned to PIs found"
+        print("No projects assigned to PIs found")
         sys.exit(0)
     # Report PIs, projects etc
-    print "Summary (PI, # of projects, total usage):"
-    print "========================================="
+    print("Summary (PI, # of projects, total usage):")
+    print("=========================================")
     total_projects = 0
     total_size = 0
     for pi in pi_list:
         n_projects = len(audit_data[pi])
         size = sum([p[1] for p in audit_data[pi]])
-        print "%s\t%d\t%s" % (pi,n_projects,
-                              utils.format_file_size(size))
+        print("%s\t%d\t%s" % (pi,n_projects,
+                              utils.format_file_size(size)))
         total_projects += n_projects
         total_size += size
-    print "Total usage\t%d\t%s" % (total_projects,
-                                   utils.format_file_size(total_size))
-    print "\nBreakdown by PI/project:"
-    print "========================"
+    print("Total usage\t%d\t%s" % (total_projects,
+                                   utils.format_file_size(total_size)))
+    print("\nBreakdown by PI/project:")
+    print("========================")
     for pi in pi_list:
-        print "%s:" % pi
+        print("%s:" % pi)
         for project,size in audit_data[pi]:
-            print "\t%s:\t%s\t%s" % (project.info.run,project.name,
-                                     utils.format_file_size(size))
+            print("\t%s:\t%s\t%s" % (project.info.run,project.name,
+                                     utils.format_file_size(size)))
     if undetermined:
-        print "\nUsage for 'undetermined' reads:"
-        print "==============================="
+        print("\nUsage for 'undetermined' reads:")
+        print("===============================")
         total_size = 0
         for u,size in undetermined:
-            print "%s\t%s" % (u.info.run,utils.format_file_size(size))
+            print("%s\t%s" % (u.info.run,utils.format_file_size(size)))
             total_size += size
-        print "Total usage\t%s" % utils.format_file_size(total_size)
+        print("Total usage\t%s" % utils.format_file_size(total_size))
         
