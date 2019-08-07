@@ -311,7 +311,7 @@ class BarcodeCounter(object):
         interpreted as an integer then it's set to be 'None'.
 
         """
-        print "Reading count data from file '%s'" % filen
+        print("Reading count data from file '%s'" % filen)
         counts = {}
         with open(filen,'r') as fp:
             for line in fp:
@@ -343,7 +343,7 @@ class BarcodeCounter(object):
         Write barcode data to a file
 
         """
-        print "Writing all counts to file '%s'" % filen
+        print("Writing all counts to file '%s'" % filen)
         with open(filen,'w') as fp:
             fp.write("#Lane\tRank\tSequence\tCount\n")
             for lane in self.lanes:

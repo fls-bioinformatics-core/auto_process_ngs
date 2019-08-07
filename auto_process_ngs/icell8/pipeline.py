@@ -940,9 +940,9 @@ class SetupDirectories(PipelineTask):
         for dirn in self.args.dirs:
             dirn = os.path.abspath(dirn)
             if os.path.exists(dirn):
-                print "%s: already exists" % dirn
+                print("%s: already exists" % dirn)
             else:
-                print "%s: making directory" % dirn
+                print("%s: making directory" % dirn)
                 mkdir(dirn)
 
 class CollectFiles(PipelineFunctionTask):
@@ -1096,13 +1096,13 @@ class GetICell8Stats(PipelineTask):
                 if self.args.suffix is not None:
                     col = '%s%s' % (col,self.args.suffix)
                 if col not in stats.header():
-                    print "Column not in file: %s" % col
+                    print("Column not in file: %s" % col)
                     got_cols = False
                 else:
-                    print "Found column: %s" % col
+                    print("Found column: %s" % col)
             if got_cols:
                 # Skip statistics collection
-                print "Stats file already contains data"
+                print("Stats file already contains data")
                 return
         # Set up the statistics collection
         self.add_cmd(ICell8Statistics(self.args.fastqs,
@@ -1128,12 +1128,12 @@ class GetICell8PolyGStats(GetICell8Stats):
         # Adds another column to the stats file
         # with the percentage of 'unfiltered' reads
         # with poly-G regions
-        print "Add number of reads with poly-G regions as percentage"
+        print("Add number of reads with poly-G regions as percentage")
         stats_file = self.args.stats_file
         stats = TabFile(stats_file,first_line_is_header=True)
         # Check if data is already present
         if "%reads_poly_g" in stats.header():
-            print "Poly-G stats already collected"
+            print("Poly-G stats already collected")
             return
         # Add and populate the new column
         stats.appendColumn("%reads_poly_g")
@@ -1187,7 +1187,7 @@ class SplitFastqsIntoBatches(PipelineTask):
     def setup(self):
         # If output directory already exists then nothing to do
         if os.path.exists(self.args.batch_dir):
-            print "%s already exists" % self.args.batch_dir
+            print("%s already exists" % self.args.batch_dir)
             return
         # Make temp directory for outputs
         self.tmp_batch_dir = tmp_dir(self.args.batch_dir)
@@ -1205,7 +1205,7 @@ class SplitFastqsIntoBatches(PipelineTask):
     def finish(self):
         # On success move the temp dir to the final location
         if not os.path.exists(self.args.batch_dir):
-            print "Moving tmp dir to final location"
+            print("Moving tmp dir to final location")
             os.rename(self.tmp_batch_dir,self.args.batch_dir)
 
 class FilterICell8Fastqs(PipelineTask):
@@ -1294,7 +1294,7 @@ class FilterICell8Fastqs(PipelineTask):
         self.add_output('fastqs',fastqs)
     def setup(self):
         if os.path.exists(self.args.filter_dir):
-            print "%s already exists" % self.args.filter_dir
+            print("%s already exists" % self.args.filter_dir)
             return
         self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
         for fastq_pair in self.args.fastq_pairs:
@@ -1308,9 +1308,9 @@ class FilterICell8Fastqs(PipelineTask):
                 discard_unknown_barcodes=self.args.discard_unknown_barcodes,
                 quality_filter=self.args.quality_filter))
     def finish(self):
-        print self.stdout
+        print(self.stdout)
         if not os.path.exists(self.args.filter_dir):
-            print "Moving tmp dir to final location"
+            print("Moving tmp dir to final location")
             os.rename(self.tmp_filter_dir,self.args.filter_dir)
 
 class TrimReads(PipelineTask):
@@ -1351,7 +1351,7 @@ class TrimReads(PipelineTask):
                                                pattern))
     def setup(self):
         if os.path.exists(self.args.trim_dir):
-            print "%s already exists" % self.args.trim_dir
+            print("%s already exists" % self.args.trim_dir)
             return
         self.tmp_trim_dir = tmp_dir(self.args.trim_dir)
         for fastq_pair in self.args.fastq_pairs:
@@ -1389,7 +1389,7 @@ class GetReadsWithPolyGRegions(PipelineTask):
                                                pattern))
     def setup(self):
         if os.path.exists(self.args.poly_g_regions_dir):
-            print "%s already exists" % self.args.poly_g_regions_dir
+            print("%s already exists" % self.args.poly_g_regions_dir)
             return
         self.tmp_poly_g_regions_dir = tmp_dir(self.args.poly_g_regions_dir)
         for fastq_pair in self.args.fastq_pairs:
@@ -1445,7 +1445,7 @@ class FilterContaminatedReads(PipelineTask):
                                                pattern))
     def setup(self):
         if os.path.exists(self.args.filter_dir):
-            print "%s already exists" % self.args.filter_dir
+            print("%s already exists" % self.args.filter_dir)
             return
         self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
         for fastq_pair in self.args.fastq_pairs:
@@ -1491,7 +1491,7 @@ class SplitByBarcodes(PipelineTask):
                                                pattern))
     def setup(self):
         if os.path.exists(self.args.barcodes_dir):
-            print "%s already exists" % self.args.barcodes_dir
+            print("%s already exists" % self.args.barcodes_dir)
             return
         self.tmp_barcodes_dir = tmp_dir(self.args.barcodes_dir)
         for fastq_pair in self.args.fastq_pairs:
@@ -1684,12 +1684,12 @@ class MergeBarcodeFastqs(PipelineTask):
     def setup(self):
         # If output directory already exists then nothing to do
         if os.path.exists(self.args.merge_dir):
-            print "%s already exists" % self.args.merge_dir
+            print("%s already exists" % self.args.merge_dir)
             return
         # Make temp directory for outputs
         self.tmp_merge_dir = "%s.tmp" % self.args.merge_dir
         if os.path.exists(self.tmp_merge_dir):
-            print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
+            print("Removing existing tmp dir '%s'" % self.tmp_merge_dir)
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
         # Extract the barcodes from the fastq groups dict
@@ -1701,10 +1701,10 @@ class MergeBarcodeFastqs(PipelineTask):
         # Concat fastqs
         for i,barcode_batch in enumerate(barcode_batches):
             batch_name = "barcodes%06d" % i
-            print "Barcode batch: %s" % batch_name
+            print("Barcode batch: %s" % batch_name)
             fastq_pairs = []
             for barcode in barcode_batch:
-                print "-- %s" % barcode
+                print("-- %s" % barcode)
                 fastq_pairs.extend(self.args.fastq_groups[barcode])
             self.add_cmd(SplitAndFilterFastqPair(fastq_pairs,
                                                  self.tmp_merge_dir,
@@ -1731,7 +1731,7 @@ class MergeBarcodeFastqs(PipelineTask):
     def finish(self):
         # On success move the temp dir to the final location
         if not os.path.exists(self.args.merge_dir):
-            print "Moving tmp dir to final location"
+            print("Moving tmp dir to final location")
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
 
 class MergeSampleFastqs(PipelineTask):
@@ -1767,12 +1767,12 @@ class MergeSampleFastqs(PipelineTask):
     def setup(self):
         # If output directory already exists then nothing to do
         if os.path.exists(self.args.merge_dir):
-            print "%s already exists" % self.args.merge_dir
+            print("%s already exists" % self.args.merge_dir)
             return
         # Make temp directory for outputs
         self.tmp_merge_dir = "%s.tmp" % self.args.merge_dir
         if os.path.exists(self.tmp_merge_dir):
-            print "Removing existing tmp dir '%s'" % self.tmp_merge_dir
+            print("Removing existing tmp dir '%s'" % self.tmp_merge_dir)
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
         # Extract the samples from the fastq groups dict
@@ -1791,7 +1791,7 @@ class MergeSampleFastqs(PipelineTask):
     def finish(self):
         # On success move the temp dir to the final location
         if not os.path.exists(self.args.merge_dir):
-            print "Moving tmp dir to final location"
+            print("Moving tmp dir to final location")
             os.rename(self.tmp_merge_dir,self.args.merge_dir)
 
 class CheckICell8Barcodes(PipelineFunctionTask):
@@ -1830,7 +1830,7 @@ class CheckICell8Barcodes(PipelineFunctionTask):
                          fastqs):
             # Get the assigned barcode from the name
             assigned_barcode = AnalysisFastq(fq).barcode_sequence
-            print "%s: %s" % (fq,assigned_barcode)
+            print("%s: %s" % (fq,assigned_barcode))
             # Iterate through the Fastq
             for r in FastqIterator(fq):
                 barcode = ICell8Read1(r).barcode
@@ -1842,7 +1842,7 @@ class CheckICell8Barcodes(PipelineFunctionTask):
             raise Exception("Found Fastqs with inconsistent "
                             "barcodes")
     def finish(self):
-        print "All okay"
+        print("All okay")
 
 class ConvertStatsToXLSX(PipelineFunctionTask):
     """
@@ -1951,8 +1951,8 @@ class UpdateProjectData(PipelineTask):
         project.info['number_of_cells'] = len(well_list.barcodes())
         project.info.save()
         # Report
-        print "Primary fastq dir: %s" % project.info.primary_fastq_dir
-        print "Number of cells  : %s" % project.info.number_of_cells
+        print("Primary fastq dir: %s" % project.info.primary_fastq_dir)
+        print("Number of cells  : %s" % project.info.number_of_cells)
 
 class CleanupDirectory(PipelineFunctionTask):
     """
@@ -1990,9 +1990,9 @@ def tmp_dir(d):
     # Make temp directory for outputs
     tmp = "%s.tmp" % d
     if os.path.exists(tmp):
-        print "Removing existing tmp dir '%s'" % tmp
+        print("Removing existing tmp dir '%s'" % tmp)
         shutil.rmtree(tmp)
-    print "Creating tmp dir '%s'" % tmp
+    print("Creating tmp dir '%s'" % tmp)
     mkdir(tmp)
     return tmp
 

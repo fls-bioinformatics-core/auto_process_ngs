@@ -422,7 +422,7 @@ class DirectoryUpdater(object):
         if not os.path.isabs(dirn):
             dirn = os.path.join(self._base_dir,
                                 dirn)
-        print "Adding directory: %s" % dirn
+        print("Adding directory: %s" % dirn)
         os.mkdir(dirn)
 
     def add_file(self,filen,content=None):
@@ -437,7 +437,7 @@ class DirectoryUpdater(object):
         if not os.path.isabs(filen):
             filen = os.path.join(self._base_dir,
                                  filen)
-        print "Adding file: %s" % filen
+        print("Adding file: %s" % filen)
         with open(filen,'w') as fp:
             if content is not None:
                 fp.write("%s" % content)
@@ -599,16 +599,16 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # Handle Fastq set
         if fastq_set is not None:
             self._project.use_fastq_dir(fastq_dir=fastq_set)
-        print "- Fastq set: %s" % self._project.fastq_dir
+        print("- Fastq set: %s" % self._project.fastq_dir)
         # Handle QC directory
         self._project.setup_qc_dir(qc_dir=qc_dir,
                                    fastq_dir=fastq_set)
         if qc_dir is not None:
             self._project.use_qc_dir(qc_dir)
-        print "- QC dir: %s" % self._project.qc_dir
+        print("- QC dir: %s" % self._project.qc_dir)
         # Generate base QC outputs (one set per fastq)
         for fq in self._project.fastqs:
-            print "Adding outputs for %s" % fq
+            print("Adding outputs for %s" % fq)
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
             if protocol == 'singlecell' and \
                self._project.fastq_attrs(fq).read_number == 1:
@@ -648,7 +648,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                   (qc_name,
                                    self._project.name,
                                    analysis_name))
-        print "Building ZIP archive: %s" % report_zip
+        print("Building ZIP archive: %s" % report_zip)
         zip_file = ZipArchive(report_zip,
                               relpath=self._project.dirn,
                               prefix="%s.%s.%s" %
@@ -704,7 +704,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
         """
         Add mock 'cellranger count' outputs to project
         """
-        print "Adding cellranger count outputs for %s" % self._project.dirn
+        print("Adding cellranger count outputs for %s" % self._project.dirn)
         self.add_file("cellranger_count_report.html")
         self.add_subdir("cellranger_count")
         for sample in self._project.samples:
@@ -862,7 +862,7 @@ class MockBcl2fastq2Exe(object):
             to imitate
         """
         path = os.path.abspath(path)
-        print "Building mock executable: %s" % path
+        print("Building mock executable: %s" % path)
         # Don't clobber an existing executable
         assert(os.path.exists(path) is False)
         with open(path,'w') as fp:
@@ -885,8 +885,8 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                    version))
             os.chmod(path,0775)
         with open(path,'r') as fp:
-            print "bcl2fastq:"
-            print "%s" % fp.read()
+            print("bcl2fastq:")
+            print("%s" % fp.read())
         return path
 
     def __init__(self,exit_code=0,
@@ -918,7 +918,7 @@ bcl2fastq v%s
             header += "Copyright (c) 2007-2017 Illumina, Inc.\n"
         # Handle version request
         if "--version" in args:
-            print header
+            print(header)
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -939,13 +939,13 @@ bcl2fastq v%s
         args = p.parse_args(args)
         # Check bases mask
         if self._assert_bases_mask:
-            print "Checking bases mask: %s" % args.use_bases_mask
+            print("Checking bases mask: %s" % args.use_bases_mask)
             assert(args.use_bases_mask == self._assert_bases_mask)
         # Platform
-        print "Platform (default): %s" % self._platform
+        print("Platform (default): %s" % self._platform)
         # Run folder (input data)
         runfolder = args.runfolder_dir
-        print "Runfolder dir: %s" % runfolder
+        print("Runfolder dir: %s" % runfolder)
         if runfolder is None:
             return 1
         run_info_xml = os.path.join(runfolder,"RunInfo.xml")
@@ -960,15 +960,15 @@ bcl2fastq v%s
             paired_end = True
         else:
             paired_end = False
-        print "Paired-end: %s" % paired_end
+        print("Paired-end: %s" % paired_end)
         # Lanes
         lanes = IlluminaRun(runfolder,platform=self._platform).lanes
-        print "Lanes: %s" % lanes
+        print("Lanes: %s" % lanes)
         # Output folder
         output_dir = args.output_dir
         if output_dir is None:
             output_dir = "bcl2fastq"
-        print "Output dir: %s" % output_dir
+        print("Output dir: %s" % output_dir)
         # Sample sheet
         sample_sheet = args.sample_sheet
         if sample_sheet is None:
@@ -981,10 +981,10 @@ bcl2fastq v%s
                 if os.path.exists(sample_sheet):
                     break
                 sample_sheet = None
-        print "Sample sheet: %s" % sample_sheet
+        print("Sample sheet: %s" % sample_sheet)
         # Modifiers
         no_lane_splitting = bool(args.no_lane_splitting)
-        print "No lane splitting: %s" % no_lane_splitting
+        print("No lane splitting: %s" % no_lane_splitting)
         # Generate mock output based on inputs
         tmpname = "tmp.%s" % uuid.uuid4()
         output = MockIlluminaData(name=tmpname,
@@ -998,7 +998,7 @@ bcl2fastq v%s
                   no_lane_splitting=no_lane_splitting,
                   lanes=lanes)
             for project in s.projects:
-                print "Adding project: %s" % project.name
+                print("Adding project: %s" % project.name)
                 for sample in project.samples:
                     for fq in sample.fastqs():
                         if missing_fastqs and (fq in missing_fastqs):
@@ -1095,7 +1095,7 @@ class MockCellrangerExe(object):
             'I1',)``)
         """
         path = os.path.abspath(path)
-        print "Building mock executable: %s" % path
+        print("Building mock executable: %s" % path)
         # Don't clobber an existing executable
         assert(os.path.exists(path) is False)
         with open(path,'w') as fp:
@@ -1117,8 +1117,8 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
                    reads))
             os.chmod(path,0775)
         with open(path,'r') as fp:
-            print "cellranger:"
-            print "%s" % fp.read()
+            print("cellranger:")
+            print("%s" % fp.read())
         return path
 
     def __init__(self,path=None,
@@ -1259,7 +1259,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         # Get executable name
         cellranger_exe = os.path.basename(self._path)
         # Handle version request or no args
-        print header
+        print(header)
         if cmd == " --version" or not cmd:
             return self._exit_code
         # Build top-level parser
@@ -1305,13 +1305,13 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             ##################
             # Run folder
             run = args.run
-            print "Run folder: %s" % run
+            print("Run folder: %s" % run)
             # Sample sheet
             sample_sheet = args.samplesheet
-            print "Sample sheet: %s" % sample_sheet
+            print("Sample sheet: %s" % sample_sheet)
             # Output folder
             output_dir = args.output_dir
-            print "Output dir: %s" % output_dir
+            print("Output dir: %s" % output_dir)
             # Lanes
             s = SampleSheet(sample_sheet)
             if args.lanes:
@@ -1320,7 +1320,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 lanes = [line['Lane'] for line in s.data]
             else:
                 lanes = IlluminaRun(runfolder).lanes
-            print "Lanes: %s" % lanes
+            print("Lanes: %s" % lanes)
             # Generate mock output based on inputs
             tmpname = "tmp.%s" % uuid.uuid4()
             output = MockIlluminaData(name=tmpname,
@@ -1331,7 +1331,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                   lanes=lanes,
                   force_sample_dir=True)
             for project in s.projects:
-                print "Adding project: %s" % project.name
+                print("Adding project: %s" % project.name)
                 for sample in project.samples:
                     for fq in sample.fastqs():
                         if sample.sample_name is None:
@@ -1392,8 +1392,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
         else:
-            print "%s: not implemented" % command
-        print "Return exit code: %s" % self._exit_code
+            print("%s: not implemented" % command)
+        print("Return exit code: %s" % self._exit_code)
         return self._exit_code
 
 class MockIlluminaQcSh(object):
@@ -1444,7 +1444,7 @@ class MockIlluminaQcSh(object):
             with
         """
         path = os.path.abspath(path)
-        print "Building mock executable: %s" % path
+        print("Building mock executable: %s" % path)
         # Don't clobber an existing executable
         assert(os.path.exists(path) is False)
         with open(path,'w') as fp:
@@ -1463,8 +1463,8 @@ sys.exit(MockIlluminaQcSh(version=%s,
                    exit_code))
             os.chmod(path,0775)
         with open(path,'r') as fp:
-            print "illumina_qc.sh:"
-            print "%s" % fp.read()
+            print("illumina_qc.sh:")
+            print("%s" % fp.read())
         return path
 
     def __init__(self,version=None,fastq_screen=True,
@@ -1488,7 +1488,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
             return self._exit_code
         # Handle version request
         if args[0] == "--version":
-            print "illumina_qc.sh %s" % self._version
+            print("illumina_qc.sh %s" % self._version)
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -1502,14 +1502,14 @@ sys.exit(MockIlluminaQcSh(version=%s,
         args = p.parse_args(args)
         # Check input file
         if not os.path.exists(args.fastq):
-            print "%s: fastq file not found" % args.fastq
+            print("%s: fastq file not found" % args.fastq)
             return 1
         # Output dir
         qc_dir = args.qc_dir
         if qc_dir is None:
             qc_dir = "qc"
         if not os.path.isdir(qc_dir):
-            print "Making QC directory %s" % qc_dir
+            print("Making QC directory %s" % qc_dir)
             os.mkdir(qc_dir)
         # Fastq base name
         fastq_base = MockQCOutputs.fastq_basename(args.fastq)
@@ -1584,7 +1584,7 @@ class MockMultiQC(object):
             with
         """
         path = os.path.abspath(path)
-        print "Building mock executable: %s" % path
+        print("Building mock executable: %s" % path)
         # Don't clobber an existing executable
         assert(os.path.exists(path) is False)
         with open(path,'w') as fp:
@@ -1596,8 +1596,8 @@ sys.exit(MockMultiQC(no_outputs=%s,
             """ % (no_outputs,exit_code))
             os.chmod(path,0775)
         with open(path,'r') as fp:
-            print "multiqc:"
-            print "%s" % fp.read()
+            print("multiqc:")
+            print("%s" % fp.read())
         return path
 
     def __init__(self,no_outputs=False,exit_code=0):
@@ -1616,7 +1616,7 @@ sys.exit(MockMultiQC(no_outputs=%s,
             return self._exit_code
         # Handle version request
         if args[0] == "--version":
-            print "multiqc, version 1.5"
+            print("multiqc, version 1.5")
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()
@@ -1694,7 +1694,7 @@ class MockFastqStrandPy(object):
             with
         """
         path = os.path.abspath(path)
-        print "Building mock executable: %s" % path
+        print("Building mock executable: %s" % path)
         # Don't clobber an existing executable
         assert(os.path.exists(path) is False)
         with open(path,'w') as fp:
@@ -1706,8 +1706,8 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
             """ % (no_outputs,exit_code))
             os.chmod(path,0775)
         with open(path,'r') as fp:
-            print "fastq_strand.py:"
-            print "%s" % fp.read()
+            print("fastq_strand.py:")
+            print("%s" % fp.read())
         return path
 
     def __init__(self,no_outputs=False,exit_code=0):
@@ -1727,7 +1727,7 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
             return self._exit_code
         # Handle version request
         if args[0] == "--version":
-            print "%s" % self._version
+            print("%s" % self._version)
             return self._exit_code
         # Deal with arguments
         p = argparse.ArgumentParser()

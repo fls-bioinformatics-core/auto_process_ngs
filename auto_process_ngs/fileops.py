@@ -185,7 +185,7 @@ def _run_command(cmd,sched=None):
       sched (SimpleScheduler): optional, a scheduler
         to use to run the command
     """
-    print "Running %s" % cmd
+    print("Running %s" % cmd)
     if sched is None:
         retcode,output = cmd.subprocess_check_output()
     else:

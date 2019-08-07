@@ -247,7 +247,7 @@ class QCReporter(object):
                                   fastq_strand_conf,
                                   qc_protocol=qc_protocol):
             if not os.path.exists(f):
-                print "Missing: %s" % f
+                print("Missing: %s" % f)
                 verified = False
         return verified
 
@@ -426,38 +426,38 @@ class QCReport(Document):
         # Detect outputs
         self._detect_outputs()
         if self.samples:
-            print "Samples found:"
+            print("Samples found:")
             for sample in self.samples:
-                print "\t- %s" % sample
+                print("\t- %s" % sample)
         else:
             logger.warning("No samples found")
         if self.fastqs:
-            print "Fastqs referenced:"
+            print("Fastqs referenced:")
             for fastq in self.fastqs:
-                print "\t- %s" % fastq
-            print "Reads found:"
+                print("\t- %s" % fastq)
+            print("Reads found:")
             for read in self.reads:
-                print "\t- %s" % read
+                print("\t- %s" % read)
         else:
             logger.warning("No Fastqs referenced")
         if self.outputs:
-            print "Available QC outputs:"
+            print("Available QC outputs:")
             for output in self.outputs:
-                print "\t- %s" % output
+                print("\t- %s" % output)
         else:
             logger.warning("No QC outputs found")
         if self.software:
-            print "Software versions:"
+            print("Software versions:")
             for package in self.software:
-                print "\t- %s: %s" % (package,
-                                      ','.join(self.software[package]))
+                print("\t- %s: %s" % (package,
+                                      ','.join(self.software[package])))
         # Load metadata from parent run
         self.run_metadata = AnalysisDirMetadata()
         run_metadata_file = os.path.join(
             os.path.dirname(os.path.abspath(self.project.dirn)),
             "metadata.info")
         if os.path.exists(run_metadata_file):
-            print "Loading run metadata from %s" % run_metadata_file
+            print("Loading run metadata from %s" % run_metadata_file)
             self.run_metadata.load(run_metadata_file)
         else:
             logger.warning("Run metadata file '%s' not found"
@@ -529,7 +529,7 @@ class QCReport(Document):
         self.warnings = self._init_warnings_section()
         self.summary = self._init_summary_section()
         # Build the report
-        print "Building the report..."
+        print("Building the report...")
         self.report_metadata()
         self.report_software()
         for sample in self.samples:
@@ -638,9 +638,9 @@ class QCReport(Document):
         """
         outputs = set()
         software = {}
-        print "Scanning contents of %s" % self.qc_dir
+        print("Scanning contents of %s" % self.qc_dir)
         files = os.listdir(self.qc_dir)
-        print "\t- %d objects found" % len(files)
+        print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
         # Look for screen files
         screens = filter(lambda f:
@@ -648,7 +648,7 @@ class QCReport(Document):
                          f.endswith("_screen.png"),
                          files)
         logger.debug("Screens: %s" % screens)
-        print "\t- %d fastq_screen files" % len(screens)
+        print("\t- %d fastq_screen files" % len(screens))
         fastq_names = set()
         if screens:
             versions = set()
@@ -672,7 +672,7 @@ class QCReport(Document):
         # Look for fastqc outputs
         fastqcs = filter(lambda f: f.endswith("_fastqc.html"),files)
         logger.debug("Fastqc: %s" % fastqcs)
-        print "\t- %d fastqc files" % len(fastqcs)
+        print("\t- %d fastqc files" % len(fastqcs))
         if fastqcs:
             versions = set()
             # Pull out the Fastq names from the Fastqc files
@@ -690,7 +690,7 @@ class QCReport(Document):
         # Look for fastq_strand outputs
         fastq_strand = filter(lambda f: f.endswith("_fastq_strand.txt"),files)
         logger.debug("fastq_strand: %s" % fastq_strand)
-        print "\t- %d fastq_strand files" % len(fastq_strand)
+        print("\t- %d fastq_strand files" % len(fastq_strand))
         if fastq_strand:
             outputs.add("strandedness")
             versions = set()
@@ -716,7 +716,7 @@ class QCReport(Document):
             if cellranger_samples:
                 outputs.add("cellranger_count")
         # Look for MultiQC report
-        print "Checking for MultiQC report in %s" % self.project.dirn
+        print("Checking for MultiQC report in %s" % self.project.dirn)
         multiqc_report = os.path.join(self.project.dirn,
                                       "multi%s_report.html"
                                       % os.path.basename(self.qc_dir))
