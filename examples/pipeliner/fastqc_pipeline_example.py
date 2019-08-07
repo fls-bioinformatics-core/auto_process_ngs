@@ -54,7 +54,7 @@ class FilterEmptyFastqs(PipelineFunctionTask):
         filtered_fastqs = list()
         for fq in fastqs:
             if nreads(fq) > 0:
-                print "%s" % fq
+                print("%s" % fq)
                 filtered_fastqs.append(fq)
         return filtered_fastqs
     def finish(self):
@@ -78,4 +78,4 @@ if __name__ == "__main__":
     ppl.add_task(filter_empty_fastqs)
     ppl.add_task(run_fastqc,requires=(filter_empty_fastqs,))
     ppl.run()
-    print run_fastqc.output()
+    print(run_fastqc.output())
