@@ -47,7 +47,7 @@ class MockBcl2fastq(object):
         self._exes = []
 
     def __del__(self):
-        print "Deleting %s" % self.dirn
+        print("Deleting %s" % self.dirn)
         shutil.rmtree(self.dirn)
 
     def _makedirs(self,*args):
@@ -90,7 +90,7 @@ class MockBcl2fastq(object):
             content = kws['content']
         else:
             content = ""
-        print "Content = %s" % content
+        print("Content = %s" % content)
         with open(os.path.join(self.dirn,*args),'w') as fp:
             fp.write(content)
         os.chmod(os.path.join(self.dirn,*args),0775)
@@ -110,7 +110,7 @@ class MockBcl2fastq(object):
         if prepend:
             new_path = new_path + os.pathsep + os.environ['PATH']
         os.environ['PATH'] = new_path
-        print "PATH = %s" % os.environ['PATH']
+        print("PATH = %s" % os.environ['PATH'])
 
     @property
     def paths(self):
@@ -226,7 +226,7 @@ M00880 = miseq
 FS10000171 = iseq
 """)
         settings = Settings(settings_ini)
-        print settings.sequencers
+        print(settings.sequencers)
         self.assertEqual(get_sequencer_platform(
             "/mnt/data/120919_SN7001251_0035_BC133VACXX",
             settings=settings),"hiseq")
@@ -249,7 +249,7 @@ M00880 = miseq
 FS10000171 = iseq
 """)
         settings = Settings(settings_ini)
-        print settings.sequencers
+        print(settings.sequencers)
         self.assertEqual(get_sequencer_platform(
             "/mnt/data/120919_BLAH_0035_BC133VACXX",
             instrument="SN7001251",
@@ -275,7 +275,7 @@ M00880 = miseq
 FS10000171 = iseq
 """)
         settings = Settings(settings_ini)
-        print settings.sequencers
+        print(settings.sequencers)
         self.assertEqual(get_sequencer_platform(
             "/mnt/data/120919_BLAH_0035_BC133VACXX"),None)
         self.assertEqual(get_sequencer_platform(

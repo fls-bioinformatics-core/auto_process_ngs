@@ -356,7 +356,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
             with open(sample_sheet,'w') as fp2:
                 fp2.write(fp1.read())
         sample_sheet = "file://%s" % sample_sheet
-        print sample_sheet
+        print(sample_sheet)
         # Set up autoprocessor
         ap = AutoProcess()
         setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)

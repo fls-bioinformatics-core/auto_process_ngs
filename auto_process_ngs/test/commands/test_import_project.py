@@ -101,7 +101,7 @@ Comments\t1% PhiX spike in
         UpdateAnalysisProject(
             AnalysisProject('NewProj',self.new_project_dir)).add_qc_outputs(
                 include_multiqc=False)
-        print os.listdir(os.path.join(self.dirn,'NewProj'))
+        print(os.listdir(os.path.join(self.dirn,'NewProj')))
         # Check that the project is not currently present
         ap = AutoProcess(mockdir.dirn)
         self.assertFalse('NewProj' in [p.name
@@ -124,7 +124,7 @@ Comments\t1% PhiX spike in
                                       for p in ap2.get_analysis_projects_from_dirs()])
         self.assertTrue(os.path.exists(os.path.join(ap2.analysis_dir,'NewProj')))
         # Check for QC report and ZIP file
-        print os.listdir(os.path.join(ap2.analysis_dir,'NewProj'))
+        print(os.listdir(os.path.join(ap2.analysis_dir,'NewProj')))
         for f in ("qc_report.html",
                   "multiqc_report.html",
                   "qc_report.NewProj.160621_M00879_0087_000000000-AGEW9_analysis.zip",):

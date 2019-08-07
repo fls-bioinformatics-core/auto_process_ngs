@@ -495,7 +495,7 @@ class TestPipeline(unittest.TestCase):
         # Add a runner definition
         self.assertFalse('test_runner' in ppl.runners)
         ppl.add_runner('test_runner')
-        print ppl.runners
+        print(ppl.runners)
         self.assertTrue('test_runner' in ppl.runners)
         self.assertTrue(isinstance(ppl.runners['test_runner'],
                                    PipelineParam))
@@ -1285,7 +1285,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         # ...x three times
-        print task.stdout
+        print(task.stdout)
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
         for i in xrange(3):

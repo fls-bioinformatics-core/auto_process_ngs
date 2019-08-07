@@ -154,7 +154,7 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
         os.remove(os.path.join(mockdir.dirn,"projects.info"))
         # Remove the unaligned dir
         shutil.rmtree(os.path.join(mockdir.dirn,"bcl2fastq"))
-        print os.listdir(mockdir.dirn)
+        print(os.listdir(mockdir.dirn))
         # No projects should be listed
         projects = AutoProcess(mockdir.dirn).get_analysis_projects()
         self.assertEqual(projects,[])
@@ -172,7 +172,7 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
         mockdir.create(no_project_dirs=True)
         # Remove the projects.info file
         os.remove(os.path.join(mockdir.dirn,"projects.info"))
-        print os.listdir(mockdir.dirn)
+        print(os.listdir(mockdir.dirn))
         # Listing the projects should raise an exception
         self.assertRaises(Exception,
                           AutoProcess(mockdir.dirn).get_analysis_projects)
