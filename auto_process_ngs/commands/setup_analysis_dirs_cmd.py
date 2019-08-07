@@ -142,7 +142,7 @@ def setup_analysis_dirs(ap,
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
             continue
-        print "Creating project: '%s'" % project_name
+        print("Creating project: '%s'" % project_name)
         try:
             project.create_directory(
                 illumina_data.get_project(project_name),
@@ -192,7 +192,8 @@ def setup_analysis_dirs(ap,
                 logger.warning("Failed to finish setup for project '%s': "
                                "%s" % (project_name,ex))
     # Tell us how many were made
-    print "Created %d project%s" % (n_projects,'s' if n_projects != 1 else '')
+    print("Created %d project%s" % (n_projects,
+                                    's' if n_projects != 1 else ''))
     # Also set up analysis directory for undetermined reads
     if undetermined_project is None:
         undetermined_project = 'undetermined'
@@ -208,8 +209,8 @@ def setup_analysis_dirs(ap,
             "with undetermined indices",
             platform=ap.metadata.platform)
         if not undetermined.exists:
-            print "Creating directory '%s' for analysing reads " \
-                "with undetermined indices" % undetermined.name
+            print("Creating directory '%s' for analysing reads "
+                  "with undetermined indices" % undetermined.name)
             undetermined.create_directory(illumina_data.undetermined,
                                           link_to_fastqs=link_to_fastqs)
         else:

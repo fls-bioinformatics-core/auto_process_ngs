@@ -162,41 +162,41 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         platform = ap.metadata.platform
     # Check the settings
     if location.is_remote:
-        print "Copying QC to remote directory"
-        print "user:\t%s" % location.user
-        print "host:\t%s" % location.server
-        print "dirn:\t%s" % location.path
+        print("Copying QC to remote directory")
+        print("user:\t%s" % location.user)
+        print("host:\t%s" % location.server)
+        print("dirn:\t%s" % location.path)
     else:
-        print "Copying QC to local directory"
+        print("Copying QC to local directory")
     if use_hierarchy:
-        print "dirn\t%s" % os.path.join(location.path,
-                                        year,platform)
+        print("dirn\t%s" % os.path.join(location.path,
+                                        year,platform))
     else:
-        print "dirn:\t%s" % location.path
+        print("dirn:\t%s" % location.path)
     if exclude_zip_files:
-        print "ZIP archives will be excluded from publication"
+        print("ZIP archives will be excluded from publication")
     if location.path is None:
         raise Exception("No target directory specified")
     if not fileops.exists(str(location)):
         raise Exception("Target directory '%s' doesn't exist" %
                         location)
     # Collect processing statistics
-    print "Checking for processing QC report"
+    print("Checking for processing QC report")
     processing_qc_html = os.path.join(ap.analysis_dir,
                                       "processing_qc.html")
     processing_qc_warnings = False
     if os.path.exists(processing_qc_html):
-        print "...found %s" % os.path.basename(processing_qc_html)
+        print("...found %s" % os.path.basename(processing_qc_html))
         # Check for warnings
         processing_qc_warnings = detect_processing_qc_warnings(
             processing_qc_html)
         if processing_qc_warnings:
-            print "...processing QC report contains warnings"
+            print("...processing QC report contains warnings")
     else:
-        print "...no processing QC report found"
+        print("...no processing QC report found")
         processing_qc_html = None
     # Collect barcode analysis artefacts
-    print "Checking for barcode analysis"
+    print("Checking for barcode analysis")
     if ap.params.barcode_analysis_dir is not None:
         barcode_analysis_dir = ap.params.barcode_analysis_dir
     else:
@@ -207,34 +207,34 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     barcodes_files = []
     barcodes_warnings = False
     if os.path.exists(barcode_analysis_dir):
-        print "...found barcode analysis dir: %s" % barcode_analysis_dir
+        print("...found barcode analysis dir: %s" % barcode_analysis_dir)
         for filen in ('barcodes.report',
                       'barcodes.xls',
                       'barcodes.html'):
             filen = os.path.join(barcode_analysis_dir,filen)
             if os.path.exists(filen):
-                print "...found %s" % os.path.basename(filen)
+                print("...found %s" % os.path.basename(filen))
                 barcodes_files.append(filen)
         # Check for warnings
         barcodes_warnings = detect_barcodes_warnings(
             os.path.join(barcode_analysis_dir,'barcodes.report'))
         if barcodes_warnings:
-            print "...barcode analysis contains warnings"
+            print("...barcode analysis contains warnings")
     if not barcodes_files:
-        print "...no barcode analysis found"
+        print("...no barcode analysis found")
     # Collect 10xGenomics cellranger QC summaries
-    print "Checking for 10xGenomics cellranger QC summaries"
+    print("Checking for 10xGenomics cellranger QC summaries")
     cellranger_qc_html = []
     for filen in os.listdir(ap.analysis_dir):
         if filen.startswith("cellranger_qc_summary") and \
            filen.endswith(".html"):
-            print "...found %s" % filen
+            print("...found %s" % filen)
             cellranger_qc_html.append(
                 os.path.join(ap.analysis_dir,filen))
     if not cellranger_qc_html:
-        print "...no cellranger QC summaries found"
+        print("...no cellranger QC summaries found")
     # Collect QC for project directories
-    print "Checking project directories"
+    print("Checking project directories")
     projects = ap.get_analysis_projects_from_dirs(pattern=project_pattern)
     if projects:
         ap.set_log_dir(ap.get_log_subdir('publish_qc'))
@@ -242,14 +242,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     status = {}
     for project in projects:
         # Check qc subdirectories
-        print "Checking project '%s':" % project.name
+        print("Checking project '%s':" % project.name)
         project_qc[project.name] = bcf_utils.AttributeDictionary()
         project_qc[project.name]['qc_dirs'] = {}
         status[project.name] = {}
         if not project.qc_dirs:
-            print "...no QC directories found"
+            print("...no QC directories found")
         for qc_dir in project.qc_dirs:
-            print "...found QC dir '%s'" % qc_dir
+            print("...found QC dir '%s'" % qc_dir)
             # Gather the QC artefacts
             qc_artefacts = bcf_utils.AttributeDictionary()
             project_qc[project.name].qc_dirs[qc_dir] = qc_artefacts
@@ -258,13 +258,13 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             # Set the source Fastqs dir
             fastq_dir = project.qc_info(qc_dir).fastq_dir
             project.use_fastq_dir(fastq_dir)
-            print "...associated Fastq set '%s'" % \
-                os.path.basename(fastq_dir)
+            print("...associated Fastq set '%s'" %
+                  os.path.basename(fastq_dir))
             qc_protocol = project.qc_info(qc_dir).protocol
-            print "...associated QC protocol '%s'" % qc_protocol
+            print("...associated QC protocol '%s'" % qc_protocol)
             if qc_protocol is None:
                 qc_protocol = "standardPE"
-                print "...assuming QC protocol '%s'" % qc_protocol
+                print("...assuming QC protocol '%s'" % qc_protocol)
             # Verify the QC and check for report
             verified = verify_qc(
                 project,
@@ -273,9 +273,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 qc_protocol=qc_protocol,
                 log_dir=ap.log_dir)
             if verified:
-                print "...%s: verified QC" % qc_dir
+                print("...%s: verified QC" % qc_dir)
             else:
-                print "...%s: failed to verify QC" % qc_dir
+                print("...%s: failed to verify QC" % qc_dir)
             status[project.name][qc_dir] = verified
             if verified or force:
                 # Check for an existing report
@@ -293,15 +293,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               force=force,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
-                        print "...%s: (re)generated report" % qc_dir
+                        print("...%s: (re)generated report" % qc_dir)
                     else:
-                        print "...%s: failed to (re)generate " \
-                            "QC report" % qc_dir
+                        print("...%s: failed to (re)generate "
+                              "QC report" % qc_dir)
                 # Add to the list of verified QC dirs
                 if os.path.exists(qc_zip):
                     qc_artefacts['qc_zip'] = qc_zip
                 else:
-                    print "...%s: missing QC report" % qc_dir
+                    print("...%s: missing QC report" % qc_dir)
                     status[project.name][qc_dir] = False
             if legacy:
                 # MultiQC report
@@ -309,17 +309,17 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               "multi%s.html"
                                               % qc_base)
                 if os.path.exists(multiqc_report):
-                    print "...%s: found MultiQC report" % qc_dir
+                    print("...%s: found MultiQC report" % qc_dir)
                     qc_artefacts['multiqc_report'] = multiqc_report
                 else:
-                    print "...%s: no MultiQC report" % qc_dir
+                    print("...%s: no MultiQC report" % qc_dir)
         # ICell8 pipeline report
         icell8_zip = os.path.join(project.dirn,
                                   "icell8_processing.%s.%s.zip" %
                                   (project.name,
                                    os.path.basename(ap.analysis_dir)))
         if os.path.exists(icell8_zip):
-            print "...%s: found ICell8 pipeline report" % project.name
+            print("...%s: found ICell8 pipeline report" % project.name)
             project_qc[project.name]['icell8_zip'] = icell8_zip
         # Cellranger count report
         if legacy:
@@ -328,7 +328,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                           (project.name,
                                            os.path.basename(ap.analysis_dir)))
             if os.path.exists(cellranger_zip):
-                print "...%s: found cellranger count report" % project.name
+                print("...%s: found cellranger count report" % project.name)
                 project_qc[project.name]['cellranger_zip'] = cellranger_zip
     # Projects with no QC
     no_qc_projects = filter(lambda p: not project_qc[p.name].qc_dirs,
@@ -345,7 +345,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         logging.warning(err_msg)
     # Remove the 'bad' projects from the list before proceeding
     for project in no_qc_projects:
-        print "Project %s will be skipped" % project.name
+        print("Project %s will be skipped" % project.name)
         projects.remove(project)
     if not projects:
         logging.warning("No projects with QC results to publish")
@@ -532,7 +532,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         if copy_job.exit_status or unzip_job.exit_status:
                             raise Exception("copy and/or unzip job failed")
                         if exclude_zip_files:
-                            print "Removing %s from server" % qc_zip
+                            print("Removing %s from server" % qc_zip)
                             fileops.remove_file(os.path.join(
                                 dirn,
                                 os.path.basename(qc_zip)))
@@ -552,7 +552,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                 Link("[ZIP%s]" % fastq_set_name,
                                      os.path.basename(qc_zip)))
                     except Exception as ex:
-                        print "Failed to copy QC report: %s" % ex
+                        print("Failed to copy QC report: %s" % ex)
                 except AttributeError:
                     # No QC report
                     pass
@@ -569,7 +569,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             Link("[MultiQC%s]" % fastq_set_name,
                                  final_multiqc))
                     except Exception as ex:
-                        print "Failed to copy MultiQC report: %s" % ex
+                        print("Failed to copy MultiQC report: %s" % ex)
                 except AttributeError:
                     # No MultiQC report
                     pass
@@ -593,7 +593,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     if copy_job.exit_status or unzip_job.exit_status:
                         raise Exception("copy and/or unzip job failed")
                     if exclude_zip_files:
-                        print "Removing %s from server" % icell8_zip
+                        print("Removing %s from server" % icell8_zip)
                         fileops.remove_file(os.path.join(
                             dirn,
                             os.path.basename(icell8_zip)))
@@ -609,7 +609,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             Link("[ZIP]",
                                  os.path.basename(icell8_processing_zip)))
                 except Exception as ex:
-                    print "Failed to copy ICell8 report: %s" % ex
+                    print("Failed to copy ICell8 report: %s" % ex)
             except AttributeError:
                 # No ICell8 report
                 pass
@@ -633,7 +633,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     if copy_job.exit_status or unzip_job.exit_status:
                         raise Exception("copy and/or unzip job failed")
                     if exclude_zip_files:
-                        print "Removing %s from server" % cellranger_zip
+                        print("Removing %s from server" % cellranger_zip)
                         fileops.remove_file(os.path.join(
                             dirn,
                             os.path.basename(cellranger_zip)))
@@ -649,7 +649,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             Link("[ZIP]",
                                  os.path.basename(cellranger_zip)))
                 except Exception as ex:
-                    print "Failed to copy cellranger report: %s" % ex
+                    print("Failed to copy cellranger report: %s" % ex)
             except AttributeError:
                 # No cellranger count data to copy
                 pass
@@ -661,7 +661,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                (get_version(),time.asctime()))
     # Copy to server
     index_html = os.path.join(ap.tmp_dir,'index.html')
-    print "Writing index page: %s" % index_html
+    print("Writing index page: %s" % index_html)
     index_page.write(index_html)
     fileops.copy(index_html,dirn)
     # Stop scheduler
@@ -676,4 +676,4 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                platform,
                                os.path.basename(ap.analysis_dir),
                                "index.html")
-        print "QC published to %s" % url
+        print("QC published to %s" % url)

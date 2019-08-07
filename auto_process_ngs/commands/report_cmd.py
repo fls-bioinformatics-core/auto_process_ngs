@@ -78,9 +78,9 @@ def report(ap,mode=None,fields=None,out_file=None):
             fpp.write("%s\n" % report)
         fileops.copy(temp_file,out_file)
         os.remove(temp_file)
-        print "Report written to %s" % out_file
+        print("Report written to %s" % out_file)
     else:
-        print report
+        print(report)
 
 def report_info(ap):
     """Generate a general report

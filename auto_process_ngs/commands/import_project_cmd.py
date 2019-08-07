@@ -49,14 +49,14 @@ def import_project(ap,project_dir):
     # Set up a log directory
     ap.set_log_dir(ap.get_log_subdir('import_project_%s' % project_name))
     # Rsync the project directory
-    print "Importing project directory contents for '%s'" % project_name
+    print("Importing project directory contents for '%s'" % project_name)
     try:
         excludes = ['--exclude=tmp.*',
                     '--exclude=qc_report.*']
         rsync = applications_general.rsync(project_dir,
                                            ap.analysis_dir,
                                            extra_options=excludes)
-        print "Running %s" % rsync
+        print("Running %s" % rsync)
         status = rsync.run_subprocess(log=ap.log_path('import_project.rsync.log'))
     except Exception as ex:
         logger.error("Exception importing project: %s" % ex)
@@ -65,7 +65,7 @@ def import_project(ap,project_dir):
         raise Exception("Failed to import project from %s (status %s)" %
                         (project_dir,status))
     # Update the projects.info metadata file
-    print "Updating projects.info file with imported project"
+    print("Updating projects.info file with imported project")
     project_metadata = ap.load_project_metadata()
     sample_names = [s.name for s in project.samples]
     project_metadata.add_project(project_name,
@@ -78,9 +78,9 @@ def import_project(ap,project_dir):
                                  comments=project.info.comments)
     project_metadata.save()
     # Report
-    print "Projects now in metadata file:"
+    print("Projects now in metadata file:")
     for p in project_metadata:
-        print "- %s" % p['Project']
+        print("- %s" % p['Project'])
     # Update the QC report
     try:
         project = ap.get_analysis_projects(pattern=project_name)[0]
@@ -89,17 +89,17 @@ def import_project(ap,project_dir):
                       % (project_name,ex))
         return
     if project.qc_dir is None:
-        print "No QC directory assigned for %s" % project_name
+        print("No QC directory assigned for %s" % project_name)
     else:
-        print "QC directory for %s: %s" % (project_name,
-                                           project.qc_dir)
+        print("QC directory for %s: %s" % (project_name,
+                                           project.qc_dir))
         qc_info = project.qc_info(project.qc_dir)
         if qc_info.fastq_dir:
-            print "Updating stored Fastq directory for QC"
+            print("Updating stored Fastq directory for QC")
             fastq_dir = os.path.join(project.dirn,
                                      os.path.relpath(qc_info.fastq_dir,
                                                      project_dir))
-            print "Updated Fastq directory: %s" % fastq_dir
+            print("Updated Fastq directory: %s" % fastq_dir)
             qc_info['fastq_dir'] = fastq_dir
             qc_info.save()
         if verify_qc(project,log_dir=ap.log_dir):
@@ -108,10 +108,10 @@ def import_project(ap,project_dir):
                           zip_outputs=True,
                           multiqc=True,
                           log_dir=ap.log_dir)
-                print "Updated QC report for %s" % project_name
+                print("Updated QC report for %s" % project_name)
             except Exception as ex:
                 raise Exception("Project '%s' imported but failed to "
                                 "generate QC report: %s" % (project_name,
                                                             ex))
         else:
-            print "Failed to verify QC: report not updated"
+            print("Failed to verify QC: report not updated")

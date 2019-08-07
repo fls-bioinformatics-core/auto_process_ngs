@@ -113,7 +113,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         platform = get_sequencer_platform(data_dir,
                                           instrument=instrument,
                                           settings=ap.settings)
-    print "Platform identified as '%s'" % platform
+    print("Platform identified as '%s'" % platform)
     # Log dir
     ap.set_log_dir(ap.get_log_subdir('setup'))
     # Attempt to acquire sample sheet
@@ -124,10 +124,10 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Sample sheet already stored
             original_sample_sheet = os.path.join(ap.analysis_dir,
                                                  'SampleSheet.orig.csv')
-            print "Sample sheet '%s'" % custom_sample_sheet
+            print("Sample sheet '%s'" % custom_sample_sheet)
         else:
             # Look for sample sheet
-            print "Acquiring sample sheet..."
+            print("Acquiring sample sheet...")
             if sample_sheet is None:
                 targets = ('Data/Intensities/BaseCalls/SampleSheet.csv',
                            'SampleSheet.csv',)
@@ -140,7 +140,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                                                 os.path.basename(target.path))
                 if target.is_url:
                     # Try fetching samplesheet from URL
-                    print "Trying '%s'" % target.url
+                    print("Trying '%s'" % target.url)
                     try:
                         urlfp = urllib2.urlopen(target.url)
                         with open(tmp_sample_sheet,'w') as fp:
@@ -160,10 +160,10 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                         else:
                             target_sample_sheet = os.path.join(data_dir,
                                                                target.path)
-                    print "Trying '%s'" % target_sample_sheet
+                    print("Trying '%s'" % target_sample_sheet)
                     rsync = general_applications.rsync(target_sample_sheet,
                                                        ap.tmp_dir)
-                    print "%s" % rsync
+                    print("%s" % rsync)
                     status = rsync.run_subprocess(log=ap.log_path('rsync.sample_sheet.log'))
                     if status != 0:
                         logger.warning("Failed to fetch sample sheet '%s'"
@@ -177,7 +177,8 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             # Keep a copy of the original sample sheet
             original_sample_sheet = os.path.join(ap.analysis_dir,
                                                  'SampleSheet.orig.csv')
-            print "Copying original sample sheet to %s" % original_sample_sheet
+            print("Copying original sample sheet to %s" %
+                  original_sample_sheet)
             shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
             os.chmod(original_sample_sheet,0664)
@@ -211,14 +212,14 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                 logger.warning("No element '%s' found in sample sheet"
                                % item)
     # Bases mask
-    print "Bases mask set to 'auto' (will be determined at run time)"
+    print("Bases mask set to 'auto' (will be determined at run time)")
     bases_mask = "auto"
     # Data source metadata
     data_source = ap.settings.metadata.default_data_source
     # Generate and print predicted outputs and warnings
     if custom_sample_sheet is not None:
         sample_sheet_data = SampleSheet(custom_sample_sheet)
-        print predict_outputs(sample_sheet=sample_sheet_data)
+        print(predict_outputs(sample_sheet=sample_sheet_data))
         check_and_warn(sample_sheet=sample_sheet_data)
     # Check supplied unaligned Fastq dir
     if unaligned_dir is not None:
@@ -249,7 +250,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             custom_sample_sheet = os.path.join(
                 analysis_dir,
                 os.path.basename(custom_sample_sheet))
-        print "Created analysis directory '%s'" % ap.analysis_dir
+        print("Created analysis directory '%s'" % ap.analysis_dir)
     # Store the parameters
     ap.params['data_dir'] = data_dir
     ap.params['analysis_dir'] = ap.analysis_dir

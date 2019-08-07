@@ -110,7 +110,7 @@ def analyse_barcodes(ap,unaligned_dir=None,lanes=None,
         verbose=False)
     # Finish
     if status == 0:
-        print "Report written to %s" % barcode_analysis.output.report_file
-        print "XLS written to %s" % barcode_analysis.output.xls_file
-        print "HTML written to %s" % barcode_analysis.output.html_file
+        print("Report written to %s" % barcode_analysis.output.report_file)
+        print("XLS written to %s" % barcode_analysis.output.xls_file)
+        print("HTML written to %s" % barcode_analysis.output.html_file)
     return status

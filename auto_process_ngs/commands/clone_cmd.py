@@ -46,7 +46,7 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
         projects from the parent analysis directory
     """
     clone_dir = os.path.abspath(clone_dir)
-    print "Cloning into %s" % clone_dir
+    print("Cloning into %s" % clone_dir)
     if os.path.exists(clone_dir):
         # Directory already exists
         logger.critical("Target directory '%s' already exists" %
@@ -65,12 +65,12 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
         if os.path.isdir(primary_data_dir):
             clone_primary_data_dir = os.path.join(clone_dir,
                                                   os.path.basename(primary_data_dir))
-            print "[Primary data] making %s" % clone_primary_data_dir
+            print("[Primary data] making %s" % clone_primary_data_dir)
             bcf_utils.mkdir(clone_primary_data_dir)
             data_dir = os.path.basename(ap.params.data_dir)
             if os.path.exists(os.path.join(primary_data_dir,data_dir)):
                 clone_data_dir = os.path.join(clone_primary_data_dir,data_dir)
-                print "[Primary data] symlinking %s" % clone_data_dir
+                print("[Primary data] symlinking %s" % clone_data_dir)
                 os.symlink(os.path.join(primary_data_dir,data_dir),
                            clone_data_dir)
     # Link to or copy fastqs
@@ -87,19 +87,19 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
                                            os.path.basename(unaligned_dir))
         if not copy_fastqs:
             # Link to unaligned dir
-            print "[Unaligned] symlinking %s" % clone_unaligned_dir
+            print("[Unaligned] symlinking %s" % clone_unaligned_dir)
             os.symlink(unaligned_dir,clone_unaligned_dir)
         else:
             # Copy unaligned dir
-            print "[Unaligned] copying %s" % clone_unaligned_dir
+            print("[Unaligned] copying %s" % clone_unaligned_dir)
             shutil.copytree(unaligned_dir,clone_unaligned_dir)
     else:
-        print "[Unaligned] no 'unaligned' dir found"
+        print("[Unaligned] no 'unaligned' dir found")
     # Duplicate project directories
     projects = ap.get_analysis_projects()
     if projects and not exclude_projects:
         for project in ap.get_analysis_projects():
-            print "[Projects] duplicating project '%s'" % project.name
+            print("[Projects] duplicating project '%s'" % project.name)
             fastqs = project.fastqs
             new_project = AnalysisProject(
                 project.name,
@@ -135,11 +135,11 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
             continue
         srcpath = os.path.join(ap.analysis_dir,f)
         if os.path.exists(srcpath):
-            print "[Files] copying %s" % f
+            print("[Files] copying %s" % f)
             shutil.copy(srcpath,clone_dir)
     # Create the basic set of subdirectories
     for subdir in ('logs','ScriptCode',):
-        print "[Subdirectories] making %s" % subdir
+        print("[Subdirectories] making %s" % subdir)
         bcf_utils.mkdir(os.path.join(clone_dir,subdir))
     # Update the settings
     parameter_file = os.path.join(clone_dir,
@@ -150,7 +150,7 @@ def clone(ap,clone_dir,copy_fastqs=False,exclude_projects=False):
     for p in ("sample_sheet","primary_data_dir"):
         if not params[p]:
             continue
-        print "[Parameters] updating '%s'" % p
+        print("[Parameters] updating '%s'" % p)
         params[p] = os.path.join(clone_dir,
                                  os.path.relpath(params[p],
                                                  ap.analysis_dir))
