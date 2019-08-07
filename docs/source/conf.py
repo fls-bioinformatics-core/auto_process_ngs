@@ -377,7 +377,7 @@ modlist = get_modules(auto_process_ngs)
 # Ensure the 'developers' subdir exists
 devdocdir = os.path.join(os.getcwd(),"developers")
 if not os.path.exists(devdocdir):
-    print "Making %s" % devdocdir
+    print("Making %s" % devdocdir)
     os.mkdir(devdocdir)
 
 # Ensure the 'api_docs' subdir exists
@@ -385,7 +385,7 @@ api_doc_dir = os.path.join(os.getcwd(),
                            "developers",
                            "api_docs")
 if not os.path.exists(api_doc_dir):
-    print "Making %s" % api_doc_dir
+    print("Making %s" % api_doc_dir)
     os.mkdir(api_doc_dir)
 
 # Generate documents for each module
@@ -393,7 +393,7 @@ for modname in modlist:
     docname = modname.replace('.','_')
     docfile = os.path.join(api_doc_dir,
                            "%s.rst" % docname)
-    print "Generating %s" % docfile
+    print("Generating %s" % docfile)
     with open(docfile,'w') as doc:
          title = "``auto_process_ngs.%s``" % modname
          doc.write("""%s
@@ -405,7 +405,7 @@ for modname in modlist:
 
 # Generate an index
 api_index = os.path.join(api_doc_dir,"index.rst")
-print "Writing %s" % api_index
+print("Writing %s" % api_index)
 with open(api_index,'w') as doc:
     doc.write("""=============================
 Developers' API documentation
