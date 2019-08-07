@@ -208,8 +208,7 @@ def get_fastqs_from_dir(dirn,lane,unaligned_dir=None):
         illumina_data = IlluminaData.IlluminaData(dirn,
                                                   unaligned_dir=unaligned_dir)
     except Exception as ex:
-        sys.stderr.write("Unable to read fastqs from %s: %s\n" % (dirn,ex))
-        sys.exit(1)
+        raise Exception("Unable to read fastqs from %s: %s\n" % (dirn,ex))
     paired_end = illumina_data.paired_end
     fastqs_r1 = []
     fastqs_r2 = []
@@ -271,8 +270,8 @@ def split_single_end(matcher,fastqs,base_name=None,output_dir=None):
             nread += 1
             seq = read.seqid.index_sequence
             if not seq:
-                logging.error("No index sequence for read!")
-                sys.exit(1)
+                raise Exception("%s: no index sequence for read %d" %
+                                (fastq,nread))
             assigned_index = matcher.match(seq)
             # Read not assigned
             if assigned_index is None:
@@ -317,8 +316,8 @@ def split_paired_end(matcher,fastq_pairs,base_name=None,output_dir=None):
             nread += 1
             seq = read1.seqid.index_sequence
             if not seq:
-                logging.error("No index sequence for read!")
-                sys.exit(1)
+                raise Exception("%s: no index sequence for read %d" %
+                                (fq_r1,nread))
             if seq != read2.seqid.index_sequence:
                 raise Exception("Index sequence mismatch between R1 and "
                                 "R2 reads")
