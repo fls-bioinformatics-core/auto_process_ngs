@@ -26,11 +26,10 @@ supplied via the -b/--barcode argument.
 For each barcode there will be an output file called BARCODE.fastq
 """
 
-__version__ = "0.0.7"
-
-import optparse
+import argparse
 import logging
 import sys
+from auto_process_ngs import get_version
 from auto_process_ngs.barcodes.splitter import BarcodeMatcher
 from auto_process_ngs.barcodes.splitter import get_fastqs_from_dir
 from auto_process_ngs.barcodes.splitter import split_single_end
@@ -41,33 +40,40 @@ from auto_process_ngs.barcodes.splitter import split_paired_end
 #######################################################################
 
 if __name__ == "__main__":
-    p = optparse.OptionParser(usage="\n\t%prog [OPTIONS] FASTQ [FASTQ...]\n"
-                              "\t%prog [OPTIONS] FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2...]\n"
-                              "\t%prog [OPTIONS] DIR",
-                              description="Split reads from one or more input Fastq files "
-                              "into new Fastqs based on matching supplied barcodes.")
-    p.add_option('-b','--barcode',action='append',dest='index_seq',
-                 help="specify index sequence to filter using")
-    p.add_option('-m','--mismatches',action='store',dest='n_mismatches',type='int',default=0,
-                 help="maximum number of differing bases to allow for two index sequences "
-                 "to count as a match. Default is zero i.e. exact matches only")
-    p.add_option('-n','--name',action='store',dest='base_name',default=None,
-                 help="basename to use for output files")
-    p.add_option('-o','--output-dir',action='store',dest='out_dir',
-                 help="specify directory for output split Fastqs")
-    p.add_option('-u','--unaligned',action='store',dest='unaligned_dir',default=None,
-                 help="specify subdirectory with outputs from bcl-to-fastq")
-    p.add_option('-l','--lane',action='store',dest='lane',default=None,type='int',
-                 help="specify lane to collect and split Fastqs for")
-    p.add_option('-p','--paired-end',action='store_true',dest='paired_end',
-                 help="input arguments are pairs of Fastq files **NB** deprecated, pairs "
-                 "are detected automatically")
+    p = argparse.ArgumentParser(
+        usage="\n"
+        "\t%(prog)s [OPTIONS] FASTQ [FASTQ ...]\n"
+        "\t%(prog)s [OPTIONS] FASTQ_R1,FASTQ_R2 [FASTQ_R1,FASTQ_R2 ...]\n"
+        "\t%(prog)s [OPTIONS] DIR",
+        description="Split reads from one or more input Fastq files "
+        "into new Fastqs based on matching supplied barcodes.")
+    p.add_argument('--version',action='version',
+                   version='%%(prog)s %s' % get_version())
+    p.add_argument('-b','--barcode',action='append',dest='index_seq',
+                   help="specify index sequence to filter using")
+    p.add_argument('-m','--mismatches',action='store',dest='n_mismatches',
+                   type=int,default=0,
+                   help="maximum number of differing bases to allow for "
+                   "two index sequences to count as a match. Default is "
+                   "zero (i.e. exact matches only)")
+    p.add_argument('-n','--name',action='store',dest='base_name',
+                   default=None,
+                   help="basename to use for output files")
+    p.add_argument('-o','--output-dir',action='store',dest='out_dir',
+                   help="specify directory for output split Fastqs")
+    p.add_argument('-u','--unaligned',action='store',dest='unaligned_dir',
+                   default=None,
+                   help="specify subdirectory with outputs from "
+                   "bcl2fastq")
+    p.add_argument('-l','--lane',action='store',dest='lane',
+                   default=None,type=int,
+                   help="specify lane to collect and split Fastqs for")
 
-    options,args = p.parse_args()
+    options,args = p.parse_known_args()
     if options.index_seq is None:
         p.error("No index sequences specified")
     if len(args) == 0:
-        p.error("No input files specified")
+        p.error("No inputs specified")
 
     matcher = BarcodeMatcher(options.index_seq,
                              max_dist=options.n_mismatches)
