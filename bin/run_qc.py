@@ -66,9 +66,9 @@ def announce(title):
     """
     title = str(title)
     len_title = len(title)
-    print "="*len_title
-    print title
-    print "="*len_title
+    print("="*len_title)
+    print(title)
+    print("="*len_title)
 
 #######################################################################
 # Main program

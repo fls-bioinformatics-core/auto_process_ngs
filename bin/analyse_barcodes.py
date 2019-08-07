@@ -47,8 +47,8 @@ def count_barcodes_bcl2fastq(dirn):
         unaligned = os.path.basename(dirn.rstrip(os.sep))
         dirn = os.path.dirname(os.path.abspath(dirn.rstrip(os.sep)))
         illumina_data = IlluminaData(dirn,unaligned_dir=unaligned)
-    except IlluminaDataError,ex:
-        print "%s: not an Illumina output directory?" % dirn
+    except IlluminaDataError as ex:
+        print("%s: not an Illumina output directory?" % dirn)
         raise ex
     fqs = []
     for p in illumina_data.projects:
@@ -66,12 +66,12 @@ def count_barcodes(fastqs):
     Count the barcodes from multiple fastqs
 
     """
-    print "Reading in %s fastq%s" % (len(fastqs),
+    print("Reading in %s fastq%s" % (len(fastqs),
                                      ('' if len(fastqs) == 1
-                                      else 's'))
+                                      else 's')))
     counts = BarcodeCounter()
     for fq in fastqs:
-        print "%s" % os.path.basename(fq)
+        print("%s" % os.path.basename(fq))
         for r in FastqIterator(fq):
             seq = r.seqid.index_sequence
             lane = int(r.seqid.flowcell_lane)
@@ -250,15 +250,15 @@ if __name__ == '__main__':
                             mismatches=mismatches,
                             reporter=reporter)
         if args.report_file is not None:
-            print "Writing report to %s" % args.report_file
+            print("Writing report to %s" % args.report_file)
             reporter.write(filen=args.report_file,title=args.title)
         else:
             reporter.write(title=args.title)
         if args.xls_file is not None:
-            print "Writing XLS to %s" % args.xls_file
+            print("Writing XLS to %s" % args.xls_file)
             reporter.write_xls(args.xls_file,title=args.title)
         if args.html_file is not None:
-            print "Writing HTML to %s" % args.html_file
+            print("Writing HTML to %s" % args.html_file)
             reporter.write_html(args.html_file,title=args.title)
     # Output counts if requested
     if args.counts_file_out is not None:

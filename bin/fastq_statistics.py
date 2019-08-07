@@ -105,18 +105,18 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     # Report settings etc
-    print "Source directory      : %s" % args.illumina_run_dir
-    print "Unaligned subdirectory: %s" % args.unaligned_dir
-    print "Samplesheet file      : %s" % (args.sample_sheet
+    print("Source directory      : %s" % args.illumina_run_dir)
+    print("Unaligned subdirectory: %s" % args.unaligned_dir)
+    print("Samplesheet file      : %s" % (args.sample_sheet
                                           if args.sample_sheet is not None
-                                          else '')
-    print "Basic stats file      : %s" % args.stats_file
-    print "Full stats file       : %s" % args.full_stats_file
-    print "Update existing stats?: %s" % ('yes' if args.update else 'no')
-    print "Per-lane summary stats: %s" % args.per_lane_stats_file
-    print "Per-lane sample stats : %s" % args.per_lane_sample_stats_file
-    print "Number of processors  : %s" % args.n
-    print "Debug?                : %s" % ('yes' if args.debug else 'no')
+                                          else ''))
+    print("Basic stats file      : %s" % args.stats_file)
+    print("Full stats file       : %s" % args.full_stats_file)
+    print("Update existing stats?: %s" % ('yes' if args.update else 'no'))
+    print("Per-lane summary stats: %s" % args.per_lane_stats_file)
+    print("Per-lane sample stats : %s" % args.per_lane_sample_stats_file)
+    print("Number of processors  : %s" % args.n)
+    print("Debug?                : %s" % ('yes' if args.debug else 'no'))
 
     # Check for existing stats
     if args.update:
@@ -150,13 +150,13 @@ if __name__ == '__main__':
                             n_processors=args.n,
                             add_to=existing_stats_file)
     stats.report_full_stats(args.full_stats_file)
-    print "Full statistics written to %s" % args.full_stats_file
+    print("Full statistics written to %s" % args.full_stats_file)
     stats.report_basic_stats(args.stats_file)
-    print "Basic statistics written to %s" % args.stats_file
+    print("Basic statistics written to %s" % args.stats_file)
     stats.report_per_lane_sample_stats(args.per_lane_sample_stats_file,
                                        samplesheet=args.sample_sheet)
-    print "Per-lane sample statistics written to %s" % \
-        args.per_lane_sample_stats_file
+    print("Per-lane sample statistics written to %s" %
+          args.per_lane_sample_stats_file)
     stats.report_per_lane_summary_stats(args.per_lane_stats_file)
-    print "Per-lane summary statistics written to %s" % \
-        args.per_lane_stats_file
+    print("Per-lane summary statistics written to %s" %
+          args.per_lane_stats_file)

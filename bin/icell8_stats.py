@@ -37,7 +37,7 @@ logger = logging.getLogger("icell8_stats")
 ######################################################################
 
 if __name__ == "__main__":
-    print "[%s] ICell8 stats started" % time.strftime("%Y/%m/%d-%H:%M:%S")
+    print("[%s] ICell8 stats started" % time.strftime("%Y/%m/%d-%H:%M:%S"))
     # Handle the command line
     p = argparse.ArgumentParser()
     p.add_argument("fastqs",nargs='*',metavar="FASTQ_R1 FASTQ_R2",
@@ -81,16 +81,16 @@ if __name__ == "__main__":
 
     # Number of cores
     nprocs = args.nprocessors
-    print "%d processor%s will be used" % (nprocs,
+    print("%d processor%s will be used" % (nprocs,
                                            ('s' if nprocs != 1
-                                            else ''))
+                                            else '')))
 
     # Pair up Fastq files
     fastqs,unpaired = pair_fastqs(fastqs)
     if unpaired:
-        print "Unpaired Fastqs specified:"
+        print("Unpaired Fastqs specified:")
         for fq in unpaired:
-            print "- %s" % fq
+            print("- %s" % fq)
         logging.fatal("Unpaired Fastqs specified")
         sys.exit(1)
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             tmpdir = None
     working_dir = tempfile.mkdtemp(suffix="icell8_stats",
                                    dir=tmpdir)
-    print "Using working dir %s" % working_dir
+    print("Using working dir %s" % working_dir)
 
     # Split into batches for multiprocessing
     if nprocs > 1:
@@ -203,6 +203,6 @@ if __name__ == "__main__":
         stats_data.write(filen=stats_file,include_header=True)
 
     # Report summary
-    print "#barcodes     : %s" % len(stats.barcodes())
-    print "#reads        : %s" % stats.nreads()
-    print "[%s] ICell8 stats completed" % time.strftime("%Y/%m/%d-%H:%M:%S")
+    print("#barcodes     : %s" % len(stats.barcodes()))
+    print("#reads        : %s" % stats.nreads())
+    print("[%s] ICell8 stats completed" % time.strftime("%Y/%m/%d-%H:%M:%S"))

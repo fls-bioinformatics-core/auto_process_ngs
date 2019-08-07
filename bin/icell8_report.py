@@ -64,7 +64,7 @@ if __name__ == "__main__":
         project_dir = os.getcwd()
     else:
         project_dir = os.path.abspath(project_dir)
-    print "Project dir: %s" % project_dir
+    print("Project dir: %s" % project_dir)
 
     # Stats file
     if args.stats_file is None:
@@ -73,13 +73,13 @@ if __name__ == "__main__":
                                   "icell8_stats.tsv")
     else:
         stats_file = os.path.abspath(args.stats_file)
-    print "Stats file: %s" % stats_file
+    print("Stats file: %s" % stats_file)
 
     # Check for XLSX version of stats
     xlsx_file = os.path.splitext(stats_file)[0]+".xlsx"
     if not os.path.exists(xlsx_file):
         xlsx_file = None
-    print "XLSX file: %s" % xlsx_file
+    print("XLSX file: %s" % xlsx_file)
 
     # Output file and directory for output data (images etc)
     out_file = args.out_file
@@ -88,8 +88,8 @@ if __name__ == "__main__":
     out_dir = os.path.splitext(out_file)[0]+"_data"
     if not os.path.exists(out_dir):
         os.mkdir(out_dir)
-    print "Output file: %s" % out_file
-    print "Data dir   : %s" % out_dir
+    print("Output file: %s" % out_file)
+    print("Data dir   : %s" % out_dir)
 
     # Sort out title/name
     report_name = args.name
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     df.rename(columns={'#Barcode':'Barcode',
                        '%reads_poly_g':'percent_poly_g'},
               inplace=True)
-    print df.head()
+    print(df.head())
 
     # Gather the data
     data = AttributeDictionary()
@@ -149,13 +149,13 @@ if __name__ == "__main__":
     data['assigned_barcodes'] = len(df[df['Nreads'] > 0])
 
     # Report data
-    print "Total #reads         : %d" % data.total_reads
-    print "Total assigned #reads: %d" % data.total_assigned_reads
-    print "Median read count    : %d" % data.median_read_count
-    print "Mean   read count    : %d" % data.mean_read_count
-    print "Std    read count    : %d" % data.std_read_count
-    print "Total #barcodes      : %d" % data.total_barcodes
-    print "Assigned #barcodes   : %d" % data.assigned_barcodes
+    print("Total #reads         : %d" % data.total_reads)
+    print("Total assigned #reads: %d" % data.total_assigned_reads)
+    print("Median read count    : %d" % data.median_read_count)
+    print("Mean   read count    : %d" % data.mean_read_count)
+    print("Std    read count    : %d" % data.std_read_count)
+    print("Total #barcodes      : %d" % data.total_barcodes)
+    print("Assigned #barcodes   : %d" % data.assigned_barcodes)
 
     # Make a HTML report
     report = Document(title="ICell8 processing summary")
@@ -208,7 +208,7 @@ if __name__ == "__main__":
         pd.Series([data.total_reads,],
                   ['Nreads_initial',]).append(
                       df[cols].sum())
-    print reads_per_stage
+    print(reads_per_stage)
     fig=plt.figure()
     plot = reads_per_stage.plot.bar(figsize=(6,4))
     labels = ['Initial',
@@ -280,8 +280,8 @@ if __name__ == "__main__":
     # List barcodes with low read counts
     if low_reads:
         read_counts.add(low_read_count.to_html(index=False))
-    print "#barcodes < %d reads: %d" % (low_read_threshold,
-                                        len(low_read_count))
+    print("#barcodes < %d reads: %d" % (low_read_threshold,
+                                        len(low_read_count)))
     toc_list.add_item(Link(read_counts.title,read_counts))
 
     # Sample info
@@ -339,9 +339,9 @@ if __name__ == "__main__":
                 poly_g_threshold,
                 value="%d" % len(high_poly_g['Nreads_poly_g']))
     poly_g_info.add(tbl)
-    print "#reads with poly-G regions: %d" % high_poly_g['Nreads_poly_g'].sum()
-    print "Mean   poly-G percentage: %f%%" % mean_poly_g
-    print "Median poly-G percentage: %f%%" % median_poly_g
+    print("#reads with poly-G regions: %d" % high_poly_g['Nreads_poly_g'].sum())
+    print("Mean   poly-G percentage: %f%%" % mean_poly_g)
+    print("Median poly-G percentage: %f%%" % median_poly_g)
 
     # Histogram of poly-g reads
     plot_filen = os.path.join(out_dir,"poly_g_dist.png")
@@ -384,4 +384,4 @@ if __name__ == "__main__":
     if xlsx_file is not None:
         zip_file.add_file(xlsx_file)
     zip_file.close()
-    print "Wrote zip archive: %s" % report_zip
+    print("Wrote zip archive: %s" % report_zip)

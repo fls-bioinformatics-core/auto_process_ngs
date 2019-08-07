@@ -157,7 +157,7 @@ def main():
     args = p.parse_args()
 
     # Report name and version
-    print "%s version %s" % (os.path.basename(sys.argv[0]),__version__)
+    print("%s version %s" % (os.path.basename(sys.argv[0]),__version__))
 
     # Check for MultiQC if required
     if args.multiqc:
@@ -172,8 +172,8 @@ def main():
         dir_path = os.path.abspath(d)
         project_name = os.path.basename(dir_path)
         p = AnalysisProject(project_name,dir_path)
-        print "Project           : %s" % p.name
-        print "Primary Fastqs dir: %s" % p.fastq_dir
+        print("Project           : %s" % p.name)
+        print("Primary Fastqs dir: %s" % p.fastq_dir)
         if args.qc_dir is None:
             qc_dir = p.qc_dir
         else:
@@ -183,9 +183,9 @@ def main():
         qc_base = os.path.basename(qc_dir)
         # QC metadata
         qc_info = p.qc_info(qc_dir)
-        print "QC output dir     : %s" % qc_dir
-        print "...stored protocol: %s" % qc_info.protocol
-        print "...stored Fastqdir: %s" % qc_info.fastq_dir
+        print("QC output dir     : %s" % qc_dir)
+        print("...stored protocol: %s" % qc_info.protocol)
+        print("...stored Fastqdir: %s" % qc_info.fastq_dir)
         # Set QC protocol
         if args.qc_protocol is None:
             protocol = qc_info.protocol
@@ -193,7 +193,7 @@ def main():
                 protocol = determine_qc_protocol(p)
         else:
             protocol = args.qc_protocol
-        print "QC protocol: %s" % protocol
+        print("QC protocol: %s" % protocol)
         # Fastq subdirectory
         if args.fastq_dir is None:
             fastq_dir = qc_info.fastq_dir
@@ -207,9 +207,9 @@ def main():
                                     "(%s != %s)" % (fastq_dir,
                                                     qc_info.fastq_dir))
         p.use_fastq_dir(fastq_dir)
-        print "Fastqs dir        : %s" % p.fastq_dir
-        print "-"*(len('Project: ')+len(p.name))
-        print "%d samples | %d fastqs" % (len(p.samples),len(p.fastqs))
+        print("Fastqs dir        : %s" % p.fastq_dir)
+        print("-"*(len('Project: ')+len(p.name)))
+        print("%d samples | %d fastqs" % (len(p.samples),len(p.fastqs)))
         # Setup reporter
         qc_reporter = QCReporter(p)
         # Verification step
@@ -223,14 +223,14 @@ def main():
                 logging.critical("Error: %s" % ex)
                 verified = False
         if not verified:
-            print "Verification: FAILED"
+            print("Verification: FAILED")
             if not args.force:
                 retval = 1
                 continue
             else:
-                print "--force specified, ignoring previous errors"
+                print("--force specified, ignoring previous errors")
         else:
-            print "Verification: OK"
+            print("Verification: OK")
             if args.verify:
                 continue
         # MultiQC report
@@ -258,15 +258,15 @@ def main():
                     '--filename','%s' % multiqc_report,
                     '--force',
                     qc_dir)
-                print "Running %s" % multiqc_cmd
+                print("Running %s" % multiqc_cmd)
                 multiqc_retval = multiqc_cmd.run_subprocess()
                 if multiqc_retval == 0 and os.path.exists(multiqc_report):
-                    print "MultiQC: %s" % multiqc_report
+                    print("MultiQC: %s" % multiqc_report)
                 else:
-                    print "MultiQC: FAILED"
+                    print("MultiQC: FAILED")
                     retval += 1
             else:
-                print "MultiQC: %s (already exists)" % multiqc_report
+                print("MultiQC: %s (already exists)" % multiqc_report)
         # Report generation
         if args.filename is None:
             out_file = '%s_report.html' % qc_base
@@ -279,17 +279,17 @@ def main():
                                         title=args.title,
                                         filename=out_file,
                                         relative_links=True)
-        print "Wrote QC report to %s" % out_file
+        print("Wrote QC report to %s" % out_file)
         # Generate ZIP archive
         if args.zip:
             report_zip = zip_report(p,report_html,qc_dir,
                                     qc_protocol=protocol)
-            print "ZIP archive: %s" % report_zip
+            print("ZIP archive: %s" % report_zip)
     # Finish with appropriate exit code
-    print "%s completed: exit code %s (%s)" % \
-        (os.path.basename(sys.argv[0]),
-         retval,
-         ('ok' if retval == 0 else 'error'))
+    print("%s completed: exit code %s (%s)" %
+          (os.path.basename(sys.argv[0]),
+           retval,
+           ('ok' if retval == 0 else 'error')))
     sys.exit(retval)
 
 if __name__ == '__main__':

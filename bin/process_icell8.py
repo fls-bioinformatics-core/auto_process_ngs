@@ -276,39 +276,39 @@ if __name__ == "__main__":
     do_clean_up = (not args.no_cleanup)
 
     # Report settings
-    print "Unaligned dir     : %s" % args.unaligned_dir
-    print "Project           : %s" % args.project
-    print "Well list file    : %s" % well_list
-    print "Output dir        : %s" % outdir
-    print "Batch size (reads): %s" % args.batch_size
-    print "Quality filter barcodes/UMIs: %s" % \
-        ('yes' if do_quality_filter else 'no')
-    print "Filter contaminants: %s" % \
-        ('yes' if do_contaminant_filter else 'no')
+    print("Unaligned dir     : %s" % args.unaligned_dir)
+    print("Project           : %s" % args.project)
+    print("Well list file    : %s" % well_list)
+    print("Output dir        : %s" % outdir)
+    print("Batch size (reads): %s" % args.batch_size)
+    print("Quality filter barcodes/UMIs: %s" %
+          ('yes' if do_quality_filter else 'no'))
+    print("Filter contaminants: %s" %
+          ('yes' if do_contaminant_filter else 'no'))
     if do_contaminant_filter:
-        print "Mammalian genome panel  : %s" % args.mammalian_conf
+        print("Mammalian genome panel  : %s" % args.mammalian_conf)
         with open(args.mammalian_conf) as fp:
             for line in fp:
                 if line.startswith("DATABASE"):
-                    print "-- %s" % line.split('\t')[1]
-        print "Contaminant genome panel: %s" % args.contaminants_conf
+                    print("-- %s" % line.split('\t')[1])
+        print("Contaminant genome panel: %s" % args.contaminants_conf)
         with open(args.contaminants_conf) as fp:
             for line in fp:
                 if line.startswith("DATABASE"):
-                    print "-- %s" % line.split('\t')[1]
-            print "Fastq_screen aligner    : %s" % args.aligner
-    print "Maximum concurrent jobs : %s" % max_jobs
-    print "Stage specific settings :"
+                    print("-- %s" % line.split('\t')[1])
+            print("Fastq_screen aligner    : %s" % args.aligner)
+    print("Maximum concurrent jobs : %s" % max_jobs)
+    print("Stage specific settings :")
     for stage in stages:
-        print "-- %s: %s (nprocs=%d)" % (stage,
-                                  runners[stage],
-                                  nprocessors[stage])
+        print("-- %s: %s (nprocs=%d)" % (stage,
+                                         runners[stage],
+                                         nprocessors[stage]))
     if modulefiles is not None:
-        print "Environment modules:"
+        print("Environment modules:")
         for modulefile in modulefiles.split(','):
-            print "-- %s" % modulefile
-    print "Clean-up intermediate Fastqs: %s" % \
-        ('yes' if do_clean_up else 'no')
+            print("-- %s" % modulefile)
+    print("Clean-up intermediate Fastqs: %s" %
+          ('yes' if do_clean_up else 'no'))
 
     # Check well list file
     try:
@@ -383,7 +383,7 @@ if __name__ == "__main__":
     pipelines = []
 
     # ICELL QC and filtering
-    print "Setting up a pipeline for ICELL processing"
+    print("Setting up a pipeline for ICELL processing")
     pipelines.append(
         ICell8QCFilter(outdir,fastqs,well_list,
                        args.mammalian_conf,
@@ -396,19 +396,19 @@ if __name__ == "__main__":
                        nprocessors=nprocessors))
 
     # Final reporting
-    print "Setting up a pipeline for final reporting"
+    print("Setting up a pipeline for final reporting")
     pipelines.append(
         ICell8FinalReporting(outdir,
                              project=analysis_project))
 
     # Chain the pipelines
-    print "Merging the pipelines"
+    print("Merging the pipelines")
     ppl = pipelines[0]
     for p in pipelines[1:]:
         ppl.append_pipeline(p)
 
     # Execute the pipelines
-    print "Running the final pipeline"
+    print("Running the final pipeline")
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
                           default_runner=default_runner,
                           runners=runners,
@@ -420,7 +420,7 @@ if __name__ == "__main__":
         sys.exit(exit_status)
 
     # Run the QC
-    print "Running the QC"
+    print("Running the QC")
     runqc = QCPipeline()
     runqc.add_project(analysis_project,
                       qc_protocol="singlecell",
@@ -450,5 +450,5 @@ if __name__ == "__main__":
         sys.exit(exit_status)
 
     # Finish
-    print "All pipelines completed ok"
+    print("All pipelines completed ok")
     sys.exit(0)
