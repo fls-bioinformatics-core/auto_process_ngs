@@ -611,7 +611,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     exit_code = configure_job.exit_code
     # Check exit code
     if exit_code != 0:
-        logger.error("configureToBclFastq.pl returned %s" % returncode)
+        logger.error("configureToBclFastq.pl returned %s" % exit_code)
         return exit_code
     # Check outputs (directory and makefile)
     if not os.path.isdir(output_dir):
@@ -797,7 +797,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     exit_code = bcl2fastq_job.exit_code
     # Check exit code
     if exit_code != 0:
-        logger.error("bcl2fastq returned %s" % returncode)
+        logger.error("bcl2fastq returned %s" % exit_code)
         return exit_code
     # Check output directory
     if not os.path.isdir(output_dir):
