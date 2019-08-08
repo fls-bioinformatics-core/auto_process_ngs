@@ -730,9 +730,9 @@ from cStringIO import StringIO
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.JobRunner import SimpleJobRunner
-from auto_process_ngs.applications import Command
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.simple_scheduler import SchedulerReporter
+from .applications import Command
+from .simple_scheduler import SimpleScheduler
+from .simple_scheduler import SchedulerReporter
 
 # Module specific logger
 logger = logging.getLogger(__name__)
