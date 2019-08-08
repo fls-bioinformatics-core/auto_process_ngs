@@ -80,7 +80,7 @@ def fastq_screen_tag(conf_file,fastq_in,out_dir,
     if args.aligner is not None:
         fastq_screen_cmd.add_args('--aligner',args.aligner)
     fastq_screen_cmd.add_args(fastq_in)
-    print "Running %s" % fastq_screen_cmd
+    print("Running %s" % fastq_screen_cmd)
     # Run the command
     exit_code = fastq_screen_cmd.run_subprocess(working_dir=work_dir)
     if exit_code != 0:
@@ -232,8 +232,8 @@ if __name__ == "__main__":
     nohits_contaminants = nohits_tag_from_conf(contaminants_conf)
     ndatabases_mammalian = len(nohits_mammalian)
     ndatabases_contaminants = len(nohits_contaminants)
-    print "'nohits' tags: '%s' and '%s'" % (nohits_mammalian,
-                                            nohits_contaminants)
+    print("'nohits' tags: '%s' and '%s'" % (nohits_mammalian,
+                                            nohits_contaminants))
     # Output filtered FASTQ pair
     fqr1_out = os.path.basename(strip_ext(fqr1,'.fastq')) \
                + '.filtered.fastq'

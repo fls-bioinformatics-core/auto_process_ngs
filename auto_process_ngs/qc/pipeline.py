@@ -581,16 +581,16 @@ class CheckIlluminaQCOutputs(PipelineFunctionTask):
             self.output.fastqs.extend(result)
         if self.output.fastqs:
             if self.args.verbose:
-                print "Fastqs with missing QC outputs from " \
-                    "illumina_qc.sh:"
+                print("Fastqs with missing QC outputs from "
+                      "illumina_qc.sh:")
                 for fq in self.output.fastqs:
-                    print "-- %s" % fq
+                    print("-- %s" % fq)
             else:
-                print "%s Fastqs with missing QC outputs from " \
-                    "illumina_qc.sh" % len(self.output.fastqs)
+                print("%s Fastqs with missing QC outputs from "
+                      "illumina_qc.sh" % len(self.output.fastqs))
         else:
-            print "No Fastqs with missing QC outputs from " \
-                "illumina_qc.sh"
+            print("No Fastqs with missing QC outputs from "
+                  "illumina_qc.sh")
 
 class RunIlluminaQC(PipelineTask):
     """
@@ -619,7 +619,7 @@ class RunIlluminaQC(PipelineTask):
         pass
     def setup(self):
         if not self.args.fastqs:
-            print "Nothing to do"
+            print("Nothing to do")
             return
         # Set up the illumina_qc.sh runs for each Fastq
         for fastq in self.args.fastqs:
@@ -728,28 +728,28 @@ class SetupFastqStrandConf(PipelineFunctionTask):
                                 organism=None,star_indexes=None):
         # Remove existing fastq_strand.conf file
         if os.path.exists(fastq_strand_conf):
-            print "Removing existing conf file: %s" % fastq_strand_conf
+            print("Removing existing conf file: %s" % fastq_strand_conf)
             os.remove(fastq_strand_conf)
         # Sort out organism(s)
         if not organism:
             organism = project.info.organism
         if not organism:
-            print "No organisms specified"
+            print("No organisms specified")
             return
-        print "Organism(s): %s" % organism
+        print("Organism(s): %s" % organism)
         # Fetch matching STAR indexes
         if not star_indexes:
-            print "No STAR indexes available"
+            print("No STAR indexes available")
             return
-        print "STAR indexes: %s" % star_indexes
+        print("STAR indexes: %s" % star_indexes)
         fastq_strand_indexes = build_fastq_strand_conf(
             get_organism_list(organism),
             star_indexes)
         if not fastq_strand_indexes:
-            print "No matching indexes for strandedness determination"
+            print("No matching indexes for strandedness determination")
             return
         # Create the conf file
-        print "Writing conf file: %s" % fastq_strand_conf
+        print("Writing conf file: %s" % fastq_strand_conf)
         with open(fastq_strand_conf,'w') as fp:
             fp.write("%s\n" % fastq_strand_indexes)
     def finish(self):
@@ -788,7 +788,7 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
     def setup(self):
         fastq_strand_conf = self.args.fastq_strand_conf
         if not fastq_strand_conf or not os.path.exists(fastq_strand_conf):
-            print "No conf file, nothing to check"
+            print("No conf file, nothing to check")
             return
         self.add_call("Check fastq_strand.py outputs for %s"
                       % self.args.project.name,
@@ -802,16 +802,16 @@ class CheckFastqStrandOutputs(PipelineFunctionTask):
             self.output.fastq_pairs.extend(result)
         if self.output.fastq_pairs:
             if self.args.verbose:
-                print "Fastq pairs with missing QC outputs from " \
-                    "fastq_strand.py:"
+                print("Fastq pairs with missing QC outputs from "
+                      "fastq_strand.py:")
                 for fq_pair in self.output.fastq_pairs:
-                    print "-- %s" % (fq_pair,)
+                    print("-- %s" % (fq_pair,))
             else:
-                print "%s Fastq pairs with missing QC outputs from " \
-                    "fastq_strand.py" % len(self.output.fastq_pairs)
+                print("%s Fastq pairs with missing QC outputs from "
+                      "fastq_strand.py" % len(self.output.fastq_pairs))
         else:
-            print "No Fastqs with missing QC outputs from " \
-                "fastq_strand.py"
+            print("No Fastqs with missing QC outputs from "
+                  "fastq_strand.py")
 
 class RunFastqStrand(PipelineTask):
     """
@@ -841,11 +841,11 @@ class RunFastqStrand(PipelineTask):
         pass
     def setup(self):
         if not self.args.fastq_pairs:
-            print "No Fastqs: nothing to do"
+            print("No Fastqs: nothing to do")
             return
         elif not self.args.fastq_strand_conf or \
              not os.path.exists(self.args.fastq_strand_conf):
-            print "No conf file: nothing to do"
+            print("No conf file: nothing to do")
             return
         for fastq_pair in self.args.fastq_pairs:
             cmd = PipelineCommandWrapper(

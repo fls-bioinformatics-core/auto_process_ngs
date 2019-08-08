@@ -191,7 +191,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
          sample, ignore it (10xGenomics Chromium SC data only)
     """
     # Report protocol
-    print "Protocol              : %s" % protocol
+    print("Protocol              : %s" % protocol)
     if protocol not in MAKE_FASTQS_PROTOCOLS:
         raise Exception("Unknown protocol: '%s' (must be one of "
                         "%s)" % (protocol,
@@ -201,7 +201,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         ap.params['unaligned_dir'] = unaligned_dir
     elif ap.params['unaligned_dir'] is None:
         ap.params['unaligned_dir'] = 'bcl2fastq'
-    print "Output dir            : %s" % ap.params.unaligned_dir
+    print("Output dir            : %s" % ap.params.unaligned_dir)
     # Sample sheet
     if sample_sheet is None:
         sample_sheet = ap.params.sample_sheet
@@ -210,12 +210,12 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if not os.path.isfile(sample_sheet):
         raise Exception("Missing sample sheet '%s'" % sample_sheet)
     ap.params['sample_sheet'] = sample_sheet
-    print "Source sample sheet   : %s" % ap.params.sample_sheet
+    print("Source sample sheet   : %s" % ap.params.sample_sheet)
     # Check requested lanes are actually present
-    print "Lanes                 : %s" % ('all' if lanes is None
+    print("Lanes                 : %s" % ('all' if lanes is None
                                           else
                                           ','.join([str(l)
-                                                    for l in lanes]))
+                                                    for l in lanes])))
     if lanes is not None:
         s = IlluminaData.SampleSheet(ap.params.sample_sheet)
         if not s.has_lanes:
@@ -240,7 +240,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              sample_sheet,
                              lanes=lanes)
     # Check the temporary sample sheet
-    print "Checking temporary sample sheet"
+    print("Checking temporary sample sheet")
     invalid_barcodes = SampleSheetLinter(
         sample_sheet_file=sample_sheet).has_invalid_barcodes()
     if invalid_barcodes:
@@ -261,7 +261,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if protocol in ('10x_chromium_sc','10x_chromium_sc_atac',):
             # Force inclusion of sample-name subdirectories
             # when verifying Chromium SC data
-            print "Sample sheet includes Chromium SC indices"
+            print("Sample sheet includes Chromium SC indices")
             verify_include_sample_dir = True
         else:
             # Chromium SC indices detected but not using
@@ -284,13 +284,13 @@ def make_fastqs(ap,protocol='standard',platform=None,
             icell8_well_list=icell8_well_list,
             lanes=lanes,
             include_sample_dir=verify_include_sample_dir):
-        print "Expected Fastq outputs already present"
+        print("Expected Fastq outputs already present")
         skip_rsync = True
         skip_fastq_generation = True
     # Check if there's anything to do
     if (skip_rsync and skip_fastq_generation) and \
        not (generate_stats or analyse_barcodes):
-        print "Nothing to do"
+        print("Nothing to do")
         return
     # Log dir
     log_dir = 'make_fastqs'
@@ -317,7 +317,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         primary_data_dir = os.path.join(
             ap.params.primary_data_dir,
             os.path.basename(ap.params.data_dir))
-        print "Primary data dir      : %s" % primary_data_dir
+        print("Primary data dir      : %s" % primary_data_dir)
         try:
             illumina_run = IlluminaData.IlluminaRun(primary_data_dir,
                                                     platform=platform)
@@ -329,20 +329,20 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 logger.critical("Check specified platform is valid (or "
                                 "omit --platform")
             raise Exception("Error determining sequencer platform")
-        print "Platform              : %s" % illumina_run.platform
-        print "Bcl format            : %s" % illumina_run.bcl_extension
+        print("Platform              : %s" % illumina_run.platform)
+        print("Bcl format            : %s" % illumina_run.bcl_extension)
         # Set platform in metadata
         ap.metadata['platform'] = illumina_run.platform
         # Bases mask
         if bases_mask is not None:
             ap.params['bases_mask'] = bases_mask
         bases_mask = ap.params.bases_mask
-        print "Bases mask setting    : %s" % bases_mask
+        print("Bases mask setting    : %s" % bases_mask)
         if protocol not in ('icell8_atac',
                             '10x_chromium_sc',
                             '10x_chromium_sc_atac',):
             if bases_mask == "auto":
-                print "Determining bases mask from RunInfo.xml"
+                print("Determining bases mask from RunInfo.xml")
                 bases_mask = get_bases_mask(illumina_run.runinfo_xml,
                                             sample_sheet)
                 if not bases_mask_is_valid(bases_mask):
@@ -352,7 +352,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         if protocol == 'icell8':
             # ICELL8 single-cell RNA-seq
             # Update bcl2fastq settings appropriately
-            print "Updating read trimming and masking for ICELL8"
+            print("Updating read trimming and masking for ICELL8")
             minimum_trimmed_read_length = 21
             mask_short_adapter_reads = 0
             # Reset the default bases mask
@@ -396,7 +396,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
             if bases_mask == "auto":
                 bases_mask = get_bases_mask_icell8_atac(
                     illumina_run.runinfo_xml)
-            print "Bases mask for ICELL8 ATAC: %s" % bases_mask
+            print("Bases mask for ICELL8 ATAC: %s" % bases_mask)
             if not bases_mask_is_valid(bases_mask):
                 raise Exception("Invalid bases mask: '%s'" %
                                 bases_mask)
@@ -485,8 +485,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
             assert(len(missing_fastqs) > 0)
             missing_fastqs_file = os.path.join(ap.log_dir,
                                                "missing_fastqs.log")
-            print "Writing list of missing Fastq files to %s" % \
-                missing_fastqs_file
+            print("Writing list of missing Fastq files to %s" %
+                  missing_fastqs_file)
             with open(missing_fastqs_file,'w') as fp:
                 for fq in missing_fastqs:
                     fp.write("%s\n" % fq)
@@ -506,7 +506,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 for fq in missing_fastqs:
                     fastq = os.path.join(ap.analysis_dir,
                                          ap.params.unaligned_dir,fq)
-                    print "-- %s" % fastq
+                    print("-- %s" % fastq)
                     if not os.path.exists(os.path.dirname(fastq)):
                         mkdirs(os.path.dirname(fastq))
                     with gzip.GzipFile(filename=fastq,mode='wb') as fp:
@@ -603,7 +603,7 @@ def get_primary_data(ap,runner=None):
                                                   '--include=runParameters.xml',
                                                   '--include=RunParameters.xml',
                                                   '--exclude=*'))
-    print "Running %s" % rsync_cmd
+    print("Running %s" % rsync_cmd)
     rsync_job = SchedulerJob(runner,
                              rsync_cmd.command_line,
                              name='rsync.primary_data',
@@ -619,7 +619,7 @@ def get_primary_data(ap,runner=None):
         rsync_job.terminate()
         return -1
     exit_code = rsync_job.exit_code
-    print "rsync of primary data completed: exit code %s" % exit_code
+    print("rsync of primary data completed: exit code %s" % exit_code)
     if exit_code != 0:
         logger.error("Failed to acquire primary data (non-zero "
                      "exit code returned)")
@@ -638,7 +638,7 @@ def remove_primary_data(ap):
     primary_data = os.path.join(ap.params.primary_data_dir,
                                 os.path.basename(ap.params.data_dir))
     if os.path.isdir(primary_data):
-        print "Removing copy of primary data in %s" % primary_data
+        print("Removing copy of primary data in %s" % primary_data)
         shutil.rmtree(primary_data)
 
 def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
@@ -717,8 +717,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
         if require_bcl2fastq is None:
             require_bcl2fastq = ap.settings.bcl2fastq.default_version
     if require_bcl2fastq is not None:
-        print "Platform '%s' requires bcl2fastq version %s" \
-            % (ap.metadata.platform,require_bcl2fastq)
+        print("Platform '%s' requires bcl2fastq version %s" %
+              (ap.metadata.platform,require_bcl2fastq))
     else:
         logger.warning("No bcl2fastq version explicitly specified")
     bcl2fastq = available_bcl2fastq_versions(require_bcl2fastq)
@@ -747,7 +747,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
                                     "SampleSheet.%s.%s.csv" %
                                     (fmt,
                                      time.strftime("%Y%m%d%H%M%S")))
-    print "Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet)
+    print("Generating '%s' format sample sheet: %s" % (fmt,tmp_sample_sheet))
     make_custom_sample_sheet(sample_sheet,
                              tmp_sample_sheet,
                              fmt=fmt)
@@ -774,35 +774,35 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             collisions = check_barcode_collisions(tmp_sample_sheet,
                                                   nmismatches)
             if not collisions:
-                print "No collisions using %d mismatches" % nmismatches
+                print("No collisions using %d mismatches" % nmismatches)
                 break
         else:
             # Unable to address collisions, bail out
             raise Exception("Barcode collisions with zero mismatches "
                             "(duplicated indexes?): unable to proceed")
     else:
-        print "No barcode collisions detected using %d mismatches" % \
-            nmismatches
+        print("No barcode collisions detected using %d mismatches" %
+              nmismatches)
     # Working directory (set to analysis dir)
     working_dir = ap.analysis_dir
     # Log directory
     log_dir = ap.log_dir
     # Report values and settings
-    print "Bcl-to-fastq exe      : %s" % bcl2fastq_exe
-    print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
-                                             bcl2fastq_info[2])
-    print "Sample sheet          : %s" % os.path.basename(tmp_sample_sheet)
-    print "Bases mask            : %s" % bases_mask
-    print "Nmismatches           : %d" % nmismatches
-    print "Nprocessors           : %s" % nprocessors
-    print "Ignore missing bcl    : %s" % ignore_missing_bcl
-    print "Ignore missing stats  : %s" % ignore_missing_stats
-    print "No lane splitting     : %s" % no_lane_splitting
-    print "Min trimmed read len  : %s" % minimum_trimmed_read_length
-    print "Mask short adptr reads: %s" % mask_short_adapter_reads
-    print "Create index Fastqs   : %s" % create_fastq_for_index_reads
-    print "Working directory     : %s" % working_dir
-    print "Log directory         : %s" % log_dir
+    print("Bcl-to-fastq exe      : %s" % bcl2fastq_exe)
+    print("Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
+                                             bcl2fastq_info[2]))
+    print("Sample sheet          : %s" % os.path.basename(tmp_sample_sheet))
+    print("Bases mask            : %s" % bases_mask)
+    print("Nmismatches           : %d" % nmismatches)
+    print("Nprocessors           : %s" % nprocessors)
+    print("Ignore missing bcl    : %s" % ignore_missing_bcl)
+    print("Ignore missing stats  : %s" % ignore_missing_stats)
+    print("No lane splitting     : %s" % no_lane_splitting)
+    print("Min trimmed read len  : %s" % minimum_trimmed_read_length)
+    print("Mask short adptr reads: %s" % mask_short_adapter_reads)
+    print("Create index Fastqs   : %s" % create_fastq_for_index_reads)
+    print("Working directory     : %s" % working_dir)
+    print("Log directory         : %s" % log_dir)
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.bcl2fastq
@@ -835,11 +835,11 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             demultiplexing_threads=max(int(float(nprocessors)*0.2),
                                        nprocessors)
             processing_threads=nprocessors
-            print "Explicitly setting number of threads for each stage:"
-            print "Loading (-r)       : %d" % loading_threads
-            print "Demultiplexing (-d): %d" % demultiplexing_threads
-            print "Processing (-p)    : %d" % processing_threads
-            print "Writing (-w)       : %d" % writing_threads
+            print("Explicitly setting number of threads for each stage:")
+            print("Loading (-r)       : %d" % loading_threads)
+            print("Demultiplexing (-d): %d" % demultiplexing_threads)
+            print("Processing (-p)    : %d" % processing_threads)
+            print("Writing (-w)       : %d" % writing_threads)
         else:
             # Use the defaults
             loading_threads = None
@@ -874,10 +874,10 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             loading_threads=min(4,nprocessors)
             writing_threads=min(4,nprocessors)
             processing_threads=nprocessors
-            print "Explicitly setting number of threads for each stage:"
-            print "Loading (-r)       : %d" % loading_threads
-            print "Processing (-p)    : %d" % processing_threads
-            print "Writing (-w)       : %d" % writing_threads
+            print("Explicitly setting number of threads for each stage:")
+            print("Loading (-r)       : %d" % loading_threads)
+            print("Processing (-p)    : %d" % processing_threads)
+            print("Writing (-w)       : %d" % writing_threads)
         else:
             # Use the defaults
             loading_threads = None
@@ -903,7 +903,7 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
             log_dir=log_dir,
             bcl2fastq_exe=bcl2fastq_exe
         )
-    print "bcl2fastq completed: exit code %s" % exit_code
+    print("bcl2fastq completed: exit code %s" % exit_code)
     if exit_code != 0:
         logger.error("bcl2fastq exited with an error")
     return exit_code
@@ -959,9 +959,9 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
     if not cellranger:
         raise Exception("No cellranger package found")
     cellranger_package_info = cellranger_info(cellranger)
-    print "Using cellranger %s: %s" % \
-        (cellranger_package_info[-1],
-         cellranger)
+    print("Using cellranger %s: %s" %
+          (cellranger_package_info[-1],
+           cellranger))
     # Check we have bcl2fastq
     bcl2fastq = find_program('bcl2fastq')
     if not bcl2fastq:
@@ -974,8 +974,8 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
                         "located")
     bcl2fastq = bcl2fastq[0]
     bcl2fastq_info = bcl_to_fastq_info(bcl2fastq)
-    print "Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
-                                      bcl2fastq)
+    print("Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
+                                      bcl2fastq))
     # Store info on bcl2fastq package
     ap.metadata['bcl2fastq_software'] = bcl2fastq_info
     # Store info on cellranger package
@@ -990,22 +990,22 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
     # Working directory (set to analysis dir)
     working_dir = ap.analysis_dir
     # Report values and settings
-    print "Cellranger exe        : %s" % cellranger
-    print "Cellranger version    : %s %s" % (cellranger_package_info[1],
-                                             cellranger_package_info[2])
-    print "Bcl-to-fastq exe      : %s" % bcl2fastq
-    print "Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
-                                             bcl2fastq_info[2])
-    print "Sample sheet          : %s" % os.path.basename(sample_sheet)
-    print "Bases mask            : %s" % bases_mask
-    print "Cellranger jobmode    : %s" % cellranger_jobmode
-    print "Cellranger maxjobs    : %s" % cellranger_maxjobs
-    print "Cellranger mempercore : %s" % cellranger_mempercore
-    print "Cellranger jobinterval: %s" % cellranger_jobinterval
-    print "Cellranger localcores : %s" % cellranger_localcores
-    print "Cellranger localmem   : %s" % cellranger_localmem
-    print "Working directory     : %s" % working_dir
-    print "Log directory         : %s" % log_dir
+    print("Cellranger exe        : %s" % cellranger)
+    print("Cellranger version    : %s %s" % (cellranger_package_info[1],
+                                             cellranger_package_info[2]))
+    print("Bcl-to-fastq exe      : %s" % bcl2fastq)
+    print("Bcl-to-fastq version  : %s %s" % (bcl2fastq_info[1],
+                                             bcl2fastq_info[2]))
+    print("Sample sheet          : %s" % os.path.basename(sample_sheet))
+    print("Bases mask            : %s" % bases_mask)
+    print("Cellranger jobmode    : %s" % cellranger_jobmode)
+    print("Cellranger maxjobs    : %s" % cellranger_maxjobs)
+    print("Cellranger mempercore : %s" % cellranger_mempercore)
+    print("Cellranger jobinterval: %s" % cellranger_jobinterval)
+    print("Cellranger localcores : %s" % cellranger_localcores)
+    print("Cellranger localmem   : %s" % cellranger_localmem)
+    print("Working directory     : %s" % working_dir)
+    print("Log directory         : %s" % log_dir)
     # Run cellranger mkfastq
     try:
         return run_cellranger_mkfastq(
@@ -1081,9 +1081,9 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
         # Update bases mask to only use first 8 bases from
         # first index e.g. I8nnnnnnnn and convert second index
         # to read e.g. Y16
-        print "Determining bases mask from RunInfo.xml"
+        print("Determining bases mask from RunInfo.xml")
         bases_mask = get_bases_mask_10x_atac(illumina_run.runinfo_xml)
-        print "Bases mask: %s (updated for 10x scATAC-seq)" % bases_mask
+        print("Bases mask: %s (updated for 10x scATAC-seq)" % bases_mask)
         if not bases_mask_is_valid(bases_mask):
             raise Exception("Invalid bases mask: '%s'" %
                             bases_mask)
@@ -1092,9 +1092,9 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
     if not cellranger_atac:
         raise Exception("No cellranger package found")
     cellranger_package_info = cellranger_info(cellranger_atac)
-    print "Using cellranger-atac %s: %s" % \
-        (cellranger_package_info[-1],
-         cellranger_atac)
+    print("Using cellranger-atac %s: %s" %
+          (cellranger_package_info[-1],
+           cellranger_atac))
     # Check we have bcl2fastq
     bcl2fastq = find_program('bcl2fastq')
     if not bcl2fastq:
@@ -1107,8 +1107,8 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
                         "located")
     bcl2fastq = bcl2fastq[0]
     bcl2fastq_info = bcl_to_fastq_info(bcl2fastq)
-    print "Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
-                                      bcl2fastq)
+    print("Using bcl2fastq %s: %s" % (bcl2fastq_info[-1],
+                                      bcl2fastq))
     # Store info on bcl2fastq package
     ap.metadata['bcl2fastq_software'] = bcl2fastq_info
     # Store info on cellranger package
@@ -1122,22 +1122,22 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
     # Working directory (set to analysis dir)
     working_dir = ap.analysis_dir
     # Report values and settings
-    print "Cellranger-atac exe    : %s" % cellranger_atac
-    print "Cellranger-atac version: %s %s" % (cellranger_package_info[1],
-                                              cellranger_package_info[2])
-    print "Bcl-to-fastq exe       : %s" % bcl2fastq
-    print "Bcl-to-fastq version   : %s %s" % (bcl2fastq_info[1],
-                                              bcl2fastq_info[2])
-    print "Sample sheet           : %s" % os.path.basename(sample_sheet)
-    print "Bases mask             : %s" % bases_mask
-    print "Cellranger jobmode     : %s" % cellranger_jobmode
-    print "Cellranger maxjobs     : %s" % cellranger_maxjobs
-    print "Cellranger mempercore  : %s" % cellranger_mempercore
-    print "Cellranger jobinterval : %s" % cellranger_jobinterval
-    print "Cellranger localcores  : %s" % cellranger_localcores
-    print "Cellranger localmem    : %s" % cellranger_localmem
-    print "Working directory      : %s" % working_dir
-    print "Log directory          : %s" % log_dir
+    print("Cellranger-atac exe    : %s" % cellranger_atac)
+    print("Cellranger-atac version: %s %s" % (cellranger_package_info[1],
+                                              cellranger_package_info[2]))
+    print("Bcl-to-fastq exe       : %s" % bcl2fastq)
+    print("Bcl-to-fastq version   : %s %s" % (bcl2fastq_info[1],
+                                              bcl2fastq_info[2]))
+    print("Sample sheet           : %s" % os.path.basename(sample_sheet))
+    print("Bases mask             : %s" % bases_mask)
+    print("Cellranger jobmode     : %s" % cellranger_jobmode)
+    print("Cellranger maxjobs     : %s" % cellranger_maxjobs)
+    print("Cellranger mempercore  : %s" % cellranger_mempercore)
+    print("Cellranger jobinterval : %s" % cellranger_jobinterval)
+    print("Cellranger localcores  : %s" % cellranger_localcores)
+    print("Cellranger localmem    : %s" % cellranger_localmem)
+    print("Working directory      : %s" % working_dir)
+    print("Log directory          : %s" % log_dir)
     # Run cellranger-atac mkfastq
     try:
         return run_cellranger_mkfastq(
@@ -1267,7 +1267,7 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
                                    reverse_complement)
         demultiplexer.add_args(well_list)
         demultiplexer.add_args(*fastqs)
-        print "Running %s" % demultiplexer
+        print("Running %s" % demultiplexer)
         demultiplexer_job = SchedulerJob(runner,
                                          demultiplexer.command_line,
                                          name='demultiplex_icell8',
@@ -1282,13 +1282,13 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
             demultiplexer_job.terminate()
             raise ex
         exit_code = demultiplexer_job.exit_code
-        print "demultiplexer completed: exit code %s" % exit_code
+        print("demultiplexer completed: exit code %s" % exit_code)
         if exit_code != 0:
             logger.error("demultiplexer exited with an error")
             return exit_code
     # Build bcl2fastq2-style output dir
     bcl2fastq_dir = os.path.join(ap.tmp_dir,"bcl2fastq")
-    print "Building temporary output dir: %s" % bcl2fastq_dir
+    print("Building temporary output dir: %s" % bcl2fastq_dir)
     for d in ('Stats','Reports',):
         mkdirs(os.path.join(bcl2fastq_dir,d))
     project = illumina_data.projects[0]
@@ -1308,8 +1308,8 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
             else:
                 os.link(os.path.join(tmp_demultiplex_dir,f),
                         os.path.join(bcl2fastq_dir,project.name,f))
-    print "Moving %s to final destination: %s" % (bcl2fastq_dir,
-                                                  unaligned_dir)
+    print("Moving %s to final destination: %s" % (bcl2fastq_dir,
+                                                  unaligned_dir))
     os.rename(bcl2fastq_dir,unaligned_dir)
     # Remove the intermediate directories
     shutil.rmtree(icell8_tmp)
@@ -1342,7 +1342,7 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
             unaligned_dir = ap.params.unaligned_dir
         else:
             raise Exception("Bcl2fastq output directory not defined")
-    print "Checking bcl2fastq output directory '%s'" % unaligned_dir
+    print("Checking bcl2fastq output directory '%s'" % unaligned_dir)
     bcl_to_fastq_dir = os.path.join(ap.analysis_dir,unaligned_dir)
     if not os.path.isdir(bcl_to_fastq_dir):
         # Directory doesn't exist
@@ -1491,7 +1491,7 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     )
     if add_data:
         fastq_statistics_cmd.add_args('--update')
-    print "Generating statistics: running %s" % fastq_statistics_cmd
+    print("Generating statistics: running %s" % fastq_statistics_cmd)
     fastq_statistics_job = SchedulerJob(
         runner,
         fastq_statistics_cmd.command_line,
@@ -1508,13 +1508,13 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         fastq_statistics_job.terminate()
         raise ex
     exit_code = fastq_statistics_job.exit_code
-    print "fastq_statistics completed: exit code %s" % exit_code
+    print("fastq_statistics completed: exit code %s" % exit_code)
     if exit_code != 0:
         raise Exception("fastq_statistics exited with an error")
     ap.params['stats_file'] = stats_file
     ap.params['per_lane_stats_file'] = per_lane_stats_file
-    print "Statistics generation completed: %s" % ap.params.stats_file
-    print "Generating processing QC report"
+    print("Statistics generation completed: %s" % ap.params.stats_file)
+    print("Generating processing QC report")
     processing_qc_html = os.path.join(ap.analysis_dir,
                                       "processing_qc.html")
     report_processing_qc(ap,processing_qc_html)

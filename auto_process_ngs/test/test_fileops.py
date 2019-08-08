@@ -184,7 +184,7 @@ class TestSetGroupFunction(FileopsTestCase):
         current_user = pwd.getpwuid(os.getuid()).pw_name
         groups = [g.gr_gid for g in grp.getgrall()
                   if current_user in g.gr_mem]
-        print "Available groups: %s" % groups
+        print("Available groups: %s" % groups)
         if len(groups) < 2:
             raise unittest.SkipTest("user '%s' must be in at least "
                                     "two groups" % current_user)
@@ -200,23 +200,23 @@ class TestSetGroupFunction(FileopsTestCase):
             self.assertTrue(os.path.isfile(f))
         # Get initial group from a test file
         gid = os.stat(test_file1).st_gid
-        print "File: %s GID: %s" % (test_file1,gid)
+        print("File: %s GID: %s" % (test_file1,gid))
         # Get a second group
         new_gid = None
         for group in groups:
             if group != gid:
                 new_gid = group
                 break
-        print "Selected new GID: %s" % new_gid
+        print("Selected new GID: %s" % new_gid)
         for f in (test_file1,test_file2,test_file3):
             self.assertNotEqual(os.stat(f).st_gid,new_gid)
         # Change group by name
         new_group = grp.getgrgid(new_gid).gr_name
-        print "New group name: %s" % new_group
+        print("New group name: %s" % new_group)
         status = set_group(new_group,test_dir)
         self.assertEqual(status,0)
         for f in (test_file1,test_file2,test_file3):
-            print "File: %s GID: %s"  % (f,os.stat(f).st_gid)
+            print("File: %s GID: %s"  % (f,os.stat(f).st_gid))
             self.assertEqual(os.stat(f).st_gid,new_gid)
 
 class TestUnzip(FileopsTestCase):

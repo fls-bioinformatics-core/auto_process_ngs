@@ -82,7 +82,7 @@ class FastqQualityStats(object):
             nreads += 1
             for pos,q in enumerate(read.quality):
                 quality_per_base[pos][q] += 1
-        #print quality_per_base
+        #print(quality_per_base)
 
         # Median etc positions
         # FIXME these are not correct if the list has an odd number of values!
@@ -96,29 +96,29 @@ class FastqQualityStats(object):
 
         # For each base position determine stats
         for pos,counts in enumerate(quality_per_base):
-            #print "Position: %d" % pos
+            #print("Position: %d" % pos)
             # Expand to a list
             scores = ''
             for q in counts:
                 scores += q*counts[q]
             # Sort into order
             scores = ''.join(sorted(scores))
-            #print scores
+            #print(scores)
             # Get the mean (scores are Phred+33 encoded)
             self.mean.append(float(sum([(ord(q)-33)
                                         for q in scores]))/nreads)
-            #print "Mean: %.2f" % self.mean[pos]
+            #print("Mean: %.2f" % self.mean[pos])
             # Get the median etc
             self.median.append(ord(scores[median_pos])-33)
             self.q25.append(ord(scores[q25_pos])-33)
             self.q75.append(ord(scores[q75_pos])-33)
             self.p10.append(ord(scores[p10_pos])-33)
             self.p90.append(ord(scores[p90_pos])-33)
-            #print "Median: %d" % self.median[pos]
-            #print "Q25   : %d" % self.q25[pos]
-            #print "Q75   : %d" % self.q75[pos]
-            #print "P10   : %d" % self.p10[pos]
-            #print "P90   : %d" % self.p90[pos]
+            #print("Median: %d" % self.median[pos])
+            #print("Q25   : %d" % self.q25[pos])
+            #print("Q75   : %d" % self.q75[pos])
+            #print("P10   : %d" % self.p10[pos])
+            #print("P90   : %d" % self.p90[pos])
 
     def from_fastqc_data(self,fastqc_data):
         """

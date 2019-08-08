@@ -416,7 +416,7 @@ class ProgressChecker(object):
     >>> progress = ProgressChecker(every=100)
     >>> for i in range(10000):
     >>>    if progress.check(i):
-    >>>       print "Item %d" % i
+    >>>       print("Item %d" % i)
 
     To report every 5% of items:
 
@@ -424,7 +424,7 @@ class ProgressChecker(object):
     >>> progress = ProgressChecker(percent=5,total=nitems)
     >>> for i in range(nitems):
     >>>    if progress.check(i):
-    >>>       print "Item %d (%.2f%%)" % (i,progress.percent(i))
+    >>>       print("Item %d (%.2f%%)" % (i,progress.percent(i)))
     """
     def __init__(self,every=None,percent=None,total=None):
         """
@@ -711,15 +711,15 @@ def find_executables(names,info_func,reqs=None,paths=None):
         logger.debug("Versions : %s" % [info_func(x)[2]
                                  for x in available_exes])
     if available_exes:
-        print "%s: found available packages:" % ','.join(names)
+        print("%s: found available packages:" % ','.join(names))
         for i,package in enumerate(available_exes):
             package_info = info_func(package)
-            print "%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
+            print("%s %s\t%s\t%s" % (('*' if i == 0 else ' '),
                                      package_info[0],
                                      package_info[1],
-                                     package_info[2])
+                                     package_info[2]))
     else:
-        print "%s: No packages found" % ','.join(names)
+        print("%s: No packages found" % ','.join(names))
     return available_exes
 
 def parse_version(s):
@@ -914,4 +914,4 @@ def paginate(text):
             pydoc.pager(text)
     else:
         # Stdout not a terminal
-        print text
+        print(text)

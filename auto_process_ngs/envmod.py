@@ -130,7 +130,7 @@ def load(*args):
     """
     for arg in args:
         if arg:
-            print "Loading environment module: %s" % arg
+            print("Loading environment module: %s" % arg)
             module('load',arg)
             if arg not in loaded():
                 raise Exception("Failed to load environment module '%s'" % arg)
@@ -141,7 +141,7 @@ def unload(*args):
     """
     for arg in args:
         if arg:
-            print "Unloading environment module: %s" % arg
+            print("Unloading environment module: %s" % arg)
             module('unload',arg)
 
 def unload_all():

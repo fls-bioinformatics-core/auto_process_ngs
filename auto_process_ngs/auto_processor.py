@@ -58,7 +58,7 @@ def add_command(name,f):
     For example:
 
     >>> def hello(cls):
-    ...    print "Hello %s" % cls.person
+    ...    print("Hello %s" % cls.person)
     ...
     >>> @command("greeting",hello)
     ... class Example:
@@ -77,14 +77,14 @@ def add_command(name,f):
         # Wraps execution of the supplied
         # function to trap exceptions and
         # add additional commentary
-        print "[%s] Running '%s' command" % (timestamp(),name)
+        print("[%s] Running '%s' command" % (timestamp(),name))
         try:
             ret = f(*args,**kws)
         except Exception as ex:
             logging.fatal("%s: %s" % (name,ex))
             ret = 1
         else:
-            print "[%s] %s: finished" % (timestamp(),name)
+            print("[%s] %s: finished" % (timestamp(),name))
         return ret
     def timestamp():
         # Return the current time
@@ -195,7 +195,7 @@ class AutoProcess(object):
             for sub_dir in dirn.split(os.sep):
                 dir_path = os.path.join(dir_path,sub_dir)
                 if not os.path.exists(dir_path):
-                    print "Making %s" % dir_path
+                    print("Making %s" % dir_path)
                     bcf_utils.mkdir(dir_path)
 
     def load_parameters(self,allow_save=True):
@@ -289,24 +289,24 @@ class AutoProcess(object):
         # Migrate missing values from parameter file
         if self.has_parameter_file:
             # Migrate relevant values across
-            print "Migrating metadata values from parameter file"
+            print("Migrating metadata values from parameter file")
             for param in ('platform','run_number','source','assay'):
                 if param not in self.params:
                     continue
                 if self.metadata[param] is None:
                     logging.debug("Importing metadata item '%s': set to "
                               "'%s'" % (param,self.params[param]))
-                    print "Importing metadata item '%s'" % param
+                    print("Importing metadata item '%s'" % param)
                     self.metadata[param] = self.params[param]
         # Run name
         if self.metadata.run_name is None:
-            print "Attempting to set missing 'run_name' metadata item"
+            print("Attempting to set missing 'run_name' metadata item")
             self.metadata['run_name'] = self.run_name
         # Instrument-related metadata
         if self.metadata.instrument_name is None or \
            self.metadata.instrument_datestamp is None or \
            self.metadata.instrument_run_number is None:
-            print "Attempting to set missing instrument metadata items"
+            print("Attempting to set missing instrument metadata items")
             # Extract from run name
             try:
                 datestamp,instrument,run_number,\
@@ -332,8 +332,8 @@ class AutoProcess(object):
                 instrument=self.metadata.instrument_name,
                 settings=self.settings)
             if platform:
-                print "Setting 'platform' metadata item to %s" % \
-                    platform
+                print("Setting 'platform' metadata item to %s" %
+                      platform)
                 self.metadata['platform'] = platform
 
     def edit_samplesheet(self):
@@ -356,7 +356,7 @@ class AutoProcess(object):
         """
         if self.readme_file is None:
             readme_file = os.path.join(self.analysis_dir,'README')
-            print "Initialising %s" % readme_file
+            print("Initialising %s" % readme_file)
             with open(readme_file,'w') as fp:
                 title = "Processing notes for %s" % \
                         os.path.basename(self.analysis_dir)
@@ -494,22 +494,22 @@ class AutoProcess(object):
         """
         if project_metadata_file is not None:
             self.params['project_metadata'] = project_metadata_file
-        print "Project metadata file: %s" % self.params.project_metadata
+        print("Project metadata file: %s" % self.params.project_metadata)
         filen = os.path.join(self.analysis_dir,
                              self.params.project_metadata)
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
-        print "Unaligned_dir: %s" % self.params.unaligned_dir
+        print("Unaligned_dir: %s" % self.params.unaligned_dir)
         illumina_data = IlluminaData.IlluminaData(
             self.analysis_dir,
             unaligned_dir=self.params.unaligned_dir)
         if os.path.exists(filen):
             # Load data from existing file
-            print "Loading project metadata from existing file: %s" % filen
+            print("Loading project metadata from existing file: %s" % filen)
             project_metadata = metadata.ProjectMetadataFile(filen)
         else:
             # New (empty) metadata file
-            print "Creating new project metadata file: %s" % filen
+            print("Creating new project metadata file: %s" % filen)
             project_metadata = metadata.ProjectMetadataFile()
         # Populate/update
         for project in illumina_data.projects:
@@ -533,7 +533,8 @@ class AutoProcess(object):
                 try:
                     IlluminaData.IlluminaData(self.analysis_dir,
                                               unaligned_dir=test_unaligned)
-                    print "Setting 'unaligned_dir' parameter to %s" % test_unaligned
+                    print("Setting 'unaligned_dir' parameter to %s" %
+                          test_unaligned)
                     return test_unaligned
                 except IlluminaData.IlluminaDataError, ex:
                     logging.debug("Unable to load data from %s" % test_unaligned)
@@ -739,8 +740,8 @@ class AutoProcess(object):
             values[i] = data[i]
         field_width = max([len(i) for i in values])
         for item in values:
-            print "%s: %s" % (item+' '*(field_width-len(item)),
-                              values[item])
+            print("%s: %s" % (item+' '*(field_width-len(item)),
+                              values[item]))
 
     def set_param(self,key,value):
         """
@@ -752,7 +753,7 @@ class AutoProcess(object):
 
         """
         if key in self.params:
-            print "Setting parameter '%s' to '%s'" % (key,value)
+            print("Setting parameter '%s' to '%s'" % (key,value))
             self.params[key] = value
         else:
             raise KeyError("Parameter 'key' not found" % key)
@@ -763,9 +764,10 @@ class AutoProcess(object):
 
         """
         if self.has_parameter_file:
-            print "Parameters in %s:" % (os.path.basename(self.parameter_file))
+            print("Parameters in %s:" % (os.path.basename(
+                self.parameter_file)))
         else:
-            print "No parameters file found"
+            print("No parameters file found")
         self.print_values(self.params)
 
     def set_metadata(self,key,value):
@@ -778,7 +780,7 @@ class AutoProcess(object):
 
         """
         if key in self.metadata:
-            print "Setting metadata item '%s' to '%s'" % (key,value)
+            print("Setting metadata item '%s' to '%s'" % (key,value))
             self.metadata[key] = value
         else:
             raise KeyError("Metadata item 'key' not found" % key)
@@ -789,9 +791,10 @@ class AutoProcess(object):
 
         """
         if os.path.exists(self.metadata_file):
-            print "Metadata in %s:" % (os.path.basename(self.metadata_file))
+            print("Metadata in %s:" % (os.path.basename(
+                self.metadata_file)))
         else:
-            print "No metadata file found"
+            print("No metadata file found")
         self.print_values(self.metadata)
 
     def make_project_metadata_file(self,project_metadata_file='projects.info'):
@@ -804,7 +807,7 @@ class AutoProcess(object):
         filen = os.path.join(self.params.analysis_dir,project_metadata_file)
         project_metadata.save(filen)
         self.params['project_metadata'] = project_metadata_file
-        print "Saving project metadata to %s" % self.params.project_metadata
+        print("Saving project metadata to %s" % self.params.project_metadata)
 
     def get_analysis_projects(self,pattern=None):
         """

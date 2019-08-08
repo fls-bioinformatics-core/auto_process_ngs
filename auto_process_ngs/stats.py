@@ -569,7 +569,7 @@ def collect_fastq_data(fqstats):
     fqs = fqstats
     fastq = fqs.fastq
     fastq_name = fqs.name
-    print "* %s: starting" % fastq_name
+    print("* %s: starting" % fastq_name)
     start_time = time.time()
     sys.stdout.flush()
     if fqs.read_number == 1:
@@ -590,10 +590,10 @@ def collect_fastq_data(fqstats):
         # Only get total reads for non-R1 fastqs
         fqs.nreads = FastqReadCounter.zcat_wc(fastq)
     fqs.fsize = os.path.getsize(fastq)
-    print "- %s: finished" % fastq_name
+    print("- %s: finished" % fastq_name)
     end_time = time.time()
-    print "- %s: %d reads, %s" % (fastq_name,
+    print("- %s: %d reads, %s" % (fastq_name,
                                   fqs.nreads,
-                                  bcf_utils.format_file_size(fqs.fsize))
-    print "- %s: took %.2fs" % (fastq_name,(end_time-start_time))
+                                  bcf_utils.format_file_size(fqs.fsize)))
+    print("- %s: took %.2fs" % (fastq_name,(end_time-start_time)))
     return fqs

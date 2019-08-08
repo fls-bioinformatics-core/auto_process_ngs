@@ -389,7 +389,7 @@ class Table(object):
       >>> t = Table(('Key','Value'))
       >>> t.add_row(Key="Employee name",
       ...           Value="John Doe")
-      >>> print t.html()
+      >>> print(t.html())
       <table>
       <tr><th>Key</th><th>Value</th></tr>
       <tr><td>Employee name</td><td>John Doe</td></tr>
@@ -405,7 +405,7 @@ class Table(object):
       >>> t.add_row(name="Test setup",
       ...           date="10/10/2017",
       ...           result="Ok")
-      >>> print t.html()
+      >>> print(t.html())
       <table>
       <tr><th>Experiment</th><th>Date run</th><th>Final result</th></tr>
       <tr><td>Test setup</td><td>10/10/2017</td><td>Ok</td></tr>
@@ -416,7 +416,7 @@ class Table(object):
 
       >>> t.append_columns('verified',verified="Is verified?")
       >>> t.set_value(0,"verified","no")
-      >>> print t.html()
+      >>> print(t.html())
       <table>
       <tr><th>Experiment</th><th>Date run</th><th>Final result</th><th>Is verified?</th></tr>
       <tr><td>Test setup</td><td>10/10/2017</td><td>Ok</td><td>no</td></tr>

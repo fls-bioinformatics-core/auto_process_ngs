@@ -60,7 +60,7 @@ class TestZipArchive(unittest.TestCase):
                         "file exists but is not zip file")
         # Check the contents
         namelist = zipfile.ZipFile(zip_filename).namelist()
-        print namelist
+        print(namelist)
         for item in ('test1',
                      'sub1/test3',
                      'sub1/test4',
@@ -689,7 +689,7 @@ class TestFindExecutables(unittest.TestCase):
                 exes.append(exe)
                 paths.append(os.path.dirname(exe))
             self._prepend_path(os.path.dirname(exe))
-        print os.environ['PATH']
+        print(os.environ['PATH'])
         self.assertEqual(find_executables(("zyzyx","xyxyz",),
                                           self.info_func,
                                           paths=paths),exes)

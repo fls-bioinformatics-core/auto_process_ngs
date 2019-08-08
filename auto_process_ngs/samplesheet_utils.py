@@ -422,7 +422,7 @@ def get_close_names(names):
     for i,name in enumerate(names[:-1]):
         matches = difflib.get_close_matches(name,names[i+1:])
         if len(matches):
-            #print "*** %s: matches %s ***" % (name,matches)
+            #print("*** %s: matches %s ***" % (name,matches))
             close_names[name] = matches
             for name1 in matches:
                 if name1 not in close_names:

@@ -196,10 +196,10 @@ class AnalysisDir(object):
                 # Attempt to acquire values from parameters
                 for param in ('platform','run_number','source','assay'):
                     if param not in params:
-                        print "-- %s: missing" % param
+                        print("-- %s: missing" % param)
                         continue
-                    print "-- %s: setting to '%s'" % (param,
-                                                      params[param])
+                    print("-- %s: setting to '%s'" % (param,
+                                                      params[param]))
                     self.metadata[param] = params[param]
             except Exception as ex:
                 # No parameter file either
@@ -619,29 +619,29 @@ class AnalysisProject(object):
           Exception: if previously stored Fastq source dir
             doesn't match the one supplied via 'fastq_dir'.
         """
-        print "Setting up QC directory"
+        print("Setting up QC directory")
         if qc_dir is None:
             qc_dir = os.path.relpath(self.qc_dir,self.dirn)
-            print "Assuming default QC dir: %s" % qc_dir
+            print("Assuming default QC dir: %s" % qc_dir)
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(self.dirn,qc_dir)
         if not os.path.exists(qc_dir):
-            print "Creating QC dir: %s" % qc_dir
+            print("Creating QC dir: %s" % qc_dir)
             bcf_utils.mkdir(qc_dir,mode=0775)
         else:
-            print "QC dir already exists: %s" % qc_dir
+            print("QC dir already exists: %s" % qc_dir)
         # Set up metadata
         qc_info = self.qc_info(qc_dir)
-        print "qc_dir            : %s" % qc_dir
-        print "Supplied fastq_dir: %s" % fastq_dir
-        print "Stored fastq_dir  : %s" % qc_info.fastq_dir
+        print("qc_dir            : %s" % qc_dir)
+        print("Supplied fastq_dir: %s" % fastq_dir)
+        print("Stored fastq_dir  : %s" % qc_info.fastq_dir)
         if fastq_dir is None:
             if qc_info.fastq_dir is not None:
                 fastq_dir = qc_info.fastq_dir
-                print "Using stored Fastq dir for this QC dir"
+                print("Using stored Fastq dir for this QC dir")
             else:
                 fastq_dir = os.path.relpath(self.fastq_dir,self.dirn)
-                print "Assuming default Fastq dir: %s" % fastq_dir
+                print("Assuming default Fastq dir: %s" % fastq_dir)
         if qc_info.fastq_dir is not None:
             if qc_info.fastq_dir != fastq_dir:
                 raise Exception("Project '%s': supplied Fastq dir ('%s') "
@@ -650,7 +650,7 @@ class AnalysisProject(object):
                                               fastq_dir,
                                               qc_info.fastq_dir,
                                               qc_dir))
-        print "Setting associated Fastq dir: %s" % fastq_dir
+        print("Setting associated Fastq dir: %s" % fastq_dir)
         qc_info['fastq_dir'] = fastq_dir
         qc_info.save()
         # Return the path to the QC directory

@@ -440,7 +440,7 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         fp = gzip.GzipFile(filename=fastq_out,mode='wb')
     else:
         fp = open(fastq_out,'w')
-    print "Processing reads from %s" % fastq_in
+    print("Processing reads from %s" % fastq_in)
     nread = 0
     for read in FastqIterator(fastq_in):
         # Extract new barcode sequence
@@ -454,7 +454,7 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         read.quality = quality
         fp.write("%s\n" % read)
         nread += 1
-    print "Finished (%d reads processed)" % nread
+    print("Finished (%d reads processed)" % nread)
     return nread
 
 def get_read_number(fastq):
@@ -485,7 +485,7 @@ def get_read_count(fastqs):
     nreads = 0
     for fq in fastqs:
         n = FastqReadCounter.zcat_wc(fq)
-        print "%s:\t%d" % (os.path.basename(fq),n)
+        print("%s:\t%d" % (os.path.basename(fq),n))
         nreads += n
     return nreads
 

@@ -231,16 +231,16 @@ class SimpleScheduler(threading.Thread):
             while not self.is_empty():
                 time.sleep(self.__poll_interval)
         except KeyboardInterrupt:
-            print "KeyboardInterrupt"
+            print("KeyboardInterrupt")
             self.stop()
-            print "Terminating running jobs:"
+            print("Terminating running jobs:")
             for job in self.__running:
-                print "\t#%d (%s): \"%s\" (%s)" % (job.job_number,
+                print("\t#%d (%s): \"%s\" (%s)" % (job.job_number,
                                                    job.job_id,
                                                    job.name,
-                                                   date_and_time(job.start_time))
+                                                   date_and_time(job.start_time)))
                 job.terminate()
-            print "Finished"
+            print("Finished")
 
     def wait_for(self,names,timeout=None):
         """Wait until the named jobs/groups have completed
@@ -268,16 +268,16 @@ class SimpleScheduler(threading.Thread):
                         (names,timeout))
                 time.sleep(self.__poll_interval)
         except KeyboardInterrupt:
-            print "KeyboardInterrupt"
+            print("KeyboardInterrupt")
             self.stop()
-            print "Terminating running jobs:"
+            print("Terminating running jobs:")
             for job in self.__running:
-                print "\t#%d (%s): \"%s\" (%s)" % (job.job_number,
+                print("\t#%d (%s): \"%s\" (%s)" % (job.job_number,
                                                    job.job_id,
                                                    job.name,
-                                                   date_and_time(job.start_time))
+                                                   date_and_time(job.start_time)))
                 job.terminate()
-            print "Finished"
+            print("Finished")
 
     def submit(self,args,runner=None,name=None,wd=None,log_dir=None,
                wait_for=None,callbacks=[]):

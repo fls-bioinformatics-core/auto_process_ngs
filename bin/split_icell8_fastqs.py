@@ -89,7 +89,7 @@ def main():
         well_list_file = os.path.abspath(args.well_list_file)
     well_list = ICell8WellList(well_list_file)
     expected_barcodes = set(well_list.barcodes())
-    print "%d expected barcodes" % len(expected_barcodes)
+    print("%d expected barcodes" % len(expected_barcodes))
 
     # Filtering on barcode
     do_check_barcodes = args.discard_unknown_barcodes
@@ -133,14 +133,14 @@ def main():
     # Iterate over pairs of Fastqs
     for fastq_pair in fastqs:
         # Iterate over read pairs from the Fastqs
-        print "-- %s\n   %s" % fastq_pair
-        print "   Starting at %s" % time.ctime()
+        print("-- %s\n   %s" % fastq_pair)
+        print("   Starting at %s" % time.ctime())
         start_time = time.time()
         for i,read_pair in enumerate(ICell8FastqIterator(*fastq_pair),start=1):
             # Deal with read pair
             if (i % 100000) == 0:
-                print "   Examining read pair #%d (%s)" % \
-                    (i,time.ctime())
+                print("   Examining read pair #%d (%s)" %
+                      (i,time.ctime()))
             inline_barcode = read_pair.barcode
             barcode_list.add(inline_barcode)
             # Initial assignment
@@ -204,26 +204,26 @@ def main():
                                     "%s.%s.r2.%s" %
                                     (basename,assign_to,fastq_ext))
             output_fqs.write(fq_r2,"%s" % read_pair.r2)
-        print "   Finished at %s" % time.ctime()
-        print "   (Took %.0fs)" % (time.time()-start_time)
+        print("   Finished at %s" % time.ctime())
+        print("   (Took %.0fs)" % (time.time()-start_time))
     # Close output files
     output_fqs.close()
 
     # Summary output to screen
     total_reads = assigned + unassigned
-    print "Summary:"
-    print "--------"
-    print "Number of barcodes         : %d" % len(barcode_list)
+    print("Summary:")
+    print("--------")
+    print("Number of barcodes         : %d" % len(barcode_list))
     if do_check_barcodes:
-        print "Number of expected barcodes: %d/%d" % \
-            (len(filtered_counts.keys()),
-             len(expected_barcodes))
-    print "Total reads                : %d" % total_reads
+        print("Number of expected barcodes: %d/%d" %
+              (len(filtered_counts.keys()),
+               len(expected_barcodes)))
+    print("Total reads                : %d" % total_reads)
     if do_quality_filter:
-        print "Total reads (filtered)     : %d" % filtered
+        print("Total reads (filtered)     : %d" % filtered)
     if do_check_barcodes:
-        print "Total reads (assigned)     : %d" % assigned
-        print "Unassigned reads           : %d" % unassigned
+        print("Total reads (assigned)     : %d" % assigned)
+        print("Unassigned reads           : %d" % unassigned)
 
 ######################################################################
 # Main

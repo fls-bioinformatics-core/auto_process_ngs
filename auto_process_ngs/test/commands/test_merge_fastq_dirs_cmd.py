@@ -77,7 +77,7 @@ poll_interval = 0.5
         mockdir1.add_fastq_batch('AB','AB1','AB1_S1',lanes=lanes)
         mockdir1.add_fastq_batch('AB','AB2','AB2_S2',lanes=lanes)
         m1 = mockdir1.create()
-        print m1
+        print(m1)
         mockdir2 = MockAnalysisDir("161209_K123_0001_BLAH2",
                                    "hiseq",
                                    unaligned_dir='bcl2fastq.CDE',
@@ -104,7 +104,7 @@ poll_interval = 0.5
             with gzip.GzipFile(undetermined_r2,'wb') as fq:
                 for i in xrange(4):
                     fq.write("%s\n" % fastq_reads_r2[n*4+i])
-        print m2
+        print(m2)
         return m1
 
     def _setup_bcl2fastq2(self):
@@ -121,7 +121,7 @@ poll_interval = 0.5
         mockdir1.add_fastq_batch('AB','AB1','AB1_S1',lanes=[1,2])
         mockdir1.add_fastq_batch('AB','AB2','AB2_S2',lanes=[1,2])
         m1 = mockdir1.create()
-        print m1
+        print(m1)
         mockdir2 = MockAnalysisDir("161209_K123_0002_BLAH2",
                                    "hiseq",
                                    unaligned_dir='bcl2fastq.lanes3-4',
@@ -138,7 +138,7 @@ poll_interval = 0.5
         # Remove unwanted project dirs and files
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
-        print m2
+        print(m2)
         return m1
 
     def _setup_casava(self):
@@ -155,7 +155,7 @@ poll_interval = 0.5
         mockdir1.add_fastq_batch('AB','AB1','AB1_GCCAAT',lanes=[1,2])
         mockdir1.add_fastq_batch('AB','AB2','AB2_AGTCAA',lanes=[1,2])
         m1 = mockdir1.create()
-        print m1
+        print(m1)
         mockdir2 = MockAnalysisDir("161209_K123_0003_BLAH2",
                                    "hiseq",
                                    unaligned_dir='bcl2fastq.lanes3-4',
@@ -172,7 +172,7 @@ poll_interval = 0.5
         # Remove unwanted project dirs and files
         shutil.rmtree(os.path.join(m1,'AB'))
         shutil.rmtree(os.path.join(m1,'undetermined'))
-        print m2
+        print(m2)
         return m1
 
     def _assert_dir_exists(self,path):

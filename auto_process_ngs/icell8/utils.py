@@ -91,9 +91,9 @@ def get_batch_size(fastqs,min_batches=1,
       Tuple: tuple of (batch_size,nbatches).
     """
     # Count the total number of reads
-    print "Fetching read counts"
+    print("Fetching read counts")
     nreads = get_read_count(fastqs)
-    print "Total reads: %d" % nreads
+    print("Total reads: %d" % nreads)
 
     # Default incrementer function: add the initial
     # number of batches on to get new number
@@ -103,8 +103,8 @@ def get_batch_size(fastqs,min_batches=1,
     # Determine batch size
     batch_size = nreads/min_batches
     nbatches = min_batches
-    print "Initial batch size: %d" % batch_size
-    print "Maximum batch size: %d" % max_batch_size
+    print("Initial batch size: %d" % batch_size)
+    print("Maximum batch size: %d" % max_batch_size)
     if max_batch_size > 0:
         while batch_size > max_batch_size or batch_size*nbatches < nreads:
             # Reset the number of batches
@@ -113,12 +113,12 @@ def get_batch_size(fastqs,min_batches=1,
             batch_size = nreads/nbatches
             if nreads%nbatches:
                 batch_size += 1
-            print "Trying %d batches: %d reads" % (nbatches,batch_size)
+            print("Trying %d batches: %d reads" % (nbatches,batch_size))
         logger.warning("Maximum batch size exceeded (%d), "
                        "increasing number of batches to %d"
                        % (max_batch_size,nbatches))
         logger.warning("New batch size: %d" % batch_size)
-    print "Final batch size: %d" % batch_size
+    print("Final batch size: %d" % batch_size)
 
     # Assert that all reads are covered with none left over
     # with no remainder
@@ -149,8 +149,8 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
     nbatches = nreads/batch_size
     if nbatches*batch_size < nreads:
         nbatches += 1
-    print "Creating %d batches of %d reads" % (nbatches,
-                                               batch_size)
+    print("Creating %d batches of %d reads" % (nbatches,
+                                               batch_size))
     assert(batch_size*nbatches >= nreads)
 
     # Check if fastqs are compressed
@@ -184,7 +184,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
                           working_dir=out_dir)
     if retcode != 0:
         raise Exception("Batching failed: exit code %s" % retcode)
-    print "Batching completed"
+    print("Batching completed")
 
     # Collect and return the batched Fastq names
     batched_fastqs = [os.path.join(out_dir,
@@ -454,8 +454,8 @@ class ICell8FastqIterator(Iterator):
     instances, for example:
 
     >>> for pair in ICell8FastqIterator(fq1,fq2):
-    >>>   print "-- R1: %s" % pair.r1
-    >>>   print "   R2: %s" % pair.r2
+    >>>   print("-- R1: %s" % pair.r1)
+    >>>   print("   R2: %s" % pair.r2)
     """
     def __init__(self,fqr1,fqr2):
         """
@@ -475,10 +475,10 @@ class ICell8FastqIterator(Iterator):
         try:
             return ICell8ReadPair(r1,r2)
         except Exception as ex:
-            print "Failed to create read pair:"
-            print "-- Read pair number: %d" % self._read_count
-            print "-- Read 1:\n%s" % r1
-            print "-- Read 2:\n%s" % r2
+            print("Failed to create read pair:")
+            print("-- Read pair number: %d" % self._read_count)
+            print("-- Read 1:\n%s" % r1)
+            print("-- Read 2:\n%s" % r2)
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
 
@@ -551,12 +551,12 @@ class ICell8StatsCollector(object):
             is a dictionary with barcodes as keys and
             sets of UMIs as values.
         """
-        print "collect_fastq_stats: started: %s" % fastq
+        print("collect_fastq_stats: started: %s" % fastq)
         try:
             n = FastqReadCounter.zcat_wc(fastq)
-            print "%s: processing %d read%s" % (
+            print("%s: processing %d read%s" % (
                 os.path.basename(fastq),
-                n,('s' if n != 1 else ''))
+                n,('s' if n != 1 else '')))
             counts = {}
             umis = {}
             progress = ProgressChecker(percent=5,total=n)
@@ -574,15 +574,15 @@ class ICell8StatsCollector(object):
                     umis[barcode] = set((umi,))
                 if self._verbose:
                     if progress.check(i):
-                        print "%s: %s: processed %d reads (%.1f%%)" % (
-                            time.strftime("%Y%m%d.%H%M%S"),
-                            os.path.basename(fastq),
-                            i,progress.percent(i))
+                        print("%s: %s: processed %d reads (%.1f%%)" %
+                              (time.strftime("%Y%m%d.%H%M%S"),
+                               os.path.basename(fastq),
+                               i,progress.percent(i)))
         except Exception as ex:
-            print "collect_fastq_stats: caught exception: '%s'" % ex
+            print("collect_fastq_stats: caught exception: '%s'" % ex)
             raise Exception("collect_fastq_stats: %s: caught exception "
                             "'%s'",(fastq,ex))
-        print "collect_fastq_stats: returning: %s" % fastq
+        print("collect_fastq_stats: returning: %s" % fastq)
         return (fastq,counts,umis)
 
 class ICell8Stats(object):
@@ -626,31 +626,31 @@ class ICell8Stats(object):
         # Set up collector instance
         collector = ICell8StatsCollector(verbose=True)
         # Collect statistics for each file
-        print "Collecting stats..."
+        print("Collecting stats...")
         if nprocs > 1:
             # Multiple cores
-            print "Multicore mode (%d cores)" % nprocs
+            print("Multicore mode (%d cores)" % nprocs)
             pool = Pool(nprocs)
             results = pool.map(collector,fastqs)
-            print "Processes completed, disposing of pool.."
+            print("Processes completed, disposing of pool..")
             pool.close()
             pool.join()
-            print "Pool disposal complete"
+            print("Pool disposal complete")
         else:
             # Single core
-            print "Single core mode"
+            print("Single core mode")
             results = map(collector,fastqs)
         # Combine results
-        print "Merging stats from each Fastq:"
+        print("Merging stats from each Fastq:")
         self._counts = {}
         self._umis = {}
         for fq,fq_counts,fq_umis in results:
-            print "- %s" % fq
+            print("- %s" % fq)
             nbarcodes = len(fq_counts)
             progress = ProgressChecker(percent=5,total=nbarcodes)
-            print "  %d barcode%s" % (nbarcodes,
+            print("  %d barcode%s" % (nbarcodes,
                                       ('s' if nbarcodes != 1
-                                       else ''))
+                                       else '')))
             for i,barcode in enumerate(fq_counts):
                 try:
                     self._counts[barcode] += fq_counts[barcode]
@@ -662,22 +662,22 @@ class ICell8Stats(object):
                     self._umis[barcode] = set(fq_umis[barcode])
                 if verbose:
                     if progress.check(i):
-                        print "  %d barcodes merged (%.1f%%)" \
-                            % (i,progress.percent(i))
+                        print("  %d barcodes merged (%.1f%%)" %
+                              (i,progress.percent(i)))
         nbarcodes = len(self._counts)
-        print "Total %s barcode%s" % (nbarcodes,
+        print("Total %s barcode%s" % (nbarcodes,
                                       ('s' if nbarcodes != 1
-                                       else ''))
+                                       else '')))
         # Create unique sorted UMI lists
-        print "Sorting UMI lists for each barcode"
+        print("Sorting UMI lists for each barcode")
         progress = ProgressChecker(percent=5,total=nbarcodes)
         for i,barcode in enumerate(self._umis):
             self._umis[barcode] = sorted(list(self._umis[barcode]))
             if verbose:
                 if progress.check(i):
-                    print "- UMIs sorted for %d barcodes (%.1f%%)" \
-                        % (i,progress.percent(i))
-        print "Finished stats collection"
+                    print("- UMIs sorted for %d barcodes (%.1f%%)" %
+                          (i,progress.percent(i)))
+        print("Finished stats collection")
 
     def barcodes(self):
         """

@@ -82,7 +82,7 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
     # Attempt to look up the instrument name
     platform = None
     if instrument is None:
-        print "Extracting instrument name from directory name"
+        print("Extracting instrument name from directory name")
         try:
             datestamp,instrument,run_number,\
                 flow_cell_prefix,flow_cell_id = \
@@ -91,7 +91,7 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
             logger.warning("Unable to extract instrument name: "
                            "%s" % ex)
     if instrument and settings:
-        print "Identifying platform from instrument name"
+        print("Identifying platform from instrument name")
         try:
             return settings.sequencers[instrument]
         except KeyError:
@@ -99,7 +99,7 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
             logger.warning("Instrument name '%s' not found in "
                            "configuration file" % instrument)
     # Fall back to old method
-    print "Identifying platform from data directory name"
+    print("Identifying platform from data directory name")
     platform = platforms.get_sequencer_platform(dirn)
     if platform is None:
         logger.warning("Unable to identify platform from "
@@ -341,7 +341,7 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None):
     """
     # Get initial bases mask
     bases_mask = IlluminaData.IlluminaRunInfo(run_info_xml).bases_mask
-    print "Bases mask: %s (from RunInfo.xml)" % bases_mask
+    print("Bases mask: %s (from RunInfo.xml)" % bases_mask)
     if sample_sheet_file is not None:
         # Update bases mask from sample sheet
         example_barcode = IlluminaData.samplesheet_index_sequence(
@@ -349,12 +349,12 @@ def get_bases_mask(run_info_xml,sample_sheet_file=None):
         if example_barcode is None:
             example_barcode = ""
         if barcode_is_10xgenomics(example_barcode):
-            print "Bases mask: barcode is 10xGenomics sample set ID"
+            print("Bases mask: barcode is 10xGenomics sample set ID")
         else:
             bases_mask = IlluminaData.fix_bases_mask(bases_mask,
                                                      example_barcode)
-        print "Bases mask: %s (updated for barcode sequence '%s')" % \
-            (bases_mask,example_barcode)
+        print("Bases mask: %s (updated for barcode sequence '%s')" %
+              (bases_mask,example_barcode))
     return bases_mask
 
 def bases_mask_is_valid(bases_mask):
@@ -594,7 +594,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     else:
         log_dir = os.path.abspath(log_dir)
     # Run the configure command
-    print "Running %s" % configure_cmd
+    print("Running %s" % configure_cmd)
     configure_job = SchedulerJob(
         SimpleJobRunner(join_logs=True),
         configure_cmd.command_line,
@@ -628,7 +628,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     if not make_cmd.has_exe:
         logger.error("'%s' missing, cannot run" % make_cmd.command)
         return -1
-    print "Running %s" % make_cmd
+    print("Running %s" % make_cmd)
     make_job = SchedulerJob(
         runner,
         make_cmd.command_line,
@@ -780,7 +780,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     else:
         log_dir = os.path.abspath(log_dir)
     # Run the command
-    print "Running %s" % bcl2fastq2_cmd
+    print("Running %s" % bcl2fastq2_cmd)
     bcl2fastq_job = SchedulerJob(
         runner,
         bcl2fastq2_cmd.command_line,

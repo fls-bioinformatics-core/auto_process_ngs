@@ -385,7 +385,7 @@ def build_fastq_path_dir(project_dir):
     fq_dir = os.path.join(fastq_path_dir,project.name)
     mkdirs(fq_dir)
     for fastq in project.fastqs:
-        print fastq
+        print(fastq)
         link_name = os.path.join(fq_dir,os.path.basename(fastq))
         if os.path.exists(link_name):
             logger.warning("%s: already exists" % link_name)
@@ -631,7 +631,7 @@ def run_cellranger_mkfastq(sample_sheet,
                         localcores=cellranger_localcores,
                         localmem=cellranger_localmem)
     # Run the command
-    print "Running %s" % cmd
+    print("Running %s" % cmd)
     if not dry_run:
         # Sort out the working directory
         if working_dir is None:
@@ -658,7 +658,7 @@ def run_cellranger_mkfastq(sample_sheet,
             cellranger_mkfastq_job.terminate()
             raise ex
         exit_code = cellranger_mkfastq_job.exit_code
-        print "cellranger mkfastq completed: exit code %s" % exit_code
+        print("cellranger mkfastq completed: exit code %s" % exit_code)
         if exit_code != 0:
             logger.error("cellranger mkfastq exited with an error")
             return exit_code
@@ -763,7 +763,7 @@ def run_cellranger_count(fastq_dir,
     """
     # Cellranger mode
     cellranger_mode = os.path.basename(cellranger_exe)
-    print "Cellranger mode: %s" % cellranger_mode
+    print("Cellranger mode: %s" % cellranger_mode)
     # Input data
     sample_names = {}
     try:
@@ -777,7 +777,7 @@ def run_cellranger_count(fastq_dir,
         logger.critical("Couldn't load data from '%s'" %
                          fastq_dir)
         return 1
-    print "Samples: %s" % sample_names
+    print("Samples: %s" % sample_names)
     projects = sample_names.keys()
 
     # Set up a scheduler
@@ -797,15 +797,15 @@ def run_cellranger_count(fastq_dir,
         log_dir = get_numbered_subdir("%s_count" % cellranger_mode,
                                       parent_dir=log_dir,
                                       full_path=True)
-        print "Log directory: %s" % log_dir
+        print("Log directory: %s" % log_dir)
         mkdirs(log_dir)
 
     # Submit the cellranger count jobs
     jobs = []
     for project in projects:
-        print "Project: %s" % project
+        print("Project: %s" % project)
         for sample in sample_names[project]:
-            print "Sample: %s" % sample
+            print("Sample: %s" % sample)
             # Check if outputs already exist
             count_dir = os.path.abspath(
                 os.path.join(project,
@@ -813,17 +813,17 @@ def run_cellranger_count(fastq_dir,
                              sample,
                              "outs"))
             if os.path.isdir(count_dir):
-                print "-- %s: outputs exist, nothing to do" % sample
+                print("-- %s: outputs exist, nothing to do" % sample)
                 continue
             else:
-                print "-- %s: setting up %s count" % (sample,
-                                                      cellranger_mode)
+                print("-- %s: setting up %s count" % (sample,
+                                                      cellranger_mode))
             # Set up job for this sample
             work_dir = os.path.abspath("tmp.%s_count.%s.%s" %
                                        (cellranger_mode,
                                         project,sample))
             mkdirs(work_dir)
-            print "Working directory: %s" % work_dir
+            print("Working directory: %s" % work_dir)
             cmd = Command(cellranger_exe,
                           "count",
                           "--id",sample,
@@ -841,7 +841,7 @@ def run_cellranger_count(fastq_dir,
                                 jobinterval=cellranger_jobinterval,
                                 localcores=cellranger_localcores,
                                 localmem=cellranger_localmem)
-            print "Running: %s" % cmd
+            print("Running: %s" % cmd)
             if not dry_run:
                 job = sched.submit(cmd,
                                    name="%s_count.%s.%s" %
@@ -869,9 +869,9 @@ def run_cellranger_count(fastq_dir,
 
     # Handle outputs
     for project in projects:
-        print "Project: %s" % project
+        print("Project: %s" % project)
         for sample in sample_names[project]:
-            print "Sample: %s" % sample
+            print("Sample: %s" % sample)
             # Destination for count output
             count_dir = os.path.abspath(
                 os.path.join(project,
@@ -886,7 +886,7 @@ def run_cellranger_count(fastq_dir,
                                     "outs")
             if not summary_only:
                 # Collect all outputs
-                print "Copying contents of %s to %s" % (outs_dir,count_dir)
+                print("Copying contents of %s to %s" % (outs_dir,count_dir))
                 shutil.copytree(outs_dir,count_dir)
             else:
                 # Only collect the web and csv summaries
@@ -902,9 +902,9 @@ def run_cellranger_count(fastq_dir,
                         logger.warning("%s: not found in %s" % (f,outs_dir))
                         retval = 1
                     else:
-                        print "Copying %s from %s to %s" % (f,
+                        print("Copying %s from %s to %s" % (f,
                                                             outs_dir,
-                                                            count_dir)
+                                                            count_dir))
                         shutil.copy(path,count_dir)
                 # Stop if there was an error
                 if retval != 0:
@@ -925,7 +925,7 @@ def run_cellranger_count(fastq_dir,
                               prefix="cellranger_count_report.%s.%s" %
                               (project,analysis_dir))
         # Construct index page
-        print "Making report for project %s" % project
+        print("Making report for project %s" % project)
         count_report = Document("%s: cellranger count" % project)
         count_report.add_css_rule(css_rules.QC_REPORT_CSS_RULES)
         summaries = count_report.add_section()
@@ -937,8 +937,8 @@ def run_cellranger_count(fastq_dir,
                                        sample,
                                        "outs",
                                        "web_summary.html")
-            print "Adding web summary (%s) for %s" % (web_summary,
-                                                      sample)
+            print("Adding web summary (%s) for %s" % (web_summary,
+                                                      sample))
             summary_links.add_item(Link("%s" % sample,
                                         web_summary))
             # Add to the zip file

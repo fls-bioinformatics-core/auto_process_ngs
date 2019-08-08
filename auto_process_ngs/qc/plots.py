@@ -211,7 +211,7 @@ def uboxplot(fastqc_data=None,fastq=None,
         pixels[fastq_stats.nbases-1,j] = box_color
     # For each base position determine stats
     for i in xrange(fastq_stats.nbases):
-        #print "Position: %d" % i
+        #print("Position: %d" % i)
         try:
             for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
                 # 10th-90th percentile coloured cyan
@@ -304,7 +304,7 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
         y = im*4 + 1
         for i in xrange(x,x+8):
             for j in xrange(y,y+3):
-                #print "%d %d" % (i,j)
+                #print("%d %d" % (i,j))
                 pixels[i,j] = code['rgb']
     # Output the plot to file
     fp,tmp_plot = tempfile.mkstemp(".ufastqc.png")

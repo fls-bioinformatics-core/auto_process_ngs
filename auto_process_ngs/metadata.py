@@ -65,7 +65,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     >>> metadata['valediction'] = 'goodbye'
 
     Retrieve values:
-    >>> print "Salutation is %s" % metadata.salutation
+    >>> print("Salutation is %s" % metadata.salutation)
 
     Save to file:
     >>> metadata.save('metadata.tsv')

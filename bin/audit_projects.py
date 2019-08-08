@@ -107,7 +107,7 @@ if __name__ == "__main__":
                         if not fnmatch.fnmatch(pi,args.pi_name):
                             # Skip non-matching name
                             continue
-                    #(print "\t%s: %s" % (p.name,pi))
+                    #print("\t%s: %s" % (p.name,pi))
                     if pi not in audit_data:
                         audit_data[pi] = []
                     # Acquire size of data

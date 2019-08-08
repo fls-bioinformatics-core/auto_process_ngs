@@ -156,21 +156,21 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         dest = final_dest
     else:
         dest = staging
-    print "Copying to archive directory: %s" % archive_dir
-    print "Platform   : %s" % platform
-    print "Year       : %s" % year
-    print "Destination: %s %s" % (dest,
+    print("Copying to archive directory: %s" % archive_dir)
+    print("Platform   : %s" % platform)
+    print("Year       : %s" % year)
+    print("Destination: %s %s" % (dest,
                                   "(final)" if final else
-                                  "(staging)")
+                                  "(staging)"))
     # Check if final archive already exists
     if fileops.exists(os.path.join(archive_dir,final_dest)):
         raise Exception("Final archive already exists, stopping")
     # Report available space on target filesystem
     usage = fileops.disk_usage(archive_dir)
-    print "Available  : %s/%s (%s%% in use)" % \
-        (format_file_size(usage.free),
-         format_file_size(usage.total),
-         usage.percent)
+    print("Available  : %s/%s (%s%% in use)" %
+          (format_file_size(usage.free),
+           format_file_size(usage.total),
+           usage.percent))
     # Check metadata
     check_metadata = ap.check_metadata(('source','run_number'))
     if not check_metadata:
@@ -213,13 +213,13 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             # because there are links from the analysis directories
             for project in projects:
                 if project.fastqs_are_symlinks:
-                    print "Found at least one project with fastq " \
-                        "symlinks (%s)" % project.name
+                    print("Found at least one project with fastq "
+                          "symlinks (%s)" % project.name)
                     include_bcl2fastq = True
                     break
         if not include_bcl2fastq:
-            print "Excluding '%s' directory from archive" % \
-                ap.params.unaligned_dir
+            print("Excluding '%s' directory from archive" %
+                  ap.params.unaligned_dir)
             excludes.append('--exclude=%s' % ap.params.unaligned_dir)
         # 10xgenomics products to exclude
         excludes.append('--exclude=*.mro')
@@ -267,7 +267,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 dry_run=dry_run,
                 chmod='ugo-w',
                 extra_options=extra_options)
-            print "Running %s" % rsync_fastqs
+            print("Running %s" % rsync_fastqs)
             rsync_fastqs_job = sched.submit(rsync_fastqs,
                                             name="rsync.archive_fastqs")
             # Exclude fastqs from main rsync
@@ -289,7 +289,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             dry_run=dry_run,
             chmod=perms,
             extra_options=excludes)
-        print "Running %s" % rsync
+        print("Running %s" % rsync)
         rsync_job = sched.submit(rsync,name="rsync.archive",
                                  wait_for=wait_for)
         archiving_jobs.append(rsync_job)
@@ -297,8 +297,8 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         rsync_job.wait()
         # Check exit status on jobs
         for job in archiving_jobs:
-            print "%s completed: exit code %s" % (job.name,
-                                                  job.exit_code)
+            print("%s completed: exit code %s" % (job.name,
+                                                  job.exit_code))
         retval = sum([j.exit_code for j in archiving_jobs])
         if retval != 0:
             logger.warning("One or more archiving jobs failed "
@@ -306,23 +306,23 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         else:
             # Set the group
             if group is not None:
-                print "Setting group of archived files to '%s'" % group
+                print("Setting group of archived files to '%s'" % group)
                 if not dry_run:
                     set_group = fileops.set_group_command(
                         group,
                         os.path.join(archive_dir,staging),
                         safe=force,
                         verbose=True)
-                    print "Running %s" % set_group
+                    print("Running %s" % set_group)
                     set_group_job = sched.submit(
                         set_group,
                         name="set_group.archive")
                     set_group_job.wait()
                     # Check exit status
                     exit_code = set_group_job.exit_code
-                    print "%s completed: exit code %s" % (
+                    print("%s completed: exit code %s" % (
                         set_group_job.name,
-                        exit_code)
+                        exit_code))
                     if exit_code != 0:
                         logger.warning("Setting group failed (non-zero "
                                        "exit status code returned)")
@@ -338,15 +338,15 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 logger.warning("Staging to archive failed (ignored)")
     # Move to final location
     if final:
-        print "Moving to final location: %s" % final_dest
+        print("Moving to final location: %s" % final_dest)
         if not dry_run:
             fileops.rename(os.path.join(archive_dir,staging),
                            os.path.join(archive_dir,final_dest))
     # Report usage of target filesystem
     usage = fileops.disk_usage(archive_dir)
-    print "Usage of archive: %s available (of %s) (%s%% in use)" % \
-        (format_file_size(usage.free),
-         format_file_size(usage.total),
-         usage.percent)
+    print("Usage of archive: %s available (of %s) (%s%% in use)" %
+          (format_file_size(usage.free),
+           format_file_size(usage.total),
+           usage.percent))
     # Finish
     return retval

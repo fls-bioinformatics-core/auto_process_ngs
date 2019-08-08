@@ -162,11 +162,11 @@ def update_project_metadata(unaligned_dir,
     filen = os.path.abspath(project_metadata_file)
     if os.path.exists(filen):
         # Load data from existing file
-        print "Loading project metadata from existing file: %s" % filen
+        print("Loading project metadata from existing file: %s" % filen)
         project_metadata = ProjectMetadataFile(filen)
     else:
         # New (empty) metadata file
-        print "Creating new project metadata file: %s" % filen
+        print("Creating new project metadata file: %s" % filen)
         project_metadata = ProjectMetadataFile()
     # Populate/update
     for project in illumina_data.projects:
@@ -359,7 +359,7 @@ if __name__ == "__main__":
                        help="report commands that would be run "
                        "(don't execute them)")
     args = parser.parse_args()
-    print "command: %s" % args.command
+    print("command: %s" % args.command)
 
     # Deal with environment modules
     if args.command in ("mkfastq","count","count-atac"):
@@ -413,7 +413,7 @@ if __name__ == "__main__":
             cellranger_exe = "cellranger"
         if args.projects:
             for project in args.projects:
-                print "Project: %s" % project
+                print("Project: %s" % project)
                 if cellranger_exe == "cellranger":
                     # Fetch transcriptome for project
                     reference_data = args.transcriptome
@@ -423,7 +423,7 @@ if __name__ == "__main__":
                                 os.path.basename(project),
                                 project).info.organism,
                             __settings['10xgenomics_transcriptomes'])
-                    print "Transcriptome: %s" % reference_data
+                    print("Transcriptome: %s" % reference_data)
                     # Handle chemistry argument
                     chemistry = args.chemistry
                 elif cellranger_exe == "cellranger-atac":
@@ -435,7 +435,7 @@ if __name__ == "__main__":
                                 os.path.basename(project),
                                 project).info.organism,
                             __settings['10xgenomics_atac_genome_references'])
-                    print "ATAC genome reference: %s" % reference_data
+                    print("ATAC genome reference: %s" % reference_data)
                     # Don't supply chemistry argument
                     chemistry = None
                 # Run single library analysis
