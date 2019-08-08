@@ -1139,7 +1139,7 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     run_name = os.path.basename(os.path.normpath(run_name))
     try:
         datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-    except Exception, ex:
+    except Exception as ex:
         logger.warning("Unable to extract information from run name '%s'" \
                        % run_name)
         logger.warning("Exception: %s" % ex)

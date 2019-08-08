@@ -501,7 +501,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             # Identify the keyword parameter for this field
             try:
                 kw = self._kwmap[field]
-            except KeyError,ex:
+            except KeyError as ex:
                 raise ex
             # Look up the assigned value
             try:
@@ -545,7 +545,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             # Identify the keyword parameter for this field
             try:
                 kw = self._kwmap[field]
-            except KeyError,ex:
+            except KeyError as ex:
                 raise ex
             # Assign the new values
             if kw not in kws:

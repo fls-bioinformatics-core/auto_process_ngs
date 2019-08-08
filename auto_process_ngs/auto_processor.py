@@ -155,7 +155,7 @@ class AutoProcess(object):
             self.analysis_dir = os.path.abspath(self.analysis_dir)
             try:
                 self.load_parameters(allow_save=allow_save_params)
-            except MissingParameterFileException, ex:
+            except MissingParameterFileException as ex:
                 # No parameter file
                 logging.warning("Failed to load parameters: %s (ignored)" % ex)
                 logging.warning("Perhaps this is not an auto_process project?")
@@ -163,7 +163,7 @@ class AutoProcess(object):
                 self.params['unaligned_dir'] = self.detect_unaligned_dir()
                 if self.params.unaligned_dir is None:
                     logging.warning("Unable to find subdirectory containing data")
-            except Exception, ex:
+            except Exception as ex:
                 logging.error("Failed to load parameters: %s" % ex)
                 logging.error("Stopping")
                 sys.exit(1)
@@ -171,11 +171,11 @@ class AutoProcess(object):
             # Load metadata
             try:
                 self.load_metadata(allow_save=allow_save_params)
-            except MissingParameterFileException, ex:
+            except MissingParameterFileException as ex:
                 # No metadata file
                 logging.warning("Failed to load metadata: %s (ignored)" % ex)
                 logging.warning("Consider running metadata --update?")
-            except Exception, ex:
+            except Exception as ex:
                 # Some other problem
                 logging.error("Failed to load metadata: %s" % ex)
                 logging.error("Stopping")
@@ -398,7 +398,7 @@ class AutoProcess(object):
         logging.debug("Project metadata file: %s" % filen)
         try:
             illumina_data = self.load_illumina_data()
-        except IlluminaData.IlluminaDataError,ex:
+        except IlluminaData.IlluminaDataError as ex:
             logging.warning("Failed to load data from bcl2fastq output "
                             "(ignored): %s" % ex)
             illumina_data = None
@@ -536,7 +536,7 @@ class AutoProcess(object):
                     print("Setting 'unaligned_dir' parameter to %s" %
                           test_unaligned)
                     return test_unaligned
-                except IlluminaData.IlluminaDataError, ex:
+                except IlluminaData.IlluminaDataError as ex:
                     logging.debug("Unable to load data from %s" % test_unaligned)
         # Unable to detect existing data directory
         return None

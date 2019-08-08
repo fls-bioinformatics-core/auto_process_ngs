@@ -79,7 +79,7 @@ else:
     try:
         execfile(modules_python)
         __ENVMODULES__ = True
-    except Exception,ex:
+    except Exception as ex:
         logging.debug("Exception executing code from %s: %s: %s" % 
                       (modules_python,ex.__class__.__name__,ex))
 

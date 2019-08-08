@@ -382,7 +382,7 @@ class FastqReadCounter(object):
         output = subprocess.check_output(cmd,shell=True)
         try:
             return int(output)/4
-        except Exception,ex:
+        except Exception as ex:
             raise Exception("zcat_wc returned: %s" % output)
     @staticmethod
     def reads_per_lane(fastq=None,fp=None):

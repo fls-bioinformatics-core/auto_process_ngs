@@ -549,7 +549,7 @@ class SimpleScheduler(threading.Thread):
                         self.__running.append(job)
                         self.__reporter.job_start(job)
                         logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
-                    except Exception,ex:
+                    except Exception as ex:
                         logging.error("Failed to start job #%s: %s" % (job.job_number,ex))
                         if job.job_name is not None:
                             self.__finished_names.append(job.job_name)
@@ -946,7 +946,7 @@ class SchedulerCallback(object):
         logging.debug("Invoking callback function: %s" % self.callback_name)
         try:
             return self.callback_function(self.callback_name,jobs,sched)
-        except Exception,ex:
+        except Exception as ex:
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
 
@@ -1143,7 +1143,7 @@ class SchedulerReporter(object):
             if template is None:
                 return
             self.__fp.write(template % args)
-        except KeyError,ex:
+        except KeyError as ex:
             logging.debug("SchedulerReporter: exception '%s' (ignored)" % ex)
             return
 

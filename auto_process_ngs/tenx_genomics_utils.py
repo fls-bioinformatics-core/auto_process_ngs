@@ -653,7 +653,7 @@ def run_cellranger_mkfastq(sample_sheet,
         cellranger_mkfastq_job.start()
         try:
             cellranger_mkfastq_job.wait()
-        except KeyboardInterrupt,ex:
+        except KeyboardInterrupt as ex:
             logger.warning("Keyboard interrupt, terminating cellranger")
             cellranger_mkfastq_job.terminate()
             raise ex

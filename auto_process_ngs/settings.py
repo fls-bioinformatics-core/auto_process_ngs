@@ -500,7 +500,7 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
             try:
                 open(settings_file,'w').write(open(sample_settings_file,'r').read())
                 logging.warning("Created new file %s" % settings_file)
-            except Exception,ex:
+            except Exception as ex:
                 raise Exception("Failed to create %s: %s" % (settings_file,ex))
     # Finish
     return settings_file

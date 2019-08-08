@@ -178,7 +178,7 @@ class Document(object):
         for section in self._sections:
             try:
                 html.append(section.html())
-            except AttributeError,ex:
+            except AttributeError as ex:
                 html.append("<p>Failed to render section: %s</p>" % ex)
         return '\n'.join(html)
 
@@ -371,7 +371,7 @@ class Section(object):
         for content in self._content:
             try:
                 html.append(content.html())
-            except AttributeError,ex:
+            except AttributeError as ex:
                 html.append("<p>%s</p>" % str(content))
         html.append('</div>')
         return '\n'.join(html)
@@ -949,7 +949,7 @@ class Para(object):
         for content in self._content:
             try:
                 html.append(content.html())
-            except AttributeError,ex:
+            except AttributeError as ex:
                 html.append("%s" % str(content))
         if self._css_classes:
             classes = " class='%s'" % ' '.join(self._css_classes)

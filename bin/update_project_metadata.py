@@ -104,7 +104,7 @@ if __name__ == "__main__":
                 try:
                     key = pair.split('=')[0]
                     value = '='.join(pair.split('=')[1:]).strip("'\"")
-                except Exception,ex:
+                except Exception as ex:
                     sys.stderr.write("Bad key=value pair: %s\n" % pair)
                     sys.exit(1)
                 if key not in ('run','platform','user','PI','library_type','organism','comments'):

@@ -1277,7 +1277,7 @@ def bcl_to_fastq_icell8_atac(ap,unaligned_dir,sample_sheet,
             demultiplexer_job.wait(
                 poll_interval=ap.settings.general.poll_interval
             )
-        except KeyboardInterrupt,ex:
+        except KeyboardInterrupt as ex:
             logger.warning("Keyboard interrupt, terminating demultiplexer")
             demultiplexer_job.terminate()
             raise ex
