@@ -1109,7 +1109,7 @@ class Pipeline(object):
         self._params[name] = PipelineParam(type=type,
                                            value=value)
 
-    def add_runner(self,name,param=None):
+    def add_runner(self,name):
         """
         Define a new runner within the pipeline
 
@@ -1117,7 +1117,7 @@ class Pipeline(object):
         with the supplied runner name.
 
         Runner instances can be accessed and set via the
-        ``params`` property of the pipeline, for example:
+        ``runners`` property of the pipeline, for example:
 
         To access:
 
