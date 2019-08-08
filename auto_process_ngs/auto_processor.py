@@ -944,8 +944,8 @@ class AutoProcess(object):
             logging.debug("No undetermined analysis directory found")
             return None
         elif len(dirs) > 1:
-            raise Exception, "Found multiple undetermined analysis directories: %s" \
-                % ' '.join(dirs)
+            raise Exception("Found multiple undetermined analysis "
+                            "directories: %s" % ' '.join(dirs))
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
         return analysis.AnalysisProject(dirs[0],undetermined_dir)

@@ -938,7 +938,7 @@ class AnalysisProject(object):
         """
         for sample in self.samples:
             if sample.name == name: return sample
-        raise KeyError, "No matching sample for '%s'" % name
+        raise KeyError("No matching sample for '%s'" % name)
 
     def get_samples(self,pattern):
         """Return list of sample matching pattern

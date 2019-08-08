@@ -488,7 +488,7 @@ def bases_mask_is_paired_end(bases_mask):
         return False
     else:
         # An error?
-        raise Exception, "Bad bases mask '%s'?" % bases_mask
+        raise Exception("Bad bases mask '%s'?" % bases_mask)
 
 def get_organism_list(organisms):
     """

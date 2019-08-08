@@ -92,7 +92,7 @@ class CallbackTester(object):
         self.jobs = jobs
         self.sched = sched
         if self.raise_exception:
-            raise Exception,"call_me raised expected exception"
+            raise Exception("call_me raised expected exception")
 
 class TestSimpleScheduler(unittest.TestCase):
     """Unit tests for SimpleScheduler class
