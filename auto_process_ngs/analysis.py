@@ -938,7 +938,7 @@ class AnalysisProject(object):
         """
         for sample in self.samples:
             if sample.name == name: return sample
-        raise KeyError, "No matching sample for '%s'" % name
+        raise KeyError("No matching sample for '%s'" % name)
 
     def get_samples(self,pattern):
         """Return list of sample matching pattern
@@ -1139,7 +1139,7 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
     run_name = os.path.basename(os.path.normpath(run_name))
     try:
         datestamp,instrument,run_number = IlluminaData.split_run_name(run_name)
-    except Exception, ex:
+    except Exception as ex:
         logger.warning("Unable to extract information from run name '%s'" \
                        % run_name)
         logger.warning("Exception: %s" % ex)

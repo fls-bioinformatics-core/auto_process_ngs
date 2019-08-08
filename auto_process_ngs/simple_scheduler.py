@@ -312,7 +312,7 @@ class SimpleScheduler(threading.Thread):
             name = "%s.%s" % (str(args[0]),job_number)
         # Check names are not duplicated
         if self.has_name(name):
-            raise Exception,"Name '%s' already assigned" % name
+            raise Exception("Name '%s' already assigned" % name)
         self.__names.append(name)
         # Check we're not waiting on a non-existent name
         if wait_for:
@@ -362,7 +362,7 @@ class SimpleScheduler(threading.Thread):
             name = "group.%s" % job_number
         # Check names are not duplicated
         if self.has_name(name):
-            raise Exception,"Name '%s' already assigned" % name
+            raise Exception("Name '%s' already assigned" % name)
         self.__names.append(name)
         new_group = SchedulerGroup(name,job_number,self,log_dir=log_dir,
                                    wait_for=wait_for)
@@ -410,7 +410,7 @@ class SimpleScheduler(threading.Thread):
             name = "callback.%s" % job_number
         # Check names are not duplicated
         if self.has_name(name):
-            raise Exception,"Name '%s' already assigned" % name
+            raise Exception("Name '%s' already assigned" % name)
         new_callback = SchedulerCallback(name,callback,wait_for=wait_for)
         self.__callbacks.append(new_callback)
         return new_callback
@@ -549,7 +549,7 @@ class SimpleScheduler(threading.Thread):
                         self.__running.append(job)
                         self.__reporter.job_start(job)
                         logging.debug("Started job #%s (id %s)" % (job.job_number,job.job_id))
-                    except Exception,ex:
+                    except Exception as ex:
                         logging.error("Failed to start job #%s: %s" % (job.job_number,ex))
                         if job.job_name is not None:
                             self.__finished_names.append(job.job_name)
@@ -696,8 +696,8 @@ class SchedulerGroup(object):
         """
         # Check we can still add jobs
         if self.closed:
-            raise Exception, \
-                "Can't add job to group '%s': group closed to new jobs" % self.group_name
+            raise Exception("Can't add job to group '%s': group closed "
+                            "to new jobs" % self.group_name)
         # Deal with directory for log files
         if log_dir is None:
             log_dir = self.log_dir
@@ -727,7 +727,7 @@ class SchedulerGroup(object):
 
         """
         if self.closed:
-            raise Exception, "Group '%s' already closed" % self.group_name
+            raise Exception("Group '%s' already closed" % self.group_name)
         logging.debug("Group '%s' #%s closed" % (self.group_name,self.group_id))
         self.__closed = True
 
@@ -741,7 +741,7 @@ class SchedulerGroup(object):
 
         """
         if not self.closed:
-            raise Exception, "Group '%s' not closed" % self.group_name
+            raise Exception("Group '%s' not closed" % self.group_name)
         logging.debug("Waiting for group '%s' (#%s)..." % (self.group_name,
                                                            self.group_id))
         while self.is_running:
@@ -946,7 +946,7 @@ class SchedulerCallback(object):
         logging.debug("Invoking callback function: %s" % self.callback_name)
         try:
             return self.callback_function(self.callback_name,jobs,sched)
-        except Exception,ex:
+        except Exception as ex:
             logging.error("Exception invoking callback function '%s': %s (ignored)" % \
                           (self.callback_name,ex))
 
@@ -1117,7 +1117,8 @@ class SchedulerReporter(object):
 
         """
         if name not in self.__template_list:
-            raise KeyError,"SchedulerReporter: name '%s' not defined" % name
+            raise KeyError("SchedulerReporter: name '%s' not "
+                           "defined" % name)
         if not template.endswith('\n'):
             template += '\n'
         self.__templates[name] = template
@@ -1143,7 +1144,7 @@ class SchedulerReporter(object):
             if template is None:
                 return
             self.__fp.write(template % args)
-        except KeyError,ex:
+        except KeyError as ex:
             logging.debug("SchedulerReporter: exception '%s' (ignored)" % ex)
             return
 

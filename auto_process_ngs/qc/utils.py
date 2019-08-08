@@ -110,7 +110,7 @@ def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     verify.start()
     try:
         verify.wait()
-    except KeyboardInterrupt,ex:
+    except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating QC verification")
         verify.terminate()
         raise ex
@@ -200,7 +200,7 @@ def report_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,
     report.start()
     try:
         report.wait()
-    except KeyboardInterrupt,ex:
+    except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating QC reporting")
         report.terminate()
         raise ex

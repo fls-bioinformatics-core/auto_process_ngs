@@ -141,7 +141,7 @@ if __name__ == '__main__':
         illumina_data = IlluminaData.IlluminaData(
             args.illumina_run_dir,
             unaligned_dir=args.unaligned_dir)
-    except IlluminaData.IlluminaDataError,ex:
+    except IlluminaData.IlluminaDataError as ex:
         logger.critical("failed to get data from %s: %s" %
                         (args.illumina_run_dir,ex))
         sys.exit(1)

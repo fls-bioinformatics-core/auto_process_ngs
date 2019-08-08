@@ -194,7 +194,7 @@ class Command(object):
             p = subprocess.Popen(self.command_line,
                                  cwd=working_dir,stdout=fpout,stderr=fperr)
             returncode = p.wait()
-        except KeyboardInterrupt,ex:
+        except KeyboardInterrupt as ex:
             # Handle keyboard interrupt while process is running
             logging.warning("KeyboardInterrupt: stopping command subprocess")
             p.kill()

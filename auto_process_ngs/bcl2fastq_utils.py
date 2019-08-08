@@ -604,7 +604,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     configure_job.start()
     try:
         configure_job.wait()
-    except KeyboardInterrupt,ex:
+    except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating configure")
         configure_job.terminate()
         raise ex
@@ -638,7 +638,7 @@ def run_bcl2fastq_1_8(basecalls_dir,sample_sheet,
     make_job.start()
     try:
         make_job.wait()
-    except KeyboardInterrupt,ex:
+    except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating make")
         make_job.terminate()
         raise ex
@@ -790,7 +790,7 @@ def run_bcl2fastq_2(basecalls_dir,sample_sheet,
     bcl2fastq_job.start()
     try:
         bcl2fastq_job.wait()
-    except KeyboardInterrupt,ex:
+    except KeyboardInterrupt as ex:
         logger.warning("Keyboard interrupt, terminating bcl2fastq")
         bcl2fastq_job.terminate()
         raise ex
