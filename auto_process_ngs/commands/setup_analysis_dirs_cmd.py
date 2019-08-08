@@ -14,7 +14,7 @@ import shutil
 import json
 import logging
 import bcftbx.IlluminaData as IlluminaData
-import auto_process_ngs.analysis as analysis
+from .. import analysis
 
 # Module specific logger
 logger = logging.getLogger(__name__)

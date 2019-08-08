@@ -16,9 +16,9 @@ import logging
 import tempfile
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
-import auto_process_ngs.analysis as analysis
-import auto_process_ngs.utils as utils
-import auto_process_ngs.fileops as fileops
+from .. import analysis
+from .. import utils
+from .. import fileops
 from ..qc.utils import verify_qc
 
 # Module specific logger

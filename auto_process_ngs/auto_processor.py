@@ -41,7 +41,7 @@ import bcl2fastq_utils
 import samplesheet_utils
 from .settings import Settings
 from .exceptions import MissingParameterFileException
-from auto_process_ngs import get_version
+from . import get_version
 
 #######################################################################
 # Decorators

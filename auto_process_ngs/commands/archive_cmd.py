@@ -13,10 +13,10 @@
 import os
 import time
 import logging
-import auto_process_ngs.applications as applications
-import auto_process_ngs.fileops as fileops
-import auto_process_ngs.simple_scheduler as simple_scheduler
-import auto_process_ngs.tenx_genomics_utils as tenx_genomics_utils
+from .. import applications
+from .. import fileops
+from .. import simple_scheduler
+from .. import tenx_genomics_utils
 from bcftbx.utils import format_file_size
 
 # Module specific logger

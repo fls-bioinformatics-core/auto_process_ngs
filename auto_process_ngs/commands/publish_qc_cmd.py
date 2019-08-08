@@ -13,10 +13,8 @@ import os
 import time
 import string
 import ast
-import auto_process_ngs.fileops as fileops
-from auto_process_ngs.simple_scheduler import SimpleScheduler
-from auto_process_ngs.qc.utils import verify_qc
-from auto_process_ngs.qc.utils import report_qc
+from .. import fileops
+from ..simple_scheduler import SimpleScheduler
 from ..docwriter import Document
 from ..docwriter import Table
 from ..docwriter import Link
@@ -24,8 +22,10 @@ from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..barcodes.analysis import detect_barcodes_warnings
 from ..qc.processing import detect_processing_qc_warnings
+from ..qc.utils import verify_qc
+from ..qc.utils import report_qc
 import bcftbx.utils as bcf_utils
-from auto_process_ngs import get_version
+from .. import get_version
 
 # Module specific logger
 import logging
