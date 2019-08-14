@@ -618,6 +618,65 @@ setting up tasks, for example:
 The values will be set when the pipeline's ``run`` method is
 invoked.
 
+Defining execution environment for a task: runners and envmodules
+-----------------------------------------------------------------
+
+It is possible to define the execution environment on a per-task
+basis within a pipeline, by defining job runners and environment
+modules.
+
+Runners and environments can be declared in a parameterised
+fashion when a pipline is created, using the ``add_runner`` and
+``add_envmodules`` methods respectively of the ``Pipeline`` class.
+
+For example:
+
+::
+
+    ppl = Pipeline()
+    ppl.add_runner('4_cpus')
+    ppl.add_envmodules('myenv')
+
+This defines a ``runner`` called ``4_cpus`` and an environment
+called ``myenv``.
+
+The runners and environments are accessed via the ``runners``
+and ``envmodules`` properties of the ``Pipeline`` instance, and
+can be associated with tasks within the pipeline when they
+are added via the ``add_task`` method, using the ``runner`` and
+``envmodules`` keywords respectively).
+
+For example:
+
+::
+
+    ppl.add_task(my_task,runner=ppl.runners['4_cpus'],...)
+
+and
+
+::
+
+    ppl.add_task(my_task,envmodules=ppl.envmodules['myenv'],...)
+
+Actual runners and environments can be assigned when the pipeline
+is executed, via the ``runners`` and ``envmodules`` options of
+the ``run`` method of the ``Pipeline`` instance - these are
+mappings of the names defined previously to ``JobRunner`` instances,
+and to lists of environment modules.
+
+For example:
+
+::
+
+    ppl.run(runners={ '4_cpus': GEJobRunner('-pe smp.pe 4'), },
+            envmodules={ 'myenv': 'apps/trimmomatic/0.38', },...)
+
+If a runner is not explicitly set for a task then the pipeline's
+default runner is used for that task; this defaults to a
+``SimpleJobRunner`` instance but can be set explicitly via the
+``default_runner`` argument of the ``Pipeline`` instance's ``run``
+method.
+
 Defining outputs from a pipeline
 --------------------------------
 
@@ -967,6 +1026,7 @@ class Pipeline(object):
         self._removed = []
         self._params = AttributeDictionary()
         self._runners = dict()
+        self._envmodules = dict()
         self._scheduler = None
         self._log_file = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
@@ -1006,6 +1066,20 @@ class Pipeline(object):
         >>> runner = ppl.runners['my_runner'].value
         """
         return dict(**self._runners)
+
+    @property
+    def envmodules(self):
+        """
+        Access the modules environments defined for the pipeline
+
+        Returns the dictionary mapping modules environment
+        names to PipelineParam instances that store the
+        module lists; so to get the list of modules associated
+        with an environment name do e.g.
+
+        >>> modules = ppl.envmodules['my_env'].value
+        """
+        return dict(**self._envmodules)
 
     @property
     def output(self):
@@ -1136,6 +1210,35 @@ class Pipeline(object):
         self._runners[name] = PipelineParam(
             name=name,
             default=lambda: self.runners['default'].value)
+
+    def add_envmodules(self,name):
+        """
+        Define a new environment defined by modules
+
+        Creates a new ``PipelineParam`` instance associated
+        with the supplied environment name.
+
+        Runner instances can be accessed and set via the
+        ``envmodules`` property of the pipeline, for example:
+
+        To access:
+
+        >>> env_modules = ppl.envmodules['my_env'].value
+
+        To set:
+
+        >>> ppl.envmodules['my_env'].set("")
+
+        Arguments:
+          name (str): name for the new runner
+        """
+        if name in self._envmodules:
+            raise KeyError("Modules environment '%s' already defined"
+                           % name)
+        self.report("Defining new modules environment '%s'" % name)
+        self._envmodules[name] = PipelineParam(
+            name=name,
+            value=list())
 
     def add_output(self,name,value):
         """
@@ -1318,8 +1421,9 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,params=None,runners=None,batch_size=None,
-            verbose=False,exit_on_failure=PipelineFailure.IMMEDIATE,
+            poll_interval=5,params=None,runners=None,envmodules=None,
+            batch_size=None,verbose=False,
+            exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
         Run the tasks in the pipeline
@@ -1350,6 +1454,9 @@ class Pipeline(object):
             associates parameter names with values
           runners (mapping): a dictionary or mapping which
             associates runner names with job runners
+          envmodules (mapping): a dictionary or mapping which
+            associates envmodule names with list of
+            environment module names
           batch_size (int): if set then run commands in
             each task in batches, with each batch running
             this many commands at a time (default is to run
@@ -1380,6 +1487,10 @@ class Pipeline(object):
                 self.runners[r].set(runners[r])
         if default_runner:
             self.runners['default'].set(default_runner)
+        # Deal with environment modules
+        if envmodules:
+            for m in envmodules:
+                self.envmodules[m].value.append(envmodules[m])
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -1446,6 +1557,19 @@ class Pipeline(object):
             self.report("-- %s%s: %s" % (r,
                                          ' '*(width-len(r)),
                                          self.runners[r].value))
+        # Report modules environments
+        if self.envmodules:
+            self.report("Modules environments:")
+            width = max([len(m) for m in self.envmodules])
+            for m in sorted(self.envmodules):
+                self.report("-- %s%s: %s" %
+                            (m,
+                             ' '*(width-len(m)),
+                             ('<not set>'
+                              if self.envmodules[m].value is None
+                              else
+                              ','.join(
+                                  [str(x) for x in self.envmodules[m].value]))))
         # Sort the tasks and set up the pipeline
         self.report("Scheduling tasks...")
         for i,rank in enumerate(self.rank_tasks()):
@@ -1920,9 +2044,9 @@ class PipelineTask(object):
         """
         return self._output
 
-    def run(self,sched=None,runner=None,working_dir=None,log_dir=None,
-            scripts_dir=None,log_file=None,wait_for=(),async=True,
-            poll_interval=5,batch_size=None,verbose=False):
+    def run(self,sched=None,runner=None,envmodules=None,working_dir=None,
+            log_dir=None,scripts_dir=None,log_file=None,wait_for=(),
+            async=True,poll_interval=5,batch_size=None,verbose=False):
         """
         Run the task
 
@@ -1934,6 +2058,8 @@ class PipelineTask(object):
           sched (SimpleScheduler): scheduler to submit jobs to
           runner (JobRunner): job runner to use when running
             jobs via the scheduler
+          envmodules (list): list of environment modules to load when
+            running jobs in the task
           working_dir (str): path to the working directory to use
             (defaults to the current working directory)
           log_dir (str): path to the directory to write logs to
@@ -1976,8 +2102,12 @@ class PipelineTask(object):
                 if verbose:
                     self.report("%s" % command.cmd())
                 script_file = command.make_wrapper_script(
-                    scripts_dir=scripts_dir)
-                cmd = Command('/bin/bash',script_file)
+                    scripts_dir=scripts_dir,
+                    envmodules=envmodules)
+                cmd = Command('/bin/bash')
+                if envmodules:
+                    cmd.add_args('-l')
+                cmd.add_args(script_file)
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
@@ -2001,8 +2131,12 @@ class PipelineTask(object):
                 if verbose:
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
-                    scripts_dir=scripts_dir)
-                cmd = Command('/bin/bash',script_file)
+                    scripts_dir=scripts_dir,
+                    envmodules=envmodules)
+                cmd = Command('/bin/bash')
+                if envmodules:
+                    cmd.add_args('-l')
+                cmd.add_args(script_file)
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
@@ -2207,7 +2341,8 @@ class PipelineCommand(object):
         """
         return sanitize_name(self._name)
 
-    def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash"):
+    def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
+                            envmodules=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -2215,6 +2350,7 @@ class PipelineCommand(object):
           scripts_dir (str): path of directory to write
             the wrapper scripts to
           shell (str): shell to use (defaults to '/bin/bash')
+          envmodules (str): list of environment modules to load
 
         Returns:
           String: name of the wrapper script.
@@ -2228,6 +2364,10 @@ class PipelineCommand(object):
                     "echo \"#### HOSTNAME $HOSTNAME\"",
                     "echo \"#### USER $USER\"",
                     "echo \"#### START $(date)\""]
+        if envmodules:
+            shell += " --login"
+            for module in envmodules:
+                prologue.append("module load %s" % module)
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",

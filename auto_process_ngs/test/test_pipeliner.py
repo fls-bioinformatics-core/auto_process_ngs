@@ -7,8 +7,10 @@ import tempfile
 import shutil
 import time
 import os
+import io
 import getpass
 import platform
+import auto_process_ngs.envmod as envmod
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
 from auto_process_ngs.pipeliner import Pipeline
@@ -601,6 +603,118 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         self.assertTrue(os.path.exists(out_file))
         self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_with_envmodules(self):
+        """
+        Pipeline: define and run pipeline with environment modules
+        """
+        # Set up mock Fastqc
+        bin_dir = os.path.join(self.working_dir,"apps","bin")
+        os.mkdir(os.path.join(self.working_dir,"apps"))
+        os.mkdir(bin_dir)
+        with io.open(os.path.join(bin_dir,"fastqc"),'wt') as fp:
+            fp.write(u"""#!/bin/bash
+echo $1
+exit 0
+""")
+        os.chmod(os.path.join(bin_dir,"fastqc"),0775)
+        # Set up mock environment module
+        modules_dir = os.path.join(self.working_dir,"modulefiles")
+        os.mkdir(modules_dir)
+        modules = ('apps/fastqc/1.0',)
+        os.mkdir(os.path.join(modules_dir,"apps"))
+        os.mkdir(os.path.join(modules_dir,"apps","fastqc"))
+        with io.open(os.path.join(modules_dir,"apps","fastqc","1.0"),'wt') \
+             as fp:
+            fp.write(u"""#%%Module1.0
+prepend-path PATH %s
+""" % bin_dir)
+        os.environ['MODULEPATH'] = modules_dir
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_envmodules("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     envmodules=ppl.envmodules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              envmodules={
+                                  'fastqc': modules,
+                              },
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the outputs
+        self.assertEqual(exit_status,0)
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_fails_with_missing_modules_environment(self):
+        """
+        Pipeline: check pipeline fails for missing 'modules' environment
+        """
+        # Missing module file
+        modules = ('apps/fastqc/1.0',)
+        # Define a task
+        class RunFastqc(PipelineTask):
+            def init(self,*files):
+                self.add_output('files',list())
+            def setup(self):
+                for f in self.args.files:
+                    self.add_cmd(
+                        PipelineCommandWrapper(
+                            "Run fastqc for %s" % f,
+                            "fastqc",f))
+            def finish(self):
+                for f in self.args.files:
+                    self.output.files.append(f)
+        # Build the pipeline
+        ppl = Pipeline()
+        ppl.add_envmodules("fastqc")
+        task = RunFastqc("Run Fastqc",
+                         "sample1.fastq","sample2.fastq")
+        ppl.add_task(task,
+                     envmodules=ppl.envmodules["fastqc"])
+        # Run the pipeline
+        exit_status = ppl.run(working_dir=self.working_dir,
+                              envmodules={
+                                  'fastqc': modules,
+                              },
+                              poll_interval=0.1,
+                              verbose=True)
+        # Check the pipeline failed (non-zero exit)
+        self.assertNotEqual(exit_status,0)
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_add_envmodules_twice_raises_exception(self):
+        """
+        Pipeline: 'add_envmodules' raises exception when environment is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a environment definition
+        self.assertFalse('test_env' in ppl.envmodules)
+        ppl.add_envmodules('test_env')
+        self.assertTrue('test_env' in ppl.envmodules)
+        self.assertRaises(KeyError,
+                          ppl.add_envmodules,
+                          'test_env')
 
     def test_pipeline_define_outputs(self):
         """
@@ -1450,6 +1564,46 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### HOSTNAME $HOSTNAME\"\n"
                          "echo \"#### USER $USER\"\n"
                          "echo \"#### START $(date)\"\n"
+                         "echo 'hello there'\n"
+                         "exit_code=$?\n"
+                         "echo \"#### END $(date)\"\n"
+                         "echo \"#### EXIT_CODE $exit_code\"\n"
+                         "exit $exit_code")
+
+    def test_pipelinecommand_with_modules(self):
+        """
+        PipelineCommand: check command and wrapper script with modules
+        """
+        # Subclass PipelineCommand
+        class EchoCmd(PipelineCommand):
+            def init(self,txt):
+                self._txt = txt
+            def cmd(self):
+                return Command(
+                    "echo",
+                    self._txt)
+        # Make an instance
+        cmd = EchoCmd("hello there")
+        # Check name
+        self.assertEqual(cmd.name(),"echocmd")
+        # Check command
+        self.assertEqual(str(cmd.cmd()),"echo hello there")
+        # Check wrapper script file
+        script_file = cmd.make_wrapper_script(
+            scripts_dir=self.working_dir,
+            envmodules=('apps/fastq-screen/0.13.0',
+                        'apps/fastqc/0.11.8',))
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        self.assertEqual(open(script_file,'r').read(),
+                         "#!/bin/bash --login\n"
+                         "echo \"#### COMMAND EchoCmd\"\n"
+                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                         "echo \"#### USER $USER\"\n"
+                         "echo \"#### START $(date)\"\n"
+                         "module load apps/fastq-screen/0.13.0\n"
+                         "module load apps/fastqc/0.11.8\n"
                          "echo 'hello there'\n"
                          "exit_code=$?\n"
                          "echo \"#### END $(date)\"\n"
