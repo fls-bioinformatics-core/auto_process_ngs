@@ -606,9 +606,9 @@ class TestPipeline(unittest.TestCase):
 
     @unittest.skipIf(not envmod.__ENVMODULES__,
                      "Environment modules not available")
-    def test_pipeline_with_modules_environment(self):
+    def test_pipeline_with_envmodules(self):
         """
-        Pipeline: define and run pipeline with 'modules' environment
+        Pipeline: define and run pipeline with environment modules
         """
         # Set up mock Fastqc
         bin_dir = os.path.join(self.working_dir,"apps","bin")
@@ -647,14 +647,14 @@ prepend-path PATH %s
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        ppl.add_modules_env("fastqc")
+        ppl.add_envmodules("fastqc")
         task = RunFastqc("Run Fastqc",
                          "sample1.fastq","sample2.fastq")
         ppl.add_task(task,
-                     modules=ppl.modules["fastqc"])
+                     envmodules=ppl.envmodules["fastqc"])
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
-                              modules={
+                              envmodules={
                                   'fastqc': modules,
                               },
                               poll_interval=0.1,
@@ -685,20 +685,36 @@ prepend-path PATH %s
                     self.output.files.append(f)
         # Build the pipeline
         ppl = Pipeline()
-        ppl.add_modules_env("fastqc")
+        ppl.add_envmodules("fastqc")
         task = RunFastqc("Run Fastqc",
                          "sample1.fastq","sample2.fastq")
         ppl.add_task(task,
-                     modules=ppl.modules["fastqc"])
+                     envmodules=ppl.envmodules["fastqc"])
         # Run the pipeline
         exit_status = ppl.run(working_dir=self.working_dir,
-                              modules={
+                              envmodules={
                                   'fastqc': modules,
                               },
                               poll_interval=0.1,
                               verbose=True)
         # Check the pipeline failed (non-zero exit)
         self.assertNotEqual(exit_status,0)
+
+    @unittest.skipIf(not envmod.__ENVMODULES__,
+                     "Environment modules not available")
+    def test_pipeline_add_envmodules_twice_raises_exception(self):
+        """
+        Pipeline: 'add_envmodules' raises exception when environment is added twice
+        """
+        # Make an empty pipeline
+        ppl = Pipeline()
+        # Add a environment definition
+        self.assertFalse('test_env' in ppl.envmodules)
+        ppl.add_envmodules('test_env')
+        self.assertTrue('test_env' in ppl.envmodules)
+        self.assertRaises(KeyError,
+                          ppl.add_envmodules,
+                          'test_env')
 
     def test_pipeline_define_outputs(self):
         """
@@ -1575,8 +1591,8 @@ class TestPipelineCommand(unittest.TestCase):
         # Check wrapper script file
         script_file = cmd.make_wrapper_script(
             scripts_dir=self.working_dir,
-            modules=('apps/fastq-screen/0.13.0',
-                     'apps/fastqc/0.11.8',))
+            envmodules=('apps/fastq-screen/0.13.0',
+                        'apps/fastqc/0.11.8',))
         self.assertTrue(os.path.isfile(script_file))
         self.assertEqual(os.path.dirname(script_file),
                          self.working_dir)
