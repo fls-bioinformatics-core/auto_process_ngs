@@ -188,5 +188,62 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
                              "barcodes.html")),
                         "Missing file: barcodes.html")
 
-        
-        
+    def test_analyse_barcodes_empty_barcode_in_samplesheet(self):
+        """analyse_barcodes: test with empty barcode in sample sheet
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "160621" },
+            top_dir=self.wd)
+        mockdir.create(no_project_dirs=True)
+        # Add data to Fastq files
+        self._insert_fastq_reads(mockdir.dirn)
+        # Populate the samplesheet
+        sample_sheet = os.path.join(mockdir.dirn,"custom_SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write("""[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
+AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
+CDE3,CDE3,,,D701,,D501,,CDE,
+CDE4,CDE4,,,D702,,D501,,CDE,
+""")
+        # Analyse barcodes
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        analyse_barcodes(ap)
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "160621_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,"barcode_analysis")),
+                            "Missing dir: barcode_analysis")
+        self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,"barcode_analysis","counts")),
+                            "Missing dir: barcode_analysis/counts")
+        for f in ("AB.AB1_S1_R1_001.fastq.gz.counts",
+                  "AB.AB2_S2_R1_001.fastq.gz.counts",
+                  "CDE.CDE3_S3_R1_001.fastq.gz.counts",
+                  "CDE.CDE4_S4_R1_001.fastq.gz.counts",
+                  "undetermined.Undetermined_S0_R1_001.fastq.gz.counts"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,"barcode_analysis","counts",f)),
+                            "Missing file: %s" % f)
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.report")),
+                        "Missing file: barcodes.report")
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.xls")),
+                        "Missing file: barcodes.xls")
+        self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,
+                             "barcode_analysis",
+                             "barcodes.html")),
+                        "Missing file: barcodes.html")
