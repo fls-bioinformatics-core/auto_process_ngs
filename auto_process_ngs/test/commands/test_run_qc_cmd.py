@@ -355,7 +355,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         settings_ini = os.path.join(self.dirn,"settings.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = 1.0
 
 [fastq_strand_indexes]
 human = /data/genomeIndexes/hg38/STAR
@@ -445,7 +445,7 @@ mouse = /data/cellranger/transcriptomes/mm10
         settings_ini = os.path.join(self.dirn,"settings.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
-poll_interval = 0.5
+poll_interval = 1.0
 
 [fastq_strand_indexes]
 human = /data/genomeIndexes/hg38/STAR
