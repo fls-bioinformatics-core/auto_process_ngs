@@ -14,6 +14,7 @@ import shutil
 import logging
 from ..applications import Command
 from ..fileops import copytree_command
+from ..fileops import copy_command
 from ..simple_scheduler import SimpleScheduler
 from bcftbx import IlluminaData
 from bcftbx.utils import list_dirs
@@ -219,24 +220,42 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
     print("Dealing with undetermined reads:")
     if no_lane_splitting:
         # No lane info: merge undetermined fastqs
-        for read in (1,2):
-            if read == 2 and not paired_end:
-                break
-            cmd = Command('concat_fastqs.py')
-            for sample in undetermined:
+        if len(undetermined) == 1:
+            # Only one undetermined sample - copy Fastqs
+            for read in (1,2):
+                if read == 2 and not paired_end:
+                    break
                 fastqs = sample.fastq_subset(read_number=read,
                                              full_path=True)
-                cmd.add_args(*fastqs)
-            cmd.add_args(os.path.join(
-                merge_undetermined_dir,
-                "Undetermined_S0_R%s_001.fastq.gz" % read))
-            print("- Running %s" % cmd)
-            if not dry_run:
-                job = sched.submit(cmd,
-                                   name="merge_undetermined.R%s" % read,
-                                   wd=merge_dir)
-                print("Job: %s" % job)
-                jobs.append(job)
+                for fq in fastqs:
+                    cmd = copy_command(fq,merge_undetermined_dir)
+                    print("- Running %s" % cmd)
+                    if not dry_run:
+                        job = sched.submit(cmd,
+                                           name="copy_undetermined.R%s" % read,
+                                           wd=merge_dir)
+                        print("Job: %s" % job)
+                        jobs.append(job)
+        else:
+            # Multiple undetermined samples - concat Fastqs
+            for read in (1,2):
+                if read == 2 and not paired_end:
+                    break
+                cmd = Command('concat_fastqs.py')
+                for sample in undetermined:
+                    fastqs = sample.fastq_subset(read_number=read,
+                                                 full_path=True)
+                    cmd.add_args(*fastqs)
+                cmd.add_args(os.path.join(
+                    merge_undetermined_dir,
+                    "Undetermined_S0_R%s_001.fastq.gz" % read))
+                print("- Running %s" % cmd)
+                if not dry_run:
+                    job = sched.submit(cmd,
+                                       name="merge_undetermined.R%s" % read,
+                                       wd=merge_dir)
+                    print("Job: %s" % job)
+                    jobs.append(job)
     else:
         for sample in undetermined:
             print("- %s" % sample.name)
