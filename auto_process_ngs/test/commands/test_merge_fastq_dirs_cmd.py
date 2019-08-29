@@ -570,5 +570,55 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
                                          unaligned_dir='bcl2fastq')
         except Exception as ex:
             self.fail("exception loading rsynced directory: %s" % ex)
+
+    def test_bcl2fastq2_one_undetermined_fastq_pair(self):
+        """
+        merge_fastq_dirs: bcl2fastq v2 output with --no-lane-splitting, one undetermined Fastq pair
+        """
+        analysis_dir = self._setup_bcl2fastq2_no_lane_splitting()
+        # Remove undetermined Fastqs from bcl2fastq.CDE
+        for f in os.listdir(os.path.join(analysis_dir,"bcl2fastq.CDE")):
+            if f.startswith("Undetermined_S0_"):
+                os.remove(os.path.join(analysis_dir,"bcl2fastq.CDE",f))
+        # Merge the unaligned dirs
+        self.ap = AutoProcess(analysis_dir,
+                              settings=self.settings)
+        merge_fastq_dirs(self.ap,"bcl2fastq.AB")
+        # Check outputs
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.AB'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'save.bcl2fastq.CDE'))
+        self._assert_dir_exists(os.path.join(analysis_dir,'bcl2fastq.AB'))
+        self._assert_dir_doesnt_exist(os.path.join(analysis_dir,'bcl2fastq.CDE'))
+        for f in ('AB/AB1_S1_R1_001.fastq.gz',
+                  'AB/AB1_S1_R2_001.fastq.gz',
+                  'AB/AB2_S2_R1_001.fastq.gz',
+                  'AB/AB2_S2_R2_001.fastq.gz',
+                  'CDE/CDE3_S3_R1_001.fastq.gz',
+                  'CDE/CDE3_S3_R2_001.fastq.gz',
+                  'CDE/CDE4_S4_R1_001.fastq.gz',
+                  'CDE/CDE4_S4_R2_001.fastq.gz',
+                  'Undetermined_S0_R1_001.fastq.gz',
+                  'Undetermined_S0_R2_001.fastq.gz',):
+            self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.AB',f))
+        # Check merge of undetermined fastqs
+        undetermined_r1 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read()
+        expected_r1 = '\n'.join(fastq_reads_r1[:4])+'\n'
+        self.assertEqual(undetermined_r1,expected_r1)
+        undetermined_r2 = gzip.GzipFile(
+            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read()
+        expected_r2 = '\n'.join(fastq_reads_r2[:4])+'\n'
+        self.assertEqual(undetermined_r2,expected_r2)
+        # Check projects.info files
+        self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
+        self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
+        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
+AB	AB1,AB2	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.
+"""
+        self.assertEqual(projects_info,expected)
         
         
