@@ -704,7 +704,7 @@ class QCReport(Document):
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
         # Look for cellranger_count outputs
-        cellranger_count_dir = os.path.join(self.project.dirn,
+        cellranger_count_dir = os.path.join(self.qc_dir,
                                              "cellranger_count")
         cellranger_samples = []
         if os.path.isdir(cellranger_count_dir):
@@ -1410,7 +1410,7 @@ class QCReportFastq(object):
         self.program_versions['fastq_screen'] = fastq_screen_versions
         # Cellranger count outputs
         self.cellranger_count = CellrangerCount(
-            os.path.join(os.path.dirname(qc_dir),
+            os.path.join(qc_dir,
                          "cellranger_count",
                          self.sample_name))
 
