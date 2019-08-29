@@ -715,7 +715,7 @@ poll_interval = 0.5
                 protocol="singlecell")
         # Add cellranger count output for one project
         tenxgenomics_project = projects[0]
-        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs()
+        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs(legacy=True)
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
@@ -906,7 +906,7 @@ poll_interval = 0.5
         UpdateAnalysisProject(icell8_project).add_icell8_outputs()
         # Add cellranger count output for one project
         tenxgenomics_project = projects[-1]
-        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs()
+        UpdateAnalysisProject(tenxgenomics_project).add_cellranger_count_outputs(legacy=True)
         # Make a mock publication area
         publication_dir = os.path.join(self.dirn,'QC')
         os.mkdir(publication_dir)
