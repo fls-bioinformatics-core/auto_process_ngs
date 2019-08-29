@@ -219,7 +219,12 @@ if __name__ == '__main__':
                     if mismatches is None:
                         barcode_length = None
                         for line in s:
-                            length = len(samplesheet_index_sequence(line))
+                            index_sequence = samplesheet_index_sequence(line)
+                            if index_sequence is None:
+                                # Empty barcode sequence in samplesheet
+                                length = 0
+                            else:
+                                length = len(index_sequence)
                             if barcode_length is None:
                                 barcode_length = length
                             elif length != barcode_length:
