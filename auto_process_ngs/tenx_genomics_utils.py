@@ -395,7 +395,7 @@ def build_fastq_path_dir(project_dir):
         os.symlink(target,link_name)
     return fastq_path_dir
 
-def set_cell_count_for_project(project_dir):
+def set_cell_count_for_project(project_dir,qc_dir=None):
     """
     Set the total number of cells for a project
 
@@ -410,6 +410,8 @@ def set_cell_count_for_project(project_dir):
 
     Arguments:
       project_dir (str): path to the project directory
+      qc_dir (str): path to QC directory (if not the default
+        QC directory for the project)
 
     Returns:
       Integer: exit code, non-zero values indicate problems
@@ -417,13 +419,16 @@ def set_cell_count_for_project(project_dir):
     """
     project = AnalysisProject(os.path.basename(project_dir),
                               project_dir)
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    qc_dir = os.path.abspath(qc_dir)
     number_of_cells = 0
     if project.info.library_type == 'scRNA-seq':
         # Single cell RNA-seq
         for sample in project.samples:
             try:
                 metrics_summary_csv = os.path.join(
-                    project_dir,
+                    qc_dir,
                     "cellranger_count",
                     sample.name,
                     "outs",
@@ -440,7 +445,7 @@ def set_cell_count_for_project(project_dir):
         for sample in project.samples:
             try:
                 summary_csv = os.path.join(
-                    project_dir,
+                    qc_dir,
                     "cellranger_count",
                     sample.name,
                     "outs",
