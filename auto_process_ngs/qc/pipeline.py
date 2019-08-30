@@ -112,6 +112,12 @@ class QCPipeline(Pipeline):
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
+        # Define module environment modules
+        self.add_envmodules('illumina_qc')
+        self.add_envmodules('fastq_strand')
+        self.add_envmodules('cellranger')
+        self.add_envmodules('report_qc')
+
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
                     qc_protocol=None,multiqc=False,
                     sample_pattern=None,log_dir=None):
@@ -202,6 +208,7 @@ class QCPipeline(Pipeline):
             "%s: check illumina_qc.sh version" %
             project_name)
         self.add_task(check_illumina_qc_version,
+                      envmodules=self.envmodules['illumina_qc'],
                       log_dir=log_dir)
 
         # Check outputs for illumina_qc.sh
@@ -232,6 +239,7 @@ class QCPipeline(Pipeline):
         self.add_task(run_illumina_qc,
                       requires=(check_illumina_qc,),
                       runner=self.runners['qc_runner'],
+                      envmodules=self.envmodules['illumina_qc'],
                       log_dir=log_dir)
         report_requires.append(run_illumina_qc)
 
@@ -277,6 +285,7 @@ class QCPipeline(Pipeline):
         self.add_task(run_fastq_strand,
                       requires=(check_fastq_strand,),
                       runner=self.runners['qc_runner'],
+                      envmodules=self.envmodules['fastq_strand'],
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
 
@@ -332,6 +341,7 @@ class QCPipeline(Pipeline):
                           requires=(get_cellranger_reference_data,
                                     check_cellranger_count,),
                           runner=self.runners['cellranger_runner'],
+                          envmodules=self.envmodules['cellranger'],
                           log_dir=log_dir)
 
             # Set cell count
@@ -354,6 +364,7 @@ class QCPipeline(Pipeline):
         self.add_task(report_qc,
                       requires=report_requires,
                       runner=self.runners['report_runner'],
+                      envmodules=self.envmodules['report_qc'],
                       log_dir=log_dir)
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
@@ -363,7 +374,7 @@ class QCPipeline(Pipeline):
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,poll_interval=5,runners=None,
-            default_runner=None,verbose=False):
+            default_runner=None,envmodules=None,verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -413,6 +424,10 @@ class QCPipeline(Pipeline):
             instances; valid names are 'qc_runner',
             'report_runner','cellranger_runner',
             'verify_runner','default'
+          envmodules (mapping): mapping of names to
+            environment module file lists; valid names are
+            'illumina_qc','fastq_strand','cellranger',
+            'report_qc'
           default_runner (JobRunner): optional default
             job runner to use
           verbose (bool): if True then report additional
@@ -466,6 +481,7 @@ class QCPipeline(Pipeline):
                               max_jobs=max_jobs,
                               runners=runners,
                               default_runner=default_runner,
+                              envmodules=envmodules,
                               verbose=verbose)
 
         # Clean up working dir
