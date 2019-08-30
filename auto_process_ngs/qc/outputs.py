@@ -417,8 +417,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
     # Cellranger count output
     if qc_protocol == '10x_scRNAseq':
         for output in cellranger_count_output(project):
-            outputs.add(os.path.join(project.dirn,output))
+            outputs.add(os.path.join(qc_dir,output))
     elif qc_protocol == '10x_scATAC':
         for output in cellranger_atac_count_output(project):
-            outputs.add(os.path.join(project.dirn,output))
+            outputs.add(os.path.join(qc_dir,output))
     return sorted(list(outputs))
