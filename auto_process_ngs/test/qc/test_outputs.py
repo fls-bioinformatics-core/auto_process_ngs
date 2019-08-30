@@ -910,8 +910,8 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R2_001_rRNA_screen.png",
                              "qc/PJB1_S1_R2_001_rRNA_screen.txt",
                              "qc/PJB1_S1_R2_001_fastq_strand.txt",
-                             "cellranger_count/PJB1/outs/metrics_summary.csv",
-                             "cellranger_count/PJB1/outs/web_summary.html",)
+                             "qc/cellranger_count/PJB1/outs/metrics_summary.csv",
+                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
@@ -970,8 +970,8 @@ class TestExpectedOutputs(unittest.TestCase):
                              "qc/PJB1_S1_R3_001_other_organisms_screen.txt",
                              "qc/PJB1_S1_R3_001_rRNA_screen.png",
                              "qc/PJB1_S1_R3_001_rRNA_screen.txt",
-                             "cellranger_count/PJB1/outs/summary.csv",
-                             "cellranger_count/PJB1/outs/web_summary.html",)
+                             "qc/cellranger_count/PJB1/outs/summary.csv",
+                             "qc/cellranger_count/PJB1/outs/web_summary.html",)
         expected = expected_outputs(AnalysisProject(p.name,
                                                     os.path.join(self.wd,
                                                                  p.name)),
