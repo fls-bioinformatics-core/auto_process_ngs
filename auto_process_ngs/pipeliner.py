@@ -1489,8 +1489,10 @@ class Pipeline(object):
             self.runners['default'].set(default_runner)
         # Deal with environment modules
         if envmodules:
-            for m in envmodules:
-                self.envmodules[m].value.append(envmodules[m])
+            for name in envmodules:
+                if envmodules[name] is not None:
+                    for m in envmodules[name].split(','):
+                        self.envmodules[name].value.append(m)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler
@@ -2367,7 +2369,8 @@ class PipelineCommand(object):
         if envmodules:
             shell += " --login"
             for module in envmodules:
-                prologue.append("module load %s" % module)
+                if module is not None:
+                    prologue.append("module load %s" % module)
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
