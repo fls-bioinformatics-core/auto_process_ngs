@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 __version__ = auto_process_ngs.get_version()
 __settings = auto_process_ngs.settings.Settings()
 try:
-    __modulefiles = __settings.modulefiles['run_qc']
+    __modulefiles = __settings.modulefiles
 except KeyError:
     # No environment modules specified
     __modulefiles = None
@@ -158,14 +158,25 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     # Set up environment
+    envmodules = dict()
     if args.modulefiles is None:
-        modulefiles = __modulefiles
+        modulefiles = __modulefiles['run_qc']
     else:
         modulefiles = args.modulefiles
     if modulefiles is not None:
         announce("Setting up environment")
         for modulefile in modulefiles.split(','):
             envmod.load(modulefile)
+
+    # Per task environment modules
+    for name in ('illumina_qc',
+                 'fastq_strand',
+                 'cellranger',
+                 'report_qc',):
+        try:
+            envmodules[name] = __modulefiles[name]
+        except KeyError:
+            envmodules[name] = None
 
     # Job runners
     default_runner = __settings.general.default_runner
@@ -227,7 +238,8 @@ if __name__ == "__main__":
                            'qc_runner': qc_runner,
                            'verify_runner': verify_runner,
                            'report_runner': report_runner,
-                       })
+                       },
+                       envmodules=envmodules)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)
