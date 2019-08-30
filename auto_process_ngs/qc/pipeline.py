@@ -1088,20 +1088,26 @@ class RunCellrangerCount(PipelineTask):
             self.add_cmd(cmd)
     def finish(self):
         # Handle outputs from cellranger count
+        top_level_files = ("_cmdline",)
         if self.args.qc_protocol == "10x_scRNAseq":
-            files = ("web_summary.html","metrics_summary.csv")
+            outs_files = ("web_summary.html","metrics_summary.csv")
         elif self.args.qc_protocol == "10x_scATAC":
-            files = ("web_summary.html","summary.csv")
+            outs_files = ("web_summary.html","summary.csv")
         has_errors = False
         for sample in self.args.samples:
             # Check outputs
-            outs_dir = os.path.join(self._working_dir,
-                                    "tmp.count.%s" % sample,
-                                    sample,
-                                    "outs")
+            top_dir = os.path.join(self._working_dir,
+                                   "tmp.count.%s" % sample,
+                                   sample)
+            outs_dir = os.path.join(top_dir,"outs")
             missing_files = []
-            for f in files:
+            for f in outs_files:
                 path = os.path.join(outs_dir,f)
+                if not os.path.exists(path):
+                    print("Missing: %s" % path)
+                    missing_files.append(path)
+            for f in top_level_files:
+                path = os.path.join(top_dir,f)
                 if not os.path.exists(path):
                     print("Missing: %s" % path)
                     missing_files.append(path)
@@ -1124,13 +1130,19 @@ class RunCellrangerCount(PipelineTask):
                     qc_dir = os.path.abspath(
                         os.path.join(self.args.qc_dir,
                                      "cellranger_count",
-                                     sample,
-                                     "outs"))
-                    mkdirs(qc_dir)
-                    for f in files:
+                                     sample))
+                    qc_outs_dir = os.path.join(qc_dir,"outs")
+                    mkdirs(qc_outs_dir)
+                    for f in outs_files:
                         path = os.path.join(outs_dir,f)
                         print("Copying %s from %s to %s" % (f,
                                                             outs_dir,
+                                                            qc_outs_dir))
+                        shutil.copy(path,qc_outs_dir)
+                    for f in top_level_files:
+                        path = os.path.join(top_dir,f)
+                        print("Copying %s from %s to %s" % (f,
+                                                            top_dir,
                                                             qc_dir))
                         shutil.copy(path,qc_dir)
         if has_errors:
