@@ -736,6 +736,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
             self.add_subdir(os.path.join(sample_dir,"outs"))
             for f in ("web_summary.html","metrics_summary.csv"):
                 self.add_file(os.path.join(sample_dir,"outs",f))
+            for f in ("_cmdline",):
+                self.add_file(os.path.join(sample_dir,f))
         # Build ZIP archive
         if legacy:
             analysis_dir = os.path.basename(self._parent_dir())
@@ -1268,6 +1270,8 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
         """
         Internal: provides mock cellranger functionality
         """
+        # Store command line
+        cmdline = "%s" % ' '.join(args)
         # Build generic header
         try:
             cmd = " %s" % args[0]
@@ -1400,6 +1404,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             ###############
             top_dir = str(args.id)
             os.mkdir(top_dir)
+            # Outs
             outs_dir = os.path.join(top_dir,"outs")
             os.mkdir(outs_dir)
             if cellranger_exe == "cellranger":
@@ -1413,6 +1418,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # _cmdline file
+            cmdline_file = os.path.join(top_dir,"_cmdline")
+            with open(cmdline_file,'w') as fp:
+                fp.write("%s\n" % cmdline)
         else:
             print("%s: not implemented" % command)
         print("Return exit code: %s" % self._exit_code)
