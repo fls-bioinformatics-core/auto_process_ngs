@@ -35,8 +35,16 @@ class TestSettings(unittest.TestCase):
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
         self.assertEqual(s.general.poll_interval,5.0)
+        # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.run_qc,None)
+        self.assertEqual(s.modulefiles.publish_qc,None)
+        self.assertEqual(s.modulefiles.process_icell8,None)
+        self.assertEqual(s.modulefiles.process_10xgenomics,None)
+        self.assertEqual(s.modulefiles.illumina_qc,None)
+        self.assertEqual(s.modulefiles.fastq_strand,None)
+        self.assertEqual(s.modulefiles.cellranger,None)
+        self.assertEqual(s.modulefiles.report_qc,None)
         # Bcl2fastq
         self.assertEqual(s.bcl2fastq.nprocessors,1)
         self.assertEqual(s.bcl2fastq.default_version,'>=1.8.4')
@@ -77,6 +85,7 @@ nprocessors = 8
         self.assertTrue(isinstance(s.general.default_runner,SimpleJobRunner))
         self.assertEqual(s.general.max_concurrent_jobs,12)
         self.assertEqual(s.general.poll_interval,5.0)
+        # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)
         self.assertEqual(s.modulefiles.run_qc,None)
         # Fastq_stats
