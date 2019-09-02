@@ -1070,10 +1070,6 @@ class RunCellrangerCount(PipelineTask):
             cellranger_exe = "cellranger-atac"
         else:
             cellranger_exe = "cellranger"
-        # Check that the cellranger software is available
-        if not find_program(cellranger_exe):
-            self.fail(message="Can't locate %s" % cellranger_exe)
-            return
         # Run cellranger for each sample
         for sample in self.args.samples:
             work_dir = os.path.join(self._working_dir,
