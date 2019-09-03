@@ -147,7 +147,7 @@ with 8 cores might look like:
 ::
 
    [runners]
-    bcl2fastq = GEJobRunner(-pe smp.pe 8)
+   bcl2fastq = GEJobRunner(-pe smp.pe 8)
 
 .. note::
 
@@ -168,7 +168,7 @@ Using environment modules
 -------------------------
 
 `Environment modules <http://modules.sourceforge.net/>`_ provide a way to
-dynamic modify the user's environment. They can be especially useful to
+dynamically modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
@@ -178,10 +178,32 @@ files to be loaded before a specific step, for example::
     [modulefiles]
     make_fastqs = apps/bcl2fastq/1.8.4
 
+These can be defined for the following stages:
+
+ * ``make_fastqs``
+ * ``run_qc``
+ * ``publish_qc``
+ * ``process_icell8``
+ * ``process_10xgenomics``
+
+(see :ref:`software_dependencies` for details of what software is required
+for each of these stages.)
+
 .. note::
 
-   These can be overridden for the ``make_fastqs`` and ``run_qc`` using
-   the ``--modulefiles`` option.
+   These can be overridden for the ``make_fastqs`` and ``run_qc`` stages
+   using the ``--modulefiles`` option.
+
+For the ``run_qc`` stage, additional module files can be specified for
+individual tasks within the QC pipeline:
+
+ * ``illumina_qc``
+ * ``fastq_strand``
+ * ``cellranger``
+ * ``report_qc``
+
+If any of these are defined then they will be loaded for the relevant
+tasks in the QC pipeline.
 
 .. _required_bcl2fastq_versions:
 
