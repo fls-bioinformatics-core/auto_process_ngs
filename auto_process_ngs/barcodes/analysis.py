@@ -1260,6 +1260,11 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                      "overrepresented compared to the assigned "
                      "barcodes:")
         reporter.add("#Index\tN_reads\t%reads",heading=True)
+        # Sort into order of highest to lowest counts
+        overrepresented = sorted(overrepresented,
+                                 key=lambda x: x['counts'],
+                                 reverse=True)
+        # Report
         for barcode in overrepresented:
             reporter.add("%s\t%d\t%.2f%%" %
                          (barcode['barcode'],
