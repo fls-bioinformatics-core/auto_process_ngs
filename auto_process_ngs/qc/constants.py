@@ -19,6 +19,7 @@ PROTOCOLS = ('standardPE',
              'standardSE',
              'singlecell',
              '10x_scRNAseq',
+             '10x_snRNAseq',
              '10x_scATAC',
              'ICELL8_scATAC',)
 
