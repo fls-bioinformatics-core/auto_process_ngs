@@ -1114,7 +1114,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
             if sample not in found_samples:
                 barcode = sample_sheet.lookup_barcode(sample,lane)
                 try:
-                    count = counts.counts(barcode,lane)
+                    count = analysis.counts[barcode].reads
                 except KeyError:
                     count = 0
                 if count > 0:
@@ -1147,7 +1147,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                         {
                             'barcode': barcode,
                             'rank': unassigned_indexes[barcode],
-                            'counts': counts.counts(barcode,lane),
+                            'counts': analysis.counts[barcode].reads,
                         })
     # Add separator line if the reporter already has content
     if reporter:
@@ -1260,6 +1260,11 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                      "overrepresented compared to the assigned "
                      "barcodes:")
         reporter.add("#Index\tN_reads\t%reads",heading=True)
+        # Sort into order of highest to lowest counts
+        overrepresented = sorted(overrepresented,
+                                 key=lambda x: x['counts'],
+                                 reverse=True)
+        # Report
         for barcode in overrepresented:
             reporter.add("%s\t%d\t%.2f%%" %
                          (barcode['barcode'],
