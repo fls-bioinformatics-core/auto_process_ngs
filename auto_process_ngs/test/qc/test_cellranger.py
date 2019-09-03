@@ -36,7 +36,7 @@ class TestCellrangerCount(unittest.TestCase):
         # Add cellranger count outputs
         UpdateAnalysisProject(self.project).add_cellranger_count_outputs()
         # Do tests
-        count_dir = os.path.join(self.project.dirn,"cellranger_count","PJB1")
+        count_dir = os.path.join(self.project.qc_dir,"cellranger_count","PJB1")
         cellranger_count = CellrangerCount(count_dir)
         self.assertEqual(cellranger_count.dir,count_dir)
         self.assertEqual(cellranger_count.sample_name,"PJB1")
@@ -49,7 +49,7 @@ class TestCellrangerCount(unittest.TestCase):
         CellrangerCount: handle missing directory
         """
         # Do tests
-        count_dir = os.path.join(self.project.dirn,"cellranger_count","PJB1")
+        count_dir = os.path.join(self.project.qc_dir,"cellranger_count","PJB1")
         cellranger_count = CellrangerCount(count_dir)
         self.assertRaises(OSError,
                           getattr,cellranger_count,'dir')

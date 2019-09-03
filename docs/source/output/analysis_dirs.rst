@@ -140,18 +140,22 @@ contents of the ``projects.info`` file.
 Each project directory will contain the following files and
 directories:
 
-   ========================== ==================================
+   ========================== ======================================
    **File or Directory**      **Description and contents**
-   -------------------------- ----------------------------------
+   -------------------------- --------------------------------------
    README.info                Project metadata
    fastqs/                    Fastq files
    ScriptCode/                Directory for custom user scripts
    qc/                        QC pipeline outputs
    qc_report.html             :doc:`QC report <qc_reports>`
    qc_report.PROJECT.RUN.zip  ZIP file containing all QC outputs
+                              and reports
    multiqc_report.html        ``multiqc`` outputs
    multiqc_report_data/       Data associated with ``multiqc``
-   ========================== ==================================
+   cellranger_count/          Full outputs from ``cellranger count``
+                              single library analyses
+                              (10xGenomics projects only)
+   ========================== ======================================
 
 --------------------------
 Project directory metadata

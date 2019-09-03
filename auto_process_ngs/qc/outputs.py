@@ -290,9 +290,9 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
             fastq_pairs.add(fq_pair)
     return sorted(list(fastq_pairs))
 
-def check_cellranger_count_outputs(project):
+def check_cellranger_count_outputs(project,qc_dir=None):
     """
-    Return samples missing outputs from 'cellranger count'
+    Return samples missing QC outputs from 'cellranger count'
 
     Returns a list of the samples from a project for which
     one or more associated outputs from `cellranger count`
@@ -301,20 +301,25 @@ def check_cellranger_count_outputs(project):
     Arguments:
       project (AnalysisProject): project to check the
         QC outputs for
+      qc_dir (str): path to QC directory (if not the default
+        QC directory for the project)
 
     Returns:
       List: list of sample names with missing outputs
     """
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    qc_dir = os.path.abspath(qc_dir)
     samples = set()
     for sample in project.samples:
         for output in cellranger_count_output(project,sample.name):
-            if not os.path.exists(os.path.join(project.dirn,output)):
+            if not os.path.exists(os.path.join(qc_dir,output)):
                 samples.add(sample.name)
     return sorted(list(samples))
 
-def check_cellranger_atac_count_outputs(project):
+def check_cellranger_atac_count_outputs(project,qc_dir=None):
     """
-    Return samples missing outputs from 'cellranger-atac count'
+    Return samples missing QC outputs from 'cellranger-atac count'
 
     Returns a list of the samples from a project for which
     one or more associated outputs from `cellranger-atac count`
@@ -323,14 +328,19 @@ def check_cellranger_atac_count_outputs(project):
     Arguments:
       project (AnalysisProject): project to check the
         QC outputs for
+      qc_dir (str): path to QC directory (if not the default
+        QC directory for the project)
 
     Returns:
       List: list of sample names with missing outputs
     """
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    qc_dir = os.path.abspath(qc_dir)
     samples = set()
     for sample in project.samples:
         for output in cellranger_atac_count_output(project,sample.name):
-            if not os.path.exists(os.path.join(project.dirn,output)):
+            if not os.path.exists(os.path.join(qc_dir,output)):
                 samples.add(sample.name)
     return sorted(list(samples))
 
@@ -407,8 +417,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
     # Cellranger count output
     if qc_protocol == '10x_scRNAseq':
         for output in cellranger_count_output(project):
-            outputs.add(os.path.join(project.dirn,output))
+            outputs.add(os.path.join(qc_dir,output))
     elif qc_protocol == '10x_scATAC':
         for output in cellranger_atac_count_output(project):
-            outputs.add(os.path.join(project.dirn,output))
+            outputs.add(os.path.join(qc_dir,output))
     return sorted(list(outputs))

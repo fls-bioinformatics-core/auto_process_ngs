@@ -52,6 +52,7 @@ The following data are shown:
 * :ref:`qc_report_fastqc_summary_plots`
 * :ref:`qc_report_fastq_screen_summary_plots`
 * :ref:`qc_report_strandedness`
+* :ref:`qc_report_cellranger_count`
 
 One purpose of this table is to help pick up on trends and identify
 any outliers within the dataset as a whole; hence the main function
@@ -148,6 +149,30 @@ Some examples:
 
 More detailed information about the strandedness statistics
 is given in the :ref:`qc_report_qc_outputs_per_fastq` section.
+
+.. _qc_report_cellranger_count:
+
+Cellranger count/single library analyses
+----------------------------------------
+
+For 10xGenomics scRNA-seq and scATAC-seq data the ``cellranger count``
+or ``cellranger-atac count`` commands are run as appropriate to
+perform the single library analysis on each sample.
+
+The resulting HTML reports for each sample are then linked from the
+QC summary table.
+
+Details of the report contents can be found in the appropriate
+``cellranger`` documentation:
+
+ * scRNA-seq data: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/output/summary
+ * scATAC-seq data: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/output/summary
+
+.. note::
+
+   The full set of outputs can be found under the ``cellranger_count``
+   subdirectory of the project directory, when single library
+   analysis has been performed.
    
 .. _qc_report_qc_outputs_per_fastq:
 

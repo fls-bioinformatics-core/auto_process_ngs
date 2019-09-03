@@ -700,37 +700,61 @@ class UpdateAnalysisProject(DirectoryUpdater):
         zip_file.close()
         self._reload_project()
 
-    def add_cellranger_count_outputs(self):
+    def add_cellranger_count_outputs(self,qc_dir=None,legacy=False):
         """
         Add mock 'cellranger count' outputs to project
+
+        Arguments:
+          qc_dir (str): specify non-default QC output
+            directory
+          legacy (bool): if True then generate 'legacy'
+            style cellranger outputs
         """
         print("Adding cellranger count outputs for %s" % self._project.dirn)
-        self.add_file("cellranger_count_report.html")
-        self.add_subdir("cellranger_count")
+        if legacy:
+            print("- legacy mode")
+            self.add_file("cellranger_count_report.html")
+            self.add_subdir("cellranger_count")
+        else:
+            if qc_dir is not None:
+                self._project.use_qc_dir(qc_dir)
+            print("- QC dir: %s" % self._project.qc_dir)
+            if not os.path.exists(self._project.qc_dir):
+                self.add_subdir(self._project.qc_dir)
+            self.add_subdir(os.path.join(self._project.qc_dir,
+                                         "cellranger_count"))
         for sample in self._project.samples:
-            sample_dir = os.path.join(self._project.dirn,
-                                      "cellranger_count",
-                                      sample.name)
+            if legacy:
+                sample_dir = os.path.join(self._project.dirn,
+                                          "cellranger_count",
+                                          sample.name)
+            else:
+                sample_dir = os.path.join(self._project.qc_dir,
+                                          "cellranger_count",
+                                          sample.name)
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
             for f in ("web_summary.html","metrics_summary.csv"):
                 self.add_file(os.path.join(sample_dir,"outs",f))
+            for f in ("_cmdline",):
+                self.add_file(os.path.join(sample_dir,f))
         # Build ZIP archive
-        analysis_dir = os.path.basename(self._parent_dir())
-        cellranger_zip = os.path.join(self._project.dirn,
-                                      "cellranger_count_report.%s.%s.zip" %
-                                      (self._project.name,
-                                       analysis_dir))
-        zip_file = ZipArchive(cellranger_zip,
-                              relpath=self._project.dirn,
-                              prefix="cellranger_count_report.%s.%s" %
-                              (self._project.name,
-                               analysis_dir))
-        zip_file.add_file(os.path.join(self._project.dirn,
-                                       "cellranger_count_report.html"))
-        zip_file.add(os.path.join(self._project.dirn,
-                                  "cellranger_count"))
-        zip_file.close()
+        if legacy:
+            analysis_dir = os.path.basename(self._parent_dir())
+            cellranger_zip = os.path.join(self._project.dirn,
+                                          "cellranger_count_report.%s.%s.zip" %
+                                          (self._project.name,
+                                           analysis_dir))
+            zip_file = ZipArchive(cellranger_zip,
+                                  relpath=self._project.dirn,
+                                  prefix="cellranger_count_report.%s.%s" %
+                                  (self._project.name,
+                                   analysis_dir))
+            zip_file.add_file(os.path.join(self._project.dirn,
+                                           "cellranger_count_report.html"))
+            zip_file.add(os.path.join(self._project.dirn,
+                                      "cellranger_count"))
+            zip_file.close()
         self._reload_project()
 
 #######################################################################
@@ -1246,6 +1270,8 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
         """
         Internal: provides mock cellranger functionality
         """
+        # Store command line
+        cmdline = "%s" % ' '.join(args)
         # Build generic header
         try:
             cmd = " %s" % args[0]
@@ -1378,6 +1404,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             ###############
             top_dir = str(args.id)
             os.mkdir(top_dir)
+            # Outs
             outs_dir = os.path.join(top_dir,"outs")
             os.mkdir(outs_dir)
             if cellranger_exe == "cellranger":
@@ -1391,6 +1418,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
+            # _cmdline file
+            cmdline_file = os.path.join(top_dir,"_cmdline")
+            with open(cmdline_file,'w') as fp:
+                fp.write("%s\n" % cmdline)
         else:
             print("%s: not implemented" % command)
         print("Return exit code: %s" % self._exit_code)

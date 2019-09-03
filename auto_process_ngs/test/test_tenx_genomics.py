@@ -529,8 +529,9 @@ class TestSetCellCountForProject(unittest.TestCase):
         project_dir = self._make_mock_analysis_project(
             "10xGenomics Chromium 3'v3",
             "scRNA-seq")
-        # Add metrics_summart.csv
+        # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
+                                  "qc",
                                   "cellranger_count",
                                   "PJB1",
                                   "outs")
@@ -559,8 +560,9 @@ class TestSetCellCountForProject(unittest.TestCase):
         project_dir = self._make_mock_analysis_project(
             "10xGenomics Single Cell ATAC",
             "scATAC-seq")
-        # Add metrics_summart.csv
+        # Add metrics_summary.csv
         counts_dir = os.path.join(project_dir,
+                                  "qc",
                                   "cellranger_count",
                                   "PJB1",
                                   "outs")
