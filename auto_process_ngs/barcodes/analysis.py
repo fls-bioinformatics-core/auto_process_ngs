@@ -1114,7 +1114,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
             if sample not in found_samples:
                 barcode = sample_sheet.lookup_barcode(sample,lane)
                 try:
-                    count = counts.counts(barcode,lane)
+                    count = analysis.counts[barcode].reads
                 except KeyError:
                     count = 0
                 if count > 0:
@@ -1147,7 +1147,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                         {
                             'barcode': barcode,
                             'rank': unassigned_indexes[barcode],
-                            'counts': counts.counts(barcode,lane),
+                            'counts': analysis.counts[barcode].reads,
                         })
     # Add separator line if the reporter already has content
     if reporter:
