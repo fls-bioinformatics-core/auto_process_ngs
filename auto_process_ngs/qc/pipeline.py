@@ -521,7 +521,7 @@ class SetupQCDirs(PipelineFunctionTask):
            stored_protocol != self.args.qc_protocol:
             logger.warning("QC protocol mismatch for %s: "
                            "'%s' stored, '%s' specified"
-                           % (self.project.name,
+                           % (self.args.project.name,
                               stored_protocol,
                               self.args.protocol))
             logger.warning("Stored protocol will be ignored")
