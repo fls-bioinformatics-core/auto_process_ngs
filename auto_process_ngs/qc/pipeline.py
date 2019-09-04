@@ -98,6 +98,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_transcriptomes',type=dict)
+        self.add_param('cellranger_premrna_references',type=dict)
         self.add_param('cellranger_atac_references',type=dict)
         self.add_param('cellranger_jobmode',type=str,value='local')
         self.add_param('cellranger_maxjobs',type=int)
@@ -289,8 +290,9 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
 
-        if (qc_protocol == "10x_scRNAseq" or
-            qc_protocol == "10x_scATAC"):
+        if qc_protocol in ("10x_scRNAseq",
+                           "10x_snRNAseq",
+                           "10x_scATAC",):
 
             # Get reference data for cellranger
             get_cellranger_reference_data = GetCellrangerReferenceData(
@@ -299,6 +301,7 @@ class QCPipeline(Pipeline):
                 project,
                 organism=organism,
                 transcriptomes=self.params.cellranger_transcriptomes,
+                premrna_references=self.params.cellranger_premrna_references,
                 atac_references=self.params.cellranger_atac_references,
                 qc_protocol=qc_protocol
             )
@@ -369,6 +372,7 @@ class QCPipeline(Pipeline):
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
             fastq_subset=None,cellranger_transcriptomes=None,
+            cellranger_premrna_references=None,
             cellranger_atac_references=None,cellranger_jobmode='local',
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
@@ -388,6 +392,9 @@ class QCPipeline(Pipeline):
           cellranger_transcriptomes (mapping): mapping of
             organism names to reference transcriptome data
             for cellranger
+          cellranger_premrna_references (mapping):
+            mapping of organism names to "pre-mRNA"
+            reference data for cellranger
           cellranger_atac_references (mapping): mapping of
             organism names to ATAC-seq reference genome data
             for cellranger-atac
@@ -468,6 +475,8 @@ class QCPipeline(Pipeline):
                                   'fastq_strand_indexes': fastq_strand_indexes,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
+                                  'cellranger_premrna_references':
+                                  cellranger_premrna_references,
                                   'cellranger_atac_references':
                                   cellranger_atac_references,
                                   'cellranger_jobmode': cellranger_jobmode,
@@ -648,9 +657,10 @@ class RunIlluminaQC(PipelineTask):
             if self.args.fastq_screen_subset is not None:
                 cmd.add_args('--subset',self.args.fastq_screen_subset)
             # No screens for R1 reads for single cell
-            if (self.args.qc_protocol == 'singlecell' or
-                self.args.qc_protocol == '10x_scRNAseq') and \
-                self.args.fastq_attrs(fastq).read_number == 1:
+            if self.args.qc_protocol in ('singlecell',
+                                         '10x_scRNAseq',
+                                         '10x_snRNAseq') \
+                and self.args.fastq_attrs(fastq).read_number == 1:
                 cmd.add_args('--no-screens')
             # Add the command
             self.add_cmd(cmd)
@@ -666,9 +676,10 @@ class RunIlluminaQC(PipelineTask):
         if fastq_screen_subset is not None:
             cmd.add_args('--subset',fastq_screen_subset)
         # No screens for for in single cell
-        if (qc_protocol == 'singlecell' or
-            qc_protocol == '10x_scRNAseq') and \
-            fastq_attrs(fastq).read_number == 1:
+        if qc_protocol in ('singlecell',
+                           '10x_scRNAseq',
+                           '10x_snRNAseq',) \
+            and fastq_attrs(fastq).read_number == 1:
             cmd.add_args('--no-screens')
         # Execute the command
         status = cmd.run_subprocess(working_dir=qc_dir)
@@ -682,9 +693,10 @@ class RunIlluminaQC(PipelineTask):
             if not os.path.exists(output):
                 failed = True
         # Check the Fastq_screen outputs
-        if (qc_protocol == 'singlecell' or
-            qc_protocol == '10x_scRNAseq') and \
-            fastq_attrs(fastq).read_number == 1:
+        if qc_protocol in ('singlecell',
+                           '10x_scRNAseq',
+                           '10x_snRNAseq',) \
+            and fastq_attrs(fastq).read_number == 1:
             # No screens for R1 for single cell
             pass
         else:
@@ -884,7 +896,8 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
     """
     """
     def init(self,project,organism=None,transcriptomes=None,
-             atac_references=None,qc_protocol=None):
+             premrna_references=None,atac_references=None,
+             qc_protocol=None):
         """
         Initialise the GetCellrangerReferenceData task
 
@@ -898,6 +911,8 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
             the project)
           transcriptomes (mapping): mapping of organism names
             to reference transcriptome data for cellranger
+          premrna_references (mapping): mapping of organism
+            names to "pre-mRNA" reference data for cellranger
           atac_references (mapping): mapping of organism names
             to reference genome data for cellranger-atac
           qc_protocol (str): QC protocol to use
@@ -913,6 +928,8 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         # Set the references we're going to use
         if self.args.qc_protocol == "10x_scRNAseq":
             references = self.args.transcriptomes
+        elif self.args.qc_protocol == "10x_snRNAseq":
+            references = self.args.premrna_references
         elif self.args.qc_protocol == "10x_scATAC":
             references = self.args.atac_references
         else:
@@ -974,7 +991,8 @@ class CheckCellrangerCountOutputs(PipelineFunctionTask):
         self.add_output('fastq_dir',Param(type=str))
         self.add_output('samples',list())
     def setup(self):
-        if self.args.qc_protocol == "10x_scRNAseq":
+        if self.args.qc_protocol in ("10x_scRNAseq",
+                                     "10x_snRNAseq",):
             check_outputs = check_cellranger_count_outputs
         elif self.args.qc_protocol == "10x_scATAC":
             check_outputs = check_cellranger_atac_count_outputs
@@ -1099,9 +1117,15 @@ class RunCellrangerCount(PipelineTask):
                                 localmem=self.args.cellranger_localmem)
             self.add_cmd(cmd)
     def finish(self):
+        # If no reference data then ignore and return
+        if not self.args.reference_data_path:
+            print("No reference data: single library analysis was "
+                  "skipped")
+            return
         # Handle outputs from cellranger count
         top_level_files = ("_cmdline",)
-        if self.args.qc_protocol == "10x_scRNAseq":
+        if self.args.qc_protocol in ("10x_scRNAseq",
+                                     "10x_snRNAseq",):
             outs_files = ("web_summary.html","metrics_summary.csv")
         elif self.args.qc_protocol == "10x_scATAC":
             outs_files = ("web_summary.html","summary.csv")
