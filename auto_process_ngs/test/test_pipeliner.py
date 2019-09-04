@@ -623,7 +623,7 @@ exit 0
         # Set up mock environment module
         modules_dir = os.path.join(self.working_dir,"modulefiles")
         os.mkdir(modules_dir)
-        modules = ('apps/fastqc/1.0',)
+        modules = "apps/fastqc/1.0"
         os.mkdir(os.path.join(modules_dir,"apps"))
         os.mkdir(os.path.join(modules_dir,"apps","fastqc"))
         with io.open(os.path.join(modules_dir,"apps","fastqc","1.0"),'wt') \
@@ -669,7 +669,7 @@ prepend-path PATH %s
         Pipeline: check pipeline fails for missing 'modules' environment
         """
         # Missing module file
-        modules = ('apps/fastqc/1.0',)
+        modules = "apps/fastqc/1.0"
         # Define a task
         class RunFastqc(PipelineTask):
             def init(self,*files):
