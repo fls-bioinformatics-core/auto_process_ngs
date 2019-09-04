@@ -577,6 +577,44 @@ class TestCheckCellrangerCountOutputs(unittest.TestCase):
         # Check the outputs
         self.assertEqual(check_cellranger_count_outputs(project),[])
 
+    def test_check_cellranger_count_outputs_10x_snRNAseq_missing(self):
+        """
+        check_cellranger_count_outputs: cellranger count output missing (10x_snRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3", })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_snRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        # Check the outputs
+        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+
+    def test_check_cellranger_count_outputs_10x_snRNAseq_present(self):
+        """
+        check_cellranger_count_outputs: cellranger count output present (10x_snRNAseq)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Chromium 3'v3" })
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
+        UpdateAnalysisProject(project).add_qc_outputs(
+            protocol="10x_snRNAseq",
+            include_fastq_strand=False,
+            include_multiqc=False)
+        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        # Check the outputs
+
 class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
     """
     Tests for the 'check_cellranger_atac_count_outputs' function
