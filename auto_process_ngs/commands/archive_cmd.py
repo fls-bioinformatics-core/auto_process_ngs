@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 #
 #     archive_cmd.py: implement auto process archive command
@@ -264,6 +263,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
                 "%s/" % ap.analysis_dir,
                 os.path.join(archive_dir,staging),
                 prune_empty_dirs=True,
+                mirror=True,
                 dry_run=dry_run,
                 chmod='ugo-w',
                 extra_options=extra_options)
