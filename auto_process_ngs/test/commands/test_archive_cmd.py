@@ -991,3 +991,102 @@ poll_interval = 0.5
             final_dir,
             "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
         self.assertFalse(os.path.exists(staging_dir))
+
+    def test_archive_removes_redundant_fastqs(self):
+        """archive: remove redundant Fastqs from final archive (read-only Fastqs)
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Do archiving to staging
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=True,
+                         final=False)
+        self.assertEqual(status,0)
+        # Check staging dir
+        staging_dir = os.path.join(
+            final_dir,
+            "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
+        self.assertTrue(os.path.exists(staging_dir))
+        dirs = ("AB","CDE","logs","undetermined")
+        for d in dirs:
+            d = os.path.join(staging_dir,d)
+            self.assertTrue(os.path.exists(d))
+        # Check Fastqs for project 'AB'
+        initial_fastqs = ("AB1_S1_R1_001.fastq.gz",
+                          "AB1_S1_R2_001.fastq.gz",
+                          "AB2_S2_R1_001.fastq.gz",
+                          "AB2_S2_R2_001.fastq.gz")
+        for fq in initial_fastqs:
+            fastq = os.path.join(staging_dir,
+                                 "AB",
+                                 "fastqs",
+                                 fq)
+            self.assertTrue(os.path.exists(fastq))
+        # Update Fastqs in project 'AB': remove existing ones
+        # and make new ones with different names
+        new_fastqs = ("AB3_S3_R1_001.fastq.gz",
+                      "AB3_S3_R2_001.fastq.gz",
+                      "AB4_S4_R1_001.fastq.gz",
+                      "AB4_S4_R2_001.fastq.gz")
+        for fq in initial_fastqs:
+            fastq = os.path.join(mockdir.dirn,
+                                 "AB",
+                                 "fastqs",
+                                 fq)
+            os.remove(fastq)
+        for fq in new_fastqs:
+            fastq = os.path.join(mockdir.dirn,
+                                 "AB",
+                                 "fastqs",
+                                 fq)
+            with open(fastq,'w') as fp:
+                fp.write("")
+        # Do second archive operation to final
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=True,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check final dir
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        dirs = ("AB","CDE","logs","undetermined")
+        for d in dirs:
+            d = os.path.join(final_archive_dir,d)
+            self.assertTrue(os.path.exists(d))
+        # Check Fastqs have been updated for project 'AB'
+        for fq in initial_fastqs:
+            fastq = os.path.join(final_archive_dir,
+                                 "AB",
+                                 "fastqs",
+                                 fq)
+            self.assertFalse(os.path.exists(fastq))
+        for fq in new_fastqs:
+            fastq = os.path.join(final_archive_dir,
+                                 "AB",
+                                 "fastqs",
+                                 fq)
+            self.assertTrue(os.path.exists(fastq))
