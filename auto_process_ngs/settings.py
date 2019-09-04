@@ -119,6 +119,10 @@ class Settings(object):
         self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
         self.modulefiles['process_10xgenomics'] = config.get('modulefiles',
                                                              'process_10xgenomics')
+        self.modulefiles['illumina_qc'] = config.get('modulefiles','illumina_qc')
+        self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
+        self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
+        self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)

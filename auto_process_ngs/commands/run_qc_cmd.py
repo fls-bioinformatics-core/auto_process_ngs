@@ -95,6 +95,16 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     default_runner = ap.settings.general.default_runner
     if runner is None:
         qc_runner = ap.settings.runners.qc
+    # Get environment modules
+    envmodules = dict()
+    for name in ('illumina_qc',
+                 'fastq_strand',
+                 'cellranger',
+                 'report_qc',):
+        try:
+            envmodules[name] = ap.settings.modulefiles[name]
+        except KeyError:
+            envmodules[name] = None
     # Get scheduler parameters
     if max_jobs is None:
         max_jobs = ap.settings.general.max_concurrent_jobs
@@ -143,5 +153,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                            'qc_runner': qc_runner,
                            'verify_runner': default_runner,
                            'report_runner': default_runner,
-                       })
+                       },
+                       envmodules=envmodules)
     return status
