@@ -523,7 +523,7 @@ class SetupQCDirs(PipelineFunctionTask):
                            "'%s' stored, '%s' specified"
                            % (self.args.project.name,
                               stored_protocol,
-                              self.args.protocol))
+                              self.args.qc_protocol))
             logger.warning("Stored protocol will be ignored")
         # Set up QC dir
         if not os.path.exists(self.args.qc_dir):
