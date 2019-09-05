@@ -12,6 +12,7 @@ from auto_process_ngs.mock import MockMultiQC
 from auto_process_ngs.mock import MockFastqStrandPy
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.qc.pipeline import QCPipeline
 
@@ -728,6 +729,46 @@ class TestQCPipeline(unittest.TestCase):
         status = runqc.run(fastq_strand_indexes=
                            { 'human': '/data/hg38/star_index' },
                            poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
+    def test_qcpipeline_rerun_with_protocol_mismatch(self):
+        """QCPipeline: handle QC protocol mismatch when rerunning pipeline
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"))
+        p.create(top_dir=self.wd)
+        # Add existing QC outputs
+        UpdateAnalysisProject(
+            AnalysisProject("PJB",os.path.join(self.wd,"PJB"))).add_qc_outputs(
+                protocol="standardSE",
+                include_fastq_strand=False,
+                include_multiqc=True)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          qc_protocol="standardPE",
+                          multiqc=True)
+        status = runqc.run(poll_interval=0.5,
                            max_jobs=1,
                            runners={ 'default': SimpleJobRunner(), })
         # Check output and reports
