@@ -143,6 +143,32 @@ section of the ``settings.ini`` file, for example::
 or else must be specified using the relevant command line
 option.
 
+.. _auto_process_reference_data_10xgenomics_snrna_seq:
+
+----------------------------------------------------------------
+process_10xgenomics (single library analysis for snRNA-seq data)
+----------------------------------------------------------------
+
+When dealing with single-nuclei RNA-seq (snRNA-seq) 10xGenomics
+data, it is recommended that ``cellranger count`` is run with a
+compatible ``cellranger`` "pre-mRNA" reference package (which
+includes both intronic and exonic information) instead of the
+standard transcriptome reference used for scRNA-seq.
+
+10xGenomics don't provide pre-mRNA references, but the
+documentation explains how to generate a custom reference
+package for these data:
+
+* https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/advanced/references#premrna
+
+These can be made available within ``auto-process`` by adding
+definitions into the ``10xgenomics_premrna_references``
+section of the ``settings.ini`` file, for example::
+
+  [10xgenomics_premrna_references]
+  human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0_premrna
+  mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0_premrna
+
 .. _auto_process_reference_data_10xgenomics_atac:
 
 -----------------------------------------------------------------

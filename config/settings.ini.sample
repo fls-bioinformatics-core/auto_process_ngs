@@ -73,6 +73,14 @@ cellranger_localcores = 1
 #human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
 #mouse = /data/cellranger/refdata-cellranger-mm10-1.2.0
 
+# 10xGenomics snRNA-seq pre-mRNA references
+# Assign organism name to path to cellranger
+# snRNA-seq reference data to use for that
+# organism in single library analysis
+[10xgenomics_premrna_references]
+#human = /data/cellranger/refdata-cellranger-GRCh38-1.0.1-pre_mrna
+#mouse = /data/cellranger/refdata-cellranger-mm10-1.0.1-pre_mrna
+
 # 10xGenomics scATAC-seq genome references
 # Assign organism name to path to cellranger
 # scATAC-seq reference data to use for that

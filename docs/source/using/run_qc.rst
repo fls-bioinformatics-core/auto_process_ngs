@@ -24,6 +24,7 @@ QC protocol      Used for
 ``standardSE``   Standard single-end data i.e. R1 Fastqs only
 ``10x_scATAC``   10xGenomics single cell ATAC-seq
 ``10x_scRNAseq`` 10xGenomics single cell RNA-seq
+``10x_snRNAseq`` 10xGenomics single nuclei RNA-seq
 ``singlecell``   ICELL8 single cell RNA-seq
 ================ ========================
 
@@ -40,8 +41,8 @@ each Fastq file in the project:
    or on R1 (for single-end data), to determine the strandedness
    of the sequence data
 
-For the single-cell RNA-seq data from ICELL8 and 10xGenomics Chromium
-platforms:
+For the single-cell and single-nuclei RNA-seq data from ICELL8 and
+10xGenomics Chromium platforms:
 
  * `fastqc`_ is run for each Fastq file
  * `fastq_screen`_ and `fastq_strand`_ are run on just the R2
@@ -51,7 +52,7 @@ platforms:
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
 .. _fastq_strand: https://genomics-bcftbx.readthedocs.io/en/latest/reference/qc_pipeline.html#fastq-strand
 
-In addition for 10xGenomics scRNA-seq and scATAC data:
+In addition for 10xGenomics scRNA-seq, snRNA-seq and scATAC data:
 
  * Single library analysis is run using the ``count`` command of
    either `cellranger`_ or `cellranger_atac`_ (as appropriate)

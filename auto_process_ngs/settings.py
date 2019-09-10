@@ -198,6 +198,13 @@ class Settings(object):
                 self['10xgenomics_transcriptomes'][genome] = transcriptome
         except NoSectionError:
             logging.debug("No 10xgenomics transcriptomes defined")
+        # 10xgenomics snRNA-seq pre-mRNA references
+        self.add_section('10xgenomics_premrna_references')
+        try:
+            for genome,reference in config.items('10xgenomics_premrna_references'):
+                self['10xgenomics_premrna_references'][genome] = reference
+        except NoSectionError:
+            logging.debug("No 10xgenomics snRNA-seq pre-mRNA references defined")
         # 10xgenomics scATAC-seq genome references
         self.add_section('10xgenomics_atac_genome_references')
         try:
