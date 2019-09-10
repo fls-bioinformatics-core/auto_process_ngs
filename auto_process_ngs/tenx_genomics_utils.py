@@ -423,8 +423,9 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
         qc_dir = project.qc_dir
     qc_dir = os.path.abspath(qc_dir)
     number_of_cells = 0
-    if project.info.library_type == 'scRNA-seq':
-        # Single cell RNA-seq
+    if project.info.library_type in ('scRNA-seq',
+                                     'snRNA-seq'):
+        # Single cell/single nuclei RNA-seq
         for sample in project.samples:
             try:
                 metrics_summary_csv = os.path.join(
