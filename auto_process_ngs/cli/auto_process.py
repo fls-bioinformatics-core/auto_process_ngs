@@ -430,7 +430,7 @@ def add_make_fastqs_command(cmdparser):
                         dest="icell8_swap_i1_and_i2",
                         help="swap supplied I1 and I2 Fastqs when matching "
                         "ATAC barcodes against well list")
-    icell8.add_argument('--reverse-complement',type='choice',
+    icell8.add_argument('--reverse-complement',
                         choices=['i1','i2','both'],
                         dest="icell8_reverse_complement",
                         default=None,
