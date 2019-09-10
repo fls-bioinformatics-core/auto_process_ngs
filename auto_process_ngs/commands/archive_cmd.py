@@ -262,7 +262,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             rsync_fastqs = applications.general.rsync(
                 "%s/" % ap.analysis_dir,
                 os.path.join(archive_dir,staging),
-                prune_empty_dirs=True,
+                prune_empty_dirs=False,
                 mirror=True,
                 dry_run=dry_run,
                 chmod='ugo-w',
