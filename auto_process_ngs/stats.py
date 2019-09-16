@@ -209,7 +209,7 @@ class FastqStatistics(object):
                 self._stats.append(data=data)
             else:
                 # Overwrite existing entry
-                logging.warning("Overwriting exisiting entry for "
+                logging.warning("Overwriting existing entry for "
                                 "%s/%s/%s" % (fastq.project,
                                               fastq.sample,
                                               fastq.name))
