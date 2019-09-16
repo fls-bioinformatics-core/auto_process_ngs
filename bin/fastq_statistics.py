@@ -36,7 +36,6 @@ import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils
 from auto_process_ngs.stats import FastqStatistics
-from auto_process_ngs.stats import FastqStats
 
 from auto_process_ngs import get_version
 __version__ = get_version()
