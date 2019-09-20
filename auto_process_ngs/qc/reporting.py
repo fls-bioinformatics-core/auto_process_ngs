@@ -15,7 +15,6 @@ import time
 import ast
 from collections import defaultdict
 from bcftbx.IlluminaData import IlluminaFastq
-from bcftbx.IlluminaData import cmp_sample_names
 from bcftbx.TabFile import TabFile
 from bcftbx.qc.report import strip_ngs_extensions
 from bcftbx.utils import AttributeDictionary
