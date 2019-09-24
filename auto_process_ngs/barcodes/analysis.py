@@ -353,8 +353,8 @@ class BarcodeCounter(object):
                                                    seq,
                                                    self.counts(seq,lane)))
 
-    def group(self,lane,mismatches=2,cutoff=None,
-              seed_barcodes=None,exclude_reads=0.000001):
+    def group(self,lane,mismatches=2,cutoff=None,seed_barcodes=None,
+              minimum_read_fraction=0.000001):
         """
         Put barcodes into groups of similar sequences
 
@@ -368,9 +368,10 @@ class BarcodeCounter(object):
           cutoff: minimum number of reads as a fraction of all
             reads that a group must contain to be included
             (set to None to disable cut-off)
-          exclude_reads: speed-up parameter, excludes barcodes with
-            less than this fraction of associated reads. Speeds up
-            the grouping calculation at the cost of some precision
+          minimum_read_fraction: speed-up parameter, excludes
+            barcodes with less than this fraction of associated
+            reads. Speeds up the grouping calculation at the cost
+            of some precision
           seed_barcodes (list): optional, set of barcode sequences
             (typically, expected index sequences from a sample sheet)
             which will be used to build groups around even if they
@@ -378,7 +379,8 @@ class BarcodeCounter(object):
 
         """
         # Initialise
-        barcodes = self.filter_barcodes(lane=lane,cutoff=exclude_reads)
+        barcodes = self.filter_barcodes(lane=lane,
+                                        cutoff=minimum_read_fraction)
         nreads = self.nreads(lane=lane)
         groups = []
         # Update barcode list if 'seed' barcodes were provided
