@@ -429,7 +429,7 @@ class BarcodeCounter(object):
         return groups
 
     def analyse(self,lane=None,sample_sheet=None,cutoff=None,
-                mismatches=0):
+                mismatches=0,minimum_read_fraction=0.000001):
         """
         Analyse barcode frequencies
 
@@ -464,6 +464,13 @@ class BarcodeCounter(object):
             have at least this fraction of reads to be included;
             (if mismatches > 0 then this condition is applied to
             groups instead)
+          mismatches (integer): maximum number of mismatched
+            bases allowed when matching barcodes (default is 0
+            i.e. exact matches only)
+          minimum_read_fraction: speed-up parameter, excludes
+            barcodes with less than this fraction of associated
+            reads (speeds up the grouping calculation at the
+            cost of some precision)
 
         """
         sample_lookup = {}
@@ -478,7 +485,9 @@ class BarcodeCounter(object):
         else:
             groups = self.group(lane,mismatches=mismatches,
                                 seed_barcodes=sample_sheet_barcodes,
-                                cutoff=cutoff)
+                                cutoff=cutoff,
+                                minimum_read_fraction=
+                                minimum_read_fraction)
             barcodes = [grp.reference for grp in groups]
         analysis = AttributeDictionary(
             barcodes=barcodes,
@@ -1068,7 +1077,8 @@ class Reporter(object):
 #######################################################################
 
 def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
-                    mismatches=0,reporter=None):
+                    mismatches=0,minimum_read_fraction=0.000001,
+                    reporter=None):
     """
     Report barcode statistics
 
@@ -1087,6 +1097,10 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         that must be associated with a barcode in order
         to be included in analyses (e.g. 0.001 = 0.1%).
         Default is to include all barcodes
+      minimum_read_fraction: speed-up parameter, excludes
+        barcodes with less than this fraction of associated
+        reads (speeds up the grouping calculation at the
+        cost of some precision)
       reporter (Reporter): Reporter instance to write
         results to for reporting (optional, default is to
         write to stdout)
