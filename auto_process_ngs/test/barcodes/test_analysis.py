@@ -623,6 +623,31 @@ class TestBarcodeGroup(unittest.TestCase):
         # -- Too long
         self.assertFalse(grp.match("CGATGCCGG"))
 
+    def test_barcodegroup_match_dual_index(self):
+        """BarcodeGroup: check matching dual-index sequences against the reference
+        """
+        # Match sequence against the group
+        grp = BarcodeGroup("CGTACTAG+CTCTCTAT",2894178)
+        # 1 mismatch allowed
+        self.assertTrue(grp.match("CGTACTAA+CTCTCTAT",mismatches=1))
+        self.assertTrue(grp.match("CGTACTAG+CTCTCTAG",mismatches=1))
+        self.assertTrue(grp.match("CGTACTAA+CTCTCTAT",mismatches=1))
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTAT",mismatches=1))
+        self.assertFalse(grp.match("CGTACTAG+ATCTCTAG",mismatches=1))
+        self.assertFalse(grp.match("CTTACTAA+ATCTCTAT",mismatches=1))
+        # Default (2 mismatches)
+        self.assertTrue(grp.match("CTTACTAA+CTCTCTAT"))
+        self.assertTrue(grp.match("CGTACTAG+ATCTCTAG"))
+        self.assertTrue(grp.match("CTTACTAA+ATCTCTAT"))
+        self.assertFalse(grp.match("CTTACGAA+CTCTCTAT"))
+        self.assertFalse(grp.match("CGTACTAG+ATCTCGAG"))
+        self.assertFalse(grp.match("CTTACGAA+ATCTCGAT"))
+        # Differing lengths of barcode
+        # -- Too short
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTA"))
+        # -- Too long
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTATT"))
+
 # SampleSheetBarcodes
 class TestSampleSheetBarcodes(unittest.TestCase):
     def setUp(self):

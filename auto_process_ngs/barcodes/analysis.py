@@ -598,17 +598,34 @@ class BarcodeGroup(object):
 
     def match(self,seq,mismatches=2):
         """
-        Check if a sequence is related to the reference
+        Check if a sequence matches the reference
 
-        Note that if sequences differ in length then they
-        automatically fail to match.
+        The supplied sequence is checked against the
+        stored reference, and is a match if the number
+        of mismatching positions are less than or
+        equal to the number of allowed mismatches.
+
+        Note that:
+
+        - for dual index sequences and references (i.e.
+          sequences which contain either a '+' or '-'
+          character to separate the indices within the
+          sequence), each index is checked separately
+          and the mismatch limit is applied per index
+          (i.e. not across the sequence as a whole);
+        - positions with an 'N's in either sequence
+          automatically count as a mismatch in that
+          position;
+        - sequences which differ in length automatically
+          fail to match.
 
         Arguments:
-          seq (str): sequence to check against the reference
-          mismatches (int): maximum number of mismatches that
-            are allowed for the sequences to be considered as
-            related (default is 2). Note that 'N's in either
-            sequence automatically count as a mismatch.
+          seq (str): sequence to check against the
+            reference sequence
+          mismatches (int): maximum number of mismatches
+            that are allowed for the input sequence to be
+            considered to match the reference (default is
+            2).
 
         Returns:
           Boolean: True if sequences match within the
@@ -616,14 +633,18 @@ class BarcodeGroup(object):
             sequence lengths differ)
 
         """
-        if len(self._barcode) != len(seq):
+        if len(seq) != len(self._barcode):
             return False
-        m = 0
-        for c1,c2 in izip(self._barcode,seq):
-            if c1 == 'N' or c2 == 'N' or c1 != c2:
-                m += 1
-                if m > mismatches:
-                    return False
+        for index,ref in izip(seq.replace('-','+').split('+'),
+                              self._barcode.split('+')):
+            if len(index) != len(ref):
+                return False
+            m = 0
+            for c1,c2 in izip(index,ref):
+                if c1 == 'N' or c2 == 'N' or c1 != c2:
+                    m += 1
+                    if m > mismatches:
+                        return False
         return True
 
     @property
