@@ -366,7 +366,7 @@ class ReportBarcodeAnalysis(PipelineTask):
     Perform analysis and reporting of barcode counts
     """
     def init(self,counts_files,barcode_analysis_dir,lanes=None,
-             mismatches=None,cutoff=None,sample_sheet=None,
+             mismatches=None,cutoff=0.001,sample_sheet=None,
              title=None):
         """
         Initialise the ReportBarcodeAnalysis task
