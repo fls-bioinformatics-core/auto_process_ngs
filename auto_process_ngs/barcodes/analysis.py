@@ -139,8 +139,6 @@ class BarcodeCounter(object):
             (defaults to 1)
 
         """
-        # Normalise barcode
-        barcode = normalise_barcode(barcode)
         # Store by lane
         try:
             self._seqs[lane][barcode] += incr
@@ -657,17 +655,16 @@ class BarcodeGroup(object):
 
 class SampleSheetBarcodes(object):
     """
-    Class for handling index sequence information from a sample sheet
+    Class for handling index sequences from a sample sheet
 
     Given a SampleSheet.csv file this class can extract
     the index sequences (aka barcodes) corresponding to
     sample names, and provides methods to look up one from
     the other.
 
-    Note that the sequences are 'normalised' i.e. dual
-    indexes are concatenated with no intermediate character
-    (so 'AGCCCTT' and 'GTTACAT' becomes 'AGCCCTTGTTACAT',
-    not 'AGCCCTT-GTTACAT' or 'AGCCCTT+GTTACAT')
+    (Note that for dual index sequences the indices are
+    joined with a '+' character, so for example 'AGCCCTT'
+    and 'GTTACAT' becomes 'AGCCCTT+GTTACAT'.)
 
     Create an initial lookup object:
 
@@ -712,7 +709,7 @@ class SampleSheetBarcodes(object):
                 self._sample_lookup[lane] = {}
                 self._barcode_lookup[lane] = {}
             sample = line[sample_id]
-            index_seq = normalise_barcode(samplesheet_index_sequence(line))
+            index_seq = samplesheet_index_sequence(line).replace('-','+')
             self._sample_lookup[lane][index_seq] = sample
             self._barcode_lookup[lane][sample] = index_seq
 
