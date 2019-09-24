@@ -353,7 +353,7 @@ class BarcodeCounter(object):
                                                    seq,
                                                    self.counts(seq,lane)))
 
-    def group(self,lane,mismatches=2,n=None,cutoff=None,
+    def group(self,lane,mismatches=2,cutoff=None,
               seed_barcodes=None,exclude_reads=0.000001):
         """
         Put barcodes into groups of similar sequences
