@@ -1175,8 +1175,8 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     # Report settings
     if minimum_read_fraction:
         reporter.add(" * Initial barcodes were weeded to remove any "
-                     "with less than %f%% of total reads, so reported "
-                     "counts are approximate" %
+                     "with less than %f%% of total reads (so reported "
+                     "counts are approximate)" %
                      (minimum_read_fraction*100.0))
     if mismatches:
         reporter.add(" * Barcodes have been grouped by allowing %d "
