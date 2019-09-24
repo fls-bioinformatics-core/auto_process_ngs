@@ -718,6 +718,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         with open(self.dual_index_with_lanes,"w") as fp:
             fp.write(sample_sheet_header +
                      sample_sheet_dual_index_with_lanes)
+        #
+        sample_sheet_empty_barcode = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
+AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
+CDE3,CDE3,,,D701,,D501,,CDE,
+CDE4,CDE4,,,D702,,D501,,CDE,
+"""
+        self.empty_barcode = \
+            os.path.join(self.wd,"empty_barcode.csv")
+        with open(self.empty_barcode,"w") as fp:
+            fp.write(sample_sheet_header + sample_sheet_empty_barcode)
 
     def tearDown(self):
         # Remove temporary working dir
@@ -877,6 +889,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(s.lookup_barcode("AD5",4),"CCAGCAAT+ATCGCGAG")
         self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGAT+TCTTTCCC")
         self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGA+TCTTTCCC")
+
+    def test_empty_barcode(self):
+        """SampleSheetBarcodes: dual index sample sheet with empty barcode
+        """
+        s = SampleSheetBarcodes(self.empty_barcode)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["",
+                                       "CGTGTAGG+ATGTAACT",
+                                       "CGTGTAGG+GACCTGAA"])
+        # Check all samples
+        self.assertEqual(s.samples(),["AB1","AB2",
+                                      "CDE3","CDE4"])
 
     def test_request_non_existent_lane(self):
         """SampleSheetBarcodes: handle request for non-existent lane

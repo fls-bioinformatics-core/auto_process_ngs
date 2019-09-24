@@ -730,7 +730,11 @@ class SampleSheetBarcodes(object):
                 self._sample_lookup[lane] = {}
                 self._barcode_lookup[lane] = {}
             sample = line[sample_id]
-            index_seq = samplesheet_index_sequence(line).replace('-','+')
+            index_seq = samplesheet_index_sequence(line)
+            if index_seq is not None:
+                index_seq = index_seq.replace('-','+')
+            else:
+                index_seq = ""
             self._sample_lookup[lane][index_seq] = sample
             self._barcode_lookup[lane][sample] = index_seq
 
