@@ -126,6 +126,15 @@ if __name__ == '__main__':
                    action='store',dest='sample_sheet',default=None,
                    help="report best matches against barcodes in "
                    "SAMPLE_SHEET")
+    p.add_argument('--minimum_read_fraction',
+                   action='store',dest='minimum_read_fraction',
+                   metavar='FRACTION',default=0.000001,type=float,
+                   help="weed out individual barcodes from initial "
+                   "analysis which have a smaller fraction of reads "
+                   "than FRACTION, e.g. '0.001' removes barcodes "
+                   "with < 0.1%% of reads; speeds up analysis at the "
+                   "expense of accuracy as reported counts will be "
+                   "approximate (default: 1.0e-6)")
     p.add_argument('-r','--report',
                    action='store',dest='report_file',default=None,
                    help="write report to REPORT_FILE (otherwise write to "
@@ -253,7 +262,9 @@ if __name__ == '__main__':
                             cutoff=cutoff,
                             sample_sheet=sample_sheet,
                             mismatches=mismatches,
-                            reporter=reporter)
+                            reporter=reporter,
+                            minimum_read_fraction=
+                            args.minimum_read_fraction)
         if args.report_file is not None:
             print("Writing report to %s" % args.report_file)
             reporter.write(filen=args.report_file,title=args.title)
