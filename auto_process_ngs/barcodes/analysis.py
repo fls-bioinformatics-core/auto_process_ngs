@@ -1114,38 +1114,32 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     # Get analysis
     analysis = counts.analyse(lane=lane,cutoff=cutoff,
                               sample_sheet=sample_sheet,
-                              mismatches=mismatches)
-    # Check for overrepresented sequences, and missing and
-    # underrepresented samples
+                              mismatches=mismatches,
+                              minimum_read_fraction=
+                              minimum_read_fraction)
+    # Check for overrepresented sequences and underrepresented
+    # samples
     underrepresented = []
     overrepresented = []
-    missing = []
     if sample_sheet is not None:
         sample_sheet = SampleSheetBarcodes(sample_sheet)
         found_samples = filter(lambda s: s is not None,
                                [analysis.counts[bc].sample
                                 for bc in analysis.barcodes])
-        # Get the underrepresented and missing sample names
+        # Get the underrepresented sample names
         for sample in sample_sheet.samples(lane):
             if sample not in found_samples:
                 barcode = sample_sheet.lookup_barcode(sample,lane)
                 try:
                     count = analysis.counts[barcode].reads
                 except KeyError:
-                    count = 0
-                if count > 0:
-                    underrepresented.append(
-                        {
-                            'name': sample,
-                            'barcode': barcode,
-                            'counts': count,
-                        })
-                else:
-                    missing.append(
-                        {
-                            'name': sample,
-                            'barcode': barcode,
-                        })
+                    count = None
+                underrepresented.append(
+                    {
+                        'name': sample,
+                        'barcode': barcode,
+                        'counts': count,
+                    })
         # Get the overrepresented barcodes not associated
         # with a sample name
         lowest_ranked_sample = None
@@ -1169,7 +1163,7 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     if reporter:
         reporter.add('')
     # Check lanes
-    warning = (missing or underrepresented or overrepresented)
+    warning = (underrepresented or overrepresented)
     if lane is not None:
         reporter.add("Barcode analysis for lane #%d" % lane,
                      title=True,
@@ -1179,32 +1173,41 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
                      title=True,
                      warning=warning)
     # Report settings
-    if cutoff is not None:
-        reporter.add(" * Barcodes which cover less than %.1f%% of reads "
-                     "have been excluded" % (cutoff*100.0))
-        reporter.add(" * Reported barcodes cover %.1f%% of the data "
-                     "(%d/%d)" % (percent(analysis.coverage,
-                                          analysis.total_reads),
-                                  analysis.coverage,
-                                  analysis.total_reads))
+    if minimum_read_fraction:
+        reporter.add(" * Initial barcodes were weeded to remove any "
+                     "with less than %f%% of total reads, so reported "
+                     "counts are approximate" %
+                     (minimum_read_fraction*100.0))
     if mismatches:
         reporter.add(" * Barcodes have been grouped by allowing %d "
                      "mismatch%s" % (mismatches,
                                      ('' if mismatches == 1 else 'es')))
     else:
         reporter.add(" * No mismatches were allowed (exact matches only)")
+    if cutoff is not None:
+        if mismatches:
+            reporter.add(" * Barcode groups which cover less than "
+                         "%.1f%% of total reads have been excluded" %
+                         (cutoff*100.0))
+        else:
+            reporter.add(" * Barcodes which cover less than "
+                         "%.1f%% of total reads have been excluded" %
+                         (cutoff*100.0))
+        reporter.add(" * Reported barcodes cover %.1f%% of the data "
+                     "(%d/%d)" % (percent(analysis.coverage,
+                                          analysis.total_reads),
+                                  analysis.coverage,
+                                  analysis.total_reads))
     # Check there are results
     if analysis.total_reads == 0:
         reporter.add("No barcodes counted",warning=True)
         return reporter
     # Warning about specific problems
-    if underrepresented or missing or overrepresented:
+    if underrepresented or overrepresented:
         reporter.add("")
         reporter.add("Problems detected:",warning=True)
         if underrepresented:
             reporter.add(" * Underrepresented samples")
-        if missing:
-            reporter.add(" * Missing samples")
         if overrepresented:
             reporter.add(" * Overrepresented barcodes not "
                          "assigned to any samples")
@@ -1250,25 +1253,18 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("")
         reporter.add("\t#Sample\tIndex\tN_reads\t%reads",heading=True)
         for sample in underrepresented:
-            reporter.add("\t%s\t%s\t%d\t%.2f%%" %
+            if sample['counts'] is not None:
+                count = "%d" % sample['counts']
+                percent_count = "%.2f%%" % percent(count,
+                                                   analysis['total_reads'])
+            else:
+                count = ""
+                percent_count = "<%.1f%%" % (cutoff*100.0,)
+            reporter.add("\t%s\t%s\t%s\t%s" %
                          (sample['name'],
                           sample['barcode'],
-                          sample['counts'],
-                          percent(sample['counts'],
-                                  analysis['total_reads'])))
-    # Report missing samples
-    if missing:
-        # Sort into alphabetical order
-        missing = sorted(missing,
-                         key=lambda x: x['name'])
-        # Report
-        reporter.add("")
-        reporter.add("The following samples had no counts:")
-        reporter.add("")
-        reporter.add("\t#Sample\tIndex",heading=True)
-        for sample in missing:
-            reporter.add("\t%s\t%s" % (sample['name'],
-                                       sample['barcode']))
+                          count,
+                          percent_count))
     # Report overrepresented sequences
     if overrepresented:
         reporter.add("")
