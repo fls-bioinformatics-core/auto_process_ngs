@@ -119,9 +119,10 @@ if __name__ == '__main__':
                    "defaults to 0)")
     p.add_argument('--cutoff',action='store',dest='cutoff',
                    default=0.001,type=float,
-                   help="exclude barcodes with a smaller fraction of "
-                   "associated reads than CUTOFF, e.g. '0.01' excludes "
-                   "barcodes with < 1.0%% of reads (default is 0.1%%)")
+                   help="exclude barcodes/barcode groups from reporting "
+                   "with a smaller fraction of associated reads than "
+                   "CUTOFF, e.g. '0.01' excludes barcodes with < 1.0%% "
+                   "of reads (default: 0.001)")
     p.add_argument('-s','--sample-sheet',
                    action='store',dest='sample_sheet',default=None,
                    help="report best matches against barcodes in "
