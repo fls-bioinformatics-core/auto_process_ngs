@@ -121,7 +121,7 @@ if __name__ == '__main__':
                    default=0.001,type=float,
                    help="exclude barcodes with a smaller fraction of "
                    "associated reads than CUTOFF, e.g. '0.01' excludes "
-                   "barcodes with < 0.01%% of reads (default is 0.1%%)")
+                   "barcodes with < 1.0%% of reads (default is 0.1%%)")
     p.add_argument('-s','--sample-sheet',
                    action='store',dest='sample_sheet',default=None,
                    help="report best matches against barcodes in "
