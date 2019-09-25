@@ -19,12 +19,26 @@ In these cases the barcode analysis report can be useful for diagnosing
 and understanding various problems with the demultiplexing, by
 identifying the following issues:
 
- * **Underrepresented and missing samples**: samples which have
-   extremely low (underrepresented) or zero (missing) numbers of
-   reads assigned to them;
+ * **Underrepresented samples**: samples which have extremely low
+   or zero numbers of reads assigned to them;
  * **Overrepresented unassigned index sequences**: barcodes which
    have high numbers of associated reads but which aren't assigned
    to a sample in the sample sheet.
+
+.. note::
+
+   By default the analysis discounts *individual* barcode sequences
+   with extremely low associated reads (less than 0.0001% of the
+   total number of reads) before grouping similar sequences according
+   to allowed mismatches.
+
+   This is done to remove large numbers of spurious sequences which
+   would otherwise cause the analysis to take much longer to complete.
+
+   However it also means that the report read counts are no longer
+   accurate, so they should be treated as approximations and are
+   likely to underreport the number of reads compared with those
+   reported in the per-sample statistics.
 
 Barcode analysis is normally run automatically as part of the
 :doc:`auto_process make_fastqs <../using/make_fastqs>` command (for
@@ -62,19 +76,19 @@ For example:
 ::
 
     #Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
-        1	GCTACGCTCTAAGCCT	SM9	1	2894178	13.3%	(13.3%)
-        2	CAGAGAGGAGAGTAGA	SM8	1	2454006	11.3%	(24.6%)
-        3	TCCTGAGCCTCTCTAT	SM4	1	2241825	10.3%	(34.9%)
-        4	AGGCAGAACTCTCTAT	SM3	1	2206475	10.1%	(45.0%)
-        5	CGAGGCTGCTAAGCCT		1	2141506	9.8%	(54.9%)
-        6	CTCTCTACAGAGTAGA	SM7	1	2094131	9.6%	(64.5%)
-        7	TAGGCATGTATCCTCT	SM6	1	1943974	8.9%	(73.4%)
-        8	GGACTCCTTATCCTCT	SM5	1	1868127	8.6%	(82.0%)
-        9	CGTACTAGTAGATCGC	SM2	1	1659786	7.6%	(89.7%)
-       10	TAAGGCGATAGATCGC		1	942645	4.3%	(94.0%)
-       11	CGGCAGAACTCTCTAT		1	61005	0.3%	(94.3%)
-       12	CAGAGAGGCGAGTAGA		1	38768	0.2%	(94.5%)
-       13	CTCTCTACCGAGTAGA		1	26927	0.1%	(94.6%)
+        1	GCTACGCT+CTAAGCCT	SM9	1	2894178	13.3%	(13.3%)
+        2	CAGAGAGG+AGAGTAGA	SM8	1	2454006	11.3%	(24.6%)
+        3	TCCTGAGC+CTCTCTAT	SM4	1	2241825	10.3%	(34.9%)
+        4	AGGCAGAA+CTCTCTAT	SM3	1	2206475	10.1%	(45.0%)
+        5	CGAGGCTG+CTAAGCCT		1	2141506	9.8%	(54.9%)
+        6	CTCTCTAC+AGAGTAGA	SM7	1	2094131	9.6%	(64.5%)
+        7	TAGGCATG+TATCCTCT	SM6	1	1943974	8.9%	(73.4%)
+        8	GGACTCCT+TATCCTCT	SM5	1	1868127	8.6%	(82.0%)
+        9	CGTACTAG+TAGATCGC	SM2	1	1659786	7.6%	(89.7%)
+       10	TAAGGCGA+TAGATCGC		1	942645	4.3%	(94.0%)
+       11	CGGCAGAA+CTCTCTAT		1	61005	0.3%	(94.3%)
+       12	CAGAGAGG+CGAGTAGA		1	38768	0.2%	(94.5%)
+       13	CTCTCTAC+CGAGTAGA		1	26927	0.1%	(94.6%)
 
 Here the 5th ranked barcode sequence doesn't have an associated
 sample name. This overrepresented sequence is highlighted after
@@ -84,7 +98,7 @@ the list:
     
     The following unassigned barcodes are overrepresented compared to the assigned barcodes:
     #Index	N_reads	%reads
-    CGAGGCTGCTAAGCCT	2141506	9.84%
+    CGAGGCTG+CTAAGCCT	2141506	9.84%
 
 In addition the analysis reports any underrepresented and
 missing samples, for example:
@@ -94,12 +108,16 @@ missing samples, for example:
     The following samples are underrepresented:
     
     	#Sample	Index	N_reads	%reads
-    	SM1	CAGAGAGGAGAGTAGT	9971	0.05%
-    
-    The following samples had no counts:
-    
-    	#Sample	Index
-    	SM10	CGAGGCTGAAGCCTCT
+    	SM1	CAGAGAGG+AGAGTAGT	9971	0.05%
+    	SM10	CGAGGCTG+AAGCCTCT		<0.05%
+
+.. note::
+
+   Note that if weeding of the initial data has been performed (which
+   is the default) then the counts are only approximate and so it's
+   not possible to say if underrepresented samples with zero counts are
+   really missing. Therefore they are reported as having read fractions
+   below the cutoff threshold, as in the example above.
 
 The analysis is performed in the ``barcode_analysis`` subdirectory
 by default, where the report is written as text, XLS and HTML files.
