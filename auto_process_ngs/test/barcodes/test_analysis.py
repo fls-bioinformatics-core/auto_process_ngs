@@ -1050,6 +1050,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(str(reporter),
                          """Barcode analysis for lane #1
 ============================
+ * Initial barcodes were weeded to remove any with less than 0.000100% of total reads (so reported counts are approximate)
  * Barcodes have been grouped by allowing 2 mismatches
 
 #Rank	Index	Sample	N_seqs	N_reads	%reads	(%Total_reads)
@@ -1066,5 +1067,6 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(str(reporter),
                          """Barcode analysis for all lanes
 ==============================
+ * Initial barcodes were weeded to remove any with less than 0.000100% of total reads (so reported counts are approximate)
  * No mismatches were allowed (exact matches only)
 No barcodes counted""")

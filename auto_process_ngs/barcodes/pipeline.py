@@ -72,7 +72,7 @@ class AnalyseBarcodes(Pipeline):
         self.add_param('sample_sheet',type=str)
         self.add_param('bases_mask',type=str)
         self.add_param('mismatches',type=int)
-        self.add_param('cutoff',type=float)
+        self.add_param('cutoff',type=float,value=0.001)
         self.add_param('force',type=bool,value=False)
 
         # Load data from bcl2fastq output
@@ -366,7 +366,7 @@ class ReportBarcodeAnalysis(PipelineTask):
     Perform analysis and reporting of barcode counts
     """
     def init(self,counts_files,barcode_analysis_dir,lanes=None,
-             mismatches=None,cutoff=None,sample_sheet=None,
+             mismatches=None,cutoff=0.001,sample_sheet=None,
              title=None):
         """
         Initialise the ReportBarcodeAnalysis task
