@@ -623,6 +623,31 @@ class TestBarcodeGroup(unittest.TestCase):
         # -- Too long
         self.assertFalse(grp.match("CGATGCCGG"))
 
+    def test_barcodegroup_match_dual_index(self):
+        """BarcodeGroup: check matching dual-index sequences against the reference
+        """
+        # Match sequence against the group
+        grp = BarcodeGroup("CGTACTAG+CTCTCTAT",2894178)
+        # 1 mismatch allowed
+        self.assertTrue(grp.match("CGTACTAA+CTCTCTAT",mismatches=1))
+        self.assertTrue(grp.match("CGTACTAG+CTCTCTAG",mismatches=1))
+        self.assertTrue(grp.match("CGTACTAA+CTCTCTAT",mismatches=1))
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTAT",mismatches=1))
+        self.assertFalse(grp.match("CGTACTAG+ATCTCTAG",mismatches=1))
+        self.assertFalse(grp.match("CTTACTAA+ATCTCTAT",mismatches=1))
+        # Default (2 mismatches)
+        self.assertTrue(grp.match("CTTACTAA+CTCTCTAT"))
+        self.assertTrue(grp.match("CGTACTAG+ATCTCTAG"))
+        self.assertTrue(grp.match("CTTACTAA+ATCTCTAT"))
+        self.assertFalse(grp.match("CTTACGAA+CTCTCTAT"))
+        self.assertFalse(grp.match("CGTACTAG+ATCTCGAG"))
+        self.assertFalse(grp.match("CTTACGAA+ATCTCGAT"))
+        # Differing lengths of barcode
+        # -- Too short
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTA"))
+        # -- Too long
+        self.assertFalse(grp.match("CTTACTAA+CTCTCTATT"))
+
 # SampleSheetBarcodes
 class TestSampleSheetBarcodes(unittest.TestCase):
     def setUp(self):
@@ -693,6 +718,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         with open(self.dual_index_with_lanes,"w") as fp:
             fp.write(sample_sheet_header +
                      sample_sheet_dual_index_with_lanes)
+        #
+        sample_sheet_empty_barcode = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+AB1,AB1,,,D701,CGTGTAGG,D501,GACCTGAA,AB,
+AB2,AB2,,,D702,CGTGTAGG,D501,ATGTAACT,AB,
+CDE3,CDE3,,,D701,,D501,,CDE,
+CDE4,CDE4,,,D702,,D501,,CDE,
+"""
+        self.empty_barcode = \
+            os.path.join(self.wd,"empty_barcode.csv")
+        with open(self.empty_barcode,"w") as fp:
+            fp.write(sample_sheet_header + sample_sheet_empty_barcode)
 
     def tearDown(self):
         # Remove temporary working dir
@@ -724,28 +761,28 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         """
         s = SampleSheetBarcodes(self.dual_index_no_lanes)
         # Check all barcodes
-        self.assertEqual(s.barcodes(),["AGGCAGAATCTTACGC",
-                                       "CGTACTAGTCTTACGC",
-                                       "GGACTCCTTCTTACGC",
-                                       "TAAGGCGATCTTACGC",
-                                       "TAGGCATGTCTTACGC",
-                                       "TCCTGAGCTCTTACGC"])
+        self.assertEqual(s.barcodes(),["AGGCAGAA+TCTTACGC",
+                                       "CGTACTAG+TCTTACGC",
+                                       "GGACTCCT+TCTTACGC",
+                                       "TAAGGCGA+TCTTACGC",
+                                       "TAGGCATG+TCTTACGC",
+                                       "TCCTGAGC+TCTTACGC"])
         # Check all samples
         self.assertEqual(s.samples(),["SW1","SW2","SW3","SW4","SW5","SW6"])
         # Look up sample names for barcodes in each lane
-        self.assertEqual(s.lookup_sample("TAAGGCGATCTTACGC"),"SW1")
-        self.assertEqual(s.lookup_sample("CGTACTAGTCTTACGC"),"SW2")
-        self.assertEqual(s.lookup_sample("AGGCAGAATCTTACGC"),"SW3")
-        self.assertEqual(s.lookup_sample("TCCTGAGCTCTTACGC"),"SW4")
-        self.assertEqual(s.lookup_sample("GGACTCCTTCTTACGC"),"SW5")
-        self.assertEqual(s.lookup_sample("TAGGCATGTCTTACGC"),"SW6")
+        self.assertEqual(s.lookup_sample("TAAGGCGA+TCTTACGC"),"SW1")
+        self.assertEqual(s.lookup_sample("CGTACTAG+TCTTACGC"),"SW2")
+        self.assertEqual(s.lookup_sample("AGGCAGAA+TCTTACGC"),"SW3")
+        self.assertEqual(s.lookup_sample("TCCTGAGC+TCTTACGC"),"SW4")
+        self.assertEqual(s.lookup_sample("GGACTCCT+TCTTACGC"),"SW5")
+        self.assertEqual(s.lookup_sample("TAGGCATG+TCTTACGC"),"SW6")
         # Look up barcode matching sample names in each lane
-        self.assertEqual(s.lookup_barcode("SW1"),"TAAGGCGATCTTACGC")
-        self.assertEqual(s.lookup_barcode("SW2"),"CGTACTAGTCTTACGC")
-        self.assertEqual(s.lookup_barcode("SW3"),"AGGCAGAATCTTACGC")
-        self.assertEqual(s.lookup_barcode("SW4"),"TCCTGAGCTCTTACGC")
-        self.assertEqual(s.lookup_barcode("SW5"),"GGACTCCTTCTTACGC")
-        self.assertEqual(s.lookup_barcode("SW6"),"TAGGCATGTCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW1"),"TAAGGCGA+TCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW2"),"CGTACTAG+TCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW3"),"AGGCAGAA+TCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW4"),"TCCTGAGC+TCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW5"),"GGACTCCT+TCTTACGC")
+        self.assertEqual(s.lookup_barcode("SW6"),"TAGGCATG+TCTTACGC")
 
     def test_single_index_with_lanes(self):
         """SampleSheetBarcodes: single index sample sheet with lanes defined
@@ -778,37 +815,37 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         """
         s = SampleSheetBarcodes(self.dual_index_with_lanes)
         # Check all barcodes
-        self.assertEqual(s.barcodes(),["ACAGTGATTCTTTCCC",
-                                       "ACCGATTCGCGCGTAG",
-                                       "ATGCTCGTCTCGCATC",
-                                       "ATGCTCGTCTCGCATC",
-                                       "ATGTCAGATCTTTCCC",
-                                       "CAGATCATTCTTTCCC",
-                                       "CCAGCAATATCGCGAG",
-                                       "CCGCGTAAGCAATAGA",
-                                       "CGTGTAGGATGTAACT",
-                                       "CGTGTAGGCACAGGAT",
-                                       "CGTGTAGGGACCTGTA",
-                                       "CGTGTAGGGTTTCAGA",
-                                       "GCCAATATTCTTTCCC",
-                                       "GGATTCGCTAGTAGCC",
-                                       "TACCAGCGCGCTGCTG"])
+        self.assertEqual(s.barcodes(),["ACAGTGAT+TCTTTCCC",
+                                       "ACCGATTC+GCGCGTAG",
+                                       "ATGCTCGT+CTCGCATC",
+                                       "ATGCTCGT+CTCGCATC",
+                                       "ATGTCAGA+TCTTTCCC",
+                                       "CAGATCAT+TCTTTCCC",
+                                       "CCAGCAAT+ATCGCGAG",
+                                       "CCGCGTAA+GCAATAGA",
+                                       "CGTGTAGG+ATGTAACT",
+                                       "CGTGTAGG+CACAGGAT",
+                                       "CGTGTAGG+GACCTGTA",
+                                       "CGTGTAGG+GTTTCAGA",
+                                       "GCCAATAT+TCTTTCCC",
+                                       "GGATTCGC+TAGTAGCC",
+                                       "TACCAGCG+CGCTGCTG"])
         # Check barcodes in each lane
-        self.assertEqual(s.barcodes(1),["CGTGTAGGATGTAACT",
-                                        "CGTGTAGGCACAGGAT",
-                                        "CGTGTAGGGACCTGTA",
-                                        "CGTGTAGGGTTTCAGA"])
-        self.assertEqual(s.barcodes(2),["CAGATCATTCTTTCCC",
-                                        "GCCAATATTCTTTCCC"])
-        self.assertEqual(s.barcodes(3),["ACCGATTCGCGCGTAG",
-                                        "ATGCTCGTCTCGCATC",
-                                        "CCGCGTAAGCAATAGA",
-                                        "GGATTCGCTAGTAGCC",
-                                        "TACCAGCGCGCTGCTG"])
-        self.assertEqual(s.barcodes(4),["ACAGTGATTCTTTCCC",
-                                        "ATGCTCGTCTCGCATC",
-                                        "ATGTCAGATCTTTCCC",
-                                        "CCAGCAATATCGCGAG"])
+        self.assertEqual(s.barcodes(1),["CGTGTAGG+ATGTAACT",
+                                        "CGTGTAGG+CACAGGAT",
+                                        "CGTGTAGG+GACCTGTA",
+                                        "CGTGTAGG+GTTTCAGA"])
+        self.assertEqual(s.barcodes(2),["CAGATCAT+TCTTTCCC",
+                                        "GCCAATAT+TCTTTCCC"])
+        self.assertEqual(s.barcodes(3),["ACCGATTC+GCGCGTAG",
+                                        "ATGCTCGT+CTCGCATC",
+                                        "CCGCGTAA+GCAATAGA",
+                                        "GGATTCGC+TAGTAGCC",
+                                        "TACCAGCG+CGCTGCTG"])
+        self.assertEqual(s.barcodes(4),["ACAGTGAT+TCTTTCCC",
+                                        "ATGCTCGT+CTCGCATC",
+                                        "ATGTCAGA+TCTTTCCC",
+                                        "CCAGCAAT+ATCGCGAG"])
         # Check all samples
         self.assertEqual(s.samples(),["AD5","AEx","AEx",
                                       "AT1","AT3","AT4","AT5",
@@ -821,37 +858,49 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(s.samples(3),["AEx","AT1","AT3","AT4","AT5"])
         self.assertEqual(s.samples(4),["AD5","AEx","D3K1","D3K2"])
         # Look up sample names for barcodes in each lane
-        self.assertEqual(s.lookup_sample("CGTGTAGGGACCTGTA",1),"DI1")
-        self.assertEqual(s.lookup_sample("CGTGTAGGATGTAACT",1),"DI2")
-        self.assertEqual(s.lookup_sample("CGTGTAGGGTTTCAGA",1),"DI3")
-        self.assertEqual(s.lookup_sample("CGTGTAGGCACAGGAT",1),"DI4")
-        self.assertEqual(s.lookup_sample("GCCAATATTCTTTCCC",2),"E11")
-        self.assertEqual(s.lookup_sample("CAGATCATTCTTTCCC",2),"E12")
-        self.assertEqual(s.lookup_sample("GGATTCGCTAGTAGCC",3),"AT1")
-        self.assertEqual(s.lookup_sample("TACCAGCGCGCTGCTG",3),"AT3")
-        self.assertEqual(s.lookup_sample("ACCGATTCGCGCGTAG",3),"AT4")
-        self.assertEqual(s.lookup_sample("CCGCGTAAGCAATAGA",3),"AT5")
-        self.assertEqual(s.lookup_sample("ATGCTCGTCTCGCATC",3),"AEx")
-        self.assertEqual(s.lookup_sample("ATGCTCGTCTCGCATC",4),"AEx")
-        self.assertEqual(s.lookup_sample("CCAGCAATATCGCGAG",4),"AD5")
-        self.assertEqual(s.lookup_sample("ACAGTGATTCTTTCCC",4),"D3K1")
-        self.assertEqual(s.lookup_sample("ATGTCAGATCTTTCCC",4),"D3K2")
+        self.assertEqual(s.lookup_sample("CGTGTAGG+GACCTGTA",1),"DI1")
+        self.assertEqual(s.lookup_sample("CGTGTAGG+ATGTAACT",1),"DI2")
+        self.assertEqual(s.lookup_sample("CGTGTAGG+GTTTCAGA",1),"DI3")
+        self.assertEqual(s.lookup_sample("CGTGTAGG+CACAGGAT",1),"DI4")
+        self.assertEqual(s.lookup_sample("GCCAATAT+TCTTTCCC",2),"E11")
+        self.assertEqual(s.lookup_sample("CAGATCAT+TCTTTCCC",2),"E12")
+        self.assertEqual(s.lookup_sample("GGATTCGC+TAGTAGCC",3),"AT1")
+        self.assertEqual(s.lookup_sample("TACCAGCG+CGCTGCTG",3),"AT3")
+        self.assertEqual(s.lookup_sample("ACCGATTC+GCGCGTAG",3),"AT4")
+        self.assertEqual(s.lookup_sample("CCGCGTAA+GCAATAGA",3),"AT5")
+        self.assertEqual(s.lookup_sample("ATGCTCGT+CTCGCATC",3),"AEx")
+        self.assertEqual(s.lookup_sample("ATGCTCGT+CTCGCATC",4),"AEx")
+        self.assertEqual(s.lookup_sample("CCAGCAAT+ATCGCGAG",4),"AD5")
+        self.assertEqual(s.lookup_sample("ACAGTGAT+TCTTTCCC",4),"D3K1")
+        self.assertEqual(s.lookup_sample("ATGTCAGA+TCTTTCCC",4),"D3K2")
         # Look up barcode matching sample names in each lane
-        self.assertEqual(s.lookup_barcode("DI1",1),"CGTGTAGGGACCTGTA")
-        self.assertEqual(s.lookup_barcode("DI2",1),"CGTGTAGGATGTAACT")
-        self.assertEqual(s.lookup_barcode("DI3",1),"CGTGTAGGGTTTCAGA")
-        self.assertEqual(s.lookup_barcode("DI4",1),"CGTGTAGGCACAGGAT")
-        self.assertEqual(s.lookup_barcode("E11",2),"GCCAATATTCTTTCCC")
-        self.assertEqual(s.lookup_barcode("E12",2),"CAGATCATTCTTTCCC")
-        self.assertEqual(s.lookup_barcode("AT1",3),"GGATTCGCTAGTAGCC")
-        self.assertEqual(s.lookup_barcode("AT3",3),"TACCAGCGCGCTGCTG")
-        self.assertEqual(s.lookup_barcode("AT4",3),"ACCGATTCGCGCGTAG")
-        self.assertEqual(s.lookup_barcode("AT5",3),"CCGCGTAAGCAATAGA")
-        self.assertEqual(s.lookup_barcode("AEx",3),"ATGCTCGTCTCGCATC")
-        self.assertEqual(s.lookup_barcode("AEx",4),"ATGCTCGTCTCGCATC")
-        self.assertEqual(s.lookup_barcode("AD5",4),"CCAGCAATATCGCGAG")
-        self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGATTCTTTCCC")
-        self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGATCTTTCCC")
+        self.assertEqual(s.lookup_barcode("DI1",1),"CGTGTAGG+GACCTGTA")
+        self.assertEqual(s.lookup_barcode("DI2",1),"CGTGTAGG+ATGTAACT")
+        self.assertEqual(s.lookup_barcode("DI3",1),"CGTGTAGG+GTTTCAGA")
+        self.assertEqual(s.lookup_barcode("DI4",1),"CGTGTAGG+CACAGGAT")
+        self.assertEqual(s.lookup_barcode("E11",2),"GCCAATAT+TCTTTCCC")
+        self.assertEqual(s.lookup_barcode("E12",2),"CAGATCAT+TCTTTCCC")
+        self.assertEqual(s.lookup_barcode("AT1",3),"GGATTCGC+TAGTAGCC")
+        self.assertEqual(s.lookup_barcode("AT3",3),"TACCAGCG+CGCTGCTG")
+        self.assertEqual(s.lookup_barcode("AT4",3),"ACCGATTC+GCGCGTAG")
+        self.assertEqual(s.lookup_barcode("AT5",3),"CCGCGTAA+GCAATAGA")
+        self.assertEqual(s.lookup_barcode("AEx",3),"ATGCTCGT+CTCGCATC")
+        self.assertEqual(s.lookup_barcode("AEx",4),"ATGCTCGT+CTCGCATC")
+        self.assertEqual(s.lookup_barcode("AD5",4),"CCAGCAAT+ATCGCGAG")
+        self.assertEqual(s.lookup_barcode("D3K1",4),"ACAGTGAT+TCTTTCCC")
+        self.assertEqual(s.lookup_barcode("D3K2",4),"ATGTCAGA+TCTTTCCC")
+
+    def test_empty_barcode(self):
+        """SampleSheetBarcodes: dual index sample sheet with empty barcode
+        """
+        s = SampleSheetBarcodes(self.empty_barcode)
+        # Check all barcodes
+        self.assertEqual(s.barcodes(),["",
+                                       "CGTGTAGG+ATGTAACT",
+                                       "CGTGTAGG+GACCTGAA"])
+        # Check all samples
+        self.assertEqual(s.samples(),["AB1","AB2",
+                                      "CDE3","CDE4"])
 
     def test_request_non_existent_lane(self):
         """SampleSheetBarcodes: handle request for non-existent lane
@@ -863,12 +912,12 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Any lane for sample sheet with no lanes
         s = SampleSheetBarcodes(self.dual_index_no_lanes)
         self.assertEqual(s.barcodes(1),
-                         ["AGGCAGAATCTTACGC",
-                          "CGTACTAGTCTTACGC",
-                          "GGACTCCTTCTTACGC",
-                          "TAAGGCGATCTTACGC",
-                          "TAGGCATGTCTTACGC",
-                          "TCCTGAGCTCTTACGC"])
+                         ["AGGCAGAA+TCTTACGC",
+                          "CGTACTAG+TCTTACGC",
+                          "GGACTCCT+TCTTACGC",
+                          "TAAGGCGA+TCTTACGC",
+                          "TAGGCATG+TCTTACGC",
+                          "TCCTGAGC+TCTTACGC"])
         self.assertEqual(s.samples(1),
                          ["SW1","SW2","SW3","SW4","SW5","SW6"])
 
