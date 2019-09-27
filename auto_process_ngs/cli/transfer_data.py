@@ -25,12 +25,29 @@ from ..fileops import exists
 from ..fileops import mkdir
 from ..fileops import copy
 from ..settings import Settings
+from ..settings import get_config_dir
 from .. import get_version
 
 # Logging
 import logging
 logging.basicConfig()
 logger = logging.getLogger(__name__)
+
+def get_templates_dir():
+    """
+    Return location of 'templates' directory
+
+    Returns the path to the 'templates' directory, or None if
+    it doesn't exist.
+
+    """
+    path = get_config_dir()
+    path = os.path.join(os.path.dirname(path),"templates")
+    logging.debug("Putative templates dir: %s" % path)
+    if os.path.isdir(path):
+        return path
+    else:
+        return None
 
 # Main function
 
@@ -55,7 +72,9 @@ def main():
                    "used")
     p.add_argument('--readme',action='store',
                    metavar='README_TEMPLATE',dest='readme_template',
-                   help="template file to generate README file from")
+                   help="template file to generate README file from; "
+                   "can be full path to a template file, or the name "
+                   "of a file in the 'templates' directory")
     p.add_argument('--weburl',action='store',
                    help="base URL for webserver (sets the value of "
                    "the WEBURL variable in the template README)")
@@ -205,10 +224,19 @@ def main():
     # Construct the README
     if readme_template:
         # Check that template file exists
-        if not os.path.exists(readme_template):
+        template = None
+        for filen in (readme_template,
+                      os.path.join(get_templates_dir(),
+                                   readme_template),):
+            if os.path.exists(filen):
+                template = filen
+                break
+        if template is None:
             logger.error("'%s': template file not found" %
                          readme_template)
             return 1
+        else:
+            readme_template = template
         print("Using '%s' as template for README file" %
               readme_template)
         # Read in template
