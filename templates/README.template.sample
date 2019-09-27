@@ -1,0 +1,10 @@
+Example README template for transfer_data.py
+
+Platform  : %PLATFORM%
+Run_number: %RUN_NUMBER% 
+Datestamp : %DATESTAMP%
+Project   : %PROJECT%
+Base URL  : %WEBURL%
+Bin/subdir: %SUBDIR%
+
+Today is %TODAY%

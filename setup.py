@@ -54,7 +54,7 @@ setup(name = "auto_process_ngs",
       scripts = scripts,
       # Configuration file for QC
       data_files = [('config',['config/settings.ini.sample']),
-                    ('templates',[]),
+                    ('templates',['templates/README.template.sample']),
                     ('etc/bash_completion.d',['scripts/auto_process-completion.bash']),],
       include_package_data=True,
       zip_safe = False)
