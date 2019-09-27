@@ -116,6 +116,7 @@ class TestAnalysisDir(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
@@ -130,6 +131,7 @@ class TestAnalysisDir(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)
@@ -156,6 +158,7 @@ class TestAnalysisDir(unittest.TestCase):
                 fp.write("")
         # Load and check the analysis dir
         analysis_dir = AnalysisDir(mockdir.dirn)
+        self.assertEqual(analysis_dir.analysis_dir,mockdir.dirn)
         self.assertEqual(analysis_dir.run_name,mockdir.run_name)
         self.assertEqual(analysis_dir.n_sequencing_data,1)
         self.assertEqual(analysis_dir.n_projects,2)

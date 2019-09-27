@@ -265,6 +265,13 @@ class AnalysisDir(object):
                 logger.debug("- %s: unknown" % dirn)
 
     @property
+    def analysis_dir(self):
+        """Return the path to the analysis directory
+
+        """
+        return self._analysis_dir
+
+    @property
     def n_projects(self):
         """Return number of projects found
 
