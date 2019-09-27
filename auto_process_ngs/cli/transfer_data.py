@@ -81,6 +81,9 @@ def main():
     p.add_argument('--include_downloader',action='store_true',
                    help="copy the 'download_fastqs.py' utility to the "
                    "final location")
+    p.add_argument('--include_qc_report',action='store_true',
+                   help="copy the zipped QC reports to the final "
+                   "location")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
                    "the checksumming and Fastq copy operations "
@@ -168,6 +171,28 @@ def main():
         print("Downloader %s" % downloader)
     else:
         downloader = None
+
+    # Locate zipped QC report
+    if args.include_qc_report:
+        print("Locating zipped QC reports for inclusion")
+        qc_zips = list()
+        # Check QC directories and look for zipped reports
+        for qc_dir in project.qc_dirs:
+            fq_dir = project.qc_info(qc_dir).fastq_dir
+            if fq_dir == project.fastq_dir:
+                qc_zip = os.path.join(project.dirn,
+                                      "%s_report.%s.%s.zip" %
+                                      (qc_dir,project.name,
+                                       os.path.basename(
+                                           analysis_dir.analysis_dir)))
+                if os.path.exists(qc_zip):
+                    print("... found %s" % qc_zip)
+                    qc_zips.append(qc_zip)
+        if not qc_zips:
+            logger.error("No zipped QC reports found")
+            return 1
+    else:
+        qc_zips = None
 
     # Determine subdirectory
     if args.subdir == "random_bin":
@@ -308,6 +333,13 @@ def main():
         print("Copying downloader")
         copy(downloader,
              os.path.join(target_dir,os.path.basename(downloader)))
+
+    # Copy QC reports
+    if qc_zips:
+        for qc_zip in qc_zips:
+            print("Copying '%s'" % os.path.basename(qc_zip))
+            copy(qc_zip,
+                 os.path.join(target_dir,os.path.basename(qc_zip)))
 
     print("Files now at %s" % target_dir)
     print("Done")
