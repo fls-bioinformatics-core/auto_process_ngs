@@ -168,7 +168,7 @@ def main():
         if downloader is None:
             logging.error("Unable to locate download_fastqs.py")
             return 1
-        print("Downloader %s" % downloader)
+        print("... found %s" % downloader)
     else:
         downloader = None
 
@@ -214,7 +214,7 @@ def main():
         if subdir is None:
             print("Failed to locate empty subdirectory")
             return
-        print("Using random empty subdirectory '%s'" % subdir)
+        print("... found '%s'" % subdir)
         # Update target dir
         target_dir = os.path.join(target_dir,subdir)
     elif args.subdir == "run_id":
@@ -249,6 +249,7 @@ def main():
     # Construct the README
     if readme_template:
         # Check that template file exists
+        print("Locating README template")
         template = None
         for filen in (readme_template,
                       os.path.join(get_templates_dir(),
@@ -262,8 +263,7 @@ def main():
             return 1
         else:
             readme_template = template
-        print("Using '%s' as template for README file" %
-              readme_template)
+        print("... found %s" % readme_template)
         # Read in template
         with open(readme_template,'rt') as fp:
             readme = fp.read()
