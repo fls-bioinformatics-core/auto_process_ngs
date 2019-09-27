@@ -106,7 +106,13 @@ def add_setup_command(cmdparser):
                    default=None,
                    help="Copy sample sheet file from name and location "
                    "SAMPLE_SHEET (default is to look for SampleSheet.csv "
-                   "inside DIR)")
+                   "inside DIR). SAMPLE_SHEET can be a local or remote "
+                   "file, or a URL")
+    p.add_argument('-f','--file',action='append',dest='extra_files',
+                   metavar="FILE",default=None,
+                   help="Additional file(s) to copy into new analysis "
+                   "directory (e.g. ICELL8 well list). FILE can be a "
+                   "local or remote file, or a URL")
     p.add_argument('--fastq-dir',action='store',dest='unaligned_dir',
                    default=None,
                    help="Import fastq.gz files from FASTQ_DIR (which should "
@@ -993,6 +999,7 @@ def setup(args):
         d.setup(args.run_dir,
                 analysis_dir=args.analysis_dir,
                 sample_sheet=args.sample_sheet,
+                extra_files=args.extra_files,
                 unaligned_dir=args.unaligned_dir)
 
 def params(args):
