@@ -345,4 +345,9 @@ def main():
                  os.path.join(target_dir,os.path.basename(qc_zip)))
 
     print("Files now at %s" % target_dir)
+    if args.weburl:
+        url = args.weburl
+        if subdir is not None:
+            url = os.path.join(url,subdir)
+        print("URL: %s" % url)
     print("Done")
