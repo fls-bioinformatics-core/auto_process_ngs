@@ -17,6 +17,7 @@ from random import shuffle
 from datetime import date
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.utils import find_program
+from bcftbx.utils import format_file_size
 from ..analysis import AnalysisDir
 from ..applications import Command
 from ..simple_scheduler import SchedulerJob
@@ -192,6 +193,18 @@ def main():
                      (project.name,fastq_dir,ex))
         return 1
     print("Transferring data from '%s'" % project.name)
+
+    # Summarise samples and Fastqs
+    samples = set()
+    nfastqs = 0
+    fsize = 0
+    for sample in project.samples:
+        samples.add(sample.name)
+        for fq in sample.fastq:
+            fsize += os.lstat(fq).st_size
+            nfastqs += 1
+    print("%d Fastqs from %d samples totalling %s" %
+          (nfastqs,len(samples),format_file_size(fsize)))
 
     # Check target dir
     if not exists(target_dir):
