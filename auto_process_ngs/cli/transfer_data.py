@@ -59,6 +59,9 @@ def main():
     # Collect defaults
     default_runner = settings.runners.rsync
 
+    # Get pre-defined destinations
+    destinations = [name for name in settings.destination]
+
     # Command line
     p = argparse.ArgumentParser(
         description="Transfer copies of Fastq data from an analysis "
@@ -95,8 +98,14 @@ def main():
                    "(defaults to job runner defined for copying in "
                    "config file [%s])" % default_runner)
     p.add_argument('dest',action='store',metavar="DEST",
-                   help="destination to copy Fastqs to; can be an "
-                   "arbitrary location of the form [[USER@]HOST:]DIR'")
+                   help="destination to copy Fastqs to; can be the "
+                   "name of a destination defined in the configuration "
+                   "file, or an arbitrary location of the form "
+                   "'[[USER@]HOST:]DIR' (%s)" %
+                   (("available destinations: %s" %
+                     (','.join("'%s'" % d for d in sorted(destinations))))
+                    if destinations else
+                    "no destinations currently defined"))
     p.add_argument('analysis_dir',action='store',
                    metavar="ANALYSIS_DIR",
                    help="analysis directory holding the project to "
@@ -110,8 +119,35 @@ def main():
     # Process command line
     args = p.parse_args()
 
-    target_dir = args.dest
-    readme_template = args.readme_template
+    # Check if target is pre-defined destination
+    if args.dest in destinations:
+        print("Loading settings for destination '%s'" % args.dest)
+        dest = settings.destination[args.dest]
+        target_dir = dest.directory
+        readme_template = dest.readme_template
+        subdir = dest.subdir
+        include_downloader = dest.include_downloader
+        include_qc_report = dest.include_qc_report
+        weburl = dest.url
+    else:
+        target_dir = args.dest
+        readme_template = None
+        subdir = None
+        include_downloader = False
+        include_qc_report = False
+        weburl = None
+
+    # Update defaults with command line values
+    if args.readme_template:
+        readme_template = args.readme_template
+    if args.subdir:
+        subdir = args.subdir
+    if args.include_downloader:
+        include_downloader = True
+    if args.include_qc_report:
+        include_qc_report = True
+    if args.weburl:
+        weburl = args.weburl
 
     # Load analysis directory and projects
     analysis_dir = AnalysisDir(args.analysis_dir)
@@ -165,7 +201,7 @@ def main():
         print("Target directory %s" % target_dir)
 
     # Locate downloader
-    if args.include_downloader:
+    if include_downloader:
         print("Locating downloader for inclusion")
         downloader = find_program("download_fastqs.py")
         if downloader is None:
@@ -176,7 +212,7 @@ def main():
         downloader = None
 
     # Locate zipped QC report
-    if args.include_qc_report:
+    if include_qc_report:
         print("Locating zipped QC reports for inclusion")
         qc_zips = list()
         # Check QC directories and look for zipped reports
@@ -198,7 +234,7 @@ def main():
         qc_zips = None
 
     # Determine subdirectory
-    if args.subdir == "random_bin":
+    if subdir == "random_bin":
         # Find a random empty directory under the
         # target directory
         print("Locating random empty bin")
@@ -220,7 +256,7 @@ def main():
         print("... found '%s'" % subdir)
         # Update target dir
         target_dir = os.path.join(target_dir,subdir)
-    elif args.subdir == "run_id":
+    elif subdir == "run_id":
         # Construct subdirectory name based on the
         # run ID
         subdir = "{platform}_{datestamp}.{run_number}-{project}".format(
@@ -235,9 +271,6 @@ def main():
         print("Using subdirectory '%s'" % subdir)
         # Update target dir
         target_dir = os.path.join(target_dir,subdir)
-    else:
-        # No subdir
-        subdir = None
 
     # Make target directory
     if not exists(target_dir):
@@ -276,7 +309,7 @@ def main():
             'RUN_NUMBER': analysis_dir.metadata.run_number,
             'DATESTAMP': analysis_dir.metadata.instrument_datestamp,
             'PROJECT': project_name,
-            'WEBURL': args.weburl,
+            'WEBURL': weburl,
             'BIN': subdir,
             'DIR': target_dir,
             'TODAY': date.today().strftime("%d/%m/%Y"),
@@ -345,8 +378,8 @@ def main():
                  os.path.join(target_dir,os.path.basename(qc_zip)))
 
     print("Files now at %s" % target_dir)
-    if args.weburl:
-        url = args.weburl
+    if weburl:
+        url = weburl
         if subdir is not None:
             url = os.path.join(url,subdir)
         print("URL: %s" % url)
