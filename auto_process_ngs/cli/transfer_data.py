@@ -16,7 +16,6 @@ import tempfile
 from random import shuffle
 from datetime import date
 from bcftbx.JobRunner import fetch_runner
-from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import find_program
 from ..analysis import AnalysisDir
 from ..applications import Command
@@ -54,6 +53,12 @@ def get_templates_dir():
 def main():
     """
     """
+    # Load configuration
+    settings = Settings()
+
+    # Collect defaults
+    default_runner = settings.runners.rsync
+
     # Command line
     p = argparse.ArgumentParser(
         description="Transfer copies of Fastq data from an analysis "
@@ -87,7 +92,8 @@ def main():
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
                    "the checksumming and Fastq copy operations "
-                   "(defaults to local job runner)")
+                   "(defaults to job runner defined for copying in "
+                   "config file [%s])" % default_runner)
     p.add_argument('dest',action='store',metavar="DEST",
                    help="destination to copy Fastqs to; can be an "
                    "arbitrary location of the form [[USER@]HOST:]DIR'")
@@ -106,9 +112,6 @@ def main():
 
     target_dir = args.dest
     readme_template = args.readme_template
-
-    # Load configuration
-    settings = Settings()
 
     # Load analysis directory and projects
     analysis_dir = AnalysisDir(args.analysis_dir)
@@ -244,7 +247,7 @@ def main():
     if args.runner:
         runner = fetch_runner(args.runner)
     else:
-        runner = settings.general.default_runner
+        runner = default_runner
 
     # Construct the README
     if readme_template:
