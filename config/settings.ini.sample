@@ -140,3 +140,30 @@ exclude_zip_files = False
 # Assign fields to template names for reporting projects
 [reporting_templates]
 #bcf = datestamp,,user,run_id,#samples,#cells,organism,library_type,PI,analysis_dir
+
+# Destinations data can be copied to using 'transfer_data.py'
+# Define destinations with sections '[destination:NAME]' and
+# set parameters to define following settings:
+# - directory: destination directory to copy Fastqs to, defined
+#   as an arbitrary location of the form '[[USER@]HOST:]DIR'
+# - subdir: subdirectory naming scheme; if set then files are
+#   copied to a subdirectory of the destination directory
+#   according to this scheme:
+#   * 'random_bin': used a random pre-existing empty subdir
+#   * 'run_id': creates new subdir 'PLATFORM_DATESTAMP.RUN_ID-PROJECT'
+# - readme_template: template file to generate README file from
+#   (either full path or the name of a file in the 'templates'
+#   directory of the installation
+# - url: base URL for the copied data (sets value of WEBURL
+#   variable in the template README file)
+# - include_downloader: whether to include a copy of the
+#   'download_fastqs.py' utility with the copied data
+# - include_qc_report: whether to include a copy of the
+#   zipped QC reports with the copied data
+#[destination:webserver]
+#directory = /mnt/hosted/web
+#subdir = random_bin
+#readme_template = README.webserver.txt
+#url = http://awesome.com/data
+#include_downloader = true
+#include_qc_report = true
