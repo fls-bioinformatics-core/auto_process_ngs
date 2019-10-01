@@ -1105,7 +1105,8 @@ poll_interval = 0.5
         exclude_dirs = ("primary_data",
                         "save.bcl2fastqL1234",
                         "save.bcl2fastqL5678",
-                        "tmp.illumina_qc.XYZ")
+                        "tmp.illumina_qc.XYZ",
+                        "__qc.XYZ123.tmp",)
         exclude_files = ("custom_SampleSheet.csv.bak",)
         for d in exclude_dirs:
             os.makedirs(os.path.join(mockdir.dirn,d))
