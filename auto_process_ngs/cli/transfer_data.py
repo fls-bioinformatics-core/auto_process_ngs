@@ -193,6 +193,7 @@ def main():
                      (project.name,fastq_dir,ex))
         return 1
     print("Transferring data from '%s'" % project.name)
+    print("Fastqs in %s" % project.fastq_dir)
 
     # Summarise samples and Fastqs
     samples = set()
@@ -230,8 +231,11 @@ def main():
         qc_zips = list()
         # Check QC directories and look for zipped reports
         for qc_dir in project.qc_dirs:
-            fq_dir = project.qc_info(qc_dir).fastq_dir
-            if fq_dir == project.fastq_dir:
+            # Get the associated Fastq set
+            # NB only compare the basename of the Fastq dir
+            # in case full paths weren't updated
+            fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
+            if fq_set == os.path.basename(project.fastq_dir):
                 qc_zip = os.path.join(project.dirn,
                                       "%s_report.%s.%s.zip" %
                                       (qc_dir,project.name,
