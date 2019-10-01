@@ -1109,6 +1109,8 @@ poll_interval = 0.5
         exclude_files = ("custom_SampleSheet.csv.bak",)
         for d in exclude_dirs:
             os.makedirs(os.path.join(mockdir.dirn,d))
+            with open(os.path.join(mockdir.dirn,d,"placeholder"),'wt')  as fp:
+                fp.write("")
         for f in exclude_files:
             with open(os.path.join(mockdir.dirn,f),'wt') as fp:
                 fp.write("")
