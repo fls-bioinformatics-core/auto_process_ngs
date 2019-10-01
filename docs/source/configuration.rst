@@ -248,6 +248,54 @@ version will be used.
    This mechanism allows multiple ``bcl2fastq`` versions to be present
    in the environment simultaneously.
 
+.. _data_transfer_destinations:
+
+--------------------------
+Data transfer destinations
+--------------------------
+
+The ``transfer_data.py`` utility can be used to copy Fastqs and other
+data produced by the ``auto_process.py`` pipeline to arbitrary
+destinations, typically for sharing with end users of the pipeline.
+
+The utility provides a number of command line options to specify a
+destination and the data that are transferred at runtime. However it
+is also to define one or more destinations in the configuration file,
+with appropriate presets for each destination.
+
+A destination can be defined by adding a new section to the config
+file of the form ``[destination:NAME]``, where ``NAME`` is the name
+that will be used to refer to the destination when it is specified in
+a run of ``transfer_data.py``.
+
+Within each section the following parameters can be set for the
+destination:
+
+====================== ==============================================
+Parameter              Function
+====================== ==============================================
+``directory``          **Compulsory** sets the destination directory
+                       to copy files to; can be an arbitrary location
+                       of the form ``[[USER@]HOST:]DIR``
+``subdir``             Subdirectory naming scheme
+``readme_template``    Template file to generate ``README`` from
+``url``                Base URL to access copied data at
+``include_downloader`` Whether to include ``download_fastqs.py``
+``include_qc_report``  Whether to include zipped QC reports
+====================== ==============================================
+
+For example:
+
+::
+
+    [destination:webserver]
+    directory = /mnt/hosted/web
+    subdir = random_bin
+    readme_template = README.webserver
+    url = http://ourdata.com/shared
+
+See :ref:`transfer_data` for more information on what these settings do.
+
 -------------------
 Bash tab completion
 -------------------

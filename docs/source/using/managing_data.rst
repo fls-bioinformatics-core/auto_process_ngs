@@ -6,6 +6,7 @@ the utilities for performing them are currently part of the same package so
 they are outlined here.
 
  * :ref:`manage_fastqs`
+ * :ref:`transfer_data`
  * :ref:`download_fastqs`
  * :ref:`update_project_metadata`
  * :ref:`audit_projects`
@@ -16,8 +17,8 @@ library, but suggestions on how to do this can be found in the section
 
 .. _manage_fastqs:
 
-``manage_fastqs.py``: copying data for transfer to end users
-************************************************************
+``manage_fastqs.py``: managing and copy Fastq files
+***************************************************
 
 The ``manage_fastqs.py`` utility can be used to explore and copy data from
 an analysis directory to another location on a per-project basis.
@@ -76,7 +77,99 @@ will be included.
 
 For example to only copy ``R1`` files::
 
-    manage_fastqs.py RUN_DIR PROJECTNAME copy /path/to/local/dir --filter *_R1_*
+    manage_fastqs.py ANALYSIS_DIR PROJECTNAME copy /path/to/local/dir --filter *_R1_*
+
+.. _transfer_data:
+
+``transfer_data.py``: copying data for transfer to end users
+************************************************************
+
+The ``transfer_data.py`` utility can be used to copy data from analysis
+projects to different destinations, typically to transfer copies of
+data to end users.
+
+A destination is defined as a local or remote directory where files
+will be copied, for example in its most basic mode:
+
+::
+
+    transfer_data.py /mnt/data/shared ANALYSIS_DIR PROJECT
+
+will copy Fastq files from the ``PROJECT`` project in ``ANALYSIS_DIR``
+to the local directory ``/mnt/data/shared``.
+
+Destinations can also be defined in the configuration file (see
+:ref:`data_transfer_destinations`) and then referred to by their
+name when copying the Fastqs.
+
+For example:
+
+::
+
+    transfer_data.py webserver ANALYSIS_DIR PROJECT
+
+where ``webserver`` is a pre-defined destination.
+
+Schemes for dymanic subdirectory specification
+----------------------------------------------
+
+By default the data are copied directly to the specified directory.
+However it is possible to specify a scheme for dynamic subdirectory
+assignment, which can be useful for example if copying to a
+webserver.
+
+The scheme can be specified via either the ``--subdir`` command line
+option or the ``subdir`` parameter in the configuration file.
+
+The following schemes are available:
+
+==============  ==========================================
+Scheme name     Behaviour
+==============  ==========================================
+``random_bin``  Locates an empty pre-existing subdirectory
+                (aka 'bin') at random
+``run_id``      Creates a new subdirectory named
+                ``PLATFORM_DATESTAMP.RUN_NUMBER-PROJECT``
+                (must not already exist)
+==============  ==========================================
+
+Generating a README file from a template
+----------------------------------------
+
+It is possible to generate a ``README`` for the copied data by
+specifying a template file via either the ``--readme`` command line
+option or the ``readme_template`` parameter in the configuration
+file.
+
+The template should be a plain text file but it can also contain
+placeholders for 'template variables' which will be substituted with
+the appropriate values when the ``README`` file is generated:
+
+================  =================================
+Placeholder       Value
+================  =================================
+``%PLATFORM%``    Run platform (uppercase)
+``%RUN_NUMBER%``  Run number
+``%DATESTAMP%``   Run datestamp
+``%PROJECT%``     Name of project being copied
+``%WEBURL%``      Base URL for the webserver
+``%BIN%``         Name of the subdirectory, if any
+``%DIR%``         Directory data were copied to
+``%TODAY%``       Today's date
+================  =================================
+
+Including downloader and QC reports
+-----------------------------------
+
+By default only Fastqs are copied by ``transfer_data.py``, however it
+is possible to include additional files:
+
+ * A standalone downloader script (see :ref:`download_fastqs`)
+   (specify the ``--include_downloader`` or set the
+   ``include_downloader`` parameter in the configuration);
+ * The zipped QC reports for the project (specify the
+   ``--include_qc_report`` or set the ``include_qc_report``
+   parameter)
 
 .. _download_fastqs:
 

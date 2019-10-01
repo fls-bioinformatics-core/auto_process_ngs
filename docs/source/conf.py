@@ -337,6 +337,7 @@ for utility in ("analyse_barcodes.py",
                 "process_icell8.py",
                 "run_qc.py",
                 "split_icell8_fastqs.py",
+                "transfer_data.py",
                 "update_project_metadata.py"):
     # Capture the output
     help_text_file = "%s.help" % utility

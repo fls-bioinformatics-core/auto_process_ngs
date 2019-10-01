@@ -116,3 +116,44 @@ SN7001251 = hiseq
         self.assertTrue('SN7001251' in s.sequencers)
         self.assertEqual(s.sequencers['SN7001251'],'hiseq')
         self.assertEqual(s.sequencers.SN7001251,'hiseq')
+
+    def test_destination_definitions(self):
+        """Settings: handle 'destination:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"settings.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[destination:webserver]
+directory = /mnt/www/data
+subdir = random_bin
+readme_template = README.webserver.template
+url = https://our.data.com/data
+include_downloader = true
+include_qc_report = true
+
+[destination:local]
+directory = /mnt/shared
+subdir = run_id
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check destination settings
+        self.assertTrue('webserver' in s.destination)
+        self.assertEqual(s.destination['webserver']['directory'],
+                         '/mnt/www/data')
+        self.assertEqual(s.destination['webserver']['subdir'],'random_bin')
+        self.assertEqual(s.destination['webserver']['readme_template'],
+                         'README.webserver.template')
+        self.assertEqual(s.destination['webserver']['url'],
+                         'https://our.data.com/data')
+        self.assertEqual(s.destination['webserver']['include_downloader'],
+                         True)
+        self.assertEqual(s.destination['webserver']['include_qc_report'],
+                         True)
+        self.assertTrue('local' in s.destination)
+        self.assertEqual(s.destination['local']['directory'],'/mnt/shared')
+        self.assertEqual(s.destination['local']['subdir'],'run_id')
+        self.assertEqual(s.destination['local']['readme_template'],None)
+        self.assertEqual(s.destination['local']['url'],None)
+        self.assertEqual(s.destination['local']['include_downloader'],False)
+        self.assertEqual(s.destination['local']['include_qc_report'],False)

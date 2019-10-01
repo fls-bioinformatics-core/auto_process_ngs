@@ -250,12 +250,19 @@ class Settings(object):
                 self['reporting_templates'][template] = fields
         except NoSectionError:
             logging.debug("No reporting templates defined")
+        # Destinations for data transfer
+        self.add_section('destination')
+        for section in filter(lambda x: x.startswith('destination:'),
+                              config.sections()):
+            dest = section.split(':')[1]
+            self.destination[dest] = self.get_destination_config(
+                section,config)
 
     def get_bcl2fastq_config(self,section,config):
         """
         Retrieve bcl2fastq configuration options from .ini file
 
-        Given the name of a section (e.g. 'blc2fastq',
+        Given the name of a section (e.g. 'bcl2fastq',
         'platform:miseq'), fetch the bcl2fastq settings and return
         in an AttributeDictionary object.
 
@@ -296,6 +303,43 @@ class Settings(object):
                 section,
                 'create_empty_fastqs',
                 None)
+        return values
+
+    def get_destination_config(self,section,config):
+        """
+        Retrieve 'destination' configuration options from .ini file
+
+        Given the name of a section (e.g. 'destination:webserver'),
+        fetch the associated data transfer settings and return
+        in an AttributeDictionary object.
+
+        The options that can be extracted are:
+
+        - directory (compulsory, str)
+        - subdir (optional, str, default 'None')
+        - readme_template (optional, str, default 'None')
+        - url (optional, str, default 'None')
+        - include_downloader (optional, boolean, default 'False')
+        - include_qc_report (optional, boolean, default 'False')
+
+        Arguments:
+          section (str): name of the section to retrieve the
+            settings from
+          config (Config): Config object with settings loaded
+
+        Returns:
+          AttributeDictionary: dictionary of option:value pairs.
+
+        """
+        values = AttributeDictionary()
+        values['directory'] = config.get(section,'directory',None)
+        values['subdir'] = config.get(section,'subdir',None)
+        values['readme_template'] = config.get(section,'readme_template',None)
+        values['url'] = config.get(section,'url',None)
+        values['include_downloader'] = config.getboolean(
+            section,'include_downloader',False)
+        values['include_qc_report'] = config.getboolean(
+            section,'include_qc_report',False)
         return values
 
     def set(self,param,value):
