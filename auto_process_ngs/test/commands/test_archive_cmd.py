@@ -1091,6 +1091,76 @@ poll_interval = 0.5
                                  fq)
             self.assertTrue(os.path.exists(fastq))
 
+    def test_archive_excludes_extra_bcl2fastq_dirs(self):
+        """archive: excludes extra bcl2fastq directories
+        """
+        # Make a mock auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add extra bcl2fastq directories
+        for i,bcl2fastq_dir in enumerate(('bcl2fastq.1',
+                                          'bcl2fastq.2')):
+            mockdir1 = MockAnalysisDirFactory.bcl2fastq2(
+                '170901_M00879_0087_000000000-AGEW9_%d' % i,
+                'miseq',
+                unaligned_dir=bcl2fastq_dir,
+                metadata={ "instrument_datestamp": "170901" },
+                top_dir=self.dirn)
+            mockdir1.create()
+            os.rename(os.path.join(mockdir1.dirn,bcl2fastq_dir),
+                      os.path.join(mockdir.dirn,bcl2fastq_dir))
+        # Make a mock archive directory
+        archive_dir = os.path.join(self.dirn,"archive")
+        final_dir = os.path.join(archive_dir,
+                                 "2017",
+                                 "miseq")
+        os.makedirs(final_dir)
+        self.assertTrue(os.path.isdir(final_dir))
+        self.assertEqual(len(os.listdir(final_dir)),0)
+        # Make autoprocess instance and set required metadata
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=self.settings)
+        ap.set_metadata("source","testing")
+        ap.set_metadata("run_number","87")
+        # Do archiving to staging
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=True,
+                         final=False)
+        self.assertEqual(status,0)
+        # Check staging dir
+        staging_dir = os.path.join(
+            final_dir,
+            "__170901_M00879_0087_000000000-AGEW9_analysis.pending")
+        self.assertTrue(os.path.exists(staging_dir))
+        # Check bcl2fastq dirs not copied across
+        for d in ('bcl2fastq',
+                  'bcl2fastq.1',
+                  'bcl2fastq.2',):
+            self.assertFalse(os.path.exists(os.path.join(staging_dir,d)))
+        # Do second archive operation to final
+        status = archive(ap,
+                         archive_dir=archive_dir,
+                         year='2017',platform='miseq',
+                         read_only_fastqs=True,
+                         final=True)
+        self.assertEqual(status,0)
+        # Check final dir
+        final_archive_dir = os.path.join(
+            final_dir,
+            "170901_M00879_0087_000000000-AGEW9_analysis")
+        self.assertTrue(os.path.exists(final_archive_dir))
+        # Check bcl2fastq dirs not copied across
+        for d in ('bcl2fastq',
+                  'bcl2fastq.1',
+                  'bcl2fastq.2',):
+            self.assertFalse(os.path.exists(os.path.join(final_archive_dir,d)))
+
     def test_archive_excludes_unwanted_content(self):
         """archive: excludes unwanted content
         """
