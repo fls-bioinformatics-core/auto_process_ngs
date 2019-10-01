@@ -368,7 +368,7 @@ def main():
     try:
         copy_job.wait(poll_interval=settings.general.poll_interval)
     except KeyboardInterrupt as ex:
-        logger.errore("Keyboard interrupt, terminating file copy")
+        logger.error("Keyboard interrupt, terminating file copy")
         copy_job.terminate()
         return 1
     exit_code = copy_job.exit_code
