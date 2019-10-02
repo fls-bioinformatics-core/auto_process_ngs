@@ -124,6 +124,24 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 3,smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
 4,smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
 """
+        self.sample_sheet_no_indices = """[Header]
+IEMFileVersion,4
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,Sample_Project,Description
+1,smpl1,smpl1,,GGTTTACT,standard,
+2,smpl2,smpl2,,GTAATCTT,standard,
+3,smpl3,smpl3,,SI-GA-C1,10xGenomics,
+4,smpl4,smpl4,,SI-GA-D1,10xGenomics,
+"""
         # Make temporary working dir
         self.wd = tempfile.mkdtemp(suffix="TestHasChromiumSCIndices")
     def tearDown(self):
@@ -164,6 +182,13 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         """
         s = self._make_sample_sheet(
             self.sample_sheet_standard_indices)
+        self.assertFalse(has_chromium_sc_indices(s))
+    def test_sample_sheet_no_indices(self):
+        """
+        has_chromium_indices: sample sheet with no indices
+        """
+        s = self._make_sample_sheet(
+            self.sample_sheet_no_indices)
         self.assertFalse(has_chromium_sc_indices(s))
     def test_sample_sheet_some_chromium_sc_3_v2_indices(self):
         """

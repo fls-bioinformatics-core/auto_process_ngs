@@ -252,8 +252,11 @@ def has_chromium_sc_indices(sample_sheet):
     index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[0-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
-        if index_pattern.match(line['index']):
-            return True
+        try:
+            if index_pattern.match(line['index']):
+                return True
+        except KeyError:
+            pass
     return False
 
 def get_bases_mask_10x_atac(runinfo_xml):
