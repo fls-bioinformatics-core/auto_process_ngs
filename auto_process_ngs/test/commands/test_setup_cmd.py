@@ -402,6 +402,72 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                                        subdirn)),
                             "Missing subdir: %s" % subdirn)
 
+    def test_autoprocess_setup_import_extra_files(self):
+        """setup: check extra files can be imported
+        """
+        # Create mock Illumina run directory
+        mock_illumina_run = MockIlluminaRun(
+            '151125_M00879_0001_000000000-ABCDE1',
+            'miseq',
+            top_dir=self.dirn)
+        mock_illumina_run.create()
+        # Create additional files
+        extra_file1 = os.path.join(self.dirn,'extra_file1.txt')
+        with open(extra_file1,'wt') as fp:
+            fp.write(u"This is extra file 1\n")
+        extra_file2 = os.path.join(self.dirn,'extra_file2.txt')
+        with open(extra_file2,'wt') as fp:
+            fp.write(u"This is extra file 2\n")
+        # Make extra_file2 into a URL
+        extra_file2 = "file://%s" % extra_file2
+        # Set up autoprocessor
+        ap = AutoProcess()
+        setup_(ap,mock_illumina_run.dirn,extra_files=(extra_file1,
+                                                      extra_file2))
+        analysis_dirn = "%s_analysis" % mock_illumina_run.name
+        # Check parameters
+        self.assertEqual(ap.analysis_dir,
+                         os.path.join(self.dirn,analysis_dirn))
+        self.assertEqual(ap.params.data_dir,mock_illumina_run.dirn)
+        self.assertEqual(ap.params.sample_sheet,
+                         os.path.join(self.dirn,analysis_dirn,
+                                      'custom_SampleSheet.csv'))
+        self.assertEqual(ap.params.bases_mask,'auto')
+        # Check metadata
+        self.assertEqual(ap.metadata.run_name,
+                         "151125_M00879_0001_000000000-ABCDE1")
+        self.assertEqual(ap.metadata.run_number,None)
+        self.assertEqual(ap.metadata.source,None)
+        self.assertEqual(ap.metadata.platform,"miseq")
+        self.assertEqual(ap.metadata.assay,"TruSeq HT")
+        self.assertEqual(ap.metadata.bcl2fastq_software,None)
+        self.assertEqual(ap.metadata.cellranger_software,None)
+        self.assertEqual(ap.metadata.instrument_name,"M00879")
+        self.assertEqual(ap.metadata.instrument_datestamp,"151125")
+        self.assertEqual(ap.metadata.instrument_run_number,"1")
+        self.assertEqual(ap.metadata.instrument_flow_cell_id,
+                         "000000000-ABCDE1")
+        # Delete to force write of data to disk
+        del(ap)
+        # Check directory exists
+        self.assertTrue(os.path.isdir(analysis_dirn))
+        # Check files exist
+        for filen in ('SampleSheet.orig.csv',
+                      'custom_SampleSheet.csv',
+                      'auto_process.info',
+                      'metadata.info',
+                      'extra_file1.txt',
+                      'extra_file2.txt',):
+            self.assertTrue(os.path.exists(os.path.join(analysis_dirn,
+                                                        filen)),
+                            "Missing file: %s" % filen)
+        # Check subdirs have been created
+        for subdirn in ('ScriptCode',
+                        'logs',):
+            self.assertTrue(os.path.isdir(os.path.join(analysis_dirn,
+                                                       subdirn)),
+                            "Missing subdir: %s" % subdirn)
+
     def test_autoprocess_setup_from_casava_outputs(self):
         """setup: get Fastqs from existing CASAVA-style outputs
         """

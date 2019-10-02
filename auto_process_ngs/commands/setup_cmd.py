@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
-          unaligned_dir=None):
+          extra_files=None,unaligned_dir=None):
     """
     Set up the initial analysis directory
 
@@ -51,6 +51,9 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         sample sheet file; can be a local or remote file, or
         a URL (optional, will use sample sheet from the
         source data directory if present)
+      extra_files (list): arbitrary additional files to copy
+        into the new analysis directory; each file can be a
+        local or remote file or a URL
       unaligned_dir (str): directory with existing Fastqs
         output from CASAVA or bcl2fastq2; if specified then
         Fastqs will be taken from this directory (optional)
@@ -221,6 +224,34 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
         sample_sheet_data = SampleSheet(custom_sample_sheet)
         print(predict_outputs(sample_sheet=sample_sheet_data))
         check_and_warn(sample_sheet=sample_sheet_data)
+    # Import additional files
+    if extra_files:
+        for extra_file in extra_files:
+            print("Importing '%s'" % extra_file)
+            extra_file = Location(extra_file)
+            if extra_file.is_url:
+                # Try fetching file from URL
+                try:
+                    urlfp = urllib2.urlopen(extra_file.url)
+                    with open(os.path.join(ap.analysis_dir,
+                                           os.path.basename(extra_file.path)),
+                              'w') as fp:
+                        fp.write(urlfp.read())
+                except urllib2.URLError as ex:
+                    # Failed to download from URL
+                    raise Exception("Error fetching '%s': %s" %
+                                    (extra_file.url,ex))
+            else:
+                # File is on a local or remote server
+                if extra_file.is_remote:
+                    extra_file_path = str(extra_file)
+                else:
+                    extra_file_path = os.path.abspath(extra_file.path)
+                rsync = general_applications.rsync(extra_file_path,
+                                                   ap.analysis_dir)
+                status = rsync.run_subprocess(log=ap.log_path('rsync.extra_file.log'))
+                if status != 0:
+                    raise Exception("Failed to fetch '%s'" % extra_file_path)
     # Check supplied unaligned Fastq dir
     if unaligned_dir is not None:
         try:
