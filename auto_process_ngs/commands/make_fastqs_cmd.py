@@ -1392,7 +1392,7 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
                      unaligned_dir=None,sample_sheet=None,add_data=False,
-                     nprocessors=None,runner=None):
+                     forces=False,nprocessors=None,runner=None):
     """Generate statistics for Fastq files
 
     Generates statistics for all Fastq files found in the
@@ -1415,6 +1415,10 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
       add_data (bool): if True then add stats to the existing
         stats files (default is to overwrite existing stats
         files)
+      force (bool): if True then force update of the stats
+        files even if they are newer than the Fastq files
+        (by default stats are only updated if they are older
+        than the Fastqs)
       nprocessors (int): number of cores to use when running
         'fastq_statistics.py'
       runner (JobRunner): (optional) specify a non-default job
@@ -1465,12 +1469,13 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
         if regenerate_stats:
             logger.warning("Fastqs are newer than stats files")
         else:
-            # Don't rerun the stats, just regenerate the report
             logger.warning("Stats files are newer than Fastqs")
-            processing_qc_html = os.path.join(ap.analysis_dir,
-                                              "processing_qc.html")
-            report_processing_qc(ap,processing_qc_html)
-            return
+            if not force:
+                # Don't rerun the stats, just regenerate the report
+                processing_qc_html = os.path.join(ap.analysis_dir,
+                                                  "processing_qc.html")
+                report_processing_qc(ap,processing_qc_html)
+                return
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.stats
