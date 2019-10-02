@@ -1392,7 +1392,7 @@ def verify_fastq_generation(ap,unaligned_dir=None,lanes=None,
 
 def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
                      unaligned_dir=None,sample_sheet=None,add_data=False,
-                     forces=False,nprocessors=None,runner=None):
+                     force=False,nprocessors=None,runner=None):
     """Generate statistics for Fastq files
 
     Generates statistics for all Fastq files found in the
