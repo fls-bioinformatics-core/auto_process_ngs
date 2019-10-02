@@ -823,6 +823,7 @@ class MockAnalysisDirFactory(object):
                run_name,platform,
                paired_end=True,
                unaligned_dir='bcl2fastq',
+               params=None,
                metadata=None,
                top_dir=None):
         """
