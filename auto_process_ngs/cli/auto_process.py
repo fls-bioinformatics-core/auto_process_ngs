@@ -944,6 +944,9 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_argument('-a','--add',action="store_true",dest="add_data",
                    help="add new data from UNALIGNED_DIR to existing "
                    "statistics")
+    p.add_argument('--force',action="store_true",dest="force",
+                   help="force statistics to be regenerated even if "
+                   "existing statistics files are newer than fastqs ")
     add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
     add_runner_option(p)
     add_debug_option(p)
@@ -1367,6 +1370,7 @@ def update_fastq_stats(args):
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,
         add_data=args.add_data,
+        force=args.force,
         nprocessors=args.nprocessors,
         runner=runner)
 
