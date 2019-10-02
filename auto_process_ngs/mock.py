@@ -120,6 +120,7 @@ class MockAnalysisDir(MockIlluminaData):
                  no_lane_splitting=False,
                  no_undetermined=False,
                  top_dir=None,
+                 params=None,
                  metadata=None,
                  readme=None,
                  project_metadata=None,
@@ -156,6 +157,10 @@ class MockAnalysisDir(MockIlluminaData):
           top_dir (str): set parent directory to
             make the mock analysis directory in
             (default: current working directory)
+          params (dict): if set then should be
+            a dictionary of parameter items with
+            corresponding values, which will be
+            written to the auto_process.info file
           metadata (dict): if set then should be
             a dictionary of metadata items with
             corresponding values, which will be
@@ -178,6 +183,11 @@ class MockAnalysisDir(MockIlluminaData):
         self.bases_mask = bases_mask
         self.readme = readme
         self.include_stats_files = include_stats_files
+        # Store params
+        self.params = {}
+        if params is not None:
+            for item in params:
+                self.params[item] = params[item]
         # Store metadata
         self.metadata = { 'run_name': self.run_name,
                           'platform': self.platform, }
@@ -233,22 +243,27 @@ class MockAnalysisDir(MockIlluminaData):
             else:
                 fp.write('')
         # Add auto_process.info file
+        default_params = {
+            'analysis_dir': os.path.basename(self.dirn),
+            'bases_mask': self.bases_mask,
+            'data_dir': "/mnt/data/%s" % self.run_name,
+            'primary_data_dir': "%s/primary_data" % self.dirn,
+            'project_metadata': "projects.info",
+            'sample_sheet': "%s/custom_SampleSheet.csv" % self.dirn,
+            'unaligned_dir': "bcl2fastq",
+        }
+        if self.include_stats_files:
+            default_params['per_lane_stats_files'] = "per_lane_statistics.info"
+            default_params['stats_file'] = "statistics.info"
+        else:
+            default_params['per_lane_stats_files'] = "."
+            default_params['stats_file'] = '.'
+        for p in default_params:
+            if p not in self.params:
+                self.params[p] = default_params[p]
         with open(os.path.join(self.dirn,'auto_process.info'),'w') as fp:
-            fp.write("analysis_dir\t%s\n" % os.path.basename(self.dirn))
-            fp.write("bases_mask\t%s\n" % self.bases_mask)
-            fp.write("data_dir\t/mnt/data/%s\n" % self.run_name)
-            if self.include_stats_files:
-                fp.write("per_lane_stats_file\tper_lane_statistics.info\n")
-            else:
-                fp.write("per_lane_stats_file\t.\n")
-            fp.write("primary_data_dir\t%s/primary_data\n" % self.dirn)
-            fp.write("project_metadata\tprojects.info\n")
-            fp.write("sample_sheet\t%s/custom_SampleSheet.csv\n" % self.dirn)
-            if self.include_stats_files:
-                fp.write("stats_file\tstatistics.info\n")
-            else:
-                fp.write("stats_file\t.\n")
-            fp.write("unaligned_dir\tbcl2fastq\n")
+            for item in self.params:
+                fp.write("%s\t%s\n" % (item,self.params[item]))
         # Add (empty) stats files
         if self.include_stats_files:
             for stats_file in ('statistics.info',
@@ -773,6 +788,7 @@ class MockAnalysisDirFactory(object):
                    no_lane_splitting=True,
                    reads=None,
                    top_dir=None,
+                   params=None,
                    metadata=None,
                    project_metadata=None,
                    bases_mask='auto',
@@ -791,6 +807,7 @@ class MockAnalysisDirFactory(object):
                               paired_end=paired_end,
                               no_lane_splitting=no_lane_splitting,
                               lanes=lanes,
+                              params=params,
                               metadata=metadata,
                               project_metadata=project_metadata,
                               include_stats_files=include_stats_files,
@@ -817,6 +834,7 @@ class MockAnalysisDirFactory(object):
                               fmt='casava',
                               paired_end=paired_end,
                               lanes=lanes,
+                              params=params,
                               metadata=metadata,
                               top_dir=top_dir)
         mad.add_fastq_batch('AB','AB1','AB1_GCCAAT',lanes=lanes)
