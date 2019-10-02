@@ -769,6 +769,7 @@ class MockAnalysisDirFactory(object):
     def bcl2fastq2(self,
                    run_name,platform,
                    paired_end=True,
+                   unaligned_dir='bcl2fastq',
                    no_lane_splitting=True,
                    reads=None,
                    top_dir=None,
@@ -784,7 +785,7 @@ class MockAnalysisDirFactory(object):
         else:
             lanes = [1,2,3,4]
         mad = MockAnalysisDir(run_name,platform,
-                              unaligned_dir='bcl2fastq',
+                              unaligned_dir=unaligned_dir,
                               fmt='bcl2fastq2',
                               bases_mask=bases_mask,
                               paired_end=paired_end,
@@ -804,6 +805,7 @@ class MockAnalysisDirFactory(object):
     def casava(self,
                run_name,platform,
                paired_end=True,
+               unaligned_dir='bcl2fastq',
                metadata=None,
                top_dir=None):
         """
@@ -811,7 +813,7 @@ class MockAnalysisDirFactory(object):
         """
         lanes = [1,2,3,4]
         mad = MockAnalysisDir(run_name,platform,
-                              unaligned_dir='bcl2fastq',
+                              unaligned_dir=unaligned_dir,
                               fmt='casava',
                               paired_end=paired_end,
                               lanes=lanes,

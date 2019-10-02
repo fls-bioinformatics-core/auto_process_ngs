@@ -16,7 +16,9 @@ from .. import applications
 from .. import fileops
 from .. import simple_scheduler
 from .. import tenx_genomics_utils
+from bcftbx.IlluminaData import IlluminaData
 from bcftbx.utils import format_file_size
+from bcftbx.utils import list_dirs
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -176,6 +178,21 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         if not force or not is_staging:
             raise Exception("Some metadata items not set, stopping")
         logger.warning("Some metadata items not set, proceeding")
+    # Locate extra bcl2fastq directories
+    extra_bcl2fastq_dirs = list()
+    for dirn in list_dirs(ap.analysis_dir):
+        if dirn.endswith(".bak") or dirn.startswith("save."):
+            # Ignore
+            continue
+        elif dirn == os.path.basename(ap.params.unaligned_dir):
+            continue
+        # Try to load data from the directory
+        try:
+            illumina_data = IlluminaData(ap.analysis_dir,
+                                         unaligned_dir=dirn)
+            extra_bcl2fastq_dirs.append(dirn)
+        except Exception:
+            pass
     if not is_staging:
         # Are there any projects to archive?
         try:
@@ -221,6 +238,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
             print("Excluding '%s' directory from archive" %
                   ap.params.unaligned_dir)
             excludes.append('--exclude=%s' % ap.params.unaligned_dir)
+        # Exclude extra bcl2fastq dirs
+        for dirn in extra_bcl2fastq_dirs:
+            print("Excluding '%s' directory from archive" % dirn)
+            excludes.append('--exclude=%s' % dirn)
         # 10xgenomics products to exclude
         excludes.append('--exclude=*.mro')
         excludes.append('--exclude=%s*' %
