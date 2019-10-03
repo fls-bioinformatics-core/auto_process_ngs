@@ -27,6 +27,7 @@ from ..bcl2fastq_utils import run_bcl2fastq_1_8
 from ..bcl2fastq_utils import run_bcl2fastq_2_17
 from ..bcl2fastq_utils import run_bcl2fastq_2_20
 from ..barcodes.pipeline import AnalyseBarcodes
+from ..fileops import Location
 from ..icell8.utils import get_bases_mask_icell8
 from ..icell8.utils import get_bases_mask_icell8_atac
 from ..icell8.utils import ICell8WellList
@@ -580,12 +581,26 @@ def get_primary_data(ap,runner=None):
     Arguments:
       ap (AutoProcessor): autoprocessor pointing to the analysis
         directory to create Fastqs for
+      force_copy (bool): if True then force primary data to be copied
+        even if it's on the local system
       runner (JobRunner): (optional) specify a non-default job runner
         to use for primary data rsync
     """
     # Source and target directories
     data_dir = ap.params.data_dir
     ap.params["primary_data_dir"] = ap.add_directory('primary_data')
+    # Check if source data are local or remote
+    if not Location(data_dir).is_remote:
+        # Local data
+        print("Data are on the local system")
+        # Make a symlink
+        print("Making a symlink to source data")
+        os.symlink(data_dir,os.path.join(ap.params.primary_data_dir,
+                                         os.path.basename(data_dir)))
+        return 0
+    else:
+        # Remote data
+        print("Data are on a remote system")
     # Set up runner
     if runner is None:
         runner = ap.settings.runners.rsync
