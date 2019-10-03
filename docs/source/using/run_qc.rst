@@ -17,16 +17,17 @@ can be used to run the QC pipeline on an arbitrary subdirectory.
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
 
-================ ========================
-QC protocol      Used for
-================ ========================
-``standardPE``   Standard paired-end data i.e. R1/R2 Fastq pairs
-``standardSE``   Standard single-end data i.e. R1 Fastqs only
-``10x_scATAC``   10xGenomics single cell ATAC-seq
-``10x_scRNAseq`` 10xGenomics single cell RNA-seq
-``10x_snRNAseq`` 10xGenomics single nuclei RNA-seq
-``singlecell``   ICELL8 single cell RNA-seq
-================ ========================
+================  ========================
+QC protocol       Used for
+================  ========================
+``standardPE``    Standard paired-end data i.e. R1/R2 Fastq pairs
+``standardSE``    Standard single-end data i.e. R1 Fastqs only
+``10x_scATAC``    10xGenomics single cell & single nuclei ATAC-seq
+``10x_scRNAseq``  10xGenomics single cell RNA-seq
+``10x_snRNAseq``  10xGenomics single nuclei RNA-seq
+``singlecell``    ICELL8 single cell RNA-seq
+``ICELL8_scATAC`` ICELL8 single cell ATAC-seq
+================= ========================
 
 The protocol is determined automatically for each project.
 
