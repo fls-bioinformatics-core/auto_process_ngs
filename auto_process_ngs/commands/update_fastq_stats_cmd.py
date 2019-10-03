@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
-                       unaligned_dir=None,add_data=False,nprocessors=None,
-                       runner=None):
+                       unaligned_dir=None,add_data=False,force=False,
+                       nprocessors=None,runner=None):
     """Update statistics for Fastq files
 
     Updates the statistics for all Fastq files found in the
@@ -42,6 +42,10 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
       add_data (bool): if True then add stats to the existing
         stats files (default is to overwrite existing stats
         files)
+      force (bool): if True then force update of the stats
+        files even if they are newer than the Fastq files
+        (by default stats are only updated if they are older
+        than the Fastqs)
       nprocessors (int): number of cores to use when running
         'fastq_statistics.py'
       runner (JobRunner): (optional) specify a non-default job
@@ -53,5 +57,6 @@ def update_fastq_stats(ap,stats_file=None,per_lane_stats_file=None,
                      stats_file=stats_file,
                      per_lane_stats_file=per_lane_stats_file,
                      add_data=add_data,
+                     force=force,
                      nprocessors=nprocessors,
                      runner=runner)
