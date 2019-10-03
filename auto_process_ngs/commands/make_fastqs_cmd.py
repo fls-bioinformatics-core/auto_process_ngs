@@ -78,6 +78,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
                 skip_fastq_generation=False,
                 only_fetch_primary_data=False,
+                force_copy_of_primary_data=False,
                 create_empty_fastqs=None,runner=None,
                 icell8_swap_i1_and_i2=False,
                 icell8_reverse_complement=None,
@@ -161,6 +162,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
         generation
       only_fetch_primary_data (bool): if True then fetch primary data,
         don't do anything else
+      force_copy_of_primary_data (bool): if True then force primary
+        data to be copied (rsync'ed) even if it's on the local system
+        (default is to link to primary data unless it's on a remote
+        filesystem).
       create_empty_fastqs (bool): if True then create empty 'placeholder'
         fastq files for any missing fastqs after bcl2fastq
         (must have completed with zero exit status)
@@ -302,7 +307,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
     ap.set_log_dir(ap.get_log_subdir(log_dir))
     # Fetch primary data
     if not skip_rsync and not ap.params.acquired_primary_data:
-        if get_primary_data(ap) != 0:
+        if get_primary_data(ap,
+                            force_copy=force_copy_of_primary_data) != 0:
             logger.error("Failed to acquire primary data")
             raise Exception("Failed to acquire primary data")
         else:
@@ -571,7 +577,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
 # TODO: remove dependency on AutoProcessor instance for
 # TODO: runner, source and target destinations etc
-def get_primary_data(ap,runner=None):
+def get_primary_data(ap,force_copy=False,runner=None):
     """
     Acquire the primary sequencing data (i.e. BCL files)
 
@@ -593,11 +599,12 @@ def get_primary_data(ap,runner=None):
     if not Location(data_dir).is_remote:
         # Local data
         print("Data are on the local system")
-        # Make a symlink
-        print("Making a symlink to source data")
-        os.symlink(data_dir,os.path.join(ap.params.primary_data_dir,
-                                         os.path.basename(data_dir)))
-        return 0
+        if not force_copy:
+            # Make a symlink
+            print("Making a symlink to source data")
+            os.symlink(data_dir,os.path.join(ap.params.primary_data_dir,
+                                             os.path.basename(data_dir)))
+            return 0
     else:
         # Remote data
         print("Data are on a remote system")

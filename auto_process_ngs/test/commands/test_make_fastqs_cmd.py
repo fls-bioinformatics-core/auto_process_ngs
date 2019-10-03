@@ -1121,6 +1121,35 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                                     "171020_SN7001250_00002_AHGXXXX")
         self.assertTrue(os.path.islink(primary_data))
 
+    def test_make_fastqs_force_rsync_of_primary_data(self):
+        """make_fastqs: force rsync of primary data
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger executables
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        make_fastqs(ap,only_fetch_primary_data=True,
+                    force_copy_of_primary_data=True)
+        # Check primary data is not a link
+        primary_data = os.path.join(ap.params.primary_data_dir,
+                                    "171020_SN7001250_00002_AHGXXXX")
+        self.assertFalse(os.path.islink(primary_data))
+
     def test_make_fastqs_unknown_protocol(self):
         """make_fastqs: fails with unknown protocol
         """
