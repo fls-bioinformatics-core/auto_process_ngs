@@ -93,6 +93,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     explicit links for each project for the following (where
     appropriate):
 
+    - ICELL8 processing reports
     - cellranger count outputs
     - MultiQC report
 
@@ -313,14 +314,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     qc_artefacts['multiqc_report'] = multiqc_report
                 else:
                     print("...%s: no MultiQC report" % qc_dir)
-        # ICell8 pipeline report
-        icell8_zip = os.path.join(project.dirn,
-                                  "icell8_processing.%s.%s.zip" %
-                                  (project.name,
-                                   os.path.basename(ap.analysis_dir)))
-        if os.path.exists(icell8_zip):
-            print("...%s: found ICell8 pipeline report" % project.name)
-            project_qc[project.name]['icell8_zip'] = icell8_zip
+                # ICELL8 pipeline report
+                icell8_zip = os.path.join(project.dirn,
+                                          "icell8_processing.%s.%s.zip" %
+                                          (project.name,
+                                           os.path.basename(ap.analysis_dir)))
+                if os.path.exists(icell8_zip):
+                    print("...%s: found ICELL8 pipeline report" % project.name)
+                    project_qc[project.name]['icell8_zip'] = icell8_zip
         # Cellranger count report
         if legacy:
             cellranger_zip = os.path.join(project.dirn,

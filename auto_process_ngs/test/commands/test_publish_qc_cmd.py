@@ -517,7 +517,70 @@ poll_interval = 0.5
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
-        # ICell8 outputs
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+        # ICELL8 outputs shouldn't be present
+        icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
+                                                  os.path.basename(
+                                                      ap.analysis_dir))
+        outputs = []
+        outputs.append(icell8_dir)
+        outputs.append("%s.zip" % icell8_dir)
+        outputs.append(os.path.join(icell8_dir,"icell8_processing_data"))
+        outputs.append(os.path.join(icell8_dir,"icell8_processing.html"))
+        outputs.append(os.path.join(icell8_dir,"stats"))
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertFalse(os.path.exists(f),"Found %s" % f)
+
+    def test_publish_qc_with_icell8_outputs_legacy_mode(self):
+        """publish_qc: project with ICELL8 QC outputs (legacy mode)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        projects = ap.get_analysis_projects()
+        for project in projects:
+            UpdateAnalysisProject(project).add_qc_outputs(
+                protocol="singlecell")
+        # Add ICELL8 report for one project
+        icell8_project = projects[0]
+        UpdateAnalysisProject(icell8_project).add_icell8_outputs()
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir,legacy=True)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              os.path.basename(
+                                                  ap.analysis_dir))
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+        # ICELL8 outputs
         icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
                                                   os.path.basename(
                                                       ap.analysis_dir))
@@ -852,16 +915,7 @@ poll_interval = 0.5
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
             zip_files.append("%s.zip" % project_qc)
-        # ICell8 outputs
-        icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
-                                                  os.path.basename(
-                                                      ap.analysis_dir))
-        outputs.append(icell8_dir)
-        outputs.append(os.path.join(icell8_dir,"icell8_processing_data"))
-        outputs.append(os.path.join(icell8_dir,"icell8_processing.html"))
-        outputs.append(os.path.join(icell8_dir,"stats"))
-        zip_files.append("%s.zip" % icell8_dir)
-        # NB cellranger count outputs shouldn't be present
+        # NB ICELL8 and cellranger count outputs shouldn't be present
         # Do checks
         for item in outputs:
             f = os.path.join(publication_dir,
