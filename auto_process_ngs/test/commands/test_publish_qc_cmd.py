@@ -478,7 +478,7 @@ poll_interval = 0.5
                              project.name)
 
     def test_publish_qc_with_icell8_outputs(self):
-        """publish_qc: project with ICell8 QC outputs
+        """publish_qc: project with ICELL8 QC outputs
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -497,7 +497,7 @@ poll_interval = 0.5
         for project in projects:
             UpdateAnalysisProject(project).add_qc_outputs(
                 protocol="singlecell")
-        # Add ICell8 report for one project
+        # Add ICELL8 report for one project
         icell8_project = projects[0]
         UpdateAnalysisProject(icell8_project).add_icell8_outputs()
         # Make a mock publication area
@@ -890,7 +890,7 @@ poll_interval = 0.5
         projects = ap.get_analysis_projects()
         for project in projects:
             UpdateAnalysisProject(project).add_qc_outputs()
-        # Add ICell8 report for one project
+        # Add ICELL8 report for one project
         icell8_project = projects[0]
         UpdateAnalysisProject(icell8_project).add_icell8_outputs()
         # Add cellranger count output for one project
@@ -955,7 +955,7 @@ poll_interval = 0.5
         projects = ap.get_analysis_projects()
         for project in projects:
             UpdateAnalysisProject(project).add_qc_outputs()
-        # Add ICell8 report for one project
+        # Add ICELL8 report for one project
         icell8_project = projects[0]
         UpdateAnalysisProject(icell8_project).add_icell8_outputs()
         # Add cellranger count output for one project
@@ -981,7 +981,7 @@ poll_interval = 0.5
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
             zip_files.append("%s.zip" % project_qc)
-        # ICell8 outputs
+        # ICELL8 outputs
         icell8_dir = "icell8_processing.%s.%s" % (icell8_project.name,
                                                   os.path.basename(
                                                       ap.analysis_dir))

@@ -83,10 +83,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
 
     - QC report for standard QC
 
-    Also if a project comprises ICell8 or 10xGenomics Chromium
+    Also if a project comprises ICELL8 or 10xGenomics Chromium
     data:
 
-    - ICell8 processing report, or
+    - ICELL8 processing reports, or
     - 'cellranger count' reports for each sample
 
     In 'legacy' mode, the top-level report will also contain
@@ -574,11 +574,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 except AttributeError:
                     # No MultiQC report
                     pass
-            # ICell8 pipeline report
+            # ICELL8 pipeline report
             try:
                 icell8_zip = project_qc[project.name].icell8_zip
                 try:
-                    # Copy and unzip ICell8 report
+                    # Copy and unzip ICELL8 report
                     copy_job = sched.submit(
                         fileops.copy_command(icell8_zip,dirn),
                         name="copy.icell8_report.%s" % project.name)
@@ -600,7 +600,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             os.path.basename(icell8_zip)))
                     # Append info to the index page
                     report_html.add(
-                        Link("[Icell8 processing]",
+                        Link("[ICELL8 processing]",
                              "icell8_processing.%s.%s/"
                              "icell8_processing.html" %
                              (project.name,
@@ -610,9 +610,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             Link("[ZIP]",
                                  os.path.basename(icell8_processing_zip)))
                 except Exception as ex:
-                    print("Failed to copy ICell8 report: %s" % ex)
+                    print("Failed to copy ICELL8 report: %s" % ex)
             except AttributeError:
-                # No ICell8 report
+                # No ICELL8 report
                 pass
             # Cellranger count reports
             try:
