@@ -93,6 +93,14 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
                            os.path.basename(qc_dir))
     if os.path.exists(multiqc):
         zip_file.add(multiqc)
+    # ICELL8 reports
+    icell8_reports = (os.path.join("stats","icell8_stats.xlsx"),
+                      "icell8_processing.html",
+                      "icell8_processing_data",)
+    for f in icell8_reports:
+        f = os.path.join(project.dirn,f)
+        if os.path.exists(f):
+            zip_file.add(f)
     # Finished
     return report_zip
 
