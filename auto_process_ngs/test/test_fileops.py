@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import pwd
 import grp
+import stat
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.fileops import *
@@ -147,6 +148,27 @@ class TestCopyFunction(FileopsTestCase):
         self.assertTrue(os.path.isfile(tgt_file))
         self.assertEqual(open(tgt_file).read(),
                          "This is a test file")
+
+    def test_local_copy_as_link(self):
+        """fileops.copy: copy a local file as a link
+        """
+        src_file = os.path.join(self.test_dir,'test.txt')
+        with open(src_file,'w') as fp:
+            fp.write("This is a test file")
+        self.assertTrue(os.path.isfile(src_file))
+        tgt_file = os.path.join(self.test_dir,'test2.txt')
+        self.assertFalse(os.path.exists(tgt_file))
+        status = copy(src_file,tgt_file,link=True)
+        self.assertEqual(status,0)
+        self.assertTrue(os.path.isfile(tgt_file))
+        self.assertEqual(open(tgt_file).read(),
+                         "This is a test file")
+        # Convoluted way to check if one file is hard-linked
+        # to another (see https://stackoverflow.com/a/41942022)
+        stat_src = os.stat(src_file)
+        stat_tgt = os.stat(tgt_file)
+        self.assertEqual((stat_src[stat.ST_INO],stat_src[stat.ST_DEV]),
+                         (stat_tgt[stat.ST_INO],stat_tgt[stat.ST_DEV]))
 
 class TestCopytreeFunction(FileopsTestCase):
     """Tests for the 'copy' function
@@ -350,6 +372,27 @@ class TestCopyCommand(unittest.TestCase):
         """
         copy_cmd = copy_command("/here/myfile.txt",
                                 "pjx@remote.com:/there/myfile.txt")
+        self.assertEqual(copy_cmd.command_line,
+                         ['scp',
+                          '/here/myfile.txt',
+                          'pjx@remote.com:/there/myfile.txt'])
+    def test_copy_command_hard_links(self):
+        """fileops.copy_command: copy file locally with hard links
+        """
+        copy_cmd = copy_command("/here/myfile.txt",
+                                "/there/myfile.txt",
+                                link=True)
+        self.assertEqual(copy_cmd.command_line,
+                         ['cp',
+                          '-l',
+                          '/here/myfile.txt',
+                          '/there/myfile.txt'])
+    def test_copy_command_to_remote_ignores_hard_links(self):
+        """fileops.copy_command: copy file to remote ignores hard links
+        """
+        copy_cmd = copy_command("/here/myfile.txt",
+                                "pjx@remote.com:/there/myfile.txt",
+                                link=True)
         self.assertEqual(copy_cmd.command_line,
                          ['scp',
                           '/here/myfile.txt',
