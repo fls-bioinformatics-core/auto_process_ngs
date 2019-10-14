@@ -130,13 +130,12 @@ def copy_to_dest(f,dirn,chksum=None,link=False):
     if not exists(dirn):
         raise Exception("'%s': destination not found" % dirn)
     # Copy the file
-    copy(f,dirn)
+    copy(f,dirn,link=link)
     if chksum is not None:
         user,host,dest = utils.split_user_host_dir(dirn)
         remote = (host is not None)
         if not remote:
             # Check local copy
-            copy(f,dirn)
             if chksum is not None:
                 if md5sum.md5sum(f) != chksum:
                     raise Exception("MD5 checksum failed for "
