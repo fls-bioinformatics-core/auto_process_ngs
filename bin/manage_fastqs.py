@@ -106,7 +106,7 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
     if filen:
         fp.close()
 
-def copy_to_dest(f,dirn,chksum=None):
+def copy_to_dest(f,dirn,chksum=None,link=False):
     """Copy a file to a local or remote destination
 
     Raises an exception if the copy operation fails.
@@ -121,6 +121,8 @@ def copy_to_dest(f,dirn,chksum=None):
         "[user@]host:dir"
       chksum: (optional) MD5 sum of the original file
         to match against the copy
+      link: (optional) if True then hard link files
+        instead of copying
     
     """
     if not exists(f):
@@ -185,6 +187,9 @@ if __name__ == "__main__":
                    default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument('--link',action='store_true',dest='link',
+                   default=False,
+                   help="hard link files instead of copying")
     options,args = p.parse_known_args()
     # Get analysis dir
     try:
@@ -305,7 +310,8 @@ if __name__ == "__main__":
         for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             i += 1
             print("(% 2d/% 2d) %s" % (i,nfastqs,fq))
-            copy_to_dest(fq,dest,chksums[os.path.basename(fq)])
+            copy_to_dest(fq,dest,chksums[os.path.basename(fq)],
+                         link=options.link)
     elif cmd == 'md5':
         # Generate MD5 checksums
         md5file = "%s.chksums" % project.name
