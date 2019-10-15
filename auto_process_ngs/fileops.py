@@ -231,7 +231,7 @@ def mkdir(newdir,recursive=False):
             "Exception making directory %s: %s" %
             (newdir,ex))
 
-def copy(src,dest):
+def copy(src,dest,link=False):
     """
     Copy a file
 
@@ -242,8 +242,11 @@ def copy(src,dest):
       dest (str): destination (file or directory)
         on a local or remote system, identified by
         a specifier of the form '[[USER@]HOST:]DEST'
+      link (bool): hard link files instead of
+        copying (ignored for remote copies)
+
     """
-    copy_cmd = copy_command(src,dest)
+    copy_cmd = copy_command(src,dest,link=link)
     try:
         return _run_command(copy_cmd)
     except Exception as ex:
@@ -449,7 +452,7 @@ def disk_usage(path):
 # Command generation functions
 #########################################################################
 
-def copy_command(src,dest):
+def copy_command(src,dest,link=False):
     """
     Generate command to copy a file
 
@@ -461,6 +464,8 @@ def copy_command(src,dest):
       dest (str): destination (file or directory)
         on a local or remote system, identified by
         a specifier of the form '[[USER@]HOST:]DEST'
+      link (bool): hard link files instead of
+        copying (ignored for remote copies)
 
     Returns:
       Command: Command instance that can be used to
@@ -469,9 +474,11 @@ def copy_command(src,dest):
     dest = Location(dest)
     if not dest.is_remote:
         # Local-to-local copy
-        copy_cmd = applications.Command('cp',
-                                        src,
-                                        dest.path)
+        copy_cmd = applications.Command('cp')
+        if link:
+            copy_cmd.add_args('-l')
+        copy_cmd.add_args(src,
+                          dest.path)
     if dest.is_remote:
         # Local-to-remote copy
         copy_cmd = applications.general.scp(

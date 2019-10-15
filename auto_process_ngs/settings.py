@@ -321,6 +321,7 @@ class Settings(object):
         - url (optional, str, default 'None')
         - include_downloader (optional, boolean, default 'False')
         - include_qc_report (optional, boolean, default 'False')
+        - hard_links (optional, boolean, default 'False')
 
         Arguments:
           section (str): name of the section to retrieve the
@@ -340,6 +341,7 @@ class Settings(object):
             section,'include_downloader',False)
         values['include_qc_report'] = config.getboolean(
             section,'include_qc_report',False)
+        values['hard_links'] = config.getboolean(section,'hard_links',False)
         return values
 
     def set(self,param,value):

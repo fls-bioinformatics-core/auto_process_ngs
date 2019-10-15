@@ -130,6 +130,7 @@ readme_template = README.webserver.template
 url = https://our.data.com/data
 include_downloader = true
 include_qc_report = true
+hard_links = true
 
 [destination:local]
 directory = /mnt/shared
@@ -150,6 +151,7 @@ subdir = run_id
                          True)
         self.assertEqual(s.destination['webserver']['include_qc_report'],
                          True)
+        self.assertEqual(s.destination['webserver']['hard_links'],True)
         self.assertTrue('local' in s.destination)
         self.assertEqual(s.destination['local']['directory'],'/mnt/shared')
         self.assertEqual(s.destination['local']['subdir'],'run_id')
@@ -157,3 +159,4 @@ subdir = run_id
         self.assertEqual(s.destination['local']['url'],None)
         self.assertEqual(s.destination['local']['include_downloader'],False)
         self.assertEqual(s.destination['local']['include_qc_report'],False)
+        self.assertEqual(s.destination['local']['hard_links'],False)

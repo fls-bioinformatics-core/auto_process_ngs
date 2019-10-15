@@ -106,7 +106,7 @@ def write_checksums(project,pattern=None,filen=None,relative=True):
     if filen:
         fp.close()
 
-def copy_to_dest(f,dirn,chksum=None):
+def copy_to_dest(f,dirn,chksum=None,link=False):
     """Copy a file to a local or remote destination
 
     Raises an exception if the copy operation fails.
@@ -121,6 +121,8 @@ def copy_to_dest(f,dirn,chksum=None):
         "[user@]host:dir"
       chksum: (optional) MD5 sum of the original file
         to match against the copy
+      link: (optional) if True then hard link files
+        instead of copying
     
     """
     if not exists(f):
@@ -128,13 +130,12 @@ def copy_to_dest(f,dirn,chksum=None):
     if not exists(dirn):
         raise Exception("'%s': destination not found" % dirn)
     # Copy the file
-    copy(f,dirn)
+    copy(f,dirn,link=link)
     if chksum is not None:
         user,host,dest = utils.split_user_host_dir(dirn)
         remote = (host is not None)
         if not remote:
             # Check local copy
-            copy(f,dirn)
             if chksum is not None:
                 if md5sum.md5sum(f) != chksum:
                     raise Exception("MD5 checksum failed for "
@@ -185,6 +186,9 @@ if __name__ == "__main__":
                    default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument('--link',action='store_true',dest='link',
+                   default=False,
+                   help="hard link files instead of copying")
     options,args = p.parse_known_args()
     # Get analysis dir
     try:
@@ -305,7 +309,8 @@ if __name__ == "__main__":
         for sample_name,fastq,fq in get_fastqs(project,pattern=options.pattern):
             i += 1
             print("(% 2d/% 2d) %s" % (i,nfastqs,fq))
-            copy_to_dest(fq,dest,chksums[os.path.basename(fq)])
+            copy_to_dest(fq,dest,chksums[os.path.basename(fq)],
+                         link=options.link)
     elif cmd == 'md5':
         # Generate MD5 checksums
         md5file = "%s.chksums" % project.name

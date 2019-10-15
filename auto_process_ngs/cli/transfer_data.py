@@ -93,6 +93,8 @@ def main():
     p.add_argument('--include_qc_report',action='store_true',
                    help="copy the zipped QC reports to the final "
                    "location")
+    p.add_argument('--link',action='store_true',
+                   help="hard link files instead of copying")
     p.add_argument('--runner',action='store',
                    help="specify the job runner to use for executing "
                    "the checksumming and Fastq copy operations "
@@ -129,6 +131,7 @@ def main():
         subdir = dest.subdir
         include_downloader = dest.include_downloader
         include_qc_report = dest.include_qc_report
+        hard_links = dest.hard_links
         weburl = dest.url
     else:
         target_dir = args.dest
@@ -136,6 +139,7 @@ def main():
         subdir = None
         include_downloader = False
         include_qc_report = False
+        hard_links = False
         weburl = None
 
     # Update defaults with command line values
@@ -149,6 +153,8 @@ def main():
         include_qc_report = True
     if args.weburl:
         weburl = args.weburl
+    if args.link:
+        hard_links = args.link
 
     # Load analysis directory and projects
     analysis_dir = AnalysisDir(args.analysis_dir)
@@ -350,9 +356,11 @@ def main():
         readme_file = None
 
     # Build command to run manage_fastqs.py
-    copy_cmd = Command("manage_fastqs.py",
-                       analysis_dir.analysis_dir,
-                       project_name)
+    copy_cmd = Command("manage_fastqs.py")
+    if hard_links:
+        copy_cmd.add_args("--link")
+    copy_cmd.add_args(analysis_dir.analysis_dir,
+                      project_name)
     if fastq_dir is not None:
         copy_cmd.add_args(fastq_dir)
     copy_cmd.add_args("copy",target_dir)
