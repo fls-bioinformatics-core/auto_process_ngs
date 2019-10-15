@@ -435,7 +435,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_jobinterval=cellranger_jobinterval,
                 cellranger_localcores=cellranger_localcores,
                 cellranger_localmem=cellranger_localmem,
-                log_dir=ap.log_dir
+                log_dir=ap.log_dir,
+                runner=runner
             )
         elif protocol == '10x_chromium_sc_atac':
             # 10xGenomics Chromium scATAC-seq
@@ -452,7 +453,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_jobinterval=cellranger_jobinterval,
                 cellranger_localcores=cellranger_localcores,
                 cellranger_localmem=cellranger_localmem,
-                log_dir=ap.log_dir
+                log_dir=ap.log_dir,
+                runner=runner
             )
         else:
             # Unknown protocol
@@ -681,8 +683,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
         Fastq files for index reads (default, don't create index read
         Fastqs)
       nprocessors (int): number of processors to use
-      runner (JobRunner): (optional) specify a non-default job runner to
-        use for fastq generation
+      runner (JobRunner): (optional) specify a non-default job runner
+        to use for fastq generation
     """
     # Directories
     analysis_dir = ap.params.analysis_dir
@@ -917,7 +919,7 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
                                  cellranger_jobinterval=None,
                                  cellranger_localcores=None,
                                  cellranger_localmem=None,
-                                 log_dir=None):
+                                 log_dir=None,runner=None):
     """
     Generate FASTQ files for 10xGenomics single-cell Chromium run
 
@@ -950,6 +952,8 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
       cellranger_localmem (int): maximum memory cellranger can request
         in jobmode 'local' (default: None)
       log_dir (str): optional path to directory to write log files to
+      runner (JobRunner): (optional) specify a non-default job runner to
+        use for fastq generation
     """
     # Deal with bases mask
     if bases_mask == 'auto':
@@ -1006,6 +1010,10 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
     print("Cellranger localmem   : %s" % cellranger_localmem)
     print("Working directory     : %s" % working_dir)
     print("Log directory         : %s" % log_dir)
+    # Set up runner
+    if runner is None:
+        runner = ap.settings.runners.cellranger
+    runner.set_log_dir(ap.log_dir)
     # Run cellranger mkfastq
     try:
         return run_cellranger_mkfastq(
@@ -1023,7 +1031,8 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
             cellranger_localcores=cellranger_localcores,
             cellranger_localmem=cellranger_localmem,
             working_dir=working_dir,
-            log_dir=log_dir)
+            log_dir=log_dir,
+            runner=runner)
     except Exception as ex:
         raise Exception("'cellranger mkfastq' stage failed: "
                         "'%s'" % ex)
@@ -1037,7 +1046,7 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
                                       cellranger_jobinterval=None,
                                       cellranger_localcores=None,
                                       cellranger_localmem=None,
-                                      log_dir=None):
+                                      log_dir=None,runner=None):
     """
     Generate FASTQ files for 10xGenomics single-cell ATAC-seq run
 
@@ -1070,6 +1079,8 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
       cellranger_localmem (int): maximum memory cellranger can request
         in jobmode 'local' (default: None)
       log_dir (str): optional path to directory to write log files to
+      runner (JobRunner): (optional) specify a non-default job runner
+        to use for fastq generation
     """
     # Load run data
     illumina_run = IlluminaData.IlluminaRun(primary_data_dir,
@@ -1138,6 +1149,10 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
     print("Cellranger localmem    : %s" % cellranger_localmem)
     print("Working directory      : %s" % working_dir)
     print("Log directory          : %s" % log_dir)
+    # Set up runner
+    if runner is None:
+        runner = ap.settings.runners.cellranger
+    runner.set_log_dir(ap.log_dir)
     # Run cellranger-atac mkfastq
     try:
         return run_cellranger_mkfastq(
@@ -1155,7 +1170,8 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
             cellranger_localcores=cellranger_localcores,
             cellranger_localmem=cellranger_localmem,
             working_dir=working_dir,
-            log_dir=log_dir)
+            log_dir=log_dir,
+            runner=runner)
     except Exception as ex:
         raise Exception("'cellranger-atac mkfastq' failed: "
                         "'%s'" % ex)
