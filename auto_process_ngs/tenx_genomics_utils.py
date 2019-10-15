@@ -538,6 +538,7 @@ def run_cellranger_mkfastq(sample_sheet,
                            cellranger_jobinterval=None,
                            cellranger_localcores=None,
                            cellranger_localmem=None,
+                           runner=None,
                            working_dir=None,
                            log_dir=None,
                            dry_run=False):
@@ -586,6 +587,9 @@ def run_cellranger_mkfastq(sample_sheet,
         (default: None)
       cellranger_localmem (int): maximum memory cellranger
         can request in jobmode 'local' (default: None)
+      runner (JobRunner): specify a non-default job runner
+        to use when running cellranger (default:
+        SimpleJobRunner)
       working_dir (str): path to a directory to use as
         as the working directory (default: current
         working directory)
@@ -600,6 +604,9 @@ def run_cellranger_mkfastq(sample_sheet,
     # Working directory
     if working_dir is None:
         working_dir = os.getcwd()
+    # Job runner
+    if runner is None:
+        runner = SimpleJobRunner(join_logs=True)
     # Check for existing cellranger outputs
     flow_cell_dir = os.path.join(working_dir,
                                  flow_cell_id(primary_data_dir))
@@ -654,7 +661,7 @@ def run_cellranger_mkfastq(sample_sheet,
             log_dir = os.path.abspath(log_dir)
         # Submit the job
         cellranger_mkfastq_job = SchedulerJob(
-            SimpleJobRunner(join_logs=True),
+            runner,
             cmd.command_line,
             name='cellranger_mkfastq',
             working_dir=working_dir,
