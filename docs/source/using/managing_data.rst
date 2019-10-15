@@ -165,11 +165,22 @@ By default only Fastqs are copied by ``transfer_data.py``, however it
 is possible to include additional files:
 
  * A standalone downloader script (see :ref:`download_fastqs`)
-   (specify the ``--include_downloader`` or set the
+   (specify the ``--include_downloader`` option or set the
    ``include_downloader`` parameter in the configuration);
  * The zipped QC reports for the project (specify the
-   ``--include_qc_report`` or set the ``include_qc_report``
+   ``--include_qc_report`` option or set the ``include_qc_report``
    parameter)
+
+Hard linking Fastqs
+-------------------
+
+When sharing Fastqs via a local directory which is on the same file
+system as the original files, it is possible to make hard links to
+the Fastqs rather than making copies by specifying the ``--link``
+option (or setting the ``hard_links`` parameter).
+
+Linking Fastqs is quicker than copying and saves space as hard links
+reference the same copy of the file's data on the file system.
 
 .. _download_fastqs:
 

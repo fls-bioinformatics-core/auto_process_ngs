@@ -282,6 +282,9 @@ Parameter              Function
 ``url``                Base URL to access copied data at
 ``include_downloader`` Whether to include ``download_fastqs.py``
 ``include_qc_report``  Whether to include zipped QC reports
+``hard_links``         Whether to hard link to Fastqs rather making
+                       copies (for local directories on the same file
+                       system as the original Fastqs)
 ====================== ==============================================
 
 For example:
@@ -293,6 +296,7 @@ For example:
     subdir = random_bin
     readme_template = README.webserver
     url = http://ourdata.com/shared
+    hard_links = true
 
 See :ref:`transfer_data` for more information on what these settings do.
 

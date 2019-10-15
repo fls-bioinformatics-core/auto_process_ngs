@@ -160,6 +160,8 @@ exclude_zip_files = False
 #   'download_fastqs.py' utility with the copied data
 # - include_qc_report: whether to include a copy of the
 #   zipped QC reports with the copied data
+# - hard_links: whether to hard link files instead of copying
+#   them (only for local copies on same filesystem)
 #[destination:webserver]
 #directory = /mnt/hosted/web
 #subdir = random_bin
@@ -167,3 +169,4 @@ exclude_zip_files = False
 #url = http://awesome.com/data
 #include_downloader = true
 #include_qc_report = true
+#hard_links = false
