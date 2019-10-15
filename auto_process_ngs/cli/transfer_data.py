@@ -131,6 +131,7 @@ def main():
         subdir = dest.subdir
         include_downloader = dest.include_downloader
         include_qc_report = dest.include_qc_report
+        hard_links = dest.hard_links
         weburl = dest.url
     else:
         target_dir = args.dest
@@ -138,6 +139,7 @@ def main():
         subdir = None
         include_downloader = False
         include_qc_report = False
+        hard_links = False
         weburl = None
 
     # Update defaults with command line values
@@ -151,7 +153,8 @@ def main():
         include_qc_report = True
     if args.weburl:
         weburl = args.weburl
-    hard_link = args.link
+    if args.link:
+        hard_links = args.link
 
     # Load analysis directory and projects
     analysis_dir = AnalysisDir(args.analysis_dir)
@@ -354,7 +357,7 @@ def main():
 
     # Build command to run manage_fastqs.py
     copy_cmd = Command("manage_fastqs.py")
-    if hard_link:
+    if hard_links:
         copy_cmd.add_args("--link")
     copy_cmd.add_args(analysis_dir.analysis_dir,
                       project_name)
