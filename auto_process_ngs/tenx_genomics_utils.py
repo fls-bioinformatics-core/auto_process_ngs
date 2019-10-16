@@ -444,7 +444,8 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-    elif project.info.library_type == 'scATAC-seq':
+    elif project.info.library_type in ('scATAC-seq',
+                                       'snATAC-seq'):
         # Single cell ATAC-seq
         for sample in project.samples:
             try:
@@ -459,6 +460,10 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
+    else:
+        raise Exception("%s: don't know how to set cell count for "
+                        "library type '%s'" % (project.name,
+                                               project.info.library_type))
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
