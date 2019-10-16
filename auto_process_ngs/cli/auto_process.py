@@ -229,8 +229,14 @@ def add_make_fastqs_command(cmdparser):
                               "perform any other operations")
     primary_data.add_argument('--remove-primary-data',action='store_true',
                               dest='remove_primary_data',default=False,
-                              help="Delete the primary data at the end of "
+                              help="delete the primary data at the end of "
                               "processing (default is to keep data)")
+    primary_data.add_argument('--force-copy',action='store_true',
+                              dest='force_copy',default=False,
+                              help="force primary data to be copied (by "
+                              "default only data on a remote system will be "
+                              "copied; data on a local system will be "
+                              "symlinked)")
     # General Fastq generation options
     fastq_generation = p.add_argument_group('General Fastq generation')
     fastq_generation.add_argument('--protocol',choices=MAKE_FASTQS_PROTOCOLS,
@@ -1118,6 +1124,7 @@ def make_fastqs(args):
         skip_rsync=args.skip_rsync,
         nprocessors=args.nprocessors,
         runner=runner,
+        force_copy_of_primary_data=args.force_copy,
         remove_primary_data=args.remove_primary_data,
         ignore_missing_bcl=args.ignore_missing_bcl,
         ignore_missing_stats=args.ignore_missing_stats,
