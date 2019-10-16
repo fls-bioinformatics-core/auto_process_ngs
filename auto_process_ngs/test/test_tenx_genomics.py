@@ -608,3 +608,34 @@ class TestSetCellCountForProject(unittest.TestCase):
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          5682)
+    def test_set_cell_count_for_single_nuclei_atac_project(self):
+        """
+        set_cell_count_for_project: test for snATAC-seq
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell ATAC",
+            "snATAC-seq")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                            "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(ATAC_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         5682)
