@@ -129,7 +129,7 @@ class AutoProcess(object):
           settings (Settings): optional, if supplied then should
             be a Settings instance; otherwise use a default
             instance populated from the installation-specific
-            'settings.ini' file
+            'auto_process.ini' file
           allow_save_params (bool): if True then allow updates
             to parameters to be saved back to the parameter file
             (this is the default)
