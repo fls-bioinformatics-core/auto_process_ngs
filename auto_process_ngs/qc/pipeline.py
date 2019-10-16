@@ -458,8 +458,6 @@ class QCPipeline(Pipeline):
         # Runners
         if runners is None:
             runners = dict()
-        if 'cellranger_runner' not in runners:
-            runners['cellranger_runner'] = SimpleJobRunner()
 
         # Execute the pipeline
         status = Pipeline.run(self,

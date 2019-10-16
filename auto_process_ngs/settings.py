@@ -224,7 +224,8 @@ class Settings(object):
                      'icell8',
                      'icell8_contaminant_filter',
                      'icell8_statistics',
-                     'icell8_report',):
+                     'icell8_report',
+                     'cellranger',):
             self.runners[name] = config.getrunner('runners',name,
                                                   default_runner)
         # Information for archiving analyses

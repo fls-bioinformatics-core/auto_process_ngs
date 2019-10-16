@@ -95,6 +95,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     default_runner = ap.settings.general.default_runner
     if runner is None:
         qc_runner = ap.settings.runners.qc
+        cellranger_runner = ap.settings.runners.cellranger
     # Get environment modules
     envmodules = dict()
     for name in ('illumina_qc',
@@ -153,6 +154,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs,
                        runners={
+                           'cellranger_runner': cellranger_runner,
                            'qc_runner': qc_runner,
                            'verify_runner': default_runner,
                            'report_runner': default_runner,

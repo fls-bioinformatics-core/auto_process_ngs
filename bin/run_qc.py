@@ -182,8 +182,10 @@ if __name__ == "__main__":
     default_runner = __settings.general.default_runner
     if args.runner:
         qc_runner = fetch_runner(args.runner)
+        cellranger_runner = fetch_runner(args.runner)
     else:
         qc_runner = self._settings.runners.qc
+        cellranger_runner = self._settings.runners.cellranger
     verify_runner = default_runner
     report_runner = default_runner
 
@@ -238,6 +240,7 @@ if __name__ == "__main__":
                        max_jobs=args.max_jobs,
                        batch_size=args.batch_size,
                        runners={
+                           'cellranger_runner': cellranger_runner,
                            'qc_runner': qc_runner,
                            'verify_runner': verify_runner,
                            'report_runner': report_runner,
