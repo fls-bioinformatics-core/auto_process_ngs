@@ -85,7 +85,7 @@ described here:
 In addition the strandedness determination requires ``STAR``
 indexes for each organism of interest. These can then be
 defined in the ``fastq_strand_indexes`` section of the
-``settings.ini`` file, for example::
+``auto_process.ini`` file, for example::
 
   [fastq_strand_indexes]
   human = /data/genomeIndexes/hg38/STAR/
@@ -105,7 +105,7 @@ genomes (yeast, E.coli, UniVec7, PhiX, mycoplasma, and
 adapter sequences).
 
 These can be defined in the ``icell8`` section of the
-``settings.ini`` file, for example::
+``auto_process.ini`` file, for example::
 
   [icell8]
   mammalian_conf_file = /data/icell8/mammalian_genomes.conf
@@ -134,7 +134,7 @@ be downloaded via:
 for novel organisms that are not supported.)
 
 These can be defined in the ``10xgenomics_transcriptomes``
-section of the ``settings.ini`` file, for example::
+section of the ``auto_process.ini`` file, for example::
 
   [10xgenomics_transcriptomes]
   human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0
@@ -163,7 +163,7 @@ package for these data:
 
 These can be made available within ``auto-process`` by adding
 definitions into the ``10xgenomics_premrna_references``
-section of the ``settings.ini`` file, for example::
+section of the ``auto_process.ini`` file, for example::
 
   [10xgenomics_premrna_references]
   human = /data/cellranger/refdata-cellranger-GRCh38-1.2.0_premrna
@@ -189,7 +189,7 @@ be downloaded via:
 for novel organisms that are not supported.)
 
 These can be defined in the ``10xgenomics_atac_genome_references``
-section of the ``settings.ini`` file, for example::
+section of the ``auto_process.ini`` file, for example::
 
   [10xgenomics_atac_genome_references]
   human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1

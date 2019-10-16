@@ -112,8 +112,8 @@ The following steps are performed:
    exclude any read pairs where there is an exclusive match to the
    contaminants.
 
-   If the screen files aren't defined in the ``settings.ini`` file
-   then they must be explicitly supplied to the utility using
+   If the screen files aren't defined in the ``auto_process.ini``
+   file then they must be explicitly supplied to the utility using
    the ``-m``/``--mammalian`` and ``-c``/``--contaminants`` options.
 
 .. note::
@@ -229,8 +229,8 @@ Appendix: configuring the ICELL8 processing pipeline
 ----------------------------------------------------
 
 The running of the pipeline can be configured via command line options,
-or by setting the appropriate parameters options in the ``settings.ini``
-configuration file.
+or by setting the appropriate parameters options in the
+``auto_process.ini`` configuration file.
 
 Reference data and quality filtering
 ************************************

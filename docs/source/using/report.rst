@@ -136,8 +136,8 @@ joined by underscores.
 
 Commonly used sets of fields can be made into "templates", which
 can be defined in the ``reporting_templates`` section of the
-``settings.ini`` configuration file and then specified using the
-``--templates`` option of the ``report`` command.
+``auto_process.ini`` configuration file and then specified using
+the ``--templates`` option of the ``report`` command.
 
 .. note::
 
