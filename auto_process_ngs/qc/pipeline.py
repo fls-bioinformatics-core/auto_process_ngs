@@ -1203,7 +1203,7 @@ class SetCellCountFromCellrangerCount(PipelineTask):
         # metric file
         set_cell_count_for_project(self.args.project.dirn)
 
-class ReportQC(PipelineFunctionTask):
+class ReportQC(PipelineTask):
     """
     Generate the QC report
     """
@@ -1228,23 +1228,14 @@ class ReportQC(PipelineFunctionTask):
         """
         pass
     def setup(self):
-        self.add_call("Generate QC report for %s"
-                      % self.args.project.name,
-                      self.report_qc,
-                      self.args.project,
-                      self.args.qc_dir,
-                      report_html=self.args.report_html,
-                      fastq_dir=self.args.fastq_dir,
-                      multiqc=self.args.multiqc,
-                      zip_outputs=self.args.zip_outputs)
-    def report_qc(self,project,qc_dir,report_html=None,
-                  fastq_dir=None,multiqc=False,zip_outputs=True):
         # Build the reportqc.py command
-        qc_base = os.path.basename(qc_dir)
-        if report_html is None:
+        project = self.args.project
+        fastq_dir = self.args.fastq_dir
+        qc_base = os.path.basename(self.args.qc_dir)
+        if self.args.report_html is None:
             out_file = '%s_report.html' % qc_base
         else:
-            out_file = report_html
+            out_file = self.args.report_html
         if not os.path.isabs(out_file):
             out_file = os.path.join(project.dirn,out_file)
         if project.info.run is None:
@@ -1255,20 +1246,17 @@ class ReportQC(PipelineFunctionTask):
         if fastq_dir is not None:
             title = "%s (%s)" % (title,fastq_dir)
         title = "%s: QC report" % title
-        report_cmd = Command(
+        cmd = PipelineCommandWrapper(
+            "Generate QC report for %s" % project.name,
             "reportqc.py",
-            "--qc_dir",qc_dir,
+            "--qc_dir",self.args.qc_dir,
             "--filename",out_file,
             "--title",title)
         if fastq_dir is not None:
-            report_cmd.add_args("--fastq_dir",fastq_dir)
-        if multiqc:
-            report_cmd.add_args("--multiqc")
-        if zip_outputs:
-            report_cmd.add_args("--zip")
-        report_cmd.add_args(project.dirn)
-        # Execute the command
-        status = report_cmd.run_subprocess(working_dir=qc_dir)
-        if status != 0:
-            raise Exception("Error running reportqc.py for %s: "
-                            "exit code: %s" % (project.name,status))
+            cmd.add_args("--fastq_dir",fastq_dir)
+        if self.args.multiqc:
+            cmd.add_args("--multiqc")
+        if self.args.zip_outputs:
+            cmd.add_args("--zip")
+        cmd.add_args(project.dirn)
+        self.add_cmd(cmd)
