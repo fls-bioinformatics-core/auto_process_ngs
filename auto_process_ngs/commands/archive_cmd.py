@@ -71,7 +71,7 @@ def archive(ap,archive_dir=None,platform=None,year=None,
         analysis directory to be archived
       archive_dir (str): top level archive directory, of the
         form '[[user@]host:]dir' (if not set then use the value
-        from the settings.ini file).
+        from the auto_process.ini file).
       platform (str): set the value of the <PLATFORM> level in
         the archive (if not set then taken from the supplied
         autoprocessor instance).
@@ -81,10 +81,10 @@ def archive(ap,archive_dir=None,platform=None,year=None,
       perms (str): change the permissions of the destination
         files and directories according to the supplied
         argument (e.g. 'g+w') (if not set then use the value
-         from the settings.ini file).
+         from the auto_process.ini file).
       group (str): set the group of the destination files to
         the supplied argument (if not set then use the value
-        from the settings.ini file).
+        from the auto_process.ini file).
       include_bcl2fastq (bool): if True then force inclusion
         of the 'bcl2fastq' subdirectory; otherwise only include
         it if fastq files in project subdirectories are symlinks.

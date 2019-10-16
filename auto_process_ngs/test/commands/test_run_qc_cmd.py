@@ -65,7 +65,7 @@ class TestAutoProcessRunQc(unittest.TestCase):
             top_dir=self.dirn)
         mockdir.create()
         # Settings file with polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 0.5
@@ -123,7 +123,7 @@ poll_interval = 0.5
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 0.5
@@ -197,7 +197,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 0.5
@@ -272,7 +272,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 0.5
@@ -352,7 +352,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 1.0
@@ -441,7 +441,7 @@ mouse = /data/cellranger/transcriptomes/mm10
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 1.0
@@ -532,7 +532,7 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
         mockdir.create()
         # Settings file with fastq_strand indexes and
         # polling interval
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 1.0

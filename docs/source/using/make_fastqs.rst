@@ -390,7 +390,7 @@ the reads from all lanes that the sample appeared in will be
 combined into the same Fastq file.
 
 The default lane splitting behaviour can be controlled via the
-configuration options in the ``settings.ini`` file (see
+configuration options in the ``auto_process.ini`` file (see
 :doc:`configuration <../configuration>`).
 
 .. note::

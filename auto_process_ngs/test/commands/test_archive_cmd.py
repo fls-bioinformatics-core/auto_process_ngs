@@ -29,7 +29,7 @@ class TestArchiveCommand(unittest.TestCase):
         # Create settings instance
         # This allows us to set the polling interval for the
         # unit tests
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[general]
 poll_interval = 0.5

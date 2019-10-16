@@ -218,7 +218,7 @@ class TestGetSequencerPlatform(unittest.TestCase):
         """
         get_sequencer_platform: use run directory and settings
         """
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[sequencers]
 SN7001251 = hiseq
@@ -241,7 +241,7 @@ FS10000171 = iseq
         """
         get_sequencer_platform: use instrument name and settings
         """
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[sequencers]
 SN7001251 = hiseq
@@ -267,7 +267,7 @@ FS10000171 = iseq
         """
         get_sequencer_platform: handle unknown instrument name
         """
-        settings_ini = os.path.join(self.dirn,"settings.ini")
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
             s.write("""[sequencers]
 SN7001251 = hiseq

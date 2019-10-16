@@ -10,7 +10,7 @@ Overview
 --------
 
 The autoprocessor reads its global settings for the local system from a
-``settings.ini`` file, which it looks for in order in the following
+``auto_process.ini`` file, which it looks for in order in the following
 locations:
 
 1. The file specified by the ``AUTO_PROCESS_CONF`` environment
@@ -19,7 +19,14 @@ locations:
 3. The ``config`` subdirectory of the installation directory
 4. The installation directory (for legacy installations only)
 
-To create a ``settings.ini`` file for a new installation, use the command
+.. note::
+
+   In previous versions of the package the configuration file was
+   called ``settings.ini``, and this will be used as a fallback if
+   no ``auto_process.ini`` file is found in the locations above.
+
+To create a ``auto_process.ini`` file for a new installation, use the
+command
 
 ::
 
@@ -38,12 +45,12 @@ To change the settings, either use the ``--set`` options, for example
 
     auto_process.py config --set bcl2fastq.nprocessors=4
 
-or simply edit the ``settings.ini`` file by hand using a text editor.
+or simply edit the ``auto_process.ini`` file by hand using a text editor.
 
 
 .. note::
 
-   If no ``settings.ini`` file exists then ``auto_process`` will run
+   If no ``auto_process.ini`` file exists then ``auto_process`` will run
    using the built-in default values.
 
 .. note::
@@ -77,7 +84,7 @@ platform names to be associated with the instrument names for the
 sequencers used at the local site.
 
 For example if the local facility has a HISeq 4000 instrument
-with ID ``SN7001250`` then this would be defined in ``settings.ini``
+with ID ``SN7001250`` then this would be defined in ``auto_process.ini``
 as follows:
 
 ::
@@ -172,7 +179,7 @@ dynamically modify the user's environment. They can be especially useful to
 provide access to multiple versions of the same software package, and to
 manage conflicts between packages.
 
-The ``[modulefiles]`` section in ``settings.ini`` allows specific module
+The ``[modulefiles]`` section in ``auto_process.ini`` allows specific module
 files to be loaded before a specific step, for example::
 
     [modulefiles]
@@ -213,7 +220,7 @@ Required bcl2fastq versions
 
 Different versions of Illumina's ``bcl2fastq`` software can be specified
 both as a default and dependent on the sequencer platform, by setting the
-appropriate parameters in the ``settings.ini`` file.
+appropriate parameters in the ``auto_process.ini`` file.
 
 The ``[bcl2fastq]`` directive specifies the defaults to use for all
 platforms in the absence of more specific settings, for example::
