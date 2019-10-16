@@ -16,7 +16,7 @@ class TestSettings(unittest.TestCase):
     """
     def setUp(self):
         # Create a temp working dir
-        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcessRunQc')
+        self.dirn = tempfile.mkdtemp(suffix='TestSettings')
 
     def tearDown(self):
         # Remove the temporary test directory
@@ -27,7 +27,7 @@ class TestSettings(unittest.TestCase):
         """Settings: load from sample file
         """
         sample_settings_file = os.path.join(get_config_dir(),
-                                            'settings.ini.sample')
+                                            'auto_process.ini.sample')
         self.assertTrue(os.path.isfile(sample_settings_file),
                         "Missing sample file %s" % sample_settings_file)
         s = Settings(sample_settings_file)
@@ -70,11 +70,11 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.metadata.default_data_source,None)
 
     def test_partial_settings_file(self):
-        """Settings: load a partial settings.ini file
+        """Settings: load a partial auto_process.ini file
         """
         # Partial file
         partial_settings_file = os.path.join(self.dirn,
-                                             "settings.ini")
+                                             "auto_process.ini")
         with open(partial_settings_file,'w') as s:
             s.write("""[fastq_stats]
 nprocessors = 8
@@ -95,7 +95,7 @@ nprocessors = 8
         """Settings: get_item fetches a value
         """
         sample_settings_file = os.path.join(get_config_dir(),
-                                            'settings.ini.sample')
+                                            'auto_process.ini.sample')
         s = Settings(sample_settings_file)
         max_concurrent_jobs = s.general.max_concurrent_jobs
         self.assertEqual(s['general'].max_concurrent_jobs,
@@ -105,7 +105,7 @@ nprocessors = 8
         """Settings: case of option names is preserved
         """
         # Settings file
-        settings_file = os.path.join(self.dirn,"settings.ini")
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_file,'w') as s:
             s.write("""[sequencers]
 SN7001251 = hiseq
@@ -121,7 +121,7 @@ SN7001251 = hiseq
         """Settings: handle 'destination:...' sections
         """
         # Settings file
-        settings_file = os.path.join(self.dirn,"settings.ini")
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_file,'w') as s:
             s.write("""[destination:webserver]
 directory = /mnt/www/data

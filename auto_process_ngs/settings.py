@@ -14,8 +14,8 @@ Classes and functions for handling the collection of configuration settings
 for automated processing.
 
 The settings are stored in a '.ini'-formatted file (by default called
-'settings.ini'; this file can be created by making a copy of the
-'settings.ini.sample' file).
+'auto_process.ini'; this file can be created by making a copy of the
+'auto_process.ini.sample' file).
 
 The simplest usage example is:
 
@@ -34,7 +34,7 @@ To print the values of all parameters use
 
 To import values from a non-standard named file use e.g.
 
->>> s = Settings('my_settings.ini')
+>>> s = Settings('my_auto_process.ini')
 
 The 'locate_settings_file' function is used implicitly to locate the
 settings file if none is given; it can also automatically create a settings
@@ -72,7 +72,7 @@ class Settings(object):
 
     The input file should be in '.ini' format and contain
     sections and values consistent with the sample
-    settings.ini file.
+    'auto_process.ini' file.
 
     """
     def __init__(self,settings_file=None):
@@ -83,14 +83,25 @@ class Settings(object):
         full path to an appropriately formatted '.ini' file.
 
         Otherwise the class will attempt to locate an appropriate
-        file to use.
+        file to use: by default this will be a file called
+        'auto_process.ini' which will exist somewhere in the
+        search path defined by the 'locate_settings_file'
+        function; if no file with this name can be found then
+        the class will fallback to looking for a file with the
+        older 'settings.ini' file name.
         
         """
         # Initialise list of sections
         self._sections = []
         # Locate settings file
         if settings_file is None:
-            self.settings_file = locate_settings_file(create_from_sample=False)
+            # Look for default
+            self.settings_file = locate_settings_file(
+                name="auto_process.ini",create_from_sample=False)
+            if self.settings_file is None:
+                # Fallback to old name
+                self.settings_file = locate_settings_file(
+                    name="settings.ini",create_from_sample=False)
         else:
             self.settings_file = os.path.abspath(settings_file)
         # Import site-specific settings from local version
@@ -99,7 +110,8 @@ class Settings(object):
             config.read(self.settings_file)
         else:
             # Look for sample settings file
-            config.read(os.path.join(get_config_dir(),'settings.ini.sample'))
+            config.read(os.path.join(get_config_dir(),
+                                     'auto_process.ini.sample'))
         # General parameters
         self.add_section('general')
         default_runner = config.get('general','default_runner',
@@ -459,10 +471,9 @@ def get_install_dir():
     Return location of top-level directory of installation
 
     This is a directory one or more level above the location of this
-    module which contains a 'config' subdir with a 'settings.ini.sample'
-    file, for example:
-
-    If this file is located in:
+    module which contains a 'config' subdir with an
+    'auto_process.ini.sample' file, for example: if this file is
+    located in
 
     /opt/auto_process/lib/python2.7/site-packages/auto_process_ngs
 
@@ -476,7 +487,8 @@ def get_install_dir():
     path = os.path.dirname(__file__)
     while path != os.sep:
         if os.path.isdir(os.path.join(path,'config')) and \
-           os.path.isfile(os.path.join(path,'config','settings.ini.sample')):
+           os.path.isfile(os.path.join(path,'config',
+                                       'auto_process.ini.sample')):
             logging.debug("Found install dir: %s" % path)
             return os.path.abspath(os.path.normpath(path))
         path = os.path.dirname(path)
@@ -497,12 +509,12 @@ def get_config_dir():
     else:
         return None
 
-def locate_settings_file(name='settings.ini',create_from_sample=True):
+def locate_settings_file(name='auto_process.ini',create_from_sample=True):
     """
     Locate configuration settings file
 
     Look for a configuration settings file (default name
-    'settings.ini'). The search path is:
+    'auto_process.ini'). The search path is:
 
     1. file specified by the AUTO_PROCESS_CONF environment
        variable (if it exists)
@@ -551,15 +563,20 @@ def locate_settings_file(name='settings.ini',create_from_sample=True):
         settings_file = None
     # No settings file found anywhere on search path
     if settings_file is None:
-        logging.debug("No local settings file found in %s" % ', '.join(config_file_dirs))
+        logging.debug("No local settings file found in %s" %
+                      ', '.join(config_file_dirs))
         if sample_settings_file is not None and create_from_sample:
-            logging.warning("Attempting to make a copy from sample settings file")
+            logging.warning("Attempting to make a copy from sample "
+                            "settings file")
             settings_file = os.path.splitext(sample_settings_file)[0]
             try:
-                open(settings_file,'w').write(open(sample_settings_file,'r').read())
+                with open(settings_file,'w') as fp:
+                    with open(sample_settings_file,'r') as fpp:
+                        fp.write(fpp.read())
                 logging.warning("Created new file %s" % settings_file)
             except Exception as ex:
-                raise Exception("Failed to create %s: %s" % (settings_file,ex))
+                raise Exception("Failed to create %s: %s" %
+                                (settings_file,ex))
     # Finish
     return settings_file
 
