@@ -400,7 +400,8 @@ def main():
         for qc_zip in qc_zips:
             print("Copying '%s'" % os.path.basename(qc_zip))
             copy(qc_zip,
-                 os.path.join(target_dir,os.path.basename(qc_zip)))
+                 os.path.join(target_dir,os.path.basename(qc_zip)),
+                 link=hard_links)
 
     print("Files now at %s" % target_dir)
     if weburl:
