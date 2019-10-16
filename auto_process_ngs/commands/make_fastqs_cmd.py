@@ -598,7 +598,7 @@ def get_primary_data(ap,force_copy=False,runner=None):
     # Check if source data are local or remote
     if not Location(data_dir).is_remote:
         # Local data
-        print("Data are on the local system")
+        print("Primary data are on the local system")
         if not force_copy:
             # Make a symlink
             print("Making a symlink to source data")
