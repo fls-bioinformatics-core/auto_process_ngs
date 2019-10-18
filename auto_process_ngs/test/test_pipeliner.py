@@ -619,7 +619,7 @@ class TestPipeline(unittest.TestCase):
 echo $1
 exit 0
 """)
-        os.chmod(os.path.join(bin_dir,"fastqc"),0775)
+        os.chmod(os.path.join(bin_dir,"fastqc"),o0775)
         # Set up mock environment module
         modules_dir = os.path.join(self.working_dir,"modulefiles")
         os.mkdir(modules_dir)

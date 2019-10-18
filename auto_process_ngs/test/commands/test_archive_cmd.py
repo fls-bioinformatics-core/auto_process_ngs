@@ -48,12 +48,12 @@ poll_interval = 0.5
             # Explicitly remove read only files/
             # dirs
             if os.path.isfile(name):
-                os.chmod(os.path.dirname(name),0755)
-                os.chmod(name,0655)
+                os.chmod(os.path.dirname(name),o0755)
+                os.chmod(name,o0655)
                 os.remove(name)
             elif os.path.isdir(name):
-                os.chmod(os.path.dirname(name),0755)
-                os.chmod(name,0755)
+                os.chmod(os.path.dirname(name),o0755)
+                os.chmod(name,o0755)
                 os.rmdir(name)
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.dirn,onerror=del_rw)

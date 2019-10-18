@@ -582,7 +582,7 @@ class TestFindExecutables(unittest.TestCase):
                 "#!/bin/bash\necho %s %s" %
                 (name,
                  (version if version is not None else "")))
-        os.chmod(exe,0775)
+        os.chmod(exe,o0775)
         return exe
 
     def _info_func(self):
