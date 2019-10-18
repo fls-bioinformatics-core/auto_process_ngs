@@ -205,12 +205,12 @@ class BarcodeCounter(object):
         """
         if lane is None:
             return sorted([s for s in self._seqs_all],
-                          cmp=lambda x,y: cmp(self.counts_all(y),
-                                              self.counts_all(x)))
+                          key=lambda x: self.counts_all(x),
+                          reverse=True)
         else:
             return sorted([s for s in self._seqs[lane]],
-                          cmp=lambda x,y: cmp(self.counts(y,lane),
-                                              self.counts(x,lane)))
+                          key=lambda x: self.counts(x,lane),
+                          reverse=True)
 
     def filter_barcodes(self,cutoff=None,lane=None):
         """
@@ -423,7 +423,8 @@ class BarcodeCounter(object):
                 # Discard group
                 pass
         # Sort groups into order of total counts
-        groups = sorted(groups,cmp=lambda x,y: cmp(y.counts,x.counts))
+        groups = sorted(groups,key=lambda x: x.counts,
+                        reverse=True)
         return groups
 
     def analyse(self,lane=None,sample_sheet=None,cutoff=None,

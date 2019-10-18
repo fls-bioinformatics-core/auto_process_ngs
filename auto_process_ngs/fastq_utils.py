@@ -539,7 +539,7 @@ def pair_fastqs(fastqs):
             logging.debug("Unpaired: %s" % fq)
             seq_ids[fq] = seq_id
     # Sort pairs into order
-    fq_pairs = sorted(fq_pairs,lambda x,y: cmp(x[0],y[0]))
+    fq_pairs = sorted(fq_pairs,key=lambda x: x[0])
     unpaired = sorted(seq_ids.keys() + bad_files)
     # Return paired and upaired fastqs
     return (fq_pairs,unpaired)
@@ -593,7 +593,7 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
                 pass
         if fqr2 is not None:
             pairs.append((fqr2,))
-    pairs = sorted(pairs,cmp=lambda x,y: cmp(x[0],y[0]))
+    pairs = sorted(pairs,key=lambda x: x[0])
     return pairs
 
 def group_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
@@ -658,7 +658,7 @@ def group_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
                         unmatched_fastqs.append(fastq1)
                 fastq_sets[r] = unmatched_fastqs
             groups.append(group)
-    groups = sorted(groups,cmp=lambda x,y: cmp(x[0],y[0]))
+    groups = sorted(groups,key=lambda x: x[0])
     return groups
 
 def remove_index_fastqs(fastqs,fastq_attrs=IlluminaFastqAttrs):

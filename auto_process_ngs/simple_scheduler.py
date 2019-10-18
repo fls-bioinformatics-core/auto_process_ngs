@@ -220,7 +220,7 @@ class SimpleScheduler(threading.Thread):
         for name in self.__jobs:
             if regex.match(name):
                 matches.append(self.__jobs[name])
-        matches.sort(lambda x,y: cmp(x.name,y.name))
+        matches = sorted(matches,key=lambda x: x.name)
         return matches
 
     def wait(self):
