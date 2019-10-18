@@ -928,7 +928,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                     if assert_bases_mask is not None
                     else None),
                    version))
-            os.chmod(path,o0775)
+            os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("bcl2fastq:")
             print("%s" % fp.read())
@@ -1160,7 +1160,7 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
                     if assert_bases_mask is not None
                     else None),
                    reads))
-            os.chmod(path,o0775)
+            os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("cellranger:")
             print("%s" % fp.read())
@@ -1513,7 +1513,7 @@ sys.exit(MockIlluminaQcSh(version=%s,
                    fastq_screen,
                    fastqc,
                    exit_code))
-            os.chmod(path,o0775)
+            os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("illumina_qc.sh:")
             print("%s" % fp.read())
@@ -1646,7 +1646,7 @@ from auto_process_ngs.mock import MockMultiQC
 sys.exit(MockMultiQC(no_outputs=%s,
                      exit_code=%s).main(sys.argv[1:]))
             """ % (no_outputs,exit_code))
-            os.chmod(path,o0775)
+            os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("multiqc:")
             print("%s" % fp.read())
@@ -1756,7 +1756,7 @@ from auto_process_ngs.mock import MockFastqStrandPy
 sys.exit(MockFastqStrandPy(no_outputs=%s,
                      exit_code=%s).main(sys.argv[1:]))
             """ % (no_outputs,exit_code))
-            os.chmod(path,o0775)
+            os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("fastq_strand.py:")
             print("%s" % fp.read())

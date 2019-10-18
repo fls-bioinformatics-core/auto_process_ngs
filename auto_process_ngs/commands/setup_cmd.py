@@ -184,7 +184,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                   original_sample_sheet)
             shutil.copyfile(tmp_sample_sheet,original_sample_sheet)
             # Set the permissions for the original SampleSheet
-            os.chmod(original_sample_sheet,o0664)
+            os.chmod(original_sample_sheet,0o664)
             # Process acquired sample sheet
             custom_sample_sheet = os.path.join(ap.analysis_dir,
                                                'custom_SampleSheet.csv')

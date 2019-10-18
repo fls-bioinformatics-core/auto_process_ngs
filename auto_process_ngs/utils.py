@@ -828,7 +828,7 @@ def write_script_file(script_file,contents,append=False,shell=None):
         if (not append) and (shell is not None):
             fp.write("#!%s\n" % shell)
         fp.write("%s\n" % contents)
-    os.chmod(script_file,o0775)
+    os.chmod(script_file,0o775)
 
 def edit_file(filen,editor="vi",append=None):
     """

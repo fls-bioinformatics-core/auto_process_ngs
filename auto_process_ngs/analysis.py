@@ -634,7 +634,7 @@ class AnalysisProject(object):
             qc_dir = os.path.join(self.dirn,qc_dir)
         if not os.path.exists(qc_dir):
             print("Creating QC dir: %s" % qc_dir)
-            bcf_utils.mkdir(qc_dir,mode=o0775)
+            bcf_utils.mkdir(qc_dir,mode=0o775)
         else:
             print("QC dir already exists: %s" % qc_dir)
         # Set up metadata
@@ -725,10 +725,10 @@ class AnalysisProject(object):
             logger.warning("Directory %s already exists" % self.dirn)
         else:
             logger.debug("Making analysis directory %s" % self.dirn)
-            bcf_utils.mkdir(self.dirn,mode=o0775)
+            bcf_utils.mkdir(self.dirn,mode=0o775)
         # Make a 'ScriptCode' directory
         scriptcode_dir = os.path.join(self.dirn,"ScriptCode")
-        bcf_utils.mkdir(scriptcode_dir,mode=o0775)
+        bcf_utils.mkdir(scriptcode_dir,mode=0o775)
         # Put a file in ScriptCode to make sure it's
         # not pruned on subsequent rsync operations
         fp = open(os.path.join(self.dirn,'ScriptCode','README.txt'),'w')
@@ -738,7 +738,7 @@ class AnalysisProject(object):
         if fastq_dir is None:
             fastq_dir = "fastqs"
         fastq_dir = os.path.join(self.dirn,fastq_dir)
-        bcf_utils.mkdir(fastq_dir,mode=o0775)
+        bcf_utils.mkdir(fastq_dir,mode=0o775)
         # Check for & create links to fastq files
         if fastqs is None:
             # Make a list of fastqs to import from the supplied

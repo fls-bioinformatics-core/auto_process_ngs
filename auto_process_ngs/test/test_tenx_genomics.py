@@ -265,14 +265,14 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_201 = os.path.join(self.wd,"cellranger")
         with open(cellranger_201,'w') as fp:
             fp.write("#!/bin/bash\ncat <<EOF\ncellranger $1  (2.0.1)\nCopyright (c) 2017 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger mkfastq\n\n    cellranger count\n    cellranger aggr\n    cellranger reanalyze\n    cellranger mkloupe\n    cellranger mat2csv\n\n    cellranger mkgtf\n    cellranger mkref\n\n    cellranger vdj\n\n    cellranger mkvdjref\n\n    cellranger testrun\n    cellranger upload\n    cellranger sitecheckEOF")
-        os.chmod(cellranger_201,o0775)
+        os.chmod(cellranger_201,0o775)
         return cellranger_201
     def _make_mock_cellranger_atac_101(self):
         # Make a fake cellranger-atac 1.0.1 executable
         cellranger_atac_101 = os.path.join(self.wd,"cellranger-atac")
         with open(cellranger_atac_101,'w') as fp:
             fp.write("#!/bin/bash\ncat <<EOF\ncellranger-atac  (1.0.1)\nCopyright (c) 2018 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger-atac mkfastq\n\n    cellranger-atac count\n\n    cellranger-atac testrun\n    cellranger-atac upload\n    cellranger-atac sitecheckEOF")
-        os.chmod(cellranger_atac_101,o0775)
+        os.chmod(cellranger_atac_101,0o775)
         return cellranger_atac_101
 
     def test_cellranger_201(self):
