@@ -22,7 +22,6 @@ import uuid
 import time
 import ast
 import gzip
-import urllib2
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.TabFile as TabFile
 import bcftbx.utils as bcf_utils

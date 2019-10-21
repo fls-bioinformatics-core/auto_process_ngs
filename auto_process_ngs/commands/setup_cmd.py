@@ -8,8 +8,14 @@
 import os
 import uuid
 import shutil
-import urllib2
 import logging
+try:
+    from urllib.request import urlopen
+    from urllib.error import URLError
+except ImportError:
+    # Failed to get Python3 urlopen, fallback to Python2
+    from urllib2 import urlopen
+    from urllib2 import URLError
 from ..bcl2fastq_utils import get_sequencer_platform
 from ..bcl2fastq_utils import make_custom_sample_sheet
 from ..applications import general as general_applications
@@ -145,10 +151,10 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                     # Try fetching samplesheet from URL
                     print("Trying '%s'" % target.url)
                     try:
-                        urlfp = urllib2.urlopen(target.url)
+                        urlfp = urlopen(target.url)
                         with open(tmp_sample_sheet,'w') as fp:
                             fp.write(urlfp.read())
-                    except urllib2.URLError as ex:
+                    except URLError as ex:
                         # Failed to download from URL
                         raise Exception("Error fetching sample sheet data "
                                         "from '%s': %s" % (target.url,ex))
@@ -232,12 +238,12 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
             if extra_file.is_url:
                 # Try fetching file from URL
                 try:
-                    urlfp = urllib2.urlopen(extra_file.url)
+                    urlfp = urlopen(extra_file.url)
                     with open(os.path.join(ap.analysis_dir,
                                            os.path.basename(extra_file.path)),
                               'w') as fp:
                         fp.write(urlfp.read())
-                except urllib2.URLError as ex:
+                except URLError as ex:
                     # Failed to download from URL
                     raise Exception("Error fetching '%s': %s" %
                                     (extra_file.url,ex))
