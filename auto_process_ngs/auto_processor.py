@@ -29,16 +29,16 @@ import bcftbx.utils as bcf_utils
 import bcftbx.htmlpagewriter as htmlpagewriter
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.FASTQFile import FastqIterator
-import config
-import commands
-import applications
-import analysis
-import metadata
-import fileops
-import utils
-import simple_scheduler
-import bcl2fastq_utils
-import samplesheet_utils
+from . import commands
+from .analysis import AnalysisProject
+from .analysis import run_reference_id
+from .metadata import AnalysisDirParameters
+from .metadata import AnalysisDirMetadata
+from .metadata import ProjectMetadataFile
+from .utils import edit_file
+from .utils import get_numbered_subdir
+from .bcl2fastq_utils import get_sequencer_platform
+from .samplesheet_utils import check_and_warn
 from .settings import Settings
 from .exceptions import MissingParameterFileException
 from . import get_version
@@ -106,9 +106,9 @@ def add_command(name,f):
 @add_command("merge_fastq_dirs",commands.merge_fastq_dirs)
 @add_command("setup_analysis_dirs",commands.setup_analysis_dirs)
 @add_command("run_qc",commands.run_qc)
-@add_command("publish_qc",commands.publish_qc_cmd.publish_qc)
-@add_command("archive",commands.archive_cmd.archive)
-@add_command("report",commands.report_cmd.report)
+@add_command("publish_qc",commands.publish_qc)
+@add_command("archive",commands.archive)
+@add_command("report",commands.report)
 @add_command("update_fastq_stats",commands.update_fastq_stats)
 @add_command("import_project",commands.import_project)
 @add_command("clone",commands.clone)
@@ -143,8 +143,8 @@ class AutoProcess(object):
             settings = Settings()
         self.settings = settings
         # Create empty parameter and metadata set
-        self.params = metadata.AnalysisDirParameters()
-        self.metadata = metadata.AnalysisDirMetadata()
+        self.params = AnalysisDirParameters()
+        self.metadata = AnalysisDirMetadata()
         # Set flags to indicate whether it's okay to save parameters
         self._save_params = False
         self._save_metadata = False
@@ -327,7 +327,7 @@ class AutoProcess(object):
         # Sequencing platform
         if self.metadata.platform is None:
             # Attempt to look up the instrument name
-            platform = bcl2fastq_utils.get_sequencer_platform(
+            platform = get_sequencer_platform(
                 self.analysis_dir,
                 instrument=self.metadata.instrument_name,
                 settings=self.settings)
@@ -345,9 +345,9 @@ class AutoProcess(object):
         if sample_sheet_file is None:
             logging.error("No sample sheet file to edit")
             return
-        utils.edit_file(sample_sheet_file)
+        edit_file(sample_sheet_file)
         # Check updated sample sheet and issue warnings
-        if samplesheet_utils.check_and_warn(sample_sheet_file=sample_sheet_file):
+        if check_and_warn(sample_sheet_file=sample_sheet_file):
             logging.error("Sample sheet may have problems, see warnings above")
 
     def init_readme(self):
@@ -371,8 +371,8 @@ class AutoProcess(object):
         if self.readme_file is None:
             logging.error("No README file to edit")
             return
-        utils.edit_file(self.readme_file,
-                        append="\n[%s]" % time.ctime())
+        edit_file(self.readme_file,
+                  append="\n[%s]" % time.ctime())
 
     def load_illumina_data(self,unaligned_dir=None):
         # Load and return an IlluminaData object
@@ -406,11 +406,11 @@ class AutoProcess(object):
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
-            project_metadata = metadata.ProjectMetadataFile(filen)
+            project_metadata = ProjectMetadataFile(filen)
         else:
             # First try to populate basic metadata from existing projects
             logging.debug("Metadata file not found, guessing basic data")
-            project_metadata = metadata.ProjectMetadataFile()
+            project_metadata = ProjectMetadataFile()
             projects = projects_from_dirs
             if not projects:
                 # Get information from fastq files
@@ -442,7 +442,7 @@ class AutoProcess(object):
             bad_projects = []
             for line in project_metadata:
                 pname = line['Project']
-                test_project = analysis.AnalysisProject(
+                test_project = AnalysisProject(
                     pname,os.path.join(self.analysis_dir,pname))
                 if not test_project.is_analysis_dir:
                     # Project doesn't exist
@@ -506,11 +506,11 @@ class AutoProcess(object):
         if os.path.exists(filen):
             # Load data from existing file
             print("Loading project metadata from existing file: %s" % filen)
-            project_metadata = metadata.ProjectMetadataFile(filen)
+            project_metadata = ProjectMetadataFile(filen)
         else:
             # New (empty) metadata file
             print("Creating new project metadata file: %s" % filen)
-            project_metadata = metadata.ProjectMetadataFile()
+            project_metadata = ProjectMetadataFile()
         # Populate/update
         for project in illumina_data.projects:
             project_name = project.name
@@ -588,7 +588,7 @@ class AutoProcess(object):
           String: name for the new log subdirectory
             (nb not the full path).
         """
-        return utils.get_numbered_subdir(
+        return get_numbered_subdir(
             name,
             parent_dir=os.path.join(self.analysis_dir,self._master_log_dir))
 
@@ -674,7 +674,7 @@ class AutoProcess(object):
         """
         Return a run reference id (e.g. 'HISEQ_140701/242#22')
         """
-        return analysis.run_reference_id(
+        return run_reference_id(
             self.run_name,
             platform=self.metadata.platform,
             facility_run_number=self.metadata.run_number)
@@ -873,7 +873,7 @@ class AutoProcess(object):
                                 "'%s'" % name)
             # Attempt to load the project data
             project_dir = os.path.join(self.analysis_dir,project_dir)
-            projects.append(analysis.AnalysisProject(name,project_dir))
+            projects.append(AnalysisProject(name,project_dir))
         # Add undetermined reads directory
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
@@ -925,7 +925,7 @@ class AutoProcess(object):
                               "subdir '%s' as CASAVA/bcl2fastq output "
                               "(ignored): %s" % (dirn,ex))
             # Try loading as a project
-            test_project = analysis.AnalysisProject(
+            test_project = AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
             if test_project.is_analysis_dir:
                 logging.debug("* %s: analysis directory" % dirn)
@@ -948,7 +948,7 @@ class AutoProcess(object):
                             "directories: %s" % ' '.join(dirs))
         # Attempt to load the analysis project data
         undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
-        return analysis.AnalysisProject(dirs[0],undetermined_dir)
+        return AnalysisProject(dirs[0],undetermined_dir)
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
