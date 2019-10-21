@@ -39,8 +39,8 @@ class TestReportInfo(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 
@@ -260,8 +260,8 @@ class TestReportConcise(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 
@@ -360,8 +360,8 @@ class TestReportSummary(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 
@@ -526,8 +526,8 @@ class TestReportProjects(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 
@@ -673,8 +673,8 @@ class TestReport(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 
@@ -736,8 +736,8 @@ class TestFetchValueFunction(unittest.TestCase):
         def del_rw(action,name,excinfo):
             # Explicitly remove read only files/
             # dirs
-            os.chmod(os.path.dirname(name),0755)
-            os.chmod(name,0655)
+            os.chmod(os.path.dirname(name),0o755)
+            os.chmod(name,0o655)
             os.remove(name)
         shutil.rmtree(self.dirn,onerror=del_rw)
 

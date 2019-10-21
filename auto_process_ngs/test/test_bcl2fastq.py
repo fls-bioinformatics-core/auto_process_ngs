@@ -93,7 +93,7 @@ class MockBcl2fastq(object):
         print("Content = %s" % content)
         with open(os.path.join(self.dirn,*args),'w') as fp:
             fp.write(content)
-        os.chmod(os.path.join(self.dirn,*args),0775)
+        os.chmod(os.path.join(self.dirn,*args),0o775)
         self._exes.append(os.path.join(self.dirn,*args))
 
     def set_path(self,prepend=True):
