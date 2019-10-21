@@ -15,10 +15,15 @@ Classes and functions to support configuration of the auto_process_ngs
 module.
 
 """
-
-from ConfigParser import SafeConfigParser
-from ConfigParser import NoOptionError
-from ConfigParser import NoSectionError
+try:
+    from configparser import SafeConfigParser
+    from configparser import NoOptionError
+    from configparser import NoSectionError
+except ImportError:
+    # Failed to get Python3 ConfigParser, fallback to Python2
+    from ConfigParser import SafeConfigParser
+    from ConfigParser import NoOptionError
+    from ConfigParser import NoSectionError
 from bcftbx.JobRunner import fetch_runner
 
 #######################################################################
