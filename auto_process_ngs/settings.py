@@ -59,8 +59,8 @@ import sys
 import logging
 import bcftbx.JobRunner as JobRunner
 from bcftbx.utils import AttributeDictionary
-from config import Config
-from config import NoSectionError
+from .config import Config
+from .config import NoSectionError
 
 #######################################################################
 # Classes
