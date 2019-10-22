@@ -960,11 +960,17 @@ class Para(object):
                                   self._delimiter.join(html),
                                   self._tag)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Para instance is True if has content, False otherwise
         """
         return bool(self._content)
+
+    def __nonzero__(self):
+        """
+        Para instance is True if has content, False otherwise
+        """
+        return bool(self)
 
 class WarningIcon(Img):
     """
