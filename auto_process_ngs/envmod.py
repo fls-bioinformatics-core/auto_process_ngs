@@ -77,7 +77,8 @@ if modules_python is None or modulecmd is None:
 else:
     # Load the code from the env modules python file
     try:
-        execfile(modules_python)
+        with open(modules_python,'rt') as fp:
+            exec(fp.read())
         __ENVMODULES__ = True
     except Exception as ex:
         logging.debug("Exception executing code from %s: %s: %s" % 
