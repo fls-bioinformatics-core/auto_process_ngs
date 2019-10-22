@@ -98,7 +98,7 @@ def module(*args):
     else:
         args = list(args)
     (output,error) = subprocess.Popen([modulecmd,'python']+args, stdout=subprocess.PIPE).communicate()
-    exec output
+    exec(output)
 
 #######################################################################
 # Functions
