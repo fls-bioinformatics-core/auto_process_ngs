@@ -9,7 +9,7 @@
 #
 #########################################################################
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 """envmod
 
@@ -77,7 +77,8 @@ if modules_python is None or modulecmd is None:
 else:
     # Load the code from the env modules python file
     try:
-        execfile(modules_python)
+        with open(modules_python,'rt') as fp:
+            exec(fp.read())
         __ENVMODULES__ = True
     except Exception as ex:
         logging.debug("Exception executing code from %s: %s: %s" % 
@@ -98,7 +99,7 @@ def module(*args):
     else:
         args = list(args)
     (output,error) = subprocess.Popen([modulecmd,'python']+args, stdout=subprocess.PIPE).communicate()
-    exec output
+    exec(output)
 
 #######################################################################
 # Functions
