@@ -1008,5 +1008,5 @@ def sanitize_css_string(s):
         converted to underscores, and all other invalid
         characters removed.
     """
-    return filter(lambda c: c in VALID_CSS_ID_CHARS,
-                  str(s).replace(' ','_').replace('\t','_'))
+    return ''.join(filter(lambda c: c in VALID_CSS_ID_CHARS,
+                          str(s).replace(' ','_').replace('\t','_')))
