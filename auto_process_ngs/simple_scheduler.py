@@ -32,7 +32,12 @@ import os
 import sys
 import re
 import threading
-import Queue
+try:
+    # Python 3
+    import queue
+except ImportError:
+    # Python 2
+    import Queue as queue
 import logging
 
 #######################################################################
@@ -107,7 +112,7 @@ class SimpleScheduler(threading.Thread):
         # Internal job id counter
         self.__job_count = 0
         # Queue to add jobs
-        self.__submitted = Queue.Queue()
+        self.__submitted = queue.Queue()
         # List of scheduled (i.e.waiting) jobs
         self.__scheduled = []
         # List of running jobs
