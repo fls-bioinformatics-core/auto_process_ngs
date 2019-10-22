@@ -1040,7 +1040,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1149,7 +1149,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1179,7 +1179,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1227,7 +1227,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1290,7 +1290,7 @@ class TestPipelineTask(unittest.TestCase):
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
                  batch_size=2,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1339,7 +1339,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertNotEqual(task.exit_code,0)
@@ -1384,7 +1384,7 @@ class TestPipelineTask(unittest.TestCase):
         # Run the task
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1432,7 +1432,7 @@ class TestPipelineTask(unittest.TestCase):
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
                  poll_interval=0.5,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,123)
@@ -1483,7 +1483,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
                  poll_interval=0.1,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertEqual(task.exit_code,0)
@@ -1515,7 +1515,7 @@ class TestPipelineFunctionTask(unittest.TestCase):
         task.run(sched=self.sched,
                  working_dir=self.working_dir,
                  poll_interval=0.1,
-                 async=False)
+                 asynchronous=False)
         # Check final state
         self.assertTrue(task.completed)
         self.assertNotEqual(task.exit_code,0)
