@@ -970,7 +970,7 @@ class Para(object):
         """
         Para instance is True if has content, False otherwise
         """
-        return bool(self)
+        return self.__bool__()
 
 class WarningIcon(Img):
     """
