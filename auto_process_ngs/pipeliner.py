@@ -2048,7 +2048,8 @@ class PipelineTask(object):
 
     def run(self,sched=None,runner=None,envmodules=None,working_dir=None,
             log_dir=None,scripts_dir=None,log_file=None,wait_for=(),
-            async=True,poll_interval=5,batch_size=None,verbose=False):
+            asynchronous=True,poll_interval=5,batch_size=None,
+            verbose=False):
         """
         Run the task
 
@@ -2072,11 +2073,11 @@ class PipelineTask(object):
             to (in addition to stdout)
           wait_for (list): deprecated: list of scheduler jobs to
             wait for before running jobs from this task
-          async (bool): if False then block until the task has
-            completed
+          asynchronous (bool): if False then block until the task
+            has completed
           poll_interval (float): interval between checks on task
-            completion (in seconds) for non-async tasks (defaults
-            to 5 seconds)
+            completion (in seconds) for non-asynchronous tasks
+            (defaults to 5 seconds)
           batch_size (int): if set then run commands in
             each task in batches, with each batch running
             this many commands at a time (default is to run
@@ -2180,7 +2181,7 @@ class PipelineTask(object):
             sched.callback("%s" % self._name,
                            callback_function,
                            wait_for=(callback_name,))
-            if not async:
+            if not asynchronous:
                 # Wait for job or group to complete before returning
                 while not self.completed:
                     time.sleep(poll_interval)
