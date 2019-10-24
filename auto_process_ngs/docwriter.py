@@ -960,11 +960,17 @@ class Para(object):
                                   self._delimiter.join(html),
                                   self._tag)
 
-    def __nonzero__(self):
+    def __bool__(self):
         """
         Para instance is True if has content, False otherwise
         """
         return bool(self._content)
+
+    def __nonzero__(self):
+        """
+        Para instance is True if has content, False otherwise
+        """
+        return self.__bool__()
 
 class WarningIcon(Img):
     """
@@ -1002,5 +1008,5 @@ def sanitize_css_string(s):
         converted to underscores, and all other invalid
         characters removed.
     """
-    return filter(lambda c: c in VALID_CSS_ID_CHARS,
-                  str(s).replace(' ','_').replace('\t','_'))
+    return ''.join(filter(lambda c: c in VALID_CSS_ID_CHARS,
+                          str(s).replace(' ','_').replace('\t','_')))
