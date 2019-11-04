@@ -507,10 +507,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
                 if fastq_dir.startswith("%s%s" % (project.dirn,os.sep)):
                     fastq_dir = os.path.relpath(fastq_dir,project.dirn)
-                if fastq_dir != project.info.primary_fastq_dir:
-                    fastq_set = fastq_dir
-                else:
+                if fastq_dir == "fastqs":
                     fastq_set = None
+                elif fastq_dir.startswith("fastqs."):
+                    fastq_set = fastq_dir[7:]
+                else:
+                    fastq_set = fastq_dir
                 # QC report
                 try:
                     qc_zip = qc_artefacts.qc_zip
