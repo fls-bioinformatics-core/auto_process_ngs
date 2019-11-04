@@ -83,16 +83,17 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
 
     - QC report for standard QC
 
-    Also if a project comprises ICell8 or 10xGenomics Chromium
+    Also if a project comprises ICELL8 or 10xGenomics Chromium
     data:
 
-    - ICell8 processing report, or
+    - ICELL8 processing reports, or
     - 'cellranger count' reports for each sample
 
     In 'legacy' mode, the top-level report will also contain
     explicit links for each project for the following (where
     appropriate):
 
+    - ICELL8 processing reports
     - cellranger count outputs
     - MultiQC report
 
@@ -313,14 +314,14 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     qc_artefacts['multiqc_report'] = multiqc_report
                 else:
                     print("...%s: no MultiQC report" % qc_dir)
-        # ICell8 pipeline report
-        icell8_zip = os.path.join(project.dirn,
-                                  "icell8_processing.%s.%s.zip" %
-                                  (project.name,
-                                   os.path.basename(ap.analysis_dir)))
-        if os.path.exists(icell8_zip):
-            print("...%s: found ICell8 pipeline report" % project.name)
-            project_qc[project.name]['icell8_zip'] = icell8_zip
+                # ICELL8 pipeline report
+                icell8_zip = os.path.join(project.dirn,
+                                          "icell8_processing.%s.%s.zip" %
+                                          (project.name,
+                                           os.path.basename(ap.analysis_dir)))
+                if os.path.exists(icell8_zip):
+                    print("...%s: found ICELL8 pipeline report" % project.name)
+                    project_qc[project.name]['icell8_zip'] = icell8_zip
         # Cellranger count report
         if legacy:
             cellranger_zip = os.path.join(project.dirn,
@@ -506,10 +507,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 fastq_dir = project.qc_info(qc_dir).fastq_dir
                 if fastq_dir.startswith("%s%s" % (project.dirn,os.sep)):
                     fastq_dir = os.path.relpath(fastq_dir,project.dirn)
-                if fastq_dir != project.info.primary_fastq_dir:
-                    fastq_set = fastq_dir
-                else:
+                if fastq_dir == "fastqs":
                     fastq_set = None
+                elif fastq_dir.startswith("fastqs."):
+                    fastq_set = fastq_dir[7:]
+                else:
+                    fastq_set = fastq_dir
                 # QC report
                 try:
                     qc_zip = qc_artefacts.qc_zip
@@ -573,11 +576,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 except AttributeError:
                     # No MultiQC report
                     pass
-            # ICell8 pipeline report
+            # ICELL8 pipeline report
             try:
                 icell8_zip = project_qc[project.name].icell8_zip
                 try:
-                    # Copy and unzip ICell8 report
+                    # Copy and unzip ICELL8 report
                     copy_job = sched.submit(
                         fileops.copy_command(icell8_zip,dirn),
                         name="copy.icell8_report.%s" % project.name)
@@ -599,7 +602,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             os.path.basename(icell8_zip)))
                     # Append info to the index page
                     report_html.add(
-                        Link("[Icell8 processing]",
+                        Link("[ICELL8 processing]",
                              "icell8_processing.%s.%s/"
                              "icell8_processing.html" %
                              (project.name,
@@ -609,9 +612,9 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                             Link("[ZIP]",
                                  os.path.basename(icell8_processing_zip)))
                 except Exception as ex:
-                    print("Failed to copy ICell8 report: %s" % ex)
+                    print("Failed to copy ICELL8 report: %s" % ex)
             except AttributeError:
-                # No ICell8 report
+                # No ICELL8 report
                 pass
             # Cellranger count reports
             try:

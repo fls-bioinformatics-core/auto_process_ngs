@@ -702,6 +702,18 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,f)).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
+        # Look for ICELL8 outputs
+        print("Checking for ICELL8 reports in %s/stats" %
+              self.project.dirn)
+        icell8_stats_xlsx = os.path.join(self.project.dirn,
+                                         "stats",
+                                         "icell8_stats.xlsx")
+        if os.path.exists(icell8_stats_xlsx):
+            outputs.add("icell8_stats")
+        icell8_report_html = os.path.join(self.project.dirn,
+                                          "icell8_processing.html")
+        if os.path.exists(icell8_report_html):
+            outputs.add("icell8_report")
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(self.qc_dir,
                                              "cellranger_count")
@@ -766,6 +778,10 @@ class QCReport(Document):
                           'qc_protocol',]
         if 'multiqc' in self.outputs:
             metadata_items.append('multiqc')
+        if 'icell8_stats' in self.outputs:
+            metadata_items.append('icell8_stats')
+        if 'icell8_report' in self.outputs:
+            metadata_items.append('icell8_report')
         metadata_titles = {
             'run_id': 'Run ID',
             'run': 'Run name',
@@ -777,6 +793,8 @@ class QCReport(Document):
             'organism': 'Organism',
             'qc_protocol': 'QC protocol',
             'multiqc': 'MultiQC report',
+            'icell8_stats': 'ICELL8 statistics',
+            'icell8_report': 'ICELL8 processing report',
         }
         for item in metadata_items:
             # Acquire the value
@@ -804,6 +822,12 @@ class QCReport(Document):
                     multiqc_report = "multi%s_report.html" \
                                      % os.path.basename(self.qc_dir)
                     value = Link(multiqc_report)
+                elif item == 'icell8_stats':
+                    value = Link("icell8_stats.xlsx",
+                                 os.path.join("stats",
+                                              "icell8_stats.xlsx"))
+                elif item == 'icell8_report':
+                    value = Link("icell8_processing.html")
                 else:
                     raise Exception("Unrecognised item to report: '%s'"
                                     % item)

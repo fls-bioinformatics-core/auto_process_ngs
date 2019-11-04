@@ -701,8 +701,8 @@ def add_publish_qc_command(cmdparser):
                    "even if verification has failed")
     p.add_argument('--legacy',action='store_true',
                    dest='legacy_mode',default=False,
-                   help="legacy mode: include links to MultiQC reports in "
-                   "the top-level index page")
+                   help="legacy mode: include links to MultiQC, cellranger "
+                   "count and ICELL8 reports in the top-level index page")
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
