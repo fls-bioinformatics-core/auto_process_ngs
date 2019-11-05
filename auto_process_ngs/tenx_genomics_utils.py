@@ -51,7 +51,7 @@ from .analysis import AnalysisProject
 from .bcl2fastq_utils import get_bases_mask
 from .utils import get_numbered_subdir
 from .utils import ZipArchive
-import css_rules
+from . import css_rules
 
 # Initialise logging
 import logging
