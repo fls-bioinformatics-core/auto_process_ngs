@@ -26,7 +26,11 @@ import sys
 import os
 import glob
 import time
-from itertools import izip
+try:
+    # Python 2
+    from itertools import izip as zip
+except ImportError:
+    pass
 from collections import defaultdict
 from bcftbx.FASTQFile import SequenceIdentifier
 from bcftbx.ngsutils import getreads
@@ -307,10 +311,10 @@ def assign_reads(args):
     if mode == 'samples':
         # Assigning reads to samples
         with open(undetermined_barcodes_file,"w") as fp:
-            for r1,r2,i1,i2 in izip(getreads(fastq_r1),
-                                    getreads(fastq_r2),
-                                    getreads(fastq_i1),
-                                    getreads(fastq_i2)):
+            for r1,r2,i1,i2 in zip(getreads(fastq_r1),
+                                   getreads(fastq_r2),
+                                   getreads(fastq_i1),
+                                   getreads(fastq_i2)):
                 # Get barcodes to match against adjusted
                 # versions from well list
                 fastq_barcode = "%s+%s" % (i1[1],i2[1])
@@ -344,10 +348,10 @@ def assign_reads(args):
     elif mode == 'barcodes':
         # Assigning reads to barcodes
         with open(undetermined_barcodes_file,"w") as fp:
-            for r1,r2,i1,i2 in izip(getreads(fastq_r1),
-                                    getreads(fastq_r2),
-                                    getreads(fastq_i1),
-                                    getreads(fastq_i2)):
+            for r1,r2,i1,i2 in zip(getreads(fastq_r1),
+                                   getreads(fastq_r2),
+                                   getreads(fastq_i1),
+                                   getreads(fastq_i2)):
                 # Get barcodes to match against adjusted
                 # versions from well list
                 fastq_barcode = "%s+%s" % (i1[1],i2[1])
