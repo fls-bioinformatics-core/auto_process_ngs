@@ -22,7 +22,11 @@ import tempfile
 import shutil
 import json
 from argparse import ArgumentParser
-from itertools import izip
+try:
+    # Python 2
+    from itertools import izip as zip
+except ImportError:
+    pass
 from multiprocessing import Pool
 from bcftbx.simple_xls import XLSWorkBook
 from auto_process_ngs import get_version
@@ -186,10 +190,10 @@ if __name__ == "__main__":
     # Build barcode list
     report("Assigning reads to barcodes and samples")
     inputs = list()
-    for fastq_r1,fastq_r2,fastq_i1,fastq_i2 in izip(fastqs[0],
-                                                    fastqs[1],
-                                                    fastqs[2],
-                                                    fastqs[3]):
+    for fastq_r1,fastq_r2,fastq_i1,fastq_i2 in zip(fastqs[0],
+                                                   fastqs[1],
+                                                   fastqs[2],
+                                                   fastqs[3]):
         inputs.append((fastq_r1,fastq_r2,
                        fastq_i1,fastq_i2,
                        well_list_file,
