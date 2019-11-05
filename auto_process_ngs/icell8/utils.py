@@ -34,7 +34,6 @@ Functions:
 import os
 import time
 import logging
-from itertools import izip
 from collections import Iterator
 from multiprocessing import Pool
 from bcftbx.FASTQFile import FastqIterator
