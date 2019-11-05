@@ -29,7 +29,11 @@ FASTQ read headers:
 #######################################################################
 
 import sys
-from itertools import izip
+try:
+    # Python2
+    from itertools import izip as zip
+except ImportError:
+    pass
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
 from bcftbx.IlluminaData import normalise_barcode
@@ -636,12 +640,12 @@ class BarcodeGroup(object):
         """
         if len(seq) != len(self._barcode):
             return False
-        for index,ref in izip(seq.replace('-','+').split('+'),
+        for index,ref in zip(seq.replace('-','+').split('+'),
                               self._barcode.split('+')):
             if len(index) != len(ref):
                 return False
             m = 0
-            for c1,c2 in izip(index,ref):
+            for c1,c2 in zip(index,ref):
                 if c1 == 'N' or c2 == 'N' or c1 != c2:
                     m += 1
                     if m > mismatches:
