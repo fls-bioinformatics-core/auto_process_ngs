@@ -48,8 +48,8 @@ import gzip
 import pydoc
 import tempfile
 import operator
-import applications
 import bcftbx.utils as bcf_utils
+from . import applications
 from bcftbx.Md5sum import md5sum
 
 # Module specific logger
