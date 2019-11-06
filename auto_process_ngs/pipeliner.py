@@ -801,7 +801,7 @@ logger.addHandler(logging.NullHandler())
 # Pipeline infrastructure constants
 ######################################################################
 
-ALLOWED_CHARS = string.lowercase + string.digits + "._-"
+ALLOWED_CHARS = string.ascii_lowercase + string.digits + "._-"
 
 # Pipeline failure modes
 class PipelineFailure(object):
