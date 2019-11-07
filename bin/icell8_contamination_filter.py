@@ -27,7 +27,11 @@ import tempfile
 import logging
 import argparse
 import shutil
-from itertools import izip
+try:
+    # Python 2
+    from itertools import izip as zip
+except ImportError:
+    pass
 from bcftbx.utils import mkdir
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.utils import strip_ext
@@ -244,9 +248,9 @@ if __name__ == "__main__":
     output_fqs.open('fqr2',fqr2_out)
 
     # Filter the iCell8 read pairs against the tagged reads
-    for pair,pref,contam in izip(ICell8FastqIterator(fqr1,fqr2),
-                                 FastqIterator(mammalian_tagged_fq),
-                                 FastqIterator(contaminants_tagged_fq)):
+    for pair,pref,contam in zip(ICell8FastqIterator(fqr1,fqr2),
+                                FastqIterator(mammalian_tagged_fq),
+                                FastqIterator(contaminants_tagged_fq)):
         # Get the tags
         pref_tag = extract_fastq_screen_tag(pref)
         contam_tag = extract_fastq_screen_tag(contam)
