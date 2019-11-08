@@ -6,7 +6,6 @@ import shutil
 import tempfile
 import logging
 from math import ceil
-from matplotlib import pyplot as plt
 from PIL import Image
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from .fastqc import FastqcData
