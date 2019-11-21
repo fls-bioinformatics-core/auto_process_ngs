@@ -34,14 +34,18 @@ import os
 import logging
 import tempfile
 import shutil
+import random
 from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
+from bcftbx.ngsutils import getreads
+from bcftbx.ngsutils import getreads_subset
 from ..analysis import AnalysisProject
 from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
 from ..applications import Command
+from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
 from ..pipeliner import Pipeline
@@ -56,9 +60,12 @@ from ..utils import get_organism_list
 from .constants import FASTQ_SCREENS
 from .outputs import fastqc_output
 from .outputs import fastq_screen_output
-from .outputs import fastq_strand_output
+from .outputs import rseqc_gene_body_coverage_output
+from .outputs import rseqc_inner_distance_output
 from .outputs import check_illumina_qc_outputs
 from .outputs import check_fastq_strand_outputs
+from .outputs import check_rseqc_gene_body_coverage_output
+from .outputs import check_rseqc_inner_distance_output
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import expected_outputs
@@ -98,6 +105,7 @@ class QCPipeline(Pipeline):
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_chemistry',type=str)
+        self.add_param('reference_gene_models',type=dict)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
         self.add_param('cellranger_atac_references',type=dict)
@@ -118,6 +126,8 @@ class QCPipeline(Pipeline):
         self.add_envmodules('illumina_qc')
         self.add_envmodules('fastq_strand')
         self.add_envmodules('cellranger')
+        self.add_envmodules('star')
+        self.add_envmodules('rseqc')
         self.add_envmodules('report_qc')
 
     def add_project(self,project,qc_dir=None,library_type=None,
@@ -314,9 +324,115 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
         report_requires.append(run_fastq_strand)
 
+        if library_type == "RNA-seq":
+
+            ###############
+            # RSeQC metrics
+            ###############
+
+            for organism_ in get_organism_list(organism):
+
+                # Check outputs for gene_body_coverage
+                check_gene_body_coverage = CheckRSeQCGeneBodyCoverageOutputs(
+                    "%s: check gene body coverage outputs for '%s' (RSeQC)" %
+                    (project_name,
+                     organism_),
+                    project,
+                    qc_dir=qc_dir,
+                    organism=organism_,
+                )
+                self.add_task(check_gene_body_coverage,
+                              runner=self.runners['verify_runner'],
+                              log_dir=log_dir)
+
+                # Check outputs for inner_distance
+                check_inner_distance = CheckRSeQCInnerDistanceOutputs(
+                    "%s: check inner distance outputs for '%s' (RSeQC)" %
+                    (project_name,
+                     organism_),
+                    project,
+                    qc_dir,
+                    organism_
+                )
+                self.add_task(check_inner_distance,
+                              runner=self.runners['verify_runner'],
+                              log_dir=log_dir)
+
+                # Merge lists of Fastqs
+                merge_fastq_lists = MergeFastqLists(
+                    "%s: merge lists of Fastq pairs for '%s' (RSeQC)" %
+                    (project_name,
+                     organism_),
+                    (check_gene_body_coverage.output.fastq_pairs,
+                     check_inner_distance.output.fastq_pairs)
+                )
+                self.add_task(merge_fastq_lists,
+                              requires=(check_gene_body_coverage,
+                                        check_inner_distance),
+                              log_dir=log_dir)
+
+                # Get BAM files for RSeQC
+                get_bam_files = GetBAMFiles(
+                    "%s: generate & collect BAM files for '%s' (RSeQC)" %
+                    (project_name,
+                     organism_),
+                    merge_fastq_lists.output.fastq_pairs,
+                    organism,
+                    star_indexes=self.params.fastq_strand_indexes,
+                    subset_size=self.params.fastq_subset,
+                    nthreads=self.params.nthreads,
+                    out_dir=qc_dir
+                )
+                self.add_task(get_bam_files,
+                              requires=(merge_fastq_lists,),
+                              envmodules=self.envmodules['star'],
+                              runner=self.runners['qc_runner'],
+                              log_dir=log_dir)
+
+                # Run RSeQC gene body coverage
+                rseqc_gene_body_coverage = RSeQCGeneBodyCoverage(
+                    "%s: run RSeQC gene body coverage for '%s'" %
+                    (project_name,
+                     organism_),
+                    check_gene_body_coverage.output.fastq_pairs,
+                    project,
+                    self.params.reference_gene_models,
+                    organism_,
+                    qc_dir
+                )
+                self.add_task(rseqc_gene_body_coverage,
+                              requires=(check_gene_body_coverage,
+                                        get_bam_files),
+                              envmodules=self.envmodules['rseqc'],
+                              runner=self.runners['qc_runner'])
+                report_requires.append(rseqc_gene_body_coverage)
+
+                # Run RSeQC inner distance (paired end only)
+                if project.info.paired_end:
+                    rseqc_inner_distance = RSeQCInnerDistance(
+                        "%s: run RSeQC inner distance for '%s'" %
+                        (project_name,
+                         organism_),
+                        check_inner_distance.output.fastq_pairs,
+                        project,
+                        self.params.reference_gene_models,
+                        organism_,
+                        qc_dir
+                    )
+                    self.add_task(rseqc_inner_distance,
+                                  requires=(check_inner_distance,
+                                            get_bam_files),
+                                  envmodules=self.envmodules['rseqc'],
+                                  runner=self.runners['qc_runner'])
+                    report_requires.append(rseqc_inner_distance)
+
         if qc_protocol in ("10x_scRNAseq",
                            "10x_snRNAseq",
                            "10x_scATAC",):
+
+            ##########################################
+            # Cellranger count/single library analysis
+            ##########################################
 
             # Get reference data for cellranger
             get_cellranger_reference_data = GetCellrangerReferenceData(
@@ -409,7 +525,8 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
-            fastq_subset=None,cellranger_chemistry='auto',
+            reference_gene_models=None,fastq_subset=None,
+            cellranger_chemistry='auto',
             cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
             cellranger_atac_references=None,cellranger_jobmode='local',
@@ -426,6 +543,8 @@ class QCPipeline(Pipeline):
             use for QC jobs (defaults to 1)
           fastq_strand_indexes (dict): mapping of organism
             IDs to directories with STAR index
+          reference_gene_models (dict): mapping of organism
+            IDs to reference gene model files
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
           cellranger_chemistry (str): explicitly specify
@@ -515,6 +634,8 @@ class QCPipeline(Pipeline):
                                   'fastq_subset': fastq_subset,
                                   'fastq_strand_indexes': fastq_strand_indexes,
                                   'cellranger_chemistry': cellranger_chemistry,
+                                  'reference_gene_models':
+                                  reference_gene_models,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
                                   'cellranger_premrna_references':
@@ -916,6 +1037,492 @@ class RunFastqStrand(PipelineTask):
             cmd.add_args(*fastq_pair)
             # Add the command
             self.add_cmd(cmd)
+
+class CheckRSeQCGeneBodyCoverageOutputs(PipelineFunctionTask):
+    """
+    Check the outputs from the RSeQC gene_body_coverage.py utility
+    """
+    def init(self,project,qc_dir,organism,verbose=False):
+        """
+        Initialise the CheckRSeQCGeneBodyOutputs task.
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          organism (str): organism name to match to STAR
+            indexes and gene reference model file
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          fastq_pairs (list): list of tuples with Fastq
+            "pairs" that have missing outputs from
+            fastq_strand.py under the specified QC
+            protocol. A "pair" may be an (R1,R2) tuple,
+            or a single Fastq (e.g. (fq,)).
+        """
+        self.add_output('fastq_pairs',list())
+    def setup(self):
+        self.add_call("Check RSeQC gene_body_coverage.py outputs for %s"
+                      % self.args.project.name,
+                      check_rseqc_gene_body_coverage_outputs,
+                      self.args.project,
+                      qc_dir=self.args.qc_dir,
+                     organism=self.args.organism)
+    def finish(self):
+        fastqs = set()
+        for result in self.result():
+            for fq in result:
+                fastqs.add(fq)
+        for fq_group in group_fastqs_by_name(
+                remove_index_fastqs(list(fastqs),
+                                    self.args.project.fastq_attrs),
+                fastq_attrs=self.args.project.fastq_attrs):
+            self.output.fastq_pairs.append(fq_group)
+        if self.output.fastq_pairs:
+            if self.args.verbose:
+                print("Fastq pairs with missing QC outputs from "
+                      "RSeQC gene_body_coverage.py:")
+                for fq_pair in self.output.fastq_pairs:
+                    print ("-- %s" % (fq_pair,))
+            else:
+                print ("%s Fastq pairs with missing QC outputs from "
+                       "RSeQC gene_body_coverage.py" %
+                       len(self.output.fastq_pairs))
+        else:
+            print("No Fastqs with missing QC outputs from "
+                  "RSeQC gene_body_coverage.py")
+
+class CheckRSeQCInnerDistanceOutputs(PipelineFunctionTask):
+    """
+    Check the outputs from the RSeQC inner_distance.py utility
+    """
+    def init(self,project,qc_dir,organism=None,verbose=False):
+        """
+        Initialise the CheckRSeQCInnerDistanceOutputs task.
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          organism (str): organism name to match to STAR
+            indexes and gene reference model file
+          verbose (bool): if True then print additional
+            information from the task
+
+        Outputs:
+          fastq_pairs (list): list of tuples with Fastq
+            "pairs" that have missing outputs from
+            fastq_strand.py under the specified QC
+            protocol. A "pair" may be an (R1,R2) tuple,
+            or a single Fastq (e.g. (fq,)).
+        """
+        self.add_output('fastq_pairs',list())
+    def setup(self):
+        self.add_call("Check RSeQC inner_distance.py outputs for %s"
+                      % self.args.project.name,
+                      check_rseqc_inner_distance_outputs,
+                      self.args.project,
+                      qc_dir=self.args.qc_dir,
+                      organism=self.args.organism)
+    def finish(self):
+        for result in self.result():
+            self.output.fastq_pairs.extend(result)
+        if self.output.fastq_pairs:
+            if self.args.verbose:
+                print("Fastq pairs with missing QC outputs from "
+                      "RSeQC inner_distance.py:")
+                for fq_pair in self.output.fastq_pairs:
+                    print ("-- %s" % (fq_pair,))
+            else:
+                print ("%s Fastq pairs with missing QC outputs from "
+                       "RSeQC inner_distance.py" %
+                       len(self.output.fastq_pairs))
+        else:
+            print("No Fastqs with missing QC outputs from "
+                  "RSeQC inner_distance.py")
+
+class MergeFastqLists(PipelineTask):
+    """
+    """
+    def init(self,fastq_lists):
+        """
+        """
+        self.add_output('fastq_pairs',list())
+    def setup(self):
+        for fastq_list in self.args.fastq_lists:
+            for fq_pair in fastq_list:
+                if fq_pair not in self.output.fastq_pairs:
+                    self.output.fastq_pairs.append(fq_pair)
+
+class GetBAMFiles(PipelineFunctionTask):
+    """
+    Get BAM files for RSeQC utilities from Fastq pairs using STAR
+    """
+    def init(self,fastq_pairs,organism,star_indexes,subset_size,
+             nthreads,out_dir):
+        """
+        Initialise the GetBamFiles task
+
+        Arguments:
+          fastq_pairs (list): list of tuples with "pairs"
+            of Fastq files to run fastq_strand.py on (it is
+            expected that this list will come from the
+            CheckRSeQC...FastqOutputs task)
+          organism (str): TBA
+          star_indexes(str): TBA
+          subset_size (int): TBA
+          nthreads (int): number of cores for STAR
+            to use
+          out_dir (str): path to directory
+            to write the final BAM files to
+
+        Outputs:
+          bam_files: list of sorted BAM files
+        """
+        self.add_output('bam_files',list())
+    def setup(self):
+        # Check for the STAR index
+        try:
+            star_index = self.args.star_indexes[self.args.organism]
+        except (TypeError,KeyError):
+            self.fail(msg="No STAR index for organism '%s'" %
+                      self.args.organism)
+            return
+        # Check each Fastq pair to see if a corresponding
+        # BAM file already exists
+        for fq_pair in self.args.fastq_pairs:
+            bam_file = os.path.basename(fq_pair[0])
+            while bam_file.split('.')[-1] in ('fastq','gz'):
+                bam_file = '.'.join(bam_file.split('.')[:-1])
+            bam_file = os.path.join(self.args.out_dir,
+                                    "%s.%s.bam" % (bam_file,
+                                                   self.args.organism))
+            if not os.path.exists(bam_file):
+                # BAM file doesn't exist
+                self.add_call("Make BAM file",
+                              self.make_bam_file,
+                              fq_pair,
+                              star_index,
+                              self.args.subset_size,
+                              self.args.nthreads,
+                              bam_file)
+            # Add to the list of expected outputs
+            self.output.bam_files.append(bam_file)
+    def make_bam_file(self,fastqs,genomedir,size,nthreads,bam_file):
+        ##############################
+        # Generate and sort a BAM file
+        ##############################
+        # Basename and prefix for output files
+        basename = os.path.basename(bam_file[:-4])
+        prefix = "%s_" % basename
+        # Make a temporary directory for fastqs
+        fastqs_dir = os.path.abspath("__%s_subset%d" % (basename,size))
+        print "Creating directory for Fastq subsetting: %s" % fastqs_dir
+        mkdir(fastqs_dir)
+        # Generate subset of input reads
+        nreads = sum(1 for i in getreads(os.path.abspath(fastqs[0])))
+        if size > nreads:
+            print("Number of reads smaller than requested subset")
+            size = 0
+        if size == 0:
+            print("Using all reads/read pairs in Fastq file(s)")
+            size = nreads
+        else:
+            print("Using random subset of %d reads/read pairs"
+                  % size)
+        # Generate subset indices to extract
+        if size == nreads:
+            subset_indices = [i for i in xrange(nreads)]
+        else:
+            subset_indices = random.sample(xrange(nreads),size)
+        # Do the subsetting
+        fqs_in = filter(lambda fq: fq is not None,fastqs)
+        fastqs = []
+        for fq in fqs_in:
+            fq_subset = os.path.join(fastqs_dir,os.path.basename(fq))
+            if fq_subset.endswith(".gz"):
+                fq_subset = '.'.join(fq_subset.split('.')[:-1])
+            with open(fq_subset,'w') as fp:
+                for read in getreads_subset(os.path.abspath(fq),
+                                            subset_indices):
+                    fp.write('\n'.join(read) + '\n')
+                fastqs.append(fq_subset)
+        # Make a temporary directory for STAR
+        star_dir = os.path.abspath("__%s_STAR" % basename)
+        print "Creating directory for STAR subsetting: %s" % star_dir
+        mkdir(star_dir)
+        # Output BAM file name will be "<prefix>Aligned.out.bam"
+        star_bam_file = os.path.join(star_dir,
+                                     "%sAligned.out.bam" % prefix)
+        # Build the STAR command line for mapping
+        star_cmd = Command('STAR',
+                           '--runMode','alignReads',
+                           '--genomeLoad','NoSharedMemory',
+                           '--genomeDir',os.path.abspath(genomedir),
+                           '--readFilesIn',fastqs[0])
+        if len(fastqs) > 1:
+            star_cmd.add_args(fastqs[1])
+        star_cmd.add_args('--outSAMtype','BAM','Unsorted',
+                          '--outSAMstrandField','intronMotif',
+                          '--outFileNamePrefix',prefix,
+                          '--runThreadN',nthreads)
+        print "Running %s" % ' '.join(star_cmd)
+        status = star_cmd.run_subprocess(working_dir=star_dir)
+        if status != 0:
+            raise Exception("STAR returned non-zero exit code: %s"
+                            % status)
+        # Make a temporary directory for sorting the BAM fileSTAR
+        sort_dir = os.path.abspath("__%s_sort" % basename)
+        print("Creating directory for sorting BAM file: %s" % sort_dir)
+        mkdir(sort_dir)
+        # Sort the BAM file
+        sorted_bam_file_prefix = os.path.join(sort_dir,
+                                              "%s.sorted" %
+                                              os.path.basename(star_bam_file)[:-4])
+        # Run the sorting
+        samtools_sort_cmd = Command('samtools',
+                                    'sort',
+                                    star_bam_file,
+                                    sorted_bam_file_prefix)
+        print("Running %s" % samtools_sort_cmd.command_line)
+        status = samtools_sort_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools sort returned non-zero exit code: %s" %
+                            status)
+        sorted_bam_file = "%s.bam" % sorted_bam_file_prefix
+        # Index the sorted BAM file (makes BAI file)
+        samtools_index_cmd = Command('samtools',
+                                     'index',
+                                     sorted_bam_file)
+        print("Running %s" % samtools_index_cmd.command_line)
+        status = samtools_index_cmd.run_subprocess(working_dir=sort_dir)
+        if status != 0:
+            raise Exception("samtools index returned non-zero exit code: %s" %
+                            status)
+        # Move the BAM and BAI files to final location
+        os.rename(sorted_bam_file,bam_file)
+        os.rename("%s.bai" % sorted_bam_file,"%s.bai" % bam_file)
+        # Remove the temporary working directories
+        for dirn in (fastqs_dir,star_dir,sort_dir):
+            print("Removing %s" % dirn)
+            shutil.rmtree(dirn)
+        # Return the BAM file name
+        return bam_file
+    def finish(self):
+        print self.output.bam_files
+
+class RSeQCGeneBodyCoverage(PipelineFunctionTask):
+    """
+    Run the geneBody_coverage utility from RSeQC
+    """
+    def init(self,fastq_pairs,project,reference_gene_models,
+             organism,qc_dir):
+        """
+        Initialise the RSeQCGeneBodyCoverage task
+
+        Arguments:
+          bam_files (list): list of paths to the
+            input BAM files
+          reference_gene_model (str): path to
+            BED file with reference gene model
+          project_name (str): name of the project
+          organism (str): associated organism name
+
+        Outputs:
+          out_files: list of output files from
+            geneBody_coverage.py
+        """
+        self.add_output('out_files',list())
+    def setup(self):
+        # Placeholder for working directory
+        self.working_dir = None
+        # Check if there is a suitable gene model
+        self.has_gene_model = False
+        if self.args.reference_gene_models is None or \
+           self.args.organism not in self.args.reference_gene_models:
+            print("No appropriate reference gene model: can't "
+                  "run gene body coverage")
+            return
+        self.has_gene_model = True
+        # Check there are input Fastqs
+        if not self.args.fastq_pairs:
+            print("No Fastq files supplied: nothing to do")
+            return
+        # Generate BAM file names from supplied Fastqs
+        bam_files = list()
+        for fq_pair in self.args.fastq_pairs:
+            bam_file = os.path.basename(fq_pair[0])
+            while bam_file.split('.')[-1] in ('fastq','gz'):
+                bam_file = '.'.join(bam_file.split('.')[:-1])
+            bam_file = os.path.join(self.args.qc_dir,
+                                    "%s.%s.bam" % (bam_file,
+                                                   self.args.organism))
+            bam_files.append(bam_file)
+        # Create a temporary working directory
+        self.working_dir = tempfile.mkdtemp(
+            prefix="__rseqc.geneBody_coverage.%s.%s" % (self.args.project.name,
+                                                        self.args.organism),
+            suffix=".tmp",
+            dir=os.getcwd())
+        # Run RSeQC genebody_coverage.py in working dir
+        genebody_coverage_cmd = PipelineCommandWrapper(
+            "Run genebody_coverage.py",
+            'cd',self.working_dir,
+            '&&',
+            'geneBody_coverage.py',
+            '-i',','.join(bam_files),
+            '-r',self.args.reference_gene_models[self.args.organism],
+            '-f','png',
+            '-o','%s.%s' % (self.args.project.name,
+                            self.args.organism))
+        self.add_cmd(genebody_coverage_cmd)
+    def finish(self):
+        # If there wasn't a gene model then don't expect
+        # any outputs
+        if not self.has_gene_model:
+            return
+        # Collect the outputs
+        outputs = list()
+        for f in rseqc_gene_body_coverage_output(self.args.project,
+                                                 self.args.organism,
+                                                 include_heatmap=
+                                                 (len(self.args.fastq_pairs)>2))
+            dst = os.path.join(self.args.qc_dir,f)
+            if not os.path.exists(dst):
+                src = os.path.join(self.working_dir,f)
+                if os.path.exists(src):
+                    # Move to final location
+                    os.rename(src,dst)
+                    outputs.append(dst)
+                else:
+                    # Not found, task failed
+                    self.fail(message="Missing output: %s" % f)
+                    return
+        # Remove the temporary working directory
+        if self.working_dir is not None:
+            shutil.rmtree(self.working_dir)
+        # Update the task outputs
+        self.output.out_files.extend(outputs)
+
+class RSeQCInnerDistance(PipelineFunctionTask):
+    """
+    Run the inner_distance utility from RSeQC
+    """
+    def init(self,fastq_pairs,project,reference_gene_models,
+             organism,qc_dir):
+        """
+        Initialise the RSeQCInnerDistance task
+
+        Arguments:
+          bam_files (list): list of paths to the
+            input BAM files
+          reference_gene_model (str): path to
+            BED file with reference gene model
+          out_dir (str): path to directory
+            to write the gene body coverage files
+          working_dir (str): path to working
+            directory (or 'None')
+
+        Outputs:
+          out_files: dictionary with BAM files as
+            keys and list of associated output files
+            from inner_distance.py as values
+        """
+        self.add_output('out_files',list())
+    def setup(self):
+        # Placeholder for working directory
+        self.working_dir = None
+        # Check if there is a suitable gene model
+        self.has_gene_model = False
+        if self.args.reference_gene_models is None or \
+           self.args.organism not in self.args.reference_gene_models:
+            print("No appropriate reference gene model: can't "
+                  "run gene body coverage")
+            return
+        self.has_gene_model = True
+        # Check there is an Fastq pair
+        if not self.args.fastq_pairs:
+            print("No Fastq pairs supplied: nothing to do")
+            return
+        # Create a temporary working directory
+        self.working_dir = tempfile.mkdtemp(
+            prefix="__rseqc.inner_distance.%s.%s" % (self.args.project.name,
+                                                     self.args.organism),
+            suffix=".tmp",
+            dir=os.getcwd())
+        # Run RSeQC inner_distance.py for each Fastq pair
+        for fq_pair in self.args.fastq_pairs:
+            # Basename and prefix for output files
+            basename = os.path.basename(fq_pair[0])
+            while basename.split('.')[-1] in ('fastq','gz'):
+                basename = '.'.join(basename.split('.')[:-1])
+            prefix = "%s.%s" % (basename,
+                                self.args.organism)
+            # BAM file name for this pair
+            bam_file = os.path.join(self.args.qc_dir,"%s.bam" % prefix)
+            # Temporary dir for this pair
+            tmp_dir = os.path.join(self.working_dir,prefix)
+            # Build inner_distance.py command
+            inner_distance_cmd = PipelineCommandWrapper(
+                "Run inner_distance.py for %s" %
+                os.path.basename(bam_file),
+                'mkdir','-p',tmp_dir,
+                '&&',
+                'cd',tmp_dir,
+                '&&',
+                'inner_distance.py',
+                '-i',bam_file,
+                '-r',self.args.reference_gene_models[self.args.organism],
+                '-o',prefix)
+            # Create the PNG plot:
+            # -- Make a modified version of the R script
+            # -- Run this to make the PNG as well the PDF
+            rscript = "%s.inner_distance_plot.r" % prefix
+            rscript_png = "%s.inner_distance_plot_png.r" % prefix
+            inner_distance_cmd.add_args(
+                '&&',
+                'sed','\'s/pdf/png/g\'',rscript,'>',rscript_png,
+                '&&',
+                'Rscript','--vanilla',rscript_png
+            )
+            # Copy the outputs to the final location
+            for f in rseqc_inner_distance_output(fq_pair[0],
+                                                 self.args.organism):
+                inner_distance_cmd.add_args(
+                    '&&',
+                    'cp',f,self.args.qc_dir)
+            # Add the command to the task
+            self.add_cmd(inner_distance_cmd)
+    def finish(self):
+        # If there wasn't a gene model then don't expect
+        # any outputs
+        if not self.has_gene_model:
+            return
+        # Collect the outputs
+        outputs = list()
+        for fq_pair in self.args.fastq_pairs:
+            for f in rseqc_inner_distance_output(fq_pair[0],
+                                                 self.args.organism):
+                dst = os.path.join(self.args.qc_dir,f)
+                if not os.path.exists(dst):
+                    src = os.path.join(self.working_dir,f)
+                    if os.path.exists(src):
+                        # Move to final location
+                        os.rename(src,dst)
+                        outputs.append(dst)
+                    else:
+                        # Not found, task failed
+                        self.fail(message="Missing output: %s" % f)
+                        return
+        # Remove the temporary working directory
+        if self.working_dir is not None:
+            shutil.rmtree(self.working_dir)
+        # Update the task outputs
+        self.output.out_files.extend(outputs)
 
 class GetCellrangerReferenceData(PipelineFunctionTask):
     """
