@@ -271,6 +271,8 @@ if __name__ == "__main__":
                        __settings.fastq_strand_indexes,
                        cellranger_chemistry=\
                        args.cellranger_chemistry,
+                       reference_gene_models=
+                       __settings.rseqc_gene_reference_files,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,

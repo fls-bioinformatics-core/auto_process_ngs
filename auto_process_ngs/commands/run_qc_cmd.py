@@ -167,6 +167,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     status = runqc.run(nthreads=nthreads,
                        fastq_strand_indexes=
                        ap.settings.fastq_strand_indexes,
+                       reference_gene_models=
+                       ap.settings.rseqc_gene_reference_files,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
