@@ -133,6 +133,8 @@ class Settings(object):
                                                              'process_10xgenomics')
         self.modulefiles['illumina_qc'] = config.get('modulefiles','illumina_qc')
         self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
+        self.modulefiles['star'] = config.get('modulefiles','star')
+        self.modulefiles['rseqc'] = config.get('modulefiles','rseqc')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
         self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
