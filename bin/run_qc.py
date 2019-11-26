@@ -211,7 +211,7 @@ if __name__ == "__main__":
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
     cellranger_transcriptomes = __settings['10xgenomics_transcriptomes']
-    cellranger_premrna_references = ap.settings['10xgenomics_premrna_references']
+    cellranger_premrna_references = __settings['10xgenomics_premrna_references']
     cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
 
     # Set up and run the QC pipeline
