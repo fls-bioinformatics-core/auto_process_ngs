@@ -1157,23 +1157,30 @@ class RunCellrangerCount(PipelineTask):
                 # Skip this sample
                 has_errors = True
             else:
-                # Copy count outputs to working dir
+                # Move count outputs to final destination
                 count_dir = os.path.abspath(
                     os.path.join(self.args.out_dir,
-                                 "cellranger_count",
-                                 sample))
-                shutil.copytree(
+                                 "cellranger_count"))
+                if not os.path.exists(count_dir):
+                    mkdirs(count_dir)
+                shutil.move(
                     os.path.join(self._working_dir,
                                  "tmp.count.%s" % sample,
                                  sample),
                     count_dir)
                 # Copy QC outputs to final destination
                 if self.args.qc_dir:
+                    # Update the source locations as we
+                    # moved the outputs in the previous step
+                    top_dir = os.path.join(count_dir,sample)
+                    outs_dir = os.path.join(top_dir,"outs")
+                    # Set location to copy QC outputs to
                     qc_dir = os.path.abspath(
                         os.path.join(self.args.qc_dir,
                                      "cellranger_count",
                                      sample))
                     qc_outs_dir = os.path.join(qc_dir,"outs")
+                    # Make directories and copy the files
                     mkdirs(qc_outs_dir)
                     for f in outs_files:
                         path = os.path.join(outs_dir,f)
