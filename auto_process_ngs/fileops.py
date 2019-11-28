@@ -565,7 +565,10 @@ def set_group_command(group,path,verbose=False,safe=False):
                                      path.path)
     if safe:
         chmod_cmd.add_args('-user',username)
-    chmod_cmd.add_args('-exec',
+    chmod_cmd.add_args('!',
+                       '-type',
+                       'l',
+                       '-exec',
                        'chgrp')
     if verbose:
         chmod_cmd.add_args('--verbose')
