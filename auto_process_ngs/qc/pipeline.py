@@ -64,8 +64,8 @@ from .outputs import rseqc_gene_body_coverage_output
 from .outputs import rseqc_inner_distance_output
 from .outputs import check_illumina_qc_outputs
 from .outputs import check_fastq_strand_outputs
-from .outputs import check_rseqc_gene_body_coverage_output
-from .outputs import check_rseqc_inner_distance_output
+from .outputs import check_rseqc_gene_body_coverage_outputs
+from .outputs import check_rseqc_inner_distance_outputs
 from .outputs import check_cellranger_count_outputs
 from .outputs import check_cellranger_atac_count_outputs
 from .outputs import expected_outputs

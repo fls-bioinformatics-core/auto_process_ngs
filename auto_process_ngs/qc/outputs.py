@@ -13,7 +13,7 @@ Provides the following functions:
 - fastq_strand_output: get name for fastq_strand.py output
 - rseqc_gene_body_coverage_output: get names for RSeQC
   geneBody_coverage.py outputs
-- rseqc_inner_distance_outputs: get names for RSeQC inner_distance.py
+- rseqc_inner_distance_output: get names for RSeQC inner_distance.py
   outputs
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
