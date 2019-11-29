@@ -1289,29 +1289,31 @@ class GetBAMFiles(PipelineFunctionTask):
         if status != 0:
             raise Exception("STAR returned non-zero exit code: %s"
                             % status)
-        # Make a temporary directory for sorting the BAM fileSTAR
+        # Make a temporary directory for sorting the BAM file
         sort_dir = os.path.abspath("__%s_sort" % basename)
         print("Creating directory for sorting BAM file: %s" % sort_dir)
         mkdir(sort_dir)
         # Sort the BAM file
-        sorted_bam_file_prefix = os.path.join(sort_dir,
-                                              "%s.sorted" %
-                                              os.path.basename(star_bam_file)[:-4])
+        sorted_bam_file = os.path.join(sort_dir,
+                                       "%s.sorted.bam" %
+                                       os.path.basename(star_bam_file)[:-4])
         # Run the sorting
         samtools_sort_cmd = Command('samtools',
                                     'sort',
-                                    star_bam_file,
-                                    sorted_bam_file_prefix)
+                                    '-o',
+                                    sorted_bam_file,
+                                    star_bam_file)
         print("Running %s" % samtools_sort_cmd.command_line)
         status = samtools_sort_cmd.run_subprocess(working_dir=sort_dir)
         if status != 0:
             raise Exception("samtools sort returned non-zero exit code: %s" %
                             status)
-        sorted_bam_file = "%s.bam" % sorted_bam_file_prefix
         # Index the sorted BAM file (makes BAI file)
+        sorted_bam_file_index = "%s.bai" % sorted_bam_file
         samtools_index_cmd = Command('samtools',
                                      'index',
-                                     sorted_bam_file)
+                                     sorted_bam_file,
+                                     sorted_bam_file_index)
         print("Running %s" % samtools_index_cmd.command_line)
         status = samtools_index_cmd.run_subprocess(working_dir=sort_dir)
         if status != 0:
@@ -1319,7 +1321,7 @@ class GetBAMFiles(PipelineFunctionTask):
                             status)
         # Move the BAM and BAI files to final location
         os.rename(sorted_bam_file,bam_file)
-        os.rename("%s.bai" % sorted_bam_file,"%s.bai" % bam_file)
+        os.rename(sorted_bam_file_index,"%s.bai" % bam_file)
         # Remove the temporary working directories
         for dirn in (fastqs_dir,star_dir,sort_dir):
             print("Removing %s" % dirn)
