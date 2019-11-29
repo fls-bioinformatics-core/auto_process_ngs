@@ -245,6 +245,7 @@ if __name__ == "__main__":
                            'verify_runner': verify_runner,
                            'report_runner': report_runner,
                        },
+                       default_runner=default_runner,
                        envmodules=envmodules)
     if status:
         logger.critical("QC failed (see warnings above)")

@@ -159,5 +159,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                            'verify_runner': default_runner,
                            'report_runner': default_runner,
                        },
+                       default_runner=default_runner,
                        envmodules=envmodules)
     return status
