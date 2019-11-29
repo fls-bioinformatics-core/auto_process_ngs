@@ -398,7 +398,7 @@ class QCPipeline(Pipeline):
                     check_gene_body_coverage.output.fastq_pairs,
                     project,
                     self.params.reference_gene_models,
-                    organism_,
+                    get_bam_files.output.organism,
                     qc_dir
                 )
                 self.add_task(rseqc_gene_body_coverage,
@@ -418,7 +418,7 @@ class QCPipeline(Pipeline):
                         check_inner_distance.output.fastq_pairs,
                         project,
                         self.params.reference_gene_models,
-                        organism_,
+                        get_bam_files.output.organism,
                         qc_dir
                     )
                     self.add_task(rseqc_inner_distance,
@@ -1187,13 +1187,24 @@ class GetBAMFiles(PipelineFunctionTask):
           bam_files: list of sorted BAM files
         """
         self.add_output('bam_files',list())
+        self.add_output('organism',Param(type=str))
     def setup(self):
-        # Check for the STAR index
+        # Get organism name
+        if self.args.organism is None:
+            self.fail(message="No organism specified")
+            return
+        organisms = get_organism_list(self.args.organism)
+        if len(organisms) > 1:
+            self.fail(message="Can't handle multiple organisms")
+            return
+        organism = organisms[0]
+        self.output.organism.set(organism)
+        # Look up STAR index
         try:
-            star_index = self.args.star_indexes[self.args.organism]
+            star_index = self.args.star_indexes[organism]
         except (TypeError,KeyError):
-            self.fail(msg="No STAR index for organism '%s'" %
-                      self.args.organism)
+            self.fail(message="No STAR index available for '%s'"
+                      % organisms[0])
             return
         # Check each Fastq pair to see if a corresponding
         # BAM file already exists
@@ -1203,7 +1214,7 @@ class GetBAMFiles(PipelineFunctionTask):
                 bam_file = '.'.join(bam_file.split('.')[:-1])
             bam_file = os.path.join(self.args.out_dir,
                                     "%s.%s.bam" % (bam_file,
-                                                   self.args.organism))
+                                                   organism))
             if not os.path.exists(bam_file):
                 # BAM file doesn't exist
                 self.add_call("Make BAM file",
