@@ -119,6 +119,7 @@ class QCPipeline(Pipeline):
         # Define runners
         self.add_runner('verify_runner')
         self.add_runner('qc_runner')
+        self.add_runner('rseqc_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('report_runner')
 
@@ -404,7 +405,8 @@ class QCPipeline(Pipeline):
                               requires=(check_gene_body_coverage,
                                         get_bam_files),
                               envmodules=self.envmodules['rseqc'],
-                              runner=self.runners['qc_runner'])
+                              runner=self.runners['rseqc_runner'],
+                              log_dir=log_dir)
                 report_requires.append(rseqc_gene_body_coverage)
 
                 # Run RSeQC inner distance (paired end only)
@@ -423,7 +425,8 @@ class QCPipeline(Pipeline):
                                   requires=(check_inner_distance,
                                             get_bam_files),
                                   envmodules=self.envmodules['rseqc'],
-                                  runner=self.runners['qc_runner'])
+                                  runner=self.runners['rseqc_runner'],
+                                  log_dir=log_dir)
                     report_requires.append(rseqc_inner_distance)
 
         if qc_protocol in ("10x_scRNAseq",
