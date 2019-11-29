@@ -40,6 +40,7 @@ import logging
 from .constants import FASTQ_SCREENS
 from ..fastq_utils import group_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
+from ..utils import get_organism_list
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -583,7 +584,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         for organism in get_organism_list(project.info.organism):
             # Gene body coverage
             for output in rseqc_gene_body_coverage_output(
-                    project.name,
+                    project,
                     organism):
                 outputs.add(os.path.join(qc_dir,output))
             # Inner distance
