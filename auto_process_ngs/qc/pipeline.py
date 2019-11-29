@@ -126,7 +126,7 @@ class QCPipeline(Pipeline):
         self.add_envmodules('illumina_qc')
         self.add_envmodules('fastq_strand')
         self.add_envmodules('cellranger')
-        self.add_envmodules('star')
+        self.add_envmodules('make_bams')
         self.add_envmodules('rseqc')
         self.add_envmodules('report_qc')
 
@@ -385,7 +385,7 @@ class QCPipeline(Pipeline):
                 )
                 self.add_task(get_bam_files,
                               requires=(merge_fastq_lists,),
-                              envmodules=self.envmodules['star'],
+                              envmodules=self.envmodules['make_bams'],
                               runner=self.runners['qc_runner'],
                               log_dir=log_dir)
 

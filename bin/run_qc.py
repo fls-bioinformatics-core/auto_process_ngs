@@ -194,6 +194,8 @@ if __name__ == "__main__":
     # Per task environment modules
     for name in ('illumina_qc',
                  'fastq_strand',
+                 'make_bams',
+                 'rseqc',
                  'cellranger',
                  'report_qc',):
         try:

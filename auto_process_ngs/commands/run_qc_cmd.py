@@ -128,6 +128,8 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     envmodules = dict()
     for name in ('illumina_qc',
                  'fastq_strand',
+                 'make_bams',
+                 'rseqc',
                  'cellranger',
                  'report_qc',):
         try:
