@@ -1390,7 +1390,7 @@ class RSeQCGeneBodyCoverage(PipelineFunctionTask):
         for f in rseqc_gene_body_coverage_output(self.args.project,
                                                  self.args.organism,
                                                  include_heatmap=
-                                                 (len(self.args.fastq_pairs)>2))
+                                                 (len(self.args.fastq_pairs)>2)):
             dst = os.path.join(self.args.qc_dir,f)
             if not os.path.exists(dst):
                 src = os.path.join(self.working_dir,f)
