@@ -1083,7 +1083,7 @@ class CheckRSeQCGeneBodyCoverageOutputs(PipelineFunctionTask):
                 remove_index_fastqs(list(fastqs),
                                     self.args.project.fastq_attrs),
                 fastq_attrs=self.args.project.fastq_attrs):
-            self.output.fastq_pairs.append(fq_group)
+            self.output.fastq_pairs.append(tuple(fq_group))
         if self.output.fastq_pairs:
             if self.args.verbose:
                 print("Fastq pairs with missing QC outputs from "
@@ -1156,17 +1156,10 @@ class MergeFastqLists(PipelineTask):
         """
         self.add_output('fastq_pairs',list())
     def setup(self):
-        # FIXME
-        # This should reduce the input lists to the
-        # set of unique Fastq pairs
-        fastq_pairs = list()
         for fastq_list in self.args.fastq_lists:
             for fq_pair in fastq_list:
-                if fq_pair not in fastq_pairs:
-                    fastq_pairs.append(fq_pair)
-        for fq_pair in fastq_pairs:
-            self.output.fastq_pairs.append(fq_pair)
-            self.report("Added %s (type: %s)" % (fq_pair,type(fq_pair)))
+                if fq_pair not in self.output.fastq_pairs:
+                    self.output.fastq_pairs.append(fq_pair)
 
 class GetBAMFiles(PipelineFunctionTask):
     """
