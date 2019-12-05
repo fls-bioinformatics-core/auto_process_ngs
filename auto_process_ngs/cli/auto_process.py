@@ -633,6 +633,18 @@ def add_run_qc_command(cmdparser):
     p.add_argument('--fastq_dir',action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument('--10x_transcriptome',action='append',
+                   metavar='ORGANISM=REFERENCE',
+                   dest='cellranger_transcriptomes',
+                   help="specify cellranger transcriptome reference datasets "
+                   "to associate with organisms (overrides references defined "
+                   "in config file)")
+    p.add_argument('--10x_premrna_reference',action='append',
+                   metavar='ORGANISM=REFERENCE',
+                   dest='cellranger_premrna_references',
+                   help="specify cellranger pre-mRNA reference datasets "
+                   "to associate with organisms (overrides references defined "
+                   "in config file)")
     p.add_argument('--report',action='store',dest='html_file',default=None,
                    help="file name for output HTML QC report (default: "
                    "<QC_DIR>_report.html)")
@@ -1180,6 +1192,18 @@ def run_qc(args):
     if not analysis_dir:
         analysis_dir = os.getcwd()
     d = AutoProcess(analysis_dir)
+    # Handle 10x transcriptomes
+    cellranger_transcriptomes = dict()
+    if args.cellranger_transcriptomes:
+        for transcriptome in args.cellranger_transcriptomes:
+            organism,reference =  transcriptome.split('=')
+            cellranger_transcriptomes[organism] = reference
+    # Handle 10x pre-mRNA references
+    cellranger_premrna_references = dict()
+    if args.cellranger_premrna_references:
+        for premrna_reference in args.cellranger_premrna_references:
+            organism,reference =  premrna_reference.split('=')
+            cellranger_premrna_references[organism] = reference
     # Handle job runner specification
     if args.runner is not None:
         runner = fetch_runner(args.runner)
@@ -1193,6 +1217,10 @@ def run_qc(args):
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
                        qc_dir=args.qc_dir,
+                       cellranger_transcriptomes=
+                       cellranger_transcriptomes,
+                       cellranger_premrna_references=
+                       cellranger_premrna_references,
                        report_html=args.html_file,
                        runner=runner)
     sys.exit(retcode)
