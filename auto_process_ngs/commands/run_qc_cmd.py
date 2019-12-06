@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
            fastq_screen_subset=100000,nthreads=1,
            runner=None,fastq_dir=None,qc_dir=None,
+           cellranger_transcriptomes=None,
+           cellranger_premrna_references=None,
            report_html=None,run_multiqc=True,
            poll_interval=None):
     """Run QC pipeline script for projects
@@ -64,6 +66,10 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       qc_dir (str): specify a non-standard directory to write the
         QC outputs to; will be used for all projects that are
         processed (default: 'qc')
+      cellranger_transcriptomes (dict): mapping of organism names
+        to cellranger transcriptome reference data
+      cellranger_premrna_references (dict): mapping of organism
+        names to cellranger pre-mRNA reference data
       report_html (str): specify the name for the output HTML QC
         report (default: '<QC_DIR>_report.html')
       run_multiqc (bool): if True then run MultiQC at the end of
@@ -91,6 +97,21 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     if len(projects) == 0:
         logger.warning("No projects found for QC analysis")
         return 1
+    # Set 10x cellranger reference data
+    if not cellranger_transcriptomes:
+        cellranger_transcriptomes = dict()
+    if ap.settings['10xgenomics_transcriptomes']:
+        for organism in ap.settings['10xgenomics_transcriptomes']:
+            if organism not in cellranger_transcriptomes:
+                cellranger_transcriptomes[organism] = \
+                    ap.settings['10xgenomics_transcriptomes'][organism]
+    if not cellranger_premrna_references:
+        cellranger_premrna_references = dict()
+    if ap.settings['10xgenomics_premrna_references']:
+        for organism in ap.settings['10xgenomics_premrna_references']:
+            if organism not in cellranger_premrna_references:
+                cellranger_premrna_references[organism] = \
+                    ap.settings['10xgenomics_premrna_references'][organism]
     # Set up runners
     default_runner = ap.settings.general.default_runner
     if runner is None:
@@ -133,8 +154,6 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
-    cellranger_transcriptomes = ap.settings['10xgenomics_transcriptomes']
-    cellranger_premrna_references = ap.settings['10xgenomics_premrna_references']
     cellranger_atac_references = ap.settings['10xgenomics_atac_genome_references']
     # Run the QC
     status = runqc.run(nthreads=nthreads,

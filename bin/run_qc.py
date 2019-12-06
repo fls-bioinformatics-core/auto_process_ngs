@@ -135,6 +135,18 @@ if __name__ == "__main__":
                    help="explicitly specify QC output directory. "
                    "NB if a relative path is supplied then it's assumed "
                    "to be a subdirectory of DIR (default: <DIR>/qc)")
+    p.add_argument('--10x_transcriptome',action='append',
+                   metavar='ORGANISM=REFERENCE',
+                   dest='cellranger_transcriptomes',
+                   help="specify cellranger transcriptome reference datasets "
+                   "to associate with organisms (overrides references defined "
+                   "in config file)")
+    p.add_argument('--10x_premrna_reference',action='append',
+                   metavar='ORGANISM=REFERENCE',
+                   dest='cellranger_premrna_references',
+                   help="specify cellranger pre-mRNA reference datasets "
+                   "to associate with organisms (overrides references defined "
+                   "in config file)")
     p.add_argument('-f','--filename',metavar='NAME',action='store',
                    dest='filename',default=None,
                    help="file name for output QC report (default: "
@@ -210,8 +222,26 @@ if __name__ == "__main__":
     cellranger_jobinterval = cellranger_settings.cellranger_jobinterval
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
-    cellranger_transcriptomes = __settings['10xgenomics_transcriptomes']
-    cellranger_premrna_references = __settings['10xgenomics_premrna_references']
+    cellranger_transcriptomes = dict()
+    if __settings['10xgenomics_transcriptomes']:
+        for organism in __settings['10xgenomics_transcriptomes']:
+            if organism not in cellranger_transcriptomes:
+                cellranger_transcriptomes[organism] = \
+                    __settings['10xgenomics_transcriptomes'][organism]
+    if args.cellranger_transcriptomes:
+        for transcriptome in args.cellranger_transcriptomes:
+            organism,reference =  transcriptome.split('=')
+            cellranger_transcriptomes[organism] = reference
+    cellranger_premrna_references = dict()
+    if __settings['10xgenomics_premrna_references']:
+        for organism in __settings['10xgenomics_premrna_references']:
+            if organism not in cellranger_premrna_references:
+                cellranger_premrna_references[organism] = \
+                    __settings['10xgenomics_premrna_references'][organism]
+    if args.cellranger_premrna_references:
+        for premrna_reference in args.cellranger_premrna_references:
+            organism,reference =  premrna_reference.split('=')
+            cellranger_premrna_references[organism] = reference
     cellranger_atac_references = __settings['10xgenomics_atac_genome_references']
 
     # Set up and run the QC pipeline
