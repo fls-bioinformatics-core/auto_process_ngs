@@ -27,6 +27,7 @@ import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.qc.pipeline import QCPipeline
+from auto_process_ngs.tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
 
 # QC protocols
 from auto_process_ngs.qc.constants import PROTOCOLS
@@ -135,6 +136,12 @@ if __name__ == "__main__":
                    help="explicitly specify QC output directory. "
                    "NB if a relative path is supplied then it's assumed "
                    "to be a subdirectory of DIR (default: <DIR>/qc)")
+    p.add_argument("--10x_chemistry",
+                   choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
+                   dest="cellranger_chemistry",default="auto",
+                   help="assay configuration for 10xGenomics scRNA-seq; "
+                   "if set to 'auto' (the default) then cellranger will "
+                   "attempt to determine this automatically")
     p.add_argument('--10x_transcriptome',action='append',
                    metavar='ORGANISM=REFERENCE',
                    dest='cellranger_transcriptomes',
@@ -257,6 +264,8 @@ if __name__ == "__main__":
                        fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=
                        __settings.fastq_strand_indexes,
+                       cellranger_chemistry=\
+                       args.cellranger_chemistry,
                        cellranger_transcriptomes=cellranger_transcriptomes,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
