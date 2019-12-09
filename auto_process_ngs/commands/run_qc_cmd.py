@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
            fastq_screen_subset=100000,nthreads=1,
            runner=None,fastq_dir=None,qc_dir=None,
+           cellranger_chemistry='auto',
            cellranger_transcriptomes=None,
            cellranger_premrna_references=None,
            report_html=None,run_multiqc=True,
@@ -66,6 +67,9 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
       qc_dir (str): specify a non-standard directory to write the
         QC outputs to; will be used for all projects that are
         processed (default: 'qc')
+      cellranger_chemistry (str): assay configuration for
+        10xGenomics scRNA-seq data (set to 'auto' to let cellranger
+        determine this automatically (default: 'auto')
       cellranger_transcriptomes (dict): mapping of organism names
         to cellranger transcriptome reference data
       cellranger_premrna_references (dict): mapping of organism
@@ -163,6 +167,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
                        cellranger_atac_references=cellranger_atac_references,
+                       cellranger_chemistry=cellranger_chemistry,
                        cellranger_jobmode=cellranger_jobmode,
                        cellranger_maxjobs=max_jobs,
                        cellranger_mempercore=cellranger_mempercore,

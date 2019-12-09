@@ -80,6 +80,7 @@ from ..envmod import load as envmod_load
 from ..samplesheet_utils import predict_outputs
 from ..settings import Settings
 from ..settings import locate_settings_file
+from ..tenx_genomics_utils import CELLRANGER_ASSAY_CONFIGS
 from ..utils import paginate
 
 # Module specific logger
@@ -633,6 +634,12 @@ def add_run_qc_command(cmdparser):
     p.add_argument('--fastq_dir',action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
                    "Fastq files to run the QC on.")
+    p.add_argument("--10x_chemistry",
+                   choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
+                   dest="cellranger_chemistry",default="auto",
+                   help="assay configuration for 10xGenomics scRNA-seq; if "
+                   "set to 'auto' (the default) then cellranger will attempt "
+                   "to determine this automatically")
     p.add_argument('--10x_transcriptome',action='append',
                    metavar='ORGANISM=REFERENCE',
                    dest='cellranger_transcriptomes',
@@ -1217,6 +1224,8 @@ def run_qc(args):
                        nthreads=args.nthreads,
                        fastq_dir=args.fastq_dir,
                        qc_dir=args.qc_dir,
+                       cellranger_chemistry=
+                       args.cellranger_chemistry,
                        cellranger_transcriptomes=
                        cellranger_transcriptomes,
                        cellranger_premrna_references=
