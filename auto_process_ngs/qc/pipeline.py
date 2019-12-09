@@ -97,6 +97,7 @@ class QCPipeline(Pipeline):
         self.add_param('nthreads',type=int,value=1)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
+        self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
         self.add_param('cellranger_atac_references',type=dict)
@@ -332,6 +333,7 @@ class QCPipeline(Pipeline):
                 project.dirn,
                 qc_dir=qc_dir,
                 working_dir=self.params.WORKING_DIR,
+                chemistry=self.params.cellranger_chemistry,
                 cellranger_jobmode=self.params.cellranger_jobmode,
                 cellranger_maxjobs=self.params.cellranger_maxjobs,
                 cellranger_mempercore=self.params.cellranger_mempercore,
@@ -371,7 +373,8 @@ class QCPipeline(Pipeline):
                       log_dir=log_dir)
 
     def run(self,nthreads=None,fastq_strand_indexes=None,
-            fastq_subset=None,cellranger_transcriptomes=None,
+            fastq_subset=None,cellranger_chemistry='auto',
+            cellranger_transcriptomes=None,
             cellranger_premrna_references=None,
             cellranger_atac_references=None,cellranger_jobmode='local',
             cellranger_maxjobs=None,cellranger_mempercore=None,
@@ -389,6 +392,10 @@ class QCPipeline(Pipeline):
             IDs to directories with STAR index
           fastq_subset (int): explicitly specify
             the subset size for subsetting running Fastqs
+          cellranger_chemistry (str): explicitly specify
+            the assay configuration (set to 'auto' to let
+            cellranger determine this automatically; ignored
+            if not scRNA-seq)
           cellranger_transcriptomes (mapping): mapping of
             organism names to reference transcriptome data
             for cellranger
