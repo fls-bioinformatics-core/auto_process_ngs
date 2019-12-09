@@ -478,6 +478,7 @@ class QCPipeline(Pipeline):
                                   'nthreads': nthreads,
                                   'fastq_subset': fastq_subset,
                                   'fastq_strand_indexes': fastq_strand_indexes,
+                                  'cellranger_chemistry': cellranger_chemistry,
                                   'cellranger_transcriptomes':
                                   cellranger_transcriptomes,
                                   'cellranger_premrna_references':
