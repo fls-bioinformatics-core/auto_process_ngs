@@ -69,6 +69,7 @@ CELLRANGER_ASSAY_CONFIGS = {
     'fiveprime': 'Single Cell 5\'',
     'SC3Pv1': 'Single Cell 3\' v1',
     'SC3Pv2': 'Single Cell 3\' v2',
+    'SC3Pv3': 'Single Cell 3\' v3',
     'SC5P-PE': 'Single Cell 5\' paired-end (both R1 and R2 are used for alignment)',
     'SC5P-R2': 'Single Cell 5\' R2-only (where only R2 is used for alignment)',
 }
