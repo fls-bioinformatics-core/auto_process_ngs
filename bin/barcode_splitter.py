@@ -29,6 +29,7 @@ For each barcode there will be an output file called BARCODE.fastq
 import argparse
 import logging
 import sys
+import os
 from auto_process_ngs import get_version
 from auto_process_ngs.barcodes.splitter import BarcodeMatcher
 from auto_process_ngs.barcodes.splitter import get_fastqs_from_dir
