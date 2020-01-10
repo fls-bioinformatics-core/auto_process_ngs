@@ -785,7 +785,7 @@ import string
 import cloudpickle
 import atexit
 from collections import Iterator
-from cStringIO import StringIO
+from io import StringIO
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.JobRunner import SimpleJobRunner
