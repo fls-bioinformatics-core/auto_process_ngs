@@ -57,7 +57,7 @@ logger = logging.getLogger(__name__)
 # Constants
 #######################################################################
 
-import constants
+from . import constants
 INLINE_BARCODE_LENGTH = constants.INLINE_BARCODE_LENGTH
 UMI_LENGTH = constants.UMI_LENGTH
 MAXIMUM_BATCH_SIZE = constants.MAXIMUM_BATCH_SIZE
