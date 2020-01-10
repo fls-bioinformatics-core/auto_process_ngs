@@ -944,7 +944,7 @@ class FileCollector(Iterator):
             self._files = collect_files(self._dirn,self._pattern)
             self._idx = -1
         return len(self._files)
-    def next(self):
+    def __next__(self):
         if self._files is None:
             self._files = collect_files(self._dirn,self._pattern)
         if self._idx is None:
@@ -957,6 +957,11 @@ class FileCollector(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
+    def next(self):
+        """
+        Implemented for Python2 compatibility
+        """
+        return self.__next__()
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
