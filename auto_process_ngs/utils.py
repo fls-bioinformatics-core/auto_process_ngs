@@ -48,7 +48,7 @@ import gzip
 import pydoc
 import tempfile
 import operator
-import applications
+from .applications import Command
 import bcftbx.utils as bcf_utils
 from bcftbx.Md5sum import md5sum
 
@@ -870,7 +870,7 @@ def edit_file(filen,editor="vi",append=None):
     checksum = md5sum(tmpfile)
     # Build command line to run the editor
     editor = str(editor).split(' ')
-    edit_cmd = applications.Command(editor[0],*editor[1:])
+    edit_cmd = Command(editor[0],*editor[1:])
     edit_cmd.add_args(tmpfile)
     edit_cmd.run_subprocess()
     # Finished
