@@ -23,7 +23,7 @@ import os
 import base64
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
-import mockqcdata
+from . import mockqcdata
 
 #######################################################################
 # Class definitions

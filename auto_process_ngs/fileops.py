@@ -56,8 +56,8 @@ import psutil
 import collections
 import logging
 import bcftbx.utils as bcftbx_utils
-import applications
-from utils import split_user_host_dir
+from . import applications
+from .utils import split_user_host_dir
 
 # Module specific logger
 logger = logging.getLogger(__name__)

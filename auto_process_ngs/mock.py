@@ -60,7 +60,7 @@ from .fastq_utils import pair_fastqs_by_name
 from .tenx_genomics_utils import flow_cell_id
 from .utils import ZipArchive
 from .mockqc import MockQCOutputs
-import mock10xdata
+from . import mock10xdata
 
 #######################################################################
 # Classes for making mock directories
