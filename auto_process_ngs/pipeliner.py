@@ -1392,7 +1392,7 @@ class Pipeline(object):
             # Populate the current rank with tasks which don't
             # have any requirements
             current_rank = []
-            for task_id in required.keys():
+            for task_id in list(required.keys()):
                 if not required[task_id]:
                     # Task no longer has requirements so add
                     # to the current rank
@@ -1402,7 +1402,7 @@ class Pipeline(object):
                     del(required[task_id])
             # Update the requirement lists for remaining tasks
             # to remove those add to the current rank
-            for task_id in required.keys():
+            for task_id in list(required.keys()):
                 new_reqs = []
                 for req in required[task_id]:
                     if req not in current_rank:
