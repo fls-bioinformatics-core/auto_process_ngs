@@ -1081,6 +1081,14 @@ class TestRunReferenceIdFunction(unittest.TestCase):
                                           facility_run_number=90),
                          "MISEQ_rag_05_2017#90")
 
+    def test_run_reference_id_handle_non_numeric_run_number(self):
+        """run_reference_id: handle non-numeric facility run number
+        """
+        self.assertEqual(run_reference_id("RAG_10x_BCLFiles_Download",
+                                          platform=None,
+                                          facility_run_number="BCLFiles"),
+                         "RAG_10x_BCLFiles_Download")
+
 class TestSplitSampleNameFunction(unittest.TestCase):
     """
     Tests for the 'split_sample_name' function

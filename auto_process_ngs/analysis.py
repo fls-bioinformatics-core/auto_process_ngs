@@ -1162,7 +1162,10 @@ def run_reference_id(run_name,platform=None,facility_run_number=None):
         run_number = int(run_number)
     # Facility run number
     if facility_run_number is not None:
-        facility_run_number = int(facility_run_number)
+        try:
+            facility_run_number = int(facility_run_number)
+        except ValueError:
+            facility_run_number = None
     else:
         facility_run_number = None
     # Construct the reference id
