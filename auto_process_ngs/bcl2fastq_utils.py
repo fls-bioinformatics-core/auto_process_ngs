@@ -227,7 +227,8 @@ def bcl_to_fastq_info(path=None):
     return (bcl2fastq_path,package_name,package_version)
 
 def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
-                             lanes=None,fmt=None):
+                             lanes=None,adapter=None,adapter_read2=None,
+                             fmt=None):
     """
     Creates a corrected copy of a sample sheet file
 
@@ -246,6 +247,10 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
         output sample sheet; if `None` then all lanes will be kept
         (the default), otherwise lanes will be dropped if they don't
         appear in the supplied list
+      adapter (str): (optional) if set then write to the `Adapter`
+        setting
+      adapter_read2 (str): (optional) if set then write to the
+        `AdapterRead2` setting
       fmt (str): (optional) format for the output sample sheet,
         either 'CASAVA' or 'IEM'; if this is `None` then the format
         of the original file will be used
@@ -289,6 +294,23 @@ def make_custom_sample_sheet(input_sample_sheet,output_sample_sheet=None,
                 i += 1
             else:
                 del(sample_sheet[i])
+    # Update adapter sequences
+    if adapter is not None:
+        if adapter:
+            sample_sheet.settings['Adapter'] = str(adapter)
+        else:
+            try:
+                del(sample_sheet.settings['Adapter'])
+            except KeyError:
+                pass
+    if adapter_read2 is not None:
+        if adapter_read2:
+            sample_sheet.settings['AdapterRead2'] = str(adapter_read2)
+        else:
+            try:
+                del(sample_sheet.settings['AdapterRead2'])
+            except KeyError:
+                pass
     # Write out new sample sheet
     if output_sample_sheet is not None:
         sample_sheet.write(output_sample_sheet,fmt=fmt)
