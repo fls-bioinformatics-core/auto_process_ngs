@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 MAKE_FASTQS_PROTOCOLS = ('standard',
+                         'mirna_seq',
                          'icell8',
                          'icell8_atac',
                          '10x_chromium_sc',
@@ -415,6 +416,30 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # Do fastq generation according to protocol
         if protocol == 'standard':
             # Standard protocol
+            try:
+                exit_code = bcl_to_fastq(
+                    ap,
+                    unaligned_dir=ap.params.unaligned_dir,
+                    sample_sheet=sample_sheet,
+                    primary_data_dir=primary_data_dir,
+                    require_bcl2fastq=require_bcl2fastq_version,
+                    bases_mask=bases_mask,
+                    ignore_missing_bcl=ignore_missing_bcl,
+                    ignore_missing_stats=ignore_missing_stats,
+                    no_lane_splitting=no_lane_splitting,
+                    minimum_trimmed_read_length=minimum_trimmed_read_length,
+                    mask_short_adapter_reads=mask_short_adapter_reads,
+                    create_fastq_for_index_reads=create_fastq_for_index_reads,
+                    nprocessors=nprocessors,
+                    runner=runner)
+            except Exception as ex:
+                raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+        elif protocol == 'mirna_seq':
+            # miRNA-seq protocol
+            # Set minimum trimmed read length and turn off masking
+            minimum_trimmed_read_length = 10
+            mask_short_adapter_reads = 0
+            # Run bcl2fastq
             try:
                 exit_code = bcl_to_fastq(
                     ap,
