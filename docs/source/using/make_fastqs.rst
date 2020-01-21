@@ -23,6 +23,7 @@ Protocol option          Used for
 ======================== =====================================
 ``standard``             Standard Illumina sequencing data
                          (default)
+``mirna_seq``            miRNA-seq data
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ``10x_chromium_sc``      10xGenomics Chromium single-cell
@@ -50,10 +51,12 @@ more detail on the different usage modes can be found in the
 subsequent sections:
 
 * :ref:`make_fastqs-standard-protocol`
+* :ref:`make_fastqs-mirna_seq-protocol`
 * :ref:`make_fastqs-icell8-protocol`
 * :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
 * :ref:`make_fastqs-10x_chromium_sc_atac-protocol`
+* :ref:`make_fastqs-adapter-trimming-and-masking`
 * :ref:`make_fastqs-mixed-protocols`
 
 Information on other commonly used options can be found
@@ -120,6 +123,30 @@ in the section :ref:`make_fastqs-outputs`; it is recommended to check
 the :doc:`processing QC <../output/processing_qc>` and
 :doc:`barcode analysis <../output/barcode_analysis>` reports which
 will highlight issues with the demultiplexing.
+
+.. _make_fastqs-mirna_seq-protocol:
+
+miRNA-seq Fastq generation (``--protocol=mirna_seq``)
+-----------------------------------------------------
+
+Initial Fastqs can be generated from miRNA-seq data using the
+``--protocol=mirna_seq`` option:
+
+::
+
+    auto_process.py make_fastqs --protocol=mirna_seq ...
+
+This adjusts the adapter trimming and masking options as follows:
+
+ * Sets the minimum trimmed read length to 10 bases
+ * Turn off short read masking by setting the threshold length
+   to zero
+
+Subsequently the Fastq generation is the same as the standard
+protocol described in :ref:`make_fastqs-standard-protocol`.
+
+More details about adapter trimming and short read masking can be
+found in the section :ref:`make_fastqs-adapter-trimming-and-masking`.
 
 .. _make_fastqs-icell8-protocol:
 
@@ -224,6 +251,45 @@ This will generate the Fastqs in the specified output directory
    ``make_fastqs`` offers various options for controlling the
    behaviour of ``cellranger-atac mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-adapter-trimming-and-masking:
+
+Configuring adapter trimming and masking
+----------------------------------------
+
+By default Fastq generation includes adapter trimming and masking of
+short reads via ``bcl2fastq``.
+
+Adapter sequences used for trimming are taken from those specified
+in the input sample sheet, but these can be overriden by using the
+``--adapter`` and ``--adapter-read2`` options to specify different
+sequences.
+
+Adapter trimming can be disabled by specifying the
+``--no-adapter-trimming`` option (or by setting both adapter
+sequences to empty strings).
+
+When adapter trimming is performed two additional operations are
+applied:
+
+ * **Minium read length** is enforced for reads which are shorter
+   than this length after trimming, by padding them with ``N``s
+   up to the minimum length
+ * **Masking of short reads** is performed for reads below a
+   masking threshold length, by masking *all* bases in the read
+   with ``N``s
+
+Minimum read length defaults to 35 bases but can set explicitly by
+using the ``--minimum-trimmed-read-length`` option; the masking
+threshold defaults to 22 bases but can be set using the
+``--mask-short-adapter-reads`` option. Set this to zero to turn
+off masking.
+
+.. warning::
+
+   Setting the minimum read length to zero when using adapter
+   trimming can result in read records with zero-length sequences,
+   which may cause problems in downstream analyses.
 
 .. _make_fastqs-mixed-protocols:
 
