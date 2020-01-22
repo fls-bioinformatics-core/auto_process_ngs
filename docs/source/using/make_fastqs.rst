@@ -23,7 +23,7 @@ Protocol option          Used for
 ======================== =====================================
 ``standard``             Standard Illumina sequencing data
                          (default)
-``mirna_seq``            miRNA-seq data
+``mirna``                miRNA-seq data
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ``10x_chromium_sc``      10xGenomics Chromium single-cell
@@ -51,7 +51,7 @@ more detail on the different usage modes can be found in the
 subsequent sections:
 
 * :ref:`make_fastqs-standard-protocol`
-* :ref:`make_fastqs-mirna_seq-protocol`
+* :ref:`make_fastqs-mirna-protocol`
 * :ref:`make_fastqs-icell8-protocol`
 * :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
@@ -124,17 +124,17 @@ the :doc:`processing QC <../output/processing_qc>` and
 :doc:`barcode analysis <../output/barcode_analysis>` reports which
 will highlight issues with the demultiplexing.
 
-.. _make_fastqs-mirna_seq-protocol:
+.. _make_fastqs-mirna-protocol:
 
-miRNA-seq Fastq generation (``--protocol=mirna_seq``)
------------------------------------------------------
+miRNA-seq Fastq generation (``--protocol=mirna``)
+-------------------------------------------------
 
 Initial Fastqs can be generated from miRNA-seq data using the
-``--protocol=mirna_seq`` option:
+``--protocol=mirna`` option:
 
 ::
 
-    auto_process.py make_fastqs --protocol=mirna_seq ...
+    auto_process.py make_fastqs --protocol=mirna ...
 
 This adjusts the adapter trimming and masking options as follows:
 

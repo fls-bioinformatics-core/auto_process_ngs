@@ -52,7 +52,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 MAKE_FASTQS_PROTOCOLS = ('standard',
-                         'mirna_seq',
+                         'mirna',
                          'icell8',
                          'icell8_atac',
                          '10x_chromium_sc',
@@ -434,7 +434,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                     runner=runner)
             except Exception as ex:
                 raise Exception("Bcl2fastq stage failed: '%s'" % ex)
-        elif protocol == 'mirna_seq':
+        elif protocol == 'mirna':
             # miRNA-seq protocol
             # Set minimum trimmed read length and turn off masking
             minimum_trimmed_read_length = 10
