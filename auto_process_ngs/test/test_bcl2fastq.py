@@ -697,6 +697,120 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertTrue(os.path.exists(sample_sheet_out))
         self.assertEqual(open(sample_sheet_out,'r').read(),
                          expected)
+    def test_make_custom_sample_sheet_adapter(self):
+        """
+        make_custom_sample_sheet: update adapter sequence
+        """
+        sample_sheet_in = os.path.join(self.wd,
+                                       "SampleSheet.csv")
+        with open(sample_sheet_in,'w') as fp:
+            fp.write(self.iem_content)
+        sample_sheet_out = os.path.join(self.wd,
+                                       "custom_SampleSheet.csv")
+        make_custom_sample_sheet(sample_sheet_in,
+                                 output_sample_sheet=sample_sheet_out,
+                                 adapter="TACACATCTCTGTCTCTTA")
+        expected = """[Header]
+IEMFileVersion,4
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,TACACATCTCTGTCTCTTA
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+1,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+2,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+2,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+3,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+3,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+4,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+"""
+        self.assertTrue(os.path.exists(sample_sheet_out))
+        self.assertEqual(open(sample_sheet_out,'r').read(),
+                         expected)
+    def test_make_custom_sample_sheet_adapter_read2(self):
+        """
+        make_custom_sample_sheet: update adapter sequence (read2)
+        """
+        sample_sheet_in = os.path.join(self.wd,
+                                       "SampleSheet.csv")
+        with open(sample_sheet_in,'w') as fp:
+            fp.write(self.iem_content)
+        sample_sheet_out = os.path.join(self.wd,
+                                       "custom_SampleSheet.csv")
+        make_custom_sample_sheet(sample_sheet_in,
+                                 output_sample_sheet=sample_sheet_out,
+                                 adapter_read2="TACACATCTCTGTCTCTTA")
+        expected = """[Header]
+IEMFileVersion,4
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+AdapterRead2,TACACATCTCTGTCTCTTA
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+1,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+2,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+2,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+3,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+3,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+4,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+"""
+        self.assertTrue(os.path.exists(sample_sheet_out))
+        self.assertEqual(open(sample_sheet_out,'r').read(),
+                         expected)
+    def test_make_custom_sample_sheet_no_adapters(self):
+        """
+        make_custom_sample_sheet: remove adapter sequences
+        """
+        sample_sheet_in = os.path.join(self.wd,
+                                       "SampleSheet.csv")
+        with open(sample_sheet_in,'w') as fp:
+            fp.write(self.iem_content)
+        sample_sheet_out = os.path.join(self.wd,
+                                       "custom_SampleSheet.csv")
+        make_custom_sample_sheet(sample_sheet_in,
+                                 output_sample_sheet=sample_sheet_out,
+                                 adapter="",adapter_read2="")
+        expected = """[Header]
+IEMFileVersion,4
+
+[Reads]
+101
+101
+
+[Settings]
+ReverseComplement,0
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+1,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+1,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+2,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+2,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+3,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+3,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+4,PJB1-1579,PJB1-1579,,,N701,CGATGTAT,N501,TCTTTCCC,PeterBriggs,
+4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
+"""
+        self.assertTrue(os.path.exists(sample_sheet_out))
+        self.assertEqual(open(sample_sheet_out,'r').read(),
+                         expected)
 
 class TestBasesMaskIsValid(unittest.TestCase):
     """Tests for the bases_mask_is_valid function

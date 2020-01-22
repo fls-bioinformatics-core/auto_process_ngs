@@ -341,21 +341,6 @@ def add_make_fastqs_command(cmdparser):
                               "(bcl2fastq v2 only; turn off using "
                               "--no-lane-splitting)%s" %
                               default_use_lane_splitting)
-    # Adapter trimming/masking options
-    bcl_to_fastq.add_argument('--minimum-trimmed-read-length',action="store",
-                              dest="minimum_trimmed_read_length",default=35,
-                              help="Minimum read length after adapter "
-                              "trimming. bcl2fastq trims the adapter from "
-                              "the read down to this value; if there is more "
-                              "adapter match below this length then those "
-                              "bases are masked not trimmed (i.e. replaced "
-                              "by N rather than removed) (default: 35)")
-    bcl_to_fastq.add_argument('--mask-short-adapter-reads',action="store",
-                              dest="mask_short_adapter_reads",default=22,
-                              help="minimum length of unmasked bases that "
-                              "a read can be after adapter trimming; reads "
-                              "with fewer ACGT bases will be completely "
-                              "masked with Ns (default: 22)")
     # Creation of empty fastqs
     # Determine defaults to report to user
     create_empty_fastqs_platforms = []
@@ -432,6 +417,40 @@ def add_make_fastqs_command(cmdparser):
     add_nprocessors_option(bcl_to_fastq,None,
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
+    # Adapter trimming/masking options
+    adapters = p.add_argument_group('Adapter trimming and masking')
+    adapters.add_argument('--adapter',action="store",
+                          dest="adapter_sequence",default=None,
+                          help="sequence of adapter to be trimmed. "
+                          "Specify multiple adapters by separating "
+                          "them with plus sign (+). Only used for read "
+                          "1 if --adapter-read2 is also specified "
+                          "(default: use adapter sequence from sample "
+                          "sheet)")
+    adapters.add_argument('--adapter-read2',action="store",
+                          dest="adapter_sequence_read2",default=None,
+                          help="sequence of adapter to be trimmed in "
+                          "read 2. Specify multiple adapters by separating "
+                          "them with plus sign (+) (default: use adapter "
+                          "sequence from sample sheet)")
+    adapters.add_argument('--minimum-trimmed-read-length',action="store",
+                          dest="minimum_trimmed_read_length",default=35,
+                          help="Minimum read length after adapter "
+                          "trimming. bcl2fastq trims the adapter from "
+                          "the read down to this value; if there is more "
+                          "adapter match below this length then those "
+                          "bases are masked not trimmed (i.e. replaced "
+                          "by N rather than removed) (default: 35)")
+    adapters.add_argument('--mask-short-adapter-reads',action="store",
+                          dest="mask_short_adapter_reads",default=22,
+                          help="minimum length of unmasked bases that "
+                          "a read can be after adapter trimming; reads "
+                          "with fewer ACGT bases will be completely "
+                          "masked with Ns (default: 22)")
+    adapters.add_argument('--no-adapter-trimming',action="store_true",
+                          dest="no_adapter_trimming",default=False,
+                          help="turn off adapter trimming even if "
+                          "adapter sequences are supplied")
     # ICELL8 options
     icell8 = p.add_argument_group('ICELL8 options (ICELL8 data only)')
     icell8.add_argument("--well-list",
@@ -1159,8 +1178,11 @@ def make_fastqs(args):
         icell8_reverse_complement=args.icell8_reverse_complement,
         platform=args.platform,
         no_lane_splitting=no_lane_splitting,
+        trim_adapters=(not args.no_adapter_trimming),
         minimum_trimmed_read_length=args.minimum_trimmed_read_length,
         mask_short_adapter_reads=args.mask_short_adapter_reads,
+        adapter_sequence=args.adapter_sequence,
+        adapter_sequence_read2=args.adapter_sequence_read2,
         create_fastq_for_index_reads=args.create_fastq_for_index_reads,
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,

@@ -52,6 +52,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 MAKE_FASTQS_PROTOCOLS = ('standard',
+                         'mirna',
                          'icell8',
                          'icell8_atac',
                          '10x_chromium_sc',
@@ -72,6 +73,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 bases_mask=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
+                trim_adapters=True,
+                adapter_sequence=None,
+                adapter_sequence_read2=None,
                 create_fastq_for_index_reads=False,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
@@ -149,6 +153,16 @@ def make_fastqs(ap,protocol='standard',platform=None,
         length of ACGT bases that must be present in a read after
         adapter trimming for it not to be masked completely
         with Ns.
+      trim_adapters (boolean): if True (the default) then pass
+        adapter sequence(s) to bcl2fastq to perform adapter trimming;
+        otherwise remove adapter sequences
+      adapter_sequence (str): if not None then specifies adapter
+        sequence to use instead of any sequences already set in the
+        samplesheet (nb will be ignored if 'trim_adapters' is False)
+      adapter_sequence_read2 (str): if not None then specifies adapter
+        sequence to use for read2 instead of any sequences already set
+        in the samplesheet (nb will be ignored if 'trim_adapters' is
+        False)
       create_fastq_for_index_reads (boolean): if True then also create
         Fastq files for index reads (default, don't create index read
         Fastqs)
@@ -233,6 +247,31 @@ def make_fastqs(ap,protocol='standard',platform=None,
             if l not in samplesheet_lanes:
                 raise Exception("Requested lane '%d' not present "
                                 "in samplesheet" % l)
+    # Adapter trimming
+    if trim_adapters:
+        # Sort out adapter sequences
+        s = IlluminaData.SampleSheet(ap.params.sample_sheet)
+        if adapter_sequence is None:
+            # Use adapter sequence from sample sheet
+            try:
+                adapter_sequence = s.settings['Adapter']
+            except KeyError:
+                adapter_sequence = ""
+        if adapter_sequence_read2 is None:
+            # Use read2 adapter from sample sheet
+            try:
+                adapter_sequence_read2 = s.settings['AdapterRead2']
+            except KeyError:
+                adapter_sequence_read2 = ""
+    else:
+        # No adapter trimming
+        adapter_sequence = ""
+        adapter_sequence_read2 = ""
+    print("Adapter sequence      : %s" % (adapter_sequence
+                                          if adapter_sequence
+                                          else "<none>"))
+    if adapter_sequence_read2:
+        print("Adapter sequence read2: %s" % adapter_sequence_read2)
     # Make a temporary sample sheet
     if lanes:
         lanes_id = ".L%s" % ''.join([str(l) for l in lanes])
@@ -244,7 +283,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
                                  time.strftime("%Y%m%d%H%M%S")))
     make_custom_sample_sheet(ap.params.sample_sheet,
                              sample_sheet,
-                             lanes=lanes)
+                             lanes=lanes,
+                             adapter=adapter_sequence,
+                             adapter_read2=adapter_sequence_read2)
     # Check the temporary sample sheet
     print("Checking temporary sample sheet")
     invalid_barcodes = SampleSheetLinter(
@@ -375,6 +416,30 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # Do fastq generation according to protocol
         if protocol == 'standard':
             # Standard protocol
+            try:
+                exit_code = bcl_to_fastq(
+                    ap,
+                    unaligned_dir=ap.params.unaligned_dir,
+                    sample_sheet=sample_sheet,
+                    primary_data_dir=primary_data_dir,
+                    require_bcl2fastq=require_bcl2fastq_version,
+                    bases_mask=bases_mask,
+                    ignore_missing_bcl=ignore_missing_bcl,
+                    ignore_missing_stats=ignore_missing_stats,
+                    no_lane_splitting=no_lane_splitting,
+                    minimum_trimmed_read_length=minimum_trimmed_read_length,
+                    mask_short_adapter_reads=mask_short_adapter_reads,
+                    create_fastq_for_index_reads=create_fastq_for_index_reads,
+                    nprocessors=nprocessors,
+                    runner=runner)
+            except Exception as ex:
+                raise Exception("Bcl2fastq stage failed: '%s'" % ex)
+        elif protocol == 'mirna':
+            # miRNA-seq protocol
+            # Set minimum trimmed read length and turn off masking
+            minimum_trimmed_read_length = 10
+            mask_short_adapter_reads = 0
+            # Run bcl2fastq
             try:
                 exit_code = bcl_to_fastq(
                     ap,
