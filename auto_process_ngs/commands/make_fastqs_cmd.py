@@ -1004,6 +1004,8 @@ def bcl_to_fastq(ap,unaligned_dir,sample_sheet,primary_data_dir,
 def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
                                  primary_data_dir,lanes=None,
                                  bases_mask=None,
+                                 minimum_trimmed_read_length=None,
+                                 mask_short_adapter_reads=None,
                                  cellranger_jobmode='local',
                                  cellranger_maxjobs=None,
                                  cellranger_mempercore=None,
@@ -1030,6 +1032,10 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
       bases_mask (str): if set then use this as an alternative bases
         mask setting (default is to acquire from the autoprocessor
         parameters)
+      minimum_trimmed_read_length (int): if set then supply to
+        cellranger via --minimum-trimmed-read-length
+      mask_short_adapter_reads (int): if set then supply to cellranger
+        via --mask-short-adapter-reads
       cellranger_jobmode (str): specify the job mode to pass to
         cellranger (default: 'local')
       cellranger_maxjobs (int): specify the maximum number of jobs to
@@ -1114,6 +1120,8 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
             lanes=(None if lanes is None
                    else ','.join([str(l) for l in lanes])),
             bases_mask=bases_mask,
+            minimum_trimmed_read_length=minimum_trimmed_read_length,
+            mask_short_adapter_reads=mask_short_adapter_reads,
             cellranger_exe=cellranger,
             cellranger_jobmode=cellranger_jobmode,
             cellranger_maxjobs=cellranger_maxjobs,
@@ -1131,6 +1139,8 @@ def bcl_to_fastq_10x_chromium_sc(ap,output_dir,sample_sheet,
 def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
                                       primary_data_dir,lanes=None,
                                       bases_mask=None,
+                                      minimum_trimmed_read_length=None,
+                                      mask_short_adapter_reads=None,
                                       cellranger_jobmode=None,
                                       cellranger_maxjobs=None,
                                       cellranger_mempercore=None,
@@ -1155,6 +1165,10 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
       bases_mask (str): if set then use this as an alternative bases
         mask setting (default is to acquire from the autoprocessor
         parameters)
+      minimum_trimmed_read_length (int): if set then supply to
+        cellranger via --minimum-trimmed-read-length
+      mask_short_adapter_reads (int): if set then supply to cellranger
+        via --mask-short-adapter-reads
       lanes (list): if set then specifies the lanes to include
         (default is to include all lanes)
       cellranger_jobmode (str): specify the job mode to pass to
@@ -1253,6 +1267,8 @@ def bcl_to_fastq_10x_chromium_sc_atac(ap,output_dir,sample_sheet,
             lanes=(None if lanes is None
                    else ','.join([str(l) for l in lanes])),
             bases_mask=bases_mask,
+            minimum_trimmed_read_length=minimum_trimmed_read_length,
+            mask_short_adapter_reads=mask_short_adapter_reads,
             cellranger_exe=cellranger_atac,
             cellranger_jobmode=cellranger_jobmode,
             cellranger_maxjobs=cellranger_maxjobs,
