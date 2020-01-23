@@ -537,6 +537,8 @@ def run_cellranger_mkfastq(sample_sheet,
                            lanes=None,
                            bases_mask=None,
                            ignore_dual_index=False,
+                           minimum_trimmed_read_length=None,
+                           mask_short_adapter_reads=None,
                            cellranger_exe='cellranger',
                            cellranger_jobmode='local',
                            cellranger_maxjobs=None,
@@ -575,6 +577,13 @@ def run_cellranger_mkfastq(sample_sheet,
       ignore_dual_index (bool): optional, on a dual-indexed
         flowcell where the second index was not used for
         the 10x sample, ignore it
+      minimum_trimmed_read_length: optional, specify minimum
+        length for reads after adapter trimming (shorter reads
+        will be padded with Ns to make them long enough)
+      mask_short_adapter_reads: optional, specify the minimum
+        length of ACGT bases that must be present in a read
+        after adapter trimming for it not to be masked
+        completely with Ns
       cellranger_exe (str): optional, name or path to
         cellranger executable (default: "cellranger")
       cellranger_jobmode (str): specify the job mode to
@@ -645,6 +654,12 @@ def run_cellranger_mkfastq(sample_sheet,
         cmd.add_args("--use-bases-mask=%s" % bases_mask)
     if ignore_dual_index:
         cmd.add_args("--ignore-dual-index")
+    if minimum_trimmed_read_length:
+        cmd.add_args('--minimum-trimmed-read-length',
+                     minimum_trimmed_read_length)
+    if mask_short_adapter_reads:
+        cmd.add_args('--mask-short-adapter-reads',
+                     mask_short_adapter_reads)
     add_cellranger_args(cmd,
                         jobmode=cellranger_jobmode,
                         mempercore=cellranger_mempercore,
