@@ -60,6 +60,11 @@ MAKE_FASTQS_PROTOCOLS = ('standard',
 
 BCL2FASTQ_VERSIONS = ('1.8','2.17','2.20',)
 
+BCL2FASTQ_DEFAULTS = {
+    "minimum_trimmed_read_length": 35,
+    "mask_short_adapter_reads": 22,
+}
+
 #######################################################################
 # Command functions
 #######################################################################
@@ -416,6 +421,15 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # Do fastq generation according to protocol
         if protocol == 'standard':
             # Standard protocol
+            if trim_adapters:
+                # Set trimming/masking options to defaults if values
+                # weren't explicitly supplied
+                if minimum_trimmed_read_length is None:
+                    minimum_trimmed_read_length = \
+                        BCL2FASTQ_DEFAULTS['minimum_trimmed_read_length']
+                if mask_short_adapter_reads is None:
+                    mask_short_adapter_reads = \
+                        BCL2FASTQ_DEFAULTS['mask_short_adapter_reads']
             try:
                 exit_code = bcl_to_fastq(
                     ap,

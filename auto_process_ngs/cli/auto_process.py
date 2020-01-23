@@ -75,6 +75,7 @@ from bcftbx.JobRunner import fetch_runner
 from .. import get_version
 from ..auto_processor import AutoProcess
 from ..commands.make_fastqs_cmd import MAKE_FASTQS_PROTOCOLS
+from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
 from ..envmod import load as envmod_load
 from ..samplesheet_utils import predict_outputs
@@ -434,19 +435,21 @@ def add_make_fastqs_command(cmdparser):
                           "them with plus sign (+) (default: use adapter "
                           "sequence from sample sheet)")
     adapters.add_argument('--minimum-trimmed-read-length',action="store",
-                          dest="minimum_trimmed_read_length",default=35,
+                          dest="minimum_trimmed_read_length",default=None,
                           help="Minimum read length after adapter "
                           "trimming. bcl2fastq trims the adapter from "
                           "the read down to this value; if there is more "
                           "adapter match below this length then those "
                           "bases are masked not trimmed (i.e. replaced "
-                          "by N rather than removed) (default: 35)")
+                          "by N rather than removed) (default: %d)" %
+                          BCL2FASTQ_DEFAULTS['minimum_trimmed_read_length'])
     adapters.add_argument('--mask-short-adapter-reads',action="store",
-                          dest="mask_short_adapter_reads",default=22,
+                          dest="mask_short_adapter_reads",default=None,
                           help="minimum length of unmasked bases that "
                           "a read can be after adapter trimming; reads "
                           "with fewer ACGT bases will be completely "
-                          "masked with Ns (default: 22)")
+                          "masked with Ns (default: %d)" %
+                          BCL2FASTQ_DEFAULTS['mask_short_adapter_reads'])
     adapters.add_argument('--no-adapter-trimming',action="store_true",
                           dest="no_adapter_trimming",default=False,
                           help="turn off adapter trimming even if "
