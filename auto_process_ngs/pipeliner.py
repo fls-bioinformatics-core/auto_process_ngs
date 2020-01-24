@@ -785,7 +785,12 @@ import string
 import cloudpickle
 import atexit
 from collections import Iterator
-from io import StringIO
+try:
+    # Python2
+    from cStringIO import StringIO
+except ImportError:
+    # Python3
+    from io import StringIO
 from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
