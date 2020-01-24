@@ -10,6 +10,7 @@ import os
 import io
 import getpass
 import platform
+from builtins import range
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.simple_scheduler import SimpleScheduler
 from auto_process_ngs.applications import Command
@@ -931,8 +932,10 @@ prepend-path PATH %s
         self.assertEqual(len(ppl1.task_list()),7)
         # Check requirements on first task of pipeline 2
         # have been updated
-        self.assertEqual(sorted(ppl1.get_task(task5.id())[1]),
-                         sorted([task2,task4,]))
+        self.assertEqual(
+            sorted(ppl1.get_task(task5.id())[1],key=lambda t: t.id()),
+            sorted([task2,task4,],key=lambda t: t.id())
+        )
         # Check params from both pipelines are defined
         self.assertTrue('param1' in ppl1.params)
         self.assertTrue('param2' in ppl1.params)
@@ -1371,7 +1374,7 @@ class TestPipelineTask(unittest.TestCase):
             def init(self,s,n=1):
                 pass
             def setup(self):
-                for i in xrange(self.args.n):
+                for i in range(self.args.n):
                     self.add_cmd(
                         PipelineCommandWrapper(
                             "Echo text","echo",self.args.s))
@@ -1402,7 +1405,7 @@ class TestPipelineTask(unittest.TestCase):
         print(task.stdout)
         stdout = task.stdout.split("\n")
         self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
-        for i in xrange(3):
+        for i in range(3):
             self.assertEqual(stdout[0+i*7],"#### COMMAND Echo text")
             self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % self._hostname())
             self.assertEqual(stdout[2+i*7],"#### USER %s" % self._user())

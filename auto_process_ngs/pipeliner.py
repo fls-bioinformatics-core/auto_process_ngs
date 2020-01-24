@@ -785,7 +785,13 @@ import string
 import cloudpickle
 import atexit
 from collections import Iterator
-from cStringIO import StringIO
+try:
+    # Python2
+    from cStringIO import StringIO
+except ImportError:
+    # Python3
+    from io import StringIO
+from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
 from bcftbx.JobRunner import SimpleJobRunner
@@ -943,7 +949,7 @@ class FileCollector(Iterator):
             self._files = collect_files(self._dirn,self._pattern)
             self._idx = -1
         return len(self._files)
-    def next(self):
+    def __next__(self):
         if self._files is None:
             self._files = collect_files(self._dirn,self._pattern)
         if self._idx is None:
@@ -956,6 +962,11 @@ class FileCollector(Iterator):
             self._files = None
             self._idx = None
             raise StopIteration
+    def next(self):
+        """
+        Implemented for Python2 compatibility
+        """
+        return self.__next__()
 
 # Capture stdout and stderr from a function call
 # Based on code from http://stackoverflow.com/a/16571630/579925
@@ -1347,7 +1358,7 @@ class Pipeline(object):
         """
         Return a list of task ids
         """
-        return self._tasks.keys()
+        return list(self._tasks.keys())
 
     def get_task(self,task_id):
         """
@@ -1386,7 +1397,7 @@ class Pipeline(object):
             # Populate the current rank with tasks which don't
             # have any requirements
             current_rank = []
-            for task_id in required.keys():
+            for task_id in list(required.keys()):
                 if not required[task_id]:
                     # Task no longer has requirements so add
                     # to the current rank
@@ -1396,7 +1407,7 @@ class Pipeline(object):
                     del(required[task_id])
             # Update the requirement lists for remaining tasks
             # to remove those add to the current rank
-            for task_id in required.keys():
+            for task_id in list(required.keys()):
                 new_reqs = []
                 for req in required[task_id]:
                     if req not in current_rank:
