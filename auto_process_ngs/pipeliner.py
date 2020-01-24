@@ -1358,7 +1358,7 @@ class Pipeline(object):
         """
         Return a list of task ids
         """
-        return self._tasks.keys()
+        return list(self._tasks.keys())
 
     def get_task(self,task_id):
         """
