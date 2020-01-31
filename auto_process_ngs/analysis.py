@@ -310,8 +310,9 @@ class AnalysisDir(object):
             projects.append(self.undetermined)
         # Filter on pattern
         if pattern is not None:
-            projects = filter(lambda p: fnmatch.fnmatch(p.name,pattern),
-                              projects)
+            projects = list(filter(lambda p:
+                                   fnmatch.fnmatch(p.name,pattern),
+                                   projects))
         return projects
         
 class AnalysisProject(object):
@@ -815,8 +816,9 @@ class AnalysisProject(object):
                         reduced_fastqs.append(fq)
                         break
             # Remove index reads
-            reduced_fastqs = filter(lambda fq: not fq.is_index_read,
-                                    reduced_fastqs)
+            reduced_fastqs = list(filter(lambda fq:
+                                         not fq.is_index_read,
+                                         reduced_fastqs))
             if len(reduced_fastqs) > 1:
                 multiple_fastqs = True
             samples[sample_name] = reduced_fastqs
