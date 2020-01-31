@@ -47,6 +47,7 @@ from .metadata import ProjectMetadataFile
 from .metadata import AnalysisProjectQCDirInfo
 from .fastq_utils import BaseFastqAttrs
 from .fastq_utils import IlluminaFastqAttrs
+from functools import reduce
 
 # Module specific logger
 logger = logging.getLogger(__name__)
