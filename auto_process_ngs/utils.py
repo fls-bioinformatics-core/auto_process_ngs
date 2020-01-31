@@ -178,7 +178,7 @@ class OutputFiles(object):
             self._fp[name].close()
             del(self._fp[name])
         else:
-            names = self._fp.keys()
+            names = list(self._fp.keys())
             for name in names:
                 self.close(name)
 
