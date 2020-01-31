@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     auto_processor.py: automated processing of Illumina sequence data
-#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -40,6 +40,7 @@ from .bcl2fastq_utils import get_sequencer_platform
 from .samplesheet_utils import check_and_warn
 from .settings import Settings
 from .exceptions import MissingParameterFileException
+from functools import reduce
 from . import get_version
 
 #######################################################################
