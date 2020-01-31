@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-17,2019 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17,2019-2020 Peter Briggs
 #
 ########################################################################
 #
@@ -180,14 +180,14 @@ class Command(object):
             fpout = None
         else:
             logging.debug("Writing stdout to %s" % log)
-            fpout = open(log,'w')
+            fpout = open(log,'wt')
         if err is None:
             if log is not None:
                 fperr = subprocess.STDOUT
             else:
                 fperr = None
         else:
-            fperr = open(err,'w')
+            fperr = open(err,'wt')
             logging.debug("Writing stderr to %s" % err)
         # Execute command and wait for finish
         try:
@@ -228,7 +228,7 @@ class Command(object):
         else:
             stderr = None
         # Create a temporary file-like object to capture output
-        ftmp = tempfile.TemporaryFile()
+        ftmp = tempfile.TemporaryFile(mode='w+t')
         status = subprocess.call(self.command_line,stdout=ftmp,
                                  cwd=working_dir,stderr=stderr)
         # Read the output
@@ -286,7 +286,7 @@ class Command(object):
         if fp is not None:
             fp.write(script)
         if filen is not None:
-            with open(filen,'w') as fp:
+            with open(filen,'wt') as fp:
                 fp.write(script)
         return script
 

@@ -3,7 +3,11 @@
 #######################################################################
 from auto_process_ngs.applications import *
 import unittest
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    # cStringIO not available in Python3
+    from io import StringIO
 
 class TestCommand(unittest.TestCase):
 
@@ -79,7 +83,7 @@ class TestCommand(unittest.TestCase):
                 epilogue="echo \"# $(date)\""),
             "#!/bin/bash\necho \"# $(hostname)\"\n"
             "echo hello\necho \"# $(date)\"")
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         cmd.make_wrapper_script(fp=fp)
         self.assertEqual(fp.getvalue(),"echo hello")
 
