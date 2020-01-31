@@ -15,25 +15,20 @@ Classes and functions to support configuration of the auto_process_ngs
 module.
 
 """
-try:
-    from configparser import SafeConfigParser
-    from configparser import NoOptionError
-    from configparser import NoSectionError
-except ImportError:
-    # Failed to get Python3 ConfigParser, fallback to Python2
-    from ConfigParser import SafeConfigParser
-    from ConfigParser import NoOptionError
-    from ConfigParser import NoSectionError
+
+from configparser import ConfigParser
+from configparser import NoOptionError
+from configparser import NoSectionError
 from bcftbx.JobRunner import fetch_runner
 
 #######################################################################
 # Classes
 #######################################################################
 
-class Config(SafeConfigParser):
-    """Wraps SafeConfigParser to set defaults for missing options
+class Config(ConfigParser):
+    """Wraps ConfigParser to set defaults for missing options
 
-    Implements a wrapper for SafeConfigParser:
+    Implements a wrapper for ConfigParser:
 
     - 'get' and 'getint' methods take a 'default' argument, which
       is returned if the specified option is missing from the file
@@ -47,16 +42,16 @@ class Config(SafeConfigParser):
     >>> c.read(conf_file)
     >>> c.get('section1','parameter2')
 
-    See also the ConfigParser documentation at
-    https://docs.python.org/2/library/configparser.html
+    See also the configparser documentation at
+    https://docs.python.org/3/library/configparser.html
 
     """
     def __init__(self):
-        SafeConfigParser.__init__(self)
+        ConfigParser.__init__(self)
         self.optionxform = str
-    def get(self,section,option,default=None):
+    def get(self,section,option,default=None,**kwargs):
         try:
-            value = SafeConfigParser.get(self,section,option)
+            value = super(Config,self).get(section,option,**kwargs)
             if value == 'None' or value == '':
                 return default
             else:
@@ -67,17 +62,20 @@ class Config(SafeConfigParser):
             return default
     def getint(self,section,option,default=None):
         try:
-            return SafeConfigParser.getint(self,section,option)
+            return super(Config,self).getint(section,option,
+                                             fallback=default)
         except TypeError:
             return default
     def getfloat(self,section,option,default=None):
         try:
-            return SafeConfigParser.getfloat(self,section,option)
+            return super(Config,self).getfloat(section,option,
+                                               fallback=default)
         except (TypeError,AttributeError):
             return default
     def getboolean(self,section,option,default=None):
         try:
-            return SafeConfigParser.getboolean(self,section,option)
+            return super(Config,self).getboolean(section,option,
+                                                 fallback=default)
         except (TypeError,AttributeError):
             return default
     def getrunner(self,section,option,default='SimpleJobRunner'):

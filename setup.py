@@ -14,7 +14,8 @@ for pattern in ('bin/*.py','bin/*.sh',):
     scripts.extend(glob(pattern))
 
 # Installation requirements
-install_requires = ['pillow',
+install_requires = ['configparser',
+                    'pillow',
                     'matplotlib<=2.2.3',
                     'pandas',
                     'cloudpickle',

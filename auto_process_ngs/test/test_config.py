@@ -3,7 +3,11 @@
 #######################################################################
 
 import unittest
-import cStringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    # cStringIO not available in Python3
+    from io import StringIO
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from auto_process_ngs.config import *
 
@@ -33,7 +37,7 @@ class TestConfig(unittest.TestCase):
     """Tests for the Config class
     """
     def setUp(self):
-        fp = cStringIO.StringIO(config)
+        fp = StringIO(config)
         self.config = Config()
         self.config.readfp(fp)
 
