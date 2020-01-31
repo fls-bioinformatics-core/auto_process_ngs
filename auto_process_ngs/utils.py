@@ -818,9 +818,9 @@ def write_script_file(script_file,contents,append=False,shell=None):
 
     """
     if append:
-        mode = 'a'
+        mode = 'at'
     else:
-        mode = 'w'
+        mode = 'wt'
     with open(script_file,mode=mode) as fp:
         if (not append) and (shell is not None):
             fp.write("#!%s\n" % shell)
@@ -857,7 +857,7 @@ def edit_file(filen,editor="vi",append=None):
     # Make a temporary copy for editing
     f,tmpfile = tempfile.mkstemp()
     os.fdopen(f).close()
-    with open(tmpfile,'w') as fp:
+    with open(tmpfile,'wt') as fp:
         if os.path.exists(filen):
             fp.write(open(filen,'r').read())
         else:
@@ -872,7 +872,7 @@ def edit_file(filen,editor="vi",append=None):
     edit_cmd.run_subprocess()
     # Finished
     if md5sum(tmpfile) != checksum:
-        with open(filen,'w') as fp:
+        with open(filen,'wt') as fp:
             fp.write(open(tmpfile,'r').read())
             os.remove(tmpfile)
     else:
