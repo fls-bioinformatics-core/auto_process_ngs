@@ -471,8 +471,8 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.mockbcl2fastq.bcl2fastq_184()
         self.mockbcl2fastq.set_path()
         # Get the full path for the bcl2fastq 1.8.4 exe
-        bcl2fastq_184 = filter(lambda x: x.count('1.8.4') == 1,
-                               self.mockbcl2fastq.exes)[0]
+        bcl2fastq_184 = list(filter(lambda x: x.count('1.8.4') == 1,
+                                    self.mockbcl2fastq.exes))[0]
         self.assertEqual(available_bcl2fastq_versions(
             paths=(os.path.dirname(bcl2fastq_184),)),
                          [bcl2fastq_184,])
@@ -486,8 +486,8 @@ class TestAvailableBcl2fastqVersions(unittest.TestCase):
         self.mockbcl2fastq.bcl2fastq_184()
         self.mockbcl2fastq.set_path()
         # Get the full path for the bcl2fastq 1.8.4 exe
-        bcl2fastq_184 = filter(lambda x: x.count('1.8.4') == 1,
-                               self.mockbcl2fastq.exes)[0]
+        bcl2fastq_184 = list(filter(lambda x: x.count('1.8.4') == 1,
+                                    self.mockbcl2fastq.exes))[0]
         self.assertEqual(available_bcl2fastq_versions(
             paths=(bcl2fastq_184,)),
                          [bcl2fastq_184,])
