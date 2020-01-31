@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     applications.py: utilities for running command line applications
-#     Copyright (C) University of Manchester 2013-17,2019 Peter Briggs
+#     Copyright (C) University of Manchester 2013-17,2019-2020 Peter Briggs
 #
 ########################################################################
 #
