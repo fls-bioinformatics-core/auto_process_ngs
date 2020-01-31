@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     metadata: classes for storing metadata on analysis objects
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 ########################################################################
 #
@@ -116,8 +116,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 self.load(self.__filen)
         # Set up order of keys for output
         if order is None:
-            self.__key_order = self.__attributes.keys()
-            self.__key_order.sort()
+            self.__key_order = sorted(list(self.__attributes.keys()))
         else:
             # Use supplied key order
             self.__key_order = []
