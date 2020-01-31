@@ -207,9 +207,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
+        self.assertEqual(open(out.file_name('test1'),'rt').read(),
                          "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
+        self.assertEqual(open(out.file_name('test2'),'rt').read(),
                          "Some more\ntest text\n")
     def test_bufferedoutputfiles_with_gzip(self):
         out = BufferedOutputFiles()
@@ -222,9 +222,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(gzip.open(out.file_name('test1'),'r').read(),
+        self.assertEqual(gzip.open(out.file_name('test1'),'rt').read(),
                          "Some test text\n")
-        self.assertEqual(gzip.open(out.file_name('test2'),'r').read(),
+        self.assertEqual(gzip.open(out.file_name('test2'),'rt').read(),
                          "Some more\ntest text\n")
     def test_bufferedoutputfiles_with_basedir(self):
         out = BufferedOutputFiles(self.wd)
@@ -236,9 +236,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
             out.file_name('test2'),os.path.join(self.wd,'test2.txt'))
     def test_bufferedoutputfiles_append(self):
         out = BufferedOutputFiles()
-        with open(os.path.join(self.wd,'test1.txt'),'w') as fp:
+        with open(os.path.join(self.wd,'test1.txt'),'wt') as fp:
             fp.write("test1 already exists\n")
-        with open(os.path.join(self.wd,'test2.txt'),'w') as fp:
+        with open(os.path.join(self.wd,'test2.txt'),'wt') as fp:
             fp.write("test2 already exists\n")
         out.open('test1',os.path.join(self.wd,'test1.txt'),append=True)
         out.open('test2',os.path.join(self.wd,'test2.txt'))
@@ -249,9 +249,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
+        self.assertEqual(open(out.file_name('test1'),'rt').read(),
                          "test1 already exists\nSome test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
+        self.assertEqual(open(out.file_name('test2'),'rt').read(),
                          "Some more\ntest text\n")
     def test_bufferedoutputfiles_reopen(self):
         out = BufferedOutputFiles(base_dir=self.wd)
@@ -264,9 +264,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
+        self.assertEqual(open(out.file_name('test1'),'rt').read(),
                          "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
+        self.assertEqual(open(out.file_name('test2'),'rt').read(),
                          "Some more\ntest text\n")
         # Reopen files
         out.open('test1',append=True)
@@ -278,9 +278,9 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some extra test text')
         out.write('test2','Some different\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
+        self.assertEqual(open(out.file_name('test1'),'rt').read(),
                          "Some test text\nSome extra test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
+        self.assertEqual(open(out.file_name('test2'),'rt').read(),
                          "Some different\ntest text\n")
     def test_bufferedoutputfiles_exceed_maximum_open_files(self):
         # Only allow 2 open files at once internally
@@ -309,19 +309,19 @@ class TestBufferedOutputFiles(unittest.TestCase):
         # Close everything
         out.close()
         # Check the contents for each file
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
+        self.assertEqual(open(out.file_name('test1'),'rt').read(),
                          "test text\n"
                          "and a bit more\n"
                          "plus some final\ntext\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
+        self.assertEqual(open(out.file_name('test2'),'rt').read(),
                          "different\ntest text\n"
                          "more but different\n"
                          "and a last bit\n")
-        self.assertEqual(open(out.file_name('test3'),'r').read(),
+        self.assertEqual(open(out.file_name('test3'),'rt').read(),
                          "more test text\n"
                          "different again\n"
                          "plus a coda\n")
-        self.assertEqual(open(out.file_name('test4'),'r').read(),
+        self.assertEqual(open(out.file_name('test4'),'rt').read(),
                          "yet more\ntest text\n"
                          "and even more different\ntest text\n"
                          "et\nFIN\n")
