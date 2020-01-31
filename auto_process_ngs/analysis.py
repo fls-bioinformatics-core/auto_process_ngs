@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 ########################################################################
 #
