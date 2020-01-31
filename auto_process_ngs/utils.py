@@ -694,10 +694,11 @@ def find_executables(names,info_func,reqs=None,paths=None):
             logger.debug("Pre filter: %s" % available_exes)
             logger.debug("Versions  : %s" % [info_func(x)[2]
                                               for x in available_exes])
-            available_exes = filter(lambda x: op(
-                parse_version(info_func(x)[2]),
-                parse_version(req_version)),
-                                    available_exes)
+            available_exes = list(
+                filter(lambda x: op(
+                    parse_version(info_func(x)[2]),
+                    parse_version(req_version)),
+                       available_exes))
             logger.debug("Post filter: %s" % available_exes)
         # Sort into version order, highest to lowest
         available_exes.sort(
