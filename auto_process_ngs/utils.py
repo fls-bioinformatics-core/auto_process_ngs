@@ -264,7 +264,7 @@ class BufferedOutputFiles(OutputFiles):
             if len(self._fp) == self._max_open_files:
                 # Arbitrarily close file attached to first
                 # handle in the list of keys
-                name0 = self._fp.keys()[0]
+                name0 = list(self._fp.keys())[0]
                 self.close(name0)
                 # Reset the mode to 'append', so the contents
                 # aren't clobbered if the file is reopened
