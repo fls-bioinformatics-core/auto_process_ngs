@@ -236,14 +236,14 @@ class BufferedOutputFiles(OutputFiles):
         a gzip-compressed file.
 
         If 'append' is True then append to an existing
-        file rather than overwriting (i.e. use mode 'a'
-        instead of 'w').
+        file rather than overwriting (i.e. use mode 'at'
+        instead of 'wt').
 
         """
         if append:
-            mode = 'a'
+            mode = 'at'
         else:
-            mode = 'w'
+            mode = 'wt'
         if filen is None:
             filen = self.file_name(name)
         elif self._base_dir is not None:
