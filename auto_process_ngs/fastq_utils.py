@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_utils.py: utility functions for operating on fastq files
-#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
 #
 ########################################################################
 #
