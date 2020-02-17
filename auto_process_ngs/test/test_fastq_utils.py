@@ -422,9 +422,9 @@ class TestFastqReadCounter(unittest.TestCase):
         filen = os.path.join(self.wd,name)
         if filen.endswith(".gz"):
             with gzip.GzipFile(filen,'wb') as fp:
-                fp.write(contents)
+                fp.write(contents.encode())
         else:
-            with open(filen,'w') as fp:
+            with open(filen,'wt') as fp:
                 fp.write(contents)
         return filen
 
