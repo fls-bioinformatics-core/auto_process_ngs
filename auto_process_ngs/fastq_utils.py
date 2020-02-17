@@ -454,6 +454,7 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         read.quality = quality
         fp.write("%s\n" % read)
         nread += 1
+    fp.close()
     print("Finished (%d reads processed)" % nread)
     return nread
 
