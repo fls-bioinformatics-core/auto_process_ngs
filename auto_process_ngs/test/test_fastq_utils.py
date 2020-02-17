@@ -434,6 +434,9 @@ class TestFastqReadCounter(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_simple(self):
+        """
+        FastqReadCounter: test 'simple' counter
+        """
         readcounter = FastqReadCounter.simple
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -443,6 +446,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_simple_gz(self):
+        """
+        FastqReadCounter: test 'simple' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.simple
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -452,6 +458,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_fastqiterator(self):
+        """
+        FastqReadCounter: test 'fastqiterator' counter
+        """
         readcounter = FastqReadCounter.fastqiterator
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -461,6 +470,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_fastqiterator_gz(self):
+        """
+        FastqReadCounter: test 'fastqiterator' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.fastqiterator
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -470,6 +482,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_zcat_wc(self):
+        """
+        FastqReadCounter: test 'zcat/wc' counter
+        """
         readcounter = FastqReadCounter.zcat_wc
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -479,6 +494,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_zcat_wc_gz(self):
+        """
+        FastqReadCounter: test 'zcat/wc' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.zcat_wc
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -488,6 +506,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_reads_per_lane(self):
+        """
+        FastqReadCounter: test 'reads_per_lane'
+        """
         readcounter = FastqReadCounter.reads_per_lane
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -500,6 +521,9 @@ class TestFastqReadCounter(unittest.TestCase):
                                            4: 4 })
 
     def test_reads_per_lane_gz(self):
+        """
+        FastqReadCounter: test 'reads_per_lane' (gzipped input)
+        """
         readcounter = FastqReadCounter.reads_per_lane
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
