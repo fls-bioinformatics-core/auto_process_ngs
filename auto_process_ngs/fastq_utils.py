@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     fastq_utils.py: utility functions for operating on fastq files
-#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
 #
 ########################################################################
 #
@@ -454,6 +454,7 @@ def assign_barcodes_single_end(fastq_in,fastq_out,n=5):
         read.quality = quality
         fp.write("%s\n" % read)
         nread += 1
+    fp.close()
     print("Finished (%d reads processed)" % nread)
     return nread
 
@@ -540,7 +541,7 @@ def pair_fastqs(fastqs):
             seq_ids[fq] = seq_id
     # Sort pairs into order
     fq_pairs = sorted(fq_pairs,key=lambda x: x[0])
-    unpaired = sorted(seq_ids.keys() + bad_files)
+    unpaired = sorted(list(seq_ids.keys()) + bad_files)
     # Return paired and upaired fastqs
     return (fq_pairs,unpaired)
 
@@ -567,8 +568,10 @@ def pair_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
        or (R1,) or (R2,) for unpaired files.
     """
     pairs = []
-    fastqs_r1 = filter(lambda f: fastq_attrs(f).read_number != 2,fastqs)
-    fastqs_r2 = filter(lambda f: fastq_attrs(f).read_number == 2,fastqs)
+    fastqs_r1 = sorted(list(filter(lambda f:
+                                   fastq_attrs(f).read_number != 2,fastqs)))
+    fastqs_r2 = sorted(list(filter(lambda f:
+                                   fastq_attrs(f).read_number == 2,fastqs)))
     for fqr1 in fastqs_r1:
         # Split up R1 name
         logging.debug("fqr1 %s" % os.path.basename(fqr1))
@@ -675,6 +678,6 @@ def remove_index_fastqs(fastqs,fastq_attrs=IlluminaFastqAttrs):
       List: input Fastq list with any index read
         Fastqs removed.
     """
-    return filter(lambda fq:
-                  not fastq_attrs(fq).is_index_read,
-                  fastqs)
+    return list(filter(lambda fq:
+                       not fastq_attrs(fq).is_index_read,
+                       fastqs))

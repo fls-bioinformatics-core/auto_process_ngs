@@ -18,7 +18,7 @@ from auto_process_ngs.fastq_utils import group_fastqs_by_name
 from auto_process_ngs.fastq_utils import remove_index_fastqs
 
 # Test data
-fastq_data = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
+fastq_data = u"""@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
 TTTACAACTAGCTTCTCTTTTTCTT
 +
 >AA?131@C1FCGGGG1BFFGF1F3
@@ -39,7 +39,7 @@ GATAAAGACAGAGTCTTAATTAAAC
 +
 11>1>11DFFCFFDGGGB3BF313A
 """
-fastq_multi_lane_data = """@NB500968:10:H57NTAFXX:1:11101:4210:1091 1:N:0:CGGCAGAA
+fastq_multi_lane_data = u"""@NB500968:10:H57NTAFXX:1:11101:4210:1091 1:N:0:CGGCAGAA
 CTCCAGTTCTGAGTAACTTCAAGGG
 +
 AAAAAEEEEEEEEE6/EEEA//EE/
@@ -422,9 +422,9 @@ class TestFastqReadCounter(unittest.TestCase):
         filen = os.path.join(self.wd,name)
         if filen.endswith(".gz"):
             with gzip.GzipFile(filen,'wb') as fp:
-                fp.write(contents)
+                fp.write(contents.encode())
         else:
-            with open(filen,'w') as fp:
+            with open(filen,'wt') as fp:
                 fp.write(contents)
         return filen
 
@@ -434,6 +434,9 @@ class TestFastqReadCounter(unittest.TestCase):
             shutil.rmtree(self.wd)
 
     def test_simple(self):
+        """
+        FastqReadCounter: test 'simple' counter
+        """
         readcounter = FastqReadCounter.simple
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -443,6 +446,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_simple_gz(self):
+        """
+        FastqReadCounter: test 'simple' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.simple
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -452,6 +458,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_fastqiterator(self):
+        """
+        FastqReadCounter: test 'fastqiterator' counter
+        """
         readcounter = FastqReadCounter.fastqiterator
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -461,6 +470,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_fastqiterator_gz(self):
+        """
+        FastqReadCounter: test 'fastqiterator' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.fastqiterator
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -470,6 +482,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_zcat_wc(self):
+        """
+        FastqReadCounter: test 'zcat/wc' counter
+        """
         readcounter = FastqReadCounter.zcat_wc
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -479,6 +494,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_zcat_wc_gz(self):
+        """
+        FastqReadCounter: test 'zcat/wc' counter (gzipped input)
+        """
         readcounter = FastqReadCounter.zcat_wc
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -488,6 +506,9 @@ class TestFastqReadCounter(unittest.TestCase):
         self.assertEqual(readcounter(fq),12)
 
     def test_reads_per_lane(self):
+        """
+        FastqReadCounter: test 'reads_per_lane'
+        """
         readcounter = FastqReadCounter.reads_per_lane
         fq = self._make_fastq("test_S1_L001_R1_001.fastq",
                               fastq_data)
@@ -500,6 +521,9 @@ class TestFastqReadCounter(unittest.TestCase):
                                            4: 4 })
 
     def test_reads_per_lane_gz(self):
+        """
+        FastqReadCounter: test 'reads_per_lane' (gzipped input)
+        """
         readcounter = FastqReadCounter.reads_per_lane
         fq = self._make_fastq("test_S1_L001_R1_001.fastq.gz",
                               fastq_data)
@@ -512,7 +536,7 @@ class TestFastqReadCounter(unittest.TestCase):
                                            4: 4 })
 
 # assign_barcodes_single_end
-fastq_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
+fastq_r1 = u"""@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
 TTTACAACTAGCTTCTCTTTTTCTT
 +
 >AA?131@C1FCGGGG1BFFGF1F3
@@ -534,7 +558,7 @@ GATAAAGACAGAGTCTTAATTAAAC
 11>1>11DFFCFFDGGGB3BF313A
 """
 
-fastq_r1_out = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TTTAC
+fastq_r1_out = u"""@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TTTAC
 AACTAGCTTCTCTTTTTCTT
 +
 31@C1FCGGGG1BFFGF1F3
