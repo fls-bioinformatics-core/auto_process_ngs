@@ -70,8 +70,19 @@ def report(ap,mode=None,fields=None,out_file=None):
         kws = { 'fields': fields }
     else:
         raise Exception("Unknown reporting mode")
-    # Generate and write the report
+    # Generate the report
     report = f(ap,**kws)
+    # Report number of projects (in 'projects' mode)
+    if mode == ReportingMode.PROJECTS:
+        if report:
+            nprojects = len(report.split('\n'))
+        else:
+            nprojects = 0
+        print("%s project%s found" % (('No' if not nprojects
+                                       else nprojects),
+                                      ('' if nprojects == 1
+                                       else 's')))
+    # Write report
     if out_file:
         fp,temp_file = tempfile.mkstemp()
         with os.fdopen(fp,'w') as fpp:
@@ -79,7 +90,7 @@ def report(ap,mode=None,fields=None,out_file=None):
         fileops.copy(temp_file,out_file)
         os.remove(temp_file)
         print("Report written to %s" % out_file)
-    else:
+    elif report:
         print(report)
 
 def report_info(ap):
@@ -452,13 +463,6 @@ def report_projects(ap,fields=None):
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # Generate report, one line per project
     report = []
-    nprojects = len(analysis_dir.projects)
-    if nprojects == 0:
-        report.append("No projects found")
-    else:
-        report.append("%s project%s found" % (nprojects,
-                                              ('' if nprojects == 1
-                                               else 's')))
     for project in analysis_dir.projects:
         project_line = []
         for field in fields:
