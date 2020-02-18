@@ -245,6 +245,18 @@ class TestGetBasesMask10xAtac(unittest.TestCase):
                           get_bases_mask_10x_atac,
                           run_info_xml)
 
+    def test_get_bases_mask_10x_atac_wrong_number_of_reads(self):
+        """get_bases_mask_10x_atac: run with wrong number of reads
+        """
+        # Make a single index RunInfo.xml file
+        run_info_xml = os.path.join(self.wd,"RunInfo.xml")
+        with open(run_info_xml,'w') as fp:
+            fp.write(RunInfoXml.create("171020_NB500968_00002_AHGXXXX",
+                                       "y76,I8,y76",4,12))
+        self.assertRaises(Exception,
+                          get_bases_mask_10x_atac,
+                          run_info_xml)
+
 class TestCellrangerInfo(unittest.TestCase):
     """
     Tests for the cellranger_info function
