@@ -14,6 +14,7 @@ import os
 import ast
 import logging
 import tempfile
+import shutil
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 from .. import analysis
@@ -59,15 +60,19 @@ def report(ap,mode=None,fields=None,out_file=None):
     if mode is None or mode == ReportingMode.INFO:
         f = report_info
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.CONCISE:
         f = report_concise
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.SUMMARY:
         f = report_summary
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.PROJECTS:
         f = report_projects
         kws = { 'fields': fields }
+        ext = 'tsv'
     else:
         raise Exception("Unknown reporting mode")
     # Generate the report
@@ -84,11 +89,17 @@ def report(ap,mode=None,fields=None,out_file=None):
                                        else 's')))
     # Write report
     if out_file:
-        fp,temp_file = tempfile.mkstemp()
-        with os.fdopen(fp,'w') as fpp:
-            fpp.write("%s\n" % report)
+        temp_dir = tempfile.mkdtemp()
+        temp_file = os.path.join(temp_dir,
+                                 "%s_%s.%s.%s" %
+                                 (ap.metadata.platform,
+                                  ap.metadata.instrument_datestamp,
+                                  ap.metadata.run_number,
+                                  ext))
+        with open(temp_file,'wt') as fp:
+            fp.write("%s\n" % report)
         fileops.copy(temp_file,out_file)
-        os.remove(temp_file)
+        shutil.rmtree(temp_dir)
         print("Report written to %s" % out_file)
     elif report:
         print(report)
