@@ -14,6 +14,7 @@ import os
 import ast
 import logging
 import tempfile
+import shutil
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.utils as bcf_utils
 from .. import analysis
@@ -59,27 +60,48 @@ def report(ap,mode=None,fields=None,out_file=None):
     if mode is None or mode == ReportingMode.INFO:
         f = report_info
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.CONCISE:
         f = report_concise
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.SUMMARY:
         f = report_summary
         kws = {}
+        ext = 'txt'
     elif mode == ReportingMode.PROJECTS:
         f = report_projects
         kws = { 'fields': fields }
+        ext = 'tsv'
     else:
         raise Exception("Unknown reporting mode")
-    # Generate and write the report
+    # Generate the report
     report = f(ap,**kws)
+    # Report number of projects (in 'projects' mode)
+    if mode == ReportingMode.PROJECTS:
+        if report:
+            nprojects = len(report.split('\n'))
+        else:
+            nprojects = 0
+        print("%s project%s found" % (('No' if not nprojects
+                                       else nprojects),
+                                      ('' if nprojects == 1
+                                       else 's')))
+    # Write report
     if out_file:
-        fp,temp_file = tempfile.mkstemp()
-        with os.fdopen(fp,'w') as fpp:
-            fpp.write("%s\n" % report)
+        temp_dir = tempfile.mkdtemp()
+        temp_file = os.path.join(temp_dir,
+                                 "%s_%s.%s.%s" %
+                                 (ap.metadata.platform,
+                                  ap.metadata.instrument_datestamp,
+                                  ap.metadata.run_number,
+                                  ext))
+        with open(temp_file,'wt') as fp:
+            fp.write("%s\n" % report)
         fileops.copy(temp_file,out_file)
-        os.remove(temp_file)
+        shutil.rmtree(temp_dir)
         print("Report written to %s" % out_file)
-    else:
+    elif report:
         print(report)
 
 def report_info(ap):
@@ -452,13 +474,6 @@ def report_projects(ap,fields=None):
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     # Generate report, one line per project
     report = []
-    nprojects = len(analysis_dir.projects)
-    if nprojects == 0:
-        report.append("No projects found")
-    else:
-        report.append("%s project%s found" % (nprojects,
-                                              ('' if nprojects == 1
-                                               else 's')))
     for project in analysis_dir.projects:
         project_line = []
         for field in fields:
