@@ -284,6 +284,11 @@ def get_bases_mask_10x_atac(runinfo_xml):
       String: 10xGenomics scATAC-seq bases mask string
     """
     bases_mask = get_bases_mask(runinfo_xml).lower().split(',')
+    # Check there are four reads defined
+    if len(bases_mask) != 4:
+        raise Exception("Bases mask '%s' should have 4 reads "
+                        "defined (has %d)" % (bases_mask,
+                                              len(bases_mask)))
     # First read
     r1_mask = bases_mask[0]
     # Update first index to restrict to 8 bases
