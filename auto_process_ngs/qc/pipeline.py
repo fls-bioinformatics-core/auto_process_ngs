@@ -670,51 +670,6 @@ class RunIlluminaQC(PipelineTask):
                 cmd.add_args('--no-screens')
             # Add the command
             self.add_cmd(cmd)
-    def run_illumina_qc(self,fastq,qc_dir,fastq_screen_subset=None,
-                        nthreads=1,qc_protocol=None,fastq_attrs=None):
-        # How to extract attributes from Fastq names
-        if fastq_attrs is None:
-            fastq_attrs = AnalysisFastq
-        # Build illumina_qc.sh command
-        cmd = Command('illumina_qc.sh',fastq,
-                      '--threads',nthreads,
-                      '--qc_dir',os.path.abspath(qc_dir))
-        if fastq_screen_subset is not None:
-            cmd.add_args('--subset',fastq_screen_subset)
-        # No screens for for in single cell
-        if qc_protocol in ('singlecell',
-                           '10x_scRNAseq',
-                           '10x_snRNAseq',) \
-            and fastq_attrs(fastq).read_number == 1:
-            cmd.add_args('--no-screens')
-        # Execute the command
-        status = cmd.run_subprocess(working_dir=qc_dir)
-        if status != 0:
-            raise Exception("Error running illumina_qc.sh for %s: "
-                            "exit code: %s" % (fastq,status))
-        # Check the Fastqc outputs
-        failed = False
-        for output in [os.path.join(qc_dir,f)
-                       for f in fastqc_output(fastq)]:
-            if not os.path.exists(output):
-                failed = True
-        # Check the Fastq_screen outputs
-        if qc_protocol in ('singlecell',
-                           '10x_scRNAseq',
-                           '10x_snRNAseq',) \
-            and fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell
-            pass
-        else:
-            for screen in FASTQ_SCREENS:
-                for output in [os.path.join(qc_dir,f)
-                               for f in fastq_screen_output(fastq,
-                                                            screen)]:
-                    if not os.path.exists(output):
-                        failed = True
-        if failed:
-            raise Exception("illumina_qc.sh failed to produce all "
-                            "outputs for %s" % (fastq,))
 
 class SetupFastqStrandConf(PipelineFunctionTask):
     """
