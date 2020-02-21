@@ -121,6 +121,9 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     if runner is None:
         qc_runner = ap.settings.runners.qc
         cellranger_runner = ap.settings.runners.cellranger
+    else:
+        qc_runner = runner
+        cellranger_runner = runner
     # Get environment modules
     envmodules = dict()
     for name in ('illumina_qc',
