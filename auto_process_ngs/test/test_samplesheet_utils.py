@@ -238,7 +238,7 @@ class TestHasInvalidCharactersFunction(unittest.TestCase):
         """
         non_printing_ascii_file = os.path.join(self.wd,
                                                "test.nonprintingascii")
-        with open(non_printing_ascii_file,'wb') as fp:
+        with open(non_printing_ascii_file,'wt') as fp:
             fp.write(u"""This file contains:
 a non-printing ASCII ctrl-S character here\x13
 """)
@@ -268,7 +268,7 @@ a non-ASCII character here\x80
         """has_invalid_characters: works for valid file
         """
         valid_file = os.path.join(self.wd,"test.valid")
-        with open(valid_file,'wb') as fp:
+        with open(valid_file,'wt') as fp:
             fp.write(u"""This file contains valid characters:
 - ABCDEFGHIJKLMNOPQRSTUVWXYZ
 - abcdefghijklmnopqrstuvwxyz
