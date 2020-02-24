@@ -7,7 +7,7 @@ import unittest
 import tempfile
 import shutil
 import codecs
-import cStringIO
+from io import StringIO
 from bcftbx.IlluminaData import SampleSheet
 from auto_process_ngs.samplesheet_utils import SampleSheetLinter
 from auto_process_ngs.samplesheet_utils import has_invalid_characters
@@ -42,7 +42,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_no_close_project_names))
         self.assertEqual(linter.close_project_names(),{})
     def test_sample_sheet_with_close_project_names(self):
@@ -53,7 +53,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_close_project_names))
         self.assertEqual(linter.close_project_names(),
                          { 'Andrew_Bloggs': ['Andrew_Blogs'],
@@ -69,7 +69,7 @@ Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,ind
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_no_samples_in_multiple_projects))
         self.assertEqual(linter.samples_in_multiple_projects(),{})
     def test_sample_sheet_with_samples_in_multiple_projects(self):
@@ -81,7 +81,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_samples_in_multiple_projects))
         self.assertEqual(linter.samples_in_multiple_projects(),
                          { 'AB1': ['Andrew_Bloggs1','Andrew_Bloggs2'] })
@@ -96,7 +96,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_without_multiple_barcodes))
         self.assertEqual(linter.samples_with_multiple_barcodes(),{})
     def test_sample_sheet_with_multiple_barcodes(self):
@@ -108,7 +108,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_multiple_barcodes))
         self.assertEqual(linter.samples_with_multiple_barcodes(),
                          { 'AB1': ['CGATGTAT-TCTTTCCC','CTGTAGTA-TCTTTCCC'] })
@@ -122,7 +122,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_without_invalid_lines))
         self.assertFalse(linter.has_invalid_lines())
     def test_sample_sheet_with_invalid_lines_missing_lane(self):
@@ -135,7 +135,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 ,,,,,,,,,Filipe_Greer,
 ,,,,,,,,,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_invalid_lines))
         self.assertTrue(linter.has_invalid_lines())
     def test_sample_sheet_with_invalid_lines_no_lane(self):
@@ -148,7 +148,7 @@ FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 ,,,,,,,,Filipe_Greer,
 ,,,,,,,,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_invalid_lines_no_lane))
         self.assertTrue(linter.has_invalid_lines())
 
@@ -161,7 +161,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_valid_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_no_barcodes(self):
@@ -169,7 +169,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,,,,,Andrew_Bloggs,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_no_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_10xgenomics_barcodes(self):
@@ -184,7 +184,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 7,AB7,AB7,,,N701,SI-P03-C9,Philip_Crook,
 8,AB8,AB8,,,N701,SI-P03-C9,Philip_Crook,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_10xgenomics_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_invalid_barcodes(self):
@@ -199,7 +199,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,KL1,KL1,,,N702,TGACC&^&,N502,TCTTTCCC,Karl_Landseer,
 4,KL2,KL2,,,N702,TGACCAAT,N502,TC%$TCCC,Karl_Landseer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_invalid_barcodes))
         self.assertTrue(linter.has_invalid_barcodes())
 
@@ -212,7 +212,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_non_printing_ascii_characters))
         self.assertTrue(linter.has_invalid_characters())
     def test_sample_sheet_with_valid_characters(self):
@@ -223,7 +223,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 2,CD1,CD1,,,N701,CGATGTAT,N501,TCTTTCCC,Carl_Dewey,
 2,FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 """
-        linter = SampleSheetLinter(fp=cStringIO.StringIO(
+        linter = SampleSheetLinter(fp=StringIO(
             self.sample_sheet_with_valid_characters))
         self.assertFalse(linter.has_invalid_characters())
 
