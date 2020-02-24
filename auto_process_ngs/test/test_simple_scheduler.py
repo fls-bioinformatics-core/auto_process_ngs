@@ -9,6 +9,7 @@ import logging
 import tempfile
 import shutil
 from io import StringIO
+from builtins import range
 from bcftbx.JobRunner import BaseJobRunner
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.simple_scheduler import *
@@ -892,7 +893,7 @@ class TestSchedulerJob(unittest.TestCase):
         self.assertTrue(job.is_running)
         self.assertFalse(job.completed)
         max_tries = 3
-        for i in xrange(max_tries+1):
+        for i in range(max_tries+1):
             restarted_job_id = job.restart(max_tries)
             if i < max_tries:
                 self.assertTrue(job.is_running)
