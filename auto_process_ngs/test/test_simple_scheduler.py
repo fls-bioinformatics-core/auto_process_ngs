@@ -2,13 +2,13 @@
 # Tests for simple_scheduler.py module
 #######################################################################
 import unittest
-import cStringIO
 import os
 import sys
 import time
 import logging
 import tempfile
 import shutil
+from io import StringIO
 from bcftbx.JobRunner import BaseJobRunner
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.simple_scheduler import *
@@ -915,7 +915,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_empty_scheduler_reporter(self):
         """'Empty' SchedulerReporter returns no output for scheduler status
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(fp=fp)
         sched = SimpleScheduler(poll_interval=0.01)
         reporter.scheduler_status(sched)
@@ -924,7 +924,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_scheduler_status(self):
         """SchedulerReporter returns correct output for scheduler status
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(fp=fp,scheduler_status="%(n_running)s jobs")
         sched = SimpleScheduler(poll_interval=0.01)
         reporter.scheduler_status(sched)
@@ -933,7 +933,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_job_scheduled(self):
         """SchedulerReporter returns correct output when job is scheduled
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
             job_scheduled="Job scheduled: #%(job_number)d: \"%(job_name)s\""
@@ -946,7 +946,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_job_start(self):
         """SchedulerReporter returns correct output when job is started
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
             job_start="Job started: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
@@ -960,7 +960,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_job_end(self):
         """SchedulerReporter returns correct output when job ends
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
             job_end="Job completed: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
@@ -975,7 +975,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_group_added(self):
         """SchedulerReporter returns correct output when group is added
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
             group_added="Group has been added: #%(group_id)d: \"%(group_name)s\""
@@ -987,7 +987,7 @@ class TestSchedulerReporter(unittest.TestCase):
     def test_scheduler_reporter_group_end(self):
         """SchedulerReporter returns correct output when group finishes
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
             group_end="Group completed: #%(group_id)d: \"%(group_name)s\""
