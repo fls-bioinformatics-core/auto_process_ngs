@@ -35,7 +35,7 @@ Adapter,CTGTCTCTTATACACATCT
 
 class TestCloseProjectNames(unittest.TestCase):
     def test_sample_sheet_without_close_project_names(self):
-        self.sample_sheet_no_close_project_names = """[Data]
+        self.sample_sheet_no_close_project_names = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -46,7 +46,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_no_close_project_names))
         self.assertEqual(linter.close_project_names(),{})
     def test_sample_sheet_with_close_project_names(self):
-        self.sample_sheet_close_project_names = """[Data]
+        self.sample_sheet_close_project_names = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Blogs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -61,7 +61,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 
 class TestSamplesInMultipleProjects(unittest.TestCase):
     def test_sample_sheet_without_samples_in_multiple_projects(self):
-        self.sample_sheet_no_samples_in_multiple_projects = """[Data]
+        self.sample_sheet_no_samples_in_multiple_projects = u"""[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -73,7 +73,7 @@ Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,ind
             self.sample_sheet_no_samples_in_multiple_projects))
         self.assertEqual(linter.samples_in_multiple_projects(),{})
     def test_sample_sheet_with_samples_in_multiple_projects(self):
-        self.sample_sheet_samples_in_multiple_projects = """[Data]
+        self.sample_sheet_samples_in_multiple_projects = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs1,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs1,
@@ -88,7 +88,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 
 class TestSamplesWithMultipleBarcodes(unittest.TestCase):
     def test_sample_sheet_without_multiple_barcodes(self):
-        self.sample_sheet_without_multiple_barcodes = """[Data]
+        self.sample_sheet_without_multiple_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -100,7 +100,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_without_multiple_barcodes))
         self.assertEqual(linter.samples_with_multiple_barcodes(),{})
     def test_sample_sheet_with_multiple_barcodes(self):
-        self.sample_sheet_with_multiple_barcodes = """[Data]
+        self.sample_sheet_with_multiple_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -115,7 +115,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 
 class TestLinterHasInvalidLines(unittest.TestCase):
     def test_sample_sheet_without_invalid_lines(self):
-        self.sample_sheet_without_invalid_lines = """[Data]
+        self.sample_sheet_without_invalid_lines = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -126,7 +126,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_without_invalid_lines))
         self.assertFalse(linter.has_invalid_lines())
     def test_sample_sheet_with_invalid_lines_missing_lane(self):
-        self.sample_sheet_with_invalid_lines = """[Data]
+        self.sample_sheet_with_invalid_lines = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -139,7 +139,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_with_invalid_lines))
         self.assertTrue(linter.has_invalid_lines())
     def test_sample_sheet_with_invalid_lines_no_lane(self):
-        self.sample_sheet_with_invalid_lines_no_lane = """[Data]
+        self.sample_sheet_with_invalid_lines_no_lane = u"""[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -154,7 +154,7 @@ FG2,FG2,,,N702,TGACCAAT,N502,TCTTTCCC,Filipe_Greer,
 
 class TestLinterHasInvalidBarcodes(unittest.TestCase):
     def test_sample_sheet_with_valid_barcodes(self):
-        self.sample_sheet_with_valid_barcodes = """[Data]
+        self.sample_sheet_with_valid_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -165,7 +165,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_with_valid_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_no_barcodes(self):
-        self.sample_sheet_with_no_barcodes = """[Data]
+        self.sample_sheet_with_no_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,,,,,Andrew_Bloggs,
 """
@@ -173,7 +173,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_with_no_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_10xgenomics_barcodes(self):
-        self.sample_sheet_with_10xgenomics_barcodes = """[Data]
+        self.sample_sheet_with_10xgenomics_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
 1,AB1,AB1,,,N701,SI-GA-B3,Philip_Crook,
 2,AB2,AB2,,,N701,SI-GA-B3,Philip_Crook,
@@ -188,7 +188,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
             self.sample_sheet_with_10xgenomics_barcodes))
         self.assertEqual(linter.has_invalid_barcodes(),list())
     def test_sample_sheet_with_invalid_barcodes(self):
-        self.sample_sheet_with_invalid_barcodes = """[Data]
+        self.sample_sheet_with_invalid_barcodes = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTNN,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTNNNN,Andrew_Bloggs,
@@ -205,7 +205,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 
 class TestLinterHasInvalidCharacters(unittest.TestCase):
     def test_sample_sheet_with_non_printing_ascii_character(self):
-        self.sample_sheet_with_non_printing_ascii_characters = """[Data]
+        self.sample_sheet_with_non_printing_ascii_characters = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,\x13
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
@@ -216,7 +216,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.sample_sheet_with_non_printing_ascii_characters))
         self.assertTrue(linter.has_invalid_characters())
     def test_sample_sheet_with_valid_characters(self):
-        self.sample_sheet_with_valid_characters = """[Data]
+        self.sample_sheet_with_valid_characters = u"""[Data]
 Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
 1,AB1,AB1,,,N701,CGATGTAT,N501,TCTTTCCC,Andrew_Bloggs,
 1,AB2,AB2,,,N702,TGACCAAT,N502,TCTTTCCC,Andrew_Bloggs,
