@@ -168,6 +168,10 @@ class FastqStatistics(object):
                 self._stats.append(data=data)
         # Copy reads per lane from R1 FASTQs into other reads
         for read_number in read_numbers:
+            if read_number == 1:
+                # Skip R1 FASTQs (otherwise we're copying the
+                # data back into itself)
+                continue
             for fastq in results_r[read_number]:
                 # Get corresponding R1 name
                 logger.debug("-- Fastq R%d: %s" % (read_number,
