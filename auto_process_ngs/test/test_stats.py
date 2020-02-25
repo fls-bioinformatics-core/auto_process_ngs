@@ -7,7 +7,7 @@ import unittest
 import tempfile
 import shutil
 import gzip
-import cStringIO
+from io import StringIO
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import IlluminaData
@@ -297,7 +297,7 @@ class TestFastqStatisticsCasava(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_casava()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -315,7 +315,7 @@ class TestFastqStatisticsCasava(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_casava()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -348,7 +348,7 @@ Total reads = 11
 - Undetermined_indices/lane4	3	27.3%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_casava()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -494,7 +494,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -512,7 +512,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -545,7 +545,7 @@ Total reads = 11
 - Undetermined_indices/lane4	3	27.3%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -673,7 +673,7 @@ class TestFastqStatisticsBcl2fastq2SingleEnd(unittest.TestCase):
             self.assertEqual(line['Read_number'],1)
             self.assertEqual(line['Paired_end'],'N')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -691,7 +691,7 @@ class TestFastqStatisticsBcl2fastq2SingleEnd(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'N') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -724,7 +724,7 @@ Total reads = 11
 - Undetermined_indices/lane4	3	27.3%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -853,7 +853,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -871,7 +871,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -904,7 +904,7 @@ Total reads = 11
 - Undetermined_indices/undetermined	3	27.3%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_lane_splitting()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1046,7 +1046,7 @@ class TestFastqStatisticsBcl2fastq2WithIndexReads(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_with_index_reads()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1064,7 +1064,7 @@ class TestFastqStatisticsBcl2fastq2WithIndexReads(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_with_index_reads()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1097,7 +1097,7 @@ Total reads = 11
 - Undetermined_indices/undetermined	3	27.3%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_with_index_reads()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1246,7 +1246,7 @@ class TestFastqStatistics10xscATAC(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats_10x_sc_atac(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_10x_sc_atac()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1264,7 +1264,7 @@ class TestFastqStatistics10xscATAC(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats_10x_sc_atac(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_10x_sc_atac()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1297,7 +1297,7 @@ Total reads = 11
 - Undetermined_indices/undetermined	3	27.3%
 """)
     def test_report_per_lane_summary_stats_10x_sc_atac(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_10x_sc_atac()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1396,7 +1396,7 @@ class TestFastqStatisticsBcl2fastq2NoUndetermined(unittest.TestCase):
                              IlluminaFastq(expctd[2]).read_number)
             self.assertEqual(line['Paired_end'],'Y')
     def test_report_basic_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_undetermined()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1414,7 +1414,7 @@ class TestFastqStatisticsBcl2fastq2NoUndetermined(unittest.TestCase):
             self.assertEqual(int(line[4]),expctd[3]) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_undetermined()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1439,7 +1439,7 @@ Total reads = 2
 - AB/AB1	2	100.0%
 """)
     def test_report_per_lane_summary_stats(self):
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_no_undetermined()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1608,7 +1608,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         """
         FastqStatistics: bcl2fastq2 with empty Fastqs [basic stats]
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_empty_fastq()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1629,7 +1629,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         """
         FastqStatistics: bcl2fastq2 with empty Fastqs [per lane sample stats]
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_empty_fastq()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1663,7 +1663,7 @@ Total reads = 11
         """
         FastqStatistics: bcl2fastq2 with empty Fastqs [per lane sample stats with samplesheet]
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_empty_fastq()
         fqstatistics = FastqStatistics(
             IlluminaData(
@@ -1700,7 +1700,7 @@ Total reads = 11
         """
         FastqStatistics: bcl2fastq2 with empty Fastqs [per lane summary stats]
         """
-        fp = cStringIO.StringIO()
+        fp = StringIO()
         self._setup_bcl2fastq2_empty_fastq()
         fqstatistics = FastqStatistics(
             IlluminaData(
