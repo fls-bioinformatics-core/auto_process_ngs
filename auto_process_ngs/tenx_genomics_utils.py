@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx_genomics_utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 
 """
