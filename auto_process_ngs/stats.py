@@ -103,12 +103,12 @@ class FastqStatistics(object):
         if self._n_processors > 1:
             # Multiple cores
             pool = Pool(self._n_processors)
-            results = pool.map(collect_fastq_data,fastqstats)
+            results = list(pool.map(collect_fastq_data,fastqstats))
             pool.close()
             pool.join()
         else:
             # Single core
-            results = map(collect_fastq_data,fastqstats)
+            results = list(map(collect_fastq_data,fastqstats))
         # Set up tabfile to hold pre-existing data
         if filen is not None:
             existing_stats = TabFile(filen,first_line_is_header=True)
