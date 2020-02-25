@@ -926,7 +926,8 @@ class TestSchedulerReporter(unittest.TestCase):
         """SchedulerReporter returns correct output for scheduler status
         """
         fp = StringIO()
-        reporter = SchedulerReporter(fp=fp,scheduler_status="%(n_running)s jobs")
+        reporter = SchedulerReporter(fp=fp,
+                                     scheduler_status=u"%(n_running)s jobs")
         sched = SimpleScheduler(poll_interval=0.01)
         reporter.scheduler_status(sched)
         self.assertEqual('0 jobs\n',fp.getvalue())
@@ -937,7 +938,7 @@ class TestSchedulerReporter(unittest.TestCase):
         fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
-            job_scheduled="Job scheduled: #%(job_number)d: \"%(job_name)s\""
+            job_scheduled=u"Job scheduled: #%(job_number)d: \"%(job_name)s\""
         )
         job = SchedulerJob(MockJobRunner(),['sleep','50'],
                            job_number=2,name='test',wait_for=[])
@@ -950,7 +951,7 @@ class TestSchedulerReporter(unittest.TestCase):
         fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
-            job_start="Job started: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
+            job_start=u"Job started: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
         )
         job = SchedulerJob(MockJobRunner(),['sleep','50'],
                            job_number=2,name='test',wait_for=[])
@@ -964,7 +965,7 @@ class TestSchedulerReporter(unittest.TestCase):
         fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
-            job_end="Job completed: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
+            job_end=u"Job completed: #%(job_number)d (%(job_id)s): \"%(job_name)s\""
         )
         job = SchedulerJob(MockJobRunner(),['sleep','50'],
                            job_number=2,name='test',wait_for=[])
@@ -979,7 +980,7 @@ class TestSchedulerReporter(unittest.TestCase):
         fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
-            group_added="Group has been added: #%(group_id)d: \"%(group_name)s\""
+            group_added=u"Group has been added: #%(group_id)d: \"%(group_name)s\""
         )
         group = SchedulerGroup('test',1,SimpleScheduler(poll_interval=0.01))
         reporter.group_added(group)
@@ -991,7 +992,7 @@ class TestSchedulerReporter(unittest.TestCase):
         fp = StringIO()
         reporter = SchedulerReporter(
             fp=fp,
-            group_end="Group completed: #%(group_id)d: \"%(group_name)s\""
+            group_end=u"Group completed: #%(group_id)d: \"%(group_name)s\""
         )
         group = SchedulerGroup('test',1,SimpleScheduler(poll_interval=0.01))
         job = group.add(['sleep','50'],name='sleep',wait_for=[])
