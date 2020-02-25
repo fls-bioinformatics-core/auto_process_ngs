@@ -127,9 +127,10 @@ class FastqStatistics(object):
         # Split result sets into R1...R[n]
         results_r = dict()
         for read_number in read_numbers:
-            results_r[read_number] = filter(lambda f:
-                                            f.read_number == read_number,
-                                            results)
+            results_r[read_number] = list(filter(
+                lambda f:
+                f.read_number == read_number,
+                results))
         # Determine which lanes are present and append
         # columns for each
         lanes = set()
@@ -176,8 +177,9 @@ class FastqStatistics(object):
                 r1_fastq_name = str(r1_fastq_name)
                 logger.debug("--    -> R1: %s" % r1_fastq_name)
                 # Locate corresponding data
-                r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
-                                  results_r[1])[0]
+                r1_fastq = list(filter(lambda f:
+                                       f.name.startswith(r1_fastq_name),
+                                       results_r[1]))[0]
                 fastq.reads_by_lane = dict(r1_fastq.reads_by_lane)
         # Write the data into the tabfile
         paired_end = ('Y' if self._illumina_data.paired_end else 'N')
@@ -366,11 +368,11 @@ class FastqStatistics(object):
         lanes = self.lane_names
         for lane in lanes:
             lane_number = int(lane[1:])
-            samples = filter(lambda x:
+            samples = list(filter(lambda x:
                              x['Read_number'] == 1
                              and not IlluminaFastq(x['Fastq']).is_index_read
                              and bool(x[lane]),
-                             self._stats)
+                             self._stats))
             # Additional samples from samplesheet
             if lane in expected_samples:
                 for sample in expected_samples[lane]:
