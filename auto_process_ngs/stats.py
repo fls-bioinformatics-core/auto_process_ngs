@@ -402,8 +402,8 @@ class FastqStatistics(object):
                                          "lane %s sample %s: '%s'" %
                                          (lane,s['Sample'],s[lane]))
                 raise ex
-            fpp.write("\nLane %d\n" % lane_number)
-            fpp.write("Total reads = %d\n" % total_reads)
+            fpp.write(u"\nLane %d\n" % lane_number)
+            fpp.write(u"Total reads = %d\n" % total_reads)
             for sample in samples:
                 sample_name = "%s/%s" % (sample['Project'],
                                          sample['Sample'])
@@ -412,9 +412,9 @@ class FastqStatistics(object):
                     frac_reads = "%.1f%%" % (nreads/total_reads*100.0)
                 else:
                     frac_reads = "n/a"
-                fpp.write("- %s\t%d\t%s\n" % (sample_name,
-                                              nreads,
-                                              frac_reads))
+                fpp.write(u"- %s\t%d\t%s\n" % (sample_name,
+                                               nreads,
+                                               frac_reads))
         # Close file
         if fp is None and out_file is not None:
             fpp.close()
