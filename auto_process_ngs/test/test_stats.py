@@ -7,6 +7,7 @@ import unittest
 import tempfile
 import shutil
 import gzip
+from builtins import range
 from io import StringIO
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaFastq
@@ -158,8 +159,8 @@ GCCGATATGC
 +
 ??A??ABBDD
 """ % lane
-            for i in xrange(nreads):
-                fq.write(r)
+            for i in range(nreads):
+                fq.write(r.encode())
 
 # FastqStatistics
 class TestFastqStatisticsCasava(unittest.TestCase):
