@@ -340,7 +340,7 @@ def make_qc_summary_html(json_file,html_file):
         tbl.add_row(Parameter=item,Value=data[item])
     general_info.add(tbl)
     # Get the sample names
-    sample_names = data['sample_qc'].keys()
+    sample_names = list(data['sample_qc'].keys())
     # Get names of the associated data items
     sample0 = sample_names[0]
     item_names = data['sample_qc'][sample0]['all'].keys()
