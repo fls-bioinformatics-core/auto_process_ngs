@@ -1542,7 +1542,7 @@ class TestFastqStatisticsBcl2fastq2EmptyFastq(unittest.TestCase):
         self.illumina_data = mock_data.dirn
         # Make a sample sheet file
         self.sample_sheet = os.path.join(self.dirn,"SampleSheet.csv")
-        with open(self.sample_sheet,'w') as fp:
+        with open(self.sample_sheet,'wt') as fp:
             fp.write("""[Header]
 IEMFileVersion,4
 Date,4/11/2014
@@ -1769,7 +1769,7 @@ class TestCollectFastqData(unittest.TestCase):
             with gzip.GzipFile(filen,'wb') as fp:
                 fp.write(contents)
         else:
-            with open(filen,'w') as fp:
+            with open(filen,'wt') as fp:
                 fp.write(contents)
         return filen
 
