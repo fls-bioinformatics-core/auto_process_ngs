@@ -313,7 +313,7 @@ class TestFastqStatisticsCasava(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -510,7 +510,7 @@ class TestFastqStatisticsBcl2fastq2(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -689,7 +689,7 @@ class TestFastqStatisticsBcl2fastq2SingleEnd(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'N') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -869,7 +869,7 @@ class TestFastqStatisticsBcl2fastq2NoLaneSplitting(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -1062,7 +1062,7 @@ class TestFastqStatisticsBcl2fastq2WithIndexReads(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -1262,7 +1262,7 @@ class TestFastqStatistics10xscATAC(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats_10x_sc_atac(self):
         fp = StringIO()
@@ -1412,7 +1412,7 @@ class TestFastqStatisticsBcl2fastq2NoUndetermined(unittest.TestCase):
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         fp = StringIO()
@@ -1624,7 +1624,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.assertEqual(line[0],expctd[0]) # Project
             self.assertEqual(line[1],expctd[1]) # Sample
             self.assertEqual(line[2],expctd[2]) # Fastq
-            self.assertEqual(int(line[4]),expctd[3]) # Nreads
+            self.assertEqual(line[4],str(expctd[3])) # Nreads
             self.assertEqual(line[5],'Y') # Paired_end
     def test_report_per_lane_sample_stats(self):
         """
