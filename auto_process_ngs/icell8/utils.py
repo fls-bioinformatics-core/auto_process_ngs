@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.utils.py: utility functions for handling ICELL8 data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 
 """
@@ -36,6 +36,7 @@ import time
 import logging
 from collections import Iterator
 from multiprocessing import Pool
+from builtins import range
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
@@ -100,7 +101,7 @@ def get_batch_size(fastqs,min_batches=1,
         incr_function = lambda n: n + min_batches
 
     # Determine batch size
-    batch_size = nreads/min_batches
+    batch_size = nreads//min_batches
     nbatches = min_batches
     print("Initial batch size: %d" % batch_size)
     print("Maximum batch size: %d" % max_batch_size)
@@ -109,7 +110,7 @@ def get_batch_size(fastqs,min_batches=1,
             # Reset the number of batches
             nbatches = incr_function(nbatches)
             # Set the new batch size
-            batch_size = nreads/nbatches
+            batch_size = nreads//nbatches
             if nreads%nbatches:
                 batch_size += 1
             print("Trying %d batches: %d reads" % (nbatches,batch_size))
@@ -145,7 +146,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
     """
     # Determine number of batches
     nreads = get_read_count(fastqs)
-    nbatches = nreads/batch_size
+    nbatches = nreads//batch_size
     if nbatches*batch_size < nreads:
         nbatches += 1
     print("Creating %d batches of %d reads" % (nbatches,
@@ -189,7 +190,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
     batched_fastqs = [os.path.join(out_dir,
                                    "%s.B%03d%s"
                                    % (basename,i,suffix))
-                      for i in xrange(0,nbatches)]
+                      for i in range(0,nbatches)]
     return batched_fastqs
 
 def normalize_sample_name(s):
@@ -467,7 +468,7 @@ class ICell8FastqIterator(Iterator):
         self._read_count = 0
         self._fqr1 = FastqIterator(fqr1)
         self._fqr2 = FastqIterator(fqr2)
-    def next(self):
+    def __next__(self):
         self._read_count += 1
         r1 = self._fqr1.next()
         r2 = self._fqr2.next()
@@ -480,6 +481,9 @@ class ICell8FastqIterator(Iterator):
             print("-- Read 2:\n%s" % r2)
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
+    def next(self):
+        # Implement 'next' method for Python 2
+        return self.__next__()
 
 class ICell8StatsCollector(object):
     """

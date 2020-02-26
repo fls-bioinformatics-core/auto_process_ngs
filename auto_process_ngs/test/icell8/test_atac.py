@@ -1093,7 +1093,7 @@ class TestConcatFastqsFunction(unittest.TestCase):
         self.assertEqual(fastq,
                          os.path.join(self.final_dir,
                                       "PJB1_S1_R1_001.fastq.gz"))
-        self.assertEqual(gzip.open(fastq).read(),
+        self.assertEqual(gzip.open(fastq).read().decode(),
                          """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
@@ -1150,7 +1150,7 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
         self.assertEqual(fastq,
                          os.path.join(self.final_dir,
                                       "PJB1_S1_TTCGTGCA+GATCCAAA_R1_001.fastq.gz"))
-        self.assertEqual(gzip.open(fastq).read(),
+        self.assertEqual(gzip.open(fastq).read().decode(),
                          """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
