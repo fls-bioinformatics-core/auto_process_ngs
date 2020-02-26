@@ -101,7 +101,7 @@ def get_batch_size(fastqs,min_batches=1,
         incr_function = lambda n: n + min_batches
 
     # Determine batch size
-    batch_size = nreads/min_batches
+    batch_size = nreads//min_batches
     nbatches = min_batches
     print("Initial batch size: %d" % batch_size)
     print("Maximum batch size: %d" % max_batch_size)
@@ -110,7 +110,7 @@ def get_batch_size(fastqs,min_batches=1,
             # Reset the number of batches
             nbatches = incr_function(nbatches)
             # Set the new batch size
-            batch_size = nreads/nbatches
+            batch_size = nreads//nbatches
             if nreads%nbatches:
                 batch_size += 1
             print("Trying %d batches: %d reads" % (nbatches,batch_size))
@@ -146,7 +146,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
     """
     # Determine number of batches
     nreads = get_read_count(fastqs)
-    nbatches = nreads/batch_size
+    nbatches = nreads//batch_size
     if nbatches*batch_size < nreads:
         nbatches += 1
     print("Creating %d batches of %d reads" % (nbatches,
