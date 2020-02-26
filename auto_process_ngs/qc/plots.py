@@ -46,7 +46,7 @@ def encode_png(png_file):
     """
     Return Base64 encoded string for a PNG
     """
-    return "data:image/png;base64," + \
+    return "data:image/png;base64,%s" % \
         PNGBase64Encoder().encodePNG(png_file)
     
 def uscreenplot(screen_files,outfile=None,inline=None):
