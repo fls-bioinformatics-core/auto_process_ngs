@@ -184,7 +184,7 @@ class BarcodeCounter(object):
             ascending order.
 
         """
-        lanes = self._seqs.keys()
+        lanes = list(self._seqs.keys())
         if lanes == [None]:
             return []
         else:
@@ -761,7 +761,7 @@ class SampleSheetBarcodes(object):
             # Special case: sample sheet doesn't define any lanes
             lane = None
         if lane in self._lanes:
-            barcodes = self._sample_lookup[lane].keys()
+            barcodes = list(self._sample_lookup[lane].keys())
         elif lane is None:
             barcodes = []
             for l in self._lanes:
@@ -788,7 +788,7 @@ class SampleSheetBarcodes(object):
             # Special case:sample sheet doesn't define any lanes
             lane = None
         if lane in self._lanes:
-            samples = self._barcode_lookup[lane].keys()
+            samples = list(self._barcode_lookup[lane].keys())
         elif lane is None:
             samples = []
             for l in self._lanes:
