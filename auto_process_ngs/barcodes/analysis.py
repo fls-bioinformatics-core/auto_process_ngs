@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/analysis.py: classes and functions for analysing barcodes
-#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
 #
 ########################################################################
 #

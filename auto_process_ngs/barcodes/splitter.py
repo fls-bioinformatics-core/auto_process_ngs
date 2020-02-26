@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/splitter.py: classes & functions to sort reads by barcode
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 #########################################################################
 #
