@@ -96,7 +96,8 @@ def uscreenplot(screen_files,outfile=None,inline=None):
             pixels[xend,j] = bbox_color
         # Draw the stacked bars for each library
         for n,library in enumerate(screen.libraries):
-            data = filter(lambda x: x['Library'] == library,screen)[0]
+            data = list(filter(lambda x:
+                               x['Library'] == library,screen))[0]
             x = xorigin
             y = n*(barwidth+1) + 1
             # Get the total percentage for the stack
