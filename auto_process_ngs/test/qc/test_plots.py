@@ -27,7 +27,7 @@ class TestEncodePng(unittest.TestCase):
         self.png_base64_data = "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAIElEQVR4nGNkYPjPwMDw/z8DAwMDEwMSYIGIMTJiyAAAu6IFB//RUJMAAAAASUVORK5CYII="
         with tempfile.NamedTemporaryFile(delete=False) as fp:
             self.png = fp.name
-            fp.write(base64.decodestring(self.png_base64_data))
+            fp.write(base64.decodestring(self.png_base64_data.encode()))
 
     def tearDown(self):
         try:
