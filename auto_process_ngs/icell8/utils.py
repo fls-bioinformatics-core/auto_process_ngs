@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.utils.py: utility functions for handling ICELL8 data
-#     Copyright (C) University of Manchester 2017-2018 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 
 """
