@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     tenx_genomics_utils.py: utility functions for handling 10xGenomics data
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 
 """
@@ -31,6 +31,7 @@ import os
 import re
 import json
 import shutil
+from builtins import range
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import IlluminaData
 from bcftbx.IlluminaData import IlluminaDataError
@@ -153,7 +154,7 @@ class MetricsSummary(object):
         tokens = [t.strip('"') for t in tokens]
         # Convert to integer where possible
         # (i.e. remove commas from e.g. "2,272")
-        for i in xrange(len(tokens)):
+        for i in range(len(tokens)):
             try:
                 tokens[i] = int(tokens[i].replace(',',''))
             except ValueError:
@@ -339,7 +340,7 @@ def make_qc_summary_html(json_file,html_file):
         tbl.add_row(Parameter=item,Value=data[item])
     general_info.add(tbl)
     # Get the sample names
-    sample_names = data['sample_qc'].keys()
+    sample_names = list(data['sample_qc'].keys())
     # Get names of the associated data items
     sample0 = sample_names[0]
     item_names = data['sample_qc'][sample0]['all'].keys()
