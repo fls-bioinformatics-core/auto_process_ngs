@@ -110,9 +110,10 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
 
 def main():
     # Deal with command line
-    p = argparse.ArgumentParser(version="%(prog)s "+__version__,
-                                description="Generate QC report for each "
+    p = argparse.ArgumentParser(description="Generate QC report for each "
                                 "directory DIR")
+    p.add_argument('-v','--version',action='version',
+                   version="%(prog)s "+__version__)
     p.add_argument('--protocol',
                    action='store',dest='qc_protocol',default=None,
                    help="explicitly specify QC protocol (must be one of "
