@@ -36,6 +36,7 @@ import time
 import logging
 from collections import Iterator
 from multiprocessing import Pool
+from builtins import range
 from bcftbx.FASTQFile import FastqIterator
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import samplesheet_index_sequence
@@ -189,7 +190,7 @@ def batch_fastqs(fastqs,batch_size,basename="batched",
     batched_fastqs = [os.path.join(out_dir,
                                    "%s.B%03d%s"
                                    % (basename,i,suffix))
-                      for i in xrange(0,nbatches)]
+                      for i in range(0,nbatches)]
     return batched_fastqs
 
 def normalize_sample_name(s):
