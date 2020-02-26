@@ -118,7 +118,7 @@ class TestBarcodeCounter(unittest.TestCase):
         bc.count_barcode("TATGCGCGGTG",lane=1,incr=532)
         bc.count_barcode("ACCTACCGGTA",lane=1,incr=315)
         bc.count_barcode("CCCTTATGCGA",lane=1,incr=22)
-	bc.count_barcode("ACCTAGCGGTA",lane=2,incr=477)
+        bc.count_barcode("ACCTAGCGGTA",lane=2,incr=477)
         bc.count_barcode("ACCTCTATGCT",lane=2,incr=368)
         self.assertEqual(bc.barcodes(),["TATGCGCGGTA",
                                         "TATGCGCGGTG",
