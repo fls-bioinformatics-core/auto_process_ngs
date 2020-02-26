@@ -103,12 +103,12 @@ class FastqStatistics(object):
         if self._n_processors > 1:
             # Multiple cores
             pool = Pool(self._n_processors)
-            results = pool.map(collect_fastq_data,fastqstats)
+            results = list(pool.map(collect_fastq_data,fastqstats))
             pool.close()
             pool.join()
         else:
             # Single core
-            results = map(collect_fastq_data,fastqstats)
+            results = list(map(collect_fastq_data,fastqstats))
         # Set up tabfile to hold pre-existing data
         if filen is not None:
             existing_stats = TabFile(filen,first_line_is_header=True)
@@ -127,9 +127,10 @@ class FastqStatistics(object):
         # Split result sets into R1...R[n]
         results_r = dict()
         for read_number in read_numbers:
-            results_r[read_number] = filter(lambda f:
-                                            f.read_number == read_number,
-                                            results)
+            results_r[read_number] = list(filter(
+                lambda f:
+                f.read_number == read_number,
+                results))
         # Determine which lanes are present and append
         # columns for each
         lanes = set()
@@ -167,6 +168,10 @@ class FastqStatistics(object):
                 self._stats.append(data=data)
         # Copy reads per lane from R1 FASTQs into other reads
         for read_number in read_numbers:
+            if read_number == 1:
+                # Skip R1 FASTQs (otherwise we're copying the
+                # data back into itself)
+                continue
             for fastq in results_r[read_number]:
                 # Get corresponding R1 name
                 logger.debug("-- Fastq R%d: %s" % (read_number,
@@ -176,8 +181,9 @@ class FastqStatistics(object):
                 r1_fastq_name = str(r1_fastq_name)
                 logger.debug("--    -> R1: %s" % r1_fastq_name)
                 # Locate corresponding data
-                r1_fastq = filter(lambda f: f.name.startswith(r1_fastq_name),
-                                  results_r[1])[0]
+                r1_fastq = list(filter(lambda f:
+                                       f.name.startswith(r1_fastq_name),
+                                       results_r[1]))[0]
                 fastq.reads_by_lane = dict(r1_fastq.reads_by_lane)
         # Write the data into the tabfile
         paired_end = ('Y' if self._illumina_data.paired_end else 'N')
@@ -366,11 +372,11 @@ class FastqStatistics(object):
         lanes = self.lane_names
         for lane in lanes:
             lane_number = int(lane[1:])
-            samples = filter(lambda x:
+            samples = list(filter(lambda x:
                              x['Read_number'] == 1
                              and not IlluminaFastq(x['Fastq']).is_index_read
                              and bool(x[lane]),
-                             self._stats)
+                             self._stats))
             # Additional samples from samplesheet
             if lane in expected_samples:
                 for sample in expected_samples[lane]:
@@ -402,8 +408,8 @@ class FastqStatistics(object):
                                          "lane %s sample %s: '%s'" %
                                          (lane,s['Sample'],s[lane]))
                 raise ex
-            fpp.write("\nLane %d\n" % lane_number)
-            fpp.write("Total reads = %d\n" % total_reads)
+            fpp.write(u"\nLane %d\n" % lane_number)
+            fpp.write(u"Total reads = %d\n" % total_reads)
             for sample in samples:
                 sample_name = "%s/%s" % (sample['Project'],
                                          sample['Sample'])
@@ -412,9 +418,9 @@ class FastqStatistics(object):
                     frac_reads = "%.1f%%" % (nreads/total_reads*100.0)
                 else:
                     frac_reads = "n/a"
-                fpp.write("- %s\t%d\t%s\n" % (sample_name,
-                                              nreads,
-                                              frac_reads))
+                fpp.write(u"- %s\t%d\t%s\n" % (sample_name,
+                                               nreads,
+                                               frac_reads))
         # Close file
         if fp is None and out_file is not None:
             fpp.close()

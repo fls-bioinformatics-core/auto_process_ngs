@@ -381,7 +381,7 @@ class FastqReadCounter(object):
             cmd = "wc -l %s | cut -d' ' -f1" % fastq
         output = subprocess.check_output(cmd,shell=True)
         try:
-            return int(output)/4
+            return int(output)//4
         except Exception as ex:
             raise Exception("zcat_wc returned: %s" % output)
     @staticmethod
