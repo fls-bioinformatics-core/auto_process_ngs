@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/splitter.py: classes & functions to sort reads by barcode
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -21,7 +21,12 @@ index sequences) from the read headers:
 
 """
 
-import itertools
+try:
+    # Python 2
+    from itertools import izip as zip
+except ImportError:
+    # Python 3
+    pass
 import logging
 import bcftbx.IlluminaData as IlluminaData
 import bcftbx.FASTQFile as FASTQFile
@@ -58,7 +63,7 @@ class HammingMetrics(object):
         """
         if len(s1) != len(s2):
             raise ValueError("Undefined for sequences of unequal length")
-        return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
+        return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
     @classmethod
     def hamming_distance_truncate(self,s1,s2):
@@ -70,7 +75,7 @@ class HammingMetrics(object):
             l = min(len(s1),len(s2))
             s1 = s1[:l]
             s2 = s2[:l]
-        return sum(ch1 != ch2 for ch1, ch2 in itertools.izip(s1, s2))
+        return sum(ch1 != ch2 for ch1, ch2 in zip(s1, s2))
 
     @classmethod
     def hamming_distance_with_N(self,s1,s2):
@@ -82,7 +87,7 @@ class HammingMetrics(object):
         if len(s1) != len(s2):
             raise ValueError("Undefined for sequences of unequal length")
         return sum((ch1 != ch2 or ch1 == 'N' or ch2 == 'N') \
-                   for ch1, ch2 in itertools.izip(s1, s2))
+                   for ch1, ch2 in zip(s1, s2))
 
 class HammingLookup(object):
     """
@@ -311,8 +316,8 @@ def split_paired_end(matcher,fastq_pairs,base_name=None,output_dir=None):
     nread = 0
     for fq_r1,fq_r2 in fastq_pairs:
         print("Processing reads from fastq pair %s %s" % (fq_r1,fq_r2))
-        for read1,read2 in itertools.izip(FASTQFile.FastqIterator(fq_r1),
-                                          FASTQFile.FastqIterator(fq_r2)):
+        for read1,read2 in zip(FASTQFile.FastqIterator(fq_r1),
+                               FASTQFile.FastqIterator(fq_r2)):
             nread += 1
             seq = read1.seqid.index_sequence
             if not seq:

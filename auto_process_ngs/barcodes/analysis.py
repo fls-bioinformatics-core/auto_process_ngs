@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes/analysis.py: classes and functions for analysing barcodes
-#     Copyright (C) University of Manchester 2016-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2016-2020 Peter Briggs
 #
 ########################################################################
 #
@@ -184,7 +184,7 @@ class BarcodeCounter(object):
             ascending order.
 
         """
-        lanes = self._seqs.keys()
+        lanes = list(self._seqs.keys())
         if lanes == [None]:
             return []
         else:
@@ -761,7 +761,7 @@ class SampleSheetBarcodes(object):
             # Special case: sample sheet doesn't define any lanes
             lane = None
         if lane in self._lanes:
-            barcodes = self._sample_lookup[lane].keys()
+            barcodes = list(self._sample_lookup[lane].keys())
         elif lane is None:
             barcodes = []
             for l in self._lanes:
@@ -788,7 +788,7 @@ class SampleSheetBarcodes(object):
             # Special case:sample sheet doesn't define any lanes
             lane = None
         if lane in self._lanes:
-            samples = self._barcode_lookup[lane].keys()
+            samples = list(self._barcode_lookup[lane].keys())
         elif lane is None:
             samples = []
             for l in self._lanes:
@@ -1150,9 +1150,9 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     overrepresented = []
     if sample_sheet is not None:
         sample_sheet = SampleSheetBarcodes(sample_sheet)
-        found_samples = filter(lambda s: s is not None,
-                               [analysis.counts[bc].sample
-                                for bc in analysis.barcodes])
+        found_samples = list(filter(lambda s: s is not None,
+                                    [analysis.counts[bc].sample
+                                     for bc in analysis.barcodes]))
         # Get the underrepresented sample names
         for sample in sample_sheet.samples(lane):
             if sample not in found_samples:
