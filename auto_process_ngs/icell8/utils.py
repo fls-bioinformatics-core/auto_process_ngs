@@ -468,7 +468,7 @@ class ICell8FastqIterator(Iterator):
         self._read_count = 0
         self._fqr1 = FastqIterator(fqr1)
         self._fqr2 = FastqIterator(fqr2)
-    def next(self):
+    def __next__(self):
         self._read_count += 1
         r1 = self._fqr1.next()
         r2 = self._fqr2.next()
@@ -481,6 +481,9 @@ class ICell8FastqIterator(Iterator):
             print("-- Read 2:\n%s" % r2)
             logging.critical("Failed to create read pair: %s" % ex)
             raise ex
+    def next(self):
+        # Implement 'next' method for Python 2
+        return self.__next__()
 
 class ICell8StatsCollector(object):
     """
