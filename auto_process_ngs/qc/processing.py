@@ -3,6 +3,7 @@
 # Library for QC reporting of processing stages
 
 import os
+from functools import reduce
 from bcftbx.TabFile import TabFile
 from ..analysis import split_sample_name
 from ..docwriter import Document
