@@ -6,6 +6,7 @@ import os
 import unittest
 import tempfile
 import shutil
+from builtins import range
 from auto_process_ngs.barcodes.analysis import BarcodeCounter
 from auto_process_ngs.barcodes.analysis import BarcodeGroup
 from auto_process_ngs.barcodes.analysis import SampleSheetBarcodes
@@ -72,7 +73,7 @@ class TestBarcodeCounter(unittest.TestCase):
                        ((3,"CCAGCAATATCGCGAG"),2),
                        ((3,"CCGCGTAAGCAATAGA"),1)):
             lane,seq = r
-            for i in xrange(incr):
+            for i in range(incr):
                 bc.count_barcode(seq,lane=lane)
         # Check contents
         self.assertEqual(bc.barcodes(),["AGGCAGAATCTTACGC",
