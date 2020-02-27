@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 #     demultiplex_icell8_atac.py: demultiplex reads from ICELL8 scATAC-seq
 #     Copyright (C) University of Manchester 2019-2020 Peter Briggs
