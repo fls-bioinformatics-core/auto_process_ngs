@@ -350,8 +350,8 @@ class FastqSet(object):
         """
         Return list of Fastq files in the set
         """
-        return filter(lambda fq: fq is not None,
-                      self._fastqs)
+        return list(filter(lambda fq: fq is not None,
+                           self._fastqs))
 
 class QCReport(Document):
     """
@@ -642,19 +642,19 @@ class QCReport(Document):
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
         # Look for screen files
-        screens = filter(lambda f:
-                         f.endswith("_screen.txt") or
-                         f.endswith("_screen.png"),
-                         files)
+        screens = list(filter(lambda f:
+                              f.endswith("_screen.txt") or
+                              f.endswith("_screen.png"),
+                              files))
         logger.debug("Screens: %s" % screens)
         print("\t- %d fastq_screen files" % len(screens))
         fastq_names = set()
         if screens:
             versions = set()
             # Pull out the Fastq names from the .txt files
-            for screen in filter(lambda s:
-                                 s.endswith("_screen.txt"),
-                                 screens):
+            for screen in list(filter(lambda s:
+                                      s.endswith("_screen.txt"),
+                                      screens)):
                 screen_base = os.path.splitext(screen)[0]
                 fq = self.fastq_attrs(screen)
                 s = os.path.basename(screen_base)[:-len("_screen")]
@@ -669,7 +669,9 @@ class QCReport(Document):
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
         # Look for fastqc outputs
-        fastqcs = filter(lambda f: f.endswith("_fastqc.html"),files)
+        fastqcs = list(filter(lambda f:
+                              f.endswith("_fastqc.html"),
+                              files))
         logger.debug("Fastqc: %s" % fastqcs)
         print("\t- %d fastqc files" % len(fastqcs))
         if fastqcs:
@@ -687,7 +689,9 @@ class QCReport(Document):
             if versions:
                 software['fastqc'] = sorted(list(versions))
         # Look for fastq_strand outputs
-        fastq_strand = filter(lambda f: f.endswith("_fastq_strand.txt"),files)
+        fastq_strand = list(filter(lambda f:
+                                   f.endswith("_fastq_strand.txt"),
+                                   files))
         logger.debug("fastq_strand: %s" % fastq_strand)
         print("\t- %d fastq_strand files" % len(fastq_strand))
         if fastq_strand:
@@ -907,9 +911,10 @@ class QCReport(Document):
             name="sample_%s" % sample,
             css_classes=('sample',))
         # Get Fastq groups
-        fastqs = sorted(filter(lambda fq:
-                               self.fastq_attrs(fq).sample_name == sample,
-                               self.fastqs))
+        fastqs = sorted(list(
+            filter(lambda fq:
+                   self.fastq_attrs(fq).sample_name == sample,
+                   self.fastqs)))
         fastq_groups = group_fastqs_by_name(fastqs,self.fastq_attrs)
         # Number of fastqs
         if len(self.reads) > 1:
