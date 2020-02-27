@@ -101,10 +101,12 @@ poll_interval = 0.5
             undetermined_r2 = os.path.join(m1,dirn,'Undetermined_S0_R2_001.fastq.gz')
             with gzip.GzipFile(undetermined_r1,'wb') as fq:
                 for i in range(4):
-                    fq.write("%s\n" % fastq_reads_r1[n*4+i])
+                    reads = "%s\n" % fastq_reads_r1[n*4+i]
+                    fq.write(reads.encode())
             with gzip.GzipFile(undetermined_r2,'wb') as fq:
                 for i in range(4):
-                    fq.write("%s\n" % fastq_reads_r2[n*4+i])
+                    reads = "%s\n" % fastq_reads_r2[n*4+i]
+                    fq.write(reads.encode())
         print(m2)
         return m1
 
