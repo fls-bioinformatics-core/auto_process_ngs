@@ -602,7 +602,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                     if not os.path.exists(os.path.dirname(fastq)):
                         mkdirs(os.path.dirname(fastq))
                     with gzip.GzipFile(filename=fastq,mode='wb') as fp:
-                        fp.write('')
+                        fp.write(''.encode())
             else:
                 raise Exception("Fastq generation failed to produce "
                                 "expected outputs")
