@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     merge_fastq_dirs_cmd.py: implement auto process merge_fastq_dirs command
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 #########################################################################
 
