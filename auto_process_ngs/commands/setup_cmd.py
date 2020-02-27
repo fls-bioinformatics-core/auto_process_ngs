@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     make_fastqs_cmd.py: implement auto process make_fastqs command
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 #########################################################################
 
@@ -153,7 +153,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                     try:
                         urlfp = urlopen(target.url)
                         with open(tmp_sample_sheet,'w') as fp:
-                            fp.write(urlfp.read())
+                            fp.write(urlfp.read().decode())
                     except URLError as ex:
                         # Failed to download from URL
                         raise Exception("Error fetching sample sheet data "
@@ -242,7 +242,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                     with open(os.path.join(ap.analysis_dir,
                                            os.path.basename(extra_file.path)),
                               'w') as fp:
-                        fp.write(urlfp.read())
+                        fp.write(urlfp.read().decode())
                 except URLError as ex:
                     # Failed to download from URL
                     raise Exception("Error fetching '%s': %s" %
