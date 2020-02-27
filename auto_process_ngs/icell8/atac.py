@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 #     icell8_atac.py: utility functions for handling ICELL8 ATAC-seq data
 #     Copyright (C) University of Manchester 2019 Peter Briggs
