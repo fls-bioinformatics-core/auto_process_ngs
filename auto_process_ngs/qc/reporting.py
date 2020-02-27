@@ -816,7 +816,7 @@ class QCReport(Document):
                             platform=self.project.info['platform'],
                             facility_run_number=
                             self.run_metadata['run_number'])
-                    except AttributeError as ex:
+                    except (AttributeError,TypeError) as ex:
                         logger.warning("Run reference ID can't be "
                                        "determined: %s (ignored)" % ex)
                         continue
