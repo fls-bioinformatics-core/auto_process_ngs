@@ -133,8 +133,8 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
         print("Examining projects in %s:" % unaligned_dir)
         illumina_data = unaligned_dirs[unaligned_dir]
         for project in illumina_data.projects:
-            if not filter(lambda p: p.name == project.name,
-                          projects):
+            if not list(filter(lambda p: p.name == project.name,
+                               projects)):
                 print("- %s: will be merged in" % project.name)
                 projects.append(project)
             else:
@@ -150,8 +150,8 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
                     undetermined.append(sample)
             else:
                 for sample in illumina_data.undetermined.samples:
-                    if not filter(lambda s: s.name == sample.name,
-                                  undetermined):
+                    if not list(filter(lambda s: s.name == sample.name,
+                                       undetermined)):
                         print("- %s: will be merged in" % sample.name)
                         undetermined.append(sample)
                     else:
@@ -164,8 +164,8 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
     print("Examining projects in primary dir %s:" %
           primary_unaligned_dir)
     for project in primary_illumina_data.projects:
-        if not filter(lambda p: p.name == project.name,
-                      projects):
+        if not list(filter(lambda p: p.name == project.name,
+                           projects)):
             print("- %s: will be merged in" % project.name)
             projects.append(project)
         else:
@@ -180,8 +180,8 @@ def merge_fastq_dirs(ap,primary_unaligned_dir,output_dir=None,
             undetermined.insert(0,sample)
     else:
         for sample in primary_illumina_data.undetermined.samples:
-            if not filter(lambda s: s.name == sample.name,
-                          undetermined):
+            if not list(filter(lambda s: s.name == sample.name,
+                               undetermined)):
                 print("- %s: will be merged in" % sample.name)
                 undetermined.insert(0,sample)
             else:
