@@ -172,7 +172,7 @@ if __name__ == '__main__':
     # Process command line
     args,extra_args = p.parse_known_args()
     # Report name and version
-    p.print_version()
+    print("%s %s" % (os.path.basename(sys.argv[0]),__version__))
     # Anything to do?
     if len(extra_args) == 0:
         if args.use_counts:
