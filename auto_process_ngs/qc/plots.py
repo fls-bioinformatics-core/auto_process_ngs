@@ -7,6 +7,7 @@ import tempfile
 import logging
 from math import ceil
 from PIL import Image
+from builtins import range
 from bcftbx.htmlpagewriter import PNGBase64Encoder
 from .fastqc import FastqcData
 from .fastqc import FastqcSummary
@@ -45,7 +46,7 @@ def encode_png(png_file):
     """
     Return Base64 encoded string for a PNG
     """
-    return "data:image/png;base64," + \
+    return "data:image/png;base64,%s" % \
         PNGBase64Encoder().encodePNG(png_file)
     
 def uscreenplot(screen_files,outfile=None,inline=None):
@@ -87,15 +88,16 @@ def uscreenplot(screen_files,outfile=None,inline=None):
         xend = xorigin+50-1
         yend = height-1
         # Draw a box around the plot
-        for i in xrange(xorigin,xorigin+50):
+        for i in range(xorigin,xorigin+50):
             pixels[i,0] = bbox_color
             pixels[i,yend] = bbox_color
-        for j in xrange(height):
+        for j in range(height):
             pixels[xorigin,j] = bbox_color
             pixels[xend,j] = bbox_color
         # Draw the stacked bars for each library
         for n,library in enumerate(screen.libraries):
-            data = filter(lambda x: x['Library'] == library,screen)[0]
+            data = list(filter(lambda x:
+                               x['Library'] == library,screen))[0]
             x = xorigin
             y = n*(barwidth+1) + 1
             # Get the total percentage for the stack
@@ -106,8 +108,8 @@ def uscreenplot(screen_files,outfile=None,inline=None):
                     # Round up to nearest pixel (so that non-zero
                     # percentages are always represented)
                     npx = int(ceil(data[mapping]/2.0))
-                    for i in xrange(x,x+npx):
-                        for j in xrange(y,y+barwidth):
+                    for i in range(x,x+npx):
+                        for j in range(y,y+barwidth):
                             pixels[i,j] = rgb
                     x += npx
             elif total_percent > 0.25:
@@ -117,14 +119,14 @@ def uscreenplot(screen_files,outfile=None,inline=None):
                 for mapping,rgb in zip(mappings,colors):
                     if data[mapping] > max_mapped:
                         max_rgb = rgb
-                for j in xrange(y,y+barwidth):
+                for j in range(y,y+barwidth):
                     pixels[xorigin,j] = max_rgb
         # Add 'no hits'
         x = xorigin
         y = n_libraries_max*(barwidth+1) + 1
         npx = int(screen.no_hits/2.0)
-        for i in xrange(x,x+npx):
-            for j in xrange(y,y+barwidth):
+        for i in range(x,x+npx):
+            for j in range(y,y+barwidth):
                 pixels[i,j] = bbox_color
     # Output the plot to file
     fp,tmp_plot = tempfile.mkstemp(".ufastqscreen.png")
@@ -193,32 +195,32 @@ def uboxplot(fastqc_data=None,fastq=None,
     img = Image.new('RGB',(fastq_stats.nbases,height),"white")
     pixels = img.load()
     # Create colour bands for different quality ranges
-    for i in xrange(0,fastq_stats.nbases,2):
-        for j in xrange(0,20):
+    for i in range(0,fastq_stats.nbases,2):
+        for j in range(0,20):
             pixels[i,max_qual-j-1] = (230,175,175)
-        for j in xrange(20,30):
+        for j in range(20,30):
             pixels[i,max_qual-j-1] = (230,215,175)
-        for j in xrange(30,max_qual):
+        for j in range(30,max_qual):
             pixels[i,max_qual-j-1] = (175,230,175)
     # Draw a box around the outside
     box_color = RGB_COLORS['grey']
-    for i in xrange(fastq_stats.nbases):
+    for i in range(fastq_stats.nbases):
         pixels[i,0] = box_color
         pixels[i,height-1] = box_color
-    for j in xrange(height):
+    for j in range(height):
         pixels[0,j] = box_color
         pixels[fastq_stats.nbases-1,j] = box_color
     # For each base position determine stats
-    for i in xrange(fastq_stats.nbases):
+    for i in range(fastq_stats.nbases):
         #print("Position: %d" % i)
         try:
-            for j in xrange(fastq_stats.p10[i],fastq_stats.p90[i]):
+            for j in range(fastq_stats.p10[i],fastq_stats.p90[i]):
                 # 10th-90th percentile coloured cyan
                 pixels[i,max_qual-j] = RGB_COLORS['grey']
         except TypeError:
             pass
         try:
-            for j in xrange(fastq_stats.q25[i],fastq_stats.q75[i]):
+            for j in range(fastq_stats.q25[i],fastq_stats.q75[i]):
                 # Interquartile range coloured yellow
                 pixels[i,max_qual-j] = RGB_COLORS['darkyellow1']
         except TypeError:
@@ -301,8 +303,8 @@ def ufastqcplot(summary_file,outfile=None,inline=False):
         x = code['index']*10 + 1
         #y = 4*nmodules - im*4 - 3
         y = im*4 + 1
-        for i in xrange(x,x+8):
-            for j in xrange(y,y+3):
+        for i in range(x,x+8):
+            for j in range(y,y+3):
                 #print("%d %d" % (i,j))
                 pixels[i,j] = code['rgb']
     # Output the plot to file
@@ -364,16 +366,16 @@ def ustackedbar(data,outfile=None,inline=False,bbox=True,
             color = RGB_COLORS[color]
         except KeyError:
             pass
-        for i in xrange(p,p+d):
-             for j in xrange(height):
+        for i in range(p,p+d):
+             for j in range(height):
                 pixels[i,j] = color
         p += d
     # Overlay a bounding box
     if bbox:
-        for i in xrange(0,length):
+        for i in range(0,length):
             pixels[i,0] = RGB_COLORS[bgcolor]
             pixels[i,height-1] = RGB_COLORS[bgcolor]
-        for j in xrange(0,height):
+        for j in range(0,height):
             pixels[0,j] = RGB_COLORS[bgcolor]
             pixels[length-1,j] = RGB_COLORS[bgcolor]
     # Output the plot to file
@@ -452,30 +454,30 @@ def ustrandplot(fastq_strand_out,outfile=None,inline=False,
         # Forward strand
         bar_length = int(data.stats[genome].forward/
                          max_percent*(width-4))
-        for i in xrange(2,bar_length+2):
+        for i in range(2,bar_length+2):
             start = int(ii*float(height)/ngenomes) + spacing
             end = start + bar_width
-            for j in xrange(start,end):
+            for j in range(start,end):
                 pixels[i,j] = fg_color
         # Pad the remainder of the bar
-        for i in xrange(bar_length+2,width-2):
+        for i in range(bar_length+2,width-2):
             start = int(ii*float(height)/ngenomes) + spacing
             end = start + bar_width
-            for j in xrange(start,end):
+            for j in range(start,end):
                 pixels[i,j] = RGB_COLORS['lightgrey']
         # Reverse strand
         bar_length = max(int(data.stats[genome].reverse/
                          max_percent*(width-4)),1)
-        for i in xrange(2,bar_length+2):
+        for i in range(2,bar_length+2):
             start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
             end = start + bar_width
-            for j in xrange(start,end):
+            for j in range(start,end):
                 pixels[i,j] = fg_color
         # Pad the remainder of the bar
-        for i in xrange(bar_length+2,width-2):
+        for i in range(bar_length+2,width-2):
             start = int((float(ii)+0.5)*float(height)/ngenomes) + spacing
             end = start + bar_width
-            for j in xrange(start,end):
+            for j in range(start,end):
                 pixels[i,j] = RGB_COLORS['lightgrey']
     # Output the plot to file
     fp,tmp_plot = tempfile.mkstemp(".ustrand.png")
@@ -500,11 +502,11 @@ def _tiny_png(outfile,width=4,height=4,
     """
     img = Image.new('RGB',(width,height),bg_color)
     pixels = img.load()
-    for i in xrange(int(width/2)):
-        for j in xrange(int(height/2)):
+    for i in range(int(width/2)):
+        for j in range(int(height/2)):
             pixels[i,j] = fg_color
-    for i in xrange(int(width/2),width):
-        for j in xrange(int(height/2),height):
+    for i in range(int(width/2),width):
+        for j in range(int(height/2),height):
             pixels[i,j] = fg_color
     fp,tmp_plot = tempfile.mkstemp(".tiny.png")
     img.save(tmp_plot)

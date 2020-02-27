@@ -10,7 +10,7 @@ from auto_process_ngs.qc.fastq_screen import Fastqscreen
 class TestFastqscreen(unittest.TestCase):
     def setUp(self):
         screen_text = ""
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_screen_txt = fp.name
             fp.write(screen_text)
     def tearDown(self):
@@ -42,7 +42,7 @@ SpR6	100.00	0.00	0.00	0.00	0.00
 
 %Hit_no_libraries: 30.80
 """
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_screen_txt = fp.name
             fp.write(screen_text)
     def tearDown(self):
@@ -78,7 +78,7 @@ SpR6	89393	89393	100.00	0	0.00	0	0.00	0	0.00	0	0.00
 
 %Hit_no_libraries: 99.73
 """
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_screen_txt = fp.name
             fp.write(screen_text)
     def tearDown(self):
@@ -116,7 +116,7 @@ SpR6	597781	597781	100.00	0	0.00	0	0.00	0	0.00	0	0.00
 
 %Hit_no_genomes: 19.80
 """
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_screen_txt = fp.name
             fp.write(screen_text)
     def tearDown(self):

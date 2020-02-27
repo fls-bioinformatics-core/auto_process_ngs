@@ -11,7 +11,7 @@ from auto_process_ngs.qc.fastq_strand import build_fastq_strand_conf
 class TestFastqstrand(unittest.TestCase):
     def setUp(self):
         fastq_strand_text = ""
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_strand_txt = fp.name
             fp.write(fastq_strand_text)
     def tearDown(self):
@@ -36,7 +36,7 @@ class TestFastqstrand_0_0_1(unittest.TestCase):
             pass
     def _write_file(self,content):
         # Write a temporary file with arbitrary conten
-        with tempfile.NamedTemporaryFile(delete=False) as fp:
+        with tempfile.NamedTemporaryFile(mode='wt',delete=False) as fp:
             self.fastq_strand_txt = fp.name
             fp.write(content)
     def test_handle_fastq_strand_0_0_1(self):

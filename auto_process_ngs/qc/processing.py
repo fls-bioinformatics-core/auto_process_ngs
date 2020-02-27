@@ -3,6 +3,7 @@
 # Library for QC reporting of processing stages
 
 import os
+from functools import reduce
 from bcftbx.TabFile import TabFile
 from ..analysis import split_sample_name
 from ..docwriter import Document
@@ -258,8 +259,8 @@ def report_processing_qc(analysis_dir,html_file):
             # Check for problems
             has_warnings = False
             for line in subset:
-                nreads = filter(lambda n: n != '',
-                                [line[l] for l in subset_lanes])
+                nreads = list(filter(lambda n: n != '',
+                                     [line[l] for l in subset_lanes]))
                 if not nreads or min(nreads) == 0:
                     s.add(Para(WarningIcon(),"One or more Fastqs with zero "
                                "read counts in one or more lanes",
@@ -294,8 +295,8 @@ def report_processing_qc(analysis_dir,html_file):
                 for l in subset_lanes:
                     data[l] = (pretty_print_reads(line[l])
                                if line[l] != '' else '')
-                nreads = filter(lambda n: n != '',
-                                [line[l] for l in subset_lanes])
+                nreads = list(filter(lambda n: n != '',
+                                     [line[l] for l in subset_lanes]))
                 if not nreads:
                     nreads = [0,]
                 if min(nreads) == 0:
