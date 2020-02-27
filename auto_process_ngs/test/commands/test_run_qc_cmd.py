@@ -146,10 +146,11 @@ mouse = /data/genomeIndexes/mm10/STAR
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
@@ -220,10 +221,11 @@ mouse = /data/genomeIndexes/mm10/STAR
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
@@ -295,10 +297,11 @@ mouse = /data/genomeIndexes/mm10/STAR
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check output and reports
         for p in ("AB","CDE","undetermined"):
@@ -379,10 +382,11 @@ mouse = /data/cellranger/transcriptomes/mm10
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check cellranger count outputs are present
         for p in ("AB","CDE"):
@@ -468,10 +472,11 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check cellranger count outputs are present
         for p in ("AB","CDE"):
@@ -559,10 +564,11 @@ mouse = /data/cellranger/atac_references/mm10
                 os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
         # Check fastq_strand outputs are present
         for p in ("AB","CDE"):
-            fastq_strand_outputs = filter(lambda f:
-                                          f.endswith("fastq_strand.txt"),
-                                          os.listdir(os.path.join(
-                                              mockdir.dirn,p,"qc")))
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
             self.assertTrue(len(fastq_strand_outputs) > 0)
         # Check cellranger count outputs are present
         for p in ("AB","CDE"):
