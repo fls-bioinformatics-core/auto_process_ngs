@@ -1272,7 +1272,9 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
     if underrepresented:
         # Sort into order of highest to lowest counts
         underrepresented = sorted(underrepresented,
-                                  key=lambda x: x['counts'],
+                                  key=lambda x:
+                                  x['counts'] if x['counts'] is not None
+                                  else 0,
                                   reverse=True)
         # Report
         reporter.add("")
@@ -1301,7 +1303,9 @@ def report_barcodes(counts,lane=None,sample_sheet=None,cutoff=None,
         reporter.add("#Index\tN_reads\t%reads",heading=True)
         # Sort into order of highest to lowest counts
         overrepresented = sorted(overrepresented,
-                                 key=lambda x: x['counts'],
+                                 key=lambda x:
+                                 x['counts'] if x['counts'] is not None
+                                 else 0,
                                  reverse=True)
         # Report
         for barcode in overrepresented:
