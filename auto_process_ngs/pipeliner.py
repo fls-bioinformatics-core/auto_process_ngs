@@ -1651,7 +1651,7 @@ class Pipeline(object):
                         task.fail(exit_code=1,
                                   message="Exception trying to run task "
                                   "'%s': %s\n%s" %
-                                  (task.id(),ex,traceback.format_exc(ex)))
+                                  (task.id(),ex,traceback.format_exc()))
                         failed.append(task)
                     self._running.append(task)
                     update = True
@@ -1974,7 +1974,7 @@ class PipelineTask(object):
         except Exception as ex:
             self.report("exception invoking '%s': %s" %
                         (f.__name__,ex))
-            self.report(traceback.format_exc(ex))
+            self.report(traceback.format_exc())
             self._exit_code += 1
         # Report stdout and stderr
         for line in output.stdout:
