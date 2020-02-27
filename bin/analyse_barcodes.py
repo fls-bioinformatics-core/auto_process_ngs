@@ -84,7 +84,6 @@ if __name__ == '__main__':
                                 "\n\t%(prog)s FASTQ [FASTQ...]\n"
                                 "\t%(prog)s DIR\n"
                                 "\t%(prog)s -c COUNTS_FILE [COUNTS_FILE...]",
-                                version="%%(prog)s %s" % __version__,
                                 description="Collate and report counts and "
                                 "statistics for Fastq index sequences (aka "
                                 "barcodes). If multiple Fastq files are "
@@ -97,6 +96,8 @@ if __name__ == '__main__':
                                 "supplied then the input must be one or more "
                                 "file of barcode counts generated previously "
                                 "using the -o option.")
+    p.add_argument('-v','--version',action='version',
+                   version="%%(prog)s %s" % __version__)
     input_and_output = p.add_argument_group("Input and output options")
     input_and_output.add_argument(
         '-c','--counts',
