@@ -332,8 +332,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 print("...%s: found cellranger count report" % project.name)
                 project_qc[project.name]['cellranger_zip'] = cellranger_zip
     # Projects with no QC
-    no_qc_projects = filter(lambda p: not project_qc[p.name].qc_dirs,
-                            projects)
+    no_qc_projects = list(filter(lambda p: not project_qc[p.name].qc_dirs,
+                                 projects))
     # Determine what projects are left and if we can proceed
     if no_qc_projects:
         # Failed to generate results for some projects
