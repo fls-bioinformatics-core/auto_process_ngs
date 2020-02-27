@@ -490,12 +490,12 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         for root,dirs,files in os.walk(casava_outputs.dirn):
             for f in files:
                 if f.endswith(".fastq.gz"):
-                    with gzip.GzipFile(os.path.join(root,f),'w') as fq:
+                    with gzip.GzipFile(os.path.join(root,f),'wb') as fq:
                         try:
                             f.index("_R1_")
-                            fq.write(fastq_r1_data)
+                            fq.write(fastq_r1_data.encode())
                         except ValueError:
-                            fq.write(fastq_r2_data)
+                            fq.write(fastq_r2_data.encode())
         # Set up autoprocessor
         run_dir = "151125_M00879_0001_000000000-ABCDE1"
         analysis_dir = "%s_analysis" % run_dir
@@ -568,12 +568,12 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         for root,dirs,files in os.walk(bcl2fastq2_outputs.dirn):
             for f in files:
                 if f.endswith(".fastq.gz"):
-                    with gzip.GzipFile(os.path.join(root,f),'w') as fq:
+                    with gzip.GzipFile(os.path.join(root,f),'wb') as fq:
                         try:
                             f.index("_R1_")
-                            fq.write(fastq_r1_data)
+                            fq.write(fastq_r1_data.encode())
                         except ValueError:
-                            fq.write(fastq_r2_data)
+                            fq.write(fastq_r2_data.encode())
         # Set up autoprocessor
         run_dir = "151125_M00879_0001_000000000-ABCDE1"
         analysis_dir = "%s_analysis" % run_dir
@@ -655,12 +655,12 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
                   'AB2_AGTCAA_L001_R1_001.fastq.gz',
                   'AB2_AGTCAA_L001_R2_001.fastq.gz',):
             if f.endswith(".fastq.gz"):
-                with gzip.GzipFile(os.path.join(unaligned_dir,f),'w') as fq:
+                with gzip.GzipFile(os.path.join(unaligned_dir,f),'wb') as fq:
                     try:
                         f.index("_R1_")
-                        fq.write(fastq_r1_data)
+                        fq.write(fastq_r1_data.encode())
                     except ValueError:
-                        fq.write(fastq_r2_data)
+                        fq.write(fastq_r2_data.encode())
         # Set up autoprocessor
         analysis_dir = "%s_analysis" % run_dir
         ap = AutoProcess()
