@@ -54,10 +54,11 @@ logging.basicConfig(format='%(levelname)s %(name)s: %(message)s')
 if __name__ == '__main__':
 
     # Process command line
-    p = argparse.ArgumentParser(version="%(prog)s "+__version__,
-                                description="Generate statistics for FASTQ "
+    p = argparse.ArgumentParser(description="Generate statistics for FASTQ "
                                 "files in ILLUMINA_RUN_DIR (top-level "
                                 "directory of a processed Illumina run)")
+    p.add_argument("-v","--version",action="version",
+                   version="%(prog)s "+__version__)
     p.add_argument("--unaligned",action="store",dest="unaligned_dir",
                    default="Unaligned",
                    help="specify an alternative name for the 'Unaligned' "

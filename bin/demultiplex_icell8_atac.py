@@ -1,7 +1,7 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 #     demultiplex_icell8_atac.py: demultiplex reads from ICELL8 scATAC-seq
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 """
 demultiplex_icell8_atac.py
@@ -58,8 +58,9 @@ if __name__ == "__main__":
     # Set up parser
     p = ArgumentParser(description="Assign reads from ICELL8 ATAC "
                        "R1/R2/I1/I2 Fastq set to barcodes and samples "
-                       "in a well list file",
-                       version="%(prog)s "+__version__)
+                       "in a well list file")
+    p.add_argument('-v','--version',action='version',
+                   version="%(prog)s "+__version__)
     p.add_argument("well_list",metavar="WELL_LIST",help="Well list file")
     p.add_argument("fastq_r1",metavar="FASTQ_R1",help="FASTQ R1")
     p.add_argument("fastq_r2",metavar="FASTQ_R2",help="FASTQ R2")

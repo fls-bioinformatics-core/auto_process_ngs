@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     manage_runs.py: utility for managing fastq files from auto_process
-#     Copyright (C) University of Manchester 2014,2019 Peter Briggs
+#     Copyright (C) University of Manchester 2014,2019-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -176,8 +176,9 @@ if __name__ == "__main__":
         "then list the fastqs; 'copy' command copies fastqs for the "
         "specified PROJECT to DEST on a local or remote server; 'md5' "
         "command generates checksums for the fastqs; 'zip' command "
-        "creates a zip file with the fastq files.",
-        version="%(prog)s "+get_version())
+        "creates a zip file with the fastq files.")
+    p.add_argument('-v','--version',action='version',
+                   version="%(prog)s "+get_version())
     p.add_argument('--filter',action='store',dest='pattern',
                    default=None,
                    help="filter file names for reporting and copying "
