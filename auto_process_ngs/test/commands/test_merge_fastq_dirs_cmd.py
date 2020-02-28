@@ -7,6 +7,7 @@ import tempfile
 import shutil
 import os
 import gzip
+from builtins import range
 import auto_process_ngs.applications as applications
 from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.mock import MockAnalysisDir
@@ -99,11 +100,13 @@ poll_interval = 0.5
             undetermined_r1 = os.path.join(m1,dirn,'Undetermined_S0_R1_001.fastq.gz')
             undetermined_r2 = os.path.join(m1,dirn,'Undetermined_S0_R2_001.fastq.gz')
             with gzip.GzipFile(undetermined_r1,'wb') as fq:
-                for i in xrange(4):
-                    fq.write("%s\n" % fastq_reads_r1[n*4+i])
+                for i in range(4):
+                    reads = "%s\n" % fastq_reads_r1[n*4+i]
+                    fq.write(reads.encode())
             with gzip.GzipFile(undetermined_r2,'wb') as fq:
-                for i in xrange(4):
-                    fq.write("%s\n" % fastq_reads_r2[n*4+i])
+                for i in range(4):
+                    reads = "%s\n" % fastq_reads_r2[n*4+i]
+                    fq.write(reads.encode())
         print(m2)
         return m1
 
@@ -219,13 +222,17 @@ poll_interval = 0.5
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq',f))
         # Check merge of undetermined fastqs
         undetermined_r1 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq','Undetermined_S0_R1_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq',
+                         'Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read().decode()
         expected_r1 = '\n'.join(fastq_reads_r1[:8])+'\n'
         self.assertEqual(undetermined_r1,expected_r1)
         undetermined_r2 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq','Undetermined_S0_R2_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq',
+                         'Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read().decode()
         expected_r2 = '\n'.join(fastq_reads_r2[:8])+'\n'
         self.assertEqual(undetermined_r2,expected_r2)
         # Check projects.info files
@@ -368,13 +375,17 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.AB',f))
         # Check merge of undetermined fastqs
         undetermined_r1 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R1_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq.AB',
+                         'Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read().decode()
         expected_r1 = '\n'.join(fastq_reads_r1[:8])+'\n'
         self.assertEqual(undetermined_r1,expected_r1)
         undetermined_r2 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R2_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq.AB',
+                         'Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read().decode()
         expected_r2 = '\n'.join(fastq_reads_r2[:8])+'\n'
         self.assertEqual(undetermined_r2,expected_r2)
         # Check projects.info files
@@ -602,13 +613,17 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
             self._assert_file_exists(os.path.join(analysis_dir,'bcl2fastq.AB',f))
         # Check merge of undetermined fastqs
         undetermined_r1 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R1_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq.AB',
+                         'Undetermined_S0_R1_001.fastq.gz'),
+            'rb').read().decode()
         expected_r1 = '\n'.join(fastq_reads_r1[:4])+'\n'
         self.assertEqual(undetermined_r1,expected_r1)
         undetermined_r2 = gzip.GzipFile(
-            os.path.join(analysis_dir,'bcl2fastq.AB','Undetermined_S0_R2_001.fastq.gz'),
-            'rb').read()
+            os.path.join(analysis_dir,
+                         'bcl2fastq.AB',
+                         'Undetermined_S0_R2_001.fastq.gz'),
+            'rb').read().decode()
         expected_r2 = '\n'.join(fastq_reads_r2[:4])+'\n'
         self.assertEqual(undetermined_r2,expected_r2)
         # Check projects.info files
