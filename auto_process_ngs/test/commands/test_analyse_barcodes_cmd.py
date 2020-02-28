@@ -65,7 +65,7 @@ poll_interval = 0.5
 GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
 +
 IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
-""")
+                            """.encode())
 
     def test_analyse_barcodes_with_stored_bases_mask(self):
         """analyse_barcodes: test with stored bases mask
