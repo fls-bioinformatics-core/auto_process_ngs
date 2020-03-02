@@ -87,6 +87,11 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	24.0G	27596657
         self.assertFalse(os.path.exists(output_html))
         report_processing_qc(AutoProcess(analysis_dir),output_html)
         self.assertTrue(os.path.exists(output_html))
+        # Check the HTML
+        with open(output_html,'rt') as fp:
+            html = fp.read()
+        # No warnings
+        self.assertTrue(html.find("<div class='warnings hide'>") > -1)
 
     def test_report_processing_qc_empty_fastqs(self):
         """report_processing_qc: report with empty Fastqs
@@ -151,6 +156,11 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	24.0G	27596657
         self.assertFalse(os.path.exists(output_html))
         report_processing_qc(AutoProcess(analysis_dir),output_html)
         self.assertTrue(os.path.exists(output_html))
+        # Check the HTML
+        with open(output_html,'rt') as fp:
+            html = fp.read()
+        # Warnings
+        self.assertTrue(html.find("<div class='warnings'>") > -1)
 
     def test_report_processing_qc_empty_lane(self):
         """report_processing_qc: report with empty lane
@@ -210,3 +220,8 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	1.0K	0	Y	2	0
         self.assertFalse(os.path.exists(output_html))
         report_processing_qc(AutoProcess(analysis_dir),output_html)
         self.assertTrue(os.path.exists(output_html))
+        # Check the HTML
+        with open(output_html,'rt') as fp:
+            html = fp.read()
+        # Warnings
+        self.assertTrue(html.find("<div class='warnings'>") > -1)

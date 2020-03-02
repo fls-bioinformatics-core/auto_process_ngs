@@ -239,18 +239,16 @@ def report_processing_qc(analysis_dir,html_file):
         per_file_stats.add(project_toc_list)
         stats = TabFile(stats_file,first_line_is_header=True)
         projects = sorted(list(set([d['Project'] for d in stats])))
-        lanes = filter(lambda c: c.startswith('L'),stats.header())
+        lanes = [c for c in stats.header() if c.startswith('L')]
         sample = None
         for project in projects:
             # Get subset of lines for this project
-            subset = sorted(filter(lambda d: d['Project'] == project,stats),
+            subset = sorted([d for d in stats if d['Project'] == project],
                             key=lambda l: split_sample_name(l['Sample']))
-            # Work out which lanes are included
-            subset_lanes = filter(lambda l:
-                                  reduce(lambda x,y: x or bool(y),
-                                         [d[l] for d in subset],
-                                         False),
-                                  lanes)
+            subset_lanes = [l for l in lanes
+                            if reduce(lambda x,y: x or bool(y),
+                                      [d[l] for d in subset],
+                                      False)]
             # Add a new section for this project
             s = per_file_stats.add_subsection(
                 "%s" % project,
@@ -259,8 +257,7 @@ def report_processing_qc(analysis_dir,html_file):
             # Check for problems
             has_warnings = False
             for line in subset:
-                nreads = list(filter(lambda n: n != '',
-                                     [line[l] for l in subset_lanes]))
+                nreads = [line[l] for l in subset_lanes if line[l] != '']
                 if not nreads or min(nreads) == 0:
                     s.add(Para(WarningIcon(),"One or more Fastqs with zero "
                                "read counts in one or more lanes",
@@ -295,8 +292,7 @@ def report_processing_qc(analysis_dir,html_file):
                 for l in subset_lanes:
                     data[l] = (pretty_print_reads(line[l])
                                if line[l] != '' else '')
-                nreads = list(filter(lambda n: n != '',
-                                     [line[l] for l in subset_lanes]))
+                nreads = [line[l] for l in subset_lanes if line[l] != '']
                 if not nreads:
                     nreads = [0,]
                 if min(nreads) == 0:
