@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8.pipeline.py: pipeline components for ICELL8 data
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 
 """
@@ -85,8 +85,7 @@ from .utils import normalize_sample_name
 # Constants
 #######################################################################
 
-import constants
-MAXIMUM_BATCH_SIZE = constants.MAXIMUM_BATCH_SIZE
+from .constants import MAXIMUM_BATCH_SIZE
 DEFAULT_BATCH_SIZE = 5000000
 
 ######################################################################
