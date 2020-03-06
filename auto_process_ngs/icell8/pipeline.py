@@ -1701,7 +1701,7 @@ class MergeBarcodeFastqs(PipelineTask):
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
         # Extract the barcodes from the fastq groups dict
-        barcodes = self.args.fastq_groups.keys()
+        barcodes = list(self.args.fastq_groups.keys())
         # Group barcodes into batches
         barcode_batches = [barcodes[i:i+self.args.batch_size]
                            for i in range(0,len(barcodes),
