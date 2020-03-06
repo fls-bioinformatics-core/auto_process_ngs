@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     process_icell8.py: perform processing of Wafergen iCell8 data
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 """
 process_icell8.py
@@ -34,6 +34,11 @@ import auto_process_ngs.envmod as envmod
 # Fetch configuration settings
 import auto_process_ngs.settings
 __settings = auto_process_ngs.settings.Settings()
+try:
+    __modulefiles = __settings.modulefiles
+except KeyError:
+    # No environment modules specified
+    __modulefiles = {}
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -165,13 +170,26 @@ if __name__ == "__main__":
     modulefiles = args.modulefiles
     if modulefiles is None:
         try:
-            modulefiles = __settings.modulefiles['process_icell8']
+            modulefiles = __modulefiles['process_icell8']
         except KeyError:
             # No environment modules specified
             pass
     if modulefiles is not None:
         for modulefile in modulefiles.split(','):
             envmod.load(modulefile)
+
+    # Per task environment modules
+    envmodules = dict()
+    for name in ('cutadapt',
+                 'fastq_screen',
+                 'illumina_qc',
+                 'fastq_strand',
+                 'cellranger',
+                 'report_qc',):
+        try:
+            envmodules[name] = __modulefiles[name]
+        except KeyError:
+            envmodules[name] = None
 
     # Deal with job runners
     runners = dict()
@@ -412,6 +430,7 @@ if __name__ == "__main__":
     exit_status = ppl.run(log_dir=log_dir,scripts_dir=scripts_dir,
                           default_runner=default_runner,
                           runners=runners,
+                          envmodules=envmodules,
                           max_jobs=max_jobs,
                           verbose=args.verbose)
     if exit_status != 0:
@@ -439,6 +458,7 @@ if __name__ == "__main__":
                                 'report_runner': default_runner,
                                 'verify_runner': default_runner
                             },
+                            envmodules=envmodules,
                             fastq_strand_indexes=
                             __settings.fastq_strand_indexes,
                             nthreads=nprocessors['qc'],
