@@ -80,6 +80,7 @@ from ..pipeliner import FileCollector
 from .utils import ICell8WellList
 from .utils import ICell8Read1
 from .utils import normalize_sample_name
+from builtins import range
 
 #######################################################################
 # Constants
@@ -1703,8 +1704,8 @@ class MergeBarcodeFastqs(PipelineTask):
         barcodes = self.args.fastq_groups.keys()
         # Group barcodes into batches
         barcode_batches = [barcodes[i:i+self.args.batch_size]
-                           for i in xrange(0,len(barcodes),
-                                           self.args.batch_size)]
+                           for i in range(0,len(barcodes),
+                                          self.args.batch_size)]
         # Concat fastqs
         for i,barcode_batch in enumerate(barcode_batches):
             batch_name = "barcodes%06d" % i
