@@ -167,6 +167,10 @@ class ICell8QCFilter(Pipeline):
         self.add_runner("contaminant_filter")
         self.add_runner("qc")
 
+        # Define module environment modules
+        self.add_envmodules('cutadapt')
+        self.add_envmodules('fastq_screen')
+
         ###################
         # Do internal setup
         ###################
@@ -306,6 +310,7 @@ class ICell8QCFilter(Pipeline):
             pair_fastqs_for_poly_g.output.fastq_pairs,
             poly_g_dir)
         self.add_task(get_poly_g_reads,
+                      envmodules=self.envmodules['cutadapt'],
                       requires=(pair_fastqs_for_poly_g,))
         collect_poly_g_fastqs = CollectFiles("Collect poly-G fastqs",
                                              poly_g_dir,
@@ -332,7 +337,9 @@ class ICell8QCFilter(Pipeline):
         trim_reads = TrimReads("Read trimming",
                                pair_fastqs_for_trimming.output.fastq_pairs,
                                trim_dir)
-        self.add_task(trim_reads,requires=(pair_fastqs_for_trimming,))
+        self.add_task(trim_reads,
+                      envmodules=self.envmodules['cutadapt'],
+                      requires=(pair_fastqs_for_trimming,))
         collect_trimmed_fastqs = CollectFiles("Collect trimmed fastqs",
                                               trim_dir,
                                               trim_reads.output.pattern)
@@ -370,6 +377,7 @@ class ICell8QCFilter(Pipeline):
                 threads=nprocessors['contaminant_filter'])
             self.add_task(contaminant_filter,
                           requires=(pair_fastqs_for_contaminant_filtering,),
+                          envmodules=self.envmodules['fastq_screen'],
                           runner=self.runners['contaminant_filter'])
             collect_contaminant_filtered = CollectFiles(
                 "Collect contaminant-filtered fastqs",
