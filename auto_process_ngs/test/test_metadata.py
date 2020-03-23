@@ -56,6 +56,17 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(metadata2.valediction,"goodbye")
         self.assertEqual(metadata2.chat,None)
 
+    def test_dont_save_to_missing_file(self):
+        """Check 'save' operation is ignored if no file is specified
+        """
+        self.metadata_file = tempfile.mkstemp()[1]
+        metadata = MetadataDict(attributes={'salutation':'Salutation',
+                                            'valediction': 'Valediction',
+                                            'chat': 'Chit chat'})
+        metadata['salutation'] = "hello"
+        metadata['valediction'] = "goodbye"
+        metadata.save()
+
     def test_get_non_existent_attribute(self):
         """Check that accessing non-existent attribute raises exception
         """
