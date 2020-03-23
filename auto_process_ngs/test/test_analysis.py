@@ -896,6 +896,34 @@ class TestAnalysisProject(unittest.TestCase):
                          os.path.join(unpickled.dirn,'fastqs'))
         self.assertEqual(unpickled.fastq_dirs,['fastqs',])
 
+    def test_handle_metadata_for_analysis_project_with_no_readme_info(self):
+        """AnalysisProject: handle metadata when there is no README.info file
+        """
+        # Set up directory without README.info file
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        os.remove(os.path.join(self.dirn,'PJB','README.info'))
+        # Load data and check it's what we expect
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',dirn)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,None)
+        self.assertEqual(project.fastq_dirs,['fastqs',])
+        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        # Try altering and saving metadata
+        project.info.samples = '2 samples (PJB1-A, PJB1-B)'
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        project.info.save()
+
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
 
