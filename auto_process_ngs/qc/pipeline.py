@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 
 """
@@ -172,11 +172,17 @@ class QCPipeline(Pipeline):
         if not os.path.isabs(qc_dir):
             qc_dir = os.path.join(project.dirn,qc_dir)
 
+        # Sort out other parameters
+        if organism is None:
+            organism = project.info.organism
+
         # Report details
         self.report("-- Protocol  : %s" % qc_protocol)
         self.report("-- Directory : %s" % project.dirn)
         self.report("-- Fastqs dir: %s" % project.fastq_dir)
         self.report("-- QC dir    : %s" % qc_dir)
+        self.report("-- Library   : %s" % project.info.library_type)
+        self.report("-- Organism  : %s" % organism)
 
         ####################
         # Build the pipeline
