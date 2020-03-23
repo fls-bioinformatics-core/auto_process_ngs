@@ -405,7 +405,8 @@ def build_fastq_path_dir(project_dir):
         os.symlink(target,link_name)
     return fastq_path_dir
 
-def set_cell_count_for_project(project_dir,qc_dir=None):
+def set_cell_count_for_project(project_dir,qc_dir=None,
+                               library_type=None):
     """
     Set the total number of cells for a project
 
@@ -422,6 +423,9 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
       project_dir (str): path to the project directory
       qc_dir (str): path to QC directory (if not the default
         QC directory for the project)
+      library_type (str): explicitly set the library type
+        (overrides setting defined in the project metadata
+        if specified)
 
     Returns:
       Integer: exit code, non-zero values indicate problems
@@ -432,9 +436,11 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
     if qc_dir is None:
         qc_dir = project.qc_dir
     qc_dir = os.path.abspath(qc_dir)
+    if library_type is None:
+        library_type = project.info.library_type
     number_of_cells = 0
-    if project.info.library_type in ('scRNA-seq',
-                                     'snRNA-seq'):
+    if library_type in ('scRNA-seq',
+                        'snRNA-seq'):
         # Single cell/single nuclei RNA-seq
         for sample in project.samples:
             try:
@@ -451,8 +457,8 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-    elif project.info.library_type in ('scATAC-seq',
-                                       'snATAC-seq'):
+    elif library_type in ('scATAC-seq',
+                          'snATAC-seq'):
         # Single cell ATAC-seq
         for sample in project.samples:
             try:
@@ -467,10 +473,13 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
+    elif library_type is None:
+        raise Exception("%s: no library type set in project metadata" %
+                        project.name)
     else:
         raise Exception("%s: don't know how to set cell count for "
                         "library type '%s'" % (project.name,
-                                               project.info.library_type))
+                                               library_type))
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
