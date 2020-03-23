@@ -775,6 +775,8 @@ class TestQCPipeline(unittest.TestCase):
                                        "PJB2_S2_R2_001.fastq.gz"),
                                 metadata={})
         p.create(top_dir=self.wd)
+        # Remove the README.info file
+        os.remove(os.path.join(self.wd,"PJB","README.info"))
         # Set up and run the QC
         runqc = QCPipeline()
         runqc.add_project(AnalysisProject("PJB",
