@@ -119,7 +119,7 @@ if __name__ == "__main__":
                    help="number of threads to use for QC script "
                    "(default: %d)" % __settings.qc.nprocessors)
     p.add_argument('-r','--runner',metavar='RUNNER',action='store',
-                   dest="runner",default=str(__settings.runners.qc),
+                   dest="runner",default=None,
                    help="explicitly specify runner definition for "
                    "running QC script. RUNNER must be a valid job "
                    "runner specification e.g. 'GEJobRunner(-j y)' "
@@ -203,8 +203,8 @@ if __name__ == "__main__":
         qc_runner = fetch_runner(args.runner)
         cellranger_runner = fetch_runner(args.runner)
     else:
-        qc_runner = self._settings.runners.qc
-        cellranger_runner = self._settings.runners.cellranger
+        qc_runner = __settings.runners.qc
+        cellranger_runner = __settings.runners.cellranger
     verify_runner = default_runner
     report_runner = default_runner
 
