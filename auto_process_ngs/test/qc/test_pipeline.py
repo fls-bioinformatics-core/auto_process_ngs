@@ -757,6 +757,62 @@ class TestQCPipeline(unittest.TestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    def test_qcpipeline_with_10x_scRNAseq_no_project_metadata(self):
+        """QCPipeline: single cell RNA-seq QC run with no project metadata
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={})
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject("PJB",
+                                          os.path.join(self.wd,"PJB")),
+                          multiqc=True,
+                          qc_protocol="10x_scRNAseq",
+                          organism="human")
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_premrna_references=
+                           { 'human': '/data/hg38/cellranger' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/PJB1/_cmdline",
+                  "qc/cellranger_count/PJB1/outs/web_summary.html",
+                  "qc/cellranger_count/PJB1/outs/metrics_summary.csv",
+                  "qc/cellranger_count/PJB2/_cmdline",
+                  "qc/cellranger_count/PJB2/outs/web_summary.html",
+                  "qc/cellranger_count/PJB2/outs/metrics_summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/PJB1/_cmdline",
+                  "cellranger_count/PJB1/outs/web_summary.html",
+                  "cellranger_count/PJB1/outs/metrics_summary.csv",
+                  "cellranger_count/PJB2/_cmdline",
+                  "cellranger_count/PJB2/outs/web_summary.html",
+                  "cellranger_count/PJB2/outs/metrics_summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB",f)),
+                            "Missing %s" % f)
+
     def test_qcpipeline_with_cellranger_count_no_references(self):
         """QCPipeline: single cell QC run with 'cellranger count' (no reference data)
         """
