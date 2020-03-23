@@ -221,6 +221,11 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         # Write data to temporary file
         if filen is not None:
             self.__filen = filen
+        if self.__filen is None:
+            # Nowehere to write to
+            logger.warning("Cannot save metadata: no destination file "
+                           "defined")
+            return
         tmp_filen = os.path.join(
             os.path.dirname(self.__filen),
             "%s.%s.tmp" % (os.path.basename(self.__filen),
