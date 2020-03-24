@@ -427,50 +427,53 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
       Integer: exit code, non-zero values indicate problems
         were encountered.
     """
+    # Set up basic info
     project = AnalysisProject(os.path.basename(project_dir),
                               project_dir)
     if qc_dir is None:
         qc_dir = project.qc_dir
     qc_dir = os.path.abspath(qc_dir)
+    # Loop over samples and collect cell numbers for each
     number_of_cells = 0
-    if project.info.library_type in ('scRNA-seq',
-                                     'snRNA-seq'):
-        # Single cell/single nuclei RNA-seq
-        for sample in project.samples:
+    for sample in project.samples:
+        # Look for single cell/nuclei RNA-seq output
+        metrics_summary_csv = os.path.join(
+            qc_dir,
+            "cellranger_count",
+            sample.name,
+            "outs",
+            "metrics_summary.csv")
+        if os.path.exists(metrics_summary_csv):
+            # Extract cell numbers
             try:
-                metrics_summary_csv = os.path.join(
-                    qc_dir,
-                    "cellranger_count",
-                    sample.name,
-                    "outs",
-                    "metrics_summary.csv")
-                metrics = MetricsSummary(
-                    open(metrics_summary_csv,'r').read())
-                number_of_cells += metrics.estimated_number_of_cells
+                with open(metrics_summary_csv,'rt') as fp:
+                    metrics = MetricsSummary(fp.read())
+                    number_of_cells += metrics.estimated_number_of_cells
+                continue
             except Exception as ex:
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-    elif project.info.library_type in ('scATAC-seq',
-                                       'snATAC-seq'):
-        # Single cell ATAC-seq
-        for sample in project.samples:
+        # Look for single cell ATAC-seq output
+        summary_csv = os.path.join(
+            qc_dir,
+            "cellranger_count",
+            sample.name,
+            "outs",
+            "summary.csv")
+        if os.path.exists(summary_csv):
             try:
-                summary_csv = os.path.join(
-                    qc_dir,
-                    "cellranger_count",
-                    sample.name,
-                    "outs",
-                    "summary.csv")
                 number_of_cells += AtacSummary(summary_csv).annotated_cells
+                continue
             except Exception as ex:
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-    else:
-        raise Exception("%s: don't know how to set cell count for "
-                        "library type '%s'" % (project.name,
-                                               project.info.library_type))
+        # Reaching this point means that no data was
+        # found - treat this as an error
+        logger.critical("No single library output found for sample "
+                        "'%s': unable to get cell count" % sample.name)
+        return 1
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
