@@ -1,7 +1,7 @@
 #!/bin/env python
 #
 #     settings.py: handle configuration settings for autoprocessing
-#     Copyright (C) University of Manchester 2014-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2014-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -135,6 +135,8 @@ class Settings(object):
         self.modulefiles['fastq_strand'] = config.get('modulefiles','fastq_strand')
         self.modulefiles['cellranger'] = config.get('modulefiles','cellranger')
         self.modulefiles['report_qc'] = config.get('modulefiles','report_qc')
+        self.modulefiles['cutadapt'] = config.get('modulefiles','cutadapt')
+        self.modulefiles['fastq_screen'] = config.get('modulefiles','fastq_screen')
         # bcl2fastq
         self.add_section('bcl2fastq')
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)

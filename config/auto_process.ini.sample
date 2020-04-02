@@ -18,6 +18,8 @@ illumina_qc = None
 fastq_strand = None
 cellranger = None
 report_qc = None
+cutadapt = None
+fastq_screen = None
 
 # bcl2fastq settings
 [bcl2fastq]

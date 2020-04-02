@@ -1501,9 +1501,13 @@ class Pipeline(object):
         # Deal with environment modules
         if envmodules:
             for name in envmodules:
-                if envmodules[name] is not None:
-                    for m in envmodules[name].split(','):
-                        self.envmodules[name].value.append(m)
+                if name in self.envmodules:
+                   if envmodules[name] is not None:
+                       for m in envmodules[name].split(','):
+                           self.envmodules[name].value.append(m)
+                else:
+                    self.report("WARNING ignoring undefined environment "
+                                "module '%s'" % name)
         # Deal with scheduler
         if sched is None:
             # Create and start a scheduler

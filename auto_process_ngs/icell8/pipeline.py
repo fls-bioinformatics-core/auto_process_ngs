@@ -80,6 +80,7 @@ from ..pipeliner import FileCollector
 from .utils import ICell8WellList
 from .utils import ICell8Read1
 from .utils import normalize_sample_name
+from builtins import range
 
 #######################################################################
 # Constants
@@ -166,6 +167,10 @@ class ICell8QCFilter(Pipeline):
         self.add_runner("statistics")
         self.add_runner("contaminant_filter")
         self.add_runner("qc")
+
+        # Define module environment modules
+        self.add_envmodules('cutadapt')
+        self.add_envmodules('fastq_screen')
 
         ###################
         # Do internal setup
@@ -306,6 +311,7 @@ class ICell8QCFilter(Pipeline):
             pair_fastqs_for_poly_g.output.fastq_pairs,
             poly_g_dir)
         self.add_task(get_poly_g_reads,
+                      envmodules=self.envmodules['cutadapt'],
                       requires=(pair_fastqs_for_poly_g,))
         collect_poly_g_fastqs = CollectFiles("Collect poly-G fastqs",
                                              poly_g_dir,
@@ -332,7 +338,9 @@ class ICell8QCFilter(Pipeline):
         trim_reads = TrimReads("Read trimming",
                                pair_fastqs_for_trimming.output.fastq_pairs,
                                trim_dir)
-        self.add_task(trim_reads,requires=(pair_fastqs_for_trimming,))
+        self.add_task(trim_reads,
+                      envmodules=self.envmodules['cutadapt'],
+                      requires=(pair_fastqs_for_trimming,))
         collect_trimmed_fastqs = CollectFiles("Collect trimmed fastqs",
                                               trim_dir,
                                               trim_reads.output.pattern)
@@ -370,6 +378,7 @@ class ICell8QCFilter(Pipeline):
                 threads=nprocessors['contaminant_filter'])
             self.add_task(contaminant_filter,
                           requires=(pair_fastqs_for_contaminant_filtering,),
+                          envmodules=self.envmodules['fastq_screen'],
                           runner=self.runners['contaminant_filter'])
             collect_contaminant_filtered = CollectFiles(
                 "Collect contaminant-filtered fastqs",
@@ -1692,11 +1701,11 @@ class MergeBarcodeFastqs(PipelineTask):
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
         # Extract the barcodes from the fastq groups dict
-        barcodes = self.args.fastq_groups.keys()
+        barcodes = list(self.args.fastq_groups.keys())
         # Group barcodes into batches
         barcode_batches = [barcodes[i:i+self.args.batch_size]
-                           for i in xrange(0,len(barcodes),
-                                           self.args.batch_size)]
+                           for i in range(0,len(barcodes),
+                                          self.args.batch_size)]
         # Concat fastqs
         for i,barcode_batch in enumerate(barcode_batches):
             batch_name = "barcodes%06d" % i
