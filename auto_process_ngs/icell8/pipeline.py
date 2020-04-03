@@ -1783,8 +1783,6 @@ class MergeSampleFastqs(PipelineTask):
             print("Removing existing tmp dir '%s'" % self.tmp_merge_dir)
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
-        # Extract the samples from the fastq groups dict
-        samples = self.args.fastq_groups.keys()
         # Set up merge for fastq pairs in each sample
         for sample in self.args.fastq_groups:
             fastq_pairs = self.args.fastq_groups[sample]
