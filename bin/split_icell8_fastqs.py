@@ -176,7 +176,7 @@ def main():
                 # Reassign read pair to appropriate output files
                 if splitting_mode == "batch":
                     # Output to a batch-specific file pair
-                    batch_number = filtered/batch_size
+                    batch_number = filtered//batch_size
                     assign_to = "B%03d" % batch_number
                 elif splitting_mode == "none":
                     # Output to a single file pair
