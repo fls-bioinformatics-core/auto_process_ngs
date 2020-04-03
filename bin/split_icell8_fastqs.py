@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 #
 #     split_icell8_fastqs.py: splits fastq from Wafergen iCell8
-#     Copyright (C) University of Manchester 2017 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 """
 split_icell8_fastqs.py
 
-Utility to split FASTQ pair from Wafergen iCell8 into individual
+Utility to split FASTQ pair from Wafergen ICELL8 into individual
 FASTQ files based on the inline barcodes in read 1.
 
 """
@@ -163,10 +163,10 @@ def main():
                 else:
                     assigned += 1
             logging.debug("%s" % '\t'.join([assign_to,
-                                                inline_barcode,
-                                                read_pair.umi,
-                                                read_pair.min_barcode_quality,
-                                                read_pair.min_umi_quality]))
+                                            inline_barcode,
+                                            read_pair.umi,
+                                            read_pair.min_barcode_quality,
+                                            read_pair.min_umi_quality]))
             # Post filtering counts
             if assign_to == inline_barcode:
                 try:

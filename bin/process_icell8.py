@@ -213,7 +213,7 @@ if __name__ == "__main__":
                 # Use the general QC settings
                 stage_runner = __settings.runners['qc']
             else:
-                # Look for Icell8-specific runner
+                # Look for ICELL8-specific runner
                 try:
                     stage_runner = __settings.runners['icell8_%s' % stage]
                 except KeyError:
