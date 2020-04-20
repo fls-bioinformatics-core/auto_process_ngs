@@ -39,9 +39,10 @@ from setuptools import setup
 import auto_process_ngs
 setup(name = "auto_process_ngs",
       version = auto_process_ngs.get_version(),
-      description = 'Automatic processing of NGS sequencing data from Illumina sequencers',
-      long_description = """Utilities to help with the automated processing and management
-      of sequencing data from Illumina's HiSEQ and MiSEQ platforms""",
+      description = 'Automated processing of NGS data from Illumina sequencers',
+      long_description = """Utilities to help with the automated processing,
+      QC and management of data from Illumina Next Generation Sequencing (NGS)
+      platforms""",
       url = 'https://github.com/fls-bioinformatics-core/auto_process_ngs',
       maintainer = 'Peter Briggs',
       maintainer_email = 'peter.briggs@manchester.ac.uk',
