@@ -13,7 +13,8 @@ Specific versions can be obtained as ``tar.gz`` archives from:
 
  * https://github.com/fls-bioinformatics-core/auto_process_ngs/releases
 
-The software is written in Python and works with Python 2.7.
+The software is written in Python (see :ref:`supported_python_versions` for
+a list of supported versions).
 
 It is recommended to install the package into a Python ``virtualenv``, for
 example::
