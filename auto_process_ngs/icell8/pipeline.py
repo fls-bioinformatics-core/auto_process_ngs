@@ -1547,9 +1547,9 @@ class GroupFastqsByBarcode(PipelineFunctionTask):
         # Group files by barcode
         fastq_groups = dict()
         for barcode in barcodes:
-            fqs = filter(lambda fq: (fq.endswith("%s.r1.fastq" % barcode) or
-                                     fq.endswith("%s.r2.fastq" % barcode)),
-                         fastqs)
+            fqs = [fq for fq in fastqs
+                   if fq.endswith("%s.r1.fastq" % barcode)
+                   or fq.endswith("%s.r2.fastq" % barcode)]
             fastq_groups[barcode] = fqs
         return fastq_groups
     def finish(self):
@@ -1783,8 +1783,6 @@ class MergeSampleFastqs(PipelineTask):
             print("Removing existing tmp dir '%s'" % self.tmp_merge_dir)
             shutil.rmtree(self.tmp_merge_dir)
         mkdir(self.tmp_merge_dir)
-        # Extract the samples from the fastq groups dict
-        samples = self.args.fastq_groups.keys()
         # Set up merge for fastq pairs in each sample
         for sample in self.args.fastq_groups:
             fastq_pairs = self.args.fastq_groups[sample]
@@ -1833,9 +1831,8 @@ class CheckICell8Barcodes(PipelineFunctionTask):
         # R1 Fastq matches the assigned barcode in the filename
         failed_barcodes = list()
         # Reduce fastq list to just R1 files
-        for fq in filter(lambda fq:
-                         AnalysisFastq(fq).read_number == 1,
-                         fastqs):
+        for fq in [fq for fq in fastqs
+                   if AnalysisFastq(fq).read_number == 1]:
             # Get the assigned barcode from the name
             assigned_barcode = AnalysisFastq(fq).barcode_sequence
             print("%s: %s" % (fq,assigned_barcode))

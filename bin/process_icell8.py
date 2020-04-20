@@ -213,7 +213,7 @@ if __name__ == "__main__":
                 # Use the general QC settings
                 stage_runner = __settings.runners['qc']
             else:
-                # Look for Icell8-specific runner
+                # Look for ICELL8-specific runner
                 try:
                     stage_runner = __settings.runners['icell8_%s' % stage]
                 except KeyError:
@@ -439,35 +439,38 @@ if __name__ == "__main__":
         sys.exit(exit_status)
 
     # Run the QC
-    print("Running the QC")
-    runqc = QCPipeline()
-    runqc.add_project(analysis_project,
-                      qc_protocol="singlecell",
-                      fastq_dir="fastqs.samples",
-                      qc_dir="qc.samples",
-                      multiqc=True)
-    runqc.add_project(analysis_project,
-                      qc_protocol="singlecell",
-                      fastq_dir="fastqs.barcodes",
-                      qc_dir="qc.barcodes",
-                      multiqc=False)
-    exit_status = runqc.run(max_jobs=max_jobs,
-                            batch_size=25,
-                            runners={
-                                'qc_runner': runners['qc'],
-                                'report_runner': default_runner,
-                                'verify_runner': default_runner
-                            },
-                            envmodules=envmodules,
-                            fastq_strand_indexes=
-                            __settings.fastq_strand_indexes,
-                            nthreads=nprocessors['qc'],
-                            default_runner=default_runner,
-                            verbose=args.verbose)
-    if exit_status != 0:
-        # Finished with error
-        logger.critical("QC failed: exit status %s" % exit_status)
-        sys.exit(exit_status)
+    if analysis_project:
+        print("Running the QC")
+        runqc = QCPipeline()
+        runqc.add_project(analysis_project,
+                          qc_protocol="singlecell",
+                          fastq_dir="fastqs.samples",
+                          qc_dir="qc.samples",
+                          multiqc=True)
+        runqc.add_project(analysis_project,
+                          qc_protocol="singlecell",
+                          fastq_dir="fastqs.barcodes",
+                          qc_dir="qc.barcodes",
+                          multiqc=False)
+        exit_status = runqc.run(max_jobs=max_jobs,
+                                batch_size=25,
+                                runners={
+                                    'qc_runner': runners['qc'],
+                                    'report_runner': default_runner,
+                                    'verify_runner': default_runner
+                                },
+                                envmodules=envmodules,
+                                fastq_strand_indexes=
+                                __settings.fastq_strand_indexes,
+                                nthreads=nprocessors['qc'],
+                                default_runner=default_runner,
+                                verbose=args.verbose)
+        if exit_status != 0:
+            # Finished with error
+            logger.critical("QC failed: exit status %s" % exit_status)
+            sys.exit(exit_status)
+    else:
+        print("Skipping the QC")
 
     # Finish
     print("All pipelines completed ok")
