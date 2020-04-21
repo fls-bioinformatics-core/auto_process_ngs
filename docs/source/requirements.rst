@@ -2,6 +2,23 @@
 Requirements
 ============
 
+.. _supported_python_versions:
+
+*************************
+Supported Python versions
+*************************
+
+The package consists predominantly of code written in Python, and the
+following versions are supported:
+
+* Python 2.7
+* Python 3.6
+* Python 3.7
+* Python 3.8
+
+However as Python 2.7 is now end-of-life, support for this version with
+be withdrawn in the near future.
+
 .. _software_dependencies:
 
 *********************
