@@ -1709,6 +1709,25 @@ class TestPipelineParam(unittest.TestCase):
         # Typed parameter
         self.assertEqual(PipelineParam(type=str).value,None)
 
+    def test_pipelineparam_replacement(self):
+        """
+        PipelineParam: replace value with another parameter
+        """
+        # Create initial parameter
+        p = PipelineParam(name="param1",value=1)
+        self.assertEqual(p.value,1)
+        # Create a new parameter
+        pp = PipelineParam(name="param2",value=2)
+        self.assertEqual(pp.value,2)
+        # Replace first parameter with the first
+        p.replace_with(pp)
+        self.assertEqual(p.value,2)
+        # Change value of second parameter
+        pp.set(3)
+        self.assertEqual(pp.value,3)
+        # Value of first parameter should also have changed
+        self.assertEqual(p.value,3)
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):

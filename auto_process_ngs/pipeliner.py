@@ -874,6 +874,21 @@ class PipelineParam(object):
     >>> p = PipelineParam(name="user_name")
     >>> p.name
     "user_name"
+
+    A parameter can be "replaced" with another parameter
+    using its ``replace_with`` method:
+
+    >>> p = PipelineParam(value="old")
+    >>> p.value
+    "old"
+    >>> pp = PipelineParam(value="new")
+    >>> p.replace_with(pp)
+    >>> p.value
+    "new"
+
+    This feature allows parameters defined in one context
+    to be matched with parameters in another (for example
+    when tasks from one pipeline are imported into another).
     """
     def __init__(self,value=None,type=None,default=None,name=None):
         """
@@ -897,6 +912,7 @@ class PipelineParam(object):
         if value is not None:
             self.set(value)
         self._name = str(name)
+        self._replace_with = None
     def set(self,newvalue):
         """
         Update the value assigned to the instance
@@ -905,6 +921,19 @@ class PipelineParam(object):
           newvalue (object): new value to assign
         """
         self._value = newvalue
+    def replace_with(self,p):
+        """
+        Set a parameter to replace this one with
+
+        If a replacement parameter is set then the
+        value will be taken from that parameter
+        (ignoring all settings from this one)
+
+        Arguments:
+          p (PipelineParam): parameter to be used
+            as a replacement on evaluation
+        """
+        self._replace_with = p
     @property
     def value(self):
         """
@@ -918,6 +947,15 @@ class PipelineParam(object):
         creation then this will be used to convert the
         assigned value before it is returned.
         """
+        if self._replace_with is not None:
+            # Return the value of the parameter that
+            # this should be replaced with
+            try:
+                return self._replace_with.value
+            except AttributeError:
+                raise TypeError("PipelineParameter cannot be "
+                                "replaced with non-parameter "
+                                "object")
         if self._value is None:
             # Try to return default value
             try:
