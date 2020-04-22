@@ -925,10 +925,12 @@ class PipelineParam(object):
             except TypeError:
                 pass
         # Return stored value
-        try:
-            return self._type(self._value)
-        except TypeError:
-            return self._value
+        if self._value is not None:
+            try:
+                return self._type(self._value)
+            except TypeError:
+                pass
+        return self._value
     @property
     def name(self):
         """

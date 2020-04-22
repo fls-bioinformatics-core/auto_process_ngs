@@ -1700,6 +1700,15 @@ class TestPipelineParam(unittest.TestCase):
         p = PipelineParam(name="my_param")
         self.assertEqual(p.name,"my_param")
 
+    def test_pipelineparam_handles_None_value(self):
+        """
+        PipelineParam: handle 'None' value
+        """
+        # Untyped parameter
+        self.assertEqual(PipelineParam().value,None)
+        # Typed parameter
+        self.assertEqual(PipelineParam(type=str).value,None)
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):
