@@ -30,6 +30,7 @@ internal use:
 - Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
+- resolve_parameter: get the value of arbitrary parameter or object
 
 Overview
 --------
@@ -1639,13 +1640,9 @@ class Pipeline(object):
                         kws['verbose'] = verbose
                     kws['log_file'] = self._log_file
                     for k in kws:
-                        # If any keywords are actually PipelineParams
-                        # then replace with the actual values
-                        try:
-                            kws[k] = kws[k].value
-                            logger.debug("'%s' -> %s" % (k,kws[k]))
-                        except AttributeError:
-                            pass
+                        # Resolve keywords which are PipelineParams etc
+                        # and replace with the final value
+                        kws[k] = resolve_parameter(kws[k])
                     try:
                         task.run(sched=sched,
                                  poll_interval=poll_interval,
@@ -1843,13 +1840,7 @@ class PipelineTask(object):
         """
         args = AttributeDictionary(**self._callargs)
         for a in args:
-            try:
-                # If arg is a PipelineParam then convert it
-                # and store the final value instead of the
-                # PipelineParam instance
-                args[a] = args[a].value
-            except AttributeError:
-                pass
+            args[a] = resolve_parameter(args[a])
         return args
 
     @property
@@ -2665,7 +2656,7 @@ class Dispatcher(object):
             return self._pickler.loads(fp.read())
 
 ######################################################################
-# Generic pipeline functions
+# Utility functions
 ######################################################################
 
 def sanitize_name(s):
@@ -2700,3 +2691,26 @@ def collect_files(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
+
+def resolve_parameter(p):
+    """
+    Resolve the value of an arbitrary parameter
+
+    The supplied "parameter" can be any object; if it
+    has a 'value' property then the resolved value will
+    whatever this returns, otherwise the supplied
+    object is returned as-is.
+
+    Arguments:
+      p (object): parameter to resolve
+
+    Returns:
+      Object: resolved parameter value.
+    """
+    try:
+        # If arg is a PipelineParam then convert it
+        # and store the final value instead of the
+        # PipelineParam instance
+        return p.value
+    except AttributeError:
+        return p

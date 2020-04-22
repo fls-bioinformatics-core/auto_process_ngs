@@ -23,6 +23,7 @@ from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
+from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
 # Unit tests
@@ -1783,3 +1784,20 @@ class TestDispatcher(unittest.TestCase):
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
+
+class TestResolveParameter(unittest.TestCase):
+
+    def test_resolve_parameter_pipelineparam(self):
+        """
+        resolve_parameter: returns value for PipelineParam
+        """
+        self.assertEqual(
+            resolve_parameter(PipelineParam(value="this is the value")),
+            "this is the value")
+
+    def test_resolve_parameter_non_pipelineparam(self):
+        """
+        resolve_parameter: returns original object if not PipelineParam
+        """
+        self.assertEqual(resolve_parameter("this is the value"),
+                         "this is the value")
