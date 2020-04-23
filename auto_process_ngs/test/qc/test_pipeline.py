@@ -786,7 +786,7 @@ class TestQCPipeline(unittest.TestCase):
                           organism="human")
         status = runqc.run(fastq_strand_indexes=
                            { 'human': '/data/hg38/star_index' },
-                           cellranger_premrna_references=
+                           cellranger_transcriptomes=
                            { 'human': '/data/hg38/cellranger' },
                            poll_interval=0.5,
                            max_jobs=1,
