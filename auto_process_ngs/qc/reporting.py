@@ -33,6 +33,7 @@ from ..docwriter import List
 from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..metadata import AnalysisDirMetadata
+from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
@@ -241,9 +242,20 @@ class QCReporter(object):
             fastq_strand_conf = None
         logger.debug("QCReporter.verify: fastq_strand conf file : %s" %
                      fastq_strand_conf)
+        cellranger_refdata = None
+        qc_info_file = os.path.join(qc_dir,"qc.info")
+        if os.path.exists(qc_info_file):
+            qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+            try:
+                cellranger_refdata = qc_info['cellranger_refdata']
+            except KeyError:
+                pass
+        logger.debug("QCReporter.verify: cellranger reference data : %s" %
+                     cellranger_refdata)
         verified = True
         for f in expected_outputs(self._project,qc_dir,
-                                  fastq_strand_conf,
+                                  fastq_strand_conf=fastq_strand_conf,
+                                  cellranger_refdata=cellranger_refdata,
                                   qc_protocol=qc_protocol):
             if not os.path.exists(f):
                 print("Missing: %s" % f)
@@ -720,7 +732,7 @@ class QCReport(Document):
             outputs.add("icell8_report")
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(self.qc_dir,
-                                             "cellranger_count")
+                                            "cellranger_count")
         cellranger_samples = []
         if os.path.isdir(cellranger_count_dir):
             for d in filter(
