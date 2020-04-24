@@ -347,7 +347,7 @@ def check_cellranger_atac_count_outputs(project,qc_dir=None):
     return sorted(list(samples))
 
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
-                     qc_protocol=None):
+                     cellranger_refdata=None,qc_protocol=None):
     """
     Return expected QC outputs for a project
 
@@ -362,6 +362,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         included unless the path is `None` or the
         config file doesn't exist. Relative path is
         assumed to be a subdirectory of the project
+      cellranger_refdata (str): path to a cellranger
+        reference dataset; cellranger count outputs will
+        be included for 10x protocols unless this path
+        is set to `None`
       qc_protocol (str): QC protocol to predict outputs
         for; if not set then defaults to standard QC
         based on ended-ness
@@ -419,8 +423,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
     # Cellranger count output
-    if qc_protocol in ('10x_scRNAseq',
-                       '10x_snRNAseq',):
+    if qc_protocol in ('10x_scRNAseq','10x_snRNAseq',) and \
+       cellranger_refdata is not None:
         for output in cellranger_count_output(project):
             outputs.add(os.path.join(qc_dir,output))
     elif qc_protocol == '10x_scATAC':
