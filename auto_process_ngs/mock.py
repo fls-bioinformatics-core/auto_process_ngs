@@ -770,6 +770,11 @@ class UpdateAnalysisProject(DirectoryUpdater):
             zip_file.add(os.path.join(self._project.dirn,
                                       "cellranger_count"))
             zip_file.close()
+        # Update cellranger reference data in qc.info
+        if not legacy:
+            qc_info = self._project.qc_info(self._project.qc_dir)
+            qc_info['cellranger_refdata'] = "/data/refdata-cellranger-1.2.0"
+            qc_info.save()
         self._reload_project()
 
 #######################################################################
