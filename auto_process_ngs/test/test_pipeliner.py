@@ -23,6 +23,7 @@ from auto_process_ngs.pipeliner import PipelineParam
 from auto_process_ngs.pipeliner import PipelineFailure
 from auto_process_ngs.pipeliner import FileCollector
 from auto_process_ngs.pipeliner import Dispatcher
+from auto_process_ngs.pipeliner import resolve_parameter
 from bcftbx.JobRunner import SimpleJobRunner
 
 # Unit tests
@@ -1699,6 +1700,34 @@ class TestPipelineParam(unittest.TestCase):
         p = PipelineParam(name="my_param")
         self.assertEqual(p.name,"my_param")
 
+    def test_pipelineparam_handles_None_value(self):
+        """
+        PipelineParam: handle 'None' value
+        """
+        # Untyped parameter
+        self.assertEqual(PipelineParam().value,None)
+        # Typed parameter
+        self.assertEqual(PipelineParam(type=str).value,None)
+
+    def test_pipelineparam_replacement(self):
+        """
+        PipelineParam: replace value with another parameter
+        """
+        # Create initial parameter
+        p = PipelineParam(name="param1",value=1)
+        self.assertEqual(p.value,1)
+        # Create a new parameter
+        pp = PipelineParam(name="param2",value=2)
+        self.assertEqual(pp.value,2)
+        # Replace first parameter with the first
+        p.replace_with(pp)
+        self.assertEqual(p.value,2)
+        # Change value of second parameter
+        pp.set(3)
+        self.assertEqual(pp.value,3)
+        # Value of first parameter should also have changed
+        self.assertEqual(p.value,3)
+
 class TestFileCollector(unittest.TestCase):
 
     def setUp(self):
@@ -1783,3 +1812,20 @@ class TestDispatcher(unittest.TestCase):
         self.assertEqual(exit_code,0)
         result = d.get_result()
         self.assertEqual(result,"Hello World!")
+
+class TestResolveParameter(unittest.TestCase):
+
+    def test_resolve_parameter_pipelineparam(self):
+        """
+        resolve_parameter: returns value for PipelineParam
+        """
+        self.assertEqual(
+            resolve_parameter(PipelineParam(value="this is the value")),
+            "this is the value")
+
+    def test_resolve_parameter_non_pipelineparam(self):
+        """
+        resolve_parameter: returns original object if not PipelineParam
+        """
+        self.assertEqual(resolve_parameter("this is the value"),
+                         "this is the value")

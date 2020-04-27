@@ -30,6 +30,7 @@ internal use:
 - Dispatcher: run a Python function as an external process
 - sanitize_name: clean up task and command names for use in pipeline
 - collect_files: collect files based on glob patterns
+- resolve_parameter: get the value of arbitrary parameter or object
 
 Overview
 --------
@@ -873,6 +874,21 @@ class PipelineParam(object):
     >>> p = PipelineParam(name="user_name")
     >>> p.name
     "user_name"
+
+    A parameter can be "replaced" with another parameter
+    using its ``replace_with`` method:
+
+    >>> p = PipelineParam(value="old")
+    >>> p.value
+    "old"
+    >>> pp = PipelineParam(value="new")
+    >>> p.replace_with(pp)
+    >>> p.value
+    "new"
+
+    This feature allows parameters defined in one context
+    to be matched with parameters in another (for example
+    when tasks from one pipeline are imported into another).
     """
     def __init__(self,value=None,type=None,default=None,name=None):
         """
@@ -896,6 +912,7 @@ class PipelineParam(object):
         if value is not None:
             self.set(value)
         self._name = str(name)
+        self._replace_with = None
     def set(self,newvalue):
         """
         Update the value assigned to the instance
@@ -904,6 +921,19 @@ class PipelineParam(object):
           newvalue (object): new value to assign
         """
         self._value = newvalue
+    def replace_with(self,p):
+        """
+        Set a parameter to replace this one with
+
+        If a replacement parameter is set then the
+        value will be taken from that parameter
+        (ignoring all settings from this one)
+
+        Arguments:
+          p (PipelineParam): parameter to be used
+            as a replacement on evaluation
+        """
+        self._replace_with = p
     @property
     def value(self):
         """
@@ -917,6 +947,15 @@ class PipelineParam(object):
         creation then this will be used to convert the
         assigned value before it is returned.
         """
+        if self._replace_with is not None:
+            # Return the value of the parameter that
+            # this should be replaced with
+            try:
+                return self._replace_with.value
+            except AttributeError:
+                raise TypeError("PipelineParameter cannot be "
+                                "replaced with non-parameter "
+                                "object")
         if self._value is None:
             # Try to return default value
             try:
@@ -924,10 +963,12 @@ class PipelineParam(object):
             except TypeError:
                 pass
         # Return stored value
-        try:
-            return self._type(self._value)
-        except TypeError:
-            return self._value
+        if self._value is not None:
+            try:
+                return self._type(self._value)
+            except TypeError:
+                pass
+        return self._value
     @property
     def name(self):
         """
@@ -1639,13 +1680,9 @@ class Pipeline(object):
                         kws['verbose'] = verbose
                     kws['log_file'] = self._log_file
                     for k in kws:
-                        # If any keywords are actually PipelineParams
-                        # then replace with the actual values
-                        try:
-                            kws[k] = kws[k].value
-                            logger.debug("'%s' -> %s" % (k,kws[k]))
-                        except AttributeError:
-                            pass
+                        # Resolve keywords which are PipelineParams etc
+                        # and replace with the final value
+                        kws[k] = resolve_parameter(kws[k])
                     try:
                         task.run(sched=sched,
                                  poll_interval=poll_interval,
@@ -1843,13 +1880,7 @@ class PipelineTask(object):
         """
         args = AttributeDictionary(**self._callargs)
         for a in args:
-            try:
-                # If arg is a PipelineParam then convert it
-                # and store the final value instead of the
-                # PipelineParam instance
-                args[a] = args[a].value
-            except AttributeError:
-                pass
+            args[a] = resolve_parameter(args[a])
         return args
 
     @property
@@ -2665,7 +2696,7 @@ class Dispatcher(object):
             return self._pickler.loads(fp.read())
 
 ######################################################################
-# Generic pipeline functions
+# Utility functions
 ######################################################################
 
 def sanitize_name(s):
@@ -2700,3 +2731,26 @@ def collect_files(dirn,pattern):
       List: list of matching files
     """
     return sorted(glob.glob(os.path.join(os.path.abspath(dirn),pattern)))
+
+def resolve_parameter(p):
+    """
+    Resolve the value of an arbitrary parameter
+
+    The supplied "parameter" can be any object; if it
+    has a 'value' property then the resolved value will
+    whatever this returns, otherwise the supplied
+    object is returned as-is.
+
+    Arguments:
+      p (object): parameter to resolve
+
+    Returns:
+      Object: resolved parameter value.
+    """
+    try:
+        # If arg is a PipelineParam then convert it
+        # and store the final value instead of the
+        # PipelineParam instance
+        return p.value
+    except AttributeError:
+        return p
