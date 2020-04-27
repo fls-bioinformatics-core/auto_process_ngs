@@ -844,6 +844,9 @@ class QCReport(Document):
                     elif item == 'cellranger_reference':
                         path = self.project.qc_info(self.qc_dir).\
                                cellranger_refdata
+                        if path is None:
+                            # No reference dataset
+                            continue
                         if os.path.dirname(path):
                             value = "...%s%s" % (os.sep,
                                                  os.path.basename(path))
