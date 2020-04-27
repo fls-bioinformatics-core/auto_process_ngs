@@ -989,6 +989,51 @@ prepend-path PATH %s
         self.assertTrue('runner1' in ppl1.runners)
         self.assertTrue('runner2' in ppl1.runners)
 
+    def test_pipeline_add_pipeline(self):
+        """
+        Pipeline: add one pipeline into another
+        """
+        # Define a reusable task
+        # Appends item to a list
+        class Append(PipelineTask):
+            def init(self,l,s):
+                self.add_output('list',list())
+            def setup(self):
+                for item in self.args.l:
+                    self.output.list.append(item)
+                self.output.list.append(self.args.s)
+        # Make first pipeline
+        ppl1 = Pipeline()
+        ppl1.add_param("param1")
+        ppl1.add_runner("runner1")
+        task1 = Append("Append 1",(),"item1")
+        task2 = Append("Append 2",task1.output.list,"item2")
+        task3 = Append("Append 3",task1.output.list,"item3")
+        task4 = Append("Append 4",task3.output.list,"item4")
+        ppl1.add_task(task2,requires=(task1,))
+        ppl1.add_task(task3,requires=(task1,))
+        ppl1.add_task(task4,requires=(task3,))
+        self.assertEqual(len(ppl1.task_list()),4)
+        # Make second pipeline
+        ppl2 = Pipeline()
+        ppl2.add_param("param2")
+        ppl2.add_runner("runner2")
+        task5 = Append("Append 5",task1.output.list,"item5")
+        task6 = Append("Append 6",task3.output.list,"item6")
+        task7 = Append("Append 7",task3.output.list,"item7")
+        ppl2.add_task(task6,requires=(task5,))
+        ppl2.add_task(task7,requires=(task6,))
+        self.assertEqual(len(ppl2.task_list()),3)
+        # Merge second pipeline into the first
+        ppl1.add_pipeline(ppl2)
+        self.assertEqual(len(ppl1.task_list()),7)
+        # Check params from both pipelines are defined
+        self.assertTrue('param1' in ppl1.params)
+        self.assertTrue('param2' in ppl1.params)
+        # Check runners from both pipelines are defined
+        self.assertTrue('runner1' in ppl1.runners)
+        self.assertTrue('runner2' in ppl1.runners)
+
 class TestPipelineTask(unittest.TestCase):
 
     def setUp(self):
