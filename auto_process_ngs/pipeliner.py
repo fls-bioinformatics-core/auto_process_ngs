@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     pipeliner.py: utilities for building simple pipelines of tasks
-#     Copyright (C) University of Manchester 2017-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
 #
 """
 Module providing utility classes and functions for building simple
@@ -750,16 +750,28 @@ probably better suited to situations where the same command was used
 in more than one distinct tasks. In cases where the command is only
 used in one task, using ``PipelineCommandWrapper`` is recommended.
 
-Advanced pipeline construction: appending and merging
------------------------------------------------------
+Advanced pipeline construction: combining pipelines
+---------------------------------------------------
 
 It possible to build larger pipelines out of smaller ones by using
-the ``append_pipeline`` and ``merge_pipeline`` methods of the
-``Pipeline`` class:
+the ``add_pipeline`` method of the ``Pipeline`` class, which pulls
+tasks from one pipeline into another along with their dependency
+relationships.
+
+Optionally dependencies on tasks from the "master" pipeline can be
+added to the imported pipeline tasks.
+
+Parameters defined in the imported pipeline are also imported and
+exposed with the same names; but it is also possible to override
+them with with parameters defined in the master pipeline, or
+parameters that are task outputs.
+
+There are two specialised methods (``append_pipeline`` and
+``merge_pipeline``) which wrap the ``add_pipeline`` method:
 
 * ``append_pipeline`` takes all the tasks from one pipeline and
   adds them to the end of another, so that the appended tasks
-  only run after the original tasks have completed.
+  only run after the original tasks have completed;
 * ``merge_pipeline`` takes all the tasks from one pipeline and
   adds them into another, without requiring that they wait until
   the original tasks have finished.
@@ -909,6 +921,7 @@ class PipelineParam(object):
         self._value = None
         self._type = type
         self._default = default
+        self._uuid = uuid.uuid4()
         if value is not None:
             self.set(value)
         self._name = str(name)
@@ -975,6 +988,12 @@ class PipelineParam(object):
         Return the name of the parameter (if supplied)
         """
         return self._name
+    @property
+    def uuid(self):
+        """
+        Return the unique identifier (UUID) of the parameter
+        """
+        return self._uuid
 
 class FileCollector(Iterator):
     """
@@ -1302,6 +1321,109 @@ class Pipeline(object):
         """
         self._output[name] = value
 
+    def add_pipeline(self,pipeline,params=None,requires=None):
+        """
+        Import tasks from another pipeline
+
+        Adds the tasks from the supplied pipeline
+        instance into this pipeline.
+
+        Dependency relationships defined between tasks
+        in the imported pipeline are preserved on
+        import. The 'requires' keyword can be used to
+        define new dependencies between the initial
+        tasks in the imported pipeline and those in
+        the destination pipeline.
+
+        By default parameters defined in the added
+        pipeline will be imported and exposed with the
+        same names; the 'params' keyword can be used to
+        replace them with arbitrary parameters (e.g.
+        parameters defined in the master pipeline,
+        outputs from tasks etc).
+
+        Arguments:
+          pipeline (Pipeline): pipeline instance with
+            tasks to be added to this pipeline
+          params (mapping): a dictionary or mapping
+            where keys are parameter names in the
+            imported pipeline and values are
+            PipelineParam instances that they will
+            be replaced by
+          requires (list): optional list of tasks
+            that the added pipeline will depend on
+        """
+        self.report("Importing tasks from pipeline '%s'" % pipeline.name)
+        # Get the starting tasks from the new pipeline
+        ranks = pipeline.rank_tasks()
+        initial_tasks = ranks[0]
+        self.report("Identified initial tasks from imported pipeline:")
+        for task_id in initial_tasks:
+            self.report("- %s" % pipeline.get_task(task_id)[0].name())
+        # Store direct references to imported parameters
+        self.report("Importing and masking parameters")
+        imported_params = pipeline.params
+        # Import parameters into the pipeline
+        for p in imported_params:
+            if p not in self._params:
+                # Imported parameter name doesn't have an equivalent
+                # in this pipeline, so add a direct reference to it
+                self._params[p] = imported_params[p]
+                self.report("- imported parameter '%s'" % p)
+            else:
+                # Imported parameter name matches an existing parameter
+                # Update the value
+                imported_params[p].set(self.params[p].value)
+            # Additionally we may need to "mask" the parameters from
+            # the imported pipeline (by assigning replacement
+            # parameters to them)
+            imported_param = imported_params[p]
+            if params and p in params:
+                # Explicit replacement
+                new_param = params[p]
+            else:
+                # Implicit replacement
+                new_param = self.params[p]
+            # Check that the imported parameter isn't going to
+            # be replaced by itself
+            try:
+                if imported_param.uuid != new_param.uuid:
+                    imported_param.replace_with(new_param)
+                    self.report("- replaced parameter '%s'" % p)
+            except Exception as ex:
+                # No UUID for replacement: not a parameter?
+                self.report("- imported parameter is not a "
+                            "PipelineParam? (%s)" % ex)
+                continue
+        # Add runner definitions from the new pipeline
+        for r in pipeline.runners:
+            if r not in self.runners:
+                self.add_runner(r)
+        # Add the tasks from the new pipeline
+        self.report("Adding tasks")
+        for task_id in pipeline.task_list():
+            task,requirements,kws = pipeline.get_task(task_id)
+            if task_id in initial_tasks:
+                if requires:
+                    if requirements:
+                        requirements = list(requirements).extend(requires)
+                    else:
+                        requirements = list(requires)
+            # Update the runner for the task
+            if 'runner' in kws:
+                name = kws['runner'].name
+                kws['runner'] = self.runners[name]
+                self.report("- updated runner '%s' for imported task '%s'"
+                            % (name,task.name()))
+            # Update the environment for the task
+            if 'envmod' in kws:
+                name = kws['envmod'].name
+                kws['envmod'] = self.envmod[name]
+                self.report("- updating envmodule '%s' for imported "
+                            "task '%s'" % (name,task.name()))
+            # Add the task to the source pipeline
+            self.add_task(task,requires=requirements,**kws)
+
     def append_pipeline(self,pipeline):
         """
         Append tasks from another pipeline
@@ -1328,38 +1450,8 @@ class Pipeline(object):
         self.report("Identified final tasks from base pipeline:")
         for task in final_tasks:
             self.report("-- %s" % task.name())
-        # Get the starting tasks from the new pipeline
-        ranks = pipeline.rank_tasks()
-        initial_tasks = ranks[0]
-        self.report("Identified initial tasks from appended pipeline:")
-        for task_id in initial_tasks:
-            self.report("-- %s" % pipeline.get_task(task_id)[0].name())
-        # Add parameters from the new pipeline
-        for p in pipeline.params:
-            if p not in self._params:
-                self.report("Adding parameter '%s' from appended pipeline"
-                            % p)
-                self._params[p] = pipeline.params[p]
-        # Add runner definitions from the new pipeline
-        for r in pipeline.runners:
-            if r not in self.runners:
-                self.add_runner(r)
-        # Add the tasks from the new pipeline
-        for task_id in pipeline.task_list():
-            task,requirements,kws = pipeline.get_task(task_id)
-            if task_id in initial_tasks:
-                if requirements:
-                    requirements = list(requirements).extend(final_tasks)
-                else:
-                    requirements = list(final_tasks)
-            # Update the runner for the task
-            if 'runner' in kws:
-                name = kws['runner'].name
-                self.report("Updating runner '%s' for task '%s'"
-                            % (name,task.name()))
-                kws['runner'] = self.runners[name]
-            # Add the task to the source pipeline
-            self.add_task(task,requires=requirements,**kws)
+        # Add the pipeline
+        self.add_pipeline(pipeline,requires=final_tasks)
 
     def merge_pipeline(self,pipeline):
         """
@@ -1378,22 +1470,7 @@ class Pipeline(object):
           pipeline (Pipeline): pipeline instance with
             tasks to be added
         """
-        # Add parameters from the new pipeline
-        for p in pipeline.params:
-            if p not in self._params:
-                self._params[p] = pipeline.params[p]
-        # Add runner definitions from the new pipeline
-        for r in pipeline.runners:
-            if r not in self.runners:
-                self.add_runner(r)
-        # Add the tasks
-        for task_id in pipeline.task_list():
-            task,requirements,kws = pipeline.get_task(task_id)
-            # Update the runner for the task
-            if 'runner' in kws:
-                name = kws['runner'].name
-                kws['runner'] = self.runners[name]
-            self.add_task(task,requirements,**kws)
+        self.add_pipeline(pipeline)
 
     def task_list(self):
         """
