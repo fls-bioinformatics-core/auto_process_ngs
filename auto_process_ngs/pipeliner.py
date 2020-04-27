@@ -909,6 +909,7 @@ class PipelineParam(object):
         self._value = None
         self._type = type
         self._default = default
+        self._uuid = uuid.uuid4()
         if value is not None:
             self.set(value)
         self._name = str(name)
@@ -975,6 +976,12 @@ class PipelineParam(object):
         Return the name of the parameter (if supplied)
         """
         return self._name
+    @property
+    def uuid(self):
+        """
+        Return the unique identifier (UUID) of the parameter
+        """
+        return self._uuid
 
 class FileCollector(Iterator):
     """
