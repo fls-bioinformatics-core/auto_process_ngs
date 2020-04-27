@@ -33,6 +33,7 @@ from ..docwriter import List
 from ..docwriter import Para
 from ..docwriter import WarningIcon
 from ..metadata import AnalysisDirMetadata
+from ..metadata import AnalysisProjectQCDirInfo
 from ..fastq_utils import group_fastqs_by_name
 from .fastqc import Fastqc
 from .fastq_screen import Fastqscreen
@@ -241,9 +242,20 @@ class QCReporter(object):
             fastq_strand_conf = None
         logger.debug("QCReporter.verify: fastq_strand conf file : %s" %
                      fastq_strand_conf)
+        cellranger_refdata = None
+        qc_info_file = os.path.join(qc_dir,"qc.info")
+        if os.path.exists(qc_info_file):
+            qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+            try:
+                cellranger_refdata = qc_info['cellranger_refdata']
+            except KeyError:
+                pass
+        logger.debug("QCReporter.verify: cellranger reference data : %s" %
+                     cellranger_refdata)
         verified = True
         for f in expected_outputs(self._project,qc_dir,
-                                  fastq_strand_conf,
+                                  fastq_strand_conf=fastq_strand_conf,
+                                  cellranger_refdata=cellranger_refdata,
                                   qc_protocol=qc_protocol):
             if not os.path.exists(f):
                 print("Missing: %s" % f)
@@ -720,7 +732,7 @@ class QCReport(Document):
             outputs.add("icell8_report")
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(self.qc_dir,
-                                             "cellranger_count")
+                                            "cellranger_count")
         cellranger_samples = []
         if os.path.isdir(cellranger_count_dir):
             for d in filter(
@@ -779,7 +791,9 @@ class QCReport(Document):
                           'single_cell_platform',
                           'number_of_cells',
                           'organism',
-                          'qc_protocol',]
+                          'protocol',]
+        if 'cellranger_count' in self.outputs:
+            metadata_items.append('cellranger_reference')
         if 'multiqc' in self.outputs:
             metadata_items.append('multiqc')
         if 'icell8_stats' in self.outputs:
@@ -795,46 +809,62 @@ class QCReport(Document):
             'single_cell_platform': 'Single cell preparation platform',
             'number_of_cells': 'Number of cells',
             'organism': 'Organism',
-            'qc_protocol': 'QC protocol',
+            'protocol': 'QC protocol',
+            'cellranger_reference': 'Cellranger reference dataset',
             'multiqc': 'MultiQC report',
             'icell8_stats': 'ICELL8 statistics',
             'icell8_report': 'ICELL8 processing report',
         }
         for item in metadata_items:
-            # Acquire the value
+            # Try to acquire the value from QC metadata
             try:
-                if self.project.info[item]:
-                    value = self.project.info[item]
-                else:
-                    # No value set, skip this item
-                    continue
+                value = self.project.qc_info(self.qc_dir)[item]
             except KeyError:
-                if item == 'run_id':
-                    try:
-                        value = run_reference_id(
-                            self.project.info['run'],
-                            platform=self.project.info['platform'],
-                            facility_run_number=
-                            self.run_metadata['run_number'])
-                    except (AttributeError,TypeError) as ex:
-                        logger.warning("Run reference ID can't be "
-                                       "determined: %s (ignored)" % ex)
+                # Fall back to project metadata
+                try:
+                    if self.project.info[item]:
+                        value = self.project.info[item]
+                    else:
+                        # No value set, skip this item
                         continue
-                elif item == 'qc_protocol':
-                    value = self.project.qc_info(self.qc_dir).protocol
-                elif item == 'multiqc':
-                    multiqc_report = "multi%s_report.html" \
-                                     % os.path.basename(self.qc_dir)
-                    value = Link(multiqc_report)
-                elif item == 'icell8_stats':
-                    value = Link("icell8_stats.xlsx",
-                                 os.path.join("stats",
-                                              "icell8_stats.xlsx"))
-                elif item == 'icell8_report':
-                    value = Link("icell8_processing.html")
-                else:
-                    raise Exception("Unrecognised item to report: '%s'"
-                                    % item)
+                except KeyError:
+                    # Additional non-metadata items, or items
+                    # requiring additional processing
+                    if item == 'run_id':
+                        try:
+                            value = run_reference_id(
+                                self.project.info['run'],
+                                platform=self.project.info['platform'],
+                                facility_run_number=
+                                self.run_metadata['run_number'])
+                        except (AttributeError,TypeError) as ex:
+                            logger.warning("Run reference ID can't be "
+                                           "determined: %s (ignored)" % ex)
+                            continue
+                    elif item == 'cellranger_reference':
+                        path = self.project.qc_info(self.qc_dir).\
+                               cellranger_refdata
+                        if path is None:
+                            # No reference dataset
+                            continue
+                        if os.path.dirname(path):
+                            value = "...%s%s" % (os.sep,
+                                                 os.path.basename(path))
+                        else:
+                            value = path
+                    elif item == 'multiqc':
+                        multiqc_report = "multi%s_report.html" \
+                                         % os.path.basename(self.qc_dir)
+                        value = Link(multiqc_report)
+                    elif item == 'icell8_stats':
+                        value = Link("icell8_stats.xlsx",
+                                     os.path.join("stats",
+                                                  "icell8_stats.xlsx"))
+                    elif item == 'icell8_report':
+                        value = Link("icell8_processing.html")
+                    else:
+                        raise Exception("Unrecognised item to report: '%s'"
+                                        % item)
             # Add to the metadata table
             self.metadata_table.add_row(
                 item=metadata_titles[item],

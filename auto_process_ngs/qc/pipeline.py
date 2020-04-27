@@ -198,6 +198,16 @@ class QCPipeline(Pipeline):
                                  if fastq_dir is not None
                                  else '')
 
+        # Keep a list of tasks that need to complete
+        # before updating the QC metadata
+        update_qc_metadata_requires = []
+
+        # Build a dictionary of QC metadata items to
+        # update
+        qc_metadata = dict(organism=organism)
+
+        # Keep a list of tasks that need to complete
+        # before running report task
         report_requires = []
 
         # Set up QC dirs
@@ -210,6 +220,8 @@ class QCPipeline(Pipeline):
         )
         self.add_task(setup_qc_dirs,
                       log_dir=log_dir)
+        update_qc_metadata_requires.append(setup_qc_dirs)
+        qc_metadata['protocol'] = qc_protocol
 
         # Check illumina_qc.sh is compatible version
         check_illumina_qc_version = CheckIlluminaQCVersion(
@@ -315,6 +327,9 @@ class QCPipeline(Pipeline):
             self.add_task(get_cellranger_reference_data,
                           runner=self.runners['verify_runner'],
                           log_dir=log_dir)
+            update_qc_metadata_requires.append(get_cellranger_reference_data)
+            qc_metadata['cellranger_refdata'] = \
+                    get_cellranger_reference_data.output.reference_data_path
 
             # Check outputs for cellranger count
             check_cellranger_count = CheckCellrangerCountOutputs(
@@ -364,6 +379,16 @@ class QCPipeline(Pipeline):
             self.add_task(set_cellranger_cell_count,
                           requires=(run_cellranger_count,),)
             report_requires.append(set_cellranger_cell_count)
+
+        # Update QC metadata
+        update_qc_metadata = UpdateQCMetadata(
+            "%s: update QC metadata" % project_name,
+            project,
+            qc_dir,
+            **qc_metadata)
+        self.add_task(update_qc_metadata,
+                      requires=update_qc_metadata_requires)
+        report_requires.append(update_qc_metadata)
 
         # Make QC report
         report_qc = ReportQC(
@@ -556,9 +581,37 @@ class SetupQCDirs(PipelineFunctionTask):
             log_dir = self.args.log_dir
         if not os.path.exists(log_dir):
             mkdir(log_dir)
-        # Store the QC protocol data
-        qc_info['protocol'] = self.args.qc_protocol
+
+class UpdateQCMetadata(PipelineTask):
+    """
+    Update the metadata stored for this QC run
+    """
+    def init(self,project,qc_dir,protocol=None,organism=None,
+             cellranger_refdata=None):
+        """
+        Initialise the UpdateQCMetadata task
+
+        Arguments:
+          project (AnalysisProject): project to run
+            QC for
+          qc_dir (str): directory for QC outputs (defaults
+            to subdirectory 'qc' of project directory)
+          log_dir (str): directory for log files (defaults
+            to 'logs' subdirectory of the QC directory
+          protocol (str): QC protocol being used
+          organism (str): organism(s) associated with the
+            run
+          cellranger_refdata (str): path to reference datasets
+            used by cellranger count
+        """
+        pass
+    def setup(self):
+        # Store the QC metadata
+        qc_info = self.args.project.qc_info(self.args.qc_dir)
+        qc_info['protocol'] = self.args.protocol
         qc_info['fastq_dir'] = self.args.project.fastq_dir
+        qc_info['organism'] = self.args.organism
+        qc_info['cellranger_refdata'] = self.args.cellranger_refdata
         qc_info.save()
 
 class CheckIlluminaQCVersion(PipelineTask):
