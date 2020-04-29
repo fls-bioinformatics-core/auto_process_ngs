@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     barcodes.pipeline.py: pipelines for analysing barcodes
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 
 """
@@ -40,7 +40,8 @@ from ..pipeliner import PipelineParam
 from ..pipeliner import PipelineFailure
 from bcftbx.utils import AttributeDictionary
 from bcftbx.FASTQFile import FastqIterator
-from bcftbx import IlluminaData
+from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import SampleSheet
 
 ######################################################################
 # Pipeline classes
@@ -53,40 +54,84 @@ class AnalyseBarcodes(Pipeline):
     Pipeline to perform barcode analysis on the Fastqs
     produced by bcl2fastq from a sequencing run.
     """
-    def __init__(self,unaligned_dir=None):
+    def __init__(self,unaligned_dir=None,sample_sheet=None):
         """
         Create a new AnalyseBarcodes pipeline instance
+
+        At least one of the bcl2fastq output directory
+        or sample sheet must be supplied when the
+        pipeline is instantiated.
+
+        If the bcl2fastq output directory is supplied
+        on initialisation then it must exist and
+        already contain output Fastq files.
+
+        It is possible to set the pipeline up before the
+        bcl2fastq outputs have been generated, as long
+        as the sample sheet is supplied. The bcl2fastq
+        output directory must then be supplied as an
+        input when the pipeline is executed via the
+        'run' method.
 
         Arguments:
           unaligned_dir (str): path to the directory
             with outputs from bcl2fastq
+          sample_sheet (str): path to the sample sheet
+            file
         """
         # Initialise the pipeline superclass
         Pipeline.__init__(self,name="Analyse Barcodes")
 
+        # Internal parameters
+        self._unaligned_dir = unaligned_dir
+        self._sample_sheet = sample_sheet
+
         # Define parameters
+        self.add_param('unaligned_dir',value=self._unaligned_dir,type=str)
+        self.add_param('sample_sheet',value=self._sample_sheet,type=str)
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
         self.add_param('title',type=str)
         self.add_param('lanes',type=list)
-        self.add_param('sample_sheet',type=str)
         self.add_param('bases_mask',type=str)
         self.add_param('mismatches',type=int)
         self.add_param('cutoff',type=float,value=0.001)
         self.add_param('force',type=bool,value=False)
 
-        # Load data from bcl2fastq output
-        if not os.path.exists(unaligned_dir):
-            raise OSError("'%s': not found" % unaligned_dir)
-        analysis_dir = os.path.abspath(os.path.dirname(unaligned_dir))
-        unaligned_dir = os.path.basename(unaligned_dir)
-        illumina_data = IlluminaData.IlluminaData(analysis_dir,
-                                                  unaligned_dir=unaligned_dir)
+        # Get a list of projects
+        if self._unaligned_dir is not None:
+            # Load data from bcl2fastq output
+            try:
+                analysis_dir = os.path.abspath(
+                    os.path.dirname(self._unaligned_dir))
+                unaligned_dir = os.path.basename(self._unaligned_dir)
+                illumina_data = IlluminaData(analysis_dir,
+                                             unaligned_dir=unaligned_dir)
+            except Exception as ex:
+                raise Exception("Unaligned dir '%s' supplied but can't "
+                                "load data" % self._unaligned_dir)
+            # Get a list of projects
+            projects = [p.name for p in illumina_data.projects]
+        elif self._sample_sheet is not None:
+            # Load data from sample sheet
+            try:
+                s = SampleSheet(self._sample_sheet)
+                # List of unique project names
+                projects = list(set(
+                    [d[s.sample_project_column]
+                     if d[s.sample_project_column]
+                     else d[s.sample_id_column]
+                     for d in s]))
+            except Exception as ex:
+                raise Exception("Sample sheet '%s' supplied but can't "
+                                "get a list of project names")
+        else:
+            raise Exception("Need to supply either unaligned (bcl2fastq "
+                            "output) dir or sample sheet")
 
-        # Example Fastq file used for determining mismatches in
-        # absence of bases mask
-        example_fastq = illumina_data.projects[0].samples[0].fastq_subset(
-            read_number=1,full_path=True)[0]
+        self.report("Expecting projects:")
+        for p in projects:
+            self.report("- %s" % p)
 
         ####################
         # Build the pipeline
@@ -100,29 +145,38 @@ class AnalyseBarcodes(Pipeline):
             force=self.params.force)
         self.add_task(setup_barcode_analysis_dir)
 
-        # Generate counts for Fastqs in each project
+        # Load the data from the unaligned/bcl2fastq output dir
+        load_illumina_data = LoadIlluminaData(
+            "Load Fastq data for barcode analysis",
+            self.params.unaligned_dir)
+        self.add_task(load_illumina_data)
+
+        # Generate counts for each project
         count_tasks = []
-        for project in illumina_data.projects:
+        for project in projects:
             count_barcodes = CountBarcodes(
-                "Count barcodes in '%s'" % project.name,
+                "Count barcodes in '%s'" % project,
+                load_illumina_data.output.illumina_data,
                 project,
                 self.params.counts_dir,
                 lanes=self.params.lanes)
             self.add_task(count_barcodes,
-                          requires=(setup_barcode_analysis_dir,))
+                          requires=(setup_barcode_analysis_dir,
+                                    load_illumina_data))
             count_tasks.append(count_barcodes)
 
-        # Generate counts for undetermined Fastqs
-        if illumina_data.undetermined is not None:
-            count_barcodes = CountBarcodes(
-                "Count barcodes in 'undetermined'",
-                illumina_data.undetermined,
-                self.params.counts_dir,
-                lanes=self.params.lanes,
-                use_project_name="undetermined")
-            self.add_task(count_barcodes,
-                          requires=(setup_barcode_analysis_dir,))
-            count_tasks.append(count_barcodes)
+        # Get counts for 'undetermined'
+        count_barcodes = CountBarcodes(
+            "Count barcodes in 'undetermined'",
+            load_illumina_data.output.illumina_data,
+            "__undetermined__",
+            self.params.counts_dir,
+            lanes=self.params.lanes,
+            use_project_name="undetermined")
+        self.add_task(count_barcodes,
+                      requires=(setup_barcode_analysis_dir,
+                                load_illumina_data))
+        count_tasks.append(count_barcodes)
 
         # List the counts files
         list_counts_files = ListBarcodeCountFiles(
@@ -150,16 +204,20 @@ class AnalyseBarcodes(Pipeline):
         self.add_output('xls_file',report_barcodes.output.xls_file)
         self.add_output('html_file',report_barcodes.output.html_file)
 
-    def run(self,barcode_analysis_dir,title=None,lanes=None,
-            mismatches=None,bases_mask=None,cutoff=None,sample_sheet=None,
-            force=False,working_dir=None,log_file=None,batch_size=None,
-            max_jobs=1,poll_interval=5,runner=None,verbose=False):
+    def run(self,barcode_analysis_dir,unaligned_dir=None,title=None,
+            lanes=None,mismatches=None,bases_mask=None,cutoff=None,
+            sample_sheet=None,force=False,working_dir=None,log_file=None,
+            batch_size=None,max_jobs=1,poll_interval=5,runner=None,
+            verbose=False):
         """
         Run the tasks in the pipeline
 
         Arguments:
           barcode_analysis_dir (str): path to the directory
             to write the analysis results to
+          unaligned_dir (str): path to the bcl2fastq outputs
+            (must be supplied here if a bcl2fastq output
+            directory was not supplied on pipeline creation)
           title (str): optional, title for output reports
           lanes (list): optional, list of lanes to restrict
             the analysis to
@@ -209,6 +267,17 @@ class AnalyseBarcodes(Pipeline):
         log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
 
+        # Input bcl2fastq directory
+        if self._unaligned_dir is not None:
+            if unaligned_dir is None:
+                unaligned_dir = self._unaligned_dir
+            else:
+                raise Exception("Bcl2fastq directory already set")
+        else:
+            if unaligned_dir is None:
+                raise Exception("No bcl2fastq output directory specified")
+        unaligned_dir = os.path.abspath(unaligned_dir)
+
         # Barcode analysis and counts directories
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)
         counts_dir = os.path.join(barcode_analysis_dir,"counts")
@@ -222,6 +291,7 @@ class AnalyseBarcodes(Pipeline):
                               batch_size=batch_size,
                               exit_on_failure=PipelineFailure.IMMEDIATE,
                               params={
+                                  'unaligned_dir': unaligned_dir,
                                   'barcode_analysis_dir': barcode_analysis_dir,
                                   'counts_dir': counts_dir,
                                   'title': title,
@@ -276,16 +346,34 @@ class SetupBarcodeAnalysisDirs(PipelineTask):
         if not os.path.exists(self.args.counts_dir):
             os.mkdir(self.args.counts_dir)
 
+class LoadIlluminaData(PipelineTask):
+    """
+    Load up an IlluminaData object from the bcl2fastq outputs
+    """
+    def init(self,bcl2fastq_dir):
+        """
+        """
+        self.add_output('illumina_data',PipelineParam())
+    def setup(self):
+        # Load the data from bcl2fastq
+        print("Loading data from %s" % self.args.bcl2fastq_dir)
+        illumina_data = IlluminaData(os.path.dirname(self.args.bcl2fastq_dir),
+                                     os.path.basename(self.args.bcl2fastq_dir))
+        self.output.illumina_data.set(illumina_data)
+
 class CountBarcodes(PipelineTask):
     """
     Generate barcode counts for a project
     """
-    def init(self,project,counts_dir,lanes=None,use_project_name=None):
+    def init(self,illumina_data,project,counts_dir,lanes=None,
+             use_project_name=None):
         """
         Initialise the CountBarcodes task
 
         Arguments:
-          project (IlluminaProject): project with Fastqs
+          illumina_data (IlluminaData): IlluminaData object
+            for the Fastq data that should be examined
+          project (str): name of project with Fastqs
             to get barcode codes from
           counts_dir (str): directory to write counts
             files to
@@ -298,12 +386,27 @@ class CountBarcodes(PipelineTask):
         pass
     def setup(self):
         # Project name to use
-        project_name = self.args.use_project_name
-        if project_name is None:
-            project_name = self.args.project.name
+        project_name = self.args.project
+        # Acquire the matching IlluminaProject
+        project = None
+        if project_name != "__undetermined__":
+            # Standard projects
+            for p in self.args.illumina_data.projects:
+                if p.name == project_name:
+                    project = p
+                    break
+        else:
+            # Undetermined reads
+            if self.args.illumina_data.undetermined is None:
+                # No undetermined reads
+                # Exit without an error
+                print("No undetermined reads, nothing to do")
+                return
+            else:
+                project = self.args.illumina_data.undetermined
         # Collect Fastq files
         fastqs = []
-        for sample in self.args.project.samples:
+        for sample in project.samples:
             for fastq in sample.fastq:
                 fq = AnalysisFastq(fastq)
                 if fq.is_index_read or fq.read_number != 1:
@@ -422,9 +525,7 @@ class ReportBarcodeAnalysis(PipelineTask):
             try:
                 lanes = sorted(
                     set([line['Lane']
-                         for line in
-                         IlluminaData.SampleSheet(
-                             self.args.sample_sheet).data]))
+                         for line in SampleSheet(self.args.sample_sheet)]))
             except KeyError:
                 # No lanes
                 lanes = None
