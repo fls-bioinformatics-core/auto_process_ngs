@@ -54,7 +54,7 @@ class AnalyseBarcodes(Pipeline):
     Pipeline to perform barcode analysis on the Fastqs
     produced by bcl2fastq from a sequencing run.
     """
-    def __init__(self,unaligned_dir=None,sample_sheet=None):
+    def __init__(self,bcl2fastq_dir=None,sample_sheet=None):
         """
         Create a new AnalyseBarcodes pipeline instance
 
@@ -74,7 +74,7 @@ class AnalyseBarcodes(Pipeline):
         'run' method.
 
         Arguments:
-          unaligned_dir (str): path to the directory
+          bcl2fastq_dir (str): path to the directory
             with outputs from bcl2fastq
           sample_sheet (str): path to the sample sheet
             file
@@ -83,11 +83,11 @@ class AnalyseBarcodes(Pipeline):
         Pipeline.__init__(self,name="Analyse Barcodes")
 
         # Internal parameters
-        self._unaligned_dir = unaligned_dir
+        self._bcl2fastq_dir = bcl2fastq_dir
         self._sample_sheet = sample_sheet
 
         # Define parameters
-        self.add_param('unaligned_dir',value=self._unaligned_dir,type=str)
+        self.add_param('bcl2fastq_dir',value=self._bcl2fastq_dir,type=str)
         self.add_param('sample_sheet',value=self._sample_sheet,type=str)
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
@@ -99,17 +99,17 @@ class AnalyseBarcodes(Pipeline):
         self.add_param('force',type=bool,value=False)
 
         # Get a list of projects
-        if self._unaligned_dir is not None:
+        if self._bcl2fastq_dir is not None:
             # Load data from bcl2fastq output
             try:
                 analysis_dir = os.path.abspath(
-                    os.path.dirname(self._unaligned_dir))
-                unaligned_dir = os.path.basename(self._unaligned_dir)
+                    os.path.dirname(self._bcl2fastq_dir))
+                bcl2fastq_dir = os.path.basename(self._bcl2fastq_dir)
                 illumina_data = IlluminaData(analysis_dir,
-                                             unaligned_dir=unaligned_dir)
+                                             unaligned_dir=bcl2fastq_dir)
             except Exception as ex:
                 raise Exception("Unaligned dir '%s' supplied but can't "
-                                "load data" % self._unaligned_dir)
+                                "load data" % self._bcl2fastq_dir)
             # Get a list of projects
             projects = [p.name for p in illumina_data.projects]
         elif self._sample_sheet is not None:
@@ -148,7 +148,7 @@ class AnalyseBarcodes(Pipeline):
         # Load the data from the unaligned/bcl2fastq output dir
         load_illumina_data = LoadIlluminaData(
             "Load Fastq data for barcode analysis",
-            self.params.unaligned_dir)
+            self.params.bcl2fastq_dir)
         self.add_task(load_illumina_data)
 
         # Generate counts for each project
@@ -204,7 +204,7 @@ class AnalyseBarcodes(Pipeline):
         self.add_output('xls_file',report_barcodes.output.xls_file)
         self.add_output('html_file',report_barcodes.output.html_file)
 
-    def run(self,barcode_analysis_dir,unaligned_dir=None,title=None,
+    def run(self,barcode_analysis_dir,bcl2fastq_dir=None,title=None,
             lanes=None,mismatches=None,bases_mask=None,cutoff=None,
             sample_sheet=None,force=False,working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,poll_interval=5,runner=None,
@@ -215,7 +215,7 @@ class AnalyseBarcodes(Pipeline):
         Arguments:
           barcode_analysis_dir (str): path to the directory
             to write the analysis results to
-          unaligned_dir (str): path to the bcl2fastq outputs
+          bcl2fastq_dir (str): path to the bcl2fastq outputs
             (must be supplied here if a bcl2fastq output
             directory was not supplied on pipeline creation)
           title (str): optional, title for output reports
@@ -268,15 +268,15 @@ class AnalyseBarcodes(Pipeline):
         scripts_dir = os.path.join(working_dir,"scripts")
 
         # Input bcl2fastq directory
-        if self._unaligned_dir is not None:
-            if unaligned_dir is None:
-                unaligned_dir = self._unaligned_dir
+        if self._bcl2fastq_dir is not None:
+            if bcl2fastq_dir is None:
+                bcl2fastq_dir = self._bcl2fastq_dir
             else:
                 raise Exception("Bcl2fastq directory already set")
         else:
-            if unaligned_dir is None:
+            if bcl2fastq_dir is None:
                 raise Exception("No bcl2fastq output directory specified")
-        unaligned_dir = os.path.abspath(unaligned_dir)
+        bcl2fastq_dir = os.path.abspath(bcl2fastq_dir)
 
         # Barcode analysis and counts directories
         barcode_analysis_dir = os.path.abspath(barcode_analysis_dir)
@@ -291,7 +291,7 @@ class AnalyseBarcodes(Pipeline):
                               batch_size=batch_size,
                               exit_on_failure=PipelineFailure.IMMEDIATE,
                               params={
-                                  'unaligned_dir': unaligned_dir,
+                                  'bcl2fastq_dir': bcl2fastq_dir,
                                   'barcode_analysis_dir': barcode_analysis_dir,
                                   'counts_dir': counts_dir,
                                   'title': title,

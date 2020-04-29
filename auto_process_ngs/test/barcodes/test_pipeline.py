@@ -72,7 +72,7 @@ IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH
         self._insert_fastq_reads(
             os.path.join(self.wd,"200428_M00879_0087_000000000-AGEW9"))
         # Set up and run pipeline
-        p = AnalyseBarcodes(unaligned_dir=
+        p = AnalyseBarcodes(bcl2fastq_dir=
                             os.path.join(self.wd,
                                          "200428_M00879_0087_000000000-AGEW9",
                                          "bcl2fastq"))
@@ -145,7 +145,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
             os.path.join(self.wd,"200428_M00879_0087_000000000-AGEW9"))
         # Run the pipeline
         exit_code = p.run(os.path.join(self.wd,"barcode_analysis"),
-                          unaligned_dir=os.path.join(
+                          bcl2fastq_dir=os.path.join(
                               self.wd,
                               "200428_M00879_0087_000000000-AGEW9",
                               "bcl2fastq"),
@@ -189,6 +189,5 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
         """
         self.assertRaises(Exception,
                           AnalyseBarcodes,
-                          unaligned_dir=None,
+                          bcl2fastq_dir=None,
                           sample_sheet=None)
-    
