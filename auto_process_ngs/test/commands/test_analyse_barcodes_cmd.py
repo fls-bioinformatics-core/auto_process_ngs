@@ -108,7 +108,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
                   "AB.AB2_S2_R1_001.fastq.gz.counts",
                   "CDE.CDE3_S3_R1_001.fastq.gz.counts",
                   "CDE.CDE4_S4_R1_001.fastq.gz.counts",
-                  "undetermined.Undetermined_S0_R1_001.fastq.gz.counts"):
+                  "__undetermined__.Undetermined_S0_R1_001.fastq.gz.counts"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,"barcode_analysis","counts",f)),
                             "Missing file: %s" % f)
@@ -168,7 +168,7 @@ CDE4,CDE4,,,D702,ATGTAACT,D501,CGTGTAGG,CDE,
                   "AB.AB2_S2_R1_001.fastq.gz.counts",
                   "CDE.CDE3_S3_R1_001.fastq.gz.counts",
                   "CDE.CDE4_S4_R1_001.fastq.gz.counts",
-                  "undetermined.Undetermined_S0_R1_001.fastq.gz.counts"):
+                  "__undetermined__.Undetermined_S0_R1_001.fastq.gz.counts"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,"barcode_analysis","counts",f)),
                             "Missing file: %s" % f)
@@ -228,7 +228,7 @@ CDE4,CDE4,,,D702,,D501,,CDE,
                   "AB.AB2_S2_R1_001.fastq.gz.counts",
                   "CDE.CDE3_S3_R1_001.fastq.gz.counts",
                   "CDE.CDE4_S4_R1_001.fastq.gz.counts",
-                  "undetermined.Undetermined_S0_R1_001.fastq.gz.counts"):
+                  "__undetermined__.Undetermined_S0_R1_001.fastq.gz.counts"):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,"barcode_analysis","counts",f)),
                             "Missing file: %s" % f)
