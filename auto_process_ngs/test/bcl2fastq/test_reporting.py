@@ -1,31 +1,34 @@
 #######################################################################
-# Tests for qc/processing.py module
+# Unit tests for bcl2fastq/reporting.py
 #######################################################################
 
 import unittest
+import os
 import tempfile
 import shutil
-import os
-from auto_process_ngs.auto_processor import AutoProcess
-from auto_process_ngs.qc.processing import report_processing_qc
+from auto_process_ngs.bcl2fastq.reporting import ProcessingQCReport
+from auto_process_ngs.bcl2fastq.reporting import detect_processing_qc_warnings
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
 
-class TestReportProcessingQC(unittest.TestCase):
+class TestProcessingQCReport(unittest.TestCase):
     """
-    Tests for report_processing_qc function
+    Tests for the ProcessingQCReport class
     """
     def setUp(self):
-        # Create a temp working dir
-        self.wd = tempfile.mkdtemp(suffix='TestReportProcessingQC')
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.TestProcessingQCReport')
 
     def tearDown(self):
-        if REMOVE_TEST_OUTPUTS:
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
             shutil.rmtree(self.wd)
 
-    def test_report_processing_qc(self):
-        """report_processing_qc: standard report
+    def test_processing_qc_report(self):
+        """ProcessingQCReport: standard report
         """
         # Create test data
         analysis_dir = os.path.join(self.wd,
@@ -52,7 +55,7 @@ Total reads = 136778255
 - Undetermined_indices/undetermined	27596657	20.2%
 """)
         per_lane_statistics = os.path.join(analysis_dir,
-                                           "per_lane_statistics.info")  
+                                           "per_lane_statistics.info")
         with open(per_lane_statistics,'w') as fp:
             fp.write("""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
 Lane 1	136778255	109181598	27596657	79.8	20.2
@@ -85,16 +88,22 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	24.0G	27596657
         output_html = os.path.join(analysis_dir,
                                    "processing_report.html")
         self.assertFalse(os.path.exists(output_html))
-        report_processing_qc(AutoProcess(analysis_dir),output_html)
+        processing_qc_report = ProcessingQCReport(
+            analysis_dir,
+            statistics_full,
+            per_lane_statistics,
+            per_lane_sample_stats
+        )
+        processing_qc_report.write(output_html)
         self.assertTrue(os.path.exists(output_html))
         # Check the HTML
         with open(output_html,'rt') as fp:
             html = fp.read()
         # No warnings
-        self.assertTrue(html.find("<div class='warnings hide'>") > -1)
+        self.assertTrue(html.find("<p>Status: OK</p>") > -1)
 
-    def test_report_processing_qc_empty_fastqs(self):
-        """report_processing_qc: report with empty Fastqs
+    def test_processing_qc_report_empty_fastqs(self):
+        """ProcessingQCReport: handle empty Fastqs
         """
         # Create test data
         analysis_dir = os.path.join(self.wd,
@@ -121,7 +130,7 @@ Total reads = 114447328
 - Undetermined_indices/undetermined	27596657	24.1%
 """)
         per_lane_statistics = os.path.join(analysis_dir,
-                                           "per_lane_statistics.info")  
+                                           "per_lane_statistics.info")
         with open(per_lane_statistics,'w') as fp:
             fp.write("""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
 Lane 1	79937946	52341289	27596657	65.5	35.5
@@ -154,16 +163,22 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	24.0G	27596657
         output_html = os.path.join(analysis_dir,
                                    "processing_report.html")
         self.assertFalse(os.path.exists(output_html))
-        report_processing_qc(AutoProcess(analysis_dir),output_html)
+        processing_qc_report = ProcessingQCReport(
+            analysis_dir,
+            statistics_full,
+            per_lane_statistics,
+            per_lane_sample_stats
+        )
+        processing_qc_report.write(output_html)
         self.assertTrue(os.path.exists(output_html))
         # Check the HTML
         with open(output_html,'rt') as fp:
             html = fp.read()
         # Warnings
-        self.assertTrue(html.find("<div class='warnings'>") > -1)
+        self.assertTrue(html.find("<p>Status: WARNINGS</p>") > -1)
 
-    def test_report_processing_qc_empty_lane(self):
-        """report_processing_qc: report with empty lane
+    def test_processing_qc_report_empty_lane(self):
+        """ProcessingQCReport: handle empty lane
         """
         # Create test data
         analysis_dir = os.path.join(self.wd,
@@ -218,10 +233,43 @@ Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	1.0K	0	Y	2	0
         output_html = os.path.join(analysis_dir,
                                    "processing_report.html")
         self.assertFalse(os.path.exists(output_html))
-        report_processing_qc(AutoProcess(analysis_dir),output_html)
+        processing_qc_report = ProcessingQCReport(
+            analysis_dir,
+            statistics_full,
+            per_lane_statistics,
+            per_lane_sample_stats
+        )
+        processing_qc_report.write(output_html)
         self.assertTrue(os.path.exists(output_html))
         # Check the HTML
         with open(output_html,'rt') as fp:
             html = fp.read()
         # Warnings
-        self.assertTrue(html.find("<div class='warnings'>") > -1)
+        self.assertTrue(html.find("<p>Status: WARNINGS</p>") > -1)
+
+class TestDetectProcessingQCWarnings(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.TestDetectProcessingQCWarnings')
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_detect_warnings(self):
+        """
+        detect_processing_qc_warnings: report contains warnings
+        """
+        mock_report_file = os.path.join(self.wd,"report.html")
+        with open(mock_report_file,'wt') as fp:
+            fp.write("<h1>Test</h1>\n<div id='status' class='hide'>\n<p>Status: WARNINGS</p>\n</div>")
+        self.assertTrue(detect_processing_qc_warnings(mock_report_file))
+    def test_detect_no_warnings(self):
+        """
+        detect_processing_qc_warnings: report doesn't contain warnings
+        """
+        mock_report_file = os.path.join(self.wd,"report.html")
+        with open(mock_report_file,'wt') as fp:
+            fp.write("<h1>Test</h1>\n<div id='status' class='hide'>\n<p>Status: OK</p>\n</div>")
+        self.assertFalse(detect_processing_qc_warnings(mock_report_file))

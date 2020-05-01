@@ -14,6 +14,7 @@ import time
 import shutil
 import gzip
 import logging
+from ..bcl2fastq.reporting import ProcessingQCReport
 from ..bcl2fastq_utils import make_custom_sample_sheet
 from ..bcl2fastq_utils import get_bases_mask
 from ..bcl2fastq_utils import bases_mask_is_valid
@@ -39,7 +40,6 @@ from ..samplesheet_utils import SampleSheetLinter
 from ..applications import Command
 from ..applications import general as general_apps
 from ..simple_scheduler import SchedulerJob
-from ..qc.processing import report_processing_qc
 from bcftbx import IlluminaData
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
@@ -1660,3 +1660,58 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     processing_qc_html = os.path.join(ap.analysis_dir,
                                       "processing_qc.html")
     report_processing_qc(ap,processing_qc_html)
+
+def report_processing_qc(ap,html_file):
+    """
+    Generate HTML report for processing statistics
+
+    Arguments:
+      ap (AutoProcess): AutoProcess instance to report the
+        processing from
+      html_file (str): destination path and file name for
+        HTML report
+    """
+    # Per-lane statistics
+    per_lane_stats_file = ap.params.per_lane_stats_file
+    if per_lane_stats_file is None:
+        per_lane_stats_file = "per_lane_statistics.info"
+    per_lane_stats_file = get_absolute_file_path(per_lane_stats_file,
+                                                 base=ap.analysis_dir)
+    # Per lane by sample statistics
+    per_lane_sample_stats_file = get_absolute_file_path(
+        "per_lane_sample_stats.info",
+        base=ap.analysis_dir)
+    # Per fastq statistics
+    stats_file = get_absolute_file_path("statistics_full.info",
+                                        base=ap.analysis_dir)
+    if not os.path.exists(stats_file):
+        if ap.params.stats_file is not None:
+            stats_file = ap.params.stats_file
+        else:
+            stats_file = "statistics.info"
+    stats_file = get_absolute_file_path(stats_file,
+                                        base=ap.analysis_dir)
+    # Generate the report
+    ProcessingQCReport(ap.analysis_dir,
+                       stats_file,
+                       per_lane_stats_file,
+                       per_lane_sample_stats_file).write(html_file)
+
+def get_absolute_file_path(p,base=None):
+    """
+    Get absolute path for supplied path
+
+    Arguments:
+      p (str): path
+      base (str): optional, base directory to
+        use if p is relative
+
+    Returns:
+      String: absolute path for p.
+    """
+    if not os.path.isabs(p):
+        if base is not None:
+            p = os.path.join(os.path.abspath(base),p)
+        else:
+            p = os.path.abspath(p)
+    return p
