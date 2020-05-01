@@ -63,20 +63,3 @@ def report_processing_qc(ap,html_file):
                        stats_file,
                        per_lane_stats_file,
                        per_lane_sample_stats_file).write(html_file)
-
-def detect_processing_qc_warnings(html_file):
-    """
-    Look for warning text in processing_qc.html file
-
-    Arguments:
-      html_file (str): path to HTML report file
-
-    Returns:
-      Boolean: True if warnings were found, False if not.
-    """
-    with open(html_file) as fp:
-        for line in fp:
-            if "Status: WARNINGS" in line:
-                return True
-                break
-    return False

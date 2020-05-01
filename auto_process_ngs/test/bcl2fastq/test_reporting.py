@@ -7,6 +7,7 @@ import os
 import tempfile
 import shutil
 from auto_process_ngs.bcl2fastq.reporting import ProcessingQCReport
+from auto_process_ngs.bcl2fastq.reporting import detect_processing_qc_warnings
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -63,3 +64,30 @@ Total reads = 13132812
         reporter.write(os.path.join(self.wd,"processing_qc_report.html"))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,"processing_qc_report.html")))
+
+class TestDetectProcessingQCWarnings(unittest.TestCase):
+    def setUp(self):
+        # Temporary working dir
+        self.wd = tempfile.mkdtemp(suffix='.TestDetectProcessingQCWarnings')
+    def tearDown(self):
+        # Remove temporary working dir
+        if not REMOVE_TEST_OUTPUTS:
+            return
+        if self.wd is not None and os.path.isdir(self.wd):
+            shutil.rmtree(self.wd)
+    def test_detect_warnings(self):
+        """
+        detect_processing_qc_warnings: report contains warnings
+        """
+        mock_report_file = os.path.join(self.wd,"report.html")
+        with open(mock_report_file,'wt') as fp:
+            fp.write("<h1>Test</h1>\n<div id='status' class='hide'>\n<p>Status: WARNINGS</p>\n</div>")
+        self.assertTrue(detect_processing_qc_warnings(mock_report_file))
+    def test_detect_no_warnings(self):
+        """
+        detect_processing_qc_warnings: report doesn't contain warnings
+        """
+        mock_report_file = os.path.join(self.wd,"report.html")
+        with open(mock_report_file,'wt') as fp:
+            fp.write("<h1>Test</h1>\n<div id='status' class='hide'>\n<p>Status: OK</p>\n</div>")
+        self.assertFalse(detect_processing_qc_warnings(mock_report_file))

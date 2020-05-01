@@ -428,3 +428,24 @@ class ProcessingQCReport(Document):
         self.add_to_toc("Per-file statistics by project",
                         per_file_stats,
                         project_toc_list)
+
+#######################################################################
+# Functions
+#######################################################################
+
+def detect_processing_qc_warnings(html_file):
+    """
+    Look for warning text in processing_qc.html file
+
+    Arguments:
+      html_file (str): path to HTML report file
+
+    Returns:
+      Boolean: True if warnings were found, False if not.
+    """
+    with open(html_file) as fp:
+        for line in fp:
+            if "Status: WARNINGS" in line:
+                return True
+                break
+    return False
