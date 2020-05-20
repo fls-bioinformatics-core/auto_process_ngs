@@ -50,6 +50,27 @@ UNASSIGNED = "Undetermined"
 __version__ = get_version()
 
 ######################################################################
+# Functions
+######################################################################
+
+def multiprocessing_map(f,inputs,n=1):
+    """
+    Wrap the 'Pool.map' functionality from 'multiprocessing'
+
+    Arguments:
+      f (function): function to apply to inputs
+      inputs (iterable): set of inputs to invoke
+        function 'f' with
+      n (int): number of concurrent processes to
+        use (default: 1)
+    """
+    pool = Pool(n)
+    results = pool.map(f,inputs)
+    pool.close()
+    pool.join()
+    return results
+
+######################################################################
 # Main
 ######################################################################
 
@@ -178,13 +199,8 @@ if __name__ == "__main__":
         inputs.append((fastq,
                        args.batch_size,
                        batched_fastqs_dir,))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(split_fastq,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(split_fastq,inputs)
+    results = multiprocessing_map(split_fastq,inputs,
+                                  n=args.nprocs)
     for result in results:
         fastqs.append(result)
 
@@ -203,14 +219,9 @@ if __name__ == "__main__":
                        args.reverse_complement,
                        args.update_read_headers,
                        tmp_dir,
-                       UNASSIGNED,))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(assign_reads,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(assign_reads,inputs)
+                       unassigned,))
+    results = multiprocessing_map(assign_reads,inputs,
+                                  n=args.nprocs)
     report("Collecting outputs from batches")
     batches = list()
     barcode_counts = {}
@@ -453,13 +464,8 @@ if __name__ == "__main__":
                                        batches,
                                        tmp_dir,
                                        output_dir))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(concat_fastqs,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(concat_fastqs,inputs)
+    results = multiprocessing_map(concat_fastqs,inputs,
+                                  n=args.nprocs)
 
     # Done
     report("Removing %s" % tmp_dir)
