@@ -414,6 +414,8 @@ def concat_fastqs(args):
       output file name
     - barcode: (optional) barcode to concatenate Fastqs
       for (set to None when concatenating across samples)
+    - lane: (optional) lane number for output Fastq
+      (set to None to stop lane number appearing)
     - read: read identifier e.g. 'R1' or 'I2'
     - batches: list of batch IDs to concatenate across
     - working_dir: working directory where batches are
@@ -428,7 +430,7 @@ def concat_fastqs(args):
       String: path of concatenated Fastq.
     """
     # Unpack arguments
-    sample,index,barcode,read,batches,working_dir,final_dir = args
+    sample,index,barcode,lane,read,batches,working_dir,final_dir = args
     label = "%s:%s" % (sample,read)
     if barcode:
         report("[%s] Concatenating batched %s Fastqs for sample '%s' (%s)" %
@@ -438,10 +440,11 @@ def concat_fastqs(args):
                (label,read,sample))
     # Name of output file
     fastq = os.path.join(final_dir,
-                         "%s_S%d_%s%s_001.fastq.gz" %
+                         "%s%s_S%d_%s%s_001.fastq.gz" %
                          (sample,
+                          "-%s_" % barcode if barcode else "",
                           index,
-                          "%s_" % barcode if barcode else "",
+                          "L%03d_" % int(lane) if lane else "",
                           read))
     # Collect the Fastqs
     fastqs = list()

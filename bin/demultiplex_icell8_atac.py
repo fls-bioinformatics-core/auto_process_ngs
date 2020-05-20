@@ -153,6 +153,13 @@ if __name__ == "__main__":
     report("-- I1: %s" % fastq_i1)
     report("-- I2: %s" % fastq_i2)
 
+    # Determine lane number
+    lane = AnalysisFastq(fastq_r1).lane_number
+    if lane is not None:
+        report("Lane set to %s" % lane)
+    else:
+        report("No lane number")
+
     # Well list file
     well_list_file = os.path.abspath(args.well_list)
     report("Well list: %s" % well_list_file)
@@ -447,6 +454,7 @@ if __name__ == "__main__":
                 inputs.append((sample,
                                index,
                                None,
+                               lane,
                                read,
                                batches,
                                tmp_dir,
@@ -460,6 +468,7 @@ if __name__ == "__main__":
                         inputs.append((sample,
                                        index,
                                        barcode,
+                                       lane,
                                        read,
                                        batches,
                                        tmp_dir,
