@@ -45,7 +45,7 @@ from auto_process_ngs.icell8.atac import report
 
 BATCH_SIZE = 50000000
 BUF_SIZE = 1024*16
-UNASSIGNED = "Undetermined"
+UNASSIGNED = "Unassigned"
 
 __version__ = get_version()
 
@@ -102,6 +102,11 @@ if __name__ == "__main__":
                    dest="mode",default="samples",
                    help="demultiplex reads by sample (default) "
                    "or by barcode")
+    p.add_argument("--unassigned",action="store",metavar="NAME",
+                   dest="unassigned_name",default=UNASSIGNED,
+                   help="basename for output Fastqs with reads which "
+                   "cannot be assigned to any sample or barcode "
+                   "(default: '%s')" % UNASSIGNED)
     p.add_argument("--swap-i1-i2",action='store_true',
                    dest="swap_i1_and_i2",
                    help="swap supplied I1 and I2 Fastqs")
@@ -177,6 +182,9 @@ if __name__ == "__main__":
     if args.swap_i1_and_i2:
         report("I1 and I2 barcode components will be swapped when matching to "
                "Fastqs")
+    unassigned = args.unassigned_name
+    report("Unassigned reads will be associated with sample '%s'" %
+           unassigned)
 
     # Set up output directory
     output_dir = os.path.abspath(args.output_dir)
@@ -242,8 +250,8 @@ if __name__ == "__main__":
                 barcode_counts[barcode] += counts[barcode]
             except KeyError:
                 barcode_counts[barcode] = counts[barcode]
-            if barcode == UNASSIGNED:
-                sample = UNASSIGNED
+            if barcode == unassigned:
+                sample = unassigned
             else:
                 sample = well_list.sample(barcode)
             try:
@@ -287,7 +295,7 @@ if __name__ == "__main__":
 
     # Report number of reads assigned to each sample
     samples = well_list.samples()
-    samples.insert(0,UNASSIGNED)
+    samples.insert(0,unassigned)
     sample_counts_file = os.path.join(tmp_dir,"sample_counts.txt")
     report("Number of reads assigned to each sample:")
     with open(sample_counts_file,'w') as fp:
@@ -357,7 +365,7 @@ if __name__ == "__main__":
     json_data['reads_per_sample'] = dict()
     for sample in well_list.samples():
         json_data['reads_per_sample'][sample] = sample_counts[sample]
-    json_data['reads_per_sample'][UNASSIGNED] = sample_counts[UNASSIGNED]
+    json_data['reads_per_sample'][unassigned] = sample_counts[unassigned]
     json_data['reads_per_barcode'] = dict()
     with open(barcode_counts_file,'r') as fp:
         number_of_barcodes_with_reads = 0
