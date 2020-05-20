@@ -203,7 +203,8 @@ def assign_reads(args):
       write the matching ICELL8 barcodes into the Fastq
       read headers on output
     - working_dir: working directory to write batches to
-    - unassigned: basename for output files
+    - unassigned: 'sample name' to associate with unassigned
+        read (used as a basename for output file)
 
     In 'samples' mode assignment is done to samples only;
     in 'barcodes' mode assignment is done to samples and
@@ -215,7 +216,7 @@ def assign_reads(args):
 
     Returns:
       Tuple: tuple consisting of (batch id,barcode_counts,
-        undetermined_barcodes_file).
+        unassigned_barcodes_file).
     """
     # Unpack arguments
     fastq_r1,fastq_r2,fastq_i1,fastq_i2,well_list_file,mode,swap_i1_and_i2,reverse_complement_index,rewrite_fastq_headers,working_dir,unassigned = args
@@ -270,10 +271,10 @@ def assign_reads(args):
         if swap_i1_and_i2:
             i2,i1 = i1,i2
         fastq_barcode_lookup["%s+%s" % (i1,i2)] = barcode
-    # File to write undetermined barcodes to
-    undetermined_barcodes_file = os.path.join(working_dir,
-                                              batch_id,
-                                              "undetermined_barcodes.txt")
+    # File to write unassigned barcodes to
+    unassigned_barcodes_file = os.path.join(working_dir,
+                                            batch_id,
+                                            "unassigned_barcodes.txt")
     # Set up output files for samples
     samples = well_list.samples()
     samples.insert(0,unassigned)
@@ -310,7 +311,7 @@ def assign_reads(args):
     progress = ProgressChecker(every=1000000)
     if mode == 'samples':
         # Assigning reads to samples
-        with open(undetermined_barcodes_file,"w") as fp:
+        with open(unassigned_barcodes_file,"w") as fp:
             for r1,r2,i1,i2 in zip(getreads(fastq_r1),
                                    getreads(fastq_r2),
                                    getreads(fastq_i1),
@@ -347,7 +348,7 @@ def assign_reads(args):
                     report("[%s]...%d reads examined" % (label,ii))
     elif mode == 'barcodes':
         # Assigning reads to barcodes
-        with open(undetermined_barcodes_file,"w") as fp:
+        with open(unassigned_barcodes_file,"w") as fp:
             for r1,r2,i1,i2 in zip(getreads(fastq_r1),
                                    getreads(fastq_r2),
                                    getreads(fastq_i1),
@@ -397,8 +398,8 @@ def assign_reads(args):
         report("[%s] Removing %s" % (label,fq))
         os.remove(fq)
     # Returns tuple with batch ID, barcode counts and
-    # file with list of undetermined barcodes
-    return (batch_id,barcode_counts,undetermined_barcodes_file)
+    # file with list of unassigned barcodes
+    return (batch_id,barcode_counts,unassigned_barcodes_file)
 
 def concat_fastqs(args):
     """
@@ -414,6 +415,8 @@ def concat_fastqs(args):
       output file name
     - barcode: (optional) barcode to concatenate Fastqs
       for (set to None when concatenating across samples)
+    - lane: (optional) lane number for output Fastq
+      (set to None to stop lane number appearing)
     - read: read identifier e.g. 'R1' or 'I2'
     - batches: list of batch IDs to concatenate across
     - working_dir: working directory where batches are
@@ -428,7 +431,7 @@ def concat_fastqs(args):
       String: path of concatenated Fastq.
     """
     # Unpack arguments
-    sample,index,barcode,read,batches,working_dir,final_dir = args
+    sample,index,barcode,lane,read,batches,working_dir,final_dir = args
     label = "%s:%s" % (sample,read)
     if barcode:
         report("[%s] Concatenating batched %s Fastqs for sample '%s' (%s)" %
@@ -438,10 +441,11 @@ def concat_fastqs(args):
                (label,read,sample))
     # Name of output file
     fastq = os.path.join(final_dir,
-                         "%s_S%d_%s%s_001.fastq.gz" %
+                         "%s%s_S%d_%s%s_001.fastq.gz" %
                          (sample,
+                          "-%s_" % barcode if barcode else "",
                           index,
-                          "%s_" % barcode if barcode else "",
+                          "L%03d_" % int(lane) if lane else "",
                           read))
     # Collect the Fastqs
     fastqs = list()

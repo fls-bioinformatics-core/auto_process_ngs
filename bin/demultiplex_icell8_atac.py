@@ -45,9 +45,30 @@ from auto_process_ngs.icell8.atac import report
 
 BATCH_SIZE = 50000000
 BUF_SIZE = 1024*16
-UNASSIGNED = "Undetermined"
+UNASSIGNED = "Unassigned"
 
 __version__ = get_version()
+
+######################################################################
+# Functions
+######################################################################
+
+def multiprocessing_map(f,inputs,n=1):
+    """
+    Wrap the 'Pool.map' functionality from 'multiprocessing'
+
+    Arguments:
+      f (function): function to apply to inputs
+      inputs (iterable): set of inputs to invoke
+        function 'f' with
+      n (int): number of concurrent processes to
+        use (default: 1)
+    """
+    pool = Pool(n)
+    results = pool.map(f,inputs)
+    pool.close()
+    pool.join()
+    return results
 
 ######################################################################
 # Main
@@ -81,6 +102,11 @@ if __name__ == "__main__":
                    dest="mode",default="samples",
                    help="demultiplex reads by sample (default) "
                    "or by barcode")
+    p.add_argument("--unassigned",action="store",metavar="NAME",
+                   dest="unassigned_name",default=UNASSIGNED,
+                   help="basename for output Fastqs with reads which "
+                   "cannot be assigned to any sample or barcode "
+                   "(default: '%s')" % UNASSIGNED)
     p.add_argument("--swap-i1-i2",action='store_true',
                    dest="swap_i1_and_i2",
                    help="swap supplied I1 and I2 Fastqs")
@@ -132,6 +158,13 @@ if __name__ == "__main__":
     report("-- I1: %s" % fastq_i1)
     report("-- I2: %s" % fastq_i2)
 
+    # Determine lane number
+    lane = AnalysisFastq(fastq_r1).lane_number
+    if lane is not None:
+        report("Lane set to %s" % lane)
+    else:
+        report("No lane number")
+
     # Well list file
     well_list_file = os.path.abspath(args.well_list)
     report("Well list: %s" % well_list_file)
@@ -149,6 +182,9 @@ if __name__ == "__main__":
     if args.swap_i1_and_i2:
         report("I1 and I2 barcode components will be swapped when matching to "
                "Fastqs")
+    unassigned = args.unassigned_name
+    report("Unassigned reads will be associated with sample '%s'" %
+           unassigned)
 
     # Set up output directory
     output_dir = os.path.abspath(args.output_dir)
@@ -178,13 +214,8 @@ if __name__ == "__main__":
         inputs.append((fastq,
                        args.batch_size,
                        batched_fastqs_dir,))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(split_fastq,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(split_fastq,inputs)
+    results = multiprocessing_map(split_fastq,inputs,
+                                  n=args.nprocs)
     for result in results:
         fastqs.append(result)
 
@@ -203,14 +234,9 @@ if __name__ == "__main__":
                        args.reverse_complement,
                        args.update_read_headers,
                        tmp_dir,
-                       UNASSIGNED,))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(assign_reads,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(assign_reads,inputs)
+                       unassigned,))
+    results = multiprocessing_map(assign_reads,inputs,
+                                  n=args.nprocs)
     report("Collecting outputs from batches")
     batches = list()
     barcode_counts = {}
@@ -224,8 +250,8 @@ if __name__ == "__main__":
                 barcode_counts[barcode] += counts[barcode]
             except KeyError:
                 barcode_counts[barcode] = counts[barcode]
-            if barcode == UNASSIGNED:
-                sample = UNASSIGNED
+            if barcode == unassigned:
+                sample = unassigned
             else:
                 sample = well_list.sample(barcode)
             try:
@@ -269,7 +295,7 @@ if __name__ == "__main__":
 
     # Report number of reads assigned to each sample
     samples = well_list.samples()
-    samples.insert(0,UNASSIGNED)
+    samples.insert(0,unassigned)
     sample_counts_file = os.path.join(tmp_dir,"sample_counts.txt")
     report("Number of reads assigned to each sample:")
     with open(sample_counts_file,'w') as fp:
@@ -339,7 +365,7 @@ if __name__ == "__main__":
     json_data['reads_per_sample'] = dict()
     for sample in well_list.samples():
         json_data['reads_per_sample'][sample] = sample_counts[sample]
-    json_data['reads_per_sample'][UNASSIGNED] = sample_counts[UNASSIGNED]
+    json_data['reads_per_sample'][unassigned] = sample_counts[unassigned]
     json_data['reads_per_barcode'] = dict()
     with open(barcode_counts_file,'r') as fp:
         number_of_barcodes_with_reads = 0
@@ -436,6 +462,7 @@ if __name__ == "__main__":
                 inputs.append((sample,
                                index,
                                None,
+                               lane,
                                read,
                                batches,
                                tmp_dir,
@@ -449,17 +476,13 @@ if __name__ == "__main__":
                         inputs.append((sample,
                                        index,
                                        barcode,
+                                       lane,
                                        read,
                                        batches,
                                        tmp_dir,
                                        output_dir))
-    if args.nprocs > 1:
-        pool = Pool(args.nprocs)
-        results = pool.map(concat_fastqs,inputs)
-        pool.close()
-        pool.join()
-    else:
-        results = map(concat_fastqs,inputs)
+    results = multiprocessing_map(concat_fastqs,inputs,
+                                  n=args.nprocs)
 
     # Done
     report("Removing %s" % tmp_dir)
