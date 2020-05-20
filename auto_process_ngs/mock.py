@@ -1371,7 +1371,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             elif s.has_lanes:
                 lanes = [line['Lane'] for line in s.data]
             else:
-                lanes = IlluminaRun(runfolder).lanes
+                lanes = IlluminaRun(args.run).lanes
             print("Lanes: %s" % lanes)
             # Generate mock output based on inputs
             tmpname = "tmp.%s" % uuid.uuid4()
