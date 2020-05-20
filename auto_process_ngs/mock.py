@@ -48,10 +48,13 @@ import sys
 import argparse
 import uuid
 import shutil
+import gzip
 import bcftbx.utils
 from bcftbx.mock import MockIlluminaData
 from bcftbx.IlluminaData import IlluminaRun
 from bcftbx.IlluminaData import IlluminaRunInfo
+from bcftbx.IlluminaData import IlluminaData
+from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.IlluminaData import SampleSheet
 from bcftbx.IlluminaData import SampleSheetPredictor
 from bcftbx.qc.report import strip_ngs_extensions
@@ -1096,6 +1099,34 @@ bcl2fastq v%s
                         % (lane,r))
         # Build the output directory
         output.create()
+        # Populate the Fastqs with reads
+        illuminadata = IlluminaData(tmpname,unaligned_dir="bcl2fastq")
+        fastqs = []
+        for p in illuminadata.projects:
+            for s in p.samples:
+                for fq in s.fastq:
+                    fastqs.append(os.path.join(s.dirn,fq))
+        for s in illuminadata.undetermined.samples:
+            for fq in s.fastq:
+                fastqs.append(os.path.join(s.dirn,fq))
+        for fastq in fastqs:
+            read_number = IlluminaFastq(fastq).read_number
+            with gzip.open(fastq,'wb') as fp:
+                if no_lane_splitting:
+                    # Add one read per lane
+                    for lane in lanes:
+                        read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+                        fp.write(read.encode())
+                else:
+                    lane = IlluminaFastq(fastq).lane_number
+                    read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+                    fp.write(read.encode())
         # Move to final location
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
