@@ -1405,7 +1405,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                         "Undetermined_S0_L%03d_%s_001.fastq.gz"
                         % (lane,r))
             # Build the output directory
-            output.create()
+            output.create(force_sample_dir=True)
             # Move to final location
             os.rename(os.path.join(tmpname,"bcl2fastq"),
                       output_dir)
