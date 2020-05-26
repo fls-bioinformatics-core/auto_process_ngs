@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/transfer_data.py: utility for copying data for sharing
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -67,8 +67,9 @@ def main():
     p = argparse.ArgumentParser(
         description="Transfer copies of Fastq data from an analysis "
         "project to an arbitrary destination for sharing with other "
-        "people",
-        version="%(prog)s "+get_version())
+        "people")
+    p.add_argument('--version', action='version',
+                   version=("%%(prog)s %s" % get_version()))
     p.add_argument('--subdir',action='store',
                    choices=('random_bin','run_id'),
                    default=None,
