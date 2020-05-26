@@ -357,7 +357,7 @@ class AutoProcess(object):
         if self.readme_file is None:
             readme_file = os.path.join(self.analysis_dir,'README')
             print("Initialising %s" % readme_file)
-            with open(readme_file,'w') as fp:
+            with open(readme_file,'wt') as fp:
                 title = "Processing notes for %s" % \
                         os.path.basename(self.analysis_dir)
                 fp.write("%s\n%s\n" % (title,'='*len(title)))
