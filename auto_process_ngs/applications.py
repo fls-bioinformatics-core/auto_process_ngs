@@ -228,12 +228,12 @@ class Command(object):
         else:
             stderr = None
         # Create a temporary file-like object to capture output
-        ftmp = tempfile.TemporaryFile(mode='w+t')
-        status = subprocess.call(self.command_line,stdout=ftmp,
-                                 cwd=working_dir,stderr=stderr)
-        # Read the output
-        ftmp.seek(0)
-        output = ftmp.read()
+        with tempfile.TemporaryFile(mode='w+t') as ftmp:
+            status = subprocess.call(self.command_line,stdout=ftmp,
+                                     cwd=working_dir,stderr=stderr)
+            # Read the output
+            ftmp.seek(0)
+            output = ftmp.read()
         return (status,output)
 
     def make_wrapper_script(self,shell=None,filen=None,fp=None,
