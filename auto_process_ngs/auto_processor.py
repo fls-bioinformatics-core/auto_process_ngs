@@ -654,8 +654,9 @@ class AutoProcess(object):
         # not pruned on subsequent rsync operations
         readme = os.path.join(script_code,'README.txt')
         if not os.path.exists(readme):
-            open(readme,'w').write("The ScriptCode directory is a "
-                                   "place to put custom scripts and programs\n")
+            with open(readme,'wt') as fp:
+                fp.write("The ScriptCode directory is a place to put "
+                         "custom scripts and programs\n")
 
     @property
     def readme_file(self):
