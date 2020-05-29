@@ -431,15 +431,15 @@ class TestAssignReadsFunction(unittest.TestCase):
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         self.assertEqual(open(os.path.join(self.wd,
                                            "B002",
@@ -715,15 +715,15 @@ AAAAAEEE
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         self.assertEqual(open(os.path.join(self.wd,
                                            "B002",
@@ -999,15 +999,15 @@ AAAAAEEE
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         for f in ("10_S4_CCTGCGGG+ATCACTCG_I1_001.fastq",
                   "10_S4_CCTGCGGG+ATCACTCG_I2_001.fastq",
