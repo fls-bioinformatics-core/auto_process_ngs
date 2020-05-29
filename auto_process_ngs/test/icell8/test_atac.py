@@ -1185,3 +1185,62 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
                              batch,
                              "PJB1_S1_TTCGTGCA+GATCCAAA_R1_001.fastq")))
 
+    def test_concat_fastqs_for_sample_including_lane(self):
+        """
+        concat_fastqs: concatenate Fastq files for sample (including lane)
+        """
+        # Make test Fastqs
+        self.fastqs = []
+        for batch in ('B000','B001','B002',):
+            os.mkdir(os.path.join(self.wd,batch))
+            fastq = os.path.join(self.wd,batch,'PJB1_S1_R1_001.fastq')
+            with open(fastq,'w') as fp:
+                fp.write(fastq_data[batch])
+            self.fastqs.append(fastq)
+        # Concatenate
+        fastq = concat_fastqs(('PJB1',
+                               1,
+                               None,
+                               1,
+                               'R1',
+                               ('B000','B001','B002',),
+                               self.wd,
+                               self.final_dir))
+        # Check output
+        print(os.listdir(self.final_dir))
+        self.assertEqual(fastq,
+                         os.path.join(self.final_dir,
+                                      "PJB1_S1_L001_R1_001.fastq.gz"))
+        self.assertEqual(gzip.open(fastq).read().decode(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
++
+AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 1:N:0:1
+AGTCTGAGATGTCTGAATCTGATCTTCNAANNNNNNAT
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######EE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 1:N:0:1
+CAGCTGTTCTCATCATGATCTTTATAATTTNNNNNNC
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######E
+@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
+TTTCTGTAGTGTGGCGTGTTGGTGTNGNCNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEE#A#E########E
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 1:N:0:1
+AAATATGGCGAGGAAAACTGAAAAAGGNGNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEA#/########E
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:1
+CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
+""")
+        # Check original files were removed
+        for batch in ('B000','B001','B002',):
+            self.assertFalse(os.path.exists(
+                os.path.join(self.wd,
+                             batch,
+                             "PJB1_S1_L001_R1_001.fastq")))
+
