@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     icell8_atac.py: utility functions for handling ICELL8 ATAC-seq data
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 """
 Utility functions for handling single-cell ATAC-seq data from
@@ -441,11 +441,11 @@ def concat_fastqs(args):
                (label,read,sample))
     # Name of output file
     fastq = os.path.join(final_dir,
-                         "%s%s_S%d_%s%s_001.fastq.gz" %
+                         "%s_S%d%s%s_%s_001.fastq.gz" %
                          (sample,
-                          "-%s_" % barcode if barcode else "",
                           index,
-                          "L%03d_" % int(lane) if lane else "",
+                          "_%s" % barcode if barcode else "",
+                          "_L%03d" % int(lane) if lane else "",
                           read))
     # Collect the Fastqs
     fastqs = list()

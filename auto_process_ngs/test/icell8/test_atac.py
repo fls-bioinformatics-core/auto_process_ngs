@@ -431,15 +431,15 @@ class TestAssignReadsFunction(unittest.TestCase):
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         self.assertEqual(open(os.path.join(self.wd,
                                            "B002",
@@ -715,15 +715,15 @@ AAAAAEEE
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         self.assertEqual(open(os.path.join(self.wd,
                                            "B002",
@@ -999,15 +999,15 @@ AAAAAEEE
                                self.wd,
                                "unassigned",))
         # Check the returned data
-        batch_id,barcode_counts,undetermined_barcodes_file = result
+        batch_id,barcode_counts,unassigned_barcodes_file = result
         self.assertEqual(batch_id,"B002")
         for barcode in self.expected_barcode_counts:
             self.assertEqual(barcode_counts[barcode],
                              self.expected_barcode_counts[barcode])
-        self.assertEqual(undetermined_barcodes_file,
+        self.assertEqual(unassigned_barcodes_file,
                          os.path.join(self.wd,
                                       "B002",
-                                      "undetermined_barcodes.txt"))
+                                      "unassigned_barcodes.txt"))
         # Check the output files
         for f in ("10_S4_CCTGCGGG+ATCACTCG_I1_001.fastq",
                   "10_S4_CCTGCGGG+ATCACTCG_I2_001.fastq",
@@ -1085,6 +1085,7 @@ class TestConcatFastqsFunction(unittest.TestCase):
         fastq = concat_fastqs(('PJB1',
                                1,
                                None,
+                               None,
                                'R1',
                                ('B000','B001','B002',),
                                self.wd,
@@ -1142,6 +1143,7 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
         fastq = concat_fastqs(('PJB1',
                                1,
                                'TTCGTGCA+GATCCAAA',
+                               None,
                                'R1',
                                ('B000','B001','B002',),
                                self.wd,
@@ -1182,4 +1184,63 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
                 os.path.join(self.wd,
                              batch,
                              "PJB1_S1_TTCGTGCA+GATCCAAA_R1_001.fastq")))
+
+    def test_concat_fastqs_for_sample_including_lane(self):
+        """
+        concat_fastqs: concatenate Fastq files for sample (including lane)
+        """
+        # Make test Fastqs
+        self.fastqs = []
+        for batch in ('B000','B001','B002',):
+            os.mkdir(os.path.join(self.wd,batch))
+            fastq = os.path.join(self.wd,batch,'PJB1_S1_R1_001.fastq')
+            with open(fastq,'w') as fp:
+                fp.write(fastq_data[batch])
+            self.fastqs.append(fastq)
+        # Concatenate
+        fastq = concat_fastqs(('PJB1',
+                               1,
+                               None,
+                               1,
+                               'R1',
+                               ('B000','B001','B002',),
+                               self.wd,
+                               self.final_dir))
+        # Check output
+        print(os.listdir(self.final_dir))
+        self.assertEqual(fastq,
+                         os.path.join(self.final_dir,
+                                      "PJB1_S1_L001_R1_001.fastq.gz"))
+        self.assertEqual(gzip.open(fastq).read().decode(),
+                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
++
+AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
+@NB500968:115:HWJNYBGX9:1:11101:11115:1057 1:N:0:1
+AGTCTGAGATGTCTGAATCTGATCTTCNAANNNNNNAT
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######EE
+@NB500968:115:HWJNYBGX9:1:11101:23324:1057 1:N:0:1
+CAGCTGTTCTCATCATGATCTTTATAATTTNNNNNNC
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######E
+@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
+TTTCTGTAGTGTGGCGTGTTGGTGTNGNCNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEE#A#E########E
+@NB500968:115:HWJNYBGX9:1:11101:4921:1055 1:N:0:1
+AAATATGGCGAGGAAAACTGAAAAAGGNGNNNNNNNNA
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEA#/########E
+@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:1
+CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
++
+AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
+""")
+        # Check original files were removed
+        for batch in ('B000','B001','B002',):
+            self.assertFalse(os.path.exists(
+                os.path.join(self.wd,
+                             batch,
+                             "PJB1_S1_L001_R1_001.fastq")))
 
