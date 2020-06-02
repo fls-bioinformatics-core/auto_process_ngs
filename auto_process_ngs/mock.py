@@ -889,11 +889,30 @@ class MockBcl2fastq2Exe(object):
 
     - the bases mask can be checked via the
       `assert_bases_mask` argument
+    - lane splitting can be checked via the
+      `assert_no_lane_splitting` argument
+    - creation of Fastqs for index reads can
+      be checked via the
+      `assert_create_fastq_for_index_read`
+      argument
+    - adapter trimming and masking can be
+      checked via the
+      `assert_minimum_trimmed_read_length`
+      and `assert_mask_short_adapter_reads`
+      arguments
+    - adpater sequences can be checked via
+      the `assert_adapter` and
+      `assert_adapter2` arguments
     """
 
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
+               assert_no_lane_splitting=None,
+               assert_create_fastq_for_index_read=None,
+               assert_minimum_trimmed_read_length=None,
+               assert_mask_short_adapter_reads=None,
+               assert_adapter=None,assert_adapter2=None,
                version='2.20.0.422'):
         """
         Create a "mock" bcl2fastq executable
@@ -911,6 +930,32 @@ class MockBcl2fastq2Exe(object):
           platform (str): platform for primary
             data (if it cannot be determined from
             the directory/instrument name)
+          assert_bases_mask (str): if set then
+            assert that bases mask matches the
+            supplied string
+          assert_lane_splitting (bool): if set
+            then assert that --no-lane-splitting
+            matches the supplied boolean value
+          assert_create_fastq_for_index_read
+            (bool): if set then assert that
+            --create-fastq-for-index-read
+            matches the supplied boolean value
+          assert_minimum_trimmed_read_length (int):
+            if set then assert that
+            --minimum-trimmed-read-length matches
+            the supplied value
+          assert_mask_short_adapter_reads (int):
+            if set then assert that
+            --mask-short-adapter-reads matches
+            the supplied value
+          assert_adapter (str): if set then
+            assert that the adapter sequence
+            in the sample sheet matches the
+            supplied value
+          assert_adapter2 (str): if set then
+            assert that the adapter sequence
+            for read2 in the sample sheet matches
+            the supplied value
           version (str): version of bcl2fastq2
             to imitate
         """
@@ -926,6 +971,12 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            missing_fastqs=%s,
                            platform=%s,
                            assert_bases_mask=%s,
+                           assert_no_lane_splitting=%s,
+                           assert_create_fastq_for_index_read=%s,
+                           assert_minimum_trimmed_read_length=%s,
+                           assert_mask_short_adapter_reads=%s,
+                           assert_adapter=%s,
+                           assert_adapter2=%s,
                            version='%s').main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
@@ -934,6 +985,16 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                     else None),
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
+                    else None),
+                   assert_no_lane_splitting,
+                   assert_create_fastq_for_index_read,
+                   assert_minimum_trimmed_read_length,
+                   assert_mask_short_adapter_reads,
+                   ("\"%s\"" % assert_adapter
+                    if assert_adapter is not None
+                    else None),
+                   ("\"%s\"" % assert_adapter2
+                    if assert_adapter2 is not None
                     else None),
                    version))
             os.chmod(path,0o775)
@@ -946,6 +1007,12 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                  missing_fastqs=None,
                  platform=None,
                  assert_bases_mask=None,
+                 assert_no_lane_splitting=None,
+                 assert_create_fastq_for_index_read=None,
+                 assert_minimum_trimmed_read_length=None,
+                 assert_mask_short_adapter_reads=None,
+                 assert_adapter=None,
+                 assert_adapter2=None,
                  version=None):
         """
         Internal: configure the mock bcl2fastq2
@@ -954,6 +1021,15 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
         self._missing_fastqs = missing_fastqs
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        self._assert_no_lane_splitting = assert_no_lane_splitting
+        self._assert_create_fastq_for_index_read = \
+                                assert_create_fastq_for_index_read
+        self._assert_minimum_trimmed_read_length = \
+                                assert_minimum_trimmed_read_length
+        self._assert_mask_short_adapter_reads = \
+                                assert_mask_short_adapter_reads
+        self._assert_adapter = assert_adapter
+        self._assert_adapter2 = assert_adapter2
         self._version = version
 
     def main(self,args):
@@ -995,6 +1071,28 @@ bcl2fastq v%s
         if self._assert_bases_mask:
             print("Checking bases mask: %s" % args.use_bases_mask)
             assert(args.use_bases_mask == self._assert_bases_mask)
+        # Check --no-lane-splitting
+        if self._assert_no_lane_splitting is not None:
+            print("Checking --no-lane-splitting: %s" % args.no_lane_splitting)
+            assert(args.no_lane_splitting == self._assert_no_lane_splitting)
+        # Check --create-fastq-for-index-read
+        if self._assert_create_fastq_for_index_read is not None:
+            print("Checking --create-fastq-for-index-read: %s" %
+                  args.create_fastq_for_index_read)
+            assert(args.create_fastq_for_index_read ==
+                   self._assert_create_fastq_for_index_read)
+        # Check --minimum-trimmed-read-length
+        if self._assert_minimum_trimmed_read_length is not None:
+            print("Checking --minimum-trimmed-read-length: %s" %
+                  args.minimum_trimmed_read_length)
+            assert(int(args.minimum_trimmed_read_length) ==
+                   int(self._assert_minimum_trimmed_read_length))
+        # Check --mask-short-adapter-reads
+        if self._assert_mask_short_adapter_reads is not None:
+            print("Checking --mask-short-adapter-reads: %s" %
+                  args.mask_short_adapter_reads)
+            assert(int(args.mask_short_adapter_reads) ==
+                   int(self._assert_mask_short_adapter_reads))
         # Platform
         print("Platform (default): %s" % self._platform)
         # Run folder (input data)
@@ -1036,6 +1134,22 @@ bcl2fastq v%s
                     break
                 sample_sheet = None
         print("Sample sheet: %s" % sample_sheet)
+        # Check the adapter sequences from the sample sheet
+        if (self._assert_adapter is not None) or \
+           (self._assert_adapter2 is not None):
+            if sample_sheet is None:
+                # No sample sheet
+                adapter = None
+                adapter2 = None
+            else:
+                # Extract adapter sequences
+                s = SampleSheet(sample_sheet)
+                adapter = s.settings['Adapter']
+                adapter2 = s.settings['AdapterRead2']
+            if self._assert_adapter is not None:
+                assert(self._assert_adapter == adapter)
+            if self._assert_adapter2 is not None:
+                assert(self._assert_adapter2 == adapter2)
         # Modifiers
         no_lane_splitting = bool(args.no_lane_splitting)
         print("No lane splitting: %s" % no_lane_splitting)
@@ -1082,10 +1196,8 @@ bcl2fastq v%s
             else:
                 reads.append("R%d" % ir)
                 ir += 1
-        if no_lane_splitting:
-            lanes = None
         for r in reads:
-            if lanes is None:
+            if no_lane_splitting:
                 output.add_fastq(
                     "Undetermined_indices",
                     "undetermined",
