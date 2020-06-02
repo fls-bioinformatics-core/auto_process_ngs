@@ -1196,10 +1196,8 @@ bcl2fastq v%s
             else:
                 reads.append("R%d" % ir)
                 ir += 1
-        if no_lane_splitting:
-            lanes = None
         for r in reads:
-            if lanes is None:
+            if no_lane_splitting:
                 output.add_fastq(
                     "Undetermined_indices",
                     "undetermined",
