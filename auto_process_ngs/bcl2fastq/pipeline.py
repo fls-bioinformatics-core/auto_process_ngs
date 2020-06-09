@@ -856,6 +856,7 @@ class MakeFastqs(Pipeline):
                               envmodules=self.envmodules['bcl2fastq'],
                               requires=(get_bcl2fastq,
                                         make_sample_sheet,
+                                        fetch_primary_data,
                                         restore_backup))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -907,6 +908,7 @@ class MakeFastqs(Pipeline):
                               requires=(get_bcl2fastq,
                                         get_bases_mask,
                                         make_sample_sheet,
+                                        fetch_primary_data,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -966,6 +968,7 @@ class MakeFastqs(Pipeline):
                               requires=(get_bcl2fastq,
                                         get_bases_mask,
                                         make_sample_sheet,
+                                        fetch_primary_data,
                                         restore_backup))
                 # Demultiplex ICELL8 ATAC Fastqs
                 demultiplex_fastqs = DemultiplexIcell8Atac(
@@ -1038,6 +1041,7 @@ class MakeFastqs(Pipeline):
                               requires=(get_cellranger,
                                         get_bcl2fastq_for_10x,
                                         make_sample_sheet,
+                                        fetch_primary_data,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -1096,6 +1100,7 @@ class MakeFastqs(Pipeline):
                               requires=(get_cellranger_atac,
                                         get_bcl2fastq_for_10x_atac,
                                         make_sample_sheet,
+                                        fetch_primary_data,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
