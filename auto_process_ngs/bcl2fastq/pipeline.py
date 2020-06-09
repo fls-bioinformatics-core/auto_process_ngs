@@ -1322,6 +1322,9 @@ class FetchPrimaryData(PipelineTask):
             source is on the local system)
           force_copy (bool): if True then force primary data to
             be copied even if it's on the local system
+
+        Outputs:
+          run_dir: path to the local copy of the primary data
         """
         self.tmp_dir = None
         self.add_output('run_dir',Param(type='str'))
@@ -1332,7 +1335,6 @@ class FetchPrimaryData(PipelineTask):
             os.path.basename(self.args.data_dir))
         if os.path.exists(final_run_dir):
             print("Primary data already acquired")
-            self.output.run_dir.set(final_run_dir)
             return
         # Create top level primary data directory
         if not os.path.exists(self.args.primary_data_dir):
