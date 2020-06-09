@@ -1646,7 +1646,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         os.mkdir(analysis_dir)
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="icell8_atac",
-                       well_list=well_list)
+                       icell8_well_list=well_list)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
         self.assertEqual(status,0)
@@ -1749,7 +1749,7 @@ Unassigned-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
                 fp.write("")
         # Do the test
         p = MakeFastqs(run_dir,sample_sheet,protocol="icell8_atac",
-                       well_list=well_list,
+                       icell8_well_list=well_list,
                        analyse_barcodes=False)
         status = p.run(analysis_dir,
                        #default_runner=SimpleJobRunner(join_logs=True),

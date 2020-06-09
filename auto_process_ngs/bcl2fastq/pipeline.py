@@ -153,7 +153,7 @@ class MakeFastqs(Pipeline):
     globally in the pipleine.
     """
     def __init__(self,run_dir,sample_sheet,protocol='standard',
-                 bases_mask="auto",platform=None,well_list=None,
+                 bases_mask="auto",platform=None,icell8_well_list=None,
                  minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
@@ -173,8 +173,8 @@ class MakeFastqs(Pipeline):
             to "auto")
           platform (str): optionally specify the platform for
             the sequencer run (e.g. 'miseq', 'nextseq' etc)
-          well_list (str): optionally specify path to a well list
-            file for ICELL8 data
+          icell8_well_list (str): optionally specify path to a
+            well list file for ICELL8 data
           minimum_trimmed_read_length (int): optionally specify
             the minimum length of reads after adapter trimming;
             trimmed reads shorter than this length will be
@@ -247,7 +247,7 @@ class MakeFastqs(Pipeline):
         self._mask_short_adapter_reads = mask_short_adapter_reads
         self._fastq_statistics = bool(fastq_statistics)
         self._analyse_barcodes = bool(analyse_barcodes)
-        self._well_list = well_list
+        self._icell8_well_list = icell8_well_list
 
         # Define parameters
         self.add_param('data_dir',value=run_dir,type=str)
@@ -334,7 +334,7 @@ class MakeFastqs(Pipeline):
                 no_lane_splitting=self.params.no_lane_splitting,
                 create_fastq_for_index_read=\
                 self.params.create_fastq_for_index_read,
-                icell8_well_list=self._well_list,
+                icell8_well_list=self._icell8_well_list,
                 icell8_atac_swap_i1_and_i2=False,
                 icell8_atac_reverse_complement=None,
                 analyse_barcodes=self._analyse_barcodes
