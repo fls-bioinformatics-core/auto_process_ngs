@@ -37,6 +37,10 @@ the external software required for parts of the pipeline:
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
+
+There are supporting standalone functions for mocking outputs:
+
+- make_mock_bcl2fastq2_output: create mock output from `bcl2fastq`
 """
 
 #######################################################################
@@ -1103,12 +1107,24 @@ bcl2fastq v%s
         run_info_xml = os.path.join(runfolder,"RunInfo.xml")
         if not os.path.exists(run_info_xml):
             return 1
-        # Determine if run is paired end
-        nreads = 0
+        # Modifiers
+        no_lane_splitting = bool(args.no_lane_splitting)
+        print("No lane splitting: %s" % no_lane_splitting)
+        create_fastq_for_index_read = bool(args.create_fastq_for_index_read)
+        print("Create fastq for index read: %s" %
+              create_fastq_for_index_read)
+        # Get reads and determine if run is paired end
+        reads = []
+        ii = 1
+        ir = 1
         for r in IlluminaRunInfo(run_info_xml).reads:
             if r['is_indexed_read'] == 'N':
-                nreads += 1
-        if nreads == 2:
+                reads.append("R%d" % ir)
+                ir += 1
+            elif create_fastq_for_index_read:
+                reads.append("I%d" % ii)
+                ii += 1
+        if ir == 2:
             paired_end = True
         else:
             paired_end = False
@@ -1144,101 +1160,26 @@ bcl2fastq v%s
             else:
                 # Extract adapter sequences
                 s = SampleSheet(sample_sheet)
-                adapter = s.settings['Adapter']
-                adapter2 = s.settings['AdapterRead2']
+                try:
+                    adapter = s.settings['Adapter']
+                except KeyError:
+                    adapter = ""
+                try:
+                    adapter2 = s.settings['AdapterRead2']
+                except KeyError:
+                    adapter2 = ""
             if self._assert_adapter is not None:
                 assert(self._assert_adapter == adapter)
             if self._assert_adapter2 is not None:
                 assert(self._assert_adapter2 == adapter2)
-        # Modifiers
-        no_lane_splitting = bool(args.no_lane_splitting)
-        print("No lane splitting: %s" % no_lane_splitting)
-        create_fastq_for_index_read = bool(args.create_fastq_for_index_read)
-        print("Create fastq for index read: %s" %
-              create_fastq_for_index_read)
         # Generate mock output based on inputs
         tmpname = "tmp.%s" % uuid.uuid4()
-        output = MockIlluminaData(name=tmpname,
-                                  package="bcl2fastq2",
-                                  unaligned_dir="bcl2fastq")
-        missing_fastqs = self._missing_fastqs
-        # Add outputs from sample sheet (if supplied)
-        if sample_sheet is not None:
-            s = SampleSheetPredictor(sample_sheet_file=sample_sheet)
-            s.set(paired_end=paired_end,
-                  no_lane_splitting=no_lane_splitting,
-                  include_index_reads=create_fastq_for_index_read,
-                  lanes=lanes)
-            for project in s.projects:
-                print("Adding project: %s" % project.name)
-                for sample in project.samples:
-                    for fq in sample.fastqs():
-                        if missing_fastqs and (fq in missing_fastqs):
-                            continue
-                        if sample.sample_name is None:
-                            sample_name = sample.sample_id
-                        else:
-                            sample_name = sample.sample_name
-                        output.add_fastq(project.name,
-                                         sample_name,
-                                         fq)
-        # Add undetermined fastqs
-        # NB Would like to use the 'add_undetermined'
-        # method but this doesn't play well with using
-        # the predictor-based approach above
-        reads = []
-        ii = 1
-        ir = 1
-        for r in IlluminaRunInfo(run_info_xml).reads:
-            if r['is_indexed_read'] == 'N':
-                reads.append("I%d" % ii)
-                ii += 1
-            else:
-                reads.append("R%d" % ir)
-                ir += 1
-        for r in reads:
-            if no_lane_splitting:
-                output.add_fastq(
-                    "Undetermined_indices",
-                    "undetermined",
-                    "Undetermined_S0_%s_001.fastq.gz" % r)
-            else:
-                for lane in lanes:
-                    output.add_fastq(
-                        "Undetermined_indices",
-                        "undetermined",
-                        "Undetermined_S0_L%03d_%s_001.fastq.gz"
-                        % (lane,r))
-        # Build the output directory
-        output.create()
-        # Populate the Fastqs with reads
-        illuminadata = IlluminaData(tmpname,unaligned_dir="bcl2fastq")
-        fastqs = []
-        for p in illuminadata.projects:
-            for s in p.samples:
-                for fq in s.fastq:
-                    fastqs.append(os.path.join(s.dirn,fq))
-        for s in illuminadata.undetermined.samples:
-            for fq in s.fastq:
-                fastqs.append(os.path.join(s.dirn,fq))
-        for fastq in fastqs:
-            read_number = IlluminaFastq(fastq).read_number
-            with gzip.open(fastq,'wb') as fp:
-                if no_lane_splitting:
-                    # Add one read per lane
-                    for lane in lanes:
-                        read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
-GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
-+
-IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                        fp.write(read.encode())
-                else:
-                    lane = IlluminaFastq(fastq).lane_number
-                    read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
-GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
-+
-IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
-                    fp.write(read.encode())
+        make_mock_bcl2fastq2_output(os.path.join(tmpname,"bcl2fastq"),
+                                    lanes=lanes,
+                                    reads=reads,
+                                    sample_sheet=sample_sheet,
+                                    no_lane_splitting=no_lane_splitting,
+                                    exclude_fastqs=self._missing_fastqs)
         # Move to final location
         os.rename(os.path.join(tmpname,"bcl2fastq"),
                   output_dir)
@@ -1972,3 +1913,134 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
         return self._exit_code
+
+#######################################################################
+# Functions for creating mock data
+#######################################################################
+
+def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
+                                reads=None,no_lane_splitting=False,
+                                exclude_fastqs=None,
+                                create_fastq_for_index_read=False,
+                                paired_end=False,
+                                force_sample_dir=False):
+    """
+    Creates files & directories structure mimicking output from bcl2fastq2
+
+    Arguments:
+      out_dir (str): path to output directory
+      lanes (iterable): list of lanes to create output
+        for
+      sample_sheet (str): path to sample sheet file
+      reads (iterable): list of 'reads' to create (e.g.
+        ('R1','R2'); defaults to ('R1') if not specified
+      no_lane_splitting (bool): whether to produce mock
+        Fastq files for each lane, or combine them
+        across lanes (mimics the --no-lane-splitting
+        option in `bcl2fastq`)
+      exclude_fastqs (iterable): specifies a list of
+        Fastq files to exclude from the outputs
+      create_fastq_for_index_read (bool): whether to
+        also include 'I1' etc Fastqs for index reads
+        (ignored if 'reads' argument is set)
+      paired_end (bool): whether to also include 'R2'
+        and 'I2' Fastqs (ignored if 'reads' argument is
+        set)
+      force_sample_dir (bool): whether to force insertion
+        of a 'sample name' directory for IEM4 sample
+        sheets where sample name and ID are the same
+    """
+    # Setup up base mock output directory
+    top_dir = os.path.dirname(os.path.abspath(out_dir))
+    unaligned_dir = os.path.basename(out_dir)
+    output = MockIlluminaData(name=top_dir,
+                              package="bcl2fastq2",
+                              unaligned_dir=unaligned_dir)
+    # Sort out reads if not explicitly set
+    if reads is None:
+        reads = ['R1']
+        if paired_end:
+            reads.append('R2')
+        if create_fastq_for_index_read:
+            reads.append('I1')
+            if paired_end:
+                reads.append('I2')
+    # Add outputs from sample sheet (if supplied)
+    if sample_sheet is not None:
+        # Cut down samplesheet if lanes were specified
+        sample_sheet_ = SampleSheet(sample_sheet)
+        i = 0
+        if lanes and sample_sheet_.has_lanes:
+            while i < len(sample_sheet_):
+                line = sample_sheet_[i]
+                if line['Lane'] in lanes:
+                    i += 1
+                else:
+                    del(sample_sheet_[i])
+        # Predict outputs
+        s = SampleSheetPredictor(sample_sheet=sample_sheet_)
+        s.set(reads=reads,
+              lanes=lanes,
+              no_lane_splitting=no_lane_splitting,
+              force_sample_dir=force_sample_dir)
+        # Build and populate outputs
+        for project in s.projects:
+                print("Adding project: %s" % project.name)
+                for sample in project.samples:
+                    for fq in sample.fastqs():
+                        if exclude_fastqs and (fq in exclude_fastqs):
+                            continue
+                        if sample.sample_name is None:
+                            sample_name = sample.sample_id
+                        else:
+                            sample_name = sample.sample_name
+                        output.add_fastq(project.name,
+                                         sample_name,
+                                         fq)
+    # Add undetermined fastqs
+    # NB Would like to use the 'add_undetermined'
+    # method but this doesn't play well with using
+    # the predictor-based approach above
+    for r in reads:
+        if no_lane_splitting:
+            output.add_fastq(
+                "Undetermined_indices",
+                "undetermined",
+                "Undetermined_S0_%s_001.fastq.gz" % r)
+        else:
+            for lane in lanes:
+                output.add_fastq(
+                    "Undetermined_indices",
+                    "undetermined",
+                    "Undetermined_S0_L%03d_%s_001.fastq.gz"
+                    % (lane,r))
+    # Build the output directory
+    output.create()
+    # Populate the Fastqs with reads
+    illuminadata = IlluminaData(top_dir,unaligned_dir=unaligned_dir)
+    fastqs = []
+    for p in illuminadata.projects:
+        for s in p.samples:
+            for fq in s.fastq:
+                fastqs.append(os.path.join(s.dirn,fq))
+    for s in illuminadata.undetermined.samples:
+        for fq in s.fastq:
+            fastqs.append(os.path.join(s.dirn,fq))
+    for fastq in fastqs:
+        read_number = IlluminaFastq(fastq).read_number
+        with gzip.open(fastq,'wb') as fp:
+            if no_lane_splitting:
+                # Add one read per lane
+                for lane in lanes:
+                    read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+                    fp.write(read.encode())
+            else:
+                lane = IlluminaFastq(fastq).lane_number
+                read = """@ILLUMINA-545855:49:FC61RLR:%s:1:10979:1695 %s:N:0:TCCTGA
+GCATACTCAGCTTTAGTAATAAGTGTGATTCTGGTA
++
+IIIIIHIIIGHHIIDGHIIIIIIHIIIIIIIIIIIH\n""" % (lane,read_number)
+                fp.write(read.encode())
