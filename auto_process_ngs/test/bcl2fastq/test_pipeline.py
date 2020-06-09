@@ -2855,54 +2855,54 @@ class TestFunctionParam(unittest.TestCase):
     Tests for the 'FunctionParam' class
     """
     #@unittest.skip("Skipped")
-    def test_lambdaparam_with_static_values(self):
+    def test_functionparam_with_static_values(self):
         """
         FunctionParam: handle static values
         """
         # Lambda function
-        lambda_param = FunctionParam(lambda x: x,"hello")
-        self.assertEqual(lambda_param.value,"hello")
-        lambda_param = FunctionParam(lambda x,y: x + y,1,2)
-        self.assertEqual(lambda_param.value,3)
+        func_param = FunctionParam(lambda x: x,"hello")
+        self.assertEqual(func_param.value,"hello")
+        func_param = FunctionParam(lambda x,y: x + y,1,2)
+        self.assertEqual(func_param.value,3)
         # Function with keywords
         def func(x,y,z=None):
             return (x,y,z)
-        lambda_param = FunctionParam(func,"hello","goodbye")
-        self.assertEqual(lambda_param.value,("hello","goodbye",None))
-        lambda_param = FunctionParam(func,"hello","goodbye",z="surprise!")
-        self.assertEqual(lambda_param.value,("hello","goodbye","surprise!"))
+        func_param = FunctionParam(func,"hello","goodbye")
+        self.assertEqual(func_param.value,("hello","goodbye",None))
+        func_param = FunctionParam(func,"hello","goodbye",z="surprise!")
+        self.assertEqual(func_param.value,("hello","goodbye","surprise!"))
 
-    def test_lambdaparam_with_parameters(self):
+    def test_functionparam_with_parameters(self):
         """
         FunctionParam: handle pipeline parameters
         """
         # Lambda function
         p = PipelineParam(value="hello")
-        lambda_param = FunctionParam(lambda x: x,p)
-        self.assertEqual(lambda_param.value,"hello")
+        func_param = FunctionParam(lambda x: x,p)
+        self.assertEqual(func_param.value,"hello")
         p.set("goodbye")
-        self.assertEqual(lambda_param.value,"goodbye")
+        self.assertEqual(func_param.value,"goodbye")
         px = PipelineParam(value=1)
         py = PipelineParam(value=2)
-        lambda_param = FunctionParam(lambda x,y: x + y,px,py)
-        self.assertEqual(lambda_param.value,3)
+        func_param = FunctionParam(lambda x,y: x + y,px,py)
+        self.assertEqual(func_param.value,3)
         px.set(3)
         py.set(4)
-        self.assertEqual(lambda_param.value,7)
+        self.assertEqual(func_param.value,7)
         # Function with keywords
         def func(x,y,z=None):
             return (x,y,z)
         px = PipelineParam(value="hello")
         py = PipelineParam(value="goodbye")
         pz = PipelineParam(value="surprise!")
-        lambda_param = FunctionParam(func,px,py)
-        self.assertEqual(lambda_param.value,("hello","goodbye",None))
-        lambda_param = FunctionParam(func,px,py,z=pz)
-        self.assertEqual(lambda_param.value,("hello","goodbye","surprise!"))
+        func_param = FunctionParam(func,px,py)
+        self.assertEqual(func_param.value,("hello","goodbye",None))
+        func_param = FunctionParam(func,px,py,z=pz)
+        self.assertEqual(func_param.value,("hello","goodbye","surprise!"))
         px.set("goodbye")
         py.set("hello")
         pz.set("backwards")
-        self.assertEqual(lambda_param.value,("goodbye","hello","backwards"))
+        self.assertEqual(func_param.value,("goodbye","hello","backwards"))
 
 class TestSubsetFunction(unittest.TestCase):
     """
