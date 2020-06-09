@@ -1176,14 +1176,14 @@ class MakeFastqs(Pipeline):
 
     def run(self,analysis_dir,primary_data_dir=None,
             nprocessors=1,force_copy_of_primary_data=False,
-            working_dir=None,log_file=None,batch_size=None,
             no_lane_splitting=None,create_fastq_for_index_read=None,
-            create_empty_fastqs=None,
-            cellranger_jobmode='local',cellranger_mempercore=None,
-            cellranger_maxjobs=None,cellranger_jobinterval=None,
-            cellranger_localcores=None,cellranger_localmem=None,
-            max_jobs=1,poll_interval=5,runners=None,
-            default_runner=None,envmodules=None,verbose=False):
+            create_empty_fastqs=None,cellranger_jobmode='local',
+            cellranger_mempercore=None,cellranger_maxjobs=None,
+            cellranger_jobinterval=None,cellranger_localcores=None,
+            cellranger_localmem=None,working_dir=None,log_dir=None,
+            log_file=None,batch_size=None,max_jobs=1,poll_interval=5,
+            runners=None,default_runner=None,envmodules=None,
+            verbose=False):
         """
         Run the tasks in the pipeline
 
@@ -1198,6 +1198,23 @@ class MakeFastqs(Pipeline):
             unless it's on a remote filesystem)
           nprocessors (int): number of threads to use for
             multithreaded applications (default is 1)
+          no_lane_splitting (bool): if True then don't split
+            output Fastqs across lanes (--no-lane-splitting)
+          create_fastq_for_index_read (bool): if True then
+            also output Fastqs for the index (I1 etc) reads
+            (--create-fastq-for-index-read)
+          create_empty_fastqs (bool): if True then create empty
+            "placeholder" Fastqs if not created by bcl2fastq
+          cellranger_jobmode (str): job mode to run cellranger in
+          cellranger_mempercore (int): memory assumed per core
+          cellranger_maxjobs (int): maxiumum number of concurrent
+            jobs to run
+          cellranger_jobinterval (int): how often jobs are
+            submitted (in ms)
+          cellranger_localcores (int): maximum number of cores
+            cellranger can request in jobmode 'local'
+          cellranger_localmem (int): (optional) maximum memory
+            cellranger can request in jobmode 'local'
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -1207,15 +1224,6 @@ class MakeFastqs(Pipeline):
             each task in batches, with each batch running
             this many commands at a time (default is to run
             one command per job)
-          no_lane_splitting (bool):
-          create_fastq_for_index_read (bool):
-          create_empty_fastqs (bool):
-          cellranger_jobmode (str):
-          cellranger_mempercore (int):
-          cellranger_maxjobs (int):
-          cellranger_jobinterval (int):
-          cellranger_localcores (int):
-          cellranger_localmem (int):
           max_jobs (int): optional maximum number of
             concurrent jobs in scheduler (defaults to 1)
           poll_interval (float): optional polling interval
@@ -1245,7 +1253,8 @@ class MakeFastqs(Pipeline):
             mkdir(working_dir)
 
         # Log and script directories
-        log_dir = os.path.join(working_dir,"logs")
+        if log_dir is None:
+            log_dir = os.path.join(working_dir,"logs")
         scripts_dir = os.path.join(working_dir,"scripts")
 
         # Runners
