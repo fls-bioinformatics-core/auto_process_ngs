@@ -2326,12 +2326,20 @@ class PipelineTask(object):
         for group in self._groups:
             for job in group.jobs:
                 njobs += 1
-                if job.completed:
-                    ncompleted += 1
+                try:
+                    if job.completed:
+                        ncompleted += 1
+                except Exception as ex:
+                    self.report("Failed to get status for job '%s': %s" %
+                                (job.name,ex))
         for job in self._jobs:
             njobs += 1
-            if job.completed:
-                ncompleted += 1
+            try:
+                if job.completed:
+                    ncompleted += 1
+            except Exception as ex:
+                self.report("Failed to get status for job '%s': %s" %
+                            (job.name,ex))
         return (njobs,ncompleted)
 
     def terminate(self):
