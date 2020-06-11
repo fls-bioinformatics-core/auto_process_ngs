@@ -272,7 +272,7 @@ class MakeFastqs(Pipeline):
         # Define runners
         self.add_runner('rsync_runner')
         self.add_runner('bcl2fastq_runner')
-        self.add_runner('demultiplex_icell_atac_runner')
+        self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
         self.add_runner('stats_runner')
@@ -984,7 +984,7 @@ class MakeFastqs(Pipeline):
                     skip_demultiplex=final_output_exists)
                 self.add_task(
                     demultiplex_fastqs,
-                    runner=self.runners['demultiplex_icell_atac_runner'],
+                    runner=self.runners['demultiplex_icell8_atac_runner'],
                     requires=(run_bcl2fastq,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
