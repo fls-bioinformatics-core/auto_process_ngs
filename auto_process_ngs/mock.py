@@ -1420,6 +1420,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         mkfastq.add_argument("--qc",action="store_true")
         mkfastq.add_argument("--lanes",action="store")
         mkfastq.add_argument("--use-bases-mask",action="store")
+        mkfastq.add_argument("--minimum-trimmed-read-length",action="store")
+        mkfastq.add_argument("--mask-short-adapter-reads",action="store")
         mkfastq.add_argument("--ignore-dual-index",action="store_true")
         mkfastq.add_argument("--jobmode",action="store")
         mkfastq.add_argument("--localcores",action="store")
