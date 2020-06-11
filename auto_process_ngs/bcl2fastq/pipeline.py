@@ -2510,11 +2510,14 @@ class FastqStatistics(PipelineTask):
             '--unaligned',os.path.basename(self.args.bcl2fastq_dir),
             '--sample-sheet',self.args.sample_sheet,
             '--output',self.stats_file,
-            '--per-lane-stats',self.per_lane_stats,
-            '--nprocessors',self.args.nprocessors,
-            os.path.dirname(self.args.bcl2fastq_dir))
+            '--per-lane-stats',self.per_lane_stats)
+        if self.args.nprocessors:
+            fastq_statistics_cmd.add_args('--nprocessors',
+                                          self.args.nprocessors)
         if self.args.add_data:
             fastq_statistics_cmd.add_args('--update')
+        fastq_statistics_cmd.add_args(
+            os.path.dirname(self.args.bcl2fastq_dir))
         print("Running %s" % fastq_statistics_cmd)
         self.add_cmd(PipelineCommandWrapper(
             "Run fastq_statistics",
