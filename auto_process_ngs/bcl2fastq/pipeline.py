@@ -962,7 +962,6 @@ class MakeFastqs(Pipeline):
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
                     skip_bcl2fastq=skip_bcl2fastq)
-                    ##skip_bcl2fastq=PathExistsParam(bcl2fastq_out_dir))
                 self.add_task(run_bcl2fastq,
                               runner=self.runners['bcl2fastq_runner'],
                               envmodules=self.envmodules['bcl2fastq'],
