@@ -240,6 +240,7 @@ class MakeFastqs(Pipeline):
                 adapter_sequence_read2 = ""
         
         # Defaults
+        self._bases_mask = bases_mask
         self._trim_adapters = bool(trim_adapters)
         self._adapter_sequence = adapter_sequence
         self._adapter_sequence_read2 = adapter_sequence_read2
@@ -323,7 +324,7 @@ class MakeFastqs(Pipeline):
         for s in self.subsets:
             self._update_subset(
                 s,
-                bases_mask=bases_mask,
+                bases_mask=self._bases_mask,
                 trim_adapters=self._trim_adapters,
                 minimum_trimmed_read_length=\
                 self._minimum_trimmed_read_length,
