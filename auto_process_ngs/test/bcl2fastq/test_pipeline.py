@@ -2781,10 +2781,10 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         analysis_dir = os.path.join(self.wd,"analysis")
         os.mkdir(analysis_dir)
         # Do the test
-        p = MakeFastqs(run_dir,sample_sheet,platform="miseq")
+        p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
-        self.assertEqual(status,0)
+        self.assertEqual(status,1)
         # Check outputs
         self.assertEqual(p.output.platform,None)
         self.assertEqual(p.output.primary_data_dir,
@@ -2798,9 +2798,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
-                                    "171020_UNKNOWN_00002_AHGXXXX"),
-                       "bcl2fastq",
-                       "barcode_analysis",):
+                                    "171020_UNKNOWN_00002_AHGXXXX"),):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -2808,12 +2806,17 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
             os.path.join(analysis_dir,
                          "primary_data",
                          "171020_UNKNOWN_00002_AHGXXXX")))
+        for subdir in ("bcl2fastq",
+                       "barcode_analysis",):
+            self.assertFalse(os.path.exists(
+                os.path.join(analysis_dir,subdir)),
+                            "Found subdir: %s" % subdir)
         for filen in ("statistics.info",
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
                       "processing_qc.html"):
-            self.assertTrue(os.path.isfile(
+            self.assertFalse(os.path.exists(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
