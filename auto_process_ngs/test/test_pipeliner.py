@@ -1764,8 +1764,27 @@ class TestPipelineParam(unittest.TestCase):
         # Create a new parameter
         pp = PipelineParam(name="param2",value=2)
         self.assertEqual(pp.value,2)
-        # Replace first parameter with the first
+        # Replace first parameter with the second
         p.replace_with(pp)
+        self.assertEqual(p.value,2)
+        # Change value of second parameter
+        pp.set(3)
+        self.assertEqual(pp.value,3)
+        # Value of first parameter should also have changed
+        self.assertEqual(p.value,3)
+
+    def test_pipelineparam_cascade_value_resolution(self):
+        """
+        PipelineParam: set value to another parameter
+        """
+        # Create initial parameter
+        p = PipelineParam(name="param1",value=1)
+        self.assertEqual(p.value,1)
+        # Create a new parameter
+        pp = PipelineParam(name="param2",value=2)
+        self.assertEqual(pp.value,2)
+        # Set first parameter to the second
+        p.set(pp)
         self.assertEqual(p.value,2)
         # Change value of second parameter
         pp.set(3)

@@ -887,7 +887,19 @@ class PipelineParam(object):
     >>> p.name
     "user_name"
 
-    A parameter can be "replaced" with another parameter
+    The value of a parameter can be set to another parameter,
+    in which case the value of the first parameter will be
+    taken from the second:
+
+    >>> first_param = PipelineParam(value="first")
+    >>> first_param.value
+    "first"
+    >>> second_param = PipelineParam(value="second")
+    >>> first_param.set(second_param)
+    >>> first_param.value
+    "second"
+
+    A parameter can also be "replaced" with another parameter
     using its ``replace_with`` method:
 
     >>> p = PipelineParam(value="old")
@@ -974,14 +986,14 @@ class PipelineParam(object):
             try:
                 return self._default()
             except TypeError:
-                pass
-        # Return stored value
-        if self._value is not None:
+                return None
+        else:
+            # Return stored value
+            value = resolve_parameter(self._value)
             try:
-                return self._type(self._value)
+                return self._type(value)
             except TypeError:
-                pass
-        return self._value
+                return value
     @property
     def name(self):
         """
