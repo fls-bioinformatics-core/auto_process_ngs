@@ -735,7 +735,7 @@ class MakeFastqs(Pipeline):
         # Keep track of lanes to analyse barcodes for
         lanes_for_barcode_analysis = []
 
-        # Placeholder for tasks acquiring software versions
+        # Placeholders for tasks acquiring software versions
         get_bcl2fastq = None
         get_bcl2fastq_for_10x = None
         get_bcl2fastq_for_10x_atac = None
@@ -1325,8 +1325,7 @@ class MakeFastqs(Pipeline):
             'verify_runner','default'
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
-            'illumina_qc','fastq_strand','cellranger',
-            'report_qc'
+            'bcl2fastq','cellranger','cellranger_atac'
           default_runner (JobRunner): optional default
             job runner to use
           verbose (bool): if True then report additional
