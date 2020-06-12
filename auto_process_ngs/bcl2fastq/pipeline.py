@@ -1647,11 +1647,16 @@ class RunBcl2Fastq(PipelineTask):
         Outputs:
           bases_mask: actual bases mask used
           mismatches: number of mismatches allowed
+          missing_fastqs: list of Fastqs missing after
+            Fastq generation
         """
+        # Internal variables
         self.supported_versions = ('1.8','2.17','2.20',)
         self.tmp_out_dir = None
+        # Outputs
         self.add_output('bases_mask',Param(type='str'))
         self.add_output('mismatches',Param(type='int'))
+        self.add_output('missing_fastqs',list())
     def setup(self):
         # Load input data
         illumina_run = IlluminaRun(self.args.run_dir,
@@ -1799,6 +1804,7 @@ class RunBcl2Fastq(PipelineTask):
                 print("Missing Fastqs:")
                 for fq in missing_fastqs:
                     print("- %s" % fq)
+                    self.output.missing_fastqs.append(fq)
                 if self.args.create_empty_fastqs:
                     # Create empty placeholder Fastqs
                     print("Making empty placeholder Fastqs")
@@ -2115,11 +2121,19 @@ class RunCellrangerMkfastq(PipelineTask):
             bcl2fastq package
           skip_cellranger (bool): if True then skip running
             cellranger mkfastq within the task
+
+        Outputs:
+            missing_fastqs: list of Fastqs missing after
+              Fastq generation
+
         """
+        # Internal variables
         self.tmp_out_dir = None
         self.lanes = None
         self.cellranger_out_dir = None
         self.mro_file = None
+        # Outputs
+        self.add_output('missing_fastqs',list())
     def setup(self):
         # Check if cellranger should be skipped
         if self.args.skip_cellranger:
@@ -2266,6 +2280,7 @@ class RunCellrangerMkfastq(PipelineTask):
                 print("Missing Fastqs:")
                 for fq in missing_fastqs:
                     print("- %s" % fq)
+                    self.output.missing_fastqs.append(fq)
                 if self.args.create_empty_fastqs:
                     # Create empty placeholder Fastqs
                     print("Making empty placeholder Fastqs")
