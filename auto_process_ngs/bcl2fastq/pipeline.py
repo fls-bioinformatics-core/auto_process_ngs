@@ -1517,10 +1517,13 @@ class GetBcl2Fastq(PipelineFunctionTask):
           bcl2fastq_exe (str): path to the bcl2fastq executable
           bcl2fastq_package (str): name of the bcl2fastq package
           bcl2fastq_version (str): the bcl2fastq version
+          bcl2fastq_info (tuple): tuple consisting of
+            (exe,package,version)
         """
         self.add_output('bcl2fastq_exe',Param(type=str))
         self.add_output('bcl2fastq_package',Param(type=str))
         self.add_output('bcl2fastq_version',Param(type=str))
+        self.add_output('bcl2fastq_info',Param())
     def setup(self):
         if self.args.require_bcl2fastq:
             print("Requires bcl2fastq version %s" %
@@ -1548,6 +1551,9 @@ class GetBcl2Fastq(PipelineFunctionTask):
         self.output.bcl2fastq_exe.set(bcl2fastq_exe)
         self.output.bcl2fastq_package.set(bcl2fastq_package)
         self.output.bcl2fastq_version.set(bcl2fastq_version)
+        self.output.bcl2fastq_info.set((bcl2fastq_exe,
+                                        bcl2fastq_package,
+                                        bcl2fastq_version))
         # Report what was found
         print("Bcl2fastq exe    : %s" % bcl2fastq_exe)
         print("Bcl2fastq package: %s" % bcl2fastq_package)
@@ -1884,10 +1890,13 @@ class GetCellranger(PipelineFunctionTask):
           cellranger_exe (str): path to the cellranger executable
           cellranger_package (str): name of the cellranger package
           cellranger_version (str): the cellranger version
+          cellranger_info (tuple): tuple consisting of
+            (exe,package,version)
         """
         self.add_output('cellranger_exe',Param(type=str))
         self.add_output('cellranger_package',Param(type=str))
         self.add_output('cellranger_version',Param(type=str))
+        self.add_output('cellranger_info',Param())
     def setup(self):
         print("Look for %s" % self.args.require_cellranger)
         self.add_call("Check %s" % self.args.require_cellranger,
@@ -1912,6 +1921,9 @@ class GetCellranger(PipelineFunctionTask):
         self.output.cellranger_exe.set(cellranger_exe)
         self.output.cellranger_package.set(cellranger_package)
         self.output.cellranger_version.set(cellranger_version)
+        self.output.cellranger_info.set((cellranger_exe,
+                                         cellranger_package,
+                                         cellranger_version))
         # Report what was found
         print("Cellranger exe    : %s" % cellranger_exe)
         print("Cellranger package: %s" % cellranger_package)
