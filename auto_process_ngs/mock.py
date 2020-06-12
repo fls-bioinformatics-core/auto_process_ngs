@@ -1398,13 +1398,14 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
             cmd = " %s" % args[0]
         except IndexError:
             cmd = ''
-        header = """%s
-cellranger%s (%s)
-Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
--------------------------------------------------------------------------------
-""" % (self._path,cmd,self._version)
         # Get executable name
         cellranger_exe = os.path.basename(self._path)
+        # Construct header
+        header = """%s
+%s%s (%s)
+Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
+-------------------------------------------------------------------------------
+""" % (self._path,cellranger_exe,cmd,self._version)
         # Handle version request or no args
         print(header)
         if cmd == " --version" or not cmd:
