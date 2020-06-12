@@ -2939,18 +2939,18 @@ class TestSubsetFunction(unittest.TestCase):
         self.assertEqual(s['icell8_well_list'],
                          "/files/well_list.txt")
 
-    def test_subset_setting_missing_parameter_raises_keyerror(self):
+    def test_subset_setting_unrecognised_parameter_raises_keyerror(self):
         """
-        subset: setting missing parameter raises KeyError
+        subset: setting unrecognised parameter raises KeyError
         """
         with self.assertRaises(KeyError) as ex:
             s = subset([1,2],
                        protocol="standard",
                        missing="not_here")
 
-    def test_subset_accessing_missing_parameter_raises_keyerror(self):
+    def test_subset_accessing_unrecognised_parameter_raises_keyerror(self):
         """
-        subset: accessing missing parameter raises KeyError
+        subset: accessing unrecognised parameter raises KeyError
         """
         s = subset([1,2],protocol="standard")
         with self.assertRaises(KeyError) as ex:
