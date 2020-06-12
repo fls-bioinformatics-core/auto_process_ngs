@@ -1509,8 +1509,6 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         # Create mock bcl2fastq and cellranger
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
-        MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
