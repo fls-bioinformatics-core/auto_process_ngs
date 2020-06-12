@@ -151,6 +151,19 @@ class MakeFastqs(Pipeline):
 
     Parameters defined in the lane subsets override those defined
     globally in the pipleine.
+
+    On completion the pipeline makes the follow outputs availble:
+
+    - platform: the platform assigned to the primary data
+    - primary_data_dir: the directory containing the primary data
+    - acquired_primary_data: boolean indicating if the primary
+        data exists
+    - bcl2fastq_info: tuple with information on the bcl2fastq
+        software used
+    - cellranger_info: tuple with information on the cellranger
+        software used
+    - missing_fastqs: list of Fastq files that bcl2fastq failed
+        to generate
     """
     def __init__(self,run_dir,sample_sheet,protocol='standard',
                  bases_mask="auto",platform=None,icell8_well_list=None,
@@ -270,6 +283,12 @@ class MakeFastqs(Pipeline):
         self.add_param('cellranger_localcores',type=int)
         self.add_param('cellranger_localmem',type=int)
 
+        # Internal parameters
+        self.add_param('_platform')
+        self.add_param('_bcl2fastq_info')
+        self.add_param('_cellranger_info')
+        self.add_param('_missing_fastqs',type=list)
+
         # Define runners
         self.add_runner('rsync_runner')
         self.add_runner('bcl2fastq_runner')
@@ -282,6 +301,14 @@ class MakeFastqs(Pipeline):
         self.add_envmodules('bcl2fastq')
         self.add_envmodules('cellranger')
         self.add_envmodules('cellranger_atac')
+
+        # Pipeline outputs
+        self.add_output('platform',self.params._platform)
+        self.add_output('primary_data_dir',self.params.primary_data_dir)
+        self.add_output('acquired_primary_data',Param())
+        self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
+        self.add_output('cellranger_info',self.params._cellranger_info)
+        self.add_output('missing_fastqs',self.params._missing_fastqs)
 
         # Lane subsets
         self._subsets = []
@@ -1187,6 +1214,56 @@ class MakeFastqs(Pipeline):
                                   'mismatches': run_bcl2fastq.output.mismatches
                               },
                               requires=fastq_generation_tasks)
+
+        # Update outputs associated with primary data
+        self.output.acquired_primary_data.set(
+            PathExistsParam(
+                fetch_primary_data.output.run_dir))
+        self.params._platform.set(identify_platform.output.platform)
+
+        # Update outputs with bcl2fastq information
+        for get_bcl2fastq_task in (get_bcl2fastq,
+                                   get_bcl2fastq_for_10x,
+                                   get_bcl2fastq_for_10x_atac,):
+            if get_bcl2fastq_task:
+                get_bcl2fastq = get_bcl2fastq_task
+                break
+        if get_bcl2fastq:
+            self.params._bcl2fastq_info.set(
+                get_bcl2fastq.output.bcl2fastq_info)
+
+        # Update outputs with cellranger information
+        for get_cellranger_task in (get_cellranger,
+                                    get_cellranger_atac,):
+            if get_cellranger_task:
+                get_cellranger = get_cellranger_task
+                break
+        if get_cellranger:
+            self.params._cellranger_info.set(
+                get_cellranger.output.cellranger_info)
+
+        # Update lists of missing Fastqs
+        self.params._missing_fastqs.set(
+            FunctionParam(self._merge_missing_fastqs,
+                          fastq_generation_tasks))
+
+    def _merge_missing_fastqs(self,tasks):
+        """
+        Internal: merge lists of "missing" Fastqs
+
+        Given a list of task instances, combine the
+        'missing_fastqs' output lists from each task
+        into a single sorted list of Fastqs.
+        """
+        missing_fastqs = list()
+        for task in tasks:
+            try:
+                if task.output.missing_fastqs:
+                    missing_fastqs.extend(
+                        task.output.missing_fastqs)
+            except AttributeError:
+                pass
+        return sorted(missing_fastqs)
 
     def run(self,analysis_dir,primary_data_dir=None,
             nprocessors=1,force_copy_of_primary_data=False,
