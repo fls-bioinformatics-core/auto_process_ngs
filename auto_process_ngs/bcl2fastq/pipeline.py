@@ -688,6 +688,13 @@ class MakeFastqs(Pipeline):
         )
         self.add_task(fetch_primary_data,
                       runner=self.runners['rsync_runner'])
+        identify_platform = IdentifyPlatform(
+            "Identify sequencer platform",
+            fetch_primary_data.output.run_dir,
+            platform=self._platform
+        )
+        self.add_task(identify_platform,
+                      requires=(fetch_primary_data,))
 
         # Load sample sheet data
         sample_sheet = SampleSheet(self._sample_sheet)
@@ -848,7 +855,7 @@ class MakeFastqs(Pipeline):
                     create_fastq_for_index_read=\
                     create_fastq_for_index_read,
                     create_empty_fastqs=self.params.create_empty_fastqs,
-                    platform=self._platform,
+                    platform=identify_platform.output.platform,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
                     skip_bcl2fastq=final_output_exists)
@@ -858,6 +865,7 @@ class MakeFastqs(Pipeline):
                               requires=(get_bcl2fastq,
                                         make_sample_sheet,
                                         fetch_primary_data,
+                                        identify_platform,
                                         restore_backup))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -900,6 +908,7 @@ class MakeFastqs(Pipeline):
                     create_fastq_for_index_read=\
                     create_fastq_for_index_read,
                     create_empty_fastqs=self.params.create_empty_fastqs,
+                    platform=identify_platform.output.platform,
                     bcl2fastq_exe=get_bcl2fastq.output.bcl2fastq_exe,
                     bcl2fastq_version=get_bcl2fastq.output.bcl2fastq_version,
                     skip_bcl2fastq=final_output_exists)
@@ -910,6 +919,7 @@ class MakeFastqs(Pipeline):
                                         get_bases_mask,
                                         make_sample_sheet,
                                         fetch_primary_data,
+                                        identify_platform,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -1017,6 +1027,7 @@ class MakeFastqs(Pipeline):
                     fetch_primary_data.output.run_dir,
                     bcl2fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
+                    platform=identify_platform.output.platform,
                     bases_mask=bases_mask,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
@@ -1042,6 +1053,7 @@ class MakeFastqs(Pipeline):
                                         get_bcl2fastq_for_10x,
                                         make_sample_sheet,
                                         fetch_primary_data,
+                                        identify_platform,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -1074,6 +1086,7 @@ class MakeFastqs(Pipeline):
                     fetch_primary_data.output.run_dir,
                     bcl2fastq_out_dir,
                     make_sample_sheet.output.custom_sample_sheet,
+                    platform=identify_platform.output.platform,
                     bases_mask=bases_mask,
                     minimum_trimmed_read_length=\
                     minimum_trimmed_read_length,
@@ -1101,6 +1114,7 @@ class MakeFastqs(Pipeline):
                                         get_bcl2fastq_for_10x_atac,
                                         make_sample_sheet,
                                         fetch_primary_data,
+                                        identify_platform,
                                         restore_backup,))
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
@@ -1399,6 +1413,28 @@ class FetchPrimaryData(PipelineTask):
             os.rename(self.tmp_dir,final_run_dir)
         if os.path.exists(final_run_dir):
             self.output.run_dir.set(final_run_dir)
+
+class IdentifyPlatform(PipelineTask):
+    """
+    Identify the sequencer platform from the primary data
+    """
+    def init(self,run_dir,platform=None):
+        """
+        Initialise the IdentifyPlatform task
+
+        Arguments:
+          run_dir (str): path to the sequencer run data
+          platform (str): optional, specify the platform
+        Outputs:
+          platform: sequencer platform
+        """
+        self.add_output('platform',Param(type='str'))
+    def setup(self):
+        # Load input data and acquire the platform
+        illumina_run = IlluminaRun(self.args.run_dir,
+                                   platform=self.args.platform)
+        self.output.platform.set(illumina_run.platform)
+        print("Platform identified as '%s'" % illumina_run.platform)
 
 class MakeSampleSheet(PipelineTask):
     """
