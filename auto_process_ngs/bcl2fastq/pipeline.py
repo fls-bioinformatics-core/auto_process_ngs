@@ -267,6 +267,7 @@ class MakeFastqs(Pipeline):
         self.add_param('data_dir',value=run_dir,type=str)
         self.add_param('sample_sheet',value=self._sample_sheet,type=str)
         self.add_param('analysis_dir',type=str)
+        self.add_param('out_dir',type=str)
         self.add_param('primary_data_dir',type=str)
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
@@ -829,17 +830,25 @@ class MakeFastqs(Pipeline):
             self.add_task(make_sample_sheet)
 
             # Construct a name for the output directory
+            # If lanes were specified then this will be
+            # - ANALYSIS_DIR/BASENAME(OUT_DIR).LANES
+            # otherwise it will be
+            # - ANALYSIS_DIR/BASENAME(OUT_DIR)
             if lanes:
                 lanes_id = ".L%s" % ''.join([str(l) for l in lanes])
             else:
                 lanes_id = ""
-            bcl2fastq_out_dir = PathJoinParam(self.params.analysis_dir,
-                                              "bcl2fastq%s" % lanes_id)
+            bcl2fastq_out_dir = PathJoinParam(
+                self.params.analysis_dir,
+                FunctionParam(
+                    lambda d,lanes_id: "%s%s" % (os.path.basename(d),
+                                                 lanes_id),
+                    self.params.out_dir,
+                    lanes_id))
 
             # Flag if the final output directory exists
             final_output_exists = PathExistsParam(
-                PathJoinParam(self.params.analysis_dir,
-                              "bcl2fastq"))
+                PathJoinParam(self.params.out_dir))
                 
             ###############
             # Set up tasks
@@ -1151,12 +1160,10 @@ class MakeFastqs(Pipeline):
 
         # Merge Fastqs
         if len(self.subsets) > 1:
-            bcl2fastq_out_dir = PathJoinParam(self.params.analysis_dir,
-                                              "bcl2fastq")
             merge_fastq_dirs = MergeFastqDirs(
                 "Merge bcl2fastq output directories",
                 bcl2fastq_out_dirs,
-                bcl2fastq_out_dir
+                self.params.out_dir
             )
             self.add_task(merge_fastq_dirs,
                           requires=fastq_generation_tasks)
@@ -1166,7 +1173,7 @@ class MakeFastqs(Pipeline):
             # Generate statistics
             fastq_statistics = FastqStatistics(
                 "Generate statistics for Fastqs",
-                bcl2fastq_out_dir,
+                self.params.out_dir,
                 self._sample_sheet,
                 self.params.analysis_dir,
                 nprocessors=self.params.nprocessors)
@@ -1209,7 +1216,7 @@ class MakeFastqs(Pipeline):
             analyse_barcodes = AnalyseBarcodes(sample_sheet=self._sample_sheet)
             self.add_pipeline(analyse_barcodes,
                               params={
-                                  'bcl2fastq_dir': bcl2fastq_out_dir,
+                                  'bcl2fastq_dir': self.params.out_dir,
                                   'lanes': lanes_for_barcode_analysis,
                                   'mismatches': run_bcl2fastq.output.mismatches
                               },
@@ -1265,7 +1272,8 @@ class MakeFastqs(Pipeline):
                 pass
         return sorted(missing_fastqs)
 
-    def run(self,analysis_dir,primary_data_dir=None,
+    def run(self,analysis_dir,out_dir=None,barcode_analysis_dir=None,
+            primary_data_dir=None,
             nprocessors=1,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
             create_empty_fastqs=None,cellranger_jobmode='local',
@@ -1281,6 +1289,10 @@ class MakeFastqs(Pipeline):
         Arguments:
           analysis_dir (str): directory to perform the processing
             and analyses in
+          out_dir (str): (sub)directory for output from Fastq
+            generation (defaults to 'bcl2fastq')
+          barcode_analysis_dir (str): (sub)directory for barcode
+            analysis (defaults to 'barcode_analysis')
           primary_data_dir (str): top-level directory
             holding the primary data
           force_copy_of_primary_data (bool): if True then force
@@ -1342,6 +1354,26 @@ class MakeFastqs(Pipeline):
         if not os.path.exists(working_dir):
             mkdir(working_dir)
 
+        # Output directory
+        if out_dir is None:
+            out_dir = "bcl2fastq"
+        if not os.path.isabs(out_dir):
+            out_dir = os.path.join(analysis_dir,out_dir)
+
+        # Primary data directory
+        if primary_data_dir is None:
+            primary_data_dir = "primary_data"
+        if not os.path.isabs(primary_data_dir):
+            primary_data_dir = os.path.join(analysis_dir,
+                                            primary_data_dir)
+
+        # Barcode analysis directory
+        if barcode_analysis_dir is None:
+            barcode_analysis_dir = "barcode_analysis"
+        if not os.path.isabs(barcode_analysis_dir):
+            barcode_analysis_dir = os.path.join(analysis_dir,
+                                                barcode_analysis_dir)
+
         # Log and script directories
         if log_dir is None:
             log_dir = os.path.join(working_dir,"logs")
@@ -1355,15 +1387,10 @@ class MakeFastqs(Pipeline):
         analysis_dir = os.path.abspath(analysis_dir)
         params = {
             'analysis_dir': analysis_dir,
-            'primary_data_dir': (os.path.abspath(primary_data_dir)
-                                 if primary_data_dir
-                                 else os.path.join(analysis_dir,
-                                                   "primary_data")),
-            'barcode_analysis_dir': os.path.join(analysis_dir,
-                                                 "barcode_analysis"),
-            'counts_dir': os.path.join(analysis_dir,
-                                       "barcode_analysis",
-                                       "counts"),
+            'out_dir': out_dir,
+            'primary_data_dir': primary_data_dir,
+            'barcode_analysis_dir': barcode_analysis_dir,
+            'counts_dir': os.path.join(barcode_analysis_dir,"counts"),
             'qc_report': os.path.join(analysis_dir,
                                       "processing_qc.html"),
             'force_copy_of_primary_data': force_copy_of_primary_data,
@@ -1897,7 +1924,7 @@ class RunBcl2Fastq(PipelineTask):
                     raise Exception("Failed to verify outputs against "
                                     "samplesheet")
             # Move to final location
-            print("Moving output to final location")
+            print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(self.tmp_out_dir,self.args.out_dir)
 
 class GetBasesMaskIcell8(PipelineTask):

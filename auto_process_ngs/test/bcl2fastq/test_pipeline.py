@@ -173,6 +173,76 @@ class TestMakeFastqs(unittest.TestCase):
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_set_out_dirs(self):
+        """
+        MakeFastqs: standard protocol: set output directories
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"),
+                                 version="2.20.0.422")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make an (empty) analysis directory
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet)
+        status = p.run(analysis_dir,
+                       out_dir="fastqs_out",
+                       barcode_analysis_dir="barcodes",
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        self.assertEqual(p.output.platform,"miseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bcl2fastq_info,
+                         (os.path.join(self.bin,"bcl2fastq"),
+                          "bcl2fastq",
+                          "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       "fastqs_out",
+                       "barcodes",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in ("bcl2fastq",
+                       "barcode_analysis",):
+            self.assertFalse(os.path.exists(
+                os.path.join(analysis_dir,subdir)),
+                            "Found subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_M00879_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_create_fastq_for_index_read(self):
         """
         MakeFastqs: standard protocol: create Fastqs for index reads
@@ -1538,6 +1608,78 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_SN7001250_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_multiple_lanes_multiple_subsets_set_out_dirs(self):
+        """
+        MakeFastqs: multiple lanes (multiple subsets, set output directories)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.hiseq)
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,
+                       protocol="standard",
+                       lane_subsets=(
+                           subset(lanes=(1,2,)),
+                           subset(lanes=(3,4,5,6,7,8,))))
+        status = p.run(analysis_dir,
+                       out_dir="fastqs_out",
+                       barcode_analysis_dir="barcodes",
+                       poll_interval=0.5)
+        # Check outputs
+        self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bcl2fastq_info,
+                         (os.path.join(self.bin,"bcl2fastq"),
+                          "bcl2fastq",
+                          "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.missing_fastqs,[])
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       "fastqs_out",
+                       "save.fastqs_out.L12",
+                       "save.fastqs_out.L345678",
+                       "barcodes",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for subdir in ("bcl2fastq",
+                       "barcode_analysis",):
+            self.assertFalse(os.path.exists(
+                os.path.join(analysis_dir,subdir)),
+                            "Found subdir: %s" % subdir)
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
