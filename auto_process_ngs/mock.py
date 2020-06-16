@@ -1980,6 +1980,10 @@ def make_mock_bcl2fastq2_output(out_dir,lanes,sample_sheet=None,
                     i += 1
                 else:
                     del(sample_sheet_[i])
+        # Get lanes from modified sample sheet
+        if sample_sheet_.has_lanes:
+            lanes = sorted(list(set([int(line['Lane'])
+                                     for line in sample_sheet_])))
         # Predict outputs
         s = SampleSheetPredictor(sample_sheet=sample_sheet_)
         s.set(reads=reads,
