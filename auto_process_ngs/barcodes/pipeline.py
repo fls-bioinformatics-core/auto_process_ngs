@@ -397,13 +397,13 @@ class CountBarcodes(PipelineTask):
                     break
         else:
             # Undetermined reads
-            if self.args.illumina_data.undetermined is None:
-                # No undetermined reads
-                # Exit without an error
-                print("No undetermined reads, nothing to do")
-                return
-            else:
-                project = self.args.illumina_data.undetermined
+            project = self.args.illumina_data.undetermined
+        # Check project was located
+        # If not then exit without an error
+        if not project:
+            print("Unable to locate project '%s': nothing to do" %
+                  project_name)
+            return
         # Collect Fastq files
         fastqs = []
         for sample in project.samples:
