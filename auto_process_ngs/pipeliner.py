@@ -1879,6 +1879,8 @@ class Pipeline(object):
                     self._output[name] = self._output[name].value
                 except AttributeError:
                     pass
+                self.report("- setting '%s': %s" % (name,
+                                                    self._output[name]))
         if self._failed:
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
