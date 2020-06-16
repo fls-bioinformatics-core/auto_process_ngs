@@ -723,15 +723,15 @@ class TestSimpleScheduler(unittest.TestCase):
         sched = SimpleScheduler(runner=SimpleJobRunner(log_dir=self.log_dir),
                                 poll_interval=0.01)
         sched.start()
-        job_1 = sched.submit(['sleep','1'],name='sleep_1')
-        job_2 = sched.submit(['sleep','3'],name='sleep_3')
-        job_3 = sched.submit(['sleep','10'],name='sleep_10')
+        job_1 = sched.submit(['sleep','3'],name='sleep_3')
+        job_2 = sched.submit(['sleep','5'],name='sleep_5')
+        job_3 = sched.submit(['sleep','15'],name='sleep_15')
         self.assertFalse(job_1.completed)
         self.assertFalse(job_2.completed)
         self.assertFalse(job_3.completed)
         # Wait for job to finish
         try:
-            sched.wait_for(('sleep_1','sleep_3'),timeout=10)
+            sched.wait_for(('sleep_3','sleep_5'),timeout=10)
         except SchedulerTimeout:
             sched.stop()
             job_1.terminate()
