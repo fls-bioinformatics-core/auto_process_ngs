@@ -1625,7 +1625,10 @@ class Pipeline(object):
         # Deal with runners
         if runners:
             for r in runners:
-                self.runners[r].set(runners[r])
+                if r in self.runners:
+                    self.runners[r].set(runners[r])
+                else:
+                    raise Exception("Undefined runner '%s'" % r)
         if default_runner:
             self.runners['default'].set(default_runner)
         # Deal with environment modules
@@ -1876,6 +1879,8 @@ class Pipeline(object):
                     self._output[name] = self._output[name].value
                 except AttributeError:
                     pass
+                self.report("- setting '%s': %s" % (name,
+                                                    self._output[name]))
         if self._failed:
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
