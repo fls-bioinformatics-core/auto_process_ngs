@@ -8,6 +8,7 @@ import shutil
 import os
 from bcftbx.mock import MockIlluminaRun
 from bcftbx.mock import SampleSheets
+from bcftbx.IlluminaData import IlluminaData
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import make_mock_bcl2fastq2_output
@@ -799,6 +800,59 @@ class TestMakeFastqs(unittest.TestCase):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_SN7001250_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_standard_protocol_multiple_lanes_reduced_subset(self):
+        """
+        MakeFastqs: standard protocol: multiple lanes (reduced subset of lanes)
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.hiseq)
+        # Create mock bcl2fastq
+        # Check that bases mask is as expected
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Do the test
+        p = MakeFastqs(run_dir,sample_sheet,protocol="standard",
+                       lanes=[1,2,])
+        status = p.run(analysis_dir,
+                       poll_interval=0.5)
+        self.assertEqual(status,0)
+        # Check outputs
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertEqual(IlluminaData(analysis_dir,"bcl2fastq").lanes,
+                         [1,2])
         self.assertTrue(os.path.islink(
             os.path.join(analysis_dir,
                          "primary_data",
@@ -3270,6 +3324,44 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           run_dir,
                           sample_sheet,
                           protocol="undefined_protocol")
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_exception_specifying_lanes_no_lanes_in_samplesheet(self):
+        """
+        MakeFastqs: raise exception when lanes specified but none in samplesheet
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with no lanes
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write("""[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
+Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGNN,,
+Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
+""")
+        # Using a samplesheet with no lanes while specifying lane
+        # numbers should raise an exception
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,
+                          lanes=[1,])
+        # Using a samplesheet with no lanes while specifying subsets
+        # should raise an exception
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,
+                          lane_subsets=(
+                              subset(lanes=[1,]),
+                              subset(lanes=[2,3,4])
+                          ))
 
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_fails_for_chromium_sc_indices(self):

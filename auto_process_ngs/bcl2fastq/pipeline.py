@@ -172,9 +172,8 @@ class MakeFastqs(Pipeline):
                  adapter_sequence=None,adapter_sequence_read2=None,
                  icell8_atac_swap_i1_and_i2=None,
                  icell8_atac_reverse_complement=None,
-                 trim_adapters=True,fastq_statistics=True,
-                 analyse_barcodes=True,
-                 lane_subsets=None):
+                 lanes=None,trim_adapters=True,fastq_statistics=True,
+                 analyse_barcodes=True,lane_subsets=None):
         """
         Create a new MakeFastqs pipeline instance
 
@@ -211,6 +210,8 @@ class MakeFastqs(Pipeline):
           icell8_atac_reverse_complement (str): whether to reverse
             complement I1, I2, or both, when demultiplexing ICELL8
             ATAC data
+          lanes (list): if set then specifies a list of lanes to
+            include; all other lanes will be excluded
           trim_adapters (bool): if True (default) then perform
             adapter trimming as part of Fastq generation
           fastq_statistics (bool): if True (default) then generate
@@ -228,6 +229,14 @@ class MakeFastqs(Pipeline):
         self._sample_sheet = os.path.abspath(sample_sheet)
         self._platform = platform
 
+        # Limit set of lanes to use?
+        if lanes:
+            self._use_lanes = sorted([int(l) for l in lanes])
+        else:
+            self._use_lanes = None
+        if self._use_lanes:
+            self.report("Restrict to lanes: %s" % self._use_lanes)
+
         # Preflight checks
         #
         # Sample sheet
@@ -235,6 +244,7 @@ class MakeFastqs(Pipeline):
             raise Exception("Problems detected in sample sheet")
         # Consistent lane definitions
         if lane_subsets:
+            # Check each lane is only defined once
             defined_lanes = set()
             for s in lane_subsets:
                 for l in s['lanes']:
@@ -246,6 +256,15 @@ class MakeFastqs(Pipeline):
                                         "definitions" % ll)
                     else:
                         defined_lanes.add(ll)
+            # Check that subsets don't include lanes
+            # that are excluded elsewhere
+            if self._use_lanes:
+                for l in defined_lanes:
+                    if l not in self._use_lanes:
+                        raise Exception("Lane '%s' is specified in a "
+                                        "subset definition but is "
+                                        "not included in supplied "
+                                        "lane master list" % l)
 
         # Adapter sequences
         sample_sheet = SampleSheet(self._sample_sheet)
@@ -336,8 +355,13 @@ class MakeFastqs(Pipeline):
             for data in sample_sheet_data:
                 # Get index sequence
                 index_sequence = samplesheet_index_sequence(data)
+                # Filter out lanes not in restricted lane set
+                lane = int(data['Lane'])
+                if self._use_lanes:
+                    if lane not in self._use_lanes:
+                        # Lane is excluded so drop this line
+                        continue
                 # Store lanes against unique masked index sequences
-                lane = data['Lane']
                 masked_index = self._mask_sequence(index_sequence)
                 try:
                     masked_indexes[masked_index].add(lane)
@@ -473,8 +497,9 @@ class MakeFastqs(Pipeline):
                                         if (kw != 'lanes' and
                                             kw != 'protocol') })
 
-        # Reset lanes for single subset
-        if len(self.subsets) == 1:
+        # Reset lanes for single subset which implicitly
+        # includes all lanes in the run
+        if len(self.subsets) == 1 and not self._use_lanes:
             self.subsets[0]['lanes'] = []
 
         # Build the pipeline
@@ -843,21 +868,26 @@ class MakeFastqs(Pipeline):
             self.add_task(make_sample_sheet)
 
             # Construct a name for the output directory
-            # If lanes were specified then this will be
-            # - ANALYSIS_DIR/BASENAME(OUT_DIR).LANES
-            # otherwise it will be
-            # - ANALYSIS_DIR/BASENAME(OUT_DIR)
-            if lanes:
+            if lanes and len(self.subsets) > 1:
+                # If lanes were specified and there are multiple
+                # subsets then this will be
+                #
+                # ANALYSIS_DIR/BASENAME(OUT_DIR).LANES
                 lanes_id = ".L%s" % ''.join([str(l) for l in lanes])
             else:
+                # If no lanes specified and/or only one
+                # subsets it will be
+                #
+                # ANALYSIS_DIR/BASENAME(OUT_DIR)
                 lanes_id = ""
-            bcl2fastq_out_dir = PathJoinParam(
-                self.params.analysis_dir,
-                FunctionParam(
-                    lambda d,lanes_id: "%s%s" % (os.path.basename(d),
-                                                 lanes_id),
+            bcl2fastq_out_dir = FunctionParam(
+                lambda analysis_dir,out_dir,lanes_id:
+                os.path.join(analysis_dir,
+                             "%s%s" % (os.path.basename(out_dir),
+                                       lanes_id)),
+                    self.params.analysis_dir,
                     self.params.out_dir,
-                    lanes_id))
+                    lanes_id)
 
             # Flag if the final output directory exists
             final_output_exists = PathExistsParam(
