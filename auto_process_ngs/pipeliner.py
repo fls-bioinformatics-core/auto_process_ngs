@@ -1625,7 +1625,10 @@ class Pipeline(object):
         # Deal with runners
         if runners:
             for r in runners:
-                self.runners[r].set(runners[r])
+                if r in self.runners:
+                    self.runners[r].set(runners[r])
+                else:
+                    raise Exception("Undefined runner '%s'" % r)
         if default_runner:
             self.runners['default'].set(default_runner)
         # Deal with environment modules
