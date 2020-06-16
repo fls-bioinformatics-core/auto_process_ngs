@@ -1217,7 +1217,8 @@ class MakeFastqs(Pipeline):
             self.add_pipeline(analyse_barcodes,
                               params={
                                   'bcl2fastq_dir': self.params.out_dir,
-                                  'lanes': lanes_for_barcode_analysis,
+                                  'lanes': Param(
+                                      value=lanes_for_barcode_analysis),
                                   'mismatches': run_bcl2fastq.output.mismatches
                               },
                               requires=fastq_generation_tasks)
