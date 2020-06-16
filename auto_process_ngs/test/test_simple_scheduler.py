@@ -731,7 +731,7 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertFalse(job_3.completed)
         # Wait for job to finish
         try:
-            sched.wait_for(('sleep_1','sleep_3'),timeout=10)
+            sched.wait_for(('sleep_3','sleep_5'),timeout=10)
         except SchedulerTimeout:
             sched.stop()
             job_1.terminate()
