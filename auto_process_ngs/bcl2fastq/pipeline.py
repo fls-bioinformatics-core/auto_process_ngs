@@ -170,6 +170,8 @@ class MakeFastqs(Pipeline):
                  minimum_trimmed_read_length=None,
                  mask_short_adapter_reads=None,
                  adapter_sequence=None,adapter_sequence_read2=None,
+                 icell8_atac_swap_i1_and_i2=None,
+                 icell8_atac_reverse_complement=None,
                  trim_adapters=True,fastq_statistics=True,
                  analyse_barcodes=True,
                  lane_subsets=None):
@@ -203,6 +205,12 @@ class MakeFastqs(Pipeline):
           adapter_sequence_read2 (str): optionally specify the
             'read2' adapter sequence to use for trimming
             (overrides sequence set in the sample sheet file)
+          icell8_atac_swap_i1_and_i2 (bool): if True then
+            swap the I1 and I2 indexes when demultiplexing ICELL8
+            ATAC data
+          icell8_atac_reverse_complement (str): whether to reverse
+            complement I1, I2, or both, when demultiplexing ICELL8
+            ATAC data
           trim_adapters (bool): if True (default) then perform
             adapter trimming as part of Fastq generation
           fastq_statistics (bool): if True (default) then generate
@@ -254,14 +262,17 @@ class MakeFastqs(Pipeline):
         
         # Defaults
         self._bases_mask = bases_mask
-        self._trim_adapters = bool(trim_adapters)
         self._adapter_sequence = adapter_sequence
         self._adapter_sequence_read2 = adapter_sequence_read2
         self._minimum_trimmed_read_length = minimum_trimmed_read_length
         self._mask_short_adapter_reads = mask_short_adapter_reads
+        self._icell8_well_list = icell8_well_list
+        self._icell8_atac_swap_i1_and_i2 = icell8_atac_swap_i1_and_i2
+        self._icell8_atac_reverse_complement = \
+                                icell8_atac_reverse_complement
+        self._trim_adapters = bool(trim_adapters)
         self._fastq_statistics = bool(fastq_statistics)
         self._analyse_barcodes = bool(analyse_barcodes)
-        self._icell8_well_list = icell8_well_list
 
         # Define parameters
         self.add_param('data_dir',value=run_dir,type=str)
@@ -364,8 +375,10 @@ class MakeFastqs(Pipeline):
                 create_fastq_for_index_read=\
                 self.params.create_fastq_for_index_read,
                 icell8_well_list=self._icell8_well_list,
-                icell8_atac_swap_i1_and_i2=False,
-                icell8_atac_reverse_complement=None,
+                icell8_atac_swap_i1_and_i2=\
+                self._icell8_atac_swap_i1_and_i2,
+                icell8_atac_reverse_complement=\
+                self._icell8_atac_reverse_complement,
                 analyse_barcodes=self._analyse_barcodes
             )
 
@@ -2060,8 +2073,8 @@ class DemultiplexIcell8Atac(PipelineTask):
             swap the I1 and I2 indexes when
             demultiplexing
           reverse_complement (str): whether to
-            reverse I1, I2, or both, when
-            demultiplexing
+            reverse complement I1, I2, or both,
+            when demultiplexing
           skip_demultiplex (bool): if True then
             skip running the demultiplexing
         """
