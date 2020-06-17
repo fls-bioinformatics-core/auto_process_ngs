@@ -99,6 +99,15 @@ logger = logging.getLogger(__name__)
 # Constants
 ######################################################################
 
+# Protocols
+
+PROTOCOLS = ('standard',
+             'mirna',
+             'icell8',
+             'icell8_atac',
+             '10x_chromium_sc',
+             '10x_atac',)
+
 # Valid attribute names for lane subsets
 
 LANE_SUBSET_ATTRS = (
