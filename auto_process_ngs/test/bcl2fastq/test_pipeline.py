@@ -90,6 +90,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.17.1.14"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -152,6 +162,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -216,6 +236,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -286,6 +316,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -349,6 +389,10 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,None)
+        self.assertEqual(p.output.stats_full,None)
+        self.assertEqual(p.output.per_lane_stats,None)
+        self.assertEqual(p.output.per_lane_sample_stats,None)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -414,6 +458,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -482,6 +536,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -546,6 +610,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -610,6 +684,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -679,6 +763,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -730,6 +824,27 @@ class TestMakeFastqs(unittest.TestCase):
                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check outputs
+        self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bcl2fastq_info,
+                         (os.path.join(self.bin,"bcl2fastq"),
+                          "bcl2fastq",
+                          "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
                        "bcl2fastq",
@@ -792,6 +907,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -844,6 +969,27 @@ class TestMakeFastqs(unittest.TestCase):
                        poll_interval=0.5)
         self.assertEqual(status,0)
         # Check outputs
+        self.assertEqual(p.output.platform,"hiseq")
+        self.assertEqual(p.output.primary_data_dir,
+                         os.path.join(analysis_dir,
+                                      "primary_data"))
+        self.assertEqual(p.output.bcl2fastq_info,
+                         (os.path.join(self.bin,"bcl2fastq"),
+                          "bcl2fastq",
+                          "2.20.0.422"))
+        self.assertEqual(p.output.cellranger_info,None)
+        self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
+        self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
                        "bcl2fastq",
@@ -927,6 +1073,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -989,6 +1145,16 @@ class TestMakeFastqs(unittest.TestCase):
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1097,6 +1263,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1206,6 +1382,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1311,6 +1497,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "cellranger",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1429,6 +1625,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "cellranger",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1555,6 +1761,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "cellranger",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1652,6 +1868,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1719,6 +1945,16 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_SN7001250_00002_AHGXXXX"),
@@ -1805,6 +2041,16 @@ AB1,AB1,,,,,AB,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -1867,6 +2113,16 @@ AB1,AB1,,,,,AB,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
@@ -1932,6 +2188,16 @@ AB1,AB1,,,,,AB,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2022,6 +2288,16 @@ AB1,AB1,,,,,AB,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2107,6 +2383,16 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2224,6 +2510,16 @@ Unassigned-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2305,6 +2601,16 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                           "cellranger",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2411,6 +2717,16 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                           "cellranger",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2497,6 +2813,16 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "cellranger-atac",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2604,6 +2930,16 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "cellranger-atac",
                           "2.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2671,6 +3007,16 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
@@ -2735,6 +3081,10 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,None)
+        self.assertEqual(p.output.stats_full,None)
+        self.assertEqual(p.output.per_lane_stats,None)
+        self.assertEqual(p.output.per_lane_sample_stats,None)
         self.assertEqual(p.output.missing_fastqs,
                          ["Sample1/Sample1_S1_L001_R1_001.fastq.gz",
                           "Sample1/Sample1_S1_L001_R2_001.fastq.gz"])
@@ -2805,6 +3155,16 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,
                          ["Sample1/Sample1_S1_L001_R1_001.fastq.gz",
                           "Sample1/Sample1_S1_L001_R2_001.fastq.gz"])
@@ -2860,6 +3220,10 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(p.output.bcl2fastq_info,None)
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,None)
+        self.assertEqual(p.output.stats_full,None)
+        self.assertEqual(p.output.per_lane_stats,None)
+        self.assertEqual(p.output.per_lane_sample_stats,None)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),):
@@ -2925,6 +3289,10 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,None)
+        self.assertEqual(p.output.stats_full,None)
+        self.assertEqual(p.output.per_lane_stats,None)
+        self.assertEqual(p.output.per_lane_sample_stats,None)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),):
@@ -2990,6 +3358,10 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,None)
+        self.assertEqual(p.output.stats_full,None)
+        self.assertEqual(p.output.per_lane_stats,None)
+        self.assertEqual(p.output.per_lane_sample_stats,None)
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_UNKNOWN_00002_AHGXXXX"),):
@@ -3055,6 +3427,16 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
                                     "171020_UNKNOWN_00002_AHGXXXX"),

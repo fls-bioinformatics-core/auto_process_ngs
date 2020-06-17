@@ -171,6 +171,11 @@ class MakeFastqs(Pipeline):
         software used
     - cellranger_info: tuple with information on the cellranger
         software used
+    - stats_file: path to the statistics file
+    - stats_full: path to the full statistics file
+    - per_lane_stats: path to the per-lane statistics file
+    - per_lane_sample_stats: path to the per-lane per-sample
+        statistics file
     - missing_fastqs: list of Fastq files that bcl2fastq failed
         to generate
     """
@@ -348,6 +353,10 @@ class MakeFastqs(Pipeline):
         self.add_output('acquired_primary_data',Param())
         self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
         self.add_output('cellranger_info',self.params._cellranger_info)
+        self.add_output('stats_file',Param())
+        self.add_output('stats_full',Param())
+        self.add_output('per_lane_stats',Param())
+        self.add_output('per_lane_sample_stats',Param())
         self.add_output('missing_fastqs',self.params._missing_fastqs)
 
         # Lane subsets
@@ -1301,6 +1310,15 @@ class MakeFastqs(Pipeline):
         if get_cellranger:
             self.params._cellranger_info.set(
                 get_cellranger.output.cellranger_info)
+
+        # Update outputs associated with stats
+        if self._fastq_statistics:
+            self.output.stats_file.set(fastq_statistics.output.stats_file)
+            self.output.stats_full.set(fastq_statistics.output.stats_full)
+            self.output.per_lane_stats.set(
+                fastq_statistics.output.per_lane_stats)
+            self.output.per_lane_sample_stats.set(
+                fastq_statistics.output.per_lane_sample_stats)
 
         # Update lists of missing Fastqs
         self.params._missing_fastqs.set(
