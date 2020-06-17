@@ -316,11 +316,15 @@ class MakeFastqs(Pipeline):
         self.add_param('barcode_analysis_dir',type=str)
         self.add_param('counts_dir',type=str)
         self.add_param('qc_report',type=str)
-        self.add_param('nprocessors',type=int)
         self.add_param('force_copy_of_primary_data',value=False,type=bool)
         self.add_param('no_lane_splitting',value=False,type=bool)
         self.add_param('create_fastq_for_index_read',value=False,type=bool)
         self.add_param('create_empty_fastqs',value=False,type=bool)
+        self.add_param('stats_file',type=str)
+        self.add_param('stats_full',type=str)
+        self.add_param('per_lane_stats',type=str)
+        self.add_param('per_lane_sample_stats',type=str)
+        self.add_param('nprocessors',type=int)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
         self.add_param('cellranger_maxjobs',type=int)
@@ -1237,6 +1241,11 @@ class MakeFastqs(Pipeline):
                 self.params.out_dir,
                 self._sample_sheet,
                 self.params.analysis_dir,
+                stats_file=self.params.stats_file,
+                stats_full_file=self.params.stats_full,
+                per_lane_stats_file=self.params.per_lane_stats,
+                per_lane_sample_stats_file=\
+                self.params.per_lane_sample_stats,
                 nprocessors=self.params.nprocessors)
             self.add_task(fastq_statistics,
                           runner=self.runners['stats_runner'],
@@ -1344,10 +1353,11 @@ class MakeFastqs(Pipeline):
         return sorted(missing_fastqs)
 
     def run(self,analysis_dir,out_dir=None,barcode_analysis_dir=None,
-            primary_data_dir=None,
-            nprocessors=1,force_copy_of_primary_data=False,
+            primary_data_dir=None,force_copy_of_primary_data=False,
             no_lane_splitting=None,create_fastq_for_index_read=None,
-            create_empty_fastqs=None,cellranger_jobmode='local',
+            create_empty_fastqs=None,stats_file=None,stats_full=None,
+            per_lane_stats=None,per_lane_sample_stats=None,
+            nprocessors=1,cellranger_jobmode='local',
             cellranger_mempercore=None,cellranger_maxjobs=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,working_dir=None,log_dir=None,
@@ -1370,8 +1380,6 @@ class MakeFastqs(Pipeline):
             primary data to be copied (rsync'ed) even if it's on
             the local system (default is to link to primary data
             unless it's on a remote filesystem)
-          nprocessors (int): number of threads to use for
-            multithreaded applications (default is 1)
           no_lane_splitting (bool): if True then don't split
             output Fastqs across lanes (--no-lane-splitting)
           create_fastq_for_index_read (bool): if True then
@@ -1379,6 +1387,14 @@ class MakeFastqs(Pipeline):
             (--create-fastq-for-index-read)
           create_empty_fastqs (bool): if True then create empty
             "placeholder" Fastqs if not created by bcl2fastq
+          stats_file (str): path to statistics output file
+          stats_full (str): path to full statistics output file
+          per_lane_stats (str): path to per-lane statistics
+            output file
+          per_lane_sample_stats(str): path to per-lane per-sample
+            statistics output file
+          nprocessors (int): number of threads to use for
+            multithreaded applications (default is 1)
           cellranger_jobmode (str): job mode to run cellranger in
           cellranger_mempercore (int): memory assumed per core
           cellranger_maxjobs (int): maxiumum number of concurrent
@@ -1438,6 +1454,29 @@ class MakeFastqs(Pipeline):
             primary_data_dir = os.path.join(analysis_dir,
                                             primary_data_dir)
 
+        # Statistics files
+        # Basic stats
+        if stats_file is None:
+            stats_file = "statistics.info"
+        if not os.path.isabs(stats_file):
+            stats_file = os.path.join(analysis_dir,stats_file)
+        # Full stats
+        if stats_full is None:
+            stats_full = "statistics_full.info"
+        if not os.path.isabs(stats_full):
+            stats_full = os.path.join(analysis_dir,stats_full)
+        # Per-lane stats
+        if per_lane_stats is None:
+            per_lane_stats = "per_lane_statistics.info"
+        if not os.path.isabs(per_lane_stats):
+            per_lane_stats = os.path.join(analysis_dir,per_lane_stats)
+        # Per-lane per-sample stats
+        if per_lane_sample_stats is None:
+            per_lane_sample_stats = "per_lane_sample_stats.info"
+        if not os.path.isabs(per_lane_sample_stats):
+            per_lane_sample_stats = os.path.join(analysis_dir,
+                                                 per_lane_sample_stats)
+
         # Barcode analysis directory
         if barcode_analysis_dir is None:
             barcode_analysis_dir = "barcode_analysis"
@@ -1465,10 +1504,14 @@ class MakeFastqs(Pipeline):
             'qc_report': os.path.join(analysis_dir,
                                       "processing_qc.html"),
             'force_copy_of_primary_data': force_copy_of_primary_data,
-            'nprocessors': nprocessors,
             'no_lane_splitting': no_lane_splitting,
             'create_fastq_for_index_read': create_fastq_for_index_read,
             'create_empty_fastqs': create_empty_fastqs,
+            'stats_file': stats_file,
+            'stats_full': stats_full,
+            'per_lane_stats': per_lane_stats,
+            'per_lane_sample_stats': per_lane_sample_stats,
+            'nprocessors': nprocessors,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -2638,7 +2681,9 @@ class FastqStatistics(PipelineTask):
     Generates statistics for Fastq files
     """
     def init(self,bcl2fastq_dir,sample_sheet,out_dir,
-             stats_file=None,per_lane_stats_file=None,
+             stats_file=None,stats_full_file=None,
+             per_lane_stats_file=None,
+             per_lane_sample_stats_file=None,
              add_data=False,force=False,nprocessors=None):
         """
         Initialise the FastqStatistics task
@@ -2649,6 +2694,13 @@ class FastqStatistics(PipelineTask):
           sample_sheet (str): path to sample sheet file
           out_dir (str): path to directory to write the
             output stats files to
+          stats_file (str): path to statistics output file
+          stats_full_file (str): path to full statistics
+            output file
+          per_lane_stats_file (str): path to per-lane
+            statistics output file
+          per_lane_sample_stats_file (str): path to
+            per-lane per-sample statistics output file
           add_data (bool): if True then add stats to the
             existing stats files (default is to overwrite
             existing stats files)
@@ -2680,24 +2732,38 @@ class FastqStatistics(PipelineTask):
         self.add_output("per_lane_sample_stats",Param(type=str))
     def setup(self):
         # Sort out final output file names
+        # Basic statistics
         if self.args.stats_file:
             self.final_stats = self.args.stats_file
             self.stats_file = os.path.basename(self.final_stats)
         else:
             self.final_stats = os.path.join(self.args.out_dir,
                                             self.stats_file)
+        # Per-lane statistics
         if self.args.per_lane_stats_file:
             self.final_per_lane_stats = \
                                 self.args.per_lane_stats_file
+            self.per_lane_stats = \
+                    os.path.basename(self.final_per_lane_stats)
         else:
             self.final_per_lane_stats = os.path.join(
                 self.args.out_dir,self.per_lane_stats)
-            self.per_lane_stats = \
-                    os.path.basename(self.final_per_lane_stats)
-        self.final_stats_full = os.path.join(self.args.out_dir,
-                                             self.stats_full)
-        self.final_per_lane_sample_stats = os.path.join(
-            self.args.out_dir,self.per_lane_sample_stats)
+        # Full statistics
+        if self.args.stats_full_file:
+            self.final_stats_full = self.args.stats_full_file
+            self.stats_full = os.path.basename(self.final_stats_full)
+        else:
+            self.final_stats_full = os.path.join(self.args.out_dir,
+                                                 self.stats_full)
+        # Per-lane per-sample statistics
+        if self.args.per_lane_sample_stats_file:
+            self.final_per_lane_sample_stats = \
+                self.args.per_lane_sample_stats_file
+            self.per_lane_sample_stats = os.path.basename(
+                self.final_per_lane_sample_stats)
+        else:
+            self.final_per_lane_sample_stats = os.path.join(
+                self.args.out_dir,self.per_lane_sample_stats)
         # Get most recent timestamp on existing files
         newest_mtime = 0
         for f in (self.final_stats,
@@ -2746,7 +2812,9 @@ class FastqStatistics(PipelineTask):
             '--unaligned',os.path.basename(self.args.bcl2fastq_dir),
             '--sample-sheet',self.args.sample_sheet,
             '--output',self.stats_file,
-            '--per-lane-stats',self.per_lane_stats)
+            '--full-stats',self.stats_full,
+            '--per-lane-stats',self.per_lane_stats,
+            '--per-lane-sample-stats',self.per_lane_sample_stats)
         if self.args.nprocessors:
             fastq_statistics_cmd.add_args('--nprocessors',
                                           self.args.nprocessors)
