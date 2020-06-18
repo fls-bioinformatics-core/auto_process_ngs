@@ -1819,8 +1819,10 @@ class Pipeline(object):
                     # Terminate all tasks and stop immediately
                     self.report("Following tasks failed:")
                     for task in failed:
-                        self.report("- '%s' (%s)" % (task.name(),
-                                                     task.id()))
+                        msg = "- '%s'" % task.name
+                        if verbose:
+                            msg += " (%s)" % task.id()
+                        self.report(msg)
                     self._failed.extend(failed)
                     return self.terminate()
                 elif self._exit_on_failure == PipelineFailure.DEFERRED:
@@ -1838,9 +1840,11 @@ class Pipeline(object):
                         pending = []
                         for t in self._pending:
                             if t[0].id() in dependent_tasks:
-                                self.report("-- removing dependent task "
-                                            "'%s' (%s)" %
-                                            (t[0].name(),t[0].id()))
+                                msg = "-- removing dependent task '%s'" \
+                                      % t[0].name()
+                                if verbose:
+                                    msg += " (%s)" % t[0].id()
+                                self.report(msg)
                                 self._removed.append(t[0])
                             else:
                                 pending.append(t)
@@ -1885,14 +1889,18 @@ class Pipeline(object):
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
             for task in self._failed:
-                self.report("- '%s' (%s)" % (task.name(),
-                                             task.id()))
+                msg = "- '%s'" % task.name()
+                if verbose:
+                    msg += " (%s)" % task.id()
+                self.report(msg)
             if self._removed:
                 # Report any tasks that were removed
                 self.report("The following tasks were not executed:")
                 for task in self._removed:
-                    self.report("- '%s' (%s)" % (task.name(),
-                                                 task.id()))
+                    msg = "- '%s'" % task.name()
+                    if verbose:
+                        msg += " (%s)" % task.id()
+                    self.report(msg)
             self.report("Completed: failed")
             return 1
         else:
