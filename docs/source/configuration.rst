@@ -292,7 +292,7 @@ The ``[modulefiles]`` section in ``auto_process.ini`` allows specific module
 files to be loaded before a specific step, for example::
 
     [modulefiles]
-    make_fastqs = apps/bcl2fastq/1.8.4
+    make_fastqs = apps/bcl2fastq/2.20
 
 These can be defined for the following stages:
 
@@ -309,6 +309,22 @@ for each of these stages.)
 
    These can be overridden for the ``make_fastqs`` and ``run_qc`` stages
    using the ``--modulefiles`` option.
+
+Environment modules for Fastq generation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For the ``make_fastqs`` stage, additional module files can be specified
+for individual tasks with the Fastq generation pipeline:
+
+* ``bcl2fastq``
+* ``cellranger_mkfastq``
+* ``cellranger_atac_mkfastq``
+
+If any of these are defined then they will be loaded for the relevant
+tasks in the Fastq generation pipeline.
+
+Environment modules for the QC pipeline
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For the ``run_qc`` stage, additional module files can be specified for
 individual tasks within the QC pipeline:
