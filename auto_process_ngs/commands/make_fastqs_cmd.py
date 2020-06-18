@@ -285,21 +285,21 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 BCL2FASTQ_DEFAULTS['mask_short_adapter_reads']
 
     # Require specific bcl2fastq version
-    if require_bcl2fastq is None:
+    if require_bcl2fastq_version is None:
         # Look for platform-specific requirement
         try:
-            require_bcl2fastq = \
+            require_bcl2fastq_version = \
                 ap.settings.platform[ap.metadata.platform].bcl2fastq
             print("Bcl2fastq version %s required for platform '%s'" %
-                  (ap.metadata.platform,require_bcl2fastq))
+                  (ap.metadata.platform,require_bcl2fastq_version))
         except (KeyError,AttributeError):
             pass
-    if require_bcl2fastq is None:
+    if require_bcl2fastq_version is None:
         # Look for default requirement
-        require_bcl2fastq = ap.settings.bcl2fastq.default_version
+        require_bcl2fastq_version = ap.settings.bcl2fastq.default_version
         print("Bcl2fastq version %s required by default" %
-              require_bcl2fastq)
-    if require_bcl2fastq is not None:
+              require_bcl2fastq_version)
+    if require_bcl2fastq_version is not None:
         # No version requirement
         print("No bcl2fastq version explicitly specified")
 
