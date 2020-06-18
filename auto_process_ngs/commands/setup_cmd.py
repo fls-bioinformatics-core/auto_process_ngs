@@ -19,7 +19,6 @@ except ImportError:
 from ..bcl2fastq_utils import get_sequencer_platform
 from ..bcl2fastq_utils import make_custom_sample_sheet
 from ..applications import general as general_applications
-from ..commands.make_fastqs_cmd import fastq_statistics
 from ..fileops import exists
 from ..fileops import Location
 from ..samplesheet_utils import predict_outputs
