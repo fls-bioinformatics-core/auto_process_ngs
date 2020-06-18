@@ -325,6 +325,7 @@ class MakeFastqs(Pipeline):
         self.add_param('per_lane_stats',type=str)
         self.add_param('per_lane_sample_stats',type=str)
         self.add_param('nprocessors',type=int)
+        self.add_param('require_bcl2fastq',type=str)
         self.add_param('cellranger_jobmode',value='local',type=str)
         self.add_param('cellranger_mempercore',type=int)
         self.add_param('cellranger_maxjobs',type=int)
@@ -935,7 +936,8 @@ class MakeFastqs(Pipeline):
                     # Create a new task only if one doesn't already
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq")
+                        "Get information on bcl2fastq",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Run standard bcl2fastq
@@ -981,7 +983,8 @@ class MakeFastqs(Pipeline):
                     # Create a new task only if one doesn't already
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq")
+                        "Get information on bcl2fastq",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1043,7 +1046,8 @@ class MakeFastqs(Pipeline):
                     # Create a new task only if one doesn't already
                     # exist
                     get_bcl2fastq = GetBcl2Fastq(
-                        "Get information on bcl2fastq")
+                        "Get information on bcl2fastq",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq,
                                   envmodules=self.envmodules['bcl2fastq'])
                 # Get ICELL8 bases mask
@@ -1108,7 +1112,8 @@ class MakeFastqs(Pipeline):
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x is None:
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
-                        "Get information on bcl2fastq for cellranger")
+                        "Get information on bcl2fastq for cellranger",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1169,7 +1174,8 @@ class MakeFastqs(Pipeline):
                 # Get bcl2fastq information
                 if get_bcl2fastq_for_10x_atac is None:
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
-                        "Get information on bcl2fastq for cellranger-atac")
+                        "Get information on bcl2fastq for cellranger-atac",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
                     self.add_task(get_bcl2fastq_for_10x_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1362,11 +1368,12 @@ class MakeFastqs(Pipeline):
             no_lane_splitting=None,create_fastq_for_index_read=None,
             create_empty_fastqs=None,stats_file=None,stats_full=None,
             per_lane_stats=None,per_lane_sample_stats=None,
-            nprocessors=1,cellranger_jobmode='local',
-            cellranger_mempercore=None,cellranger_maxjobs=None,
-            cellranger_jobinterval=None,cellranger_localcores=None,
-            cellranger_localmem=None,working_dir=None,log_dir=None,
-            log_file=None,batch_size=None,max_jobs=1,poll_interval=5,
+            nprocessors=1,require_bcl2fastq=None,
+            cellranger_jobmode='local',cellranger_mempercore=None,
+            cellranger_maxjobs=None,cellranger_jobinterval=None,
+            cellranger_localcores=None,cellranger_localmem=None,
+            working_dir=None,log_dir=None,log_file=None,
+            batch_size=None,max_jobs=1,poll_interval=5,
             runners=None,default_runner=None,envmodules=None,
             verbose=False):
         """
@@ -1400,6 +1407,10 @@ class MakeFastqs(Pipeline):
             statistics output file
           nprocessors (int): number of threads to use for
             multithreaded applications (default is 1)
+          require_bcl2fastq (str): if set then specify bcl2fastq
+            version requirement; should be a string of the form
+           '1.8.4' or '>2.0'. The pipeline will fail if this
+           requirement is not met
           cellranger_jobmode (str): job mode to run cellranger in
           cellranger_mempercore (int): memory assumed per core
           cellranger_maxjobs (int): maxiumum number of concurrent
@@ -1518,6 +1529,7 @@ class MakeFastqs(Pipeline):
             'per_lane_stats': per_lane_stats,
             'per_lane_sample_stats': per_lane_sample_stats,
             'nprocessors': nprocessors,
+            'require_bcl2fastq': require_bcl2fastq,
             'cellranger_jobmode': cellranger_jobmode,
             'cellranger_mempercore': cellranger_mempercore,
             'cellranger_maxjobs': cellranger_maxjobs,
@@ -1761,8 +1773,11 @@ class GetBcl2Fastq(PipelineFunctionTask):
             bcl2fastq_exe = bcl2fastq[0]
             bcl2fastq_info = bcl_to_fastq_info(bcl2fastq_exe)
         else:
-            raise Exception("No appropriate bcl2fastq software "
-                            "located")
+            msg = "No appropriate bcl2fastq software located"
+            if not require_bcl2fastq:
+                msg += " matching requirement '%s'" % \
+                       require_bcl2fastq
+            raise Exception(msg)
         # Return the information on bcl2fastq
         return (bcl2fastq_exe,bcl2fastq_info[1],bcl2fastq_info[2])
     def finish(self):
