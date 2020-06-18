@@ -24,7 +24,7 @@ The recommended steps are:
 
 1. Generate the Fastqs as described in
    :ref:`make_fastqs-10x_chromium_sc-protocol` or
-   :ref:`make_fastqs-10x_chromium_sc_atac-protocol`
+   :ref:`make_fastqs-10x_atac-protocol`
 2. Set up analysis directories and run initial QC as per the standard
    protocol
 3. Perform initial single library analysis by running the

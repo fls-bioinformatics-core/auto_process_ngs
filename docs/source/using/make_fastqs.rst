@@ -28,7 +28,7 @@ Protocol option          Used for
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
 ``10x_chromium_sc``      10xGenomics Chromium single-cell
                          RNA-seq data
-``10x_chromium_sc_atac`` 10xGenomics Chromium single-cell
+``10x_atac``             10xGenomics Chromium single-cell
                          ATAC-seq data
 ======================== =====================================
 
@@ -55,7 +55,7 @@ subsequent sections:
 * :ref:`make_fastqs-icell8-protocol`
 * :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
-* :ref:`make_fastqs-10x_chromium_sc_atac-protocol`
+* :ref:`make_fastqs-10x_atac-protocol`
 * :ref:`make_fastqs-adapter-trimming-and-masking`
 * :ref:`make_fastqs-mixed-protocols`
 
@@ -227,18 +227,17 @@ This will generate the Fastqs in the specified output directory
    behaviour of ``cellranger mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
-.. _make_fastqs-10x_chromium_sc_atac-protocol:
+.. _make_fastqs-10x_atac-protocol:
 
-Fastq generation for 10xGenomics Chromium single-cell ATAC-seq data (``--protocol=10x_chromium_sc_atac``)
+Fastq generation for 10xGenomics single-cell ATAC-seq data (``--protocol=10x_atac``)
 ---------------------------------------------------------------------------------------------------------
 
-Fastq generation can be performed for 10xGenomics Chromium
-single-cell ATAC-seq data by using the ``--protocol=10x_chromium_sc_atac``
-option:
+Fastq generation can be performed for 10xGenomics single-cell
+ATAC-seq data by using the ``--protocol=10x_atac`` option:
 
 ::
 
-    auto_process.py make_fastqs --protocol=10x_chromium_sc_atac ...
+    auto_process.py make_fastqs --protocol=10x_atac ...
 
 which fetches the data and runs ``cellranger-atac mkfastq``.
 
