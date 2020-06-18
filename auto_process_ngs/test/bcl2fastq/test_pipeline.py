@@ -52,7 +52,7 @@ class TestMakeFastqs(unittest.TestCase):
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bcl2fastq_2_17(self):
         """
-        MakeFastqs: standard protocol with bcl2fastq v2.17
+        MakeFastqs: standard protocol: use bcl2fastq v2.17
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
@@ -124,7 +124,7 @@ class TestMakeFastqs(unittest.TestCase):
     #@unittest.skip("Skipped")
     def test_makefastqs_standard_protocol_bcl2fastq_2_20(self):
         """
-        MakeFastqs: standard protocol with bcl2fastq v2.20
+        MakeFastqs: standard protocol: use bcl2fastq v2.20
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
