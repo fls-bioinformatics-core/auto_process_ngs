@@ -299,7 +299,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         require_bcl2fastq = ap.settings.bcl2fastq.default_version
         print("Bcl2fastq version %s required by default" %
               require_bcl2fastq)
-    if require_bcl2fastq not None:
+    if require_bcl2fastq is not None:
         # No version requirement
         print("No bcl2fastq version explicitly specified")
 
