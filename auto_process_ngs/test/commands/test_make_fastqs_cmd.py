@@ -9,10 +9,10 @@ import os
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from bcftbx.mock import MockIlluminaRun
+from bcftbx.mock import SampleSheets
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.commands.make_fastqs_cmd import make_fastqs
-from auto_process_ngs.commands.make_fastqs_cmd import report_processing_qc
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -56,10 +56,10 @@ poll_interval = 0.5
         # Remove the temporary test directory
         if REMOVE_TEST_OUTPUTS:
             shutil.rmtree(self.wd)
-            
+
     #@unittest.skip("Skipped")
-    def test_make_fastqs_standard_protocol_bcl2fastq_2_17(self):
-        """make_fastqs: standard protocol (bcl2fastq v2.17)
+    def test_make_fastqs_standard_protocol(self):
+        """make_fastqs: standard protocol
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
@@ -68,9 +68,7 @@ poll_interval = 0.5
             top_dir=self.wd)
         illumina_run.create()
         # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 version='2.17.1.14')
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -89,6 +87,9 @@ poll_interval = 0.5
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -113,8 +114,8 @@ poll_interval = 0.5
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_standard_protocol_bcl2fastq_2_20(self):
-        """make_fastqs: standard protocol (bcl2fastq v2.20)
+    def test_make_fastqs_standard_protocol_override_defaults(self):
+        """make_fastqs: standard protocol (override defaults)
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
@@ -123,9 +124,7 @@ poll_interval = 0.5
             top_dir=self.wd)
         illumina_run.create()
         # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 version="2.20.0.422")
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
@@ -136,7 +135,10 @@ poll_interval = 0.5
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
-        make_fastqs(ap,protocol="standard")
+        make_fastqs(ap,protocol="standard",
+                    unaligned_dir="fastqs_out",
+                    barcode_analysis_dir="barcodes",
+                    stats_file="stats.out")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
@@ -144,6 +146,9 @@ poll_interval = 0.5
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"fastqs_out")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcodes")
+        self.assertEqual(ap.params.stats_file,"stats.out")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -152,12 +157,12 @@ poll_interval = 0.5
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs"),
-                       "bcl2fastq",
-                       "barcode_analysis",):
+                       "fastqs_out",
+                       "barcodes",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
-        for filen in ("statistics.info",
+        for filen in ("stats.out",
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
@@ -168,90 +173,11 @@ poll_interval = 0.5
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_standard_protocol_no_demultiplexing(self):
-        """make_fastqs: standard protocol with no demultiplexing
-        """
-        # Sample sheet with no barcodes
-        samplesheet_no_demultiplexing = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-AB1,AB1,,,,,AB,
-"""
-        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
-        with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_no_demultiplexing)
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_NB500968_00002_AHGXXXX",
-            "nextseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        # Check that bases mask is as expected
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 assert_bases_mask="y76,nnnnnn,y76")
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
-        self.assertTrue(ap.params.sample_sheet is not None)
-        make_fastqs(ap,protocol="standard")
-        # Check outputs
-        analysis_dir = os.path.join(
-            self.wd,
-            "171020_NB500968_00002_AHGXXXX_analysis")
-        for subdir in (os.path.join("primary_data",
-                                    "171020_NB500968_00002_AHGXXXX"),
-                       os.path.join("logs",
-                                    "002_make_fastqs"),
-                       "bcl2fastq",
-                       "barcode_analysis",):
-            self.assertTrue(os.path.isdir(
-                os.path.join(analysis_dir,subdir)),
-                            "Missing subdir: %s" % subdir)
-        for filen in ("statistics.info",
-                      "statistics_full.info",
-                      "per_lane_statistics.info",
-                      "per_lane_sample_stats.info",
-                      "projects.info",
-                      "processing_qc.html"):
-            self.assertTrue(os.path.isfile(
-                os.path.join(analysis_dir,filen)),
-                            "Missing file: %s" % filen)
-
-    #@unittest.skip("Skipped")
-    def test_make_fastqs_standard_protocol_chromium_sc_indices(self):
+    def test_make_fastqs_standard_protocol_exception_for_chromium_sc_indices(self):
         """make_fastqs: standard protocol with Chromium SC indices raises exception
         """
         # Sample sheet with 10xGenomics Chromium SC indices
-        samplesheet_chromium_sc_indices = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
+        samplesheet_chromium_sc_indices = """[Data]
 Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
 smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
 smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
@@ -307,6 +233,10 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
                          os.path.join(self.wd,
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -336,21 +266,26 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
-            "171020_SN7001250_00002_AHGXXXX",
-            "hiseq",
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
             top_dir=self.wd)
         illumina_run.create()
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
         # Create mock bcl2fastq
         # Check that bases mask is as expected
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"),
-                                 assert_bases_mask="y25n76,I8,I8,y101")
+                                 assert_bases_mask="y25n51,I8,y76")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"))
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -360,15 +295,18 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
-                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "171020_NB500968_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
-            "171020_SN7001250_00002_AHGXXXX_analysis")
+            "171020_NB500968_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
-                                    "171020_SN7001250_00002_AHGXXXX"),
+                                    "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_icell8"),
                        "bcl2fastq",
@@ -391,30 +329,18 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
         """make_fastqs: 10x_chromium_sc protocol
         """
         # Sample sheet with 10xGenomics Chromium SC indices
-        samplesheet_chromium_sc_indices = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-1,smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-2,smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+        samplesheet_chromium_sc_indices = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
             fp.write(samplesheet_chromium_sc_indices)
         # Create mock source data
         illumina_run = MockIlluminaRun(
-            "171020_SN7001250_00002_AHGXXXX",
-            "hiseq",
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
             top_dir=self.wd)
         illumina_run.create()
         # Create mock bcl2fastq and cellranger
@@ -427,7 +353,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         # Do the test
         ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"),
+                              "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -438,15 +364,18 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
-                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "171020_NB500968_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
-            "171020_SN7001250_00002_AHGXXXX_analysis")
+            "171020_NB500968_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
-                                    "171020_SN7001250_00002_AHGXXXX"),
+                                    "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
                                     "002_make_fastqs_10x_chromium_sc"),
                        "bcl2fastq",):
@@ -464,34 +393,23 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_10x_chromium_sc_atac_protocol(self):
-        """make_fastqs: 10x_chromium_sc_atac protocol
+    def test_make_fastqs_10x_atac_protocol(self):
+        """make_fastqs: 10x_atac protocol
         """
-        # Sample sheet with 10xGenomics Chromium SC ATAC-seq indices
-        samplesheet_chromium_sc_atac_indices = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-1,smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
-2,smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
+        # Sample sheet with 10xGenomics SC ATAC-seq indices
+        samplesheet_10x_atac_indices = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-NA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
 """
         sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
         with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_chromium_sc_atac_indices)
+            fp.write(samplesheet_10x_atac_indices)
         # Create mock source data
         illumina_run = MockIlluminaRun(
-            "171020_SN7001250_00002_AHGXXXX",
-            "hiseq",
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            bases_mask="y101,I8,I8,y101",
             top_dir=self.wd)
         illumina_run.create()
         # Create mock bcl2fastq and cellranger-atac
@@ -505,86 +423,23 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
         # Do the test
         ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"),
+                              "171020_NB500968_00002_AHGXXXX"),
                  sample_sheet=sample_sheet)
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
-        make_fastqs(ap,protocol="10x_chromium_sc_atac")
+        make_fastqs(ap,protocol="10x_atac")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
                          os.path.join(self.wd,
-                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "171020_NB500968_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
-        # Check outputs
-        analysis_dir = os.path.join(
-            self.wd,
-            "171020_SN7001250_00002_AHGXXXX_analysis")
-        for subdir in (os.path.join("primary_data",
-                                    "171020_SN7001250_00002_AHGXXXX"),
-                       os.path.join("logs",
-                                    "002_make_fastqs_10x_chromium_sc_atac"),
-                       "bcl2fastq",):
-            self.assertTrue(os.path.isdir(
-                os.path.join(analysis_dir,subdir)),
-                            "Missing subdir: %s" % subdir)
-        for filen in ("statistics.info",
-                      "statistics_full.info",
-                      "per_lane_statistics.info",
-                      "per_lane_sample_stats.info",
-                      "projects.info",
-                      "processing_qc.html"):
-            self.assertTrue(os.path.isfile(
-                os.path.join(analysis_dir,filen)),
-                            "Missing file: %s" % filen)
-
-    #@unittest.skip("Skipped")
-    def test_make_fastqs_icell8_protocol_no_demultiplexing(self):
-        """make_fastqs: icell8 protocol with no demultiplexing
-        """
-        # Sample sheet with no barcodes
-        samplesheet_no_demultiplexing = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-AB1,AB1,,,,,icell8,
-"""
-        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
-        with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_no_demultiplexing)
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_NB500968_00002_AHGXXXX",
-            "nextseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        # Check that bases mask is as expected
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 assert_bases_mask="y25n51,nnnnnn,y76")
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_NB500968_00002_AHGXXXX"),
-                 sample_sheet=sample_sheet)
-        self.assertTrue(ap.params.sample_sheet is not None)
-        make_fastqs(ap,protocol="icell8")
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -592,9 +447,8 @@ AB1,AB1,,,,,icell8,
         for subdir in (os.path.join("primary_data",
                                     "171020_NB500968_00002_AHGXXXX"),
                        os.path.join("logs",
-                                    "002_make_fastqs_icell8"),
-                       "bcl2fastq",
-                       "barcode_analysis",):
+                                    "002_make_fastqs_10x_atac"),
+                       "bcl2fastq",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -646,6 +500,9 @@ AB1,AB1,,,,,icell8,
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,None)
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -653,11 +510,14 @@ AB1,AB1,,,,,icell8,
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
-                                    "002_make_fastqs"),
-                       "bcl2fastq"):
+                                    "002_make_fastqs"),):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
+        for subdir in ("bcl2fastq",):
+            self.assertFalse(os.path.exists(
+                os.path.join(analysis_dir,subdir)),
+                            "Found subdir: %s" % subdir)
         for filen in ("statistics.info",
                       "statistics_full.info",
                       "per_lane_statistics.info",
@@ -710,6 +570,9 @@ AB1,AB1,,,,,icell8,
                                       "171020_M00879_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -762,22 +625,36 @@ AB1,AB1,,,,,icell8,
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertEqual(ap.params.unaligned_dir,None)
+        self.assertEqual(ap.params.barcode_analysis_dir,None)
+        self.assertEqual(ap.params.stats_file,None)
         self.assertRaises(Exception,
                           make_fastqs,
                           ap,
                           protocol="standard")
         # Check outputs
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(
+                             self.wd,
+                             "171020_M00879_00002_AHGXXXX_analysis",
+                             "primary_data"))
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,None)
         analysis_dir = os.path.join(
             self.wd,
             "171020_M00879_00002_AHGXXXX_analysis")
         for subdir in (os.path.join("primary_data",
                                     "171020_M00879_00002_AHGXXXX"),
                        os.path.join("logs",
-                                    "002_make_fastqs"),
-                       "bcl2fastq",):
+                                    "002_make_fastqs"),):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
+        for subdir in ("bcl2fastq",):
+            self.assertFalse(os.path.exists(
+                os.path.join(analysis_dir,subdir)),
+                            "Found subdir: %s" % subdir)
         for filen in ("statistics.info",
                       "statistics_full.info",
                       "per_lane_statistics.info",
@@ -787,34 +664,6 @@ AB1,AB1,,,,,icell8,
             self.assertFalse(os.path.exists(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
-
-    #@unittest.skip("Skipped")
-    def test_make_fastqs_unknown_platform(self):
-        """make_fastqs: unknown platform raises exception
-        """
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_UNKNOWN_00002_AHGXXXX",
-            "miseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_UNKNOWN_00002_AHGXXXX"))
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertEqual(ap.params.bases_mask,"auto")
-        self.assertTrue(ap.params.primary_data_dir is None)
-        self.assertFalse(ap.params.acquired_primary_data)
-        self.assertRaises(Exception,
-                          make_fastqs,
-                          ap,
-                          protocol="standard")
 
     #@unittest.skip("Skipped")
     def test_make_fastqs_explicitly_specify_platform(self):
@@ -840,9 +689,12 @@ AB1,AB1,,,,,icell8,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,None)
+        self.assertEqual(ap.params.barcode_analysis_dir,None)
+        self.assertEqual(ap.params.stats_file,None)
         make_fastqs(ap,
-                       protocol="standard",
-                       platform="miseq")
+                    protocol="standard",
+                    platform="miseq")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertEqual(ap.params.primary_data_dir,
@@ -850,6 +702,9 @@ AB1,AB1,,,,,icell8,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -900,6 +755,9 @@ AB1,AB1,,,,,icell8,
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
         self.assertFalse(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,None)
+        self.assertEqual(ap.params.barcode_analysis_dir,None)
+        self.assertEqual(ap.params.stats_file,None)
         make_fastqs(ap,protocol="standard")
         # Check parameters
         self.assertEqual(ap.params.bases_mask,"auto")
@@ -908,6 +766,9 @@ AB1,AB1,,,,,icell8,
                                       "171020_UNKNOWN_00002_AHGXXXX_analysis",
                                       "primary_data"))
         self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
         # Check outputs
         analysis_dir = os.path.join(
             self.wd,
@@ -932,143 +793,13 @@ AB1,AB1,,,,,icell8,
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_invalid_barcodes(self):
-        """make_fastqs: stop for invalid barcodes
-        """
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_M00879_00002_AHGXXXX",
-            "miseq",
-            sample_sheet_content="""[Header],,,,,,,,,
-IEMFileVersion,4
-Date,11/23/2015
-Workflow,GenerateFASTQ
-Application,FASTQ Only
-Assay,TruSeq HT
-Description,
-Chemistry,Amplicon
-
-[Reads]
-101
-101
-
-[Settings]
-ReverseComplement,0
-Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
-AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
-Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGNN,,
-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
-""",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 platform="miseq")
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertEqual(ap.params.bases_mask,"auto")
-        self.assertTrue(ap.params.primary_data_dir is None)
-        self.assertFalse(ap.params.acquired_primary_data)
-        self.assertRaises(Exception,
-                          make_fastqs,
-                          ap)
-
-    #@unittest.skip("Skipped")
-    def test_make_fastqs_samplesheet_with_invalid_characters(self):
-        """make_fastqs: stop for invalid characters in sample sheet
-        """
-        # Create mock source data with samplesheet with backspace
-        illumina_run = MockIlluminaRun(
-            "171020_M00879_00002_AHGXXXX",
-            "miseq",
-            sample_sheet_content="""[Header],,,,,,,,,
-IEMFileVersion,4
-Date,11/23/2015
-Workflow,GenerateFASTQ
-Application,FASTQ Only
-Assay,TruSeq HT
-Description,
-Chemistry,Amplicon
-
-[Reads]
-101
-101
-
-[Settings]
-ReverseComplement,0
-Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
-AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_ID,index2,Sample_Project,Description
-Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTC,,\b
-Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
-""",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,
-                                              "bcl2fastq"),
-                                 platform="miseq")
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_M00879_00002_AHGXXXX"))
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertEqual(ap.params.bases_mask,"auto")
-        self.assertTrue(ap.params.primary_data_dir is None)
-        self.assertFalse(ap.params.acquired_primary_data)
-        self.assertRaises(Exception,
-                          make_fastqs,
-                          ap)
-
-    def test_make_fastqs_force_rsync_of_primary_data(self):
-        """make_fastqs: force rsync of primary data
-        """
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_SN7001250_00002_AHGXXXX",
-            "hiseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        # Create mock bcl2fastq and cellranger executables
-        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
-        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
-        os.environ['PATH'] = "%s:%s" % (self.bin,
-                                        os.environ['PATH'])
-        # Do the test
-        ap = AutoProcess(settings=self.settings)
-        ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"))
-        self.assertTrue(ap.params.sample_sheet is not None)
-        self.assertEqual(ap.params.bases_mask,"auto")
-        self.assertTrue(ap.params.primary_data_dir is None)
-        self.assertFalse(ap.params.acquired_primary_data)
-        make_fastqs(ap,only_fetch_primary_data=True,
-                    force_copy_of_primary_data=True)
-        # Check primary data is not a link
-        primary_data = os.path.join(ap.params.primary_data_dir,
-                                    "171020_SN7001250_00002_AHGXXXX")
-        self.assertFalse(os.path.islink(primary_data))
-
     def test_make_fastqs_unknown_protocol(self):
         """make_fastqs: fails with unknown protocol
         """
         # Create mock source data
         illumina_run = MockIlluminaRun(
-            "171020_SN7001250_00002_AHGXXXX",
-            "hiseq",
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
             top_dir=self.wd)
         illumina_run.create()
         # Create mock bcl2fastq and cellranger executables
@@ -1079,7 +810,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         # Do the test
         ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
-                              "171020_SN7001250_00002_AHGXXXX"))
+                              "171020_M00879_00002_AHGXXXX"))
         self.assertTrue(ap.params.sample_sheet is not None)
         self.assertEqual(ap.params.bases_mask,"auto")
         self.assertTrue(ap.params.primary_data_dir is None)
@@ -1088,84 +819,3 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                           make_fastqs,
                           ap,
                           protocol="undefined_protocol")
-
-class TestReportProcessingQC(unittest.TestCase):
-    """
-    Tests for report_processing_qc function
-    """
-    def setUp(self):
-        # Create a temp working dir
-        self.wd = tempfile.mkdtemp(suffix='TestReportProcessingQC')
-
-    def tearDown(self):
-        if REMOVE_TEST_OUTPUTS:
-            shutil.rmtree(self.wd)
-
-    def test_report_processing_qc(self):
-        """report_processing_qc: standard report
-        """
-        # Create test data
-        analysis_dir = os.path.join(self.wd,
-                                    "180430_K00311_0001_ABCDEFGHXX_analysis")
-        os.mkdir(analysis_dir)
-        per_lane_sample_stats = os.path.join(analysis_dir,
-                                             "per_lane_sample_stats.info")
-        with open(per_lane_sample_stats,'w') as fp:
-            fp.write("""
-Lane 1
-Total reads = 136778255
-- AB/AB1	25058003	18.3%
-- AB/AB2	22330927	16.3%
-- AB/AB3	34509382	25.2%
-- AB/AB4	27283286	19.9%
-- Undetermined_indices/undetermined	27596657	20.2%
-
-Lane 2
-Total reads = 136778255
-- CDE/CDE1	25058003	18.3%
-- CDE/CDE2	22330927	16.3%
-- CDE/CDE3	34509382	25.2%
-- CDE/CDE4	27283286	19.9%
-- Undetermined_indices/undetermined	27596657	20.2%
-""")
-        per_lane_statistics = os.path.join(analysis_dir,
-                                           "per_lane_statistics.info")
-        with open(per_lane_statistics,'w') as fp:
-            fp.write("""#Lane	Total reads	Assigned reads	Unassigned reads	%assigned	%unassigned
-Lane 1	136778255	109181598	27596657	79.8	20.2
-Lane 2	136778255	109181598	27596657	79.8	20.2
-""")
-        statistics_full = os.path.join(analysis_dir,
-                                       "statistics_full.info")
-        with open(statistics_full,'w') as fp:
-            fp.write("""#Project	Sample	Fastq	Size	Nreads	Paired_end	Read_number	L1	L2
-AB	AB1	AB1_S1_R1_001.fastq.gz	1.0G	25058003	Y	1	25058003	
-AB	AB1	AB1_S1_R2_001.fastq.gz	1.1G	25058003	Y	2	25058003	
-AB	AB2	AB2_S2_R1_001.fastq.gz	941.7M	22330927	Y	1	22330927	
-AB	AB2	AB2_S2_R2_001.fastq.gz	1.0G	22330927	Y	2	22330927	
-AB	AB3	AB3_S3_R1_001.fastq.gz	1.4G	34509382	Y	1	34509382	
-AB	AB3	AB3_S3_R2_001.fastq.gz	1.6G	34509382	Y	2	34509382	
-AB	AB4	AB4_S4_R1_001.fastq.gz	1.1G	27283286	Y	1	27283286	
-AB	AB4	AB4_S4_R2_001.fastq.gz	1.2G	27283286	Y	2	27283286	
-CDE	CDE1	CDE1_S5_R1_001.fastq.gz	1.0G	25058003	Y	1		25058003
-CDE	CDE1	CDE1_S5_R2_001.fastq.gz	1.1G	25058003	Y	2		25058003
-CDE	CDE2	CDE2_S6_R1_001.fastq.gz	941.7M	22330927	Y	1		22330927
-CDE	CDE2	CDE2_S6_R2_001.fastq.gz	1.0G	22330927	Y	2		22330927
-CDE	CDE3	CDE3_S7_R1_001.fastq.gz	1.4G	34509382	Y	1		34509382
-CDE	CDE3	CDE3_S7_R2_001.fastq.gz	1.6G	34509382	Y	2		34509382
-CDE	CDE4	CDE4_S8_R1_001.fastq.gz	1.1G	27283286	Y	1		27283286
-CDE	CDE4	CDE4_S8_R2_001.fastq.gz	1.2G	27283286	Y	2		27283286
-Undetermined_indices	undetermined	Undetermined_S0_R1_001.fastq.gz	22.0G	27596657	Y	1	27596657	27596657
-Undetermined_indices	undetermined	Undetermined_S0_R2_001.fastq.gz	24.0G	27596657	Y	2	27596657	27596657
-""")
-        # Generate QC report
-        output_html = os.path.join(analysis_dir,
-                                   "processing_report.html")
-        self.assertFalse(os.path.exists(output_html))
-        report_processing_qc(AutoProcess(analysis_dir),output_html)
-        self.assertTrue(os.path.exists(output_html))
-        # Check the HTML
-        with open(output_html,'rt') as fp:
-            html = fp.read()
-        # No warnings
-        self.assertTrue(html.find("<p>Status: OK</p>") > -1)

@@ -74,7 +74,7 @@ from bcftbx.cmdparse import add_arg
 from bcftbx.JobRunner import fetch_runner
 from .. import get_version
 from ..auto_processor import AutoProcess
-from ..commands.make_fastqs_cmd import MAKE_FASTQS_PROTOCOLS
+from ..bcl2fastq.pipeline import PROTOCOLS
 from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
 from ..envmod import load as envmod_load
@@ -241,7 +241,7 @@ def add_make_fastqs_command(cmdparser):
                               "symlinked)")
     # General Fastq generation options
     fastq_generation = p.add_argument_group('General Fastq generation')
-    fastq_generation.add_argument('--protocol',choices=MAKE_FASTQS_PROTOCOLS,
+    fastq_generation.add_argument('--protocol',choices=PROTOCOLS,
                                   dest='protocol',default='standard',
                                   help="specify Fastq generation protocol "
                                   "depending on the data being processed "
@@ -398,7 +398,7 @@ def add_make_fastqs_command(cmdparser):
     # Fastqs for index reads
     bcl_to_fastq.add_argument('--create-fastq-for-index-reads',
                               action='store_true',
-                              dest='create_fastq_for_index_reads',
+                              dest='create_fastq_for_index_read',
                               default=False,
                               help="also create FASTQs for index reads")
     # Number of processors
@@ -1203,7 +1203,7 @@ def make_fastqs(args):
         mask_short_adapter_reads=args.mask_short_adapter_reads,
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
-        create_fastq_for_index_reads=args.create_fastq_for_index_reads,
+        create_fastq_for_index_read=args.create_fastq_for_index_read,
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,
         barcode_analysis_dir=args.barcode_analysis_dir,
