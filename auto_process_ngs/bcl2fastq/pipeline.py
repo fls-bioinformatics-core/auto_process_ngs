@@ -348,8 +348,8 @@ class MakeFastqs(Pipeline):
 
         # Define module environment modules
         self.add_envmodules('bcl2fastq')
-        self.add_envmodules('cellranger')
-        self.add_envmodules('cellranger_atac')
+        self.add_envmodules('cellranger_mkfastq')
+        self.add_envmodules('cellranger_atac_mkfastq')
 
         # Pipeline outputs
         self.add_output('platform',self.params._platform)
@@ -1110,7 +1110,8 @@ class MakeFastqs(Pipeline):
                     get_bcl2fastq_for_10x = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger")
                     self.add_task(get_bcl2fastq_for_10x,
-                                  envmodules=self.envmodules['cellranger'])
+                                  envmodules=\
+                                  self.envmodules['cellranger_mkfastq'])
                 # Get cellranger information
                 if get_cellranger is None:
                     # Create a new task only if one doesn't already
@@ -1119,7 +1120,8 @@ class MakeFastqs(Pipeline):
                         "Get information on cellranger",
                         require_cellranger="cellranger")
                     self.add_task(get_cellranger,
-                                  envmodules=self.envmodules['cellranger'])
+                                  envmodules=\
+                                  self.envmodules['cellranger_mkfastq'])
                 # Run cellranger mkfastq
                 run_cellranger_mkfastq = RunCellrangerMkfastq(
                     "Run cellranger mkfastq%s" %
@@ -1149,7 +1151,7 @@ class MakeFastqs(Pipeline):
                 )
                 self.add_task(run_cellranger_mkfastq,
                               runner=self.runners['cellranger_runner'],
-                              envmodules=self.envmodules['cellranger'],
+                              envmodules=self.envmodules['cellranger_mkfastq'],
                               requires=(get_cellranger,
                                         get_bcl2fastq_for_10x,
                                         make_sample_sheet,
@@ -1169,7 +1171,8 @@ class MakeFastqs(Pipeline):
                     get_bcl2fastq_for_10x_atac = GetBcl2Fastq(
                         "Get information on bcl2fastq for cellranger-atac")
                     self.add_task(get_bcl2fastq_for_10x_atac,
-                                  envmodules=self.envmodules['cellranger_atac'])
+                                  envmodules=\
+                                  self.envmodules['cellranger_atac_mkfastq'])
                 # Get cellranger-atac information
                 if get_cellranger_atac is None:
                     # Create a new task only if one doesn't already
@@ -1178,7 +1181,8 @@ class MakeFastqs(Pipeline):
                         "Get information on cellranger-atac",
                         require_cellranger="cellranger-atac")
                     self.add_task(get_cellranger_atac,
-                                  envmodules=self.envmodules['cellranger_atac'])
+                                  envmodules=\
+                                  self.envmodules['cellranger_atac_mkfastq'])
                 # Run cellranger mkfastq
                 run_cellranger_mkfastq = RunCellrangerMkfastq(
                     "Run cellranger-atac mkfastq%s" %
@@ -1210,7 +1214,8 @@ class MakeFastqs(Pipeline):
                 )
                 self.add_task(run_cellranger_mkfastq,
                               runner=self.runners['cellranger_runner'],
-                              envmodules=self.envmodules['cellranger_atac'],
+                              envmodules=\
+                              self.envmodules['cellranger_atac_mkfastq'],
                               requires=(get_cellranger_atac,
                                         get_bcl2fastq_for_10x_atac,
                                         make_sample_sheet,
@@ -1424,7 +1429,8 @@ class MakeFastqs(Pipeline):
             'verify_runner','default'
           envmodules (mapping): mapping of names to
             environment module file lists; valid names are
-            'bcl2fastq','cellranger','cellranger_atac'
+            'bcl2fastq','cellranger_mkfastq',
+            'cellranger_atac_mkfastq'
           default_runner (JobRunner): optional default
             job runner to use
           verbose (bool): if True then report additional
