@@ -2735,7 +2735,6 @@ class FastqStatistics(PipelineTask):
         # Basic statistics
         if self.args.stats_file:
             self.final_stats = self.args.stats_file
-            self.stats_file = os.path.basename(self.final_stats)
         else:
             self.final_stats = os.path.join(self.args.out_dir,
                                             self.stats_file)
@@ -2743,15 +2742,12 @@ class FastqStatistics(PipelineTask):
         if self.args.per_lane_stats_file:
             self.final_per_lane_stats = \
                                 self.args.per_lane_stats_file
-            self.per_lane_stats = \
-                    os.path.basename(self.final_per_lane_stats)
         else:
             self.final_per_lane_stats = os.path.join(
                 self.args.out_dir,self.per_lane_stats)
         # Full statistics
         if self.args.stats_full_file:
             self.final_stats_full = self.args.stats_full_file
-            self.stats_full = os.path.basename(self.final_stats_full)
         else:
             self.final_stats_full = os.path.join(self.args.out_dir,
                                                  self.stats_full)
@@ -2759,8 +2755,6 @@ class FastqStatistics(PipelineTask):
         if self.args.per_lane_sample_stats_file:
             self.final_per_lane_sample_stats = \
                 self.args.per_lane_sample_stats_file
-            self.per_lane_sample_stats = os.path.basename(
-                self.final_per_lane_sample_stats)
         else:
             self.final_per_lane_sample_stats = os.path.join(
                 self.args.out_dir,self.per_lane_sample_stats)
@@ -2830,12 +2824,17 @@ class FastqStatistics(PipelineTask):
     def finish(self):
         if self.generate_stats:
             print("Moving stats files to final locations")
-            for f in (self.final_stats,
-                      self.final_per_lane_stats,
-                      self.final_stats_full,
-                      self.final_per_lane_sample_stats):
-                print("- %s" % f)
-                os.rename(os.path.basename(f),f)
+            for f,ff in ((self.stats_file,self.final_stats),
+                         (self.per_lane_stats,self.final_per_lane_stats),
+                         (self.stats_full,self.final_stats_full),
+                         (self.per_lane_sample_stats,
+                          self.final_per_lane_sample_stats)):
+                print("- %s -> %s" % (f,ff))
+                if not os.path.exists(f):
+                    raise Exception("'%s' not found in %s" % (f,os.get_cwd()))
+                elif not os.path.isdir(os.path.dirname(ff)):
+                    raise Exception("No path to '%s'" %ff)
+                os.rename(f,ff)
         # Assign outputs
         self.output.stats_file.set(self.final_stats)
         self.output.stats_full.set(self.final_stats_full)
