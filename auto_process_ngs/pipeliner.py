@@ -2709,8 +2709,12 @@ class Dispatcher(object):
         logger.info("-- args    : %s" % (args,))
         logger.info("-- kwds    : %s" % (kwds,))
         # Execute the function
-        result = func(*args,**kwds)
-        logger.info("Dispatcher: result: %s" % (result,))
+        try:
+            result = func(*args,**kwds)
+            logger.info("Dispatcher: result: %s" % (result,))
+        except Exception as ex:
+            print("Dispatched function raised exception: %s" % ex)
+            result = ex
         # Pickle the result
         if pkl_result_file:
             self._pickle_object(result,pkl_result_file)
@@ -2759,7 +2763,11 @@ class Dispatcher(object):
             if no result was found.
         """
         if os.path.exists(self._pickled_result_file):
-            return self._unpickle_object(self._pickled_result_file)
+            result = self._unpickle_object(self._pickled_result_file)
+            if isinstance(result,Exception):
+                raise result
+            else:
+                return result
         else:
             raise Exception("Pickled output not found")
 
