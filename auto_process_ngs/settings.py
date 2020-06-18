@@ -125,7 +125,13 @@ class Settings(object):
                                                         'poll_interval',5)
         # modulefiles
         self.add_section('modulefiles')
-        self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
+        self.modulefiles['make_fastqs'] = config.get('modulefiles',
+                                                     'make_fastqs')
+        self.modulefiles['bcl2fastq'] = config.get('modulefiles','bcl2fastq')
+        self.modulefiles['cellranger_mkfastq'] = config.get('modulefiles',
+                                                    'cellranger_mkfastq')
+        self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
+                                                    'cellranger_atac_mkfastq')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
         self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
