@@ -1819,8 +1819,10 @@ class Pipeline(object):
                     # Terminate all tasks and stop immediately
                     self.report("Following tasks failed:")
                     for task in failed:
-                        self.report("- '%s' (%s)" % (task.name(),
-                                                     task.id()))
+                        msg = "- '%s'" % task.name
+                        if verbose:
+                            msg += " (%s)" % task.id()
+                        self.report(msg)
                     self._failed.extend(failed)
                     return self.terminate()
                 elif self._exit_on_failure == PipelineFailure.DEFERRED:
@@ -1838,9 +1840,11 @@ class Pipeline(object):
                         pending = []
                         for t in self._pending:
                             if t[0].id() in dependent_tasks:
-                                self.report("-- removing dependent task "
-                                            "'%s' (%s)" %
-                                            (t[0].name(),t[0].id()))
+                                msg = "-- removing dependent task '%s'" \
+                                      % t[0].name()
+                                if verbose:
+                                    msg += " (%s)" % t[0].id()
+                                self.report(msg)
                                 self._removed.append(t[0])
                             else:
                                 pending.append(t)
@@ -1885,14 +1889,18 @@ class Pipeline(object):
             # Report failed tasks
             self.report("Pipeline completed but the following tasks failed:")
             for task in self._failed:
-                self.report("- '%s' (%s)" % (task.name(),
-                                             task.id()))
+                msg = "- '%s'" % task.name()
+                if verbose:
+                    msg += " (%s)" % task.id()
+                self.report(msg)
             if self._removed:
                 # Report any tasks that were removed
                 self.report("The following tasks were not executed:")
                 for task in self._removed:
-                    self.report("- '%s' (%s)" % (task.name(),
-                                                 task.id()))
+                    msg = "- '%s'" % task.name()
+                    if verbose:
+                        msg += " (%s)" % task.id()
+                    self.report(msg)
             self.report("Completed: failed")
             return 1
         else:
@@ -2709,8 +2717,12 @@ class Dispatcher(object):
         logger.info("-- args    : %s" % (args,))
         logger.info("-- kwds    : %s" % (kwds,))
         # Execute the function
-        result = func(*args,**kwds)
-        logger.info("Dispatcher: result: %s" % (result,))
+        try:
+            result = func(*args,**kwds)
+            logger.info("Dispatcher: result: %s" % (result,))
+        except Exception as ex:
+            print("Dispatched function raised exception: %s" % ex)
+            result = ex
         # Pickle the result
         if pkl_result_file:
             self._pickle_object(result,pkl_result_file)
@@ -2759,7 +2771,11 @@ class Dispatcher(object):
             if no result was found.
         """
         if os.path.exists(self._pickled_result_file):
-            return self._unpickle_object(self._pickled_result_file)
+            result = self._unpickle_object(self._pickled_result_file)
+            if isinstance(result,Exception):
+                raise result
+            else:
+                return result
         else:
             raise Exception("Pickled output not found")
 
