@@ -36,7 +36,8 @@ BCL2FASTQ_DEFAULTS = {
 #######################################################################
 
 def make_fastqs(ap,protocol='standard',platform=None,
-                unaligned_dir=None,sample_sheet=None,lanes=None,
+                unaligned_dir=None,sample_sheet=None,
+                lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 ignore_missing_bcl=False,ignore_missing_stats=False,
                 skip_rsync=False,remove_primary_data=False,
@@ -96,6 +97,14 @@ def make_fastqs(ap,protocol='standard',platform=None,
       lanes (list): (optional) specify a list of lane numbers to
         use in the processing; lanes not in the list will be excluded
         (default is to include all lanes)
+      lane_subsets (list): (optional) specify a list of lane subsets
+        to process separately before merging at the end; each subset
+        is a dictionary which should be generated using the 'subset'
+        function, and can include custom values for processing
+        parameters (e.g. protocol, trimming and masking options etc)
+        to override the defaults for this lane. Lanes not in a subset
+        will still be processed unless excluded via the 'lanes'
+        keyword
       icell8_well_list (str): well list file for ICELL8 platforms
         (required for ICELL8 processing protocols)
       nprocessors (int) : number of processors to use
@@ -351,6 +360,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              icell8_swap_i1_and_i2,
                              icell8_atac_reverse_complement=\
                              icell8_reverse_complement,
+                             lane_subsets=lane_subsets,
                              lanes=lanes,
                              trim_adapters=trim_adapters,
                              fastq_statistics=generate_stats,

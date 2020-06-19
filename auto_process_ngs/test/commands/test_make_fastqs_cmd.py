@@ -13,6 +13,7 @@ from bcftbx.mock import SampleSheets
 from auto_process_ngs.mock import MockBcl2fastq2Exe
 from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.commands.make_fastqs_cmd import make_fastqs
+from auto_process_ngs.bcl2fastq.pipeline import subset
 
 # Set to False to keep test output dirs
 REMOVE_TEST_OUTPUTS = True
@@ -819,3 +820,75 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           make_fastqs,
                           ap,
                           protocol="undefined_protocol")
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_specify_lane_subsets(self):
+        """make_fastqs: specify lane subsets
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_SN7001250_00002_AHGXXXX",
+            "hiseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.hiseq)
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_SN7001250_00002_AHGXXXX"))
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,None)
+        self.assertEqual(ap.params.barcode_analysis_dir,None)
+        self.assertEqual(ap.params.stats_file,None)
+        make_fastqs(ap,
+                    protocol="standard",
+                    lane_subsets=(
+                        subset(lanes=(1,2,)),
+                        subset(lanes=(3,4,5,6,7,8,))))
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_SN7001250_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_SN7001250_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_SN7001250_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "save.bcl2fastq.L12",
+                       "save.bcl2fastq.L345678",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        self.assertTrue(os.path.islink(
+            os.path.join(analysis_dir,
+                         "primary_data",
+                         "171020_SN7001250_00002_AHGXXXX")))
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
