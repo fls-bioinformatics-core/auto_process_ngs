@@ -672,9 +672,10 @@ class QCReport(Document):
                 s = os.path.basename(screen_base)[:-len("_screen")]
                 for name in FASTQ_SCREENS:
                     if s.endswith("_%s" % name):
-                        outputs.add("screens_%s%s" % (('i' if fq.is_index_read
-                                                       else 'r'),
-                                                      fq.read_number))
+                        outputs.add("screens_%s%s" %
+                                    (('i' if fq.is_index_read else 'r'),
+                                     (fq.read_number
+                                      if fq.read_number is not None else '1')))
                         fastq_names.add(s[:-len("_%s" % name)])
                 versions.add(Fastqscreen(
                     os.path.join(self.qc_dir,screen)).version)
@@ -693,9 +694,10 @@ class QCReport(Document):
                 fastqc = os.path.splitext(fastqc)[0]
                 fq = self.fastq_attrs(fastqc)
                 fastq_names.add(os.path.basename(fastqc)[:-len("_fastqc")])
-                outputs.add("fastqc_%s%s" % (('i' if fq.is_index_read
-                                              else 'r'),
-                                             fq.read_number))
+                outputs.add("fastqc_%s%s" %
+                            (('i' if fq.is_index_read else 'r'),
+                             (fq.read_number
+                              if fq.read_number is not None else '1')))
                 versions.add(Fastqc(
                     os.path.join(self.qc_dir,fastqc)).version)
             if versions:
@@ -758,9 +760,11 @@ class QCReport(Document):
         for fastq in self.fastqs:
             fq = self.fastq_attrs(fastq)
             if fq.is_index_read:
-                reads.add("i%s" % fq.read_number)
+                reads.add("i%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
             else:
-                reads.add("r%s" % fq.read_number)
+                reads.add("r%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
         self.reads = sorted(list(reads))
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
@@ -1048,7 +1052,9 @@ class QCReportFastqGroup(object):
                 read = 'i'
             else:
                 read = 'r'
-            read = "%s%d" % (read,fq.read_number)
+            read = "%s%d" % (read,
+                             fq.read_number
+                             if fq.read_number is not None else 1)
             self.fastqs[read] = fastq
             self.reporters[read] = QCReportFastq(fastq,
                                                  self.qc_dir,
