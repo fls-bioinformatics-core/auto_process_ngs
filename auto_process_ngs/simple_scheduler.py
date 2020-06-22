@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     simple_scheduler.py: provide basic scheduler capability
-#     Copyright (C) University of Manchester 2013-19 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
 #
 ########################################################################
 #
