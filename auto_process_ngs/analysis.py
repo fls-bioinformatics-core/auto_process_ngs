@@ -54,6 +54,14 @@ from functools import reduce
 logger = logging.getLogger(__name__)
 
 #######################################################################
+# Constants
+#######################################################################
+
+# Regular expression for matching SRA-style Fastq names
+SRA_REGEX = re.compile(
+    r"(?P<sample_name>(SRR|ERR)[0-9]+)(_(?P<read_number>[1-2]))?$")
+
+#######################################################################
 # Classes
 #######################################################################
 
@@ -82,8 +90,10 @@ class AnalysisFastq(BaseFastqAttrs):
     set_number:       integer (or None if no set number)
     is_index_read:    boolean (True if index read, False if not)
 
-    There are two additional attributes:
+    There are three additional attributes:
 
+    format:           string identifying the format of the
+                      Fastq name ('Illumina', 'SRA', or None)
     canonical_name:   the 'canonical' part of the name (string,
                       or None if no canonical part could be
                       extracted)
@@ -98,8 +108,7 @@ class AnalysisFastq(BaseFastqAttrs):
         self.format = None
         self.extras = None
         # Check for SRA format
-        sra = re.compile(r"(?P<sample_name>(SRR|ERR)[0-9]+)(_(?P<read_number>[1-2]))?$")
-        fq = sra.match(self.basename)
+        fq = SRA_REGEX.match(self.basename)
         if fq is not None:
             fq_attrs = fq.groupdict()
             self.format = "SRA"
