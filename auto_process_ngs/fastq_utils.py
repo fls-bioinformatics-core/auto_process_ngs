@@ -627,11 +627,12 @@ def group_fastqs_by_name(fastqs,fastq_attrs=IlluminaFastqAttrs):
     fastq_sets = dict()
     for fastq in fastqs:
         fq = fastq_attrs(fastq)
+        read_number = fq.read_number if fq.read_number else 1
         if not fq.is_index_read:
-            read = "r%d" % fq.read_number
+            read = "r%d" % read_number
             reads.add(read)
         else:
-            read = "i%d" % fq.read_number
+            read = "i%d" % read_number
             index_reads.add(read)
         try:
             fastq_sets[read].append(fastq)
