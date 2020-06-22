@@ -34,6 +34,7 @@ Functions:
 #######################################################################
 
 import os
+import re
 import fnmatch
 import logging
 import bcftbx.IlluminaData as IlluminaData
@@ -94,7 +95,18 @@ class AnalysisFastq(BaseFastqAttrs):
         # Initialise the base class
         BaseFastqAttrs.__init__(self,fastq)
         # Additional attributes
+        self.format = None
         self.extras = None
+        # Check for SRA format
+        sra = re.compile(r"(?P<sample_name>(SRR|ERR)[0-9]+)(_(?P<read_number>[1-2]))?$")
+        fq = sra.match(self.basename)
+        if fq is not None:
+            fq_attrs = fq.groupdict()
+            self.format = "SRA"
+            self.sample_name = fq_attrs['sample_name']
+            if fq_attrs['read_number'] is not None:
+                self.read_number = int(fq_attrs['read_number'])
+            return
         # Try to identify a canonical component of the
         # name by removing trailing parts and testing
         fastq_base = self.basename
@@ -119,6 +131,7 @@ class AnalysisFastq(BaseFastqAttrs):
         self.read_number = fq_attrs.read_number
         self.set_number = fq_attrs.set_number
         self.is_index_read = fq_attrs.is_index_read
+        self.format = "Illumina"
         # Store extras
         if extras:
             self.extras = "_%s" % '_'.join(extras[::-1])
@@ -129,18 +142,23 @@ class AnalysisFastq(BaseFastqAttrs):
         """
         Return the 'canonical' part of the name
         """
-        illumina_fastq_attrs = IlluminaFastqAttrs(self.fastq)
-        illumina_fastq_attrs.sample_name = self.sample_name
-        illumina_fastq_attrs.sample_number = self.sample_number
-        illumina_fastq_attrs.barcode_sequence = self.barcode_sequence
-        illumina_fastq_attrs.lane_number = self.lane_number
-        illumina_fastq_attrs.read_number = self.read_number
-        illumina_fastq_attrs.set_number = self.set_number
-        illumina_fastq_attrs.is_index_read = self.is_index_read
-        if illumina_fastq_attrs.sample_name != illumina_fastq_attrs.basename:
-            return str(illumina_fastq_attrs)
-        else:
-            return None
+        if self.format == "Illumina":
+            illumina_fastq_attrs = IlluminaFastqAttrs(self.fastq)
+            illumina_fastq_attrs.sample_name = self.sample_name
+            illumina_fastq_attrs.sample_number = self.sample_number
+            illumina_fastq_attrs.barcode_sequence = self.barcode_sequence
+            illumina_fastq_attrs.lane_number = self.lane_number
+            illumina_fastq_attrs.read_number = self.read_number
+            illumina_fastq_attrs.set_number = self.set_number
+            illumina_fastq_attrs.is_index_read = self.is_index_read
+            if illumina_fastq_attrs.sample_name != \
+               illumina_fastq_attrs.basename:
+                return str(illumina_fastq_attrs)
+        elif self.format == "SRA":
+            return "%s%s" % (self.sample_name,
+                             "_%s" % self.read_number if self.read_number
+                             else '')
+        return None
     def __repr__(self):
         """
         Implement __repr__ built-in
