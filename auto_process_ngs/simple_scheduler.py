@@ -65,13 +65,20 @@ class SimpleScheduler(threading.Thread):
     >>> s.submit(['fastq_screen',...],name='fastq_screen.other')
     >>> s.submit(['fastq_screen',...],name='fastq_screen.rRNA')
     >>> s.submit(['fastqc',...],wait_for=('fastq_screen.model',...))
-    
+
+    The number of concurrent jobs that the scheduler will run can
+    be set directly via the 'max_concurrent' option; alternatively
+    a limit can be placed on the maximum total 'slots' (aka cores,
+    threads or processors) that are available to running jobs. In
+    this case the scheduler will only start jobs when there are
+    enough available slots to accommodate them.
     """
 
     def __init__(self,
                  runner=None,
                  reporter=None,
                  max_concurrent=None,
+                 max_slots=None,
                  poll_interval=5,
                  job_interval=0.1,
                  max_restarts=1):
@@ -83,6 +90,9 @@ class SimpleScheduler(threading.Thread):
             for messaging when jobs, groups etc are started and finished
           max_concurrent: optional, maximum number of concurrent
             processes the scheduler will run (default: no limit)
+          max_slots: optional, if set then specifies the maximum number
+            of slots (aka cores/processors/threads) available to the
+            scheduler (default: no limit)
           poll_interval: optional, number of seconds to wait in
             between checking for completed jobs etc in the scheduler
             loop (default: 5 seconds)
@@ -103,6 +113,9 @@ class SimpleScheduler(threading.Thread):
         self.__runner = runner
         # Maximum number of concurrent jobs
         self.__max_concurrent = max_concurrent
+        # Maximum number of available slots across
+        # all runners
+        self.__max_slots = max_slots
         # Length of time to wait between checking jobs
         self.__poll_interval = poll_interval
         # Length of time to wait before submitting job
@@ -164,6 +177,16 @@ class SimpleScheduler(threading.Thread):
 
         """
         return len(self.__jobs) - self.n_waiting - self.n_running
+
+    @property
+    def committed_slots(self):
+        """Return number of slots currently committed
+
+        """
+        n_slots = 0
+        for job in self.__running:
+            n_slots += job.runner.nslots
+        return n_slots
 
     @property
     def job_number(self):
@@ -307,9 +330,17 @@ class SimpleScheduler(threading.Thread):
           SchedulerJob instance for the submitted job.
 
         """
-        # Use a queue rather than modifying the waiting list
-        # directly to try and avoid
-        #
+        # Use default runner if none explicitly specified
+        if runner is None:
+            runner = self.default_runner
+        # Check that the maximum number of slots isn't exceeded
+        # This is to prevent submission of jobs that can never
+        # be run by the scheduler in this configuration
+        if self.__max_slots is not None:
+            if runner.nslots > self.__max_slots:
+                raise Exception("Job runner wants %d slots but scheduler "
+                                "only has %d: job can never run" %
+                                (runner.nslots,self.__max_slots))
         # Fetch a unique id number
         job_number = self.job_number
         # Generate a name if necessary
@@ -325,9 +356,6 @@ class SimpleScheduler(threading.Thread):
                 if not self.has_name(job_name):
                     raise Exception("Job depends on a non-existent name "
                                     "'%s'" % job_name)
-        # Use default runner if none explicitly specified
-        if runner is None:
-            runner = self.default_runner
         # Pause before submitting
         time.sleep(self.__job_interval)
         # Schedule the job
@@ -542,6 +570,11 @@ class SimpleScheduler(threading.Thread):
                 if self.__max_concurrent is not None and \
                    self.n_running == self.__max_concurrent:
                     # Scheduler capacity maxed out
+                    ok_to_run = False
+                elif self.__max_slots is not None and \
+                     (self.committed_slots + job.runner.nslots) \
+                     > self.__max_slots:
+                    # Scheduler slots will be exceeded
                     ok_to_run = False
                 else:
                     # Check if job is waiting for another job to finish
