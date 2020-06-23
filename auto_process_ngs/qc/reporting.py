@@ -951,13 +951,25 @@ class QCReport(Document):
                    self.fastq_attrs(fq).sample_name == sample,
                    self.fastqs)))
         fastq_groups = group_fastqs_by_name(fastqs,self.fastq_attrs)
-        # Number of fastqs
-        if len(self.reads) > 1:
-            sample_report.add("%d fastq R1/R2 pairs" %
-                              len(fastq_groups))
+        # Report number of fastqs and reads
+        reads = QCReportFastqGroup(fastq_groups[0],
+                                   qc_dir=self.qc_dir,
+                                   fastq_attrs=self.fastq_attrs).reads
+        if len(reads) == 1:
+            sample_report.add("%d %s Fastq%s" %
+                              (len(fastq_groups),
+                               reads[0].upper(),
+                               's' if len(fastq_groups) > 1 else ''))
+        elif len(reads) == 2:
+            sample_report.add("%d %s Fastq pair%s" %
+                              (len(fastq_groups),
+                               '/'.join([r.upper() for r in reads]),
+                              's' if len(fastq_groups) > 1 else ''))
         else:
-            sample_report.add("%d fastqs" %
-                              len(fastq_groups))
+            sample_report.add("%d %s Fastq group%s" %
+                              (len(fastq_groups),
+                               '/'.join([r.upper() for r in reads]),
+                              's' if len(fastq_groups) > 1 else ''))
         # Keep track of the first line in the summary
         # table, as per-sample metrics (and name)
         # should only be reported on the first line
