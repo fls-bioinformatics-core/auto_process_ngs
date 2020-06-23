@@ -1299,6 +1299,19 @@ class QCReportFastqGroup(object):
                           'boxplot_r1',
                           'fastqc_r1',
                           'screens_r1')
+        else:
+            # Drop fields for reads that aren't present
+            # For example if there are a mixture of
+            # single and paired-end Fastqs
+            updated_fields = []
+            for field in fields:
+                if field[:-1].endswith("_r"):
+                    read = field.split("_")[-1]
+                    if read not in self.reads:
+                        print("Dropping %s" % field)
+                        continue
+                updated_fields.append(field)
+            fields = updated_fields
         # Add row to summary table
         if idx is None:
             idx = summary_table.add_row()
