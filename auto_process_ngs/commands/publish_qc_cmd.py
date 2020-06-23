@@ -65,7 +65,7 @@ div.footer { font-style: italic;
 
 def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                regenerate_reports=False,force=False,use_hierarchy=False,
-               exclude_zip_files=False,legacy=False):
+               exclude_zip_files=False,legacy=False,runner=None):
     """
     Copy the QC reports to the webserver
 
@@ -131,6 +131,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         files)
       legacy (bool): if True then operate in 'legacy' mode (i.e.
         explicitly include MultiQC reports for each project)
+      runner (JobRunner): explicitly specify the job runner to
+        send jobs to (overrides runner set in the configuration)
     """
     # Turn off saving of parameters etc
     ap._save_params = False
@@ -272,6 +274,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 fastq_dir=fastq_dir,
                 qc_dir=os.path.join(project.dirn,qc_dir),
                 qc_protocol=qc_protocol,
+                runner=runner,
                 log_dir=ap.log_dir)
             if verified:
                 print("...%s: verified QC" % qc_dir)
@@ -292,6 +295,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               force=force,
+                                              runner=runner,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
                         print("...%s: (re)generated report" % qc_dir)
@@ -364,8 +368,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if projects:
         # Make log directory and set up scheduler
         # to farm out the intensive operations to
-        runner = ap.settings.general.default_runner
-        runner.set_log_dir(ap.log_dir)
+        if runner is None:
+            runner = ap.settings.general.default_runner
         sched = SimpleScheduler(
             runner=runner,
             max_concurrent=ap.settings.general.max_concurrent_jobs,
@@ -521,7 +525,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         copy_job = sched.submit(
                             fileops.copy_command(qc_zip,dirn),
                             name="copy.qc_report.%s.%s" % (project.name,
-                                                           qc_dir))
+                                                           qc_dir),
+                            log_dir=ap.log_dir)
                         unzip_job = sched.submit(
                             fileops.unzip_command(os.path.join(
                                 dirn,
@@ -529,6 +534,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                                   fileops.Location(dirn).path),
                             name="unzip.qc_report.%s.%s" % (project.name,
                                                             qc_dir),
+                            log_dir=ap.log_dir,
                             wait_for=(copy_job.name,))
                         sched.wait()
                         # Check the jobs completed ok
@@ -583,13 +589,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     # Copy and unzip ICELL8 report
                     copy_job = sched.submit(
                         fileops.copy_command(icell8_zip,dirn),
-                        name="copy.icell8_report.%s" % project.name)
+                        name="copy.icell8_report.%s" % project.name,
+                        log_dir=ap.log_dir)
                     unzip_job = sched.submit(
                         fileops.unzip_command(os.path.join(
                             dirn,
                             os.path.basename(icell8_zip)),
                                               fileops.Location(dirn).path),
                         name="unzip.icell8_report.%s" % project.name,
+                        log_dir=ap.log_dir,
                         wait_for=(copy_job.name,))
                     sched.wait()
                     # Check the jobs completed ok
@@ -623,13 +631,15 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                     # Copy and unzip cellranger report
                     copy_job = sched.submit(
                         fileops.copy_command(cellranger_zip,dirn),
-                        name="copy.cellranger_report.%s" % project.name)
+                        name="copy.cellranger_report.%s" % project.name,
+                        log_dir=ap.log_dir)
                     unzip_job = sched.submit(
                         fileops.unzip_command(os.path.join(
                             dirn,
                             os.path.basename(cellranger_zip)),
                                               fileops.Location(dirn).path),
                         name="unzip.cellranger_report.%s" % project.name,
+                        log_dir=ap.log_dir,
                         wait_for=(copy_job.name,))
                     sched.wait()
                     # Check the jobs completed ok
