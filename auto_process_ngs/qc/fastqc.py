@@ -159,6 +159,21 @@ class FastqcSummary(TabFile):
     """
     Class representing data from a Fastqc summary file
     """
+    # Names for Fastqc modules
+    module_names = (
+        'Basic Statistics',
+        'Per base sequence quality',
+        'Per tile sequence quality',
+        'Per sequence quality scores',
+        'Per base sequence content',
+        'Per sequence GC content',
+        'Per base N content',
+        'Sequence Length Distribution',
+        'Sequence Duplication Levels',
+        'Overrepresented sequences',
+        'Adapter Content',
+        'Kmer Content',
+    )
     def __init__(self,summary_file=None):
         """
         Create a new FastqcSummary instance
@@ -239,7 +254,7 @@ class FastqcSummary(TabFile):
             full_path is True)
 
         """
-        i = self.modules.index(name)
+        i = self.module_names.index(name)
         link = "#M%d" % i
         if full_path:
             link = self.html_report() + link
