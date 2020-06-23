@@ -274,6 +274,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 fastq_dir=fastq_dir,
                 qc_dir=os.path.join(project.dirn,qc_dir),
                 qc_protocol=qc_protocol,
+                runner=runner,
                 log_dir=ap.log_dir)
             if verified:
                 print("...%s: verified QC" % qc_dir)
@@ -294,6 +295,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                                               qc_dir=qc_dir,
                                               multiqc=True,
                                               force=force,
+                                              runner=runner,
                                               log_dir=ap.log_dir)
                     if report_status == 0:
                         print("...%s: (re)generated report" % qc_dir)
