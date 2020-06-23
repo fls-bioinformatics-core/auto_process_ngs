@@ -668,10 +668,10 @@ class QCReport(Document):
                                       s.endswith("_screen.txt"),
                                       screens)):
                 screen_base = os.path.splitext(screen)[0]
-                fq = self.fastq_attrs(screen)
                 s = os.path.basename(screen_base)[:-len("_screen")]
                 for name in FASTQ_SCREENS:
                     if s.endswith("_%s" % name):
+                        fq = self.fastq_attrs(s[:-len("_%s" % name)])
                         outputs.add("screens_%s%s" %
                                     (('i' if fq.is_index_read else 'r'),
                                      (fq.read_number
@@ -692,8 +692,9 @@ class QCReport(Document):
             # Pull out the Fastq names from the Fastqc files
             for fastqc in fastqcs:
                 fastqc = os.path.splitext(fastqc)[0]
-                fq = self.fastq_attrs(fastqc)
-                fastq_names.add(os.path.basename(fastqc)[:-len("_fastqc")])
+                f = os.path.basename(fastqc)[:-len("_fastqc")]
+                fastq_names.add(f)
+                fq = self.fastq_attrs(f)
                 outputs.add("fastqc_%s%s" %
                             (('i' if fq.is_index_read else 'r'),
                              (fq.read_number
