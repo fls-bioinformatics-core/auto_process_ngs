@@ -1281,7 +1281,7 @@ def publish_qc(args):
                  ignore_missing_qc=args.ignore_missing_qc,
                  regenerate_reports=args.regenerate_reports,
                  force=args.force,legacy=args.legacy_mode,
-                 runner=args.runner)
+                 runner=runner)
 
 def archive(args):
     """
