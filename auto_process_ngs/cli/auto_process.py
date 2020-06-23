@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     cli/auto_process.py: command line interface for auto_process_ngs
-#     Copyright (C) University of Manchester 2013-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2013-2020 Peter Briggs
 #
 #########################################################################
 #
@@ -744,6 +744,7 @@ def add_publish_qc_command(cmdparser):
                    dest='legacy_mode',default=False,
                    help="legacy mode: include links to MultiQC, cellranger "
                    "count and ICELL8 reports in the top-level index page")
+    add_runner_option(p)
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
@@ -1273,7 +1274,8 @@ def publish_qc(args):
                  exclude_zip_files=(args.exclude_zip_files == 'yes'),
                  ignore_missing_qc=args.ignore_missing_qc,
                  regenerate_reports=args.regenerate_reports,
-                 force=args.force,legacy=args.legacy_mode)
+                 force=args.force,legacy=args.legacy_mode,
+                 runner=args.runner)
 
 def archive(args):
     """
