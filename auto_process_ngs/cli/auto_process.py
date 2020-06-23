@@ -1267,6 +1267,12 @@ def publish_qc(args):
     analysis_dir = args.analysis_dir
     if not analysis_dir:
         analysis_dir = os.getcwd()
+    # Handle job runner specification
+    if args.runner is not None:
+        runner = fetch_runner(args.runner)
+    else:
+        runner = None
+    # Do the publish_qc step
     d = AutoProcess(analysis_dir)
     d.publish_qc(projects=args.project_pattern,
                  location=args.qc_dir,
