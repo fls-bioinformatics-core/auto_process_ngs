@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc_cmd.py: implement auto process run_qc command
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 #########################################################################
 
@@ -117,13 +117,22 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                 cellranger_premrna_references[organism] = \
                     ap.settings['10xgenomics_premrna_references'][organism]
     # Set up runners
-    default_runner = ap.settings.general.default_runner
     if runner is None:
-        qc_runner = ap.settings.runners.qc
-        cellranger_runner = ap.settings.runners.cellranger
+        default_runner = ap.settings.general.default_runner
+        runners={
+            'cellranger_runner': ap.settings.runners.cellranger,
+            'qc_runner': ap.settings.runners.qc,
+            'verify_runner': default_runner,
+            'report_runner': default_runner,
+        }
     else:
-        qc_runner = runner
-        cellranger_runner = runner
+        default_runner = runner
+        runners={
+            'cellranger_runner': runner,
+            'qc_runner': runner,
+            'verify_runner': runner,
+            'report_runner': runner,
+        }
     # Get environment modules
     envmodules = dict()
     for name in ('illumina_qc',
@@ -180,12 +189,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        log_file=log_file,
                        poll_interval=poll_interval,
                        max_jobs=max_jobs,
-                       runners={
-                           'cellranger_runner': cellranger_runner,
-                           'qc_runner': qc_runner,
-                           'verify_runner': default_runner,
-                           'report_runner': default_runner,
-                       },
+                       runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules)
     return status
