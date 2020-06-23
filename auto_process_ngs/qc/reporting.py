@@ -1388,11 +1388,11 @@ class QCReportFastqGroup(object):
                 # for the field
                 fastqs = ", ".join([self.reporters[r].name
                                     for r in self.reads])
-                logger.error("Exception setting '%s' in summary table "
-                              "for Fastq group { %s }: %s (ignored)"
-                             % (field,
-                                fastqs,
-                                ex))
+                logger.warning("Exception setting '%s' in summary table "
+                              "for Fastq group { %s }: %s"
+                               % (field,
+                                  fastqs,
+                                  ex))
                 # Put error value into the table
                 summary_table.set_value(idx,field,
                                         WarningIcon("Unable to get value for "
