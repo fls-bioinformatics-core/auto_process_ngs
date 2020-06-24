@@ -98,16 +98,19 @@ def uscreenplot(screen_files,outfile=None,inline=None):
         for n,library in enumerate(screen.libraries):
             data = list(filter(lambda x:
                                x['Library'] == library,screen))[0]
-            x = xorigin
-            y = n*(barwidth+1) + 1
             # Get the total percentage for the stack
             total_percent = sum([data[m] for m in mappings])
             if total_percent > 2.0:
                 # Plot the stack as-is
+                x = xorigin
+                y = n*(barwidth+1) + 1
                 for mapping,rgb in zip(mappings,colors):
                     # Round up to nearest pixel (so that non-zero
                     # percentages are always represented)
                     npx = int(ceil(data[mapping]/2.0))
+                    # Don't exceed plot limit
+                    if x+npx > width:
+                        npx = width-x
                     for i in range(x,x+npx):
                         for j in range(y,y+barwidth):
                             pixels[i,j] = rgb
