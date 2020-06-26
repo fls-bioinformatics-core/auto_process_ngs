@@ -668,13 +668,14 @@ class QCReport(Document):
                                       s.endswith("_screen.txt"),
                                       screens)):
                 screen_base = os.path.splitext(screen)[0]
-                fq = self.fastq_attrs(screen)
                 s = os.path.basename(screen_base)[:-len("_screen")]
                 for name in FASTQ_SCREENS:
                     if s.endswith("_%s" % name):
-                        outputs.add("screens_%s%s" % (('i' if fq.is_index_read
-                                                       else 'r'),
-                                                      fq.read_number))
+                        fq = self.fastq_attrs(s[:-len("_%s" % name)])
+                        outputs.add("screens_%s%s" %
+                                    (('i' if fq.is_index_read else 'r'),
+                                     (fq.read_number
+                                      if fq.read_number is not None else '1')))
                         fastq_names.add(s[:-len("_%s" % name)])
                 versions.add(Fastqscreen(
                     os.path.join(self.qc_dir,screen)).version)
@@ -691,11 +692,13 @@ class QCReport(Document):
             # Pull out the Fastq names from the Fastqc files
             for fastqc in fastqcs:
                 fastqc = os.path.splitext(fastqc)[0]
-                fq = self.fastq_attrs(fastqc)
-                fastq_names.add(os.path.basename(fastqc)[:-len("_fastqc")])
-                outputs.add("fastqc_%s%s" % (('i' if fq.is_index_read
-                                              else 'r'),
-                                             fq.read_number))
+                f = os.path.basename(fastqc)[:-len("_fastqc")]
+                fastq_names.add(f)
+                fq = self.fastq_attrs(f)
+                outputs.add("fastqc_%s%s" %
+                            (('i' if fq.is_index_read else 'r'),
+                             (fq.read_number
+                              if fq.read_number is not None else '1')))
                 versions.add(Fastqc(
                     os.path.join(self.qc_dir,fastqc)).version)
             if versions:
@@ -758,9 +761,11 @@ class QCReport(Document):
         for fastq in self.fastqs:
             fq = self.fastq_attrs(fastq)
             if fq.is_index_read:
-                reads.add("i%s" % fq.read_number)
+                reads.add("i%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
             else:
-                reads.add("r%s" % fq.read_number)
+                reads.add("r%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
         self.reads = sorted(list(reads))
         # Samples
         samples = set([self.fastq_attrs(fq).sample_name
@@ -946,13 +951,25 @@ class QCReport(Document):
                    self.fastq_attrs(fq).sample_name == sample,
                    self.fastqs)))
         fastq_groups = group_fastqs_by_name(fastqs,self.fastq_attrs)
-        # Number of fastqs
-        if len(self.reads) > 1:
-            sample_report.add("%d fastq R1/R2 pairs" %
-                              len(fastq_groups))
+        # Report number of fastqs and reads
+        reads = QCReportFastqGroup(fastq_groups[0],
+                                   qc_dir=self.qc_dir,
+                                   fastq_attrs=self.fastq_attrs).reads
+        if len(reads) == 1:
+            sample_report.add("%d %s Fastq%s" %
+                              (len(fastq_groups),
+                               reads[0].upper(),
+                               's' if len(fastq_groups) > 1 else ''))
+        elif len(reads) == 2:
+            sample_report.add("%d %s Fastq pair%s" %
+                              (len(fastq_groups),
+                               '/'.join([r.upper() for r in reads]),
+                              's' if len(fastq_groups) > 1 else ''))
         else:
-            sample_report.add("%d fastqs" %
-                              len(fastq_groups))
+            sample_report.add("%d %s Fastq group%s" %
+                              (len(fastq_groups),
+                               '/'.join([r.upper() for r in reads]),
+                              's' if len(fastq_groups) > 1 else ''))
         # Keep track of the first line in the summary
         # table, as per-sample metrics (and name)
         # should only be reported on the first line
@@ -1048,7 +1065,9 @@ class QCReportFastqGroup(object):
                 read = 'i'
             else:
                 read = 'r'
-            read = "%s%d" % (read,fq.read_number)
+            read = "%s%d" % (read,
+                             fq.read_number
+                             if fq.read_number is not None else 1)
             self.fastqs[read] = fastq
             self.reporters[read] = QCReportFastq(fastq,
                                                  self.qc_dir,
@@ -1292,6 +1311,19 @@ class QCReportFastqGroup(object):
                           'boxplot_r1',
                           'fastqc_r1',
                           'screens_r1')
+        else:
+            # Drop fields for reads that aren't present
+            # For example if there are a mixture of
+            # single and paired-end Fastqs
+            updated_fields = []
+            for field in fields:
+                if field[:-1].endswith("_r"):
+                    read = field.split("_")[-1]
+                    if read not in self.reads:
+                        print("Dropping %s" % field)
+                        continue
+                updated_fields.append(field)
+            fields = updated_fields
         # Add row to summary table
         if idx is None:
             idx = summary_table.add_row()
@@ -1368,11 +1400,11 @@ class QCReportFastqGroup(object):
                 # for the field
                 fastqs = ", ".join([self.reporters[r].name
                                     for r in self.reads])
-                logger.error("Exception setting '%s' in summary table "
-                              "for Fastq group { %s }: %s (ignored)"
-                             % (field,
-                                fastqs,
-                                ex))
+                logger.warning("Exception setting '%s' in summary table "
+                              "for Fastq group { %s }: %s"
+                               % (field,
+                                  fastqs,
+                                  ex))
                 # Put error value into the table
                 summary_table.set_value(idx,field,
                                         WarningIcon("Unable to get value for "

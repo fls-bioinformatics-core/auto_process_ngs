@@ -198,15 +198,22 @@ if __name__ == "__main__":
             envmodules[name] = None
 
     # Job runners
-    default_runner = __settings.general.default_runner
-    if args.runner:
-        qc_runner = fetch_runner(args.runner)
-        cellranger_runner = fetch_runner(args.runner)
+    if args.runner is None:
+        default_runner = __settings.general.default_runner
+        runners = {
+            'cellranger_runner': __settings.runners.cellranger,
+            'qc_runner': __settings.runners.qc,
+            'verify_runner': default_runner,
+            'report_runner': default_runner,
+        }
     else:
-        qc_runner = __settings.runners.qc
-        cellranger_runner = __settings.runners.cellranger
-    verify_runner = default_runner
-    report_runner = default_runner
+        default_runner = fetch_runner(args.runner)
+        runners = {
+            'cellranger_runner': default_runner,
+            'qc_runner': default_runner,
+            'verify_runner': default_runner,
+            'report_runner': default_runner,
+        }
 
     # Load the project
     announce("Loading project data")
@@ -278,12 +285,7 @@ if __name__ == "__main__":
                        cellranger_localmem=cellranger_localmem,
                        max_jobs=args.max_jobs,
                        batch_size=args.batch_size,
-                       runners={
-                           'cellranger_runner': cellranger_runner,
-                           'qc_runner': qc_runner,
-                           'verify_runner': verify_runner,
-                           'report_runner': report_runner,
-                       },
+                       runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules)
     if status:
