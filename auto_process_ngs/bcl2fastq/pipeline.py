@@ -2841,7 +2841,6 @@ class FastqStatistics(PipelineTask):
         self.add_cmd(PipelineCommandWrapper(
             "Run fastq_statistics",
             *fastq_statistics_cmd.command_line))
-
     def finish(self):
         if self.generate_stats:
             print("Moving stats files to final locations")
@@ -2852,9 +2851,9 @@ class FastqStatistics(PipelineTask):
                           self.final_per_lane_sample_stats)):
                 print("- %s -> %s" % (f,ff))
                 if not os.path.exists(f):
-                    raise Exception("'%s' not found in %s" % (f,os.get_cwd()))
+                    raise Exception("'%s' not found in %s" % (f,os.getcwd()))
                 elif not os.path.isdir(os.path.dirname(ff)):
-                    raise Exception("No path to '%s'" %ff)
+                    raise Exception("No path to '%s'" % ff)
                 os.rename(f,ff)
         # Assign outputs
         self.output.stats_file.set(self.final_stats)
