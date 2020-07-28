@@ -2219,10 +2219,13 @@ class PipelineTask(object):
         self._completed = True
         # Report completion
         njobs,ncompleted = self.njobs()
+        status = ('ok' if self._exit_code == 0 else 'failed')
         if njobs > 1:
-            self.report("completed (%d/%d)" % (ncompleted,njobs))
+            self.report("completed (%d/%d): %s" % (ncompleted,
+                                                   njobs,
+                                                   status))
         else:
-            self.report("completed")
+            self.report("completed: %s" % status)
 
     def add_cmd(self,pipeline_job):
         """
