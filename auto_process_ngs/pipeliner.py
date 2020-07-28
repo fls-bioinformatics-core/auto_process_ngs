@@ -1945,6 +1945,7 @@ class PipelineTask(object):
         self._args = args
         self._kws = kws
         self._commands = []
+        self._scripts = []
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
@@ -2268,6 +2269,7 @@ class PipelineTask(object):
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
+                self._scripts.append(script_file)
         else:
             # Batch multiple commands per job
             if verbose:
@@ -2297,6 +2299,7 @@ class PipelineTask(object):
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
+                self._scripts.append(script_file)
                 # Update remaining commands to batch
                 remaining_cmds = remaining_cmds[batch_size:]
         # Run the commands
