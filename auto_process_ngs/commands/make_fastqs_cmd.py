@@ -40,8 +40,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 unaligned_dir=None,sample_sheet=None,
                 lanes=None,lane_subsets=None,
                 icell8_well_list=None,
-                ignore_missing_bcl=False,ignore_missing_stats=False,
-                skip_rsync=False,remove_primary_data=False,
                 nprocessors=None,require_bcl2fastq_version=None,
                 bases_mask=None,no_lane_splitting=None,
                 minimum_trimmed_read_length=None,
@@ -53,8 +51,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 generate_stats=True,stats_file=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
-                skip_fastq_generation=False,
-                only_fetch_primary_data=False,
                 force_copy_of_primary_data=False,
                 create_empty_fastqs=None,runner=None,
                 icell8_swap_i1_and_i2=False,
@@ -109,14 +105,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
       icell8_well_list (str): well list file for ICELL8 platforms
         (required for ICELL8 processing protocols)
       nprocessors (int) : number of processors to use
-      ignore_missing_bcl (bool): if True then run bcl2fastq with
-        --ignore-missing-bcl
-      ignore_missing_stats (bool): if True then run bcl2fastq with
-        --ignore-missing-stats
-      skip_rsync (bool): if True then don't rsync primary data at the
-        start of bcl2fastq conversion
-      remove_primary_data (bool): if True then remove primary data at
-        the end of bcl2fastq conversion (default is to keep it)
       generate_stats (bool): if True then (re)generate statistics file
         for fastqs
       analyse_barcodes (bool): if True then (re)analyse barcodes for
@@ -155,10 +143,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
         the output per-lane stats file.
       barcode_analysis_dir (str): if set then specifies path to the
         output directory for barcode analysis
-      skip_fastq_generation (bool): if True then don't perform fastq
-        generation
-      only_fetch_primary_data (bool): if True then fetch primary data,
-        don't do anything else
       force_copy_of_primary_data (bool): if True then force primary
         data to be copied (rsync'ed) even if it's on the local system
         (default is to link to primary data unless it's on a remote
@@ -198,18 +182,6 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if protocol not in PROTOCOLS:
         raise Exception("Unknown protocol: '%s' (must be one of "
                         "%s)" % (protocol,','.join(PROTOCOLS)))
-
-    # Trap for unsupported options
-    if only_fetch_primary_data:
-        raise Exception("'Only fetch primary data' not supported")
-    if skip_fastq_generation:
-        raise Exception("'Skip fastq generation' not supported")
-    if ignore_missing_bcl:
-        raise Exception("'Ignore missing bcl' not suppported")
-    if ignore_missing_stats:
-        raise Exception("'Ignore missing stats' not supported")
-    if remove_primary_data:
-        raise Exception("'Remove primary data' not supported")
 
     # Output (unaligned) dir
     if unaligned_dir is not None:
