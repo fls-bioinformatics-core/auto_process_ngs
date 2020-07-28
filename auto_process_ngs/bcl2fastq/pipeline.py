@@ -2850,7 +2850,10 @@ class FastqStatistics(PipelineTask):
                          (self.per_lane_sample_stats,
                           self.final_per_lane_sample_stats)):
                 print("- %s -> %s" % (f,ff))
-                if not os.path.exists(f):
+                if os.path.abspath(f) == os.path.abspath(ff):
+                    raise Exception("'%s' and '%s' are the same file?"
+                                    % (f,ff))
+                elif not os.path.exists(f):
                     raise Exception("'%s' not found in %s" % (f,os.getcwd()))
                 elif not os.path.isdir(os.path.dirname(ff)):
                     raise Exception("No path to '%s'" % ff)
