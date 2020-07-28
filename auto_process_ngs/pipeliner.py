@@ -2528,6 +2528,7 @@ class PipelineCommand(object):
         prologue = ["echo \"#### COMMAND %s\"" % self._name,
                     "echo \"#### HOSTNAME $HOSTNAME\"",
                     "echo \"#### USER $USER\"",
+                    "echo \"#### CWD $(pwd)\"",
                     "echo \"#### START $(date)\""]
         if envmodules:
             shell += " --login"
