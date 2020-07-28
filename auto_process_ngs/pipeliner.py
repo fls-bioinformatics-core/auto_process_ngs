@@ -1175,12 +1175,15 @@ class Pipeline(object):
         """
         Internal: report messages from the pipeline
         """
-        s = "%s [%s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
-                           self._name,s)
+        report = []
+        for line in s.split('\n'):
+            report.append("%s [%s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
+                                         self._name,line))
+        report = '\n'.join(report)
         if self._log_file:
             with open(self._log_file,'a') as log:
-                log.write("%s\n" % (s,))
-        print(s)
+                log.write("%s\n" % (report,))
+        print(report)
 
     def terminate(self):
         """
@@ -2078,12 +2081,15 @@ class PipelineTask(object):
         """
         Internal: report messages from the task
         """
-        s = "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
-                                  self._name,s)
+        report = []
+        for line in s.split('\n'):
+            report.append("%s [Task: %s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
+                                               self._name,line))
+        report = '\n'.join(report)
         if self._log_file:
             with open(self._log_file,'a') as log:
-                log.write("%s\n" % (s,))
-        print(s)
+                log.write("%s\n" % (report,))
+        print(report)
 
     def invoke(self,f,args=None,kws=None):
         """
