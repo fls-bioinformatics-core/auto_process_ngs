@@ -16,6 +16,7 @@ import gzip
 import logging
 from ..bcl2fastq.pipeline import PROTOCOLS
 from ..bcl2fastq.pipeline import MakeFastqs
+from bcftbx.IlluminaData import SampleSheet
 
 # Module specific logger
 logger = logging.getLogger(__name__)
@@ -233,7 +234,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                                           ','.join([str(l)
                                                     for l in lanes])))
     if lanes is not None:
-        s = IlluminaData.SampleSheet(ap.params.sample_sheet)
+        s = SampleSheet(ap.params.sample_sheet)
         if not s.has_lanes:
             raise Exception("Requested subset of lanes but "
                             "samplesheet doesn't contain any "
