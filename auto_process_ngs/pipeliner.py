@@ -1175,12 +1175,15 @@ class Pipeline(object):
         """
         Internal: report messages from the pipeline
         """
-        s = "%s [%s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
-                           self._name,s)
+        report = []
+        for line in s.split('\n'):
+            report.append("%s [%s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
+                                         self._name,line))
+        report = '\n'.join(report)
         if self._log_file:
             with open(self._log_file,'a') as log:
-                log.write("%s\n" % (s,))
-        print(s)
+                log.write("%s\n" % (report,))
+        print(report)
 
     def terminate(self):
         """
@@ -1942,6 +1945,7 @@ class PipelineTask(object):
         self._args = args
         self._kws = kws
         self._commands = []
+        self._scripts = []
         self._task_name = "%s.%s" % (sanitize_name(self._name),
                                      uuid.uuid4())
         self._completed = False
@@ -2078,12 +2082,15 @@ class PipelineTask(object):
         """
         Internal: report messages from the task
         """
-        s = "%s [Task: %s] %s" % (time.strftime("%Y-%m-%d %H:%M:%S"),
-                                  self._name,s)
+        report = []
+        for line in s.split('\n'):
+            report.append("%s [Task: %s] %s" %(time.strftime("%Y-%m-%d %H:%M:%S"),
+                                               self._name,line))
+        report = '\n'.join(report)
         if self._log_file:
             with open(self._log_file,'a') as log:
-                log.write("%s\n" % (s,))
-        print(s)
+                log.write("%s\n" % (report,))
+        print(report)
 
     def invoke(self,f,args=None,kws=None):
         """
@@ -2100,6 +2107,7 @@ class PipelineTask(object):
             current_dir = os.getcwd()
             os.chdir(self._working_dir)
         # Invoke the requested method
+        caught_exception = None
         try:
             with Capturing() as output:
                 if args is None:
@@ -2109,18 +2117,68 @@ class PipelineTask(object):
         except NotImplementedError:
             pass
         except Exception as ex:
-            self.report("exception invoking '%s': %s" %
-                        (f.__name__,ex))
-            self.report(traceback.format_exc())
+            # Store exception and traceback
+            caught_exception = ex
+            traceback_ = traceback.format_exc()
             self._exit_code += 1
         # Report stdout and stderr
         for line in output.stdout:
             self.report("[%s] %s" % (f.__name__,line))
         for line in output.stderr:
             self.report("[%s] %s" % (f.__name__,line))
+        # Report exception and diagnostics
+        if caught_exception:
+            self.report("exception invoking '%s': %s" %
+                        (f.__name__,caught_exception))
+            self.report("\n%s" % traceback_)
+            self.report_diagnostics(str(caught_exception))
         # Switch back to original directory
         if self._working_dir is not None:
             os.chdir(current_dir)
+
+    def report_diagnostics(self,s):
+        """
+        Internal: report additional diagnostic information
+
+        Reports current and working directories, current
+        directory contents, scripts and script outputs;
+        to be invoked on task failure.
+
+        Arguments:
+          s (str): string describing the reason for the
+            diagnostics being reported
+        """
+        # Report diagnostic information
+        self.report("**** TASK DIAGNOSTICS ****\n")
+        self.report("Reason: '%s'\n" % s)
+        self.report("Working directory %s" % self._working_dir)
+        self.report("CWD %s" % os.getcwd())
+        self.report("\nCWD contents:")
+        contents = sorted(os.listdir(os.getcwd()))
+        if contents:
+            for item in contents:
+                self.report("-- %s%s" % (item,
+                                         os.sep if os.path.isdir(
+                                             os.path.join(os.getcwd(),item))
+                                         else ''))
+        else:
+            self.report("Empty")
+        self.report("\nSCRIPTS:")
+        if self._scripts:
+            for script_file in self._scripts:
+                with open(script_file,'rt') as fp:
+                    self.report("%s:" % script_file)
+                    for line in fp:
+                        self.report("> %s" % line.rstrip('\n'))
+        else:
+            self.report("No scripts generated for this task")
+        self.report("\nSTDOUT:")
+        if self.stdout:
+            for line in self.stdout.split('\n'):
+                self.report("> %s" % line)
+        else:
+            self.report("No stdout from task scripts")
+        self.report("\n**** END OF DIAGNOSTICS ****")
 
     def task_completed(self,name,jobs,sched):
         """
@@ -2161,10 +2219,13 @@ class PipelineTask(object):
         self._completed = True
         # Report completion
         njobs,ncompleted = self.njobs()
+        status = ('ok' if self._exit_code == 0 else 'failed')
         if njobs > 1:
-            self.report("completed (%d/%d)" % (ncompleted,njobs))
+            self.report("completed (%d/%d): %s" % (ncompleted,
+                                                   njobs,
+                                                   status))
         else:
-            self.report("completed")
+            self.report("completed: %s" % status)
 
     def add_cmd(self,pipeline_job):
         """
@@ -2262,6 +2323,7 @@ class PipelineTask(object):
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
+                self._scripts.append(script_file)
         else:
             # Batch multiple commands per job
             if verbose:
@@ -2291,6 +2353,7 @@ class PipelineTask(object):
                 if verbose:
                     self.report("wrapper script %s" % script_file)
                 cmds.append(cmd)
+                self._scripts.append(script_file)
                 # Update remaining commands to batch
                 remaining_cmds = remaining_cmds[batch_size:]
         # Run the commands
@@ -2522,6 +2585,7 @@ class PipelineCommand(object):
         prologue = ["echo \"#### COMMAND %s\"" % self._name,
                     "echo \"#### HOSTNAME $HOSTNAME\"",
                     "echo \"#### USER $USER\"",
+                    "echo \"#### CWD $(pwd)\"",
                     "echo \"#### START $(date)\""]
         if envmodules:
             shell += " --login"

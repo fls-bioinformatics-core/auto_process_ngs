@@ -1238,19 +1238,21 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Echo text
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # Hello!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),8) # 8 = 7 + trailing newline
+        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Echo text")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
-        self.assertTrue(stdout[3].startswith("#### START "))
-        self.assertEqual(stdout[4],"Hello!")
-        self.assertTrue(stdout[5].startswith("#### END "))
-        self.assertEqual(stdout[6],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[3],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[4].startswith("#### START "))
+        self.assertEqual(stdout[5],"Hello!")
+        self.assertTrue(stdout[6].startswith("#### END "))
+        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_multiple_commands(self):
         """
@@ -1286,6 +1288,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Echo text
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # Hello!
         # #### END Thu Aug 17 08:38:14 BST 2017
@@ -1293,26 +1296,29 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Echo text
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # Goodbye!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),15) # 15 = 14 + trailing newline
+        self.assertEqual(len(stdout),17) # 17 = 16 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Echo text")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
-        self.assertTrue(stdout[3].startswith("#### START "))
-        self.assertEqual(stdout[4],"Hello!")
-        self.assertTrue(stdout[5].startswith("#### END "))
-        self.assertEqual(stdout[6],"#### EXIT_CODE 0")
-        self.assertEqual(stdout[7],"#### COMMAND Echo text")
-        self.assertEqual(stdout[8],"#### HOSTNAME %s" % self._hostname())
-        self.assertEqual(stdout[9],"#### USER %s" % self._user())
-        self.assertTrue(stdout[10].startswith("#### START "))
-        self.assertEqual(stdout[11],"Goodbye!")
-        self.assertTrue(stdout[12].startswith("#### END "))
-        self.assertEqual(stdout[13],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[3],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[4].startswith("#### START "))
+        self.assertEqual(stdout[5],"Hello!")
+        self.assertTrue(stdout[6].startswith("#### END "))
+        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[8],"#### COMMAND Echo text")
+        self.assertEqual(stdout[9],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[10],"#### USER %s" % self._user())
+        self.assertEqual(stdout[11],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[12].startswith("#### START "))
+        self.assertEqual(stdout[13],"Goodbye!")
+        self.assertTrue(stdout[14].startswith("#### END "))
+        self.assertEqual(stdout[15],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_batched_commands(self):
         """
@@ -1349,22 +1355,24 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Batch commands for Echo string
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # Hello!
         # Goodbye!
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 0
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
+        self.assertEqual(len(stdout),10) # 10 = 9 + trailing newline
         self.assertEqual(stdout[0],
                          "#### COMMAND Batch commands for Echo string")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
-        self.assertTrue(stdout[3].startswith("#### START "))
-        self.assertEqual(stdout[4],"Hello!")
-        self.assertEqual(stdout[5],"Goodbye!")
-        self.assertTrue(stdout[6].startswith("#### END "))
-        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
+        self.assertEqual(stdout[3],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[4].startswith("#### START "))
+        self.assertEqual(stdout[5],"Hello!")
+        self.assertEqual(stdout[6],"Goodbye!")
+        self.assertTrue(stdout[7].startswith("#### END "))
+        self.assertEqual(stdout[8],"#### EXIT_CODE 0")
 
     def test_pipelinetask_with_failing_command(self):
         """
@@ -1398,17 +1406,19 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Nonexistant
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # #### END Thu Aug 17 08:38:14 BST 2017
         # #### EXIT_CODE 127
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),7) # 7 = 6 + trailing newline
+        self.assertEqual(len(stdout),8) # 8 = 7 + trailing newline
         self.assertEqual(stdout[0],"#### COMMAND Nonexistant")
         self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
         self.assertEqual(stdout[2],"#### USER %s" % self._user())
-        self.assertTrue(stdout[3].startswith("#### START "))
-        self.assertTrue(stdout[4].startswith("#### END "))
-        self.assertEqual(stdout[5],"#### EXIT_CODE 127")
+        self.assertEqual(stdout[3],"#### CWD %s" % self.working_dir)
+        self.assertTrue(stdout[4].startswith("#### START "))
+        self.assertTrue(stdout[5].startswith("#### END "))
+        self.assertEqual(stdout[6],"#### EXIT_CODE 127")
 
     def test_pipelinetask_stdout(self):
         """
@@ -1443,6 +1453,7 @@ class TestPipelineTask(unittest.TestCase):
         # #### COMMAND Echo text
         # #### HOSTNAME popov
         # #### USER pjb
+        # #### CWD /tmp/dir
         # #### START Thu Aug 17 08:38:14 BST 2017
         # Hello!
         # #### END Thu Aug 17 08:38:14 BST 2017
@@ -1450,15 +1461,16 @@ class TestPipelineTask(unittest.TestCase):
         # ...x three times
         print(task.stdout)
         stdout = task.stdout.split("\n")
-        self.assertEqual(len(stdout),22) # 22 = 21 + trailing newline
+        self.assertEqual(len(stdout),25) # 25 = 24 + trailing newline
         for i in range(3):
-            self.assertEqual(stdout[0+i*7],"#### COMMAND Echo text")
-            self.assertEqual(stdout[1+i*7],"#### HOSTNAME %s" % self._hostname())
-            self.assertEqual(stdout[2+i*7],"#### USER %s" % self._user())
-            self.assertTrue(stdout[3+i*7].startswith("#### START "))
-            self.assertEqual(stdout[4+i*7],"Hello!")
-            self.assertTrue(stdout[5+i*7].startswith("#### END "))
-            self.assertEqual(stdout[6+i*7],"#### EXIT_CODE 0")
+            self.assertEqual(stdout[0+i*8],"#### COMMAND Echo text")
+            self.assertEqual(stdout[1+i*8],"#### HOSTNAME %s" % self._hostname())
+            self.assertEqual(stdout[2+i*8],"#### USER %s" % self._user())
+            self.assertEqual(stdout[3+i*8],"#### CWD %s" % self.working_dir)
+            self.assertTrue(stdout[4+i*8].startswith("#### START "))
+            self.assertEqual(stdout[5+i*8],"Hello!")
+            self.assertTrue(stdout[6+i*8].startswith("#### END "))
+            self.assertEqual(stdout[7+i*8],"#### EXIT_CODE 0")
 
     def test_pipelinetask_invoke_fail(self):
         """
@@ -1612,6 +1624,7 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### COMMAND EchoCmd\"\n"
                          "echo \"#### HOSTNAME $HOSTNAME\"\n"
                          "echo \"#### USER $USER\"\n"
+                         "echo \"#### CWD $(pwd)\"\n"
                          "echo \"#### START $(date)\"\n"
                          "echo 'hello there'\n"
                          "exit_code=$?\n"
@@ -1650,6 +1663,7 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### COMMAND EchoCmd\"\n"
                          "echo \"#### HOSTNAME $HOSTNAME\"\n"
                          "echo \"#### USER $USER\"\n"
+                         "echo \"#### CWD $(pwd)\"\n"
                          "echo \"#### START $(date)\"\n"
                          "module load apps/fastq-screen/0.13.0\n"
                          "module load apps/fastqc/0.11.8\n"
