@@ -32,6 +32,10 @@ Protocol option          Used for
                          ATAC-seq data
 ======================== =====================================
 
+The protocols are described in the section :ref:`make_fastqs-protocols`;
+information on most useful options can be found in
+:ref:`make_fastqs-commonly-used-options`.
+
 By default ``make_fastqs`` performs the following steps:
 
 * Fetches the BCL data and copies it to the ``primary_data`` subdirectory
@@ -50,66 +54,40 @@ Various options are available to skip or control each of these stages;
 more detail on the different usage modes can be found in the
 subsequent sections:
 
+* :ref:`make_fastqs-adapter-trimming-and-masking`
+* :ref:`make_fastqs-mixed-protocols`
+
+The outputs produced on successful completion are described below
+in the section :ref:`make_fastqs-outputs`.
+
+.. note::
+
+   Advice on handling unusual cases and problems can be found
+   in the section :doc:`troubleshooting`.
+
+Once the Fastqs have been generated, the next step is to set up the
+project directories - see
+:doc:`Setting up project directories <setup_analysis_dirs>`.
+
+.. _make_fastqs-protocols:
+
+Fastq generation protocols
+--------------------------
+
+The pre-defined protocols for Fastq generation are described in
+the sections below:
+
 * :ref:`make_fastqs-standard-protocol`
 * :ref:`make_fastqs-mirna-protocol`
 * :ref:`make_fastqs-icell8-protocol`
 * :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
 * :ref:`make_fastqs-10x_atac-protocol`
-* :ref:`make_fastqs-adapter-trimming-and-masking`
-* :ref:`make_fastqs-mixed-protocols`
-
-Information on other commonly used options can be found
-:ref:`below <make_fastqs-commonly-used-options>`.
-
-Advice on handling other unusual cases and problems can be found
-here:
-
-* :doc:`Troubleshooting unusual situations <troubleshooting>`
-
-Once the Fastqs have been generated, the next step is to set up the
-project directories - see
-:doc:`Setting up project directories <setup_analysis_dirs>`.
-
-.. _make_fastqs-commonly-used-options:
-
-Commonly used options
----------------------
-
-Some of the most commonly used options are:
-
-* ``--output-dir``: specifies the directory to write the output
-  Fastqs to (defaults to ``bcl2fastq``)
-* ``--sample-sheet``: specifies a non-default sample sheet file
-  to use (defaults to ``custom_SampleSheet.csv``; the new sample
-  sheet file will become the default for subsequent runs)
-* ``--lanes``: allows a subset of lanes to be processed (useful
-  for multi-lane sequencers when samples with a mixture
-  of processing protocols have been run). Lanes can be specified
-  as a range (e.g. ``1-4``), a list (e.g. ``6,8``) or a
-  combination (e.g. ``1-4,6,8``)
-* ``--use-bases-mask``: allows a custom bases mask string (which
-  controls how each cycle of raw data is used) to be specified
-  (default is to determine the bases mask automatically; set to
-  ``auto`` to restore this behaviour)
-* ``--platform``: if the sequencer platform cannot be identified
-  from the instrument name it can be explicitly specified using
-  this option (see :ref:`config_sequencer_platforms` for how to
-  associate sequencers and platforms in the configuration)
-* ``--no-barcode-analysis`` skips the barcode analysis for
-  standard runs (helpful when handling runs requiring multiple
-  rounds of processing; see :ref:`make_fastqs-mixed-protocols`)
-* ``--no-stats`` skips the generation of statistics and processing
-  QC reporting (helpful when handling runs requiring multiple
-  rounds of processing; see :ref:`make_fastqs-mixed-protocols`)
-
-The full set of options can be found in the
-:ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
 
 .. _make_fastqs-standard-protocol:
 
-Standard Fastq generation (``--protocol=standard``)
----------------------------------------------------
+Standard data (``--protocol=standard``)
+***************************************
 
 The Fastq generation for standard data is performed using a command
 of the form:
@@ -126,8 +104,8 @@ will highlight issues with the demultiplexing.
 
 .. _make_fastqs-mirna-protocol:
 
-miRNA-seq Fastq generation (``--protocol=mirna``)
--------------------------------------------------
+miRNA-seq data (``--protocol=mirna``)
+*************************************
 
 Initial Fastqs can be generated from miRNA-seq data using the
 ``--protocol=mirna`` option:
@@ -150,8 +128,8 @@ found in the section :ref:`make_fastqs-adapter-trimming-and-masking`.
 
 .. _make_fastqs-icell8-protocol:
 
-Fastq generation for ICELL8 single-cell RNA-seq data (``--protocol=icell8``)
-----------------------------------------------------------------------------
+ICELL8 single-cell RNA-seq data (``--protocol=icell8``)
+*******************************************************
 
 Initial Fastqs can be generated from ICELL8 single-cell8 RNA-seq data
 using the ``--protocol=icell8`` option:
@@ -183,8 +161,8 @@ the Fastqs.
 
 .. _make_fastqs-icell8-atac-protocol:
 
-Fastq generation for ICELL8 single-cell ATAC-seq data (``--protocol=icell8_atac``)
-----------------------------------------------------------------------------------
+ICELL8 single-cell ATAC-seq data (``--protocol=icell8_atac``)
+*************************************************************
 
 Initial Fastqs can be generated from ICELL8 single-cell8 ATAC-seq data
 using the ``--protocol=icell8_atac`` option:
@@ -204,8 +182,8 @@ file which must be supplied via the mandatory ``--well-list`` argument.
 
 .. _make_fastqs-10x_chromium_sc-protocol:
 
-Fastq generation for 10xGenomics Chromium single-cell RNA-seq data (``--protocol=10x_chromium_sc``)
----------------------------------------------------------------------------------------------------
+10xGenomics Chromium single-cell RNA-seq data (``--protocol=10x_chromium_sc``)
+******************************************************************************
 
 Fastq generation can be performed for 10xGenomics Chromium
 single-cell RNA-seq data by using the ``--protocol=10x_chromium_sc``
@@ -229,8 +207,8 @@ This will generate the Fastqs in the specified output directory
 
 .. _make_fastqs-10x_atac-protocol:
 
-Fastq generation for 10xGenomics single-cell ATAC-seq data (``--protocol=10x_atac``)
----------------------------------------------------------------------------------------------------------
+10xGenomics single-cell ATAC-seq data (``--protocol=10x_atac``)
+***************************************************************
 
 Fastq generation can be performed for 10xGenomics single-cell
 ATAC-seq data by using the ``--protocol=10x_atac`` option:
@@ -250,6 +228,41 @@ This will generate the Fastqs in the specified output directory
    ``make_fastqs`` offers various options for controlling the
    behaviour of ``cellranger-atac mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-commonly-used-options:
+
+Commonly used options
+---------------------
+
+Some of the most commonly used options are:
+
+* ``--protocol``: specifies the Fastq generation protocol
+* ``--output-dir``: specifies the directory to write the output
+  Fastqs to (defaults to ``bcl2fastq``)
+* ``--sample-sheet``: specifies a non-default sample sheet file
+  to use (defaults to ``custom_SampleSheet.csv``; the new sample
+  sheet file will become the default for subsequent runs)
+* ``--lanes``: allows a subset of lanes to be processed (useful
+  for multi-lane sequencers when samples with a mixture
+  of processing protocols have been run). Lanes can be specified
+  as a range (e.g. ``1-4``), a list (e.g. ``6,8``) or a
+  combination (e.g. ``1-4,6,8``). See
+  :ref:`make_fastqs-mixed-protocols` for more details.
+* ``--use-bases-mask``: allows a custom bases mask string (which
+  controls how each cycle of raw data is used) to be specified
+  (default is to determine the bases mask automatically; set to
+  ``auto`` to restore this behaviour)
+* ``--platform``: if the sequencer platform cannot be identified
+  from the instrument name it can be explicitly specified using
+  this option (see :ref:`config_sequencer_platforms` for how to
+  associate sequencers and platforms in the configuration)
+* ``--no-barcode-analysis`` skips the barcode analysis for
+  standard runs
+* ``--no-stats`` skips the generation of statistics and processing
+  QC reporting
+
+The full set of options can be found in the
+:ref:`'make_fastqs' section of the command reference <commands_make_fastqs>`.
 
 .. _make_fastqs-adapter-trimming-and-masking:
 
@@ -292,10 +305,10 @@ off masking.
 
 .. _make_fastqs-mixed-protocols:
 
-Fastq generation for runs with mixed protocols
-----------------------------------------------
+Fastq generation for runs with mixed protocols and options
+----------------------------------------------------------
 
-Multi-lane instruments such as the HISeq platform provide the
+Multi-lane instruments such as the HiSeq platform provide the
 option to run mixtures of samples requiring different processing
 protocols in a single sequencing run, for example:
 
@@ -305,89 +318,134 @@ protocols in a single sequencing run, for example:
 * Some lanes contain standard samples whilst others contain
   10xGenomics or ICELL8 single-cell samples
 
-In these cases the data cannot be processed in a single
-``make_fastqs`` run. Instead the recommended procedure for
-handling these situations is:
+``make_fastqs`` is able to process these in a single run provided
+that:
 
-1. Prepare a single sample sheet with the appropriate indexes
-   for each lane (for example truncating index sequences, or
-   inserting the appropriate 10xGenomics indexes)
-2. Run ``make_fastqs`` multiple times to process each subset of
-   lanes on their own using the ``--lanes`` option, specifying the
-   appropriate protocol and processing options and writing the
-   Fastqs for each to a different output directory using the
-   ``--output-dir`` option
-3. Combine the outputs from each subset into a single output
-   directory using the ``merge_fastq_dirs`` command
-4. (Re)generate the statistics and QC report on the merged
-   data using the ``update_fastq_stats`` command
+* the sample sheet has the appropriate index sequences for
+  each lane (for example, truncating index sequences, or
+  inserting the appropriate 10xGenomics indexes); and
+* where different protocols or processing options need to
+  be specified for groups of lanes, that these are specified
+  via multiple ``--lanes`` options.
 
-For example: say we have a HISeq run with non-standard samples
-in lanes 5 and 6, and standard samples in all other lanes. In
-this case, after updating the samplesheet the standard samples
-would be processed first:
+``make_fastqs`` will process each set of lanes separately
+before combining them into a single output directory at the
+end.
+
+For example: say we have a HiSeq run with non-standard samples
+in lanes 5 and 6, and standard samples in all other lanes.
+
+If the samples in lanes 5 and 6 have different barcode lengths
+to those in the other lanes, but should otherwise be treated
+the same, then the following command line would be sufficient
+to handle this:
 
 ::
 
+   auto_process.py make_fastqs \
+	    --sample-sheet=SampleSheet.updated.csv
+
+However if the samples in lanes 5 and 6 were 10xGenomics
+Chromium single cell data, then it is necessary to explicitly
+specify which lanes to group together and how each group should
+be handled. This is done using the ``--lanes`` option to
+indicate that the ``10x_chromium_sc`` protocol should be used
+with lanes 5 and 6, and that the ``standard`` protocol should
+be used with the other lanes:
+
+::
+
+   auto_process.py make_fastqs \
+            --lanes=1-4,7-8:standard \
+	    --lanes=5,6:10x_chromium_sc \
+	    --sample-sheet=SampleSheet.updated.csv
+
+
+.. note::
+
+   If the ``--lanes`` option is used one or more times then
+   only those lanes explicitly listed will be processed.
+   Lanes that aren't specified will be excluded from the
+   processing.
+
+More generally it's possible to set multiple options on a
+set of lanes using the lanes option, for example to explicitly
+specify the adapter sequences for lane 8:
+
+::
+
+   auto_process.py make_fastqs \
+            --lanes=1-7 \
+	    --lanes=8:adapter=CTGTCTCTTATACACATCT \
+	    --sample-sheet=SampleSheet.updated.csv
+
+The general form of the ``--lanes`` option is:
+
+::
+
+   --lanes=LANES[:protocol][:OPTION=VALUE[:OPTION=VALUE...]]
+
+The available options are:
+
+===================================== ==================================
+Option                                Description
+===================================== ==================================
+``bases_mask=BASES_MASK``             Set bases mask
+``trim_adapters=yes|no``              Turn adapter trimming on or off
+``adapter=SEQUENCE``                  Set adapter sequence for trimming
+``adapter_read2=SEQUENCE``            Set read2 adapter sequence
+``minimum_trimmed_read_length=N``     Set minimum trimmed read length
+``mask_short_adapter_reads=N``        Set minimum read length below
+                                      which sequences are masked
+``icell8_well_list=FILE``             Well list file (``icell8`` and
+                                      ``icell8_atac`` protocols only)
+``icell8_atac_swap_i1_and_i2=yes|no`` Turn I1/I2 swapping on or off
+                                      (``icell8_atac`` protocol only)
+``icell8_atac_reverse_complement``    Set reverse complementing option
+                                      (``icell8_atac`` protocol only)
+``analyse_barcodes=yes|no``           Turn barcode analysis on or off
+===================================== ==================================
+
+These options will override the defaults and any global values
+set by the top-level options.
+
+It is also possible to process subsets of lanes manually, and
+then use the ``merge_fastq_dirs``, ``update_fastq_stats`` and
+``analyse_barcodes`` commands to combine and analyse the Fastqs.
+
+For example, for the mixture of standard and 10xGenomics samples
+previously described this might look like:
+
+::
+
+   # Process lanes 1-4,7-8 (standard samples)
    auto_process.py make_fastqs \
             --lanes=1-4,7-8 \
 	    --sample-sheet=SampleSheet.updated.csv \
             --output-dir=bcl2fastq.L123478 \
-            --no-barcode-analysis \
-	    --no-stats
-
-The ``--lanes`` option restricts the lanes to just those with
-the standard samples. ``--output-dir`` writes the Fastqs to a
-custom output directory. Specifying ``--no-stats`` suppresses
-the statistics generation at this stage.
-
-Next process the non-standard samples, for example: if the
-samples in lanes 5 and 6 had different barcode lengths:
-
-::
-
-   auto_process.py make_fastqs \
-            --lanes=5-6 \
-            --output-dir=bcl2fastq.L56 \
             --use-bases-mask=auto \
             --no-barcode-analysis \
 	    --no-stats
 
-Alternatively if the data in these lanes were 10xGenomics
-Chromium single cell data:
-
-::
-
+   # Process lanes 5-6 (10xGenomics samples)
    auto_process.py make_fastqs \
             --lanes=5-6 \
+	    --sample-sheet=SampleSheet.updated.csv \
 	    --protocol=10x_chromium_sc \
             --output-dir=bcl2fastq.L56 \
             --use-bases-mask=auto \
 	    --no-stats
 
-The outputs from each subset of lanes can be merged into a
-single output directory using the ``merge_fastq_dirs`` command.
-For example:
-
-::
-
+   # Combine outputs
    auto_process.py merge_fastq_dirs \
              --primary-unaligned-dir=bcl2fastq.L123478 \
 	     --output-dir=bcl2fastq
 
-To generate the statistics and processing QC report for the
-merged data use the ``update_fastq_stats`` command:
-
-::
-
+   # Generate statistics
    auto_process.py update_fastq_stats
 
-To perform the barcode analysis for the merged data use the
-``analyse_barcodes`` command:
-
-::
-
-   auto_process.py analyse_barcodes
+   # Analyse barcodes (standard samples only)
+   auto_process.py analyse_barcodes --lanes=1-4,7-8
 
 See the appropriate sections of the command reference for
 the full set of available options:
