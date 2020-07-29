@@ -400,7 +400,7 @@ def add_make_fastqs_command(cmdparser):
     else:
         default_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
     default_nprocessors = ', '.join(default_nprocessors)
-    add_nprocessors_option(bcl_to_fastq,None,
+    add_nprocessors_option(bcl_to_fastq,default_nprocessors,
                            default_display=default_nprocessors)
     add_runner_option(bcl_to_fastq)
     # Adapter trimming/masking options
