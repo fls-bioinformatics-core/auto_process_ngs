@@ -246,19 +246,17 @@ def add_make_fastqs_command(cmdparser):
                                   "created on setup.")
     fastq_generation.add_argument('--lanes',action='append',
                                   dest='lanes',
-                                  metavar="LANES[:PROTOCOL][:OPTION=VALUE"
-                                  "[:OPTION=VALUE...]]",
+                                  metavar="LANES[:OPTIONS]",
                                   help="define a set of lanes to group for "
                                   "processing. LANES can be a single lane "
-                                  "(e.g. 1), a list of lanes (e.g. 1,3,...), "
-                                  "a range (e.g. 1-3), or a combination "
-                                  "(e.g. 1,3-5,7); the specified lanes will "
-                                  "be processed separately. Optionally a "
-                                  "PROTOCOL can be specified for this set "
-                                  "of lanes, and custom options can be "
-                                  "specified as OPTION=VALUE' pairs, "
-                                  "separated by ':'s. For example: "
-                                  "'--lanes=1-4:standard:trim_adapters=no'")
+                                  "(e.g. '1'), a list ('1,2,3,7'), a range "
+                                  "('1-3'), or a combination ('1-3,7'). "
+                                  "Specified lanes are processed together "
+                                  "in a group, using OPTIONS (if supplied). "
+                                  "OPTIONS takes the form "
+                                  "'[PROTOCOL:][KEY=VALUE:[KEY=VALUE]...] "
+                                  "(for example "
+                                  "--lanes=1-4:standard:trim_adapters=no)")
     fastq_generation.add_argument('--output-dir',action='store',
                                   dest='out_dir',default=None,
                                   help="set the directory for the output "
