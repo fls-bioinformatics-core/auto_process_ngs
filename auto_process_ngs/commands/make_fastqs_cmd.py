@@ -316,6 +316,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Other pipeline settings
     poll_interval = ap.settings.general.poll_interval
+    max_jobs = ap.settings.general.max_concurrent_jobs
 
     # Construct and run pipeline
     make_fastqs = MakeFastqs(ap.params.data_dir,
@@ -366,6 +367,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              envmodules=envmodules,
                              log_dir=ap.log_dir,
                              log_file=pipeline_log,
+                             max_jobs=max_jobs,
                              poll_interval=poll_interval)
 
     # Update the parameters
