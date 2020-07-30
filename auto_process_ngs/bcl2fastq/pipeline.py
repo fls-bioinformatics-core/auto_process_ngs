@@ -1994,8 +1994,9 @@ class RunBcl2Fastq(PipelineTask):
         print("%-22s: %s" % ("Sample sheet",
                              os.path.basename(self.args.sample_sheet)))
         print("%-22s: %s" % ("Output dir",self.args.out_dir))
+        print("%-22s: %s" % ("Create empty Fastqs",self.args.create_empty_fastqs))
         for item,desc in (('bases_mask',"Bases mask"),
-                          ('mismatches',"Mismatches",),
+                          ('mismatches',"Allowed mismatches",),
                           ('ignore_missing_bcl',"Ignore missing bcl"),
                           ('no_lane_splitting',"No lane splitting"),
                           ('minimum_trimmed_read_length',"Min trimmed read len"),
