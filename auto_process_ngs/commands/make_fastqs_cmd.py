@@ -41,7 +41,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 lanes=None,lane_subsets=None,
                 icell8_well_list=None,
                 nprocessors=None,require_bcl2fastq_version=None,
-                bases_mask=None,no_lane_splitting=None,
+                bases_mask=None,no_lane_splitting=False,
                 minimum_trimmed_read_length=None,
                 mask_short_adapter_reads=None,
                 trim_adapters=True,
@@ -52,7 +52,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 per_lane_stats_file=None,
                 analyse_barcodes=True,barcode_analysis_dir=None,
                 force_copy_of_primary_data=False,
-                create_empty_fastqs=None,runner=None,
+                create_empty_fastqs=False,runner=None,
                 icell8_swap_i1_and_i2=False,
                 icell8_reverse_complement=None,
                 cellranger_jobmode=None,
@@ -265,6 +265,30 @@ def make_fastqs(ap,protocol='standard',platform=None,
     if mask_short_adapter_reads is None:
         mask_short_adapter_reads = \
                 BCL2FASTQ_DEFAULTS['mask_short_adapter_reads']
+
+    # No lane splitting
+    if no_lane_splitting is None:
+        # Look for platform-specific setting
+        try:
+            no_lane_splitting = \
+                ap.settings.platform[ap.metadata.platform].no_lane_splitting
+        except (KeyError,AttributeError):
+            pass
+    if no_lane_splitting is None:
+        # Look for default setting
+        no_lane_splitting = ap.settings.bcl2fastq.no_lane_splitting
+
+    # Create empty placeholder Fastqs
+    if create_empty_fastqs is None:
+        # Look for platform-specific setting
+        try:
+            create_empty_fastqs = \
+                ap.settings.platform[ap.metadata.platform].create_empty_fastqs
+        except (KeyError,AttributeError):
+            pass
+    if create_empty_fastqs is None:
+        # Look for default setting
+        create_empty_fastqs = ap.settings.bcl2fastq.create_empty_fastqs
 
     # Require specific bcl2fastq version
     if require_bcl2fastq_version is None:
