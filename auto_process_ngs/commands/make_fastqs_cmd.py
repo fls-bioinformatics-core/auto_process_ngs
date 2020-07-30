@@ -286,6 +286,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         print("No bcl2fastq version explicitly specified")
 
     # Set up pipeline runners
+    default_runner = ap.settings.general.default_runner
     runners = {
         'rsync_runner': ap.settings.runners.rsync,
         'bcl2fastq_runner': ap.settings.runners.bcl2fastq,
@@ -296,6 +297,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
     }
     if runner is not None:
         # Override configured runners
+        default_runner = runner
         for r in runners:
             runner[r] = runner
 
@@ -351,6 +353,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              stats_file=stats_file,
                              per_lane_stats=per_lane_stats_file,
                              nprocessors=nprocessors,
+                             default_runner=default_runner,
                              require_bcl2fastq=require_bcl2fastq_version,
                              cellranger_jobmode=cellranger_jobmode,
                              cellranger_mempercore=cellranger_mempercore,
