@@ -2654,9 +2654,10 @@ class MergeFastqDirs(PipelineFunctionTask):
                 print("Concatenting '%s' Fastqs:" % idx)
                 for fq in fastqs_in:
                     print("- %s" % fq)
-                concat_cmd = Command('concat_fastqs.py')
+                concat_cmd = Command('zcat')
                 concat_cmd.add_args(*fastqs_in)
-                concat_cmd.add_args(fastq_out)
+                concat_cmd.add_args('|','gzip','-c',
+                                    '>',fastq_out)
                 self.add_cmd(PipelineCommandWrapper(
                     "Concatenate %s undetermined Fastqs" % idx,
                     *concat_cmd.command_line))
