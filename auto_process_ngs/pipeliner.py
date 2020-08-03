@@ -2589,7 +2589,6 @@ class PipelineCommand(object):
         prologue = ["echo \"#### COMMAND %s\"" % self._name,
                     "echo \"#### HOSTNAME $HOSTNAME\"",
                     "echo \"#### USER $USER\"",
-                    "echo \"#### CWD $(pwd)\"",
                     "echo \"#### START $(date)\""]
         if envmodules:
             shell += " --login"
@@ -2598,7 +2597,7 @@ class PipelineCommand(object):
                     prologue.append("module load %s" % module)
         if working_dir:
             prologue.append("cd %s" % working_dir)
-            prologue.append("echo CWD now $(pwd)")
+        prologue.append("echo \"#### CWD $(pwd)\"")
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
