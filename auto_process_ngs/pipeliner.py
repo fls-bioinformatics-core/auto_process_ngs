@@ -2564,7 +2564,7 @@ class PipelineCommand(object):
         return sanitize_name(self._name)
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
-                            envmodules=None):
+                            envmodules=None,working_dir=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -2573,6 +2573,8 @@ class PipelineCommand(object):
             the wrapper scripts to
           shell (str): shell to use (defaults to '/bin/bash')
           envmodules (str): list of environment modules to load
+          working_dir (str): explicitly specify the directory
+            the script should be executed in
 
         Returns:
           String: name of the wrapper script.
@@ -2592,6 +2594,9 @@ class PipelineCommand(object):
             for module in envmodules:
                 if module is not None:
                     prologue.append("module load %s" % module)
+        if working_dir:
+            prologue.append("cd %s" % working_dir)
+            prologue.append("echo CWD now $(pwd)")
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",

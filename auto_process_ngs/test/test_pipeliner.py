@@ -1673,6 +1673,46 @@ class TestPipelineCommand(unittest.TestCase):
                          "echo \"#### EXIT_CODE $exit_code\"\n"
                          "exit $exit_code")
 
+    def test_pipelinecommand_with_working_dir(self):
+        """
+        PipelineCommand: check command and wrapper script with working dir
+        """
+        # Subclass PipelineCommand
+        class EchoCmd(PipelineCommand):
+            def init(self,txt):
+                self._txt = txt
+            def cmd(self):
+                return Command(
+                    "echo",
+                    self._txt)
+        # Make an instance
+        cmd = EchoCmd("hello there")
+        # Check name
+        self.assertEqual(cmd.name(),"echocmd")
+        # Check command
+        self.assertEqual(str(cmd.cmd()),"echo hello there")
+        # Check wrapper script file
+        script_file = cmd.make_wrapper_script(
+            scripts_dir=self.working_dir,
+            working_dir="/tmp/command/wd")
+        self.assertTrue(os.path.isfile(script_file))
+        self.assertEqual(os.path.dirname(script_file),
+                         self.working_dir)
+        self.assertEqual(open(script_file,'r').read(),
+                         "#!/bin/bash\n"
+                         "echo \"#### COMMAND EchoCmd\"\n"
+                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                         "echo \"#### USER $USER\"\n"
+                         "echo \"#### CWD $(pwd)\"\n"
+                         "echo \"#### START $(date)\"\n"
+                         "cd /tmp/command/wd\n"
+                         "echo CWD now $(pwd)\n"
+                         "echo 'hello there'\n"
+                         "exit_code=$?\n"
+                         "echo \"#### END $(date)\"\n"
+                         "echo \"#### EXIT_CODE $exit_code\"\n"
+                         "exit $exit_code")
+
 class TestPipelineCommandWrapper(unittest.TestCase):
 
     def test_piplinecommandwrapper(self):
