@@ -2315,7 +2315,8 @@ class PipelineTask(object):
                     self.report("%s" % command.cmd())
                 script_file = command.make_wrapper_script(
                     scripts_dir=scripts_dir,
-                    envmodules=envmodules)
+                    envmodules=envmodules,
+                    working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
                     cmd.add_args('-l')
@@ -2345,7 +2346,8 @@ class PipelineTask(object):
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
                     scripts_dir=scripts_dir,
-                    envmodules=envmodules)
+                    envmodules=envmodules,
+                    working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
                     cmd.add_args('-l')
@@ -2564,7 +2566,7 @@ class PipelineCommand(object):
         return sanitize_name(self._name)
 
     def make_wrapper_script(self,scripts_dir=None,shell="/bin/bash",
-                            envmodules=None):
+                            envmodules=None,working_dir=None):
         """
         Generate a uniquely-named wrapper script to run the command
 
@@ -2573,6 +2575,8 @@ class PipelineCommand(object):
             the wrapper scripts to
           shell (str): shell to use (defaults to '/bin/bash')
           envmodules (str): list of environment modules to load
+          working_dir (str): explicitly specify the directory
+            the script should be executed in
 
         Returns:
           String: name of the wrapper script.
@@ -2585,13 +2589,15 @@ class PipelineCommand(object):
         prologue = ["echo \"#### COMMAND %s\"" % self._name,
                     "echo \"#### HOSTNAME $HOSTNAME\"",
                     "echo \"#### USER $USER\"",
-                    "echo \"#### CWD $(pwd)\"",
                     "echo \"#### START $(date)\""]
         if envmodules:
             shell += " --login"
             for module in envmodules:
                 if module is not None:
                     prologue.append("module load %s" % module)
+        if working_dir:
+            prologue.append("cd %s" % working_dir)
+        prologue.append("echo \"#### CWD $(pwd)\"")
         epilogue = ["exit_code=$?",
                     "echo \"#### END $(date)\"",
                     "echo \"#### EXIT_CODE $exit_code\"",
