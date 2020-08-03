@@ -2315,7 +2315,8 @@ class PipelineTask(object):
                     self.report("%s" % command.cmd())
                 script_file = command.make_wrapper_script(
                     scripts_dir=scripts_dir,
-                    envmodules=envmodules)
+                    envmodules=envmodules,
+                    working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
                     cmd.add_args('-l')
@@ -2345,7 +2346,8 @@ class PipelineTask(object):
                     self.report("%s" % batch_cmd.cmd())
                 script_file = batch_cmd.make_wrapper_script(
                     scripts_dir=scripts_dir,
-                    envmodules=envmodules)
+                    envmodules=envmodules,
+                    working_dir=self._working_dir)
                 cmd = Command('/bin/bash')
                 if envmodules:
                     cmd.add_args('-l')
