@@ -292,6 +292,10 @@ class MakeFastqs(Pipeline):
                 adapter_sequence_read2 = sample_sheet.settings['AdapterRead2']
             except KeyError:
                 adapter_sequence_read2 = ""
+
+        # ICELL8 well list
+        if icell8_well_list:
+            icell8_well_list = os.path.abspath(icell8_well_list)
         
         # Defaults
         self._bases_mask = bases_mask
