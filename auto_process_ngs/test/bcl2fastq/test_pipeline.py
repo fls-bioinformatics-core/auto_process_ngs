@@ -1776,6 +1776,12 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 7,KL7,KL7,,,N701,GCCAATAT,S502,TCTTTCCC,KL,
 8,MN8,MN8,,,N701,GCCAATAT,S503,TCTTTCCC,MN,
 """)
+        # Well list file
+        well_list = os.path.join(self.wd,"WellList.txt")
+        with open(well_list,'wt') as fp:
+            fp.write("""Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
+0	57	True	True	Smpl1	TAACCAAG+TAAGGCGA	Good	1	0	105		33		3465		1		1	1	1	1	10	10	A1		img1.tif	img2.tif
+""")
         # Create mock bcl2fastq and cellranger
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
@@ -1823,7 +1829,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(1,2,3,),protocol="standard"),
                            subset(lanes=(4,),protocol="mirna"),
                            subset(lanes=(5,),protocol="icell8"),
-                           subset(lanes=(6,),protocol="icell8_atac"),
+                           subset(lanes=(6,),protocol="icell8_atac",
+                                  icell8_well_list=well_list),
                            subset(lanes=(7,),protocol="10x_chromium_sc"),
                            subset(lanes=(8,),protocol="10x_atac")),
                        analyse_barcodes=False)
@@ -1915,6 +1922,12 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 7,KL7,KL7,,,N701,GCCAATAT,S502,TCTTTCCC,KL,
 8,MN8,MN8,,,N701,GCCAATAT,S503,TCTTTCCC,MN,
 """)
+        # Well list file
+        well_list = os.path.join(self.wd,"WellList.txt")
+        with open(well_list,'wt') as fp:
+            fp.write("""Row	Col	Candidate	For dispense	Sample	Barcode	State	Cells1	Cells2	Signal1	Signal2	Size1	Size2	Integ Signal1	Integ Signal2	Circularity1	Circularity2	Confidence	Confidence1	Confidence2	Dispense tip	Drop index	Global drop index	Source well	Sequencing count	Image1	Image2
+0	57	True	True	Smpl1	TAACCAAG+TAAGGCGA	Good	1	0	105		33		3465		1		1	1	1	1	10	10	A1		img1.tif	img2.tif
+""")
         # Create mock bcl2fastq
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
@@ -1959,7 +1972,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                            subset(lanes=(1,2,3,),protocol="standard"),
                            subset(lanes=(4,),protocol="mirna"),
                            subset(lanes=(5,),protocol="icell8"),
-                           subset(lanes=(6,),protocol="icell8_atac"),
+                           subset(lanes=(6,),protocol="icell8_atac",
+                                  icell8_well_list=well_list),
                            subset(lanes=(7,),protocol="10x_chromium_sc"),
                            subset(lanes=(8,),protocol="10x_atac")),
                        analyse_barcodes=False)

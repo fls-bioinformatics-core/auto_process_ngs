@@ -493,16 +493,10 @@ class MakeFastqs(Pipeline):
                 self._update_subset(s,
                                     minimum_trimmed_read_length=21,
                                     mask_short_adapter_reads=0)
-                if not s['icell8_well_list']:
-                    raise Exception("No ICELL8 well list assigned for "
-                                    "lanes %s" % s['lanes'])
             elif protocol == 'icell8_atac':
                 # ICELL8 single-cell ATAC-seq
                 self._update_subset(s,
                                     create_fastq_for_index_read=True)
-                if not s['icell8_well_list']:
-                    raise Exception("No ICELL8 well list assigned for "
-                                    "lanes %s" % s['lanes'])
             elif protocol == '10x_chromium_sc':
                 # 10xGenomics Chromium SC
                 # Turn off barcode analysis
@@ -529,6 +523,15 @@ class MakeFastqs(Pipeline):
                                     **{ kw: s[kw] for kw in s
                                         if (kw != 'lanes' and
                                             kw != 'protocol') })
+
+        # Perform checks for subsets
+        for s in self.subsets:
+            if s['protocol'] == 'icell8_atac':
+                # ICELL8 ATAC
+                # Check well list file is defined
+                if not s['icell8_well_list']:
+                    raise Exception("No ICELL8 well list assigned for "
+                                    "lanes %s" % s['lanes'])
 
         # Reset lanes for single subset which implicitly
         # includes all lanes in the run
