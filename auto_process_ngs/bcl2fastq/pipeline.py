@@ -1460,7 +1460,7 @@ class MakeFastqs(Pipeline):
             clean_up_on_completion = True
         working_dir = os.path.abspath(working_dir)
         if not os.path.exists(working_dir):
-            mkdir(working_dir)
+            os.mkdir(working_dir)
 
         # Output directory
         if out_dir is None:
