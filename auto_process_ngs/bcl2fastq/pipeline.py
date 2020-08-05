@@ -2244,7 +2244,8 @@ class DemultiplexIcell8Atac(PipelineTask):
                              (".L%03d" % illumina_fq.lane_number
                               if illumina_fq.lane_number else ""))
             # Set up temporary output dir
-            tmp_out_dir = os.path.abspath("__demultiplex%s.work" % name)
+            tmp_out_dir = os.path.abspath("demultiplex_icell8_atac.%s.work"
+                                          % name)
             # Build demultiplexer command
             demultiplex_cmd = Command('demultiplex_icell8_atac.py',
                                       '--mode=samples',
@@ -2282,21 +2283,19 @@ class DemultiplexIcell8Atac(PipelineTask):
             for name in self.tmp_out_dirs:
                 # Directory with demultiplexed Fastqs
                 tmp_out_dir = self.tmp_out_dirs[name]
-                print("Collecting data from %s" % tmp_out_dir)
+                print("Collecting Fastqs from %s:" % tmp_out_dir)
                 # Copy (hard link) fastqs
-                for f in os.listdir(tmp_out_dir):
-                    if f.endswith(".fastq.gz"):
-                        # Undetermined goes to top level
-                        if f.startswith("Undetermined_S0_"):
-                            os.link(os.path.join(tmp_out_dir,f),
-                                    os.path.join(bcl2fastq_dir,f))
-                        else:
-                            os.link(os.path.join(tmp_out_dir,f),
-                                    os.path.join(bcl2fastq_dir,
-                                                 project.name,f))
+                for fq in [f for f in os.listdir(tmp_out_dir)
+                           if f.endswith(".fastq.gz")]:
+                    print("-- %s" % fq)
+                    os.link(os.path.join(tmp_out_dir,fq),
+                            os.path.join(bcl2fastq_dir,
+                                         project.name,fq))
                 # Copy the reports and JSON file
+                print("Collecting reports from %s:" % tmp_out_dir)
                 for f in ('icell8_atac_stats.xlsx',
                           'icell8_atac_stats.json'):
+                    print("-- %s" % f)
                     if len(self.tmp_out_dirs) > 1:
                         ff = "%s.%s%s" % (os.path.splitext(f)[0],
                                           name,
@@ -2305,6 +2304,14 @@ class DemultiplexIcell8Atac(PipelineTask):
                         ff = f
                     os.link(os.path.join(tmp_out_dir,f),
                             os.path.join(bcl2fastq_dir,'Reports',ff))
+            # Copy "undetermined" Fastqs to top level
+            print("Collecting 'undetermined' Fastqs from %s:" %
+                  self.args.fastq_dir)
+            for fq in [f for f in os.listdir(self.args.fastq_dir)
+                       if f.startswith("Undetermined_S0_")]:
+                print("-- %s" % fq)
+                os.link(os.path.join(self.args.fastq_dir,fq),
+                        os.path.join(bcl2fastq_dir,fq))
             # Move outputs to final location
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(bcl2fastq_dir,self.args.out_dir)
