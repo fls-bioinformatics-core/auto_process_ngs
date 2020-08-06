@@ -807,6 +807,7 @@ except ImportError:
 from functools import reduce
 from bcftbx.utils import mkdir
 from bcftbx.utils import AttributeDictionary
+from bcftbx.JobRunner import ResourceLock
 from bcftbx.JobRunner import SimpleJobRunner
 from .applications import Command
 from .simple_scheduler import SimpleScheduler
@@ -1112,6 +1113,7 @@ class Pipeline(object):
         self._envmodules = dict()
         self._scheduler = None
         self._log_file = None
+        self._lock_manager = None
         self._exit_on_failure = PipelineFailure.IMMEDIATE
         # Initialise default runner
         self._runners['default'] = PipelineParam(value=SimpleJobRunner())
@@ -1566,7 +1568,7 @@ class Pipeline(object):
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
             poll_interval=5,params=None,runners=None,envmodules=None,
-            batch_size=None,verbose=False,
+            batch_size=None,verbose=False,use_locking=True,
             exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
@@ -1607,6 +1609,8 @@ class Pipeline(object):
             one command per job)
           verbose (bool): if True then report additional
             information for diagnostics
+          use_locking (book): if True then lock invocations
+            of task methods
           exit_on_failure (int): either IMMEDIATE (any
             task failures cause immediate termination of
             of the pipeline; this is the default) or
@@ -1650,6 +1654,9 @@ class Pipeline(object):
             sched = self.start_scheduler(runner=default_runner,
                                          max_concurrent=max_jobs,
                                          poll_interval=poll_interval)
+        # Deal with lock manager
+        if use_locking:
+            self._lock_manager = ResourceLock()
         # Deal with log directory
         if log_dir is None:
             log_dir = "%s.logs" % self._id
@@ -1774,6 +1781,7 @@ class Pipeline(object):
                     if 'verbose' not in kws:
                         kws['verbose'] = verbose
                     kws['log_file'] = self._log_file
+                    kws['lock_manager'] = self._lock_manager
                     for k in kws:
                         # Resolve keywords which are PipelineParams etc
                         # and replace with the final value
@@ -1962,6 +1970,8 @@ class PipelineTask(object):
         self._log_file = None
         # Output
         self._output = AttributeDictionary()
+        # Locking
+        self._lock_manager = None
         # Deal with subclass arguments
         try:
             self._callargs = inspect.getcallargs(self.init,*args,**kws)
@@ -2102,6 +2112,11 @@ class PipelineTask(object):
           kws (dictionary): keyworded parameters to invoke
             function with
         """
+        # Get the lock (if lock manager exists)
+        if self._lock_manager:
+            lock = self._lock_manager.acquire("task.invoke")
+        else:
+            lock = None
         # Switch to working directory, if defined
         if self._working_dir is not None:
             current_dir = os.getcwd()
@@ -2135,6 +2150,9 @@ class PipelineTask(object):
         # Switch back to original directory
         if self._working_dir is not None:
             os.chdir(current_dir)
+        # Release the lock
+        if lock:
+            self._lock_manager.release(lock)
 
     def report_diagnostics(self,s):
         """
@@ -2258,7 +2276,7 @@ class PipelineTask(object):
     def run(self,sched=None,runner=None,envmodules=None,working_dir=None,
             log_dir=None,scripts_dir=None,log_file=None,wait_for=(),
             asynchronous=True,poll_interval=5,batch_size=None,
-            verbose=False):
+            lock_manager=None,verbose=False):
         """
         Run the task
 
@@ -2291,6 +2309,7 @@ class PipelineTask(object):
             each task in batches, with each batch running
             this many commands at a time (default is to run
             one command per job)
+          lock_manager (ResourceLock): inter-task lock manager
           verbose (bool): if True then report additional
             information for diagnostics
         """
@@ -2304,6 +2323,8 @@ class PipelineTask(object):
             log_dir = self._working_dir
         if log_file:
             self._log_file = os.path.abspath(log_file)
+        if lock_manager:
+            self._lock_manager = lock_manager
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
