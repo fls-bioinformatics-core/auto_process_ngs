@@ -61,7 +61,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
                 cellranger_jobinterval=None,
                 cellranger_localcores=None,
                 cellranger_localmem=None,
-                cellranger_ignore_dual_index=False):
+                cellranger_ignore_dual_index=False,
+                verbose=False,working_dir=None):
     """
     Create and summarise FASTQ files
 
@@ -176,6 +177,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
       cellranger_ignore_dual_index (bool): (optional) on a dual-indexed
          flowcell where the second index was not used for the 10x
          sample, ignore it (10xGenomics Chromium SC data only)
+      working_dir (str): path to a working directory (defaults to
+         temporary directory in the current directory)
+      verbose (bool): if True then report additional information for
+         pipeline diagnostics
     """
     # Report protocol
     print("Protocol              : %s" % protocol)
@@ -392,7 +397,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
                              log_dir=ap.log_dir,
                              log_file=pipeline_log,
                              max_jobs=max_jobs,
-                             poll_interval=poll_interval)
+                             poll_interval=poll_interval,
+                             working_dir=working_dir,
+                             verbose=verbose)
 
     # Update the parameters
     ap.params['primary_data_dir'] = make_fastqs.output.primary_data_dir

@@ -542,6 +542,15 @@ def add_make_fastqs_command(cmdparser):
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
+    # Advanced options
+    advanced = p.add_argument_group('Advanced/debugging options')
+    advanced.add_argument('--verbose',action="store_true",
+                          dest="verbose",default=False,
+                          help="run pipeline in 'verbose' mode")
+    advanced.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
 
 def add_setup_analysis_dirs_command(cmdparser):
     """Create a parser for the 'setup_analysis_dirs' command
@@ -1218,7 +1227,9 @@ def make_fastqs(args):
         cellranger_jobinterval=args.job_interval,
         cellranger_localcores=args.local_cores,
         cellranger_localmem=args.local_mem,
-        cellranger_ignore_dual_index=args.ignore_dual_index)
+        cellranger_ignore_dual_index=args.ignore_dual_index,
+        working_dir=args.working_dir,
+        verbose=args.verbose)
 
 def setup_analysis_dirs(args):
     """
