@@ -79,6 +79,8 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
     for f in expected_outputs(project,qc_dir,
                               fastq_strand_conf=
                               os.path.join(qc_dir,"fastq_strand.conf"),
+                              cellranger_refdata=
+                              project.qc_info(qc_dir).cellranger_refdata,
                               qc_protocol=qc_protocol):
         if f.endswith('.zip'):
             # Exclude .zip file
