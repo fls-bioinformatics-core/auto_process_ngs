@@ -386,13 +386,27 @@ class AutoProcess(object):
 
     def load_project_metadata(self,project_metadata_file='projects.info',
                               check=True,update=False):
-        # Load data from 'projects.info' metadata file which lists
-        # and describes projects
-        # check: if True then check existing metadata for consistency with fastq files
-        # update: if True then update inconsistent metadata (i.e. add missing projects
-        #         and remove ones that are inconsistent); implies 'check=True'
+        """
+        Load data from projects metadata file
+
+        Loads data from the projects metadata file, which lists
+        projects in the auto-process directory along with
+        information on samples, associated organism and library
+        etc.
+
+        Arguments:
+          project_metadata_file (str): name of the metadata file
+            relative to the analysis directory (default:
+            'projects.info')
+          check (bool): if True then check existing metadata for
+            consistency with fastq files
+          update (bool): if True then update inconsistent metadata
+            (i.e. add missing projects and remove ones that are
+            inconsistent); implies 'check=True'
+        """
         if project_metadata_file is not None:
-            filen = os.path.join(self.params.analysis_dir,project_metadata_file)
+            filen = os.path.join(self.params.analysis_dir,
+                                 project_metadata_file)
         else:
             filen = None
         logging.debug("Project metadata file: %s" % filen)
@@ -402,7 +416,10 @@ class AutoProcess(object):
             logging.warning("Failed to load data from bcl2fastq output "
                             "(ignored): %s" % ex)
             illumina_data = None
-        projects_from_dirs = self.get_analysis_projects_from_dirs()
+        projects_from_dirs = [p for p in
+                              self.get_analysis_projects_from_dirs()
+                              if (p.is_analysis_dir and
+                                  p.name != "undetermined")]
         if filen is not None and os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
