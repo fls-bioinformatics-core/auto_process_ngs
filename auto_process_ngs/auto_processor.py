@@ -899,7 +899,7 @@ class AutoProcess(object):
                 projects.append(undetermined_analysis)
         return projects
 
-    def get_analysis_projects_from_dirs(self,pattern=None):
+    def get_analysis_projects_from_dirs(self,pattern=None,strict=False):
         """
         Return a list of AnalysisProjects in the analysis directory
 
@@ -919,6 +919,9 @@ class AutoProcess(object):
         Arguments:
           pattern (str): optional pattern to select a subset
             of projects (default: select all projects)
+          strict (bool): if True then apply strict checks on
+            each discovered project directory before adding it
+            to the list (default: don't apply strict checks)
 
         Returns:
           List: list of AnalysisProject instances.
@@ -944,13 +947,22 @@ class AutoProcess(object):
             # Try loading as a project
             test_project = AnalysisProject(
                 dirn,os.path.join(self.analysis_dir,dirn))
-            if test_project.is_analysis_dir:
-                logging.debug("* %s: analysis directory" % dirn)
-                if bcf_utils.name_matches(test_project.name,
-                                              pattern):
-                    projects.append(test_project)
+            if strict:
+                # Apply strict checks
+                if not test_project.is_analysis_dir:
+                    logging.debug("* %s: rejected (failed strict checks)"
+                                  % dirn)
+                    continue
             else:
-                logging.debug("* %s: rejected" % dirn)
+                # Basic check: are there any samples?
+                if not len(test_project.samples):
+                    logging.debug("* %s: rejected (no samples)" % dirn)
+                    continue
+            # Passed checks
+            logging.debug("* %s: analysis directory" % dirn)
+            if bcf_utils.name_matches(test_project.name,
+                                      pattern):
+                projects.append(test_project)
         return projects
 
     def undetermined(self):

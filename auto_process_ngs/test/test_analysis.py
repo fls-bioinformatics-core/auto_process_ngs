@@ -10,6 +10,7 @@ import pickle
 import cloudpickle
 from bcftbx.JobRunner import SimpleJobRunner,GEJobRunner
 from bcftbx.utils import find_program
+from bcftbx.mock import MockIlluminaData
 from auto_process_ngs.mock import MockAnalysisDirFactory
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.applications import Command
@@ -993,6 +994,60 @@ class TestAnalysisProject(unittest.TestCase):
         project.info.samples = '2 samples (PJB1-A, PJB1-B)'
         self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         project.info.save()
+
+    def test_is_analysis_dir(self):
+        """AnalysisProject: 'is_analysis_dir' correctly identifies dirs
+        """
+        # Set up and test example directories
+        # Standard project
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        self.assertTrue(AnalysisProject('PJB',
+                                        os.path.join(self.dirn,'PJB'))\
+                                        .is_analysis_dir)
+        # Project with README.info file should fail
+        self.make_mock_project_dir(
+            'PJB_no_readme',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        os.remove(os.path.join(self.dirn,'PJB_no_readme','README.info'))
+        self.assertFalse(AnalysisProject('PJB',
+                                         os.path.join(self.dirn,
+                                                      'PJB_no_readme'))\
+                                         .is_analysis_dir)
+        # Directory with bcl2fastq output subdirectory
+        mock_bcl2fastq = MockIlluminaData(
+            '200813_NB01234_0069_ABCDXXX','bcl2fastq2',
+            unaligned_dir="bcl2fastq",
+            top_dir=self.dirn)
+        mock_bcl2fastq.add_fastq_batch('PJB','PJB1-A','PJB1-A_ACAGTG',
+                                       lanes=(1,2))
+        mock_bcl2fastq.add_undetermined(lanes=(1,2))
+        mock_bcl2fastq.create()
+        self.assertFalse(AnalysisProject('200813_NB01234_0069_ABCDXXX',
+                                        os.path.join(
+                                            self.dirn,
+                                            '200813_NB01234_0069_ABCDXXX'))\
+                                        .is_analysis_dir)
+        # Directory with bcl2fastq output subdirectory and README file
+        with open(os.path.join(self.dirn,
+                               '200813_NB01234_0069_ABCDXXX',
+                               'README.info'),'wt') as fp:
+            fp.write("This is some random readme content\n")
+        self.assertFalse(AnalysisProject('200813_NB01234_0069_ABCDXXX',
+                                        os.path.join(
+                                            self.dirn,
+                                            '200813_NB01234_0069_ABCDXXX'))\
+                                        .is_analysis_dir)
+        # Bcl2fastq output directory
+        self.assertFalse(AnalysisProject('bcl2fastq2',
+                                        os.path.join(
+                                            self.dirn,
+                                            '200813_NB01234_0069_ABCDXXX',
+                                            'bcl2fastq2'))\
+                                        .is_analysis_dir)
 
 class TestAnalysisSample(unittest.TestCase):
     """Tests for the AnalysisSample class
