@@ -873,10 +873,28 @@ class AnalysisProject(object):
 
     @property
     def is_analysis_dir(self):
-        """Determine if directory really is an analysis project
-
         """
-        return len(self.samples) > 0
+        Determine if directory really is an analysis project
+
+        This is a strict test:
+
+        - the project must contain Fastqs
+        - the project must contain a valid metadata file
+        """
+        if not self.fastqs:
+            # No Fastqs
+            return False
+        if not os.path.exists(self.info_file):
+            # No metadata file
+            return False
+        try:
+            AnalysisProjectInfo().load(self.info_file,
+                                       fail_on_error=True)
+        except Exception:
+            # Failed to load valid metadata file
+            return False
+        # All tests passed
+        return True
 
     @property
     def qc_dir(self):
