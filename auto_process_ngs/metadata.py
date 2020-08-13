@@ -137,7 +137,7 @@ class MetadataDict(bcf_utils.AttributeDictionary):
     def __iter__(self):
         return iter(self.__key_order)
 
-    def load(self,filen,strict=True):
+    def load(self,filen,strict=True,fail_on_error=False):
         """Load key-value pairs from a tab-delimited file
         
         Loads the key-value pairs from a previously created
@@ -149,10 +149,15 @@ class MetadataDict(bcf_utils.AttributeDictionary):
         Arguments:
           filen (str): name of the tab-delimited file with
             key-value pairs
-          strict (boolean): if True (default) then discard
+          strict (bool): if True (default) then discard
             items in the input file which are missing from
             the definition; if False then add them to the
             definition.
+          fail_on_error (bool): if True then raise an
+            exception if the file contains invalid content
+            (if 'strict' is also specified then this
+            includes any unrecognised keys); default is
+            to warn and then ignore these errors.
 
         """
         self.__filen = filen
@@ -177,8 +182,11 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         break
                 if not found_key:
                     if strict:
-                        logger.debug("Unrecognised key in %s: %s"
-                                     % (filen,attr))
+                        logger.warning("Unrecognised key in %s: %s"
+                                       % (filen,attr))
+                        if fail_on_error:
+                            raise Exception("%s: failed to load: bad key"
+                                            % filen)
                     else:
                         logger.debug("Adding key from %s: %s"
                                      % (filen,attr))
@@ -187,6 +195,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                         self[attr] = value
             except IndexError:
                 logger.warning("Bad line in %s: %s" % (filen,line))
+                if fail_on_error:
+                    raise Exception("%s: failed to load: bad line"
+                                    % filen)
 
     def save(self,filen=None):
         """Save metadata to tab-delimited file

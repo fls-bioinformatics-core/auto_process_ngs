@@ -186,6 +186,58 @@ class TestMetadataDict(unittest.TestCase):
         self.assertEqual(unpickled.valediction,'goodbye')
         self.assertEqual(unpickled.chit_chat,'stuff')
 
+    def test_fail_on_error(self):
+        """
+        Metadata: check 'fail_on_error' operates correctly for loading
+        """
+        # Set up a metadata dictionary
+        metadata = MetadataDict(attributes={'salutation':'salutation',
+                                            'valediction': 'valediction'})
+        # Create a valid file
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Load into the dictionary and check that all
+        # items are present
+        metadata.load(self.metadata_file,
+                      strict=False,
+                      fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Load into the dictionary in 'strict' mode
+        metadata.load(self.metadata_file,
+                      strict=True,
+                      fail_on_error=True)
+        self.assertEqual(metadata.salutation,'hello')
+        self.assertEqual(metadata.valediction,'goodbye')
+        # Create a valid file with an additional item
+        self.metadata_file = tempfile.mkstemp()[1]
+        contents = ('salutation\thello',
+                    'valediction\tgoodbye',
+                    'chit_chat\tstuff')
+        with open(self.metadata_file,'wt') as fp:
+            for line in contents:
+                fp.write("%s\n" % line)
+        # Loading should raise exception when 'strict'
+        # is also turned on
+        self.assertRaises(Exception,
+                          metadata.load,
+                          self.metadata_file,
+                          strict=True,
+                          fail_on_error=True)
+        # Loading an invalid file should raise exception
+        self.metadata_file = tempfile.mkstemp()[1]
+        with open(self.metadata_file,'wt') as fp:
+            fp.write("This is not valid content\n")
+        self.assertRaises(Exception,
+                          metadata.load,
+                          self.metadata_file,
+                          strict=False,
+                          fail_on_error=True)
+
 class TestAnalysisDirParameters(unittest.TestCase):
     """Tests for the AnalysisDirParameters class
     """
