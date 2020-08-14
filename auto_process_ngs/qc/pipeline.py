@@ -94,7 +94,7 @@ class QCPipeline(Pipeline):
         Pipeline.__init__(self,name="QC")
 
         # Define parameters
-        self.add_param('nthreads',type=int,value=1)
+        self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_chemistry',type=str)
@@ -418,7 +418,8 @@ class QCPipeline(Pipeline):
 
         Arguments:
           nthreads (int): number of threads/processors to
-            use for QC jobs (defaults to 1)
+            use for QC jobs (defaults to number of slots set
+            in job runners)
           fastq_strand_indexes (dict): mapping of organism
             IDs to directories with STAR index
           fastq_subset (int): explicitly specify
