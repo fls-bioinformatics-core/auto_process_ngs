@@ -389,6 +389,9 @@ used to configure the scheduler, specifically:
 
 * ``max_jobs``: this sets the maximum number of concurrent
   jobs that the scheduler will run (defaults to 1)
+* ``max_slots``: this sets the maximum number of concurrent
+  CPUs (aka "slots") that the scheduler will allocate work
+  for (defaults to no limit).
 * ``poll_interval``: the time interval that the scheduler will
   used when checking the status of running jobs (defaults to
   5 seconds)
@@ -459,6 +462,82 @@ For example:
 Any runner names that don't have associated job runner
 instances will use the default runner defined via the
 ``default_runner`` argument.
+
+Dynamically setting number of CPUs/threads via job runners
+----------------------------------------------------------
+
+When job runners are created they can have a maximum number
+of available CPUs (aka "slots") associated with them.
+
+For ``SimpleJobRunner``s this has to be set explicitly via
+the ``nslots`` argument, for example:
+
+::
+
+    runner =  SimpleJobRunner(nslots=8)
+
+By default only a single slot is allocated. (For
+``GEJobRunners`` the number of slots is set implicitly.)
+
+The number of slots can then be accessed at runtime, so that
+jobs run within a task use the appropriate number of CPUs
+dynamically, by using the ``runner_nslots`` method.
+
+For standard ``PipelineTask`` classes, this should be done
+when constructing commands within the ``setup`` method. For
+example: ``bowtie2`` takes a ``--threads`` option which
+tells the program how many threads it should use. A minimal
+task to run ``bowtie2`` with dynamically assigned number of
+threads might look like:
+
+::
+
+   class RunBowtie2(PipelineTask):
+        def init(self,fastq,index_basename,sam_out):
+            pass
+        def setup(self):
+            self.add_cmd(
+                PipelineCommandWrapper("Run bowtie",
+                                       "bowtie2",
+                                       "-x",self.args.index_basename,
+                                       "-U",self.args.fastq,
+                                       "-S",self.args.sam_out,
+                                       "--threads",self.runner_nslots)
+
+For ``PipelineFunctionTask`` classes, the ``runner_nslots``
+method should be called from within the function being
+executed. For example:
+
+::
+
+   class RunBowtie2(PipelineTask):
+        def init(self,fastq,index_basename,sam_out):
+            pass
+        def setup(self):
+            self.add_call("Run bowtie",
+                          self.run_bowtie,
+                          self.args.fastq,
+                          self.args.index_basename,
+                          self.args.sam_out)
+        def run_bowtie(self,fastq,index_basename,sam_out):
+            bowtie_cmd = Command("bowtie2",
+                                 "-x",index_basename,
+                                 "-U",fastq,
+                                 "-S",sam_out,
+                                 "--threads",self.runner_nslots)
+            bowtie_cmd.run_subprocess()
+
+.. note::
+
+   The slots are obtained from the value of the
+   ``BCFTBX_RUNNER_NSLOTS`` environment variable, which
+   is set at runtime by the job runner. So it is possible
+   to access this directly from any code which is executed
+   as part of a job.
+
+When using dynamic CPU assignment with ``SimpleJobRunners``,
+it may also be worth considering using the ``max_slots``
+parameter when running the pipeline.
 
 Dealing with stdout from tasks
 ------------------------------
@@ -2064,16 +2143,6 @@ class PipelineTask(object):
         of CPUs available to the command as set in the
         job runner which is used at runtime.
 
-        For example:
-
-        >>> cmd = PipelineCommandWrapper(
-        ...     "Run bowtie",
-        ...     "bowtie2",
-        ...     "-x",self.args.index_basename,
-        ...     "-U",self.args.fastq,
-        ...     "-S",self.args.sam_out,
-        ...     "--threads",self.runner_nslots)
-
         Returns:
           String: environment variable to get slots from.
         """
@@ -2549,7 +2618,7 @@ class PipelineFunctionTask(PipelineTask):
 
         This returns the number of CPUs available at
         runtime by fetching the value of the
-        `BCFTBX_RUNNER_NSLOTS` environment variable.
+        environment variable set by the job runner.
 
         It should be invoked from within the function
         being run.
