@@ -1093,7 +1093,7 @@ class RunCellrangerCount(PipelineTask):
             cellranger (default: None)
           cellranger_localcores (int): maximum number of cores
             cellranger can request in jobmode 'local'
-            (default: None)
+            (defaults to number of slots set in runner)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
           qc_protocol (str): QC protocol to use
@@ -1135,12 +1135,21 @@ class RunCellrangerCount(PipelineTask):
                 cmd.add_args("--chemistry",self.args.chemistry)
             elif cellranger_exe == "cellranger-atac":
                 cmd.add_args("--reference",self.args.reference_data_path)
+            # Set number of local cores
+            if self.args.cellranger_localcores:
+                localcores = self.args.cellranger_localcores
+            elif self.args.cellranger_jobmode == "local":
+                # Get number of local cores from runner
+                localcores = self.runner_nslots
+            else:
+                # Not in jobmode 'local'
+                localcores = None
             add_cellranger_args(cmd,
                                 jobmode=self.args.cellranger_jobmode,
                                 mempercore=self.args.cellranger_mempercore,
                                 maxjobs=self.args.cellranger_maxjobs,
                                 jobinterval=self.args.cellranger_jobinterval,
-                                localcores=self.args.cellranger_localcores,
+                                localcores=localcores,
                                 localmem=self.args.cellranger_localmem)
             self.add_cmd(cmd)
     def finish(self):
