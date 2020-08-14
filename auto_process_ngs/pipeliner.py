@@ -2054,6 +2054,31 @@ class PipelineTask(object):
                 stdout.append(fp.read())
         return ''.join(stdout)
 
+    @property
+    def runner_nslots(self):
+        """
+        Get number of slots (i.e. available CPUs) set by runner
+
+        This returns the code to use when constructing
+        commands in task `setup`, to access the number
+        of CPUs available to the command as set in the
+        job runner which is used at runtime.
+
+        For example:
+
+        >>> cmd = PipelineCommandWrapper(
+        ...     "Run bowtie",
+        ...     "bowtie2",
+        ...     "-x",self.args.index_basename,
+        ...     "-U",self.args.fastq,
+        ...     "-S",self.args.sam_out,
+        ...     "--threads",self.runner_nslots)
+
+        Returns:
+          String: environment variable to get slots from.
+        """
+        return "$BCFTBX_RUNNER_NSLOTS"
+
     def name(self):
         """
         Get the name of the task
@@ -2516,6 +2541,23 @@ class PipelineFunctionTask(PipelineTask):
         PipelineTask.__init__(self,_name,*args,**kws)
         self._dispatchers = []
         self._result = None
+
+    @property
+    def runner_nslots(self):
+        """
+        Get number of slots (i.e. available CPUs) set by runner
+
+        This returns the number of CPUs available at
+        runtime by fetching the value of the
+        `BCFTBX_RUNNER_NSLOTS` environment variable.
+
+        It should be invoked from within the function
+        being run.
+
+        Returns:
+          String: number of slots.
+        """
+        return os.environ["BCFTBX_RUNNER_NSLOTS"]
 
     def add_call(self,name,f,*args,**kwds):
         """
