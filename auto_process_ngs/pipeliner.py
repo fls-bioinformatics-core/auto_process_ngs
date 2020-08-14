@@ -1205,13 +1205,14 @@ class Pipeline(object):
         return 1
 
     def start_scheduler(self,runner=None,max_concurrent=1,
-                        poll_interval=5):
+                        max_slots=None,poll_interval=5):
         """
         Internal: instantiate and start local scheduler
         """
         if self._scheduler is None:
             sched = SimpleScheduler(runner=runner,
                                     max_concurrent=max_concurrent,
+                                    max_slots=max_slots,
                                     poll_interval=poll_interval,
                                     reporter=SchedulerReporter())
             sched.start()
@@ -1567,9 +1568,9 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,params=None,runners=None,envmodules=None,
-            batch_size=None,verbose=False,use_locking=True,
-            exit_on_failure=PipelineFailure.IMMEDIATE,
+            max_slots=None,poll_interval=5,params=None,runners=None,
+            envmodules=None,batch_size=None,verbose=False,
+            use_locking=True,exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
         Run the tasks in the pipeline
@@ -1591,6 +1592,10 @@ class Pipeline(object):
             concurrent jobs in scheduler (defaults to 1;
             ignored if a scheduler is provided via 'sched'
             argument)
+          max_slots (int): optional maximum number of 'slots'
+            (i.e. concurrent threads or maximum number of
+            CPUs) available to the scheduler (defaults to
+            no limit)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (if scheduler not
             provided via the 'sched' argument), and to use
@@ -1653,6 +1658,7 @@ class Pipeline(object):
             # Create and start a scheduler
             sched = self.start_scheduler(runner=default_runner,
                                          max_concurrent=max_jobs,
+                                         max_slots=max_slots,
                                          poll_interval=poll_interval)
         # Deal with lock manager
         if use_locking:
@@ -1696,7 +1702,12 @@ class Pipeline(object):
         self.report("-- verbose output   : %s" % ('yes'
                                                   if verbose
                                                   else 'no'))
-        self.report("-- concurrent jobs  : %s" % max_jobs)
+        self.report("-- concurrent jobs  : %s" % (max_jobs
+                                                  if max_jobs else
+                                                  'unlimited'))
+        self.report("-- maximum slots    : %s" % (max_slots
+                                                  if max_slots else
+                                                  'unlimited'))
         self.report("-- polling interval : %ss" % ('<not set>'
                                                    if poll_interval is None
                                                    else poll_interval))
