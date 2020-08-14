@@ -870,7 +870,7 @@ class RunFastqStrand(PipelineTask):
     Run the fastq_strand.py utility
     """
     def init(self,fastq_pairs,qc_dir,fastq_strand_conf,
-             fastq_strand_subset=None,nthreads=1,
+             fastq_strand_subset=None,nthreads=None,
              qc_protocol=None):
         """
         Initialise the RunFastqStrand task.
@@ -887,7 +887,8 @@ class RunFastqStrand(PipelineTask):
           fastq_strand_subset (int): explicitly specify
             the subset size for running fastq_strand
           nthreads (int): number of threads/processors to
-            use (defaults to 1)
+            use (defaults to number of slots set in job
+            runner)
           qc_protocol (str): QC protocol to use
         """
         pass
@@ -904,13 +905,16 @@ class RunFastqStrand(PipelineTask):
                 "Run fastq_strand.py for %s" %
                 os.path.basename(fastq_pair[0]),
                 'fastq_strand.py',
-                '-n',self.args.nthreads,
                 '--conf',self.args.fastq_strand_conf,
                 '--outdir',
                 os.path.abspath(self.args.qc_dir))
             if self.args.fastq_strand_subset:
                 cmd.add_args('--subset',
                              self.args.fastq_strand_subset)
+            if self.args.nthreads:
+                cmd.add_args('-n',self.args.nthreads)
+            else:
+                cmd.add_args('-n',self.runner_nslots)
             cmd.add_args(*fastq_pair)
             # Add the command
             self.add_cmd(cmd)
