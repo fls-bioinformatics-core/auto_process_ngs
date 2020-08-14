@@ -1420,6 +1420,52 @@ class TestPipelineTask(unittest.TestCase):
         self.assertTrue(stdout[5].startswith("#### END "))
         self.assertEqual(stdout[6],"#### EXIT_CODE 127")
 
+    def test_pipelinetask_with_command_using_runner_nslots(self):
+        """
+        PipelineTask: run task with shell command using nslots from runner
+        """
+        # Define a task with a command
+        # Echoes number of slots set by runner
+        class GetNSlots(PipelineTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Get nslots",
+                        "echo","NSLOTS=%s" % self.runner_nslots))
+        # Make a task instance
+        task = GetNSlots("Get number of slots")
+        # Run the task with a custom job runner
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 runner=SimpleJobRunner(nslots=8),
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertFalse(task.output)
+        # Check stdout
+        # Should look like:
+        # #### COMMAND Get nslots
+        # #### HOSTNAME popov
+        # #### USER pjb
+        # #### START Thu Aug 17 08:38:14 BST 2017
+        # #### CWD /tmp/dir
+        # NSLOTS=8
+        # #### END Thu Aug 17 08:38:14 BST 2017
+        # #### EXIT_CODE 0
+        stdout = task.stdout.split("\n")
+        self.assertEqual(len(stdout),9) # 9 = 8 + trailing newline
+        self.assertEqual(stdout[0],"#### COMMAND Get nslots")
+        self.assertEqual(stdout[1],"#### HOSTNAME %s" % self._hostname())
+        self.assertEqual(stdout[2],"#### USER %s" % self._user())
+        self.assertTrue(stdout[3].startswith("#### START "))
+        self.assertEqual(stdout[4],"#### CWD %s" % self.working_dir)
+        self.assertEqual(stdout[5],"NSLOTS=8")
+        self.assertTrue(stdout[6].startswith("#### END "))
+        self.assertEqual(stdout[7],"#### EXIT_CODE 0")
+
     def test_pipelinetask_stdout(self):
         """
         PipelineTask: check stdout recovered from task
@@ -1581,6 +1627,33 @@ class TestPipelineFunctionTask(unittest.TestCase):
         self.assertTrue(task.completed)
         self.assertNotEqual(task.exit_code,0)
         self.assertEqual(task.result(),None)
+        self.assertFalse(task.output)
+
+    def test_pipelinefunctiontask_with_runner_nslots(self):
+        """
+        PipelineFunctionTask: run task wrapping function call with runner_nslots
+        """
+        # Define a task with a function call
+        class GetNSlots(PipelineFunctionTask):
+            def init(self):
+                pass
+            def setup(self):
+                self.add_call("Get nslots",
+                              self.get_nslots)
+            def get_nslots(self):
+                return "NSLOTS=%s" % self.runner_nslots
+        # Make a task instance
+        task = GetNSlots("Get number of slots")
+        # Run the task with a custom job runner
+        task.run(sched=self.sched,
+                 working_dir=self.working_dir,
+                 poll_interval=0.1,
+                 runner=SimpleJobRunner(nslots=8),
+                 asynchronous=False)
+        # Check final state
+        self.assertTrue(task.completed)
+        self.assertEqual(task.exit_code,0)
+        self.assertEqual(task.result(),["NSLOTS=8"])
         self.assertFalse(task.output)
 
 class TestPipelineCommand(unittest.TestCase):

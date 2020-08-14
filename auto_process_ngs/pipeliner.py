@@ -389,6 +389,9 @@ used to configure the scheduler, specifically:
 
 * ``max_jobs``: this sets the maximum number of concurrent
   jobs that the scheduler will run (defaults to 1)
+* ``max_slots``: this sets the maximum number of concurrent
+  CPUs (aka "slots") that the scheduler will allocate work
+  for (defaults to no limit).
 * ``poll_interval``: the time interval that the scheduler will
   used when checking the status of running jobs (defaults to
   5 seconds)
@@ -459,6 +462,82 @@ For example:
 Any runner names that don't have associated job runner
 instances will use the default runner defined via the
 ``default_runner`` argument.
+
+Dynamically setting number of CPUs/threads via job runners
+----------------------------------------------------------
+
+When job runners are created they can have a maximum number
+of available CPUs (aka "slots") associated with them.
+
+For ``SimpleJobRunner``s this has to be set explicitly via
+the ``nslots`` argument, for example:
+
+::
+
+    runner =  SimpleJobRunner(nslots=8)
+
+By default only a single slot is allocated. (For
+``GEJobRunners`` the number of slots is set implicitly.)
+
+The number of slots can then be accessed at runtime, so that
+jobs run within a task use the appropriate number of CPUs
+dynamically, by using the ``runner_nslots`` method.
+
+For standard ``PipelineTask`` classes, this should be done
+when constructing commands within the ``setup`` method. For
+example: ``bowtie2`` takes a ``--threads`` option which
+tells the program how many threads it should use. A minimal
+task to run ``bowtie2`` with dynamically assigned number of
+threads might look like:
+
+::
+
+   class RunBowtie2(PipelineTask):
+        def init(self,fastq,index_basename,sam_out):
+            pass
+        def setup(self):
+            self.add_cmd(
+                PipelineCommandWrapper("Run bowtie",
+                                       "bowtie2",
+                                       "-x",self.args.index_basename,
+                                       "-U",self.args.fastq,
+                                       "-S",self.args.sam_out,
+                                       "--threads",self.runner_nslots)
+
+For ``PipelineFunctionTask`` classes, the ``runner_nslots``
+method should be called from within the function being
+executed. For example:
+
+::
+
+   class RunBowtie2(PipelineTask):
+        def init(self,fastq,index_basename,sam_out):
+            pass
+        def setup(self):
+            self.add_call("Run bowtie",
+                          self.run_bowtie,
+                          self.args.fastq,
+                          self.args.index_basename,
+                          self.args.sam_out)
+        def run_bowtie(self,fastq,index_basename,sam_out):
+            bowtie_cmd = Command("bowtie2",
+                                 "-x",index_basename,
+                                 "-U",fastq,
+                                 "-S",sam_out,
+                                 "--threads",self.runner_nslots)
+            bowtie_cmd.run_subprocess()
+
+.. note::
+
+   The slots are obtained from the value of the
+   ``BCFTBX_RUNNER_NSLOTS`` environment variable, which
+   is set at runtime by the job runner. So it is possible
+   to access this directly from any code which is executed
+   as part of a job.
+
+When using dynamic CPU assignment with ``SimpleJobRunners``,
+it may also be worth considering using the ``max_slots``
+parameter when running the pipeline.
 
 Dealing with stdout from tasks
 ------------------------------
@@ -1205,13 +1284,14 @@ class Pipeline(object):
         return 1
 
     def start_scheduler(self,runner=None,max_concurrent=1,
-                        poll_interval=5):
+                        max_slots=None,poll_interval=5):
         """
         Internal: instantiate and start local scheduler
         """
         if self._scheduler is None:
             sched = SimpleScheduler(runner=runner,
                                     max_concurrent=max_concurrent,
+                                    max_slots=max_slots,
                                     poll_interval=poll_interval,
                                     reporter=SchedulerReporter())
             sched.start()
@@ -1567,9 +1647,9 @@ class Pipeline(object):
 
     def run(self,working_dir=None,log_dir=None,scripts_dir=None,
             log_file=None,sched=None,default_runner=None,max_jobs=1,
-            poll_interval=5,params=None,runners=None,envmodules=None,
-            batch_size=None,verbose=False,use_locking=True,
-            exit_on_failure=PipelineFailure.IMMEDIATE,
+            max_slots=None,poll_interval=5,params=None,runners=None,
+            envmodules=None,batch_size=None,verbose=False,
+            use_locking=True,exit_on_failure=PipelineFailure.IMMEDIATE,
             finalize_outputs=True):
         """
         Run the tasks in the pipeline
@@ -1591,6 +1671,10 @@ class Pipeline(object):
             concurrent jobs in scheduler (defaults to 1;
             ignored if a scheduler is provided via 'sched'
             argument)
+          max_slots (int): optional maximum number of 'slots'
+            (i.e. concurrent threads or maximum number of
+            CPUs) available to the scheduler (defaults to
+            no limit)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (if scheduler not
             provided via the 'sched' argument), and to use
@@ -1653,6 +1737,7 @@ class Pipeline(object):
             # Create and start a scheduler
             sched = self.start_scheduler(runner=default_runner,
                                          max_concurrent=max_jobs,
+                                         max_slots=max_slots,
                                          poll_interval=poll_interval)
         # Deal with lock manager
         if use_locking:
@@ -1696,7 +1781,12 @@ class Pipeline(object):
         self.report("-- verbose output   : %s" % ('yes'
                                                   if verbose
                                                   else 'no'))
-        self.report("-- concurrent jobs  : %s" % max_jobs)
+        self.report("-- concurrent jobs  : %s" % (max_jobs
+                                                  if max_jobs else
+                                                  'unlimited'))
+        self.report("-- maximum slots    : %s" % (max_slots
+                                                  if max_slots else
+                                                  'unlimited'))
         self.report("-- polling interval : %ss" % ('<not set>'
                                                    if poll_interval is None
                                                    else poll_interval))
@@ -1935,6 +2025,9 @@ class PipelineTask(object):
     or more 'PipelineCommand' instances.
 
     """
+    # Environment variable with slots set by job runners
+    _NSLOTS_ENV_VAR="BCFTBX_RUNNER_NSLOTS"
+
     def __init__(self,_name,*args,**kws):
         """
         Create a new PipelineTask instance
@@ -2042,6 +2135,21 @@ class PipelineTask(object):
             with open(f,'r') as fp:
                 stdout.append(fp.read())
         return ''.join(stdout)
+
+    @property
+    def runner_nslots(self):
+        """
+        Get number of slots (i.e. available CPUs) set by runner
+
+        This returns the code to use when constructing
+        commands in task `setup`, to access the number
+        of CPUs available to the command as set in the
+        job runner which is used at runtime.
+
+        Returns:
+          String: environment variable to get slots from.
+        """
+        return "$%s" % self._NSLOTS_ENV_VAR
 
     def name(self):
         """
@@ -2505,6 +2613,23 @@ class PipelineFunctionTask(PipelineTask):
         PipelineTask.__init__(self,_name,*args,**kws)
         self._dispatchers = []
         self._result = None
+
+    @property
+    def runner_nslots(self):
+        """
+        Get number of slots (i.e. available CPUs) set by runner
+
+        This returns the number of CPUs available at
+        runtime by fetching the value of the
+        environment variable set by the job runner.
+
+        It should be invoked from within the function
+        being run.
+
+        Returns:
+          String: number of slots.
+        """
+        return os.environ[self._NSLOTS_ENV_VAR]
 
     def add_call(self,name,f,*args,**kwds):
         """
