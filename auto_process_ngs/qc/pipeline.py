@@ -687,7 +687,7 @@ class RunIlluminaQC(PipelineTask):
     """
     Run the illumina_qc.sh script
     """
-    def init(self,fastqs,qc_dir,fastq_screen_subset=None,nthreads=1,
+    def init(self,fastqs,qc_dir,fastq_screen_subset=None,nthreads=None,
              qc_protocol=None,fastq_attrs=None):
         """
         Initialise the RunIlluminaQC task.
@@ -702,7 +702,7 @@ class RunIlluminaQC(PipelineTask):
           fastq_screen_subset (int): explicitly specify
             the subset size for running Fastq_screen
           nthreads (int): number of threads/processors to
-            use (defaults to 1)
+            use (defaults to number of slots set in runner)
           qc_protocol (str): QC protocol to use
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
@@ -717,8 +717,11 @@ class RunIlluminaQC(PipelineTask):
             cmd = PipelineCommandWrapper(
                 "Run illumina_qc.sh for %s" % os.path.basename(fastq),
                 'illumina_qc.sh',fastq,
-                '--threads',self.args.nthreads,
                 '--qc_dir',os.path.abspath(self.args.qc_dir))
+            if self.args.nthreads:
+                cmd.add_args('--threads',self.args.nthreads)
+            else:
+                cmd.add_args('--threads',self.runner_nslots)
             if self.args.fastq_screen_subset is not None:
                 cmd.add_args('--subset',self.args.fastq_screen_subset)
             # No screens for R1 reads for single cell
