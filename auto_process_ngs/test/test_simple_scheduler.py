@@ -18,11 +18,12 @@ class MockJobRunner(BaseJobRunner):
     """Mock job runner implementation of BaseJobRunner
 
     """
-    def __init__(self):
+    def __init__(self,nslots=1):
         self.__jobcount = 0
         self.__jobs = dict()
         self.__log_dirs = dict()
         self.__error_states = dict()
+        self.__nslots = nslots
         BaseJobRunner.__init__(self)
 
     def run(self,name,working_dir,script,args):
@@ -34,6 +35,10 @@ class MockJobRunner(BaseJobRunner):
                                 'args': args }
         self.__log_dirs[job_id] = self.log_dir
         return job_id
+
+    @property
+    def nslots(self):
+        return self.__nslots
 
     def logFile(self,job_id):
         return "%s.%s.log" % (self.__jobs[job_id]['name'],job_id)
@@ -223,6 +228,90 @@ class TestSimpleScheduler(unittest.TestCase):
         self.assertEqual(sched.n_running,0)
         self.assertEqual(sched.n_finished,3)
         self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_run_multiple_jobs_with_max_slots(self):
+        """Run several jobs with limit on maximum slots
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01,
+                                max_slots=2)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'])
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,1)
+        self.assertEqual(sched.n_running,2)
+        self.assertEqual(sched.n_finished,0)
+        self.assertFalse(sched.is_empty())
+        # Finish a job, wait for scheduler to catch up
+        job_1.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertEqual(sched.n_finished,1)
+        self.assertFalse(sched.is_empty())
+        # Finish remaining jobs, wait for scheduler to catch up
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_run_multiple_jobs_with_max_slots_mixed_runners(self):
+        """Run several jobs with limit on maximum slots using mixed runners
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01,
+                                max_slots=2)
+        sched.start()
+        job_1 = sched.submit(['sleep','10'],
+                             runner=MockJobRunner(nslots=2))
+        job_2 = sched.submit(['sleep','20'])
+        job_3 = sched.submit(['sleep','30'])
+        # Wait for scheduler to catch up
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,2)
+        self.assertEqual(sched.n_running,1)
+        self.assertEqual(sched.n_finished,0)
+        self.assertFalse(sched.is_empty())
+        # Finish a job, wait for scheduler to catch up
+        job_1.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,2)
+        self.assertEqual(sched.n_finished,1)
+        self.assertFalse(sched.is_empty())
+        # Finish remaining jobs, wait for scheduler to catch up
+        job_2.terminate()
+        job_3.terminate()
+        time.sleep(0.1)
+        self.assertEqual(sched.n_waiting,0)
+        self.assertEqual(sched.n_running,0)
+        self.assertEqual(sched.n_finished,3)
+        self.assertTrue(sched.is_empty())
+        sched.stop()
+
+    def test_simple_scheduler_raise_exception_for_insufficient_slots(self):
+        """Raise exception if submitted job exceeds maximum slots
+
+        """
+        sched = SimpleScheduler(runner=MockJobRunner(),poll_interval=0.01,
+                                max_slots=2)
+        sched.start()
+        # Attempting to submit a job requiring more slots
+        # then the maximum for the scheduler means that the
+        # job can never start - this should raise an
+        # exception
+        self.assertRaises(Exception,
+                          sched.submit,
+                          ['sleep','10'],
+                          runner=MockJobRunner(nslots=3))
         sched.stop()
 
     def test_simple_scheduler_run_dependent_jobs(self):
