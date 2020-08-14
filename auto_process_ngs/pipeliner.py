@@ -2025,6 +2025,9 @@ class PipelineTask(object):
     or more 'PipelineCommand' instances.
 
     """
+    # Environment variable with slots set by job runners
+    _NSLOTS_ENV_VAR="BCFTBX_RUNNER_NSLOTS"
+
     def __init__(self,_name,*args,**kws):
         """
         Create a new PipelineTask instance
@@ -2146,7 +2149,7 @@ class PipelineTask(object):
         Returns:
           String: environment variable to get slots from.
         """
-        return "$BCFTBX_RUNNER_NSLOTS"
+        return "$%s" % self._NSLOTS_ENV_VAR
 
     def name(self):
         """
@@ -2626,7 +2629,7 @@ class PipelineFunctionTask(PipelineTask):
         Returns:
           String: number of slots.
         """
-        return os.environ["BCFTBX_RUNNER_NSLOTS"]
+        return os.environ[self._NSLOTS_ENV_VAR]
 
     def add_call(self,name,f,*args,**kwds):
         """
