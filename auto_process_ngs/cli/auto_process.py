@@ -473,6 +473,10 @@ def add_make_fastqs_command(cmdparser):
                         "the specified indices from the well list when "
                         "matching ATAC barcodes against well list")
     # Cellranger (10xgenomics Chromium SC 3') options
+    default_cellranger_localcores = __settings['10xgenomics'].\
+                                    cellranger_localcores
+    if not default_cellranger_localcores:
+        default_cellranger_localcores = 1
     cellranger = p.add_argument_group('Cellranger options (10xGenomics '
                                       'Chromium SC 3\' and ATAC data only)')
     cellranger.add_argument("--jobmode",
@@ -491,12 +495,13 @@ def add_make_fastqs_command(cmdparser):
                             __settings['10xgenomics'].cellranger_mempercore)
     cellranger.add_argument("--localcores",
                             dest="local_cores",
-                            default=__settings['10xgenomics'].\
-                            cellranger_localcores,
+                            default=default_cellranger_localcores,
                             help="maximum cores cellranger can request at one"
                             "time for jobmode 'local' (ignored for other "
                             "jobmodes) (default: %s)" %
-                            __settings['10xgenomics'].cellranger_localcores)
+                            ("taken from job runner"
+                             if not default_cellranger_localcores
+                             else default_cellranger_localcores))
     cellranger.add_argument("--localmem",
                             dest="local_mem",
                             default=__settings['10xgenomics'].\

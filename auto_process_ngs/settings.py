@@ -204,7 +204,7 @@ class Settings(object):
         self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         self['10xgenomics']['cellranger_localmem'] = config.getint('10xgenomics','cellranger_localmem',5)
-        self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',1)
+        self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',None)
         # 10xgenomics transcriptomes
         self.add_section('10xgenomics_transcriptomes')
         try:
