@@ -80,6 +80,9 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(
         description="Run the QC pipeline standalone on an arbitrary "
         "set of Fastq files.")
+    # Defaults
+    default_nthreads = __settings.qc.nprocessors
+    # Build parser
     p.add_argument('--version', action='version',
                    version=("%%(prog)s %s" % __version__))
     p.add_argument("project_dir",metavar="DIR",
@@ -115,9 +118,11 @@ if __name__ == "__main__":
                    default=False,
                    help="also generate MultiQC report")
     p.add_argument('-t','--threads',action='store',dest="nthreads",
-                   type=int,default=__settings.qc.nprocessors,
+                   type=int,default=default_nthreads,
                    help="number of threads to use for QC script "
-                   "(default: %d)" % __settings.qc.nprocessors)
+                   "(default: %s)" % ('taken from job runner'
+                                      if not default_nthreads
+                                      else default_nthreads,))
     p.add_argument('-r','--runner',metavar='RUNNER',action='store',
                    dest="runner",default=None,
                    help="explicitly specify runner definition for "

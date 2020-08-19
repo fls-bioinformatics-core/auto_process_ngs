@@ -640,7 +640,9 @@ def add_run_qc_command(cmdparser):
     p.add_argument('-t','--threads',action='store',dest="nthreads",
                    type=int,default=default_nthreads,
                    help="number of threads to use for QC script "
-                   "(default: %d)" % default_nthreads)
+                   "(default: %s)" % ('taken from job runner'
+                                      if not default_nthreads
+                                      else default_nthreads,))
     p.add_argument('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
                    help="create decompressed copies of fastq.gz files")
     p.add_argument('--max-jobs',action='store',

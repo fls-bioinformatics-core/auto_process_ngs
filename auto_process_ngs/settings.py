@@ -142,7 +142,7 @@ class Settings(object):
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
         # qc
         self.add_section('qc')
-        self.qc['nprocessors'] = config.getint('qc','nprocessors',1)
+        self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)

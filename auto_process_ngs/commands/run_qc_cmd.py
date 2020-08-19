@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
-           fastq_screen_subset=100000,nthreads=1,
+           fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
            cellranger_transcriptomes=None,
