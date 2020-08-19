@@ -1775,9 +1775,13 @@ class Pipeline(object):
         self.report("Runners:")
         width = max([len(r) for r in self.runners])
         for r in sorted(self.runners):
-            self.report("-- %s%s: %s" % (r,
+            runner = self.runners[r].value
+            self.report("-- %s%s: %s%s" % (r,
                                          ' '*(width-len(r)),
-                                         self.runners[r].value))
+                                           runner,
+                                           '' if runner.nslots == 1
+                                           else ' [nslots=%s]' %
+                                           runner.nslots))
         # Report modules environments
         if self.envmodules:
             self.report("Modules environments:")
