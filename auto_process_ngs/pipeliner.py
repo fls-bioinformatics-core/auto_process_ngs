@@ -2468,6 +2468,14 @@ class PipelineTask(object):
                 remaining_cmds = remaining_cmds[batch_size:]
         # Run the commands
         if cmds:
+            # Report runner and nslots
+            if verbose:
+                if self._runner:
+                    self.report("Runner: %s%s" %
+                                (self._runner,
+                                 '' if self.runner_nslots == 1
+                                 else ' [nslots=%s]' %
+                                 self.runner_nslots))
             use_group = (len(cmds)!=1)
             if use_group:
                 # Run as a group
