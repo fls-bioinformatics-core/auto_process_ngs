@@ -177,6 +177,15 @@ if __name__ == "__main__":
                    "modules to load before executing commands "
                    "(overrides any modules specified in the global "
                    "settings)")
+    # Advanced options
+    advanced = p.add_argument_group('Advanced/debugging options')
+    advanced.add_argument('--verbose',action="store_true",
+                          dest="verbose",default=False,
+                          help="run pipeline in 'verbose' mode")
+    advanced.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
 
     # Parse the command line
     args = p.parse_args()
@@ -292,7 +301,9 @@ if __name__ == "__main__":
                        batch_size=args.batch_size,
                        runners=runners,
                        default_runner=default_runner,
-                       envmodules=envmodules)
+                       envmodules=envmodules,
+                       working_dir=args.working_dir,
+                       verbose=args.verbose)
     if status:
         logger.critical("QC failed (see warnings above)")
     sys.exit(status)

@@ -686,7 +686,16 @@ def add_run_qc_command(cmdparser):
                    "<QC_DIR>_report.html)")
     add_runner_option(p)
     add_modulefiles_option(p)
-    add_debug_option(p)
+    # Advanced options
+    advanced = p.add_argument_group('Advanced/debugging options')
+    advanced.add_argument('--verbose',action="store_true",
+                          dest="verbose",default=False,
+                          help="run pipeline in 'verbose' mode")
+    advanced.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
+    add_debug_option(advanced)
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/defunct options')
     deprecated.add_argument('--no-ungzip-fastqs',action='store_true',
@@ -1264,7 +1273,9 @@ def run_qc(args):
                        cellranger_premrna_references=
                        cellranger_premrna_references,
                        report_html=args.html_file,
-                       runner=runner)
+                       runner=runner,
+                       working_dir=args.working_dir,
+                       verbose=args.verbose)
     sys.exit(retcode)
 
 def publish_qc(args):
