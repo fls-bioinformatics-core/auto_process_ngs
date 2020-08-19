@@ -17,9 +17,9 @@ can be used to run the QC pipeline on an arbitrary subdirectory.
 The QC pipeline protocol used for each project will differ slightly
 depending on the nature of the data within that project:
 
-================  ========================
+================= ==========================
 QC protocol       Used for
-================  ========================
+================= ==========================
 ``standardPE``    Standard paired-end data i.e. R1/R2 Fastq pairs
 ``standardSE``    Standard single-end data i.e. R1 Fastqs only
 ``10x_scATAC``    10xGenomics single cell & single nuclei ATAC-seq
@@ -27,7 +27,7 @@ QC protocol       Used for
 ``10x_snRNAseq``  10xGenomics single nuclei RNA-seq
 ``singlecell``    ICELL8 single cell RNA-seq
 ``ICELL8_scATAC`` ICELL8 single cell ATAC-seq
-================= ========================
+================= ==========================
 
 The protocol is determined automatically for each project.
 
@@ -79,8 +79,10 @@ Configuring the QC pipeline
 See :ref:`software_dependencies` for details of the additional
 software required to run the QC pipeline. Environment modules can be
 used to set up the runtime environment for the pipeline (see
-:ref:`environment_modules`) and suitable job runners should be
-defined if running the pipeline on a compute cluster (see
+:ref:`environment_modules`).
+
+Suitable :ref:`job runners <job_runners>` should be defined,
+particularly if running the pipeline on a compute cluster (see
 :ref:`running_on_compute_cluster`).
 
 Some of the pipeline stages also require appropriate reference
