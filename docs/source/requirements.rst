@@ -60,7 +60,7 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 
 These programs provided by these packages must be found on the
 ``PATH`` when the appropriate autoprocessor commands are issued.
-:ref:`environment-modules` can be used to help manage this.
+:ref:`environment_modules` can be used to help manage this.
 Alternatively many of these packages can be obtained from the
 `bioconda project <https://bioconda.github.io/>`_.
 

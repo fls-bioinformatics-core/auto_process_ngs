@@ -473,6 +473,10 @@ def add_make_fastqs_command(cmdparser):
                         "the specified indices from the well list when "
                         "matching ATAC barcodes against well list")
     # Cellranger (10xgenomics Chromium SC 3') options
+    default_cellranger_localcores = __settings['10xgenomics'].\
+                                    cellranger_localcores
+    if not default_cellranger_localcores:
+        default_cellranger_localcores = 1
     cellranger = p.add_argument_group('Cellranger options (10xGenomics '
                                       'Chromium SC 3\' and ATAC data only)')
     cellranger.add_argument("--jobmode",
@@ -491,12 +495,13 @@ def add_make_fastqs_command(cmdparser):
                             __settings['10xgenomics'].cellranger_mempercore)
     cellranger.add_argument("--localcores",
                             dest="local_cores",
-                            default=__settings['10xgenomics'].\
-                            cellranger_localcores,
+                            default=default_cellranger_localcores,
                             help="maximum cores cellranger can request at one"
                             "time for jobmode 'local' (ignored for other "
                             "jobmodes) (default: %s)" %
-                            __settings['10xgenomics'].cellranger_localcores)
+                            ("taken from job runner"
+                             if not default_cellranger_localcores
+                             else default_cellranger_localcores))
     cellranger.add_argument("--localmem",
                             dest="local_mem",
                             default=__settings['10xgenomics'].\
@@ -640,7 +645,9 @@ def add_run_qc_command(cmdparser):
     p.add_argument('-t','--threads',action='store',dest="nthreads",
                    type=int,default=default_nthreads,
                    help="number of threads to use for QC script "
-                   "(default: %d)" % default_nthreads)
+                   "(default: %s)" % ('taken from job runner'
+                                      if not default_nthreads
+                                      else default_nthreads,))
     p.add_argument('--ungzip-fastqs',action='store_true',dest='ungzip_fastqs',
                    help="create decompressed copies of fastq.gz files")
     p.add_argument('--max-jobs',action='store',
@@ -679,7 +686,16 @@ def add_run_qc_command(cmdparser):
                    "<QC_DIR>_report.html)")
     add_runner_option(p)
     add_modulefiles_option(p)
-    add_debug_option(p)
+    # Advanced options
+    advanced = p.add_argument_group('Advanced/debugging options')
+    advanced.add_argument('--verbose',action="store_true",
+                          dest="verbose",default=False,
+                          help="run pipeline in 'verbose' mode")
+    advanced.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
+    add_debug_option(advanced)
     # Deprecated options
     deprecated = p.add_argument_group('Deprecated/defunct options')
     deprecated.add_argument('--no-ungzip-fastqs',action='store_true',
@@ -1257,7 +1273,9 @@ def run_qc(args):
                        cellranger_premrna_references=
                        cellranger_premrna_references,
                        report_html=args.html_file,
-                       runner=runner)
+                       runner=runner,
+                       working_dir=args.working_dir,
+                       verbose=args.verbose)
     sys.exit(retcode)
 
 def publish_qc(args):

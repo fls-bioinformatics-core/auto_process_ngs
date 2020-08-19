@@ -114,24 +114,110 @@ for example:
 If no default is set then the values can be updated using the
 ``metadata`` command (see :ref:`commands_metadata`).
 
+.. _job_runners:
+
+-----------
+Job Runners
+-----------
+
+*Job runners* are used within ``auto_process`` to tell the pipelines
+how to execute commands. There are currently two types of runner available:
+
+* ``SimpleJobRunner`` runs jobs as a subprocess of the current process,
+  so they run locally (i.e. on the same hardware that the ``auto_process``
+  command was started on)
+* ``GEJobRunner`` submits jobs to Grid Engine (GE), which enables it to
+  exploit additional resources available on a compute cluster (see
+  :ref:`running_on_compute_cluster`)
+
+Job runners can also be configured to specify the number of CPUs
+available to commands that are executed using them (see
+:ref:`setting_number_of_cpus`).
+
+By default ``auto_process`` is configured to use ``SimpleJobRunner``
+for all jobs; the default runner is defined in the settings:
+
+::
+
+   [general]
+   default_runner = SimpleJobRunner
+
+This default can be overridden for specific commands and pipeline
+stages by explicitly specifying alternative runners in the ``runners``
+section of the settings file:
+
+============================= =========================================
+Runner name                   Used for
+============================= =========================================
+``bcl2fastq``                 Running ``bcl2fastq`` in Fastq generation
+``stats``                     Running commands to generate statistics
+                              after Fastq generation (e.g.
+			      ``fastq_statistics.py``)
+``rsync``                     Running commands for transferring data
+                              (e.g. copying primary data for Fastq
+                              generation, archiving etc)
+``qc``                        Running computationally intensive QC
+                              commands (e.g. ``FastQC``, ``Fastq_screen``,
+                              strandedness etc)
+``cellranger``                Running ``cellranger`` in Fastq generation
+                              and QC pipelines
+``icell8``                    Default runner for commands in the ICELL8
+                              processing pipeline
+``icell8_contaminant_filter`` Running the contaminant filtering in the
+                              ICELL8 pipeline
+``icell8_statistics``         Generating statistics for ICELL8 data
+``icell8_report``             Reporting on the ICELL8 pipeline
+============================= =========================================
+
+.. _setting_number_of_cpus:
+
+--------------------------------
+Setting number of available CPUs
+--------------------------------
+
+Job runners allow the number of available CPUs (aka processors or
+threads) to be specified, and this information is then used when
+running jobs in the ``auto_process`` pipelines.
+
+For ``SimpleJobRunners`` the number of CPUs is specified via the
+``nslots`` argument. For example:
+
+::
+
+   [runners]
+   qc = SimpleJobRunner(nslots=8)
+
+(Without ``nslots`` the number of CPUs implicitly defaults to 1.)
+
+For ``GEJobRunners`` the number of available CPUs is inferred from the
+``-pe smp.pe`` argument (see :ref:`running_on_compute_cluster`).
+
+For some commands the number of available CPUs will be taken implicitly
+from this argument unless explicitly overridden by the following settings:
+
+=============== ================================== =====================
+Section         Setting                            Overrides runner
+=============== ================================== =====================
+``bcl2fastq``   ``nprocessors``                    ``bcl2fastq``
+``fastq_stats`` ``nprocessors``                    ``stats``
+``qc``          ``nprocessors``                    ``qc``
+``icell8``      ``nprocessors_contaminant_filter`` ``icell8_contaminant_filter``
+``icell8``      ``nprocessors_statistics``         ``icell8_statistics``
+``10xgenomics`` ``cellranger_localcores``          ``cellranger`` (*)
+=============== ================================== =====================
+
+(*) Used when ``cellranger`` is run with ``--jobmode=local``
+
 .. _running_on_compute_cluster:
 
 ----------------------------
 Running on a compute cluster
 ----------------------------
 
-Within ``auto_process``, "job runners" are used to tell the pipelines
-how to run their jobs. There are currently two types of runner available:
-
-* ``SimpleJobRunner`` runs jobs as a subprocess of the current process,
-  so they run locally (i.e. on the same hardware that the ``auto_process``
-  command was started on)
-* ``GEJobRunner`` submits jobs to Grid Engine (GE), which enables it to
-  exploit additional resources available on a compute cluster.
-
-By default ``auto_process`` is configured to use ``SimpleJobRunner``
-for all jobs; to switch to using ``GEJobRunner``, set the default runner
-in the settings:
+The ``GEJobRunner`` can be used to make ``auto_process`` submit its
+computationally intensive jobs to a compute cluster rather than on
+the local host; to switch to using ``GEJobRunner``, set the default
+runner in the settings:
 
 ::
 
@@ -146,15 +232,18 @@ particular queue might use:
 
    default_runner = GEJobRunner(-q ngs.queue)
 
-This default runer can further be over-ridden for specific pipeline
-stages by the settings in the ``runners`` section of the configuration
-file. For example, to run ``bcl2fastq`` jobs in parallel environment
+This default runer can further be overridden for specific commands
+and pipeline stages by the settings in the ``runners`` section of the
+configuration file (see the previous section :ref:`job_runners`).
+
+For example: to run ``bcl2fastq`` jobs in parallel environment
 with 8 cores might look like:
 
 ::
 
    [runners]
    bcl2fastq = GEJobRunner(-pe smp.pe 8)
+
 
 .. note::
 
@@ -168,7 +257,27 @@ with 8 cores might look like:
    run on the cluster login node; it has a small CPU and memory footprint
    which should impact minimally on other users of the system.
 
-.. _environment-modules:
+.. _limiting_number_of_jobs:
+
+--------------------------------------
+Limiting the number of concurrent jobs
+--------------------------------------
+
+The ``max_concurrent_jobs`` setting in the ``general`` section
+limits the number of jobs that ``auto_process`` will attempt to
+run simultaneously.
+
+For example:
+
+::
+
+    [general]
+    max_concurrent_jobs = 4
+
+This is particularly useful to prevent exceeding resource limits
+when running on a local workstation.
+
+.. _environment_modules:
 
 -------------------------
 Using environment modules

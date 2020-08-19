@@ -142,7 +142,7 @@ class Settings(object):
         self.bcl2fastq = self.get_bcl2fastq_config('bcl2fastq',config)
         # qc
         self.add_section('qc')
-        self.qc['nprocessors'] = config.getint('qc','nprocessors',1)
+        self.qc['nprocessors'] = config.getint('qc','nprocessors',None)
         self.qc['fastq_screen_subset'] = config.getint('qc',
                                                        'fastq_screen_subset',
                                                        100000)
@@ -204,7 +204,7 @@ class Settings(object):
         self['10xgenomics']['cellranger_mempercore'] = config.getint('10xgenomics','cellranger_mempercore',5)
         self['10xgenomics']['cellranger_jobinterval'] = config.getint('10xgenomics','cellranger_jobinterval',100)
         self['10xgenomics']['cellranger_localmem'] = config.getint('10xgenomics','cellranger_localmem',5)
-        self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',1)
+        self['10xgenomics']['cellranger_localcores'] = config.getint('10xgenomics','cellranger_localcores',None)
         # 10xgenomics transcriptomes
         self.add_section('10xgenomics_transcriptomes')
         try:

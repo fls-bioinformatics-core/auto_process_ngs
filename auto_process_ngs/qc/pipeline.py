@@ -94,7 +94,7 @@ class QCPipeline(Pipeline):
         Pipeline.__init__(self,name="QC")
 
         # Define parameters
-        self.add_param('nthreads',type=int,value=1)
+        self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
         self.add_param('cellranger_chemistry',type=str)
@@ -411,14 +411,16 @@ class QCPipeline(Pipeline):
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
             cellranger_localmem=None,working_dir=None,log_file=None,
-            batch_size=None,max_jobs=1,poll_interval=5,runners=None,
-            default_runner=None,envmodules=None,verbose=False):
+            batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
+            runners=None,default_runner=None,envmodules=None,
+            verbose=False):
         """
         Run the tasks in the pipeline
 
         Arguments:
           nthreads (int): number of threads/processors to
-            use for QC jobs (defaults to 1)
+            use for QC jobs (defaults to number of slots set
+            in job runners)
           fastq_strand_indexes (dict): mapping of organism
             IDs to directories with STAR index
           fastq_subset (int): explicitly specify
@@ -463,6 +465,10 @@ class QCPipeline(Pipeline):
             one command per job)
           max_jobs (int): optional maximum number of
             concurrent jobs in scheduler (defaults to 1)
+          max_slots (int): optional maximum number of 'slots'
+            (i.e. concurrent threads or maximum number of
+            CPUs) available to the scheduler (defaults to
+            no limit)
           poll_interval (float): optional polling interval
             (seconds) to set in scheduler (defaults to 5s)
           runners (dict): mapping of names to JobRunner
@@ -525,6 +531,7 @@ class QCPipeline(Pipeline):
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
+                              max_slots=max_slots,
                               runners=runners,
                               default_runner=default_runner,
                               envmodules=envmodules,
@@ -687,7 +694,7 @@ class RunIlluminaQC(PipelineTask):
     """
     Run the illumina_qc.sh script
     """
-    def init(self,fastqs,qc_dir,fastq_screen_subset=None,nthreads=1,
+    def init(self,fastqs,qc_dir,fastq_screen_subset=None,nthreads=None,
              qc_protocol=None,fastq_attrs=None):
         """
         Initialise the RunIlluminaQC task.
@@ -702,7 +709,7 @@ class RunIlluminaQC(PipelineTask):
           fastq_screen_subset (int): explicitly specify
             the subset size for running Fastq_screen
           nthreads (int): number of threads/processors to
-            use (defaults to 1)
+            use (defaults to number of slots set in runner)
           qc_protocol (str): QC protocol to use
           fastq_attrs (BaseFastqAttrs): class to use for
             extracting data from Fastq names
@@ -717,8 +724,11 @@ class RunIlluminaQC(PipelineTask):
             cmd = PipelineCommandWrapper(
                 "Run illumina_qc.sh for %s" % os.path.basename(fastq),
                 'illumina_qc.sh',fastq,
-                '--threads',self.args.nthreads,
                 '--qc_dir',os.path.abspath(self.args.qc_dir))
+            if self.args.nthreads:
+                cmd.add_args('--threads',self.args.nthreads)
+            else:
+                cmd.add_args('--threads',self.runner_nslots)
             if self.args.fastq_screen_subset is not None:
                 cmd.add_args('--subset',self.args.fastq_screen_subset)
             # No screens for R1 reads for single cell
@@ -867,7 +877,7 @@ class RunFastqStrand(PipelineTask):
     Run the fastq_strand.py utility
     """
     def init(self,fastq_pairs,qc_dir,fastq_strand_conf,
-             fastq_strand_subset=None,nthreads=1,
+             fastq_strand_subset=None,nthreads=None,
              qc_protocol=None):
         """
         Initialise the RunFastqStrand task.
@@ -884,7 +894,8 @@ class RunFastqStrand(PipelineTask):
           fastq_strand_subset (int): explicitly specify
             the subset size for running fastq_strand
           nthreads (int): number of threads/processors to
-            use (defaults to 1)
+            use (defaults to number of slots set in job
+            runner)
           qc_protocol (str): QC protocol to use
         """
         pass
@@ -901,13 +912,16 @@ class RunFastqStrand(PipelineTask):
                 "Run fastq_strand.py for %s" %
                 os.path.basename(fastq_pair[0]),
                 'fastq_strand.py',
-                '-n',self.args.nthreads,
                 '--conf',self.args.fastq_strand_conf,
                 '--outdir',
                 os.path.abspath(self.args.qc_dir))
             if self.args.fastq_strand_subset:
                 cmd.add_args('--subset',
                              self.args.fastq_strand_subset)
+            if self.args.nthreads:
+                cmd.add_args('-n',self.args.nthreads)
+            else:
+                cmd.add_args('-n',self.runner_nslots)
             cmd.add_args(*fastq_pair)
             # Add the command
             self.add_cmd(cmd)
@@ -1086,7 +1100,7 @@ class RunCellrangerCount(PipelineTask):
             cellranger (default: None)
           cellranger_localcores (int): maximum number of cores
             cellranger can request in jobmode 'local'
-            (default: None)
+            (defaults to number of slots set in runner)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
           qc_protocol (str): QC protocol to use
@@ -1128,12 +1142,21 @@ class RunCellrangerCount(PipelineTask):
                 cmd.add_args("--chemistry",self.args.chemistry)
             elif cellranger_exe == "cellranger-atac":
                 cmd.add_args("--reference",self.args.reference_data_path)
+            # Set number of local cores
+            if self.args.cellranger_localcores:
+                localcores = self.args.cellranger_localcores
+            elif self.args.cellranger_jobmode == "local":
+                # Get number of local cores from runner
+                localcores = self.runner_nslots
+            else:
+                # Not in jobmode 'local'
+                localcores = None
             add_cellranger_args(cmd,
                                 jobmode=self.args.cellranger_jobmode,
                                 mempercore=self.args.cellranger_mempercore,
                                 maxjobs=self.args.cellranger_maxjobs,
                                 jobinterval=self.args.cellranger_jobinterval,
-                                localcores=self.args.cellranger_localcores,
+                                localcores=localcores,
                                 localmem=self.args.cellranger_localmem)
             self.add_cmd(cmd)
     def finish(self):

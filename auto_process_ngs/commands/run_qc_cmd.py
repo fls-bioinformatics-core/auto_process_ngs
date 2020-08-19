@@ -25,12 +25,13 @@ logger = logging.getLogger(__name__)
 #######################################################################
 
 def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
-           fastq_screen_subset=100000,nthreads=1,
+           fastq_screen_subset=100000,nthreads=None,
            runner=None,fastq_dir=None,qc_dir=None,
            cellranger_chemistry='auto',
            cellranger_transcriptomes=None,
            cellranger_premrna_references=None,
            report_html=None,run_multiqc=True,
+           working_dir=None,verbose=None,
            poll_interval=None):
     """Run QC pipeline script for projects
 
@@ -78,6 +79,10 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
         report (default: '<QC_DIR>_report.html')
       run_multiqc (bool): if True then run MultiQC at the end of
         the QC run (default)
+      working_dir (str): path to a working directory (defaults to
+         temporary directory in the current directory)
+      verbose (bool): if True then report additional information
+         for pipeline diagnostics
       poll_interval (float): specifies non-default polling
         interval for scheduler used for running QC
 
@@ -191,5 +196,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        max_jobs=max_jobs,
                        runners=runners,
                        default_runner=default_runner,
-                       envmodules=envmodules)
+                       envmodules=envmodules,
+                       working_dir=working_dir,
+                       verbose=verbose)
     return status
