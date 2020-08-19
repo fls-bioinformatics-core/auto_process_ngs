@@ -2055,6 +2055,7 @@ class PipelineTask(object):
         # Working directory
         self._working_dir = None
         # Running jobs
+        self._runner = None
         self._jobs = []
         self._groups = []
         # Monitoring
@@ -2433,6 +2434,10 @@ class PipelineTask(object):
             self._log_file = os.path.abspath(log_file)
         if lock_manager:
             self._lock_manager = lock_manager
+        if runner:
+            self._runner = runner
+        elif sched:
+            self._runner = sched.default_runner
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
@@ -2498,7 +2503,7 @@ class PipelineTask(object):
                     group.add(cmd,
                               wd=self._working_dir,
                               name=name,
-                              runner=runner,
+                              runner=self._runner,
                               log_dir=log_dir,
                               wait_for=wait_for)
                 group.close()
@@ -2512,7 +2517,7 @@ class PipelineTask(object):
                 job = sched.submit(cmd,
                                    wd=self._working_dir,
                                    name=name,
-                                   runner=runner,
+                                   runner=self._runner,
                                    log_dir=log_dir,
                                    wait_for=wait_for)
                 callback_name = job.name
