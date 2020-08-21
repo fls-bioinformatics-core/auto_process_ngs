@@ -2027,7 +2027,7 @@ class PipelineTask(object):
         # Working directory
         self._working_dir = None
         # Running jobs
-        self._runner = None
+        self._runner_nslots = None
         self._jobs = []
         self._groups = []
         # Monitoring
@@ -2121,8 +2121,8 @@ class PipelineTask(object):
         Returns:
           String: environment variable to get slots from.
         """
-        if self._runner:
-            return self._runner.nslots
+        if self._runner_nslots:
+            return self._runner_nslots
         else:
             return 1
 
@@ -2408,10 +2408,9 @@ class PipelineTask(object):
             self._log_file = os.path.abspath(log_file)
         if lock_manager:
             self._lock_manager = lock_manager
-        if runner:
-            self._runner = runner
-        elif sched:
-            self._runner = sched.default_runner
+        if not runner:
+            runner = sched.default_runner
+        self._runner_nslots = runner.nslots
         # Do setup
         self.invoke(self.setup)
         # Generate commands to run
@@ -2470,12 +2469,11 @@ class PipelineTask(object):
         if cmds:
             # Report runner and nslots
             if verbose:
-                if self._runner:
+                if runner:
                     self.report("Runner: %s%s" %
-                                (self._runner,
-                                 '' if self.runner_nslots == 1
-                                 else ' [nslots=%s]' %
-                                 self.runner_nslots))
+                                (runner,
+                                 '' if runner.nslots == 1
+                                 else ' [nslots=%s]' % runner.nslots))
             use_group = (len(cmds)!=1)
             if use_group:
                 # Run as a group
@@ -2485,7 +2483,7 @@ class PipelineTask(object):
                     group.add(cmd,
                               wd=self._working_dir,
                               name=name,
-                              runner=self._runner,
+                              runner=runner,
                               log_dir=log_dir,
                               wait_for=wait_for)
                 group.close()
@@ -2499,7 +2497,7 @@ class PipelineTask(object):
                 job = sched.submit(cmd,
                                    wd=self._working_dir,
                                    name=name,
-                                   runner=self._runner,
+                                   runner=runner,
                                    log_dir=log_dir,
                                    wait_for=wait_for)
                 callback_name = job.name
