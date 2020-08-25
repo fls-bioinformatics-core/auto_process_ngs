@@ -387,21 +387,23 @@ def add_make_fastqs_command(cmdparser):
                               help="explicitly specify version of bcl2fastq "
                               "software to use (e.g. '=1.8.4' or '>=2.0').")
     # Number of processors
-    default_nprocessors = []
+    display_nprocessors = []
     for platform in __settings.platform:
         if __settings.platform[platform].nprocessors is not None:
-            default_nprocessors.append(
+            display_nprocessors.append(
                 "%s: %s" % 
                 (platform,
                  __settings.platform[platform].nprocessors))
-    if default_nprocessors:
-        default_nprocessors.append("other platforms: %s" %
+    if display_nprocessors:
+        display_nprocessors.append("other platforms: %s" %
                                    __settings.bcl2fastq.nprocessors)
+    elif __settings.bcl2fastq.nprocessors:
+        display_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
     else:
-        default_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
-    default_nprocessors = ', '.join(default_nprocessors)
-    add_nprocessors_option(bcl_to_fastq,default_nprocessors,
-                           default_display=default_nprocessors)
+        display_nprocessors.append("taken from job runner")
+    display_nprocessors = ', '.join(display_nprocessors)
+    add_nprocessors_option(bcl_to_fastq,None,
+                           default_display=display_nprocessors)
     add_runner_option(bcl_to_fastq)
     # Adapter trimming/masking options
     adapters = p.add_argument_group('Adapter trimming and masking')
