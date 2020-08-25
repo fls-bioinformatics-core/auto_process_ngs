@@ -157,7 +157,10 @@ def fastq_statistics(ap,stats_file=None,per_lane_stats_file=None,
     runner.set_log_dir(ap.log_dir)
     # Number of cores
     if nprocessors is None:
-        nprocessors = ap.settings.fastq_stats.nprocessors
+        if ap.settings.fastq_stats.nprocessors:
+            nprocessors = ap.settings.fastq_stats.nprocessors
+        else:
+            nprocessors = runner.nslots
     # Generate statistics
     fastq_statistics_cmd = Command(
         'fastq_statistics.py',
