@@ -109,9 +109,6 @@ if __name__ == "__main__":
                    "for fastq_screen (i.e. --subset option); (default "
                    "%d, set to 0 to use all reads)" %
                    __settings.qc.fastq_screen_subset)
-    p.add_argument('--multiqc',action='store_true',dest='run_multiqc',
-                   default=False,
-                   help="also generate MultiQC report")
     p.add_argument('-t','--threads',action='store',dest="nthreads",
                    type=int,default=default_nthreads,
                    help="number of threads to use for QC script "
@@ -131,33 +128,6 @@ if __name__ == "__main__":
                    "concurrent QC jobs to run (default %d, change "
                    "in settings file)"
                    % __settings.general.max_concurrent_jobs)
-    p.add_argument('--qc_dir',metavar='QC_DIR',
-                   action='store',dest='qc_dir',default=None,
-                   help="explicitly specify QC output directory. "
-                   "NB if a relative path is supplied then it's assumed "
-                   "to be a subdirectory of DIR (default: <DIR>/qc)")
-    p.add_argument("--10x_chemistry",
-                   choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
-                   dest="cellranger_chemistry",default="auto",
-                   help="assay configuration for 10xGenomics scRNA-seq; "
-                   "if set to 'auto' (the default) then cellranger will "
-                   "attempt to determine this automatically")
-    p.add_argument('--10x_transcriptome',action='append',
-                   metavar='ORGANISM=REFERENCE',
-                   dest='cellranger_transcriptomes',
-                   help="specify cellranger transcriptome reference datasets "
-                   "to associate with organisms (overrides references defined "
-                   "in config file)")
-    p.add_argument('--10x_premrna_reference',action='append',
-                   metavar='ORGANISM=REFERENCE',
-                   dest='cellranger_premrna_references',
-                   help="specify cellranger pre-mRNA reference datasets "
-                   "to associate with organisms (overrides references defined "
-                   "in config file)")
-    p.add_argument('-f','--filename',metavar='NAME',action='store',
-                   dest='filename',default=None,
-                   help="file name for output QC report (default: "
-                   "<DIR>/<QC_DIR>_report.html)")
     p.add_argument('--fastq_dir',metavar='SUBDIR',
                    action='store',dest='fastq_dir',default=None,
                    help="explicitly specify subdirectory of DIR with "
@@ -177,6 +147,44 @@ if __name__ == "__main__":
                    help="run the QC on the local system (overrides "
                    "any runners defined in the configuration or on "
                    "the command line")
+    # Reporting options
+    reporting = p.add_argument_group('Output and reporting')
+    reporting.add_argument('--qc_dir',metavar='QC_DIR',
+                           action='store',dest='qc_dir',default=None,
+                           help="explicitly specify QC output directory. "
+                           "NB if a relative path is supplied then it's "
+                           "assumed to be a subdirectory of DIR (default: "
+                           "<DIR>/qc)")
+    reporting.add_argument('-f','--filename',metavar='NAME',action='store',
+                           dest='filename',default=None,
+                           help="file name for output QC report (default: "
+                           "<DIR>/<QC_DIR>_report.html)")
+    reporting.add_argument('--multiqc',action='store_true',
+                           dest='run_multiqc', default=False,
+                           help="also generate MultiQC report")
+    # Cellranger options
+    cellranger = p.add_argument_group('Cellranger/10xGenomics options')
+    cellranger.add_argument('--10x_transcriptome',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_transcriptomes',
+                            help="specify cellranger transcriptome "
+                            "reference datasets to associate with "
+                            "organisms (overrides references defined "
+                            "in config file)")
+    cellranger.add_argument('--10x_premrna_reference',action='append',
+                            metavar='ORGANISM=REFERENCE',
+                            dest='cellranger_premrna_references',
+                            help="specify cellranger pre-mRNA reference "
+                            "datasets to associate with organisms "
+                            "(overrides references defined in config "
+                            "file)")
+    cellranger.add_argument("--10x_chemistry",
+                            choices=sorted(CELLRANGER_ASSAY_CONFIGS.keys()),
+                            dest="cellranger_chemistry",default="auto",
+                            help="assay configuration for 10xGenomics "
+                            "scRNA-seq; if set to 'auto' (the default) then "
+                            "cellranger will attempt to determine this "
+                            "automatically")
     # Advanced options
     advanced = p.add_argument_group('Advanced/debugging options')
     advanced.add_argument('--verbose',action="store_true",
