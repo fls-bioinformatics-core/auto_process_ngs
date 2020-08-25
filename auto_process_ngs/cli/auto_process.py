@@ -983,7 +983,13 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_argument('--force',action="store_true",dest="force",
                    help="force statistics to be regenerated even if "
                    "existing statistics files are newer than fastqs ")
-    add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
+    nprocessors = __settings.fastq_stats.nprocessors
+    if nprocessors:
+        display_nprocessors = nprocessors
+    else:
+        display_nprocessors = "taken from job runner"
+    add_nprocessors_option(p,nprocessors,
+                           default_display=display_nprocessors)
     add_runner_option(p)
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
