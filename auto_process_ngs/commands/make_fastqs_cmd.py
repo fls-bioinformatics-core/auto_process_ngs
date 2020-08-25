@@ -314,6 +314,14 @@ def make_fastqs(ap,protocol='standard',platform=None,
         # No version requirement
         print("No bcl2fastq version explicitly specified")
 
+    # Number of processors
+    if not nprocessors:
+        # Look for platform-specific number of processors
+        if platform in ap.settings.platform:
+            nprocessors = ap.settings.platform[platform].nprocessors
+        if not nprocessors:
+            nprocessors = ap.settings.bcl2fastq.nprocessors
+
     # Set up pipeline runners
     default_runner = ap.settings.general.default_runner
     runners = {
