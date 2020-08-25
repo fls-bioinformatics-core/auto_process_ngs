@@ -234,7 +234,7 @@ class Settings(object):
             logging.debug("No 10xgenomics scATAC-seq genome references defined")
         # fastq_stats
         self.add_section('fastq_stats')
-        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
+        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
         # Define runners for specific jobs
         self.add_section('runners')
         for name in ('bcl2fastq',
@@ -308,7 +308,7 @@ class Settings(object):
         if section == 'bcl2fastq':
             values['default_version'] = config.get(section,'default_version',
                                                    None)
-            values['nprocessors'] = config.getint(section,'nprocessors',1)
+            values['nprocessors'] = config.getint(section,'nprocessors',None)
             values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
                                                             False)
             values['create_empty_fastqs'] = config.getboolean(
