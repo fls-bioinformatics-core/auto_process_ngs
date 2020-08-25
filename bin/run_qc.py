@@ -97,12 +97,6 @@ if __name__ == "__main__":
                    "be determined automatically based on directory "
                    "contents." %
                    ", ".join(["'%s'" % x for x in PROTOCOLS]))
-    p.add_argument('--samples',metavar='PATTERN',
-                   action='store',dest='sample_pattern',default=None,
-                   help="simple wildcard-based pattern specifying a "
-                   "subset of samples to run the QC on. If specified "
-                   "then only FASTQs with sample names matching "
-                   "PATTERN will be examined.")
     p.add_argument('--organism',metavar='ORGANISM',
                    action='store',dest='organism',default=None,
                    help="explicitly specify organism (e.g. 'human', "
