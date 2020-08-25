@@ -1381,7 +1381,7 @@ class MakeFastqs(Pipeline):
             no_lane_splitting=None,create_fastq_for_index_read=None,
             create_empty_fastqs=None,stats_file=None,stats_full=None,
             per_lane_stats=None,per_lane_sample_stats=None,
-            nprocessors=1,require_bcl2fastq=None,
+            nprocessors=None,require_bcl2fastq=None,
             cellranger_jobmode='local',cellranger_mempercore=None,
             cellranger_maxjobs=None,cellranger_jobinterval=None,
             cellranger_localcores=None,cellranger_localmem=None,
@@ -1419,7 +1419,8 @@ class MakeFastqs(Pipeline):
           per_lane_sample_stats(str): path to per-lane per-sample
             statistics output file
           nprocessors (int): number of threads to use for
-            multithreaded applications (default is 1)
+            multithreaded applications (default is to take
+            number of CPUs set in job runners)
           require_bcl2fastq (str): if set then specify bcl2fastq
             version requirement; should be a string of the form
            '1.8.4' or '>2.0'. The pipeline will fail if this
@@ -1856,7 +1857,7 @@ class RunBcl2Fastq(PipelineTask):
              ignore_missing_bcl=False,no_lane_splitting=False,
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
-             create_fastq_for_index_read=False,nprocessors=1,
+             create_fastq_for_index_read=False,nprocessors=None,
              create_empty_fastqs=False,
              platform=None,bcl2fastq_exe=None,bcl2fastq_version=None,
              skip_bcl2fastq=False):
@@ -1881,7 +1882,7 @@ class RunBcl2Fastq(PipelineTask):
             also create Fastq files for index reads (default,
             don't create index read Fastqs)
           nprocessors (int): number of processors to use
-            (default is 1)
+            (taken from job runner by default)
           create_empty_fastqs (bool): if True then create empty
             placeholder Fastq files for any that are missing
             on successful completion of bcl2fastq
@@ -1985,20 +1986,23 @@ class RunBcl2Fastq(PipelineTask):
             'bcl2fastq_exe': self.args.bcl2fastq_exe,
         }
         # Update parameters based on bcl2fastq version
-        nprocessors = self.args.nprocessors
-        if supported_version in ('2.17',):
-            # bcl2fastq 2.17.*
-            if nprocessors is not None:
-                # Explicitly set number of threads for each stage
+        if self.args.nprocessors:
+            nprocessors = self.args.nprocessors
+        else:
+            nprocessors = self.runner_nslots
+        if nprocessors is not None:
+            # Explicitly set number of threads for each stage
+            print("Nprocessors: %s" % nprocessors)
+            if supported_version in ('2.17',):
+                # bcl2fastq 2.17.*
                 params['loading_threads'] = min(4,nprocessors)
                 params['writing_threads'] = min(4,nprocessors)
                 params['demultiplexing_threads'] = max(
                     int(float(nprocessors)*0.2),
                     nprocessors)
                 params['processing_threads'] = nprocessors
-        elif supported_version in ('2.20',):
-            # bcl2fastq 2.20.*
-            if nprocessors is not None:
+            elif supported_version in ('2.20',):
+                # bcl2fastq 2.20.*
                 params['loading_threads'] = min(4,nprocessors)
                 params['writing_threads'] = min(4,nprocessors)
                 params['processing_threads'] = nprocessors
@@ -2239,11 +2243,16 @@ class DemultiplexIcell8Atac(PipelineTask):
         # Check well list
         if not self.args.well_list:
             raise Exception("No well list file supplied")
+        # Number of processors
+        if self.args.nprocessors:
+            nprocessors = self.args.nprocessors
+        else:
+            nprocessors = self.runner_nslots
         # Report settings
         for desc,param in (("Fastq dir",self.args.fastq_dir),
                            ("Well list file",self.args.well_list),
                            ("Output dir",self.args.out_dir),
-                           ("Nprocessors",self.args.nprocessors),
+                           ("Nprocessors",nprocessors),
                            ("Swap I1/I2",self.args.swap_i1_and_i2),
                            ("Reverse complement",
                             self.args.reverse_complement)):
@@ -2262,9 +2271,8 @@ class DemultiplexIcell8Atac(PipelineTask):
             demultiplex_cmd = Command('demultiplex_icell8_atac.py',
                                       '--mode=samples',
                                       '--output-dir',tmp_out_dir,
-                                      '--update-read-headers')
-            if self.args.nprocessors:
-                demultiplex_cmd.add_args('-n',self.args.nprocessors)
+                                      '--update-read-headers',
+                                      '-n',nprocessors)
             if self.args.swap_i1_and_i2:
                 demultiplex_cmd.add_args('--swap-i1-i2')
             if self.args.reverse_complement:
@@ -2846,6 +2854,11 @@ class FastqStatistics(PipelineTask):
         if not self.generate_stats:
             print("Nothing to do")
             return
+        # Number of processors
+        if self.args.nprocessors:
+            nprocessors = self.args.nprocessors
+        else:
+            nprocessors = self.runner_nslots
         # Run the fastq_statistics.py utility
         fastq_statistics_cmd = Command(
             'fastq_statistics.py',
@@ -2854,10 +2867,8 @@ class FastqStatistics(PipelineTask):
             '--output',self.stats_file,
             '--full-stats',self.stats_full,
             '--per-lane-stats',self.per_lane_stats,
-            '--per-lane-sample-stats',self.per_lane_sample_stats)
-        if self.args.nprocessors:
-            fastq_statistics_cmd.add_args('--nprocessors',
-                                          self.args.nprocessors)
+            '--per-lane-sample-stats',self.per_lane_sample_stats,
+            '--nprocessors',nprocessors)
         if self.args.add_data:
             fastq_statistics_cmd.add_args('--update')
         fastq_statistics_cmd.add_args(
