@@ -10,6 +10,7 @@ import os
 import io
 import getpass
 import platform
+import cloudpickle
 from builtins import range
 import auto_process_ngs.envmod as envmod
 from auto_process_ngs.simple_scheduler import SimpleScheduler
@@ -1546,6 +1547,26 @@ class TestPipelineTask(unittest.TestCase):
         self.assertFalse(task.output)
         self.assertEqual(task.stdout,"")
 
+    def test_pipelinetask_cloudpickle(self):
+        """
+        PipelineTask: check serialization using 'cloudpickle'
+        """
+        # Define a task with a command
+        # Echoes text via shell command
+        class Echo(PipelineTask):
+            def init(self,s):
+                pass
+            def setup(self):
+                self.add_cmd(
+                    PipelineCommandWrapper(
+                        "Echo text","echo",self.args.s))
+        # Make a task instance
+        task = Echo("Echo string","Hello!")
+        # Pickle it
+        pickled = cloudpickle.dumps(task)
+        # Unpickle it
+        unpickled = cloudpickle.loads(pickled)
+
 class TestPipelineFunctionTask(unittest.TestCase):
 
     def setUp(self):
@@ -1655,6 +1676,27 @@ class TestPipelineFunctionTask(unittest.TestCase):
         self.assertEqual(task.exit_code,0)
         self.assertEqual(task.result(),["NSLOTS=8"])
         self.assertFalse(task.output)
+
+    def test_pipelinefunctiontask_cloudpickle(self):
+        """
+        PipelineFunctionTask: check serialization using 'cloudpickle'
+        """
+        # Define a task with a function call
+        class Hello(PipelineFunctionTask):
+            def init(self,name):
+                pass
+            def setup(self):
+                self.add_call("Emit greeting",
+                              self.hello,
+                              self.args.name)
+            def hello(self,name):
+                return "Hello %s!" % name
+        # Make a task instance
+        task = Hello("Hello world","World")
+        # Pickle it
+        pickled = cloudpickle.dumps(task)
+        # Unpickle it
+        unpickled = cloudpickle.loads(pickled)
 
 class TestPipelineCommand(unittest.TestCase):
 

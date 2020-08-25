@@ -809,7 +809,7 @@ class SetupFastqStrandConf(PipelineFunctionTask):
             return
         # Create the conf file
         print("Writing conf file: %s" % fastq_strand_conf)
-        with open(fastq_strand_conf,'w') as fp:
+        with open(fastq_strand_conf,'wt') as fp:
             fp.write("%s\n" % fastq_strand_indexes)
     def finish(self):
         if os.path.exists(self.fastq_strand_conf):
