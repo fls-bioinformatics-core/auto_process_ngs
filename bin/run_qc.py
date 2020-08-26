@@ -304,8 +304,10 @@ if __name__ == "__main__":
         cellranger_jobmode = "local"
         cellranger_mempercore = None
         cellranger_jobinterval = None
-        cellranger_localcores = max_cores
+        cellranger_localcores = min(max_cores,16)
         cellranger_localmem = max_mem
+        print("-- Cellranger localcores: %s" % cellranger_localcores)
+        print("-- Cellranger localmem  : %s" % cellranger_localmem)
         # Set up local runners
         default_runner = SimpleJobRunner()
         runners = {
