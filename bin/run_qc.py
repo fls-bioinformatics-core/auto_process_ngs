@@ -283,11 +283,12 @@ if __name__ == "__main__":
         if args.max_mem:
             max_mem = args.max_mem
         else:
-            # NB might need to implement a check on
-            # available memory when running jobs?
+            # Maximum memory is scaled by the proportion
+            # of the total cores being used
             # Needs to be converted from bytes to Gbs
             max_mem = math.floor(
-                float(psutil.virtual_memory().total)/(1024.0**3))
+                float(psutil.virtual_memory().total)/(1024.0**3)
+                *float(max_cores)/float(psutil.cpu_count()))
         print("-- Maximum memory: %s Gbs" % max_mem)
         # Set number of threads for QC jobs
         if args.nthreads:
