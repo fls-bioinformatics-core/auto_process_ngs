@@ -396,7 +396,8 @@ class FastqStatistics(object):
                                 column_names=('Project','Sample',lane)))
                 # Sort into order
                 samples = sorted(samples,
-                                 key=lambda x: (x['Project'],x['Sample']))
+                                 key=lambda x: (str(x['Project']),
+                                                str(x['Sample'])))
             try:
                 total_reads = sum([int(s[lane]) for s in samples])
             except Exception as ex:

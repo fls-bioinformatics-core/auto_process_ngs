@@ -125,7 +125,13 @@ class Settings(object):
                                                         'poll_interval',5)
         # modulefiles
         self.add_section('modulefiles')
-        self.modulefiles['make_fastqs'] = config.get('modulefiles','make_fastqs')
+        self.modulefiles['make_fastqs'] = config.get('modulefiles',
+                                                     'make_fastqs')
+        self.modulefiles['bcl2fastq'] = config.get('modulefiles','bcl2fastq')
+        self.modulefiles['cellranger_mkfastq'] = config.get('modulefiles',
+                                                    'cellranger_mkfastq')
+        self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
+                                                    'cellranger_atac_mkfastq')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
         self.modulefiles['publish_qc'] = config.get('modulefiles','publish_qc')
         self.modulefiles['process_icell8'] = config.get('modulefiles','process_icell8')
@@ -228,7 +234,7 @@ class Settings(object):
             logging.debug("No 10xgenomics scATAC-seq genome references defined")
         # fastq_stats
         self.add_section('fastq_stats')
-        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',1)
+        self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
         # Define runners for specific jobs
         self.add_section('runners')
         for name in ('bcl2fastq',
@@ -302,7 +308,7 @@ class Settings(object):
         if section == 'bcl2fastq':
             values['default_version'] = config.get(section,'default_version',
                                                    None)
-            values['nprocessors'] = config.getint(section,'nprocessors',1)
+            values['nprocessors'] = config.getint(section,'nprocessors',None)
             values['no_lane_splitting'] = config.getboolean(section,'no_lane_splitting',
                                                             False)
             values['create_empty_fastqs'] = config.getboolean(

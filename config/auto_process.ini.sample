@@ -10,16 +10,19 @@ poll_interval = 5
 # Specify modulefiles as a comma-separated list
 [modulefiles]
 make_fastqs = None
+bcl2fastq = None
+cellranger_mkfastq = None
+cellranger_atac_mkfastq = None
 run_qc = None
-publish_qc = None
-process_icell8 = None
-process_10xgenomics = None
 illumina_qc = None
 fastq_strand = None
 cellranger = None
 report_qc = None
+publish_qc = None
+process_icell8 = None
 cutadapt = None
 fastq_screen = None
+process_10xgenomics = None
 
 # bcl2fastq settings
 [bcl2fastq]

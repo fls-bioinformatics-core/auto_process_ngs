@@ -74,7 +74,8 @@ from bcftbx.cmdparse import add_arg
 from bcftbx.JobRunner import fetch_runner
 from .. import get_version
 from ..auto_processor import AutoProcess
-from ..commands.make_fastqs_cmd import MAKE_FASTQS_PROTOCOLS
+from ..bcl2fastq.pipeline import PROTOCOLS
+from ..bcl2fastq.pipeline import subset
 from ..commands.make_fastqs_cmd import BCL2FASTQ_DEFAULTS
 from ..commands.report_cmd import ReportingMode
 from ..envmod import load as envmod_load
@@ -225,14 +226,6 @@ def add_make_fastqs_command(cmdparser):
     add_debug_option(p)
     # Primary data management
     primary_data = p.add_argument_group('Primary data management')
-    primary_data.add_argument('--only-fetch-primary-data',action='store_true',
-                              dest='only_fetch_primary_data',default=False,
-                              help="only fetch the primary data, don't "
-                              "perform any other operations")
-    primary_data.add_argument('--remove-primary-data',action='store_true',
-                              dest='remove_primary_data',default=False,
-                              help="delete the primary data at the end of "
-                              "processing (default is to keep data)")
     primary_data.add_argument('--force-copy',action='store_true',
                               dest='force_copy',default=False,
                               help="force primary data to be copied (by "
@@ -241,7 +234,7 @@ def add_make_fastqs_command(cmdparser):
                               "symlinked)")
     # General Fastq generation options
     fastq_generation = p.add_argument_group('General Fastq generation')
-    fastq_generation.add_argument('--protocol',choices=MAKE_FASTQS_PROTOCOLS,
+    fastq_generation.add_argument('--protocol',choices=PROTOCOLS,
                                   dest='protocol',default='standard',
                                   help="specify Fastq generation protocol "
                                   "depending on the data being processed "
@@ -251,19 +244,23 @@ def add_make_fastqs_command(cmdparser):
                                   help="use an alternative sample sheet to "
                                   "the default 'custom_SampleSheet.csv' "
                                   "created on setup.")
-    fastq_generation.add_argument('--lanes',action='store',
-                                  dest='lanes',default=None,
-                                  help="list of lanes to include in the "
-                                  "processing. LANES should be single integer "
-                                  "(e.g. 1), a list of integers "
-                                  "(e.g. 1,3,...), a range (e.g. 1-3), or a "
-                                  "combination (e.g. 1,3-5,7). Default is to "
-                                  "include all lanes")
+    fastq_generation.add_argument('--lanes',action='append',
+                                  dest='lanes',
+                                  metavar="LANES[:OPTIONS]",
+                                  help="define a set of lanes to group for "
+                                  "processing. LANES can be a single lane "
+                                  "(e.g. '1'), a list ('1,2,3,7'), a range "
+                                  "('1-3'), or a combination ('1-3,7'). "
+                                  "Specified lanes are processed together "
+                                  "in a group, using OPTIONS (if supplied). "
+                                  "OPTIONS takes the form "
+                                  "'[PROTOCOL:][KEY=VALUE:[KEY=VALUE]...] "
+                                  "(for example "
+                                  "--lanes=1-4:standard:trim_adapters=no)")
     fastq_generation.add_argument('--output-dir',action='store',
-                                  dest='unaligned_dir',default=None,
-                                  help="explicitly set the output "
-                                  "(sub)directory for bcl-to-fastq "
-                                  "conversion (overrides default)")
+                                  dest='out_dir',default=None,
+                                  help="set the directory for the output "
+                                  "Fastqs (default: 'bcl2fastq')")
     fastq_generation.add_argument('--platform',action="store",
                                   dest="platform",default=None,
                                   help="explicitly specify the sequencing "
@@ -274,28 +271,11 @@ def add_make_fastqs_command(cmdparser):
                                   dest="bases_mask",default=None,
                                   help="explicitly set the bases-mask string "
                                   "to indicate how each cycle should be used "
-                                  "in the bcl-to-fastq conversion (overrides "
+                                  "in the bcl2fastq conversion (overrides "
                                   "default). Set to 'auto' to determine "
                                   "automatically")
-    fastq_generation.add_argument('--skip-fastq-generation',
-                                  action='store_true',
-                                  dest='skip_fastq_generation',default=False,
-                                  help="don't run Fastq generation step")
     # Options to control bcl2fastq
-    bcl_to_fastq = p.add_argument_group('Bcl-to-fastq options')
-    bcl_to_fastq.add_argument('--ignore-missing-bcl',action='store_true',
-                              dest='ignore_missing_bcl',default=False,
-                              help="use the --ignore-missing-bcl option for "
-                              "bcl2fastq (treat missing bcl files as no call)")
-    bcl_to_fastq.add_argument('--ignore-missing-stats',action='store_true',
-                              dest='ignore_missing_stats',default=False,
-                              help="use the --ignore-missing-stats option "
-                              "for bcl2fastq (fill in with zeroes when "
-                              "*.stats files are missing)")
-    bcl_to_fastq.add_argument('--require-bcl2fastq-version',action='store',
-                              dest='bcl2fastq_version',default=None,
-                              help="explicitly specify version of bcl2fastq "
-                              "software to use (e.g. '1.8.4' or '>=2.0').")
+    bcl_to_fastq = p.add_argument_group('Bcl2fastq options')
     # Use lane splitting
     # Determine defaults to report to user
     no_lane_splitting_platforms = []
@@ -398,25 +378,32 @@ def add_make_fastqs_command(cmdparser):
     # Fastqs for index reads
     bcl_to_fastq.add_argument('--create-fastq-for-index-reads',
                               action='store_true',
-                              dest='create_fastq_for_index_reads',
+                              dest='create_fastq_for_index_read',
                               default=False,
                               help="also create FASTQs for index reads")
+    # Require specific version
+    bcl_to_fastq.add_argument('--require-bcl2fastq-version',action='store',
+                              dest='bcl2fastq_version',default=None,
+                              help="explicitly specify version of bcl2fastq "
+                              "software to use (e.g. '=1.8.4' or '>=2.0').")
     # Number of processors
-    default_nprocessors = []
+    display_nprocessors = []
     for platform in __settings.platform:
         if __settings.platform[platform].nprocessors is not None:
-            default_nprocessors.append(
+            display_nprocessors.append(
                 "%s: %s" % 
                 (platform,
                  __settings.platform[platform].nprocessors))
-    if default_nprocessors:
-        default_nprocessors.append("other platforms: %s" %
+    if display_nprocessors:
+        display_nprocessors.append("other platforms: %s" %
                                    __settings.bcl2fastq.nprocessors)
+    elif __settings.bcl2fastq.nprocessors:
+        display_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
     else:
-        default_nprocessors.append("%s" % __settings.bcl2fastq.nprocessors)
-    default_nprocessors = ', '.join(default_nprocessors)
+        display_nprocessors.append("taken from job runner")
+    display_nprocessors = ', '.join(display_nprocessors)
     add_nprocessors_option(bcl_to_fastq,None,
-                           default_display=default_nprocessors)
+                           default_display=display_nprocessors)
     add_runner_option(bcl_to_fastq)
     # Adapter trimming/masking options
     adapters = p.add_argument_group('Adapter trimming and masking')
@@ -554,33 +541,18 @@ def add_make_fastqs_command(cmdparser):
                           help="don't perform barcode analysis; use "
                           "'analyse_barcodes' command to run barcode "
                           "analysis separately")
-    # Deprecated options
-    deprecated = p.add_argument_group('Deprecated/defunct options')
-    deprecated.add_argument('--keep-primary-data',action='store_true',
-                            dest='keep_primary_data',default=False,
-                            help="don't delete the primary data at the end "
-                            "of processing (does nothing; primary data is "
-                            "kept by default unless "
-                            "--remove-primary-data is specified)")
-    deprecated.add_argument('--generate-stats',action='store_true',
-                            dest='generate_stats',default=False,
-                            help="(re)generate statistics for fastq files "
-                            "(does nothing; statistics are generated by "
-                            "default unless suppressed by --no-stats)")
-    deprecated.add_argument('--skip-bcl2fastq',action='store_true',
-                            dest='skip_bcl2fastq',default=False,
-                            help="don't run the Fastq generation step "
-                            "(deprecated: use the '--skip-fastq-generation' "
-                            "option instead)")
-    deprecated.add_argument('--skip-rsync',action='store_true',
-                            dest='skip_rsync',default=False,
-                            help="don't rsync the primary data at the "
-                            "beginning of processing (deprecated: primary "
-                            "data acquisition is skipped automatically if "
-                            "data has already been rsynced)")
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
                    help="auto_process analysis directory (optional: defaults "
                    "to the current directory)")
+    # Advanced options
+    advanced = p.add_argument_group('Advanced/debugging options')
+    advanced.add_argument('--verbose',action="store_true",
+                          dest="verbose",default=False,
+                          help="run pipeline in 'verbose' mode")
+    advanced.add_argument('--work-dir',action="store",
+                          dest="working_dir",default=None,
+                          help="specify the working directory for the "
+                          "pipeline operations")
 
 def add_setup_analysis_dirs_command(cmdparser):
     """Create a parser for the 'setup_analysis_dirs' command
@@ -598,7 +570,7 @@ def add_setup_analysis_dirs_command(cmdparser):
     p.add_argument('--unaligned-dir',action='store',
                    dest='unaligned_dir',default=None,
                    help="explicitly specify the subdirectory with "
-                   "bcl-to-fastq outputs")
+                   "output Fastqs")
     p.add_argument('--undetermined',action='store',
                    dest='undetermined',default=None,
                    help="explicitly specify name for project directory "
@@ -1011,7 +983,13 @@ def add_update_fastq_stats_command(cmdparser):
     p.add_argument('--force',action="store_true",dest="force",
                    help="force statistics to be regenerated even if "
                    "existing statistics files are newer than fastqs ")
-    add_nprocessors_option(p,__settings.fastq_stats.nprocessors)
+    nprocessors = __settings.fastq_stats.nprocessors
+    if nprocessors:
+        display_nprocessors = nprocessors
+    else:
+        display_nprocessors = "taken from job runner"
+    add_nprocessors_option(p,nprocessors,
+                           default_display=display_nprocessors)
     add_runner_option(p)
     add_debug_option(p)
     p.add_argument('analysis_dir',metavar="ANALYSIS_DIR",nargs="?",
@@ -1164,13 +1142,60 @@ def make_fastqs(args):
     else:
         create_empty_fastqs = None
     # Deal with --lanes
-    if args.lanes is not None:
-        lanes = bcf_utils.parse_lanes(args.lanes)
+    if args.lanes:
+        # Build subsets
+        only_include_lanes = list()
+        lane_subsets = list()
+        for lanes_spec in args.lanes:
+            # Split the lane spec into components
+            lanes_spec = lanes_spec.rstrip(':').split(':')
+            print("Lanes spec: %s" % lanes_spec)
+            # Extract lanes for this subset
+            lanes_ = bcf_utils.parse_lanes(lanes_spec[0])
+            # Add to set of lanes to include
+            only_include_lanes.extend(lanes_)
+            # Collect additional parameters
+            subset_options = dict()
+            # Check for initial protocol specification
+            try:
+                if '=' not in lanes_spec[1]:
+                    subset_options['protocol'] = lanes_spec[1]
+                    del(lanes_spec[1])
+            except IndexError:
+                pass
+            # Remaining options should be 'key=value' pairs
+            for key_value in lanes_spec[1:]:
+                logging.debug("-- handling %s" % key_value)
+                key,value = key_value.split('=')
+                # Normalise the keys
+                # Remove leading '-'s and replace other '-'s
+                # with underscores
+                # (e.g. '--no-trimming' => 'no_trimming')
+                key = key.lstrip('-').replace('-','_')
+                # Some command line options don't map
+                # directly so update those
+                if key == 'use_bases_mask':
+                    key = 'bases_mask'
+                elif key == 'well_list':
+                    key = 'icell8_well_list'
+                elif key in ('swap_i1_and_i2',
+                             'reverse_complement'):
+                    key = "icell8_atac_%s" % key
+                # Deal with True/False values
+                # Ignore case and also allow 'yes' and 'no'
+                if value.lower() in ('true','yes'):
+                    value = True
+                elif value.lower() in ('false','no'):
+                    value = False
+                subset_options[key] = value
+            # Add the subset to the list
+            lane_subsets.append(subset(lanes_,**subset_options))
+        logging.debug("Lane subsets: %s" % lane_subsets)
+        only_include_lanes = sorted(only_include_lanes)
     else:
-        lanes = None
-    # Deal with --skip-... for fastq generation
-    skip_fastq_generation = (args.skip_fastq_generation or
-                             args.skip_bcl2fastq)
+        # No lane subsets
+        only_include_lanes = None
+        lane_subsets = None
     # Handle job runner specification
     if args.runner is not None:
         runner = fetch_runner(args.runner)
@@ -1179,20 +1204,16 @@ def make_fastqs(args):
     # Do the make_fastqs step
     d.make_fastqs(
         protocol=args.protocol,
-        skip_rsync=args.skip_rsync,
         nprocessors=args.nprocessors,
         runner=runner,
         force_copy_of_primary_data=args.force_copy,
-        remove_primary_data=args.remove_primary_data,
-        ignore_missing_bcl=args.ignore_missing_bcl,
-        ignore_missing_stats=args.ignore_missing_stats,
         generate_stats=(not args.no_stats),
         analyse_barcodes=(not args.no_barcode_analysis),
         require_bcl2fastq_version=args.bcl2fastq_version,
-        unaligned_dir=args.unaligned_dir,
+        unaligned_dir=args.out_dir,
         sample_sheet=args.sample_sheet,
         bases_mask=args.bases_mask,
-        lanes=lanes,
+        lanes=only_include_lanes,lane_subsets=lane_subsets,
         icell8_well_list=args.icell8_well_list,
         icell8_swap_i1_and_i2=args.icell8_swap_i1_and_i2,
         icell8_reverse_complement=args.icell8_reverse_complement,
@@ -1203,12 +1224,10 @@ def make_fastqs(args):
         mask_short_adapter_reads=args.mask_short_adapter_reads,
         adapter_sequence=args.adapter_sequence,
         adapter_sequence_read2=args.adapter_sequence_read2,
-        create_fastq_for_index_reads=args.create_fastq_for_index_reads,
+        create_fastq_for_index_read=args.create_fastq_for_index_read,
         stats_file=args.stats_file,
         per_lane_stats_file=args.per_lane_stats_file,
         barcode_analysis_dir=args.barcode_analysis_dir,
-        skip_fastq_generation=skip_fastq_generation,
-        only_fetch_primary_data=args.only_fetch_primary_data,
         create_empty_fastqs=create_empty_fastqs,
         cellranger_jobmode=args.job_mode,
         cellranger_mempercore=args.mem_per_core,
@@ -1216,7 +1235,9 @@ def make_fastqs(args):
         cellranger_jobinterval=args.job_interval,
         cellranger_localcores=args.local_cores,
         cellranger_localmem=args.local_mem,
-        cellranger_ignore_dual_index=args.ignore_dual_index)
+        cellranger_ignore_dual_index=args.ignore_dual_index,
+        working_dir=args.working_dir,
+        verbose=args.verbose)
 
 def setup_analysis_dirs(args):
     """

@@ -41,6 +41,9 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.publish_qc,None)
         self.assertEqual(s.modulefiles.process_icell8,None)
         self.assertEqual(s.modulefiles.process_10xgenomics,None)
+        self.assertEqual(s.modulefiles.bcl2fastq,None)
+        self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
+        self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.illumina_qc,None)
         self.assertEqual(s.modulefiles.fastq_strand,None)
         self.assertEqual(s.modulefiles.cellranger,None)
@@ -87,6 +90,9 @@ nprocessors = 8
         self.assertEqual(s.general.poll_interval,5.0)
         # Modulefiles
         self.assertEqual(s.modulefiles.make_fastqs,None)
+        self.assertEqual(s.modulefiles.bcl2fastq,None)
+        self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
+        self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
         self.assertEqual(s.modulefiles.run_qc,None)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
