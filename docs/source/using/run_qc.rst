@@ -70,6 +70,12 @@ generated for each project; these are described in
 specified in the configuration then the reports can be copied
 there for sharing using the :doc:`publish_qc command <publish_qc>`.
 
+.. note::
+
+   The QC pipeline can be run outside of the ``auto_process``
+   pipeline by using the ``run_qc.py`` utility; see the
+   section on :doc:`running the QC standalone <run_qc_standalone>`.
+
 .. _multiqc: http://multiqc.info/
 
 ---------------------------
@@ -88,29 +94,3 @@ particularly if running the pipeline on a compute cluster (see
 Some of the pipeline stages also require appropriate reference
 data to be set up before they can run; see the :ref:`reference_data`
 configuration documentation for more details.
-
--------------------------
-Running the QC standalone
--------------------------
-
-The utility ``run_qc.py`` allows the QC pipeline to be run on an
-arbitrary set of Fastqs outside of the ``auto_process`` pipeline.
-
-The general invocation is:
-
-::
-
-   run_qc.py DIR [ DIR ... ]
-
-where ``DIR`` is a directory with the Fastq files to run the QC
-on (or which has a ``fastqs`` subdirectory with the Fastqs; use
-the ``--fastq_dir`` option to specify a different subdirectory).
-
-Some of the most commonly used options are:
-
-* ``--protocol``: specify the QC protocol
-* ``--organism``: specify the organism(s)
-* ``--multiqc``: turns on generation of MultiQC reports
-
-See the documentation in the :ref:`utilities_run_qc` section
-for the full range of options.
