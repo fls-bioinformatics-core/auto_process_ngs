@@ -38,8 +38,6 @@ from bcftbx.JobRunner import SimpleJobRunner
 from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
-from ..analysis import AnalysisProject
-from ..analysis import AnalysisFastq
 from ..analysis import copy_analysis_project
 from ..applications import Command
 from ..fastq_utils import pair_fastqs_by_name
