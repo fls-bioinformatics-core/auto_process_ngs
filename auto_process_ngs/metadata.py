@@ -364,6 +364,7 @@ class AnalysisProjectInfo(MetadataDict):
 
     The data items are:
 
+    name: the project name
     run: the name of the sequencing run
     platform: the sequencing platform name e.g. 'miseq'
     user: the user associated with the project
@@ -389,6 +390,7 @@ class AnalysisProjectInfo(MetadataDict):
         """
         MetadataDict.__init__(self,
                               attributes = {
+                                  'name':'Project name',
                                   'run':'Run',
                                   'platform':'Platform',
                                   'user':'User',
@@ -404,6 +406,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'comments':'Comments',
                               },
                               order = (
+                                  'name',
                                   'run',
                                   'platform',
                                   'user',

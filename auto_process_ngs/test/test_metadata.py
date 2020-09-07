@@ -449,6 +449,7 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         """Check creation of an empty AnalysisProjectInfo object
         """
         info = AnalysisProjectInfo()
+        self.assertEqual(info.name,None)
         self.assertEqual(info.run,None)
         self.assertEqual(info.platform,None)
         self.assertEqual(info.user,None)
