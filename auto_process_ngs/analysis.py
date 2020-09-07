@@ -398,15 +398,17 @@ class AnalysisProject(object):
     of the project directory). It can be changed using the
     'set_primary_fastq_dir' method.
     """
-    def __init__(self,name,dirn,user=None,PI=None,library_type=None,
+    def __init__(self,name,dirn=None,user=None,PI=None,library_type=None,
                  single_cell_platform=None,organism=None,run=None,
                  comments=None,platform=None,fastq_attrs=None,
                  fastq_dir=None):
         """Create a new AnalysisProject instance
 
         Arguments:
-          name: name of the project
-          dirn: project directory (can be full or relative path)
+          name: name of the project (or path to project directory,
+            if 'dirn' not supplied)
+          dirn: optional, project directory (can be full or relative
+            path)
           user: optional, specify name of the user
           PI: optional, specify name of the principal investigator
           library_type: optional, specify library type e.g. 'RNA-seq',
@@ -428,8 +430,10 @@ class AnalysisProject(object):
             'fastq' (if present) or to the top-level of the project
             directory (if absent).
         """
-        self.name = name
-        self.dirn = os.path.abspath(dirn)
+        if dirn is not None:
+            self.dirn = os.path.abspath(dirn)
+        else:
+            self.dirn = os.path.abspath(name)
         self.fastq_dir = None
         self.fastq_dirs = []
         self.fastq_format = None
@@ -444,7 +448,18 @@ class AnalysisProject(object):
             self.fastq_attrs = fastq_attrs
         # Populate from the directory contents
         self.populate(fastq_dir=fastq_dir)
+        # Set project name
+        if dirn is not None:
+            # Name was explicitly supplied
+            self.name = name
+        elif self.info.name is not None:
+            # Get name from metadata
+            self.name = self.info.name
+        else:
+            # Default name from directory
+            self.name = os.path.basename(self.dirn)
         # (Re)set metadata
+        self.info['name'] = self.name
         if run is not None:
             self.info['run'] = run
         if user is not None:
