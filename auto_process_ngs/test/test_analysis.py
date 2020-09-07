@@ -254,7 +254,7 @@ class TestAnalysisProject(unittest.TestCase):
             self.fastqs.append(fastq)
 
     def make_mock_project_dir(self,name,fastq_list,fastq_dir='fastqs',
-                              primary_fastq_dir=None):
+                              primary_fastq_dir=None,project_name=None):
         # Make a mock project directory
         if primary_fastq_dir is None:
             primary_fastq_dir = fastq_dir
@@ -268,6 +268,8 @@ class TestAnalysisProject(unittest.TestCase):
                         ', '.join(sample_names))
         metadata = { 'Primary fastqs': primary_fastq_dir,
                      'Samples': sample_names }
+        if project_name:
+            metadata['Project name'] = project_name
         MockAnalysisProject(name,
                             fastq_list,
                             fastq_dir=fastq_dir,
@@ -310,6 +312,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
         self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -332,6 +335,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertTrue(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
         self.assertEqual(project.info.samples,
                          '2 samples (PJB1-A, PJB1-B, multiple fastqs per sample)')
@@ -355,6 +359,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.info.primary_fastq_dir,'fastqs')
         self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
         self.assertEqual(project.samples[0].name,'PJB1-A')
@@ -378,6 +383,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
         self.assertEqual(project.fastq_dirs,['fastqs',])
@@ -400,12 +406,34 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.samples[0].name,'PJB1-B')
         self.assertTrue(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs.test'))
         self.assertEqual(project.info.samples,
                          '1 sample (PJB1-B, multiple fastqs per sample)')
         self.assertEqual(project.fastq_dirs,['fastqs.test',])
         self.assertEqual(project.info.primary_fastq_dir,'fastqs.test')
+
+    def test_create_project_only_supply_dirname(self):
+        """Check creation of new AnalysisProject (only supply directory)
+        """
+        self.make_data_dir(('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+                            'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',))
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject(dirn)
+        project.create_directory(fastqs=self.fastqs)
+        self.assertEqual(project.name,'PJB')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
+        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.fastq_dirs,['fastqs',])
 
     def test_load_single_end_analysis_project(self):
         """Check loading of an existing single-end AnalysisProject directory
@@ -420,6 +448,30 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
+        self.assertEqual(project.samples[0].name,'PJB1-A')
+        self.assertEqual(project.samples[1].name,'PJB1-B')
+        self.assertEqual(project.fastq_dir,
+                         os.path.join(project.dirn,'fastqs'))
+        self.assertEqual(project.info.samples,'2 samples (PJB1-A, PJB1-B)')
+        self.assertEqual(project.fastq_dirs,['fastqs',])
+        self.assertEqual(project.info.primary_fastq_dir,'fastqs')
+
+    def test_load_analysis_project_only_supply_dirname_diff_project_name(self):
+        """Check loading of an existing AnalysisProject (only supply directory, name different from dir)
+        """
+        self.make_mock_project_dir(
+            'PJB',
+            ('PJB1-A_ACAGTG_L001_R1_001.fastq.gz',
+             'PJB1-B_ACAGTG_L002_R1_001.fastq.gz',),
+            project_name='PeterBriggs')
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject(dirn)
+        self.assertEqual(project.name,'PeterBriggs')
+        self.assertTrue(os.path.isdir(project.dirn))
+        self.assertFalse(project.multiple_fastqs)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PeterBriggs')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -442,6 +494,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -463,6 +516,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
         self.assertEqual(project.info.samples,
@@ -489,6 +543,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertTrue(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PB02')
         self.assertEqual(project.fastq_dir,
                          os.path.join(project.dirn,'fastqs'))
@@ -522,6 +577,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -537,6 +593,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
@@ -571,6 +628,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -583,6 +641,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
@@ -617,6 +676,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
@@ -631,6 +691,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -762,6 +823,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
@@ -780,6 +842,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A-untrimmed')
         self.assertEqual(project.samples[1].name,'PJB1-B-untrimmed')
         self.assertEqual(project.fastq_dir,
@@ -807,6 +870,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,project.dirn)
@@ -983,6 +1047,7 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertTrue(os.path.isdir(project.dirn))
         self.assertFalse(project.multiple_fastqs)
         self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.name,'PJB')
         self.assertEqual(project.samples[0].name,'PJB1-A')
         self.assertEqual(project.samples[1].name,'PJB1-B')
         self.assertEqual(project.fastq_dir,
