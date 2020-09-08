@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2020 Peter Briggs
 #
 ########################################################################
 

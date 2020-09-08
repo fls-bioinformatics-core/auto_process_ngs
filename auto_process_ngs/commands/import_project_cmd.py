@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     import_project_cmd.py: implement auto process import_project command
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 #########################################################################
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2020 Peter Briggs
 #
 
 #######################################################################
