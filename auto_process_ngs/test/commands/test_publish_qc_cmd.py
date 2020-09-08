@@ -1038,11 +1038,6 @@ poll_interval = 0.5
                              "160621_K00879_0087_000000000-AGEW9_analysis",
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
-        for item in outputs:
-            f = os.path.join(publication_dir,
-                             "160621_K00879_0087_000000000-AGEW9_analysis",
-                             item)
-            self.assertTrue(os.path.exists(f),"Missing %s" % f)
         # Check the ZIP files were excluded
         for zip_file in zip_files:
             self.assertFalse(os.path.exists(
