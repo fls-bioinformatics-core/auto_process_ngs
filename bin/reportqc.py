@@ -90,7 +90,7 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
         else:
             logging.warning("ZIP: missing file '%s'" % f)
     # MultiQC output
-    multiqc = os.path.join(project.dirn,
+    multiqc = os.path.join(report_dir,
                            "multi%s_report.html" %
                            os.path.basename(qc_dir))
     if os.path.exists(multiqc):
@@ -244,9 +244,17 @@ def main():
             print("Verification: OK")
             if args.verify:
                 continue
+        # Filename and location for report
+        if args.filename is None:
+            out_file = '%s_report.html' % qc_base
+        else:
+            out_file = args.filename
+        if not os.path.isabs(out_file):
+            out_file = os.path.join(p.dirn,out_file)
+        out_dir = os.path.dirname(out_file)
         # MultiQC report
         if args.multiqc:
-            multiqc_report = os.path.join(p.dirn,
+            multiqc_report = os.path.join(out_dir,
                                           "multi%s_report.html" %
                                           qc_base)
             # Check if we need to rerun MultiQC
@@ -278,13 +286,7 @@ def main():
                     retval += 1
             else:
                 print("MultiQC: %s (already exists)" % multiqc_report)
-        # Report generation
-        if args.filename is None:
-            out_file = '%s_report.html' % qc_base
-        else:
-            out_file = args.filename
-        if not os.path.isabs(out_file):
-            out_file = os.path.join(p.dirn,out_file)
+        # Generate report
         report_html= qc_reporter.report(qc_dir=qc_dir,
                                         qc_protocol=protocol,
                                         title=args.title,
