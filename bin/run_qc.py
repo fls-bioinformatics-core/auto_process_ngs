@@ -528,6 +528,11 @@ if __name__ == "__main__":
     project = AnalysisProject(project_dir)
     print("Loaded project '%s'" % project.name)
 
+    # Set working directory for pipeline
+    working_dir = args.working_dir
+    if not working_dir:
+        working_dir = os.path.join(project_dir,'__run_qc')
+
     # Set up and run the QC pipeline
     announce("Running QC pipeline")
     runqc = QCPipeline()
@@ -558,7 +563,7 @@ if __name__ == "__main__":
                        runners=runners,
                        default_runner=default_runner,
                        envmodules=envmodules,
-                       working_dir=args.working_dir,
+                       working_dir=working_dir,
                        verbose=args.verbose)
     if status:
         logger.critical("QC failed (see warnings above)")
