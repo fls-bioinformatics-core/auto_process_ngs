@@ -670,9 +670,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
         # Make mock ZIP archive
         analysis_name = os.path.basename(self._parent_dir())
         if not legacy_zip_name:
-            zip_prefix = "%s.%s.%s" % (qc_name,
-                                       self._project.name,
-                                       self._project.info.run)
+            zip_prefix = "%s.%s%s" % (qc_name,
+                                      self._project.name,
+                                      ".%s" % self._project.info.run
+                                      if self._project.info.run else '')
         else:
             zip_prefix = "%s.%s.%s" % (qc_name,
                                        self._project.name,
