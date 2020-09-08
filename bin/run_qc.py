@@ -569,6 +569,7 @@ if __name__ == "__main__":
         logger.critical("QC failed (see warnings above)")
 
     # Update the QC metadata
+    announce("Updating QC metadata")
     qc_info = AnalysisProjectQCDirInfo(filen=os.path.join(qc_dir,
                                                           "qc.info"))
     if qc_info.fastq_dir:
@@ -583,5 +584,11 @@ if __name__ == "__main__":
                                                if qc_info.fastq_dir
                                                else '<not set>'))
 
+    # Report locations of final outputs
+    announce("QC pipeline completed")
+    print("Output directory   : %s" % out_dir)
+    print("HTML report        : %s" % out_file)
+    print("QC output directory: %s" % qc_dir)
+    print("Exit status        : %s" % status)
     # Finish and return exit code from pipeline
     sys.exit(status)
