@@ -33,23 +33,20 @@ def import_project(ap,project_dir):
       project_dir (str): path to project directory to be
         imported
     """
-    # Check that target directory exists
+    # Load target directory as a project
     project_dir = os.path.abspath(project_dir)
+    project = AnalysisProject(project_dir)
     # Check that project doesn't already exist
-    project_name = os.path.basename(project_dir)
     project_metadata = ap.load_project_metadata()
-    if project_name in [p['Project'] for p in project_metadata] or \
-       AnalysisProject(project_name,
-                       os.path.join(ap.analysis_dir,
-                                    project_name)).exists:
+    if project.name in [p['Project'] for p in project_metadata] or \
+       AnalysisProject(os.path.join(ap.analysis_dir,
+                                    project.name)).exists:
         raise Exception("Project called '%s' already exists" %
-                        project_name)
-    # Load target as a project
-    project = AnalysisProject(project_name,project_dir)
+                        project.name)
     # Set up a log directory
-    ap.set_log_dir(ap.get_log_subdir('import_project_%s' % project_name))
+    ap.set_log_dir(ap.get_log_subdir('import_project_%s' % project.name))
     # Rsync the project directory
-    print("Importing project directory contents for '%s'" % project_name)
+    print("Importing project directory contents for '%s'" % project.name)
     try:
         excludes = ['--exclude=tmp.*',
                     '--exclude=qc_report.*']
@@ -68,7 +65,7 @@ def import_project(ap,project_dir):
     print("Updating projects.info file with imported project")
     project_metadata = ap.load_project_metadata()
     sample_names = [s.name for s in project.samples]
-    project_metadata.add_project(project_name,
+    project_metadata.add_project(project.name,
                                  sample_names,
                                  user=project.info.user,
                                  library_type=project.info.library_type,
@@ -81,17 +78,21 @@ def import_project(ap,project_dir):
     print("Projects now in metadata file:")
     for p in project_metadata:
         print("- %s" % p['Project'])
-    # Update the QC report
+    # Update the project metadata and QC report
     try:
-        project = ap.get_analysis_projects(pattern=project_name)[0]
+        project = ap.get_analysis_projects(pattern=project.name)[0]
     except Exception as ex:
         logger.error("Exception when trying to acquire project %s: %s"
-                      % (project_name,ex))
+                      % (project.name,ex))
         return
+    project.info['run'] = ap.run_name
+    project.info.save()
+    print("Set run to %s for project '%s'" % (project.info.run,
+                                              project.name))
     if project.qc_dir is None:
-        print("No QC directory assigned for %s" % project_name)
+        print("No QC directory assigned for %s" % project.name)
     else:
-        print("QC directory for %s: %s" % (project_name,
+        print("QC directory for %s: %s" % (project.name,
                                            project.qc_dir))
         qc_info = project.qc_info(project.qc_dir)
         if qc_info.fastq_dir:
@@ -108,10 +109,10 @@ def import_project(ap,project_dir):
                           zip_outputs=True,
                           multiqc=True,
                           log_dir=ap.log_dir)
-                print("Updated QC report for %s" % project_name)
+                print("Updated QC report for %s" % project.name)
             except Exception as ex:
                 raise Exception("Project '%s' imported but failed to "
-                                "generate QC report: %s" % (project_name,
+                                "generate QC report: %s" % (project.name,
                                                             ex))
         else:
             print("Failed to verify QC: report not updated")

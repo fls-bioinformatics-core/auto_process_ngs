@@ -127,7 +127,7 @@ Comments\t1% PhiX spike in
         print(os.listdir(os.path.join(ap2.analysis_dir,'NewProj')))
         for f in ("qc_report.html",
                   "multiqc_report.html",
-                  "qc_report.NewProj.160621_M00879_0087_000000000-AGEW9_analysis.zip",):
+                  "qc_report.NewProj.160621_M00879_0087_000000000-AGEW9.zip",):
             f = os.path.join(ap2.analysis_dir,'NewProj',f)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
