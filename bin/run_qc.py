@@ -32,6 +32,8 @@ from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
+from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
+from auto_process_ngs.fastq_utils import group_fastqs_by_name
 import auto_process_ngs
 import auto_process_ngs.settings
 import auto_process_ngs.envmod as envmod
@@ -241,6 +243,7 @@ if __name__ == "__main__":
     out_dir = args.out_dir
     qc_dir = args.qc_dir
     master_fastq_dir = None
+    fastq_attrs = IlluminaFastqAttrs
 
     # Deal with inputs
     #
@@ -314,11 +317,20 @@ if __name__ == "__main__":
                 # Run out of directories
                 print("Unable to locate project metadata")
                 break
-    print("Located %s Fastq%s" % (len(inputs),
-                                  's' if len(inputs) != 1 else ''))
+    # Filter out index reads
+    inputs = [fq for fq in inputs
+              if not fastq_attrs(fq).is_index_read]
     if not inputs:
         logger.fatal("No Fastqs found")
         sys.exit(1)
+
+    # Report what was found
+    for fqs in group_fastqs_by_name(inputs,fastq_attrs=fastq_attrs):
+        print("%s:" % fastq_attrs(fqs[0]).sample_name)
+        for fq in fqs:
+            print("  %s" % fq)
+    print("Located %s Fastq%s" % (len(inputs),
+                                  's' if len(inputs) != 1 else ''))
 
     # Set up environment
     envmodules = dict()
