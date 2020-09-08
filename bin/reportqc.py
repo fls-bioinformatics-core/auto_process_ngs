@@ -181,8 +181,7 @@ def main():
     retval = 0
     for d in args.dirs:
         dir_path = os.path.abspath(d)
-        project_name = os.path.basename(dir_path)
-        p = AnalysisProject(project_name,dir_path)
+        p = AnalysisProject(dir_path)
         print("Project           : %s" % p.name)
         print("Primary Fastqs dir: %s" % p.fastq_dir)
         if args.qc_dir is None:
