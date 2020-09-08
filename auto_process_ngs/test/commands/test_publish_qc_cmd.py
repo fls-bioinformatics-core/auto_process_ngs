@@ -174,8 +174,7 @@ poll_interval = 0.5
                    "processing_qc.html"]
         for project in ap.get_analysis_projects():
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -215,6 +214,46 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
+                                              project.info.run)
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
+    def test_publish_qc_with_projects_old_zip_names(self):
+        """publish_qc: projects with all QC outputs (old-style ZIP names)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report and QC outputs
+        UpdateAnalysisDir(ap).add_processing_report()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs(legacy_zip_name=True)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in ap.get_analysis_projects():
+            # Standard QC outputs with old-style ZIP file names
+            project_qc = "qc_report.%s.%s" % (project.name,
                                               os.path.basename(
                                                   ap.analysis_dir))
             outputs.append(project_qc)
@@ -250,7 +289,7 @@ poll_interval = 0.5
             qc_reports = []
             qc_reports.append("qc_report.%s.%s.zip" %
                               (project.name,
-                               os.path.basename(ap.analysis_dir)))
+                               project.info.run))
             qc_reports.append("qc_report.html")
             qc_reports.append("multiqc_report.html")
             for f in qc_reports:
@@ -270,8 +309,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -319,16 +357,14 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
         # Additional QC for second fastq set in first project
         project_qc = "qc.extra_report.%s.%s" % (multi_fastqs_project.name,
-                                                os.path.basename(
-                                                    ap.analysis_dir))
+                                                project.info.run)
         outputs.append(project_qc)
         outputs.append("%s.zip" % project_qc)
         outputs.append(os.path.join(project_qc,"qc.extra_report.html"))
@@ -402,8 +438,7 @@ poll_interval = 0.5
         for project in projects:
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -455,8 +490,7 @@ poll_interval = 0.5
         for project in projects:
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -511,8 +545,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -574,8 +607,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -734,8 +766,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -791,8 +822,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -859,8 +889,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -909,8 +938,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
@@ -975,8 +1003,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
             outputs.append(os.path.join(project_qc,"qc"))
@@ -1006,11 +1033,6 @@ poll_interval = 0.5
                                         "web_summary.html"))
         zip_files.append("%s.zip" % cellranger_count_dir)
         # Do checks
-        for item in outputs:
-            f = os.path.join(publication_dir,
-                             "160621_K00879_0087_000000000-AGEW9_analysis",
-                             item)
-            self.assertTrue(os.path.exists(f),"Missing %s" % f)
         for item in outputs:
             f = os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
@@ -1087,8 +1109,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))
@@ -1128,8 +1149,7 @@ poll_interval = 0.5
         for project in ap.get_analysis_projects():
             # Standard QC outputs
             project_qc = "qc_report.%s.%s" % (project.name,
-                                              os.path.basename(
-                                                  ap.analysis_dir))
+                                              project.info.run)
             outputs.append(project_qc)
             outputs.append("%s.zip" % project_qc)
             outputs.append(os.path.join(project_qc,"qc_report.html"))

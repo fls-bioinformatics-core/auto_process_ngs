@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2020 Peter Briggs
 #
 
 #######################################################################
@@ -52,23 +52,24 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
       String: path to the output ZIP file.
     """
     print("Making ZIP file:")
+    print("-- Project name        : %s" % project.name)
+    print("-- Run                 : %s" % project.info.run)
     print("-- Protocol            : %s" % qc_protocol)
     print("-- QC dir              : %s" % qc_dir)
     print("-- Single cell platform: %s" % project.info.single_cell_platform)
     # Name for ZIP file
+    report_dir = os.path.dirname(report_html)
     basename = os.path.splitext(os.path.basename(report_html))[0]
-    analysis_dir = os.path.basename(os.path.dirname(project.dirn))
+    run_name = project.info.run
+    zip_prefix = "%s.%s%s" % (basename,
+                              project.name,
+                              '.%s' % run_name if run_name else '')
+    print("-- ZIP prefix          : %s" % zip_prefix)
+    report_zip = os.path.join(report_dir,"%s.zip" % zip_prefix)
     # Create ZIP archive
-    report_zip = os.path.join(project.dirn,
-                              "%s.%s.%s.zip" %
-                              (basename,
-                               project.name,
-                               analysis_dir))
-    zip_file = ZipArchive(report_zip,relpath=project.dirn,
-                          prefix="%s.%s.%s" %
-                          (basename,
-                           project.name,
-                           analysis_dir))
+    zip_file = ZipArchive(report_zip,
+                          relpath=os.path.dirname(qc_dir),
+                          prefix=zip_prefix)
     # Get QC dir if not set
     if qc_dir is None:
         qc_dir = project.qc_dir
@@ -90,7 +91,7 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
         else:
             logging.warning("ZIP: missing file '%s'" % f)
     # MultiQC output
-    multiqc = os.path.join(project.dirn,
+    multiqc = os.path.join(report_dir,
                            "multi%s_report.html" %
                            os.path.basename(qc_dir))
     if os.path.exists(multiqc):
@@ -181,8 +182,7 @@ def main():
     retval = 0
     for d in args.dirs:
         dir_path = os.path.abspath(d)
-        project_name = os.path.basename(dir_path)
-        p = AnalysisProject(project_name,dir_path)
+        p = AnalysisProject(dir_path)
         print("Project           : %s" % p.name)
         print("Primary Fastqs dir: %s" % p.fastq_dir)
         if args.qc_dir is None:
@@ -244,9 +244,17 @@ def main():
             print("Verification: OK")
             if args.verify:
                 continue
+        # Filename and location for report
+        if args.filename is None:
+            out_file = '%s_report.html' % qc_base
+        else:
+            out_file = args.filename
+        if not os.path.isabs(out_file):
+            out_file = os.path.join(p.dirn,out_file)
+        out_dir = os.path.dirname(out_file)
         # MultiQC report
         if args.multiqc:
-            multiqc_report = os.path.join(p.dirn,
+            multiqc_report = os.path.join(out_dir,
                                           "multi%s_report.html" %
                                           qc_base)
             # Check if we need to rerun MultiQC
@@ -278,13 +286,7 @@ def main():
                     retval += 1
             else:
                 print("MultiQC: %s (already exists)" % multiqc_report)
-        # Report generation
-        if args.filename is None:
-            out_file = '%s_report.html' % qc_base
-        else:
-            out_file = args.filename
-        if not os.path.isabs(out_file):
-            out_file = os.path.join(p.dirn,out_file)
+        # Generate report
         report_html= qc_reporter.report(qc_dir=qc_dir,
                                         qc_protocol=protocol,
                                         title=args.title,

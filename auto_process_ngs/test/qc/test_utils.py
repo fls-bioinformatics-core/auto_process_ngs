@@ -332,7 +332,7 @@ class TestReportQCFunction(unittest.TestCase):
         self.assertEqual(report_qc(project),0)
         # Check output and reports
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -360,7 +360,7 @@ class TestReportQCFunction(unittest.TestCase):
         self.assertEqual(report_qc(project),1)
         # Check output and reports
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -381,7 +381,7 @@ class TestReportQCFunction(unittest.TestCase):
         self.assertEqual(report_qc(project),1)
         # Check output and reports
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),

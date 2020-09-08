@@ -282,12 +282,23 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 print("...%s: failed to verify QC" % qc_dir)
             status[project.name][qc_dir] = verified
             if verified or force:
-                # Check for an existing report
-                qc_zip = os.path.join(
-                    project.dirn,
-                    "%s_report.%s.%s.zip" %
-                    (qc_dir,project.name,
-                     os.path.basename(ap.analysis_dir)))
+                # Check for an existing report ZIP file
+                # Various naming styles exist
+                qc_zip = None
+                for zip_name in (
+                        # Old-style ZIP name
+                        "%s_report.%s.%s" % (qc_dir,
+                                             project.name,
+                                             os.path.basename(
+                                                 ap.analysis_dir)),
+                        # Current ZIP name format
+                        "%s_report.%s.%s" % (qc_dir,
+                                             project.name,
+                                             project.info.run)):
+                    qc_zip = os.path.join(project.dirn,
+                                          "%s.zip" % zip_name)
+                    if os.path.exists(qc_zip):
+                        break
                 # Check if we need to (re)generate report
                 if (regenerate_reports or
                     not os.path.exists(qc_zip)):
@@ -549,13 +560,12 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                         fastq_set_name = (" (%s)" % fastq_set
                                           if fastq_set is not None
                                           else "")
+                        report_dir = os.path.splitext(
+                            os.path.basename(qc_zip))[0]
                         report_html.add(
                             Link("[Report%s]" % fastq_set_name,
-                                 "%s.%s.%s/%s.html"
-                                 % (qc_base,
-                                    project.name,
-                                    os.path.basename(ap.analysis_dir),
-                                    qc_base)))
+                                 os.path.join(report_dir,
+                                              "%s.html" % qc_base)))
                         if not exclude_zip_files:
                             report_html.add(
                                 Link("[ZIP%s]" % fastq_set_name,

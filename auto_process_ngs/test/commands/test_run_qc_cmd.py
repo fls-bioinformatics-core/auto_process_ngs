@@ -82,7 +82,7 @@ poll_interval = 0.5
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -91,12 +91,12 @@ poll_interval = 0.5
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -156,7 +156,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -165,12 +165,12 @@ mouse = /data/genomeIndexes/mm10/STAR
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -231,7 +231,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -240,12 +240,12 @@ mouse = /data/genomeIndexes/mm10/STAR
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -307,7 +307,7 @@ mouse = /data/genomeIndexes/mm10/STAR
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -316,12 +316,12 @@ mouse = /data/genomeIndexes/mm10/STAR
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -397,7 +397,7 @@ mouse = /data/cellranger/transcriptomes/mm10
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -406,12 +406,12 @@ mouse = /data/cellranger/transcriptomes/mm10
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -488,7 +488,7 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -497,12 +497,12 @@ mouse = /data/cellranger/transcriptomes/mm10_pre_mrna
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
@@ -579,7 +579,7 @@ mouse = /data/cellranger/atac_references/mm10
         for p in ("AB","CDE","undetermined"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s_analysis.zip" % (
+                      "qc_report.%s.%s.zip" % (
                           p,
                           '170901_M00879_0087_000000000-AGEW9'),
                       "multiqc_report.html"):
@@ -588,12 +588,12 @@ mouse = /data/cellranger/atac_references/mm10
                                 "Missing %s in project '%s'" % (f,p))
             # Check zip file has MultiQC report
             zip_file = os.path.join(mockdir.dirn,p,
-                                    "qc_report.%s.%s_analysis.zip" % (
+                                    "qc_report.%s.%s.zip" % (
                                         p,
                                         '170901_M00879_0087_000000000-AGEW9'))
             with zipfile.ZipFile(zip_file) as z:
                 multiqc = os.path.join(
-                    "qc_report.%s.%s_analysis" % (
+                    "qc_report.%s.%s" % (
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
