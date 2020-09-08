@@ -72,7 +72,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -109,7 +109,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -148,7 +148,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -180,7 +180,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+                  "qc_report.PJB.zip"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
@@ -217,7 +217,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -251,7 +251,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -283,7 +283,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,1)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd)):
+                  "qc_report.PJB.zip"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
                             "Missing %s" % f)
@@ -320,7 +320,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -358,8 +358,7 @@ class TestQCPipeline(unittest.TestCase):
                                                    "qc.non_default")),
                          "'qc' directory doesn't exist, but should")
         for f in ("qc.non_default_report.html",
-                  "qc.non_default_report.PJB.%s.zip" %
-                  os.path.basename(self.wd),
+                  "qc.non_default_report.PJB.zip",
                   "multiqc.non_default_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -390,7 +389,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -430,7 +429,7 @@ class TestQCPipeline(unittest.TestCase):
         for p in ("AB","CD"):
             for f in ("qc",
                       "qc_report.html",
-                      "qc_report.%s.%s.zip" % (p,os.path.basename(self.wd)),
+                      "qc_report.%s.zip" % p,
                       "multiqc_report.html"):
                 self.assertTrue(os.path.exists(os.path.join(self.wd,p,f)),
                                 "Missing %s" % f)
@@ -464,7 +463,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -498,7 +497,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -535,7 +534,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.wd,"PJB","qc")),
                         "Missing 'qc'")
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertFalse(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -574,8 +573,7 @@ class TestQCPipeline(unittest.TestCase):
                                                    "qc")),
                          "'qc' directory doesn't exist, but should")
         for f in ("qc_report.html",
-                  "qc_report.PJB.%s.zip" %
-                  os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -621,7 +619,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "qc/cellranger_count",
                   "qc/cellranger_count/PJB1/_cmdline",
                   "qc/cellranger_count/PJB1/outs/web_summary.html",
@@ -678,7 +676,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "qc/cellranger_count",
                   "qc/cellranger_count/PJB1/_cmdline",
                   "qc/cellranger_count/PJB1/outs/web_summary.html",
@@ -737,7 +735,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "qc/cellranger_count",
                   "qc/cellranger_count/PJB1/_cmdline",
                   "qc/cellranger_count/PJB1/outs/web_summary.html",
@@ -795,7 +793,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "qc/cellranger_count",
                   "qc/cellranger_count/PJB1/_cmdline",
                   "qc/cellranger_count/PJB1/outs/web_summary.html",
@@ -850,7 +848,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
@@ -890,7 +888,7 @@ class TestQCPipeline(unittest.TestCase):
         self.assertEqual(status,0)
         for f in ("qc",
                   "qc_report.html",
-                  "qc_report.PJB.%s.zip" % os.path.basename(self.wd),
+                  "qc_report.PJB.zip",
                   "multiqc_report.html"):
             self.assertTrue(os.path.exists(os.path.join(self.wd,
                                                         "PJB",f)),
