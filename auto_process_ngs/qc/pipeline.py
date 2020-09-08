@@ -119,7 +119,7 @@ class QCPipeline(Pipeline):
         self.add_envmodules('report_qc')
 
     def add_project(self,project,qc_dir=None,organism=None,fastq_dir=None,
-                    qc_protocol=None,multiqc=False,
+                    qc_protocol=None,report_html=None,multiqc=False,
                     sample_pattern=None,log_dir=None):
         """
         Add a project to the QC pipeline
@@ -181,6 +181,7 @@ class QCPipeline(Pipeline):
         self.report("-- QC dir    : %s" % qc_dir)
         self.report("-- Library   : %s" % project.info.library_type)
         self.report("-- Organism  : %s" % organism)
+        self.report("-- Report    : %s" % report_html)
 
         ####################
         # Build the pipeline
@@ -393,6 +394,7 @@ class QCPipeline(Pipeline):
             "%s: make QC report" % project_name,
             project,
             qc_dir,
+            report_html=report_html,
             multiqc=multiqc
         )
         self.add_task(report_qc,
