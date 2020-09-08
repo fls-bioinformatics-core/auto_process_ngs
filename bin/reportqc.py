@@ -52,23 +52,24 @@ def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
       String: path to the output ZIP file.
     """
     print("Making ZIP file:")
+    print("-- Project name        : %s" % project.name)
+    print("-- Run                 : %s" % project.info.run)
     print("-- Protocol            : %s" % qc_protocol)
     print("-- QC dir              : %s" % qc_dir)
     print("-- Single cell platform: %s" % project.info.single_cell_platform)
     # Name for ZIP file
+    report_dir = os.path.dirname(report_html)
     basename = os.path.splitext(os.path.basename(report_html))[0]
-    analysis_dir = os.path.basename(os.path.dirname(project.dirn))
+    run_name = project.info.run
+    zip_prefix = "%s.%s%s" % (basename,
+                              project.name,
+                              '.%s' % run_name if run_name else '')
+    print("-- ZIP prefix          : %s" % zip_prefix)
+    report_zip = os.path.join(report_dir,"%s.zip" % zip_prefix)
     # Create ZIP archive
-    report_zip = os.path.join(project.dirn,
-                              "%s.%s.%s.zip" %
-                              (basename,
-                               project.name,
-                               analysis_dir))
-    zip_file = ZipArchive(report_zip,relpath=project.dirn,
-                          prefix="%s.%s.%s" %
-                          (basename,
-                           project.name,
-                           analysis_dir))
+    zip_file = ZipArchive(report_zip,
+                          relpath=os.path.dirname(qc_dir),
+                          prefix=zip_prefix)
     # Get QC dir if not set
     if qc_dir is None:
         qc_dir = project.qc_dir
