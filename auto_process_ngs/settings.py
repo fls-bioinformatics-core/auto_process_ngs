@@ -200,8 +200,8 @@ class Settings(object):
                                                         'mammalian_conf_file')
         self.icell8['contaminants_conf_file'] = config.get('icell8',
                                                            'contaminants_conf_file')
-        self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter',1)
-        self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics',1)
+        self.icell8['nprocessors_contaminant_filter'] = config.getint('icell8','nprocessors_contaminant_filter',None)
+        self.icell8['nprocessors_statistics'] = config.getint('icell8','nprocessors_statistics',None)
         # 10xgenomics
         self.add_section('10xgenomics')
         self['10xgenomics']['cellranger_jobmode'] = config.get('10xgenomics',
