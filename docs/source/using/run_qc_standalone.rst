@@ -26,6 +26,10 @@ for example:
 
    run_qc.py /mnt/data/project/fastqs.trimmed/*.fastq
 
+Various options are available to control the QC; the following
+sections outline the most useful - see the documentation in the
+:ref:`utilities_run_qc` section for the full set of options.
+
 Specifying the QC metadata
 --------------------------
 
@@ -37,9 +41,6 @@ determine which metrics are run:
 * ``--organism``: specify the organism(s)
 * ``--name``: sets the name for the project (used in the
   QC report title)
-
-(See the documentation in the :ref:`utilities_run_qc` section
-for the full range of options.)
 
 Specifying the outputs
 ----------------------
