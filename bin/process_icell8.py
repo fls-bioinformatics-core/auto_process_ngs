@@ -321,10 +321,11 @@ if __name__ == "__main__":
     print("Stage specific settings :")
     for stage in stages:
         nprocs = nprocessors[stage]
+        runner = runners[stage]
         print("-- %s: %s (nprocs=%s)" % (stage,
-                                         runners[stage],
+                                         runner,
                                          nprocs if nprocs
-                                         else '<from runner>'))
+                                         else runner.nslots))
     if modulefiles is not None:
         print("Environment modules:")
         for modulefile in modulefiles.split(','):
