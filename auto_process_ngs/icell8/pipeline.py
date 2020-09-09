@@ -1092,7 +1092,7 @@ class GetICell8Stats(PipelineTask):
             (default: taken from job runner)
 
         Outputs:
-          stats_file (st): path to the output stats file
+          stats_file (str): path to the output stats file
         """
         self.add_output('stats_file',stats_file)
     def setup(self):
