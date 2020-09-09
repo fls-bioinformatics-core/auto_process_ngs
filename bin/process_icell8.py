@@ -243,7 +243,7 @@ if __name__ == "__main__":
     try:
         default_nprocessors = nprocessors['default']
     except KeyError:
-        default_nprocessors = 1
+        default_nprocessors = None
     for stage in stages:
         stage_nprocessors = default_nprocessors
         if stage not in nprocessors:
