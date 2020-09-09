@@ -283,9 +283,10 @@ class MockAnalysisDir(MockIlluminaData):
         if self.readme is not None:
             open(os.path.join(self.dirn,'README'),'w').write(self.readme)
         # Add empty original sample sheet
-        open(os.path.join(self.dirn,'SampleSheet.orig.csv'),'w').write('')
+        with open(os.path.join(self.dirn,'SampleSheet.orig.csv'),'wt') as fp:
+            fp.write('')
         # Initialise a custom_SampleSheet.csv
-        with open(os.path.join(self.dirn,'custom_SampleSheet.csv'),'w') as fp:
+        with open(os.path.join(self.dirn,'custom_SampleSheet.csv'),'wt') as fp:
             fp.write('[Data]\n')
             fp.write('Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description\n')
         # Add top-level ScriptCode directory

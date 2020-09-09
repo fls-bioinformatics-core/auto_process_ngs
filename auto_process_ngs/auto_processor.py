@@ -357,7 +357,7 @@ class AutoProcess(object):
         if self.readme_file is None:
             readme_file = os.path.join(self.analysis_dir,'README')
             print("Initialising %s" % readme_file)
-            with open(readme_file,'w') as fp:
+            with open(readme_file,'wt') as fp:
                 title = "Processing notes for %s" % \
                         os.path.basename(self.analysis_dir)
                 fp.write("%s\n%s\n" % (title,'='*len(title)))
@@ -671,8 +671,9 @@ class AutoProcess(object):
         # not pruned on subsequent rsync operations
         readme = os.path.join(script_code,'README.txt')
         if not os.path.exists(readme):
-            open(readme,'w').write("The ScriptCode directory is a "
-                                   "place to put custom scripts and programs\n")
+            with open(readme,'wt') as fp:
+                fp.write("The ScriptCode directory is a place to put "
+                         "custom scripts and programs\n")
 
     @property
     def readme_file(self):
