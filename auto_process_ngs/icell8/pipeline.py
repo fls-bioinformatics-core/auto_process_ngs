@@ -1070,7 +1070,7 @@ class GetICell8Stats(PipelineTask):
     """
     def init(self,fastqs,stats_file,well_list=None,
              suffix=None,unassigned=False,append=False,
-             nprocs=1,temp_dir=None):
+             nprocs=None,temp_dir=None):
         """
         Initialise the GetICell8Stats task
 
@@ -1089,7 +1089,7 @@ class GetICell8Stats(PipelineTask):
             existing output file (by default creates new
             output file)
           nprocs (int): number of cores available for stats
-            (default: 1)
+            (default: taken from job runner)
 
         Outputs:
           stats_file (st): path to the output stats file
@@ -1112,6 +1112,11 @@ class GetICell8Stats(PipelineTask):
                 # Skip statistics collection
                 print("Stats file already contains data")
                 return
+        # Set the number of processors
+        if self.args.nprocs:
+            nprocs = self.args.nprocs
+        else:
+            nprocs = self.runner_nslots
         # Set up the statistics collection
         self.add_cmd(ICell8Statistics(self.args.fastqs,
                                       self.args.stats_file,
@@ -1119,7 +1124,7 @@ class GetICell8Stats(PipelineTask):
                                       suffix=self.args.suffix,
                                       append=self.args.append,
                                       unassigned=self.args.unassigned,
-                                      nprocs=self.args.nprocs,
+                                      nprocs=nprocs,
                                       temp_dir=self.args.temp_dir))
 
 class GetICell8PolyGStats(GetICell8Stats):
@@ -1440,7 +1445,7 @@ class FilterContaminatedReads(PipelineTask):
             'bowtie2') (optional)
           threads (int): explicitly specify number of
             threads to run FastqScreen using
-            (optional)
+            (default: taken from job runner)
 
         Outputs:
           pattern (str): glob-style pattern matching output
@@ -1456,6 +1461,10 @@ class FilterContaminatedReads(PipelineTask):
             print("%s already exists" % self.args.filter_dir)
             return
         self.tmp_filter_dir = tmp_dir(self.args.filter_dir)
+        if self.args.threads:
+            threads = self.args.threads
+        else:
+            threads = self.runner_nslots
         for fastq_pair in self.args.fastq_pairs:
             self.add_cmd(ContaminantFilterFastqPair(
                 fastq_pair,
@@ -1463,7 +1472,7 @@ class FilterContaminatedReads(PipelineTask):
                 self.args.mammalian_conf,
                 self.args.contaminants_conf,
                 aligner=self.args.aligner,
-                threads=self.args.threads))
+                threads=threads))
     def finish(self):
         if not os.path.exists(self.args.filter_dir):
             os.rename(self.tmp_filter_dir,
