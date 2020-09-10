@@ -1954,8 +1954,7 @@ class UpdateProjectData(PipelineTask):
     def setup(self):
         # Load the project data
         project_dir = os.path.abspath(self.args.project_dir)
-        project = AnalysisProject(project_dir,
-                                  os.path.basename(project_dir))
+        project = AnalysisProject(project_dir)
         # Set the primary fastq set
         project.set_primary_fastq_dir(self.args.primary_fastq_dir)
         # Set the number of cells
