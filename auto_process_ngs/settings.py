@@ -176,7 +176,7 @@ class Settings(object):
                 self['sequencers'][instrument]['platform'] = platform
             logging.warning("Added sequencer information from "
                             "deprecated 'sequencers' section (use "
-                            "'seqencer:INSTRUMENT' sections "
+                            "'sequencer:INSTRUMENT' sections "
                             "instead)")
         except NoSectionError:
             pass
