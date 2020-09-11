@@ -242,6 +242,7 @@ def report_summary(ap):
     - Platform
     - Run name
     - Run reference id
+    - Sequencer model
     - Processing software
     - Assay (i.e. sequencing kit)
 
@@ -266,6 +267,7 @@ def report_summary(ap):
     report_items = ['Run name',
                     'Reference',
                     'Platform',
+                    'Sequencer',
                     'Directory',
                     'Endedness',
                     'Bcl2fastq',]
@@ -323,6 +325,8 @@ def report_summary(ap):
             value = ap.run_reference_id
         elif item == 'Platform':
             value = platform
+        elif item == 'Sequencer':
+            value = ap.metadata.sequencer_model
         elif item == 'Directory':
             value = ap.params.analysis_dir
         elif item == 'Endedness':
@@ -540,6 +544,9 @@ def fetch_value(ap,project,field):
     elif field == 'sequencer_platform' or field == 'platform':
         return ('' if not ap.metadata.platform
                 else str(ap.metadata.platform).upper())
+    elif field == 'sequencer_model':
+        return ('' if not ap.metadata.sequencer_model
+                else ap.metadata.sequencer_model)
     elif field == 'no_of_samples' or field == '#samples':
         return str(len(project.samples))
     elif field == 'no_of_cells' or field == '#cells':
