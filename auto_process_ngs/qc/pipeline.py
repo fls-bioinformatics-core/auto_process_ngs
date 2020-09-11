@@ -990,8 +990,7 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
                 references[organisms[0]])
         except KeyError:
             # No reference data available
-            self.report("No reference data available for '%s'"
-                        % organism)
+            print("No reference data available for '%s'" % organism)
         except Exception as ex:
             # Some other problem
             self.fail(message="Failed to get reference data for "
