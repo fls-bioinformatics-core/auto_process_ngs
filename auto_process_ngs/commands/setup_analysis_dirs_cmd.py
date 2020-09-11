@@ -137,7 +137,8 @@ def setup_analysis_dirs(ap,
             single_cell_platform=single_cell_platform,
             run=run_name,
             comments=comments,
-            platform=ap.metadata.platform)
+            platform=ap.metadata.platform,
+            sequencer_model=ap.metadata.sequencer_model)
         if project.exists:
             logging.warning("Project '%s' already exists, skipping" %
                             project.name)
