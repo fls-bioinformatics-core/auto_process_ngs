@@ -231,6 +231,8 @@ if __name__ == "__main__":
         if stage not in stages:
             logger.fatal("Bad stage for --nprocessors option: %s" % stage)
             sys.exit(1)
+        if n is not None:
+            n = int(n)
         nprocessors[stage] = int(n)
     if args.threads is not None:
         for stage in ('contaminant_filter','statistics'):
@@ -241,7 +243,7 @@ if __name__ == "__main__":
     try:
         default_nprocessors = nprocessors['default']
     except KeyError:
-        default_nprocessors = 1
+        default_nprocessors = None
     for stage in stages:
         stage_nprocessors = default_nprocessors
         if stage not in nprocessors:
@@ -318,9 +320,12 @@ if __name__ == "__main__":
     print("Maximum concurrent jobs : %s" % max_jobs)
     print("Stage specific settings :")
     for stage in stages:
-        print("-- %s: %s (nprocs=%d)" % (stage,
-                                         runners[stage],
-                                         nprocessors[stage]))
+        nprocs = nprocessors[stage]
+        runner = runners[stage]
+        print("-- %s: %s (nprocs=%s)" % (stage,
+                                         runner,
+                                         nprocs if nprocs
+                                         else runner.nslots))
     if modulefiles is not None:
         print("Environment modules:")
         for modulefile in modulefiles.split(','):
