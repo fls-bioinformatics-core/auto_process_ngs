@@ -92,7 +92,7 @@ model = {model}
             top_dir=self.dirn)
         mock_illumina_run.create()
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn)
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
         # Check parameters
@@ -148,7 +148,7 @@ model = {model}
             top_dir=self.dirn)
         mock_illumina_run.create()
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn)
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
         # Check parameters
@@ -190,7 +190,7 @@ model = {model}
             top_dir=self.dirn)
         mockdir.create()
         # Do setup into existing analysis dir
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn)
         self.assertTrue(os.path.isdir(
             '160621_M00879_0087_000000000-AGEW9'))
@@ -219,21 +219,21 @@ model = {model}
             self.dirn,
             "160621_M00879_0087_000000000-AGEW9_analysis")
         # Do setup using absolute path
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,data_dir_abs)
         self.assertEqual(ap.params.data_dir,data_dir_abs)
         self.assertEqual(ap.analysis_dir,analysis_dir)
         del(ap)
         shutil.rmtree(analysis_dir)
         # Do setup using relative path
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,data_dir_rel)
         self.assertEqual(ap.params.data_dir,data_dir_abs)
         self.assertEqual(ap.analysis_dir,analysis_dir)
         del(ap)
         shutil.rmtree(analysis_dir)
         # Do setup using absolute unnormalized path
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,data_dir_abs_unnormalised)
         self.assertEqual(ap.params.data_dir,data_dir_abs)
         self.assertEqual(ap.analysis_dir,analysis_dir)
@@ -243,7 +243,7 @@ model = {model}
         """setup: raises exception if data directory is missing
         """
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         self.assertRaises(Exception,
                           setup_,
                           ap,
@@ -265,7 +265,7 @@ model = {model}
             top_dir=self.dirn)
         mock_illumina_run.create()
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         self.assertRaises(Exception,
                           setup_,
                           ap,
@@ -313,7 +313,7 @@ Sample1,Sample1,,,D701,CGTGTAGG,D501,GACCTGTA,,
 Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
 """)
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
         # Check parameters
@@ -377,7 +377,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         sample_sheet = "file://%s" % sample_sheet
         print(sample_sheet)
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn,sample_sheet=sample_sheet)
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
         # Check parameters
@@ -441,7 +441,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         # Make extra_file2 into a URL
         extra_file2 = "file://%s" % extra_file2
         # Set up autoprocessor
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,mock_illumina_run.dirn,extra_files=(extra_file1,
                                                       extra_file2))
         analysis_dirn = "%s_analysis" % mock_illumina_run.name
@@ -520,7 +520,7 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
         # Set up autoprocessor
         run_dir = "151125_M00879_0001_000000000-ABCDE1"
         analysis_dir = "%s_analysis" % run_dir
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,run_dir,unaligned_dir=casava_outputs.unaligned_dir)
         # Check parameters
         self.assertEqual(ap.analysis_dir,
@@ -599,7 +599,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         # Set up autoprocessor
         run_dir = "151125_M00879_0001_000000000-ABCDE1"
         analysis_dir = "%s_analysis" % run_dir
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         setup_(ap,run_dir,unaligned_dir=bcl2fastq2_outputs.unaligned_dir)
         # Check parameters
         self.assertEqual(ap.analysis_dir,
@@ -657,7 +657,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         os.mkdir(unaligned_dir)
         # Set up autoprocessor
         analysis_dir = "%s_analysis" % run_dir
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         self.assertRaises(Exception,
                           setup_,
                           ap,
@@ -686,7 +686,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
                         fq.write(fastq_r2_data.encode())
         # Set up autoprocessor
         analysis_dir = "%s_analysis" % run_dir
-        ap = AutoProcess()
+        ap = AutoProcess(settings=self.settings())
         self.assertRaises(Exception,
                           setup_,
                           ap,
