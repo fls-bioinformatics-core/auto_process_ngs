@@ -220,6 +220,33 @@ class TestGetSequencerPlatform(unittest.TestCase):
         """
         settings_ini = os.path.join(self.dirn,"auto_process.ini")
         with open(settings_ini,'w') as s:
+            s.write("""[sequencer:SN7001251]
+platform = hiseq
+
+[sequencer:M00880]
+platform = miseq
+
+[sequencer:FS10000171]
+platform = iseq
+""")
+        settings = Settings(settings_ini)
+        print(settings.sequencers)
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/120919_SN7001251_0035_BC133VACXX",
+            settings=settings),"hiseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/121210_M00880_0001_000000000-A2Y1L",
+            settings=settings),"miseq")
+        self.assertEqual(get_sequencer_platform(
+            "/mnt/data/20180829_FS10000171_3_BNT40323-1530",
+            settings=settings),"iseq")
+
+    def test_get_sequencer_platform_from_legacy_settings(self):
+        """
+        get_sequencer_platform: use run directory and settings (legacy)
+        """
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_ini,'w') as s:
             s.write("""[sequencers]
 SN7001251 = hiseq
 M00880 = miseq
