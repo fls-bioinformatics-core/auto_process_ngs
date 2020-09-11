@@ -122,6 +122,15 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
                                           instrument=instrument,
                                           settings=ap.settings)
     print("Platform identified as '%s'" % platform)
+    # Sequencer model
+    model = ap.metadata.sequencer_model
+    if model is None:
+        try:
+            model = ap.settings.sequencers[instrument]['model']
+        except KeyError:
+            pass
+    if model:
+        print("Sequencer model identified as '%s'" % model)
     # Log dir
     ap.set_log_dir(ap.get_log_subdir('setup'))
     # Attempt to acquire sample sheet
@@ -301,6 +310,7 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['instrument_datestamp'] = datestamp
     ap.metadata['instrument_run_number'] = run_number
     ap.metadata['instrument_flow_cell_id'] = flow_cell
+    ap.metadata['sequencer_model'] = model
     ap.metadata['assay'] = assay
     ap.metadata['source'] = data_source
     # Make a 'projects.info' metadata file
