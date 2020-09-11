@@ -380,6 +380,7 @@ class AnalysisProject(object):
     comments    : additional comments, either None or else string of text
     paired_end  : True if data is paired end, False if not
     primary_fastq_dir: subdirectory holding the 'primary' fastq set
+    sequencer_model: model of sequencer used to generate the data
 
     It is possible for a project to have multiple sets of associated
     fastq files, held within separate subdirectories of the project
@@ -400,8 +401,8 @@ class AnalysisProject(object):
     """
     def __init__(self,name,dirn=None,user=None,PI=None,library_type=None,
                  single_cell_platform=None,organism=None,run=None,
-                 comments=None,platform=None,fastq_attrs=None,
-                 fastq_dir=None):
+                 comments=None,platform=None,sequencer_model=None,
+                 fastq_attrs=None,fastq_dir=None):
         """Create a new AnalysisProject instance
 
         Arguments:
@@ -474,6 +475,8 @@ class AnalysisProject(object):
             self.info['organism'] = organism
         if platform is not None:
             self.info['platform'] = platform
+        if sequencer_model is not None:
+            self.info['sequencer_model'] = sequencer_model
         if comments is not None:
             self.info['comments'] = comments
 
@@ -1311,6 +1314,7 @@ def copy_analysis_project(project,fastq_dir=None):
                            run=project.info.run,
                            comments=project.info.comments,
                            platform=project.info.platform,
+                           sequencer_model=project.info.sequencer_model,
                            fastq_dir=fastq_dir,
                            fastq_attrs=
                            project.fastq_attrs)
