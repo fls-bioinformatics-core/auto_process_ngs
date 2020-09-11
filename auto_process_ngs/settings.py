@@ -509,13 +509,18 @@ class Settings(object):
             logging.warning("No settings file found, reporting built-in "
                             "defaults")
         for section in self._sections:
+            if section == 'sequencers':
+                display_name = 'sequencer'
+            else:
+                display_name = section
             if self.has_subsections(section):
                 for subsection in getattr(self,section):
                     text.append(
-                        show_dictionary('%s:%s' % (section,subsection),
+                        show_dictionary('%s:%s' % (display_name,subsection),
                                         getattr(self,section)[subsection]))
             else:
-                text.append(show_dictionary(section,getattr(self,section)))
+                text.append(show_dictionary(display_name,
+                                            getattr(self,section)))
         return '\n'.join(text)
 
 #######################################################################
