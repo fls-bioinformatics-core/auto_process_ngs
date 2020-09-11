@@ -79,21 +79,47 @@ which are described in more detail in :ref:`reference_data`.
 Sequencers and platforms
 ------------------------
 
-The ``sequencers`` section of the configuration file allows
-platform names to be associated with the instrument names for the
-sequencers used at the local site.
+Information about sequencers used at the local site can be stored
+in ``sequencer`` sections of the configuration file.
 
-For example if the local facility has a HISeq 4000 instrument
+A sequencer can be defined by adding a new section of the form
+``[sequencer:INSTRUMENT_NAME]``, where ``INSTRUMENT_NAME`` is the
+ID name for the instrument. Within each section the following
+data items can then be associated with the sequencer:
+
+============= ==============================================
+``platform``  **Compulsory** sets the generic platform name
+              (one of ``hiseq``, ``hiseq4000``, ``nextseq``,
+	      ``miseq``, ``miniseq`` or ``iseq``)
+``model``     Text describing the sequencer model (e.g.
+              ``HiSeq 4000``)
+============= ==============================================
+
+For example: if the local facility has a HiSeq 4000 instrument
 with ID ``SN7001250`` then this would be defined in ``auto_process.ini``
 as follows:
 
 ::
 
-   [sequencers]
-   SN7001250 = hiseq4000
+   [sequencer:SN7001250]
+   platform = hiseq4000
+   model = "HiSeq 4000"
 
 The instrument name can be derived from the name of the directories
 produced by the sequencer (see :ref:`run_and_fastq_naming_conventions`).
+
+
+.. note::
+
+   These sections replace the old ``sequencers`` section used
+   to define the sequencer platforms, e.g.
+
+   ::
+
+      [sequencers]
+      SN7001250 = hiseq4000
+
+  This section is still supported but is now deprecated.
 
 ----------------
 Default metadata
