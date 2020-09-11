@@ -326,6 +326,7 @@ class AnalysisDirMetadata(MetadataDict):
       instrument
     instrument_flow_cell_id: the flow cell ID from the sequencing
       instrument
+    sequencer_model: the model of the sequencing instrument
 
     """
     def __init__(self,filen=None):
@@ -349,6 +350,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'instrument_datestamp': 'instrument_datestamp',
                                   'instrument_flow_cell_id': 'instrument_flow_cell_id',
                                   'instrument_run_number': 'instrument_run_number',
+                                  'sequencer_model': 'sequencer_model',
                               },
                               order=('run_name',
                                      'platform',
