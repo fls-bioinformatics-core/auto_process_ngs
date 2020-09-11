@@ -120,8 +120,8 @@ SN7001251 = hiseq
         s = Settings(settings_file)
         # Check case of option
         self.assertTrue('SN7001251' in s.sequencers)
-        self.assertEqual(s.sequencers['SN7001251'],'hiseq')
-        self.assertEqual(s.sequencers.SN7001251,'hiseq')
+        self.assertEqual(s.sequencers['SN7001251']['platform'],'hiseq')
+        self.assertEqual(s.sequencers.SN7001251.platform,'hiseq')
 
     def test_destination_definitions(self):
         """Settings: handle 'destination:...' sections
@@ -166,3 +166,88 @@ subdir = run_id
         self.assertEqual(s.destination['local']['include_downloader'],False)
         self.assertEqual(s.destination['local']['include_qc_report'],False)
         self.assertEqual(s.destination['local']['hard_links'],False)
+
+    def test_sequencer_definitions(self):
+        """Settings: handle 'sequencer:...' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencer:SN7001250]
+platform = hiseq
+model = "HiSeq 2500"
+
+[sequencer:NB110920]
+platform = nextseq
+model = "NextSeq 500"
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check sequencer settings
+        self.assertTrue('SN7001250' in s.sequencers)
+        self.assertEqual(s.sequencers['SN7001250']['platform'],'hiseq')
+        self.assertEqual(s.sequencers['SN7001250']['model'],"HiSeq 2500")
+        self.assertTrue('NB110920' in s.sequencers)
+        self.assertEqual(s.sequencers['NB110920']['platform'],'nextseq')
+        self.assertEqual(s.sequencers['NB110920']['model'],"NextSeq 500")
+
+    def test_legacy_sequencer_definitions(self):
+        """Settings: handle 'sequencers' section (no 'sequencer:...'s)
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencers]
+SN7001250 = hiseq
+NB110920 = nextseq
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check sequencer settings
+        self.assertTrue('SN7001250' in s.sequencers)
+        self.assertEqual(s.sequencers['SN7001250']['platform'],'hiseq')
+        self.assertEqual(s.sequencers['SN7001250']['model'],None)
+        self.assertTrue('NB110920' in s.sequencers)
+        self.assertEqual(s.sequencers['NB110920']['platform'],'nextseq')
+        self.assertEqual(s.sequencers['NB110920']['model'],None)
+
+    def test_mixed_sequencer_definitions(self):
+        """Settings: handle mixture of 'sequencer:...' & 'sequencers' sections
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencers]
+SN7001250 = hiseq
+NB110920 = nextseq
+
+[sequencer:K00129]
+platform = hiseq4000
+model = "HiSeq 4000"
+""")
+        # Load settings
+        s = Settings(settings_file)
+        # Check sequencer settings
+        self.assertTrue('K00129' in s.sequencers)
+        self.assertEqual(s.sequencers['K00129']['platform'],'hiseq4000')
+        self.assertEqual(s.sequencers['K00129']['model'],"HiSeq 4000")
+        self.assertTrue('SN7001250' in s.sequencers)
+        self.assertEqual(s.sequencers['SN7001250']['platform'],'hiseq')
+        self.assertEqual(s.sequencers['SN7001250']['model'],None)
+        self.assertTrue('NB110920' in s.sequencers)
+        self.assertEqual(s.sequencers['NB110920']['platform'],'nextseq')
+        self.assertEqual(s.sequencers['NB110920']['model'],None)
+
+    def test_sequencer_definitions_fails_if_platform_not_set(self):
+        """Settings: fail to load if 'sequencer:...' section missing 'platform'
+        """
+        # Settings file
+        settings_file = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_file,'w') as s:
+            s.write("""[sequencer:SN7001250]
+model = "HiSeq 2500"
+""")
+        # Load settings
+        self.assertRaises(Exception,
+                          Settings,
+                          settings_file)
