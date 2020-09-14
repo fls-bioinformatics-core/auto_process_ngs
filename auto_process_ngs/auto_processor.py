@@ -340,7 +340,7 @@ class AutoProcess(object):
             instrument_name = self.metadata.instrument_name
             if instrument_name:
                 try:
-                    self.metadata.sequencer_model = \
+                    self.metadata['sequencer_model'] = \
                         self.settings.sequencers[instrument_name].model
                     print("Setting 'sequencer_model' metadata item to "
                           "'%s'" % self.metadata.sequencer_model)
