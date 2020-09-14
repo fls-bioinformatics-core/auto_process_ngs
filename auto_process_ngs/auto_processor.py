@@ -335,6 +335,18 @@ class AutoProcess(object):
                 print("Setting 'platform' metadata item to %s" %
                       platform)
                 self.metadata['platform'] = platform
+        # Sequencer model
+        if self.metadata.sequencer_model is None:
+            instrument_name = self.metadata.instrument_name
+            if instrument_name:
+                try:
+                    self.metadata.sequencer_model = \
+                        self.settings.sequencers[instrument_name].model
+                    print("Setting 'sequencer_model' metadata item to "
+                          "'%s'" % self.metadata.sequencer_model)
+                except KeyError:
+                    print("Unable to get sequencer model for "
+                          "instrument '%s'" % instrument_name)
 
     def edit_samplesheet(self):
         """

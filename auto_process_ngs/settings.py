@@ -161,11 +161,25 @@ class Settings(object):
             logging.debug("No strand stats conf files defined")
         # Sequencers
         self.add_section('sequencers')
+        for section in filter(lambda x: x.startswith('sequencer:'),
+                              config.sections()):
+            instrument = section.split(':')[1]
+            self.sequencers[instrument] = self.get_sequencer_config(
+                section,config)
+        # Add any settings legacy 'sequencers' section
         try:
             for instrument,platform in config.items('sequencers'):
-                self['sequencers'][instrument] = platform
+                if instrument not in self.sequencers:
+                    self['sequencers'][instrument] = \
+                        AttributeDictionary(platform=None,
+                                            model=None)
+                self['sequencers'][instrument]['platform'] = platform
+            logging.warning("Added sequencer information from "
+                            "deprecated 'sequencers' section (use "
+                            "'sequencer:INSTRUMENT' sections "
+                            "instead)")
         except NoSectionError:
-            logging.debug("No sequencers defined")
+            pass
         # Sequencing platform-specific defaults
         self.add_section('platform')
         for section in filter(lambda x: x.startswith('platform:'),
@@ -365,6 +379,40 @@ class Settings(object):
         values['hard_links'] = config.getboolean(section,'hard_links',False)
         return values
 
+    def get_sequencer_config(self,section,config):
+        """
+        Retrieve 'sequencer' configuration options from .ini file
+
+        Given the name of a section (e.g. 'sequencer:SN7001250'),
+        fetch the data associated with the sequencer instrument
+        and return in an AttributeDictionary object.
+
+        The items that can be extracted are:
+
+        - platform (compulsory, str)
+        - model (str, default 'None')
+
+        Arguments:
+          section (str): name of the section to retrieve the
+            settings from
+          config (Config): Config object with settings loaded
+
+        Returns:
+          AttributeDictionary: dictionary of option:value pairs.
+        """
+        values = AttributeDictionary()
+        values['platform'] = config.get(section,'platform',None)
+        values['model'] = config.get(section,'model',None)
+        if values['platform'] is None:
+            raise Exception("%s: missing required 'platform'" % section)
+        if values['model']:
+            # Strip quotes
+            model = values['model']
+            while model[0] in ('"','\'',) and model[-1] in ('"','\'',):
+                model = model[1:-1]
+            values['model'] = model
+        return values
+
     def set(self,param,value):
         """
         Update a configuration parameter value
@@ -461,13 +509,18 @@ class Settings(object):
             logging.warning("No settings file found, reporting built-in "
                             "defaults")
         for section in self._sections:
+            if section == 'sequencers':
+                display_name = 'sequencer'
+            else:
+                display_name = section
             if self.has_subsections(section):
                 for subsection in getattr(self,section):
                     text.append(
-                        show_dictionary('%s:%s' % (section,subsection),
+                        show_dictionary('%s:%s' % (display_name,subsection),
                                         getattr(self,section)[subsection]))
             else:
-                text.append(show_dictionary(section,getattr(self,section)))
+                text.append(show_dictionary(display_name,
+                                            getattr(self,section)))
         return '\n'.join(text)
 
 #######################################################################

@@ -269,6 +269,11 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.assay,None)
         self.assertEqual(metadata.bcl2fastq_software,None)
         self.assertEqual(metadata.cellranger_software,None)
+        self.assertEqual(metadata.instrument_name,None)
+        self.assertEqual(metadata.instrument_datestamp,None)
+        self.assertEqual(metadata.instrument_run_number,None)
+        self.assertEqual(metadata.instrument_flow_cell_id,None)
+        self.assertEqual(metadata.sequencer_model,None)
 
 class TestProjectMetadataFile(unittest.TestCase):
     """Tests for the ProjectMetadataFile class
@@ -462,4 +467,5 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.paired_end,None)
         self.assertEqual(info.primary_fastq_dir,None)
         self.assertEqual(info.samples,None)
+        self.assertEqual(info.sequencer_model,None)
         self.assertEqual(info.comments,None)

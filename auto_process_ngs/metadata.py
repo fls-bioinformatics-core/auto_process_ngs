@@ -326,6 +326,7 @@ class AnalysisDirMetadata(MetadataDict):
       instrument
     instrument_flow_cell_id: the flow cell ID from the sequencing
       instrument
+    sequencer_model: the model of the sequencing instrument
 
     """
     def __init__(self,filen=None):
@@ -349,6 +350,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'instrument_datestamp': 'instrument_datestamp',
                                   'instrument_flow_cell_id': 'instrument_flow_cell_id',
                                   'instrument_run_number': 'instrument_run_number',
+                                  'sequencer_model': 'sequencer_model',
                               },
                               order=('run_name',
                                      'platform',
@@ -367,6 +369,7 @@ class AnalysisProjectInfo(MetadataDict):
     name: the project name
     run: the name of the sequencing run
     platform: the sequencing platform name e.g. 'miseq'
+    sequencer_model: the sequencer model e.g. 'MiSeq'
     user: the user associated with the project
     PI: the principal investigator associated with the project
     organism: the organism associated with the project
@@ -393,6 +396,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'name':'Project name',
                                   'run':'Run',
                                   'platform':'Platform',
+                                  'sequencer_model':'Sequencer model',
                                   'user':'User',
                                   'PI':'PI',
                                   'organism':'Organism',
@@ -419,6 +423,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'paired_end',
                                   'primary_fastq_dir',
                                   'samples',
+                                  'sequencer_model',
                                   'comments',
                               ),
                               filen=filen)

@@ -69,6 +69,7 @@ For example:
     Run name : 150729_M00789_0088_000000000-ABCD1
     Reference: MISEQ_150729#88
     Platform : MISEQ
+    Sequencer: MiSeq
     Directory: /runs/2015/miseq/150729_M00789_0088_000000000-ABCD1_analysis
     Endedness: Paired end
     Bcl2fastq: bcl2fastq 2.17.1.14
@@ -95,6 +96,7 @@ Field name                Associated value
 ``run_number``            Facility run number (e.g. ``88``)
 ``sequencer_platform``    Sequencer platform for the run
                           (e.g. ``MISEQ``)
+``sequencer_model``       Sequencer model (e.g. ``MiSeq``)
 ``platform``              Alias for ``sequencer_platform``
 ``datestamp``             Datestamp for the run (e.g.
                           ``150729``)

@@ -790,6 +790,7 @@ class QCReport(Document):
         """
         metadata_items = ['run',
                           'run_id',
+                          'sequencer_model',
                           'user',
                           'PI',
                           'library_type',
@@ -811,6 +812,7 @@ class QCReport(Document):
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
+            'sequencer_model': 'Sequencer model',
             'single_cell_platform': 'Single cell preparation platform',
             'number_of_cells': 'Number of cells',
             'organism': 'Organism',

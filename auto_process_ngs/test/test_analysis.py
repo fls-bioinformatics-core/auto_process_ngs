@@ -296,8 +296,43 @@ class TestAnalysisProject(unittest.TestCase):
         self.assertEqual(project.info.icell8_well_list,None)
         self.assertFalse(project.info.paired_end)
         self.assertEqual(project.info.platform,None)
+        self.assertEqual(project.info.sequencer_model,None)
         self.assertEqual(project.info.primary_fastq_dir,None)
         self.assertEqual(project.info.samples,None)
+        self.assertEqual(project.info.comments,None)
+        self.assertEqual(project.fastq_dirs,[])
+
+    def test_analysis_project_set_metdata(self):
+        """Create AnalysisProject instance and set metadata
+        """
+        dirn = os.path.join(self.dirn,'PJB')
+        project = AnalysisProject('PJB',
+                                  dirn,
+                                  user="Peter Briggs",
+                                  PI="Alan Dale",
+                                  library_type="scRNA-seq",
+                                  single_cell_platform="ICELL8",
+                                  organism="Mouse",
+                                  run="200911_NB700125_0020_AHXXXXX",
+                                  comments="This is a test",
+                                  platform="nextseq",
+                                  sequencer_model="NextSeq 500")
+        self.assertEqual(project.name,'PJB')
+        self.assertEqual(project.dirn,dirn)
+        self.assertEqual(project.samples,[])
+        self.assertFalse(project.multiple_fastqs)
+        self.assertEqual(project.fastq_dir,None)
+        self.assertEqual(project.info.library_type,"scRNA-seq")
+        self.assertEqual(project.info.single_cell_platform,"ICELL8")
+        self.assertEqual(project.info.organism,"Mouse")
+        self.assertEqual(project.info.number_of_cells,None)
+        self.assertEqual(project.info.icell8_well_list,None)
+        self.assertFalse(project.info.paired_end)
+        self.assertEqual(project.info.platform,"nextseq")
+        self.assertEqual(project.info.sequencer_model,"NextSeq 500")
+        self.assertEqual(project.info.primary_fastq_dir,None)
+        self.assertEqual(project.info.samples,None)
+        self.assertEqual(project.info.comments,"This is a test")
         self.assertEqual(project.fastq_dirs,[])
 
     def test_create_single_end_analysis_project(self):
@@ -1338,7 +1373,12 @@ class TestCopyAnalysisProject(unittest.TestCase):
         # Make mock analysis project
         p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
                                        "PJB1_S1_R2_001.fastq.gz",),
-                                metadata={ 'Organism': 'Human' })
+                                metadata={ 'Library type': 'scRNA-seq',
+                                           'Organism': 'Human',
+                                           'Single cell platform': 'ICELL8',
+                                           'Platform': 'nextseq',
+                                           'Sequencer model': 'NextSeq 500',
+                                           'Comments': 'This is a test' })
         p.create(top_dir=self.wd)
         # Make initial project
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -1350,4 +1390,14 @@ class TestCopyAnalysisProject(unittest.TestCase):
         self.assertEqual(project.fastq_dir,project2.fastq_dir)
         self.assertEqual(project.fastq_dirs,project2.fastq_dirs)
         self.assertEqual(project.fastqs,project2.fastqs)
+        self.assertEqual(project.info.user,project2.info.user)
+        self.assertEqual(project.info.PI,project2.info.PI)
+        self.assertEqual(project.info.library_type,
+                         project2.info.library_type)
+        self.assertEqual(project.info.single_cell_platform,
+                         project2.info.single_cell_platform)
         self.assertEqual(project.info.organism,project2.info.organism)
+        self.assertEqual(project.info.platform,project2.info.platform)
+        self.assertEqual(project.info.sequencer_model,
+                         project2.info.sequencer_model)
+        self.assertEqual(project.info.comments,project2.info.comments)

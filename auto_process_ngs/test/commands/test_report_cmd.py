@@ -274,16 +274,19 @@ class TestReportConcise(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
                         "Organism": "Human",
-                        "PI": "Audrey Bower" },
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
@@ -374,16 +377,19 @@ class TestReportSummary(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
                         "Organism": "Human",
-                        "PI": "Audrey Bower" },
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq",
                          "Comments": "Repeat of previous run" }
             },
             top_dir=self.dirn)
@@ -396,6 +402,7 @@ class TestReportSummary(unittest.TestCase):
 Run name : 170901_M00879_0087_000000000-AGEW9
 Reference: MISEQ_170901#87
 Platform : MISEQ
+Sequencer: MiSeq
 Directory: %s
 Endedness: Paired end
 Bcl2fastq: Unknown
@@ -425,7 +432,8 @@ Additional notes/comments:
                        "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
                        "cellranger_software":
                        "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
@@ -449,6 +457,7 @@ Additional notes/comments:
 Run name  : 170901_M00879_0087_000000000-AGEW9
 Reference : MISEQ_170901#87
 Platform  : MISEQ
+Sequencer : MiSeq
 Directory : %s
 Endedness : Paired end
 Bcl2fastq : bcl2fastq 2.17.1.14
@@ -479,7 +488,8 @@ Additional notes/comments:
                        "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
                        "cellranger_software":
                        "('/usr/bin/cellranger', 'cellranger', '3.0.1')",
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance
@@ -490,6 +500,7 @@ Additional notes/comments:
 Run name  : 170901_M00879_0087_000000000-AGEW9
 Reference : MISEQ_170901#87
 Platform  : MISEQ
+Sequencer : MiSeq
 Directory : %s
 Endedness : Paired end
 Bcl2fastq : bcl2fastq 2.17.1.14
@@ -540,16 +551,19 @@ class TestReportProjects(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
                         "Organism": "Human",
-                        "PI": "Audrey Bower" },
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
@@ -572,26 +586,29 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
                         "Organism": "Human",
-                        "PI": "Audrey Bower" },
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
         # Make autoprocess instance and set required metadata
         ap = AutoProcess(analysis_dir=mockdir.dirn)
         # Generate projects report
-        expected = """170901\tMISEQ_170901#87\t87\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\t2\t\tyes\tAB1-2\t%s
-170901\tMISEQ_170901#87\t87\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\t2\t\tyes\tCDE3-4\t%s
+        expected = """170901\tMISEQ_170901#87\t87\ttesting\t\tAB\tAlison Bell\tAudrey Bower\tRNA-seq\t\tHuman\tMISEQ\tMiSeq\t2\t\tyes\tAB1-2\t%s
+170901\tMISEQ_170901#87\t87\ttesting\t\tCDE\tCharles David Edwards\tColin Delaney Eccleston\tChIP-seq\t\tMouse\tMISEQ\tMiSeq\t2\t\tyes\tCDE3-4\t%s
 """ % (ap.params.analysis_dir,ap.params.analysis_dir)
-        custom_fields = ['datestamp','run_id','run_number','source','null','project','user','PI','library_type','single_cell_platform','organism','platform','#samples','#cells','paired_end','samples','path']
+        custom_fields = ['datestamp','run_id','run_number','source','null','project','user','PI','library_type','single_cell_platform','organism','platform','sequencer_model','#samples','#cells','paired_end','samples','path']
         for o,e in zip(report_projects(ap,fields=custom_fields).split('\n'),
                        expected.split('\n')):
             self.assertEqual(o,e)
@@ -605,18 +622,21 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Single cell platform": "ICELL8",
-                        "Number of cells": 1311 },
+                        "Number of cells": 1311,
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
@@ -639,7 +659,8 @@ MISEQ_170901#87\t87\ttesting\t\tCharles David Edwards\tColin Delaney Eccleston\t
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
         # Make autoprocess instance and set required metadata
@@ -683,16 +704,19 @@ class TestReport(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera" ,
+                       "sequencer_model": "MiSeq"},
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
                         "Organism": "Human",
-                        "PI": "Audrey Bower" },
+                        "PI": "Audrey Bower",
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
@@ -746,18 +770,21 @@ class TestFetchValueFunction(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera" },
+                       "assay": "Nextera",
+                       "sequencer_model": "MiSeq" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Single cell platform": "ICELL8",
-                        "Number of cells": 1311 },
+                        "Number of cells": 1311,
+                        "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
                          "Organism": "Mouse",
-                         "PI": "Colin Delaney Eccleston" }
+                         "PI": "Colin Delaney Eccleston",
+                         "Sequencer model": "MiSeq" }
             },
             top_dir=self.dirn)
         mockdir.create()
@@ -782,6 +809,7 @@ class TestFetchValueFunction(unittest.TestCase):
         self.assertEqual(fetch_value(ap,project,'application'),'scRNA-seq')
         self.assertEqual(fetch_value(ap,project,'library_type'),'scRNA-seq')
         self.assertEqual(fetch_value(ap,project,'organism'),'Human')
+        self.assertEqual(fetch_value(ap,project,'sequencer_model'),'MiSeq')
         self.assertEqual(fetch_value(ap,project,'sequencer_platform'),'MISEQ')
         self.assertEqual(fetch_value(ap,project,'platform'),'MISEQ')
         self.assertEqual(fetch_value(ap,project,'no_of_samples'),'2')

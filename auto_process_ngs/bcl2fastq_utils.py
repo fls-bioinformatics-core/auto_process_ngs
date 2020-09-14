@@ -93,7 +93,7 @@ def get_sequencer_platform(dirn,instrument=None,settings=None):
     if instrument and settings:
         print("Identifying platform from instrument name")
         try:
-            return settings.sequencers[instrument]
+            return settings.sequencers[instrument].platform
         except KeyError:
             # Instrument not listed in the settings
             logger.warning("Instrument name '%s' not found in "
