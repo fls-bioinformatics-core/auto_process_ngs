@@ -4,6 +4,7 @@
 *.pyc
 *.bak
 auto_process_settings_local.py
+auto_process.ini
 settings.ini
 docs/build
 docs/source/developers/api_docs
