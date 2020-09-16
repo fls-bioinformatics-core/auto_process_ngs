@@ -441,6 +441,8 @@ class ProjectMetadataFile(TabFile.TabFile):
     Single cell platform: single-cell preparation platform (e.g. 'ICELL8')
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
+    Kit: the assay/kit used to prepare the samples
+    Spike in: any spike-in used when the samples were run
     Comments: free text containing additional information
               about the project
 
@@ -464,6 +466,8 @@ class ProjectMetadataFile(TabFile.TabFile):
                                 'SC_Platform',
                                 'Organism',
                                 'PI',
+                                'Kit',
+                                'Spike_in',
                                 'Comments')
         # Map keywords to column names
         self._kwmap = { 'Project': 'project_name',
@@ -473,20 +477,19 @@ class ProjectMetadataFile(TabFile.TabFile):
                         'SC_Platform': 'sc_platform',
                         'Organism': 'organism',
                         'PI' : 'PI',
+                        'Kit': 'kit',
+                        'Spike_in': 'spike_in',
                         'Comments': 'comments', }
-        # List of default values
-        self._default_values = { }
+        # Set up fields
         # Optional file to read from
         self.__filen = filen
-        if self.__filen is None:
-            # No existing file so set the default
-            # fields to write to the file
-            self._fields = self._default_fields
-        else:
+        if self.__filen:
             # Get columns from existing file
-            with open(self.__filen,'r') as fp:
+            with open(self.__filen,'rt') as fp:
                 header = fp.readline()
                 self._fields = header.rstrip('\n').lstrip('#').split('\t')
+        else:
+            self._fields = list(self._default_fields)
         # Open the file
         TabFile.TabFile.__init__(self,filen=self.__filen,
                                  column_names=self._fields,
@@ -496,7 +499,7 @@ class ProjectMetadataFile(TabFile.TabFile):
         # Add any missing columns
         for field in self._default_fields:
             if field not in self._fields:
-                self.appendColumn(field)
+                self.appendColumn(field,'.')
 
     def add_project(self,project_name,sample_names,**kws):
         """Add information about a project into the file
