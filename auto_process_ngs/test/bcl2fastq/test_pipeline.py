@@ -3579,9 +3579,9 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         p = MakeFastqs(run_dir,sample_sheet)
         status = p.run(analysis_dir,
                        poll_interval=0.5)
-        self.assertEqual(status,1)
+        self.assertEqual(status,0)
         # Check outputs
-        self.assertEqual(p.output.platform,None)
+        self.assertEqual(p.output.platform,"illumina")
         self.assertEqual(p.output.primary_data_dir,
                          os.path.join(analysis_dir,
                                       "primary_data"))
@@ -3591,13 +3591,21 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                           "2.20.0.422"))
         self.assertEqual(p.output.cellranger_info,None)
         self.assertTrue(p.output.acquired_primary_data)
-        self.assertEqual(p.output.stats_file,None)
-        self.assertEqual(p.output.stats_full,None)
-        self.assertEqual(p.output.per_lane_stats,None)
-        self.assertEqual(p.output.per_lane_sample_stats,None)
+        self.assertEqual(p.output.stats_file,
+                         os.path.join(analysis_dir,"statistics.info"))
+        self.assertEqual(p.output.stats_full,
+                         os.path.join(analysis_dir,"statistics_full.info"))
+        self.assertEqual(p.output.per_lane_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_statistics.info"))
+        self.assertEqual(p.output.per_lane_sample_stats,
+                         os.path.join(analysis_dir,
+                                      "per_lane_sample_stats.info"))
         self.assertEqual(p.output.missing_fastqs,[])
         for subdir in (os.path.join("primary_data",
-                                    "171020_UNKNOWN_00002_AHGXXXX"),):
+                                    "171020_UNKNOWN_00002_AHGXXXX"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
             self.assertTrue(os.path.isdir(
                 os.path.join(analysis_dir,subdir)),
                             "Missing subdir: %s" % subdir)
@@ -3605,17 +3613,12 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
             os.path.join(analysis_dir,
                          "primary_data",
                          "171020_UNKNOWN_00002_AHGXXXX")))
-        for subdir in ("bcl2fastq",
-                       "barcode_analysis",):
-            self.assertFalse(os.path.exists(
-                os.path.join(analysis_dir,subdir)),
-                            "Found subdir: %s" % subdir)
         for filen in ("statistics.info",
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
                       "processing_qc.html"):
-            self.assertFalse(os.path.exists(
+            self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
 
