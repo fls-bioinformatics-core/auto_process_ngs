@@ -1521,7 +1521,13 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 lanes_ext = "_%s" % ''.join([str(l) for l in lanes])
             else:
                 lanes_ext = ''
-            flow_cell_dir = flow_cell_id(run) + lanes_ext
+            try:
+                # Try to get the flow cell from RunInfo.xml
+                run_info = IlluminaRunInfo(os.path.join(run,"RunInfo.xml"))
+                flow_cell_dir = run_info.flowcell + lanes_ext
+            except Exception:
+                # Fallback to extracting from the name
+                flow_cell_dir = flow_cell_id(run) + lanes_ext
             os.mkdir(flow_cell_dir)
             outs_dir = os.path.join(flow_cell_dir,"outs")
             os.mkdir(outs_dir)
