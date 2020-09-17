@@ -442,7 +442,6 @@ class ProjectMetadataFile(TabFile.TabFile):
     Organism: name(s) of the organism(s)
     PI: name(s) of the associated principal investigator(s)
     Kit: the assay/kit used to prepare the samples
-    Spike in: any spike-in used when the samples were run
     Comments: free text containing additional information
               about the project
 
@@ -467,7 +466,6 @@ class ProjectMetadataFile(TabFile.TabFile):
                                 'Organism',
                                 'PI',
                                 'Kit',
-                                'Spike_in',
                                 'Comments')
         # Map keywords to column names
         self._kwmap = { 'Project': 'project_name',
@@ -478,7 +476,6 @@ class ProjectMetadataFile(TabFile.TabFile):
                         'Organism': 'organism',
                         'PI' : 'PI',
                         'Kit': 'kit',
-                        'Spike_in': 'spike_in',
                         'Comments': 'comments', }
         # Set up fields
         # Optional file to read from

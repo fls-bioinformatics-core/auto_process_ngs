@@ -293,7 +293,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         """
         # Make an empty 'file'
         metadata = ProjectMetadataFile()
-        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tSpike_in\tComments\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\n"
         self.assertEqual(len(metadata),0)
         for project in metadata:
             self.fail()
@@ -318,9 +318,8 @@ class TestProjectMetadataFile(unittest.TestCase):
                              library_type="ChIP-seq",
                              organism="Mouse",
                              PI="Harley",
-                             spike_in="1% PhiX",
                              comments="Squeak!")
-        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tSpike_in\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\tNextera XT\t.\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\t.\tMouse\tHarley\t.\t1% PhiX\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\tNextera XT\t.\nFarley\tF3,F4\tFarley G\tChIP-seq\t.\tMouse\tHarley\t.\tSqueak!\n"
         self.assertEqual(len(metadata),2)
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
@@ -340,7 +339,6 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Organism="Yeast",
                          PI="Marley",
                          Kit=".",
-                         Spike_in=".",
                          Comments="."))
         data.append(dict(Project="Farley",
                          Samples="F3-4",
@@ -350,16 +348,15 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Organism="Mouse",
                          PI="Harley",
                          Kit=".",
-                         Spike_in=".",
                          Comments="Squeak!"))
-        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tSpike_in\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\t.\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\t.\t.\tSqueak!\n"
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\t.\tSqueak!\n"
         with open(self.metadata_file,'wt') as fp:
             fp.write(contents)
         # Load and check contents
         metadata = ProjectMetadataFile(self.metadata_file)
         self.assertEqual(len(metadata),2)
         for x,y in zip(data,metadata):
-            for attr in ('Project','User','Library','Organism','PI','Kit','Spike_in','Comments'):
+            for attr in ('Project','User','Library','Organism','PI','Kit','Comments'):
                 self.assertEqual(x[attr],y[attr])
 
     def test_read_existing_legacy_project_metadata_file(self):
@@ -375,7 +372,6 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Organism="Yeast",
                          PI="Marley",
                          Kit=".",
-                         Spike_in=".",
                          Comments="."))
         data.append(dict(Project="Farley",
                          Samples="F3-4",
@@ -385,7 +381,6 @@ class TestProjectMetadataFile(unittest.TestCase):
                          Organism="Mouse",
                          PI="Harley",
                          Kit=".",
-                         Spike_in=".",
                          Comments="Squeak!"))
         contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
         open(self.metadata_file,'w').write(contents)
@@ -393,7 +388,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         metadata = ProjectMetadataFile(self.metadata_file)
         self.assertEqual(len(metadata),2)
         for x,y in zip(data,metadata):
-            for attr in ('Project','User','Library','Organism','PI','Kit','Spike_in','Comments'):
+            for attr in ('Project','User','Library','Organism','PI','Kit','Comments'):
                 self.assertEqual(x[attr],y[attr],
                                  "Values don't match for '%s'" % attr)
 
@@ -585,14 +580,12 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[6],"Marley")
         self.assertEqual(project[7],".")
         self.assertEqual(project[8],".")
-        self.assertEqual(project[9],".")
         # Update some attributes
         metadata.update_project('Charlie',
                                 user="Charlie Percival",
                                 library_type="scRNA-seq",
                                 sc_platform="ICell8",
-                                kit="Nextera XT",
-                                spike_in="1% PhiX")
+                                kit="Nextera XT")
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
         project = metadata.lookup("Charlie")
@@ -603,8 +596,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
         self.assertEqual(project[7],"Nextera XT")
-        self.assertEqual(project[8],"1% PhiX")
-        self.assertEqual(project[9],".")
+        self.assertEqual(project[8],".")
         # Update the samples
         metadata.update_project('Charlie',
                                 sample_names=['C01','C02'])
@@ -618,8 +610,7 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
         self.assertEqual(project[7],"Nextera XT")
-        self.assertEqual(project[8],"1% PhiX")
-        self.assertEqual(project[9],".")
+        self.assertEqual(project[8],".")
 
     def test_update_project_toggles_commenting(self):
         """Toggle the commenting for an existing project
