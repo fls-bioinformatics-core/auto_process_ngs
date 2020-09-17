@@ -86,7 +86,6 @@ from ..pipeliner import PipelineParam as Param
 from ..pipeliner import resolve_parameter
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import cellranger_info
-from ..tenx_genomics_utils import flow_cell_id
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import make_qc_summary_html
 from .reporting import ProcessingQCReport
@@ -2429,7 +2428,7 @@ class RunCellrangerMkfastq(PipelineTask):
             lanes_suffix = "_%s" % ''.join([str(l) for l in self.lanes])
         else:
             lanes_suffix = ""
-        self.cellranger_out_dir = "%s%s" % (flow_cell_id(self.args.run_dir),
+        self.cellranger_out_dir = "%s%s" % (illumina_run.runinfo.flowcell,
                                             lanes_suffix)
         self.mro_file = "__%s.mro" % self.cellranger_out_dir
         # Set bases mask
