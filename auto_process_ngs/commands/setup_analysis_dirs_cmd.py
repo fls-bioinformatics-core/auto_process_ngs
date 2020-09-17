@@ -121,6 +121,7 @@ def setup_analysis_dirs(ap,
         PI = line['PI']
         organism = line['Organism']
         library_type = line['Library']
+        kit = line['Kit']
         single_cell_platform = line['SC_Platform']
         comments = line['Comments']
         # Check it's in the list
@@ -136,6 +137,7 @@ def setup_analysis_dirs(ap,
             PI=PI,
             organism=organism,
             library_type=library_type,
+            kit=kit,
             single_cell_platform=single_cell_platform,
             run=run_name,
             comments=comments,
