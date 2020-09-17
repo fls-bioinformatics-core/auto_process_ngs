@@ -372,6 +372,7 @@ class AnalysisProject(object):
     user        : user name
     PI          : PI name
     library_type: library type, either None or e.g. 'RNA-seq' etc
+    kit         : library prep kit, either None or e.g. 'TruSeq Stranded mRNA'
     single_cell_platform: single cell prep platform, either None or 'ICell8' etc
     number of cells: number of cells in single cell projects
     ICELL8 well list: well list file for ICELL8 single cell projects
@@ -400,7 +401,7 @@ class AnalysisProject(object):
     'set_primary_fastq_dir' method.
     """
     def __init__(self,name,dirn=None,user=None,PI=None,library_type=None,
-                 single_cell_platform=None,organism=None,run=None,
+                 kit=None,single_cell_platform=None,organism=None,run=None,
                  comments=None,platform=None,sequencer_model=None,
                  fastq_attrs=None,fastq_dir=None):
         """Create a new AnalysisProject instance
@@ -414,6 +415,8 @@ class AnalysisProject(object):
           PI: optional, specify name of the principal investigator
           library_type: optional, specify library type e.g. 'RNA-seq',
             'miRNA' etc
+          kit: optional, specify library prep kit e.g.
+            'TruSeq Stranded mRNA' etc
           single_cell_platform: optional, specify single cell
             preparation platform e.g. 'Icell8', '10xGenomics' etc
           organism: optional, specify organism e.g. 'Human', 'Mouse'
@@ -469,6 +472,8 @@ class AnalysisProject(object):
             self.info['PI'] = PI
         if library_type is not None:
             self.info['library_type'] = library_type
+        if kit is not None:
+            self.info['kit'] = kit
         if single_cell_platform is not None:
             self.info['single_cell_platform'] = single_cell_platform
         if organism is not None:
