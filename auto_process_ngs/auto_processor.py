@@ -424,7 +424,9 @@ class AutoProcess(object):
                     for fastq in sample.fastq:
                         sample_names.add(sample_name)
                 sample_names = sorted(list(sample_names))
-                project_metadata.add_project(project_name,sample_names)
+                project_metadata.add_project(project_name,
+                                             sample_names,
+                                             kit=self.metadata.assay)
         except IlluminaData.IlluminaDataError as ex:
             logging.warning("Unable to get project data from bcl2fastq "
                             "output : %s" % ex)
@@ -527,7 +529,9 @@ class AutoProcess(object):
         for project_name in projects:
             sample_names = projects[project_name]
             if project_name not in project_metadata:
-                project_metadata.add_project(project_name,sample_names)
+                project_metadata.add_project(project_name,
+                                             sample_names,
+                                             kit=self.metadata.kit)
             else:
                 project_metadata.update_project(project_name,
                                                 sample_names=sample_names)
