@@ -691,6 +691,7 @@ class TestAnalysisProjectInfo(unittest.TestCase):
         self.assertEqual(info.single_cell_platform,None)
         self.assertEqual(info.number_of_cells,None)
         self.assertEqual(info.icell8_well_list,None)
+        self.assertEqual(info.kit,None)
         self.assertEqual(info.paired_end,None)
         self.assertEqual(info.primary_fastq_dir,None)
         self.assertEqual(info.samples,None)

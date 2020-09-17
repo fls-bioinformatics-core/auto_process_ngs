@@ -377,6 +377,7 @@ class AnalysisProjectInfo(MetadataDict):
     single_cell_platform: the single cell preparation platform
     number of cells: number of cells in single cell projects
     ICELL8 well list: well list file for ICELL8 single cell projects
+    kit: assay/kit used for preparing the samples
     paired_end: True if the data is paired end, False if not
     primary_fastq_dir: the primary subdir with FASTQ files
     samples: textual description of the samples in the project
@@ -401,6 +402,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI':'PI',
                                   'organism':'Organism',
                                   'library_type':'Library type',
+                                  'kit':'Library prep kit',
                                   'single_cell_platform':'Single cell platform',
                                   'number_of_cells':'Number of cells',
                                   'icell8_well_list':'ICELL8 well list',
@@ -417,6 +419,7 @@ class AnalysisProjectInfo(MetadataDict):
                                   'PI',
                                   'organism',
                                   'library_type',
+                                  'kit',
                                   'single_cell_platform',
                                   'number_of_cells',
                                   'icell8_well_list',
