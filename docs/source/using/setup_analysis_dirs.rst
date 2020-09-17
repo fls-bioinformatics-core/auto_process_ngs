@@ -19,15 +19,16 @@ Before runing ``setup_analysis_dirs``, the ``projects.info`` file should
 be edited to fill in the following information for each project:
 
 * **User**: the name(s) of the user(s) associated with the project
-* **PI**: the name(s) of the principal investigator(s) (PIs) associated
-  with the project
 * **Library**: the library or application type (for example "RNA-seq",
   "ChIP-seq" etc)
+* **SC_Platform**: the single-cell platform used to prepare the samples
+  (if appropriate)
 * **Organism**: the organism(s) that the samples in the project
   originally came from (for example "Human", "Mouse", "D. Melanogaster"
   etc)
-* **SC_Platform**: the single-cell platform used to prepare the samples
-  (if appropriate).
+* **PI**: the name(s) of the principal investigator(s) (PIs) associated
+  with the project
+* **Kit**: the kit used for library prep for the samples in this project
 
 See :doc:`projects_info` for more information on the format of the
 ``projects.info`` file and the allowed values for each field.

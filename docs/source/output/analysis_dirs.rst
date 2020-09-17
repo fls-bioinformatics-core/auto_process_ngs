@@ -64,20 +64,26 @@ The most commonly used metadata items are listed in the table below:
 .. table::
    :widths: auto
 
-   ====================== ========================================
-   **Item**               **Description**
-   ---------------------- ----------------------------------------
-   ``run_number``         Facility-assigned identifier which
-                          can differ from the instrument run
-                          number
-   ``source``             Source of the sequencing data, for
-                          example the name of the facility,
-	                  institution or service that
-		          provided it
-   ``platform``           The sequencing platform (e.g. ``miseq``)
-   ``bcl2fastq_software`` Location and version of the package
-                          used to perform the Fastq generation
-   ====================== ========================================
+   ======================= ========================================
+   **Item**                **Description**
+   ----------------------- ----------------------------------------
+   ``run_number``          Facility-assigned identifier which
+                           can differ from the instrument run
+                           number
+   ``source``              Source of the sequencing data, for
+                           example the name of the facility,
+	                   institution or service that
+		           provided it
+   ``platform``            The sequencing platform (e.g. ``miseq``)
+   ``bcl2fastq_software``  Location and version of the package
+                           used to perform the Fastq generation
+   ``cellranger_software`` Location and version of the package
+                           for handling 10xGenomics single cell
+			   data
+   ``assay``               The library prep kit (taken from the
+                           sample sheet by default)
+   ``sequencer_model``     The model of the sequencing instrument
+   ======================= ========================================
 
 The full set of metadata items and values for can be viewed using the
 ``metadata`` command:
@@ -174,10 +180,13 @@ The most commonly used metadata items are listed in the table below:
    ------------------------ -----------------------------------------
    ``Run``                  Parent run name
    ``Platform``             Sequencing platform (e.g. ``miseq``)
+   ``Sequencer model``      The model of the sequencing instrument
    ``User``                 Name of the user(s)
    ``PI``                   Name of PI(s)
    ``Organism``             Organism name(s)
    ``Library type``         The type of experiment (e.g. ``RNA-seq``)
+   ``Library prep kit``     The kit used to prepare the libraries
+                            (e.g. ``TruSeq Stranded mRNA``)
    ``Single cell platform`` Single cell platform, if applicable
    ``Number of cells``      Number of cells (single cell only)
    ``ICELL8 well list``     Well list file (ICELL8 only)
