@@ -473,6 +473,21 @@ class MakeFastqs(Pipeline):
         if self._sample_sheet and len(self.subsets) > 1:
             if self._subsets_split_project():
                 raise Exception("Subsets would split a project")
+
+        # Check that barcodes are consistent with protocols
+        for s in self.subsets:
+            protocol = s['protocol']
+            masked_index = s['masked_index']
+            if masked_index == '__10X__':
+                # 10xGenomics barcodes
+                if protocol not in ('10x_chromium_sc','10x_atac',):
+                    raise Exception("Protocol '%s': can't handle "
+                                    "10xGenomics barcodes" % protocol)
+            else:
+                # Standard barcodes
+                if protocol in ('10x_chromium_sc','10x_atac',):
+                    raise Exception("Protocol '%s': needs 10xGenomics "
+                                    "barcodes" % protocol)
             
         # Update parameters on each subset according to the
         # assigned protocol (overriding pipeline defaults)

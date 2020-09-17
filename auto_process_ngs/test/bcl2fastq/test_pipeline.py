@@ -1773,8 +1773,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,EF4,EF4,,A1,N701,TAAGGCGA,S501,TAGATCGC,EF,
 5,GH5,GH5,,A3,N703,AGGCAGAA,S501,TAGATCGC,GH,
 6,IJB6,IJ6,,F3,N703,AGGCAGAA,S506,ACTGCATA,IJ,
-7,KL7,KL7,,,N701,GCCAATAT,S502,TCTTTCCC,KL,
-8,MN8,MN8,,,N701,GCCAATAT,S503,TCTTTCCC,MN,
+7,KL7,KL7,,,N701,SI-GA-A1,S502,,KL,
+8,MN8,MN8,,,N701,SI-GA-A1,S503,,MN,
 """)
         # Well list file
         well_list = os.path.join(self.wd,"WellList.txt")
@@ -1919,8 +1919,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,EF4,EF4,,A1,N701,TAAGGCGA,S501,TAGATCGC,EF,
 5,GH5,GH5,,A3,N703,AGGCAGAA,S501,TAGATCGC,GH,
 6,IJB6,IJ6,,F3,N703,AGGCAGAA,S506,ACTGCATA,IJ,
-7,KL7,KL7,,,N701,GCCAATAT,S502,TCTTTCCC,KL,
-8,MN8,MN8,,,N701,GCCAATAT,S503,TCTTTCCC,MN,
+7,KL7,KL7,,,N701,SI-GA-A1,S502,,KL,
+8,MN8,MN8,,,N701,SI-GA-A1,S503,,MN,
 """)
         # Well list file
         well_list = os.path.join(self.wd,"WellList.txt")
@@ -3881,6 +3881,105 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                           sample_sheet)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_exception_for_standard_protocol_with_10x_barcodes(self):
+        """
+        MakeFastqs: raise exception for 10x barcodes with 'standard' protocol
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics Chromium SC indices
+        samplesheet_chromium_sc_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_sc_indices)
+        # Create mock bcl2fastq and cellranger
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Using a samplesheet with 10x barcodes should raise
+        # an exception
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet)
+
+    #@unittest.skip("Skipped")
+    def test_makefastqs_exception_for_10x_chromium_sc_protocol_with_non_10x_barcodes(self):
+        """
+        MakeFastqs: raise exception for non-10x barcodes with '10x_chromium_sc' protocol
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet with 10xGenomics Chromium SC indices
+        samplesheet_chromium_non_sc_indices = """[Header]
+IEMFileVersion,4
+Assay,Nextera XT
+
+[Reads]
+76
+76
+
+[Settings]
+ReverseComplement,0
+Adapter,CTGTCTCTTATACACATCT
+
+[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,TACCTGAC,10xGenomics,
+smpl2,smpl2,,,A005,TGACTACC,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_chromium_non_sc_indices)
+        # Create mock bcl2fastq and cellranger
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        analysis_dir = os.path.join(self.wd,"analysis")
+        os.mkdir(analysis_dir)
+        # Using a samplesheet with non-10x barcodes should raise
+        # an exception
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,
+                          protocol="10x_chromium_sc")
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_exception_for_inconsistent_subsets(self):
         """
         MakeFastqs: raise exception for inconsistent subsets
@@ -4076,50 +4175,6 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,,
                               subset(lanes=[1,]),
                               subset(lanes=[2,3,4])
                           ))
-
-    #@unittest.skip("Skipped")
-    def test_makefastqs_standard_protocol_fails_for_chromium_sc_indices(self):
-        """
-        MakeFastqs: standard protocol: fails for Chromium SC indices
-        """
-        # Create mock source data
-        illumina_run = MockIlluminaRun(
-            "171020_NB500968_00002_AHGXXXX",
-            "nextseq",
-            top_dir=self.wd)
-        illumina_run.create()
-        run_dir = illumina_run.dirn
-        # Sample sheet with 10xGenomics Chromium SC indices
-        samplesheet_chromium_sc_indices = """[Header]
-IEMFileVersion,4
-Assay,Nextera XT
-
-[Reads]
-76
-76
-
-[Settings]
-ReverseComplement,0
-Adapter,CTGTCTCTTATACACATCT
-
-[Data]
-Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
-smpl1,smpl1,,,A001,SI-GA-A1,10xGenomics,
-smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
-smpl3,smpl3,,,A006,SI-GA-C1,10xGenomics,
-smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
-"""
-        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
-        with open(sample_sheet,'w') as fp:
-            fp.write(samplesheet_chromium_sc_indices)
-        # Make an (empty) analysis directory
-        analysis_dir = os.path.join(self.wd,"analysis")
-        os.mkdir(analysis_dir)
-        # Do the test
-        p = MakeFastqs(run_dir,sample_sheet,protocol="standard")
-        status = p.run(analysis_dir,
-                       poll_interval=0.5)
-        self.assertEqual(status,1)
 
 class TestPathJoinParam(unittest.TestCase):
     """

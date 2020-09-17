@@ -194,6 +194,10 @@ smpl4,smpl4,,,A007,SI-GA-D1,10xGenomics,
             "nextseq",
             top_dir=self.wd)
         illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
         # Do the test
         ap = AutoProcess(settings=self.settings)
         ap.setup(os.path.join(self.wd,
@@ -462,6 +466,46 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_10x_chromium_sc_protocol_exception_for_standard_indices(self):
+        """make_fastqs: 10x_chromium_sc protocol without Chromium SC indices raises exception
+        """
+        # Sample sheet with standard (non-10xGenomics Chromium SC) indices
+        samplesheet_standard_indices = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,GATCTACT,10xGenomics,
+smpl2,smpl2,,,A005,CTTAGGAC,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_standard_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        MockCellrangerExe.create(os.path.join(self.bin,
+                                              "cellranger"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        self.assertRaises(Exception,
+                          make_fastqs,
+                          ap,
+                          protocol="10x_chromium_sc")
 
     #@unittest.skip("Skipped")
     def test_make_fastqs_missing_fastqs_no_placeholders(self):
