@@ -615,9 +615,15 @@ class QCReport(Document):
                                        css_classes=("info",))
         comments_list = List()
         try:
-            if self.project.info.comments:
-                for comment in self.project.info.comments.split(';'):
-                    comments_list.add_item(comment.strip())
+            if self.project.info.comments or self.project.info.kit:
+                # Add comments split by semi-colon
+                if self.project.info.comments:
+                    for comment in self.project.info.comments.split(';'):
+                        comments_list.add_item(comment.strip())
+                # Append the library prep kit
+                if self.project.info.kit:
+                    comments_list.add_item("Library prep: %s" %
+                                           self.project.info.kit)
             else:
                 # Drop out with exception
                 raise AttributeError
@@ -794,6 +800,7 @@ class QCReport(Document):
                           'user',
                           'PI',
                           'library_type',
+                          'kit',
                           'single_cell_platform',
                           'number_of_cells',
                           'organism',
@@ -812,6 +819,7 @@ class QCReport(Document):
             'user': 'User',
             'PI': 'PI',
             'library_type': 'Library type',
+            'kit': 'Library prep kit',
             'sequencer_model': 'Sequencer model',
             'single_cell_platform': 'Single cell preparation platform',
             'number_of_cells': 'Number of cells',
