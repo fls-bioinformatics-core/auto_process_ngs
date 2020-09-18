@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     report_cmd.py: implement auto process 'report' command
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 #########################################################################
 
