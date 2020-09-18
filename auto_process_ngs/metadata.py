@@ -490,8 +490,9 @@ class ProjectMetadataFile(TabFile.TabFile):
         # Open the file
         TabFile.TabFile.__init__(self,filen=self.__filen,
                                  column_names=self._fields,
-                                 first_line_is_header=True,
-                                 convert=False)
+                                 skip_first_line=True,
+                                 convert=False,
+                                 keep_commented_lines=True)
         # Add any missing columns
         for field in self._default_fields:
             if field not in self._fields:

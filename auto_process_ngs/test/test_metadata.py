@@ -371,6 +371,36 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(metadata[0]['Project'],"1234")
         self.assertEqual(metadata[1]['Project'],"56.78")
 
+    def test_handle_commented_project(self):
+        """Handle commented project lines
+        """
+        # Create metadata file independently
+        data = list()
+        data.append(dict(Project="Charlie",
+                         Samples="C1-2",
+                         User="Charlie P",
+                         Library="RNA-seq",
+                         SC_Platform=".",
+                         Organism="Yeast",
+                         PI="Marley",
+                         Comments="."))
+        data.append(dict(Project="#Farley",
+                         Samples="F3-4",
+                         User="Farley G",
+                         Library="ChIP-seq",
+                         SC_Platform=".",
+                         Organism="Mouse",
+                         PI="Harley",
+                         Comments="Squeak!"))
+        contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\n#Farley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
+        open(self.metadata_file,'w').write(contents)
+        # Load and check contents
+        metadata = ProjectMetadataFile(self.metadata_file)
+        self.assertEqual(len(metadata),2)
+        for x,y in zip(data,metadata):
+            for attr in ('Project','User','Library','Organism','PI','Comments'):
+                self.assertEqual(x[attr],y[attr])
+
     def test_refuse_to_add_duplicate_projects(self):
         """Refuse to add duplicated project names
         """
