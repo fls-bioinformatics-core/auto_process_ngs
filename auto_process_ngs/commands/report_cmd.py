@@ -121,6 +121,7 @@ def report_info(ap):
     report.append("Run reference: %s" % ap.run_reference_id)
     report.append("Directory    : %s" % ap.analysis_dir)
     report.append("Platform     : %s" % ap.metadata.platform)
+    report.append("Sequencer    : %s" % ap.metadata.sequencer_model)
     report.append("Unaligned dir: %s" % ap.params.unaligned_dir)
     if ap.readme_file:
         report.append("README.txt found: %s" % ap.readme_file)
@@ -269,8 +270,7 @@ def report_summary(ap):
                     'Platform',
                     'Sequencer',
                     'Directory',
-                    'Endedness',
-                    'Bcl2fastq',]
+                    'Endedness',]
     # Gather information
     analysis_dir = analysis.AnalysisDir(ap.analysis_dir)
     datestamp = None
@@ -297,7 +297,6 @@ def report_summary(ap):
     try:
         cellranger_software = ast.literal_eval(
             ap.metadata.cellranger_software)
-        report_items.append('Cellranger')
     except ValueError:
         cellranger_software = None
     if ap.metadata.assay is not None:
