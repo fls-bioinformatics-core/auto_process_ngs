@@ -53,14 +53,17 @@ class TestReportInfo(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
+                       "sequencer_model": "MiSeq",
                        "assay": "Nextera" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
+                        "Library prep kit": "Nextera",
                         "Organism": "Human",
                         "PI": "Audrey Bower" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
+                         "Library prep kit": "TruSeq Stranded mRNA",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston" }
             },
@@ -72,6 +75,7 @@ class TestReportInfo(unittest.TestCase):
         expected = """Run reference: MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
+Sequencer    : MiSeq
 Unaligned dir: bcl2fastq
 
 Summary of data in 'bcl2fastq' dir:
@@ -86,6 +90,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : Alison Bell
   PI      : Audrey Bower
   Library : RNA-seq
+  Kit     : Nextera
   SC Plat.: None
   Organism: Human
   Dir     : AB
@@ -100,6 +105,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : Charles David Edwards
   PI      : Colin Delaney Eccleston
   Library : ChIP-seq
+  Kit     : TruSeq Stranded mRNA
   SC Plat.: None
   Organism: Mouse
   Dir     : CDE
@@ -114,6 +120,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : None
   PI      : None
   Library : None
+  Kit     : None
   SC Plat.: None
   Organism: None
   Dir     : undetermined
@@ -135,10 +142,12 @@ Summary of data in 'bcl2fastq' dir:
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
+                       "sequencer_model": "MiSeq",
                        "assay": "Nextera" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
+                        "Library prep kit": "Nextera",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Single cell platform": "ICELL8",
@@ -146,6 +155,7 @@ Summary of data in 'bcl2fastq' dir:
                         },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
+                         "Library prep kit": "TruSeq Stranded mRNA",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston" }
             },
@@ -157,6 +167,7 @@ Summary of data in 'bcl2fastq' dir:
         expected = """Run reference: MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
+Sequencer    : MiSeq
 Unaligned dir: bcl2fastq
 
 Summary of data in 'bcl2fastq' dir:
@@ -171,6 +182,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : Alison Bell
   PI      : Audrey Bower
   Library : scRNA-seq
+  Kit     : Nextera
   SC Plat.: ICELL8
   Organism: Human
   Dir     : AB
@@ -185,6 +197,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : Charles David Edwards
   PI      : Colin Delaney Eccleston
   Library : ChIP-seq
+  Kit     : TruSeq Stranded mRNA
   SC Plat.: None
   Organism: Mouse
   Dir     : CDE
@@ -199,6 +212,7 @@ Summary of data in 'bcl2fastq' dir:
   User    : None
   PI      : None
   Library : None
+  Kit     : None
   SC Plat.: None
   Organism: None
   Dir     : undetermined
@@ -220,6 +234,7 @@ Summary of data in 'bcl2fastq' dir:
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
+                       "sequencer_model": "MiSeq",
                        "assay": "Nextera" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
@@ -229,6 +244,7 @@ Summary of data in 'bcl2fastq' dir:
         expected = """Run reference: MISEQ_170901#87
 Directory    : %s
 Platform     : miseq
+Sequencer    : MiSeq
 Unaligned dir: bcl2fastq
 
 Summary of data in 'bcl2fastq' dir:
@@ -377,16 +393,18 @@ class TestReportSummary(unittest.TestCase):
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
-                       "assay": "Nextera",
-                       "sequencer_model": "MiSeq" },
+                       "sequencer_model": "MiSeq",
+                       "assay": "Nextera" },
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "RNA-seq",
+                        "Library prep kit": "Nextera",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
+                         "Library prep kit": "TruSeq Stranded mRNA",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston",
                          "Sequencer model": "MiSeq",
@@ -405,12 +423,11 @@ Platform : MISEQ
 Sequencer: MiSeq
 Directory: %s
 Endedness: Paired end
-Bcl2fastq: Unknown
 Assay    : Nextera
 
 2 projects:
-- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human RNA-seq  2 samples (PI Audrey Bower)            (Nextera)             
+- 'CDE': Charles David Edwards Mouse ChIP-seq 2 samples (PI Colin Delaney Eccleston) (TruSeq Stranded mRNA)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -437,12 +454,14 @@ Additional notes/comments:
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
+                        "Library prep kit": "Nextera",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Single cell platform": "ICELL8",
                         "Number of cells": 1311 },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
+                         "Library prep kit": "TruSeq Stranded mRNA",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston",
                          "Comments": "Repeat of previous run" }
@@ -454,19 +473,17 @@ Additional notes/comments:
         # Generate summary report
         expected = """MISEQ run #87 datestamped 170901
 ================================
-Run name  : 170901_M00879_0087_000000000-AGEW9
-Reference : MISEQ_170901#87
-Platform  : MISEQ
-Sequencer : MiSeq
-Directory : %s
-Endedness : Paired end
-Bcl2fastq : bcl2fastq 2.17.1.14
-Cellranger: cellranger 3.0.1
-Assay     : Nextera
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Assay    : Nextera
 
 2 projects:
-- 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)           
-- 'CDE': Charles David Edwards Mouse ChIP-seq           2 samples            (PI Colin Delaney Eccleston)
+- 'AB':  Alison Bell           Human scRNA-seq (ICELL8) 2 samples/1311 cells (PI Audrey Bower)            (Nextera)             
+- 'CDE': Charles David Edwards Mouse ChIP-seq           2 samples            (PI Colin Delaney Eccleston) (TruSeq Stranded mRNA)
 
 Additional notes/comments:
 - CDE: Repeat of previous run
@@ -497,15 +514,13 @@ Additional notes/comments:
         # Generate summary report
         expected = """MISEQ run #87 datestamped 170901
 ================================
-Run name  : 170901_M00879_0087_000000000-AGEW9
-Reference : MISEQ_170901#87
-Platform  : MISEQ
-Sequencer : MiSeq
-Directory : %s
-Endedness : Paired end
-Bcl2fastq : bcl2fastq 2.17.1.14
-Cellranger: cellranger 3.0.1
-Assay     : Nextera
+Run name : 170901_M00879_0087_000000000-AGEW9
+Reference: MISEQ_170901#87
+Platform : MISEQ
+Sequencer: MiSeq
+Directory: %s
+Endedness: Paired end
+Assay    : Nextera
 
 No projects found; 'bcl2fastq' directory contains the following data:
 
@@ -775,6 +790,7 @@ class TestFetchValueFunction(unittest.TestCase):
             project_metadata={
                 "AB": { "User": "Alison Bell",
                         "Library type": "scRNA-seq",
+                        "Library prep kit": "Nextera",
                         "Organism": "Human",
                         "PI": "Audrey Bower",
                         "Single cell platform": "ICELL8",
@@ -782,6 +798,7 @@ class TestFetchValueFunction(unittest.TestCase):
                         "Sequencer model": "MiSeq" },
                 "CDE": { "User": "Charles David Edwards",
                          "Library type": "ChIP-seq",
+                         "Library prep kit": "TruSeq Stranded mRNA",
                          "Organism": "Mouse",
                          "PI": "Colin Delaney Eccleston",
                          "Sequencer model": "MiSeq" }
@@ -808,6 +825,8 @@ class TestFetchValueFunction(unittest.TestCase):
         self.assertEqual(fetch_value(ap,project,'pi'),'Audrey Bower')
         self.assertEqual(fetch_value(ap,project,'application'),'scRNA-seq')
         self.assertEqual(fetch_value(ap,project,'library_type'),'scRNA-seq')
+        self.assertEqual(fetch_value(ap,project,'kit'),'Nextera')
+        self.assertEqual(fetch_value(ap,project,'library_prep_kit'),'Nextera')
         self.assertEqual(fetch_value(ap,project,'organism'),'Human')
         self.assertEqual(fetch_value(ap,project,'sequencer_model'),'MiSeq')
         self.assertEqual(fetch_value(ap,project,'sequencer_platform'),'MISEQ')
