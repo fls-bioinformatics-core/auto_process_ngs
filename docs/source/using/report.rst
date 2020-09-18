@@ -72,11 +72,10 @@ For example:
     Sequencer: MiSeq
     Directory: /runs/2015/miseq/150729_M00789_0088_000000000-ABCD1_analysis
     Endedness: Paired end
-    Bcl2fastq: bcl2fastq 2.17.1.14
     Assay    : TruSeq HT
 
     1 project:
-    - 'AB': Abby Brown Mouse RNA-seq 4 samples (PI Carl Dover)
+    - 'AB': Abby Brown Mouse RNA-seq 4 samples (PI Carl Dover) (Nextera)
 
     Additional notes/comments:
     - AB: 1% PhiX spike in
@@ -113,6 +112,9 @@ Field name                Associated value
 ``application``           Application associated with the
                           project (e.g. ``RNA-seq``)
 ``library_type``          Alias for ``application``
+``kit``                   Kit used for the library prep
+                          (e.g. ``Nextera``)
+``library_prep_kit``      Alias for ``kit``
 ``single_cell_platform``  Name of the single-cell platform
                           (e.g. ``ICELL8``), or empty field
 			  if not a single-cell project
