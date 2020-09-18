@@ -152,6 +152,7 @@ def report_info(ap):
         report.append("  User    : %s" % info.user)
         report.append("  PI      : %s" % info.PI)
         report.append("  Library : %s" % info.library_type)
+        report.append("  Kit     : %s" % info.kit)
         report.append("  SC Plat.: %s" % info.single_cell_platform)
         report.append("  Organism: %s" % info.organism)
         report.append("  Dir     : %s" % os.path.basename(project.dirn))
@@ -360,7 +361,8 @@ def report_summary(ap):
                       'library_type',
                       'single_cell_platform',
                       'number_of_cells',
-                      'organism')
+                      'organism',
+                      'kit')
         for project in analysis_dir.projects:
             project_data = dict(project=project.name)
             for item in data_items:
@@ -381,7 +383,8 @@ def report_summary(ap):
                          project_data['organism'],
                          library,
                          samples,
-                         "(PI %s)" % project_data['PI']))
+                         "(PI %s)" % project_data['PI'],
+                         "(%s)" % project_data['kit']))
             if project.info.comments:
                 comments[project.name] = project.info.comments
         report.append(utils.pretty_print_rows(rows))
@@ -535,6 +538,8 @@ def fetch_value(ap,project,field):
     elif field == 'application' or field == 'library_type':
         return ('' if not info.library_type
                 else info.library_type)
+    elif field == 'kit' or field == 'library_prep_kit':
+        return ('' if not info.kit else info.kit)
     elif field == 'single_cell_platform':
         return ('' if not info.single_cell_platform
                 else info.single_cell_platform)
