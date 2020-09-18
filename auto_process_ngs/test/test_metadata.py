@@ -476,6 +476,26 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
 
+    def test_output_is_sorted(self):
+        """Output is sorted into project order
+        """
+        sorted_contents = \
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nXavier\tX3,X4\tXavier C\tChIP-seq\t.\tFly\tLensher\t.\n"""
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Xavier',['X3','X4'],
+                             user="Xavier C",
+                             library_type="ChIP-seq",
+                             organism="Fly",
+                             PI="Lensher")
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        metadata.save(self.metadata_file)
+        with open(self.metadata_file,'rt') as fp:
+            self.assertEqual(fp.read(),sorted_contents)
+
 class TestAnalysisProjectInfo(unittest.TestCase):
     """Tests for the AnalysisDirMetadata class
     """

@@ -595,6 +595,9 @@ class ProjectMetadataFile(TabFile.TabFile):
             defaults to the same file as data was read in from)
 
         """
+        # Sort into project name order
+        self.sort(lambda line: str(line['Project']).rstrip('#'))
+        # Write to file
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
