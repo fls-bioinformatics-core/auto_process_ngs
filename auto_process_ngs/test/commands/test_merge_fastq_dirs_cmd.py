@@ -240,9 +240,9 @@ poll_interval = 0.5
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -293,9 +293,9 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -345,9 +345,9 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -396,9 +396,9 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -446,9 +446,9 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -496,9 +496,9 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
 
@@ -637,10 +637,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             projects_info = fp.read()
-        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
-AB	AB1,AB2	.	.	.	.	.	.
-CDE	CDE3,CDE4	.	.	.	.	.	.
+        expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Kit	Comments
+AB	AB1,AB2	.	.	.	.	.	.	.
+CDE	CDE3,CDE4	.	.	.	.	.	.	.
 """
         self.assertEqual(projects_info,expected)
-        
-        
