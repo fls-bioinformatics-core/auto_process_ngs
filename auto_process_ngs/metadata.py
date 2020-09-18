@@ -598,6 +598,7 @@ class ProjectMetadataFile(TabFile.TabFile):
 
     def __contains__(self,name):
         """
+        Internal: check if field 'name' exists
         """
         return (name in [p[self._fields[0]] for p in self])
 
