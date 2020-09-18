@@ -581,12 +581,6 @@ class ProjectMetadataFile(TabFile.TabFile):
             else:
                 project[field] = value
 
-    def project(self,name):
-        """Return AttributeDictionary for a project
-
-        """
-        raise NotImplementedError
-
     def save(self,filen=None):
         """Save the data back to file
 
