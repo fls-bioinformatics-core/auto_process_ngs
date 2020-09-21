@@ -138,13 +138,12 @@ def report_info(ap):
     else:
         report.append("No information on source fastq data (no unaligned dir "
                       "found)")
-    try:
-        projects = ap.get_analysis_projects()
+    projects = ap.get_analysis_projects()
+    if len(projects):
         report.append("\n%d analysis project%s:" % (len(projects),
                                                     "s" if len(projects) != 0
                                                     else ""))
-    except Exception as ex:
-        projects = []
+    else:
         report.append("\nNo analysis projects found")
     for project in projects:
         info = project.info
