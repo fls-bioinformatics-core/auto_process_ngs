@@ -396,6 +396,26 @@ class AutoProcess(object):
         return IlluminaData.IlluminaData(self.analysis_dir,
                                          unaligned_dir=unaligned_dir)
 
+    def make_project_metadata_file(self,project_metadata_file='projects.info'):
+        """
+        Create a new project metadata file
+
+        Arguments:
+          project_metadata_file (str): name of the metadata file;
+            relative paths are created under the analysis directory
+            (default: 'projects.info')
+        """
+        # Generate a project metadata file based on the fastq
+        # files and directory structure
+        project_metadata = self.load_project_metadata(
+            project_metadata_file=project_metadata_file,
+            update=True)
+        # Save to file
+        filen = os.path.join(self.params.analysis_dir,project_metadata_file)
+        project_metadata.save(filen)
+        self.params['project_metadata'] = project_metadata_file
+        print("Saving project metadata to %s" % self.params.project_metadata)
+
     def load_project_metadata(self,project_metadata_file='projects.info',
                               check=True,update=False):
         """
@@ -826,18 +846,6 @@ class AutoProcess(object):
         else:
             print("No metadata file found")
         self.print_values(self.metadata)
-
-    def make_project_metadata_file(self,project_metadata_file='projects.info'):
-        # Generate a project metadata file based on the fastq
-        # files and directory structure
-        project_metadata = self.load_project_metadata(
-            project_metadata_file=project_metadata_file,
-            update=True)
-        # Save to file
-        filen = os.path.join(self.params.analysis_dir,project_metadata_file)
-        project_metadata.save(filen)
-        self.params['project_metadata'] = project_metadata_file
-        print("Saving project metadata to %s" % self.params.project_metadata)
 
     def get_analysis_projects(self,pattern=None):
         """
