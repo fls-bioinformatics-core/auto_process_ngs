@@ -276,7 +276,7 @@ class AnalysisDir(object):
                 else:
                     # Check against projects.info, if possible
                     try:
-                        if not self.projects_metadata.lookup('Project',dirn):
+                        if dirn not in self.projects_metadata:
                             logger.debug("- %s: not in projects.info" % dirn)
                             self._extra_dirs.append(dirn)
                             continue
