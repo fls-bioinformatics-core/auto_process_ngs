@@ -78,8 +78,10 @@ def setup_analysis_dirs(ap,
         logger.warning("Update '%s' and rerun" % project_metadata_file)
         return 1
     project_metadata = ap.load_project_metadata(
-        project_metadata_file=project_metadata_file,
-        check=True)
+        project_metadata_file=project_metadata_file)
+    # Filter out the commented projects
+    project_metadata = [p for p in project_metadata
+                        if not p['Project'].startswith('#')]
     # Sanity check that the project data file has been populated
     got_project_data = True
     for line in project_metadata:
