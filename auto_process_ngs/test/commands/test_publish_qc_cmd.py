@@ -9,6 +9,7 @@ import os
 from auto_process_ngs.settings import Settings
 from auto_process_ngs.auto_processor import AutoProcess
 from auto_process_ngs.mock import MockAnalysisDirFactory
+from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock import UpdateAnalysisDir
 from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mock import MockMultiQC
@@ -456,6 +457,53 @@ poll_interval = 0.5
                                               os.path.basename(
                                                   ap.analysis_dir)))))
 
+    def test_publish_qc_ignore_additional_project_dir(self):
+        """publish_qc: ignore project-like directory not in projects.info
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create()
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing report
+        UpdateAnalysisDir(ap).add_processing_report()
+        # Add QC outputs for subset of projects
+        projects = ap.get_analysis_projects()
+        for project in ap.get_analysis_projects():
+            UpdateAnalysisProject(project).add_qc_outputs()
+        # Make an additional project-like directory
+        project_like = MockAnalysisProject('additional_dir',
+                                           ('random1_R1.fastq',
+                                            'random2_R1.fastq',))
+        project_like.create(top_dir=mockdir.dirn)
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html"]
+        for project in projects:
+            # Standard QC outputs
+            project_qc = "qc_report.%s.%s" % (project.name,
+                                              project.info.run)
+            outputs.append(project_qc)
+            outputs.append("%s.zip" % project_qc)
+            outputs.append(os.path.join(project_qc,"qc_report.html"))
+            outputs.append(os.path.join(project_qc,"qc"))
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
     def test_publish_qc_subset_of_projects(self):
         """publish_qc: only publish subset of projects
         """
@@ -506,8 +554,7 @@ poll_interval = 0.5
                 os.path.join(publication_dir,
                              "160621_K00879_0087_000000000-AGEW9_analysis",
                              "qc_report.%s.%s" % (project.name,
-                                                  os.path.basename(
-                                                      ap.analysis_dir)))),
+                                                  project.info.run))),
                              "%s exists in final dir, but shouldn't" %
                              project.name)
 
