@@ -243,14 +243,17 @@ def main():
             # in case full paths weren't updated
             fq_set = os.path.basename(project.qc_info(qc_dir).fastq_dir)
             if fq_set == os.path.basename(project.fastq_dir):
-                qc_zip = os.path.join(project.dirn,
-                                      "%s_report.%s.%s.zip" %
-                                      (qc_dir,project.name,
-                                       os.path.basename(
-                                           analysis_dir.analysis_dir)))
-                if os.path.exists(qc_zip):
-                    print("... found %s" % qc_zip)
-                    qc_zips.append(qc_zip)
+                for qc_base in ("%s_report.%s.%s" %
+                                (qc_dir,project.name,project.info.run),
+                                "%s_report.%s.%s" %
+                                (qc_dir,project.name,
+                                 os.path.basename(
+                                     analysis_dir.analysis_dir)),):
+                    qc_zip = os.path.join(project.dirn,
+                                          "%s.zip" % qc_base)
+                    if os.path.exists(qc_zip):
+                        print("... found %s" % qc_zip)
+                        qc_zips.append(qc_zip)
         if not qc_zips:
             logger.error("No zipped QC reports found")
             return 1
