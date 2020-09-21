@@ -427,10 +427,100 @@ class TestProjectMetadataFile(unittest.TestCase):
                              PI="Marley")
         # Check for existing project
         self.assertTrue("Charlie" in metadata)
+        self.assertTrue("#Charlie" in metadata)
         # Check for non-existent project
         self.assertFalse("Marley" in metadata)
+        self.assertFalse("#Marley" in metadata)
 
-    def test_update_exisiting_project(self):
+    def test_check_if_commented_project_in_metadata(self):
+        """Check if project appears in metadata when commented
+        """
+        # Make new 'file' and add projects
+        metadata = ProjectMetadataFile()
+        metadata.add_project('#Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check for existing project
+        self.assertTrue("Charlie" in metadata)
+        self.assertTrue("#Charlie" in metadata)
+        # Check for non-existent project
+        self.assertFalse("Marley" in metadata)
+        self.assertFalse("#Marley" in metadata)
+
+    def test_lookup_project(self):
+        """Check that lookup returns specified project
+        """
+        # Make new 'file' and add projects
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Fetch data
+        project = metadata.lookup("Charlie")
+        self.assertEqual(project[0],"Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+        # Fetch data for commented name
+        project = metadata.lookup("#Charlie")
+        self.assertEqual(project[0],"Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+
+    def test_lookup_commented_project(self):
+        """Check that lookup returns specified (commented) project
+        """
+        # Make new 'file' and add projects
+        metadata = ProjectMetadataFile()
+        metadata.add_project('#Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="RNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Fetch data
+        project = metadata.lookup("Charlie")
+        self.assertEqual(project[0],"#Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+        # Fetch data for commented name
+        project = metadata.lookup("#Charlie")
+        self.assertEqual(project[0],"#Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"RNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+
+    def test_lookup_missing_project_raises_exception(self):
+        """Check that lookup raises KeyError if specified project is missing
+        """
+        # Make new 'file'
+        metadata = ProjectMetadataFile()
+        # Check for exceptions
+        self.assertRaises(KeyError,
+                          metadata.lookup,
+                          "Charlie")
+        self.assertRaises(KeyError,
+                          metadata.lookup,
+                          "#Charlie")
+
+    def test_update_existing_project(self):
         """Update the data for an existing project
         """
         # Make new 'file' and add project
@@ -442,7 +532,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                              PI="Marley")
         # Check initial data is correct
         self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
+        project = metadata.lookup("Charlie")
         self.assertEqual(project[1],"C1,C2")
         self.assertEqual(project[2],"Charlie P")
         self.assertEqual(project[3],"scRNA-seq")
@@ -456,7 +546,7 @@ class TestProjectMetadataFile(unittest.TestCase):
                                 sc_platform="ICell8")
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
+        project = metadata.lookup("Charlie")
         self.assertEqual(project[1],"C1,C2")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
@@ -468,11 +558,52 @@ class TestProjectMetadataFile(unittest.TestCase):
                                 sample_names=['C01','C02'])
         # Check the data has been updated
         self.assertTrue("Charlie" in metadata)
-        project = metadata.lookup("Project","Charlie")[0]
+        project = metadata.lookup("Charlie")
         self.assertEqual(project[1],"C01,C02")
         self.assertEqual(project[2],"Charlie Percival")
         self.assertEqual(project[3],"scRNA-seq")
         self.assertEqual(project[4],"ICell8")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+
+    def test_update_project_toggles_commenting(self):
+        """Toggle the commenting for an existing project
+        """
+        # Make new 'file' and add project
+        metadata = ProjectMetadataFile()
+        metadata.add_project('Charlie',['C1','C2'],
+                             user="Charlie P",
+                             library_type="scRNA-seq",
+                             organism="Yeast",
+                             PI="Marley")
+        # Check initial data is correct
+        self.assertTrue("Charlie" in metadata)
+        project = metadata.lookup("Charlie")
+        self.assertEqual(project[0],"Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+        # Update and comment the project name
+        metadata.update_project('#Charlie')
+        project = metadata.lookup("Charlie")
+        self.assertEqual(project[0],"#Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],".")
+        self.assertEqual(project[5],"Yeast")
+        self.assertEqual(project[6],"Marley")
+        # Update and uncomment the project name
+        metadata.update_project('Charlie')
+        project = metadata.lookup("Charlie")
+        self.assertEqual(project[0],"Charlie")
+        self.assertEqual(project[1],"C1,C2")
+        self.assertEqual(project[2],"Charlie P")
+        self.assertEqual(project[3],"scRNA-seq")
+        self.assertEqual(project[4],".")
         self.assertEqual(project[5],"Yeast")
         self.assertEqual(project[6],"Marley")
 

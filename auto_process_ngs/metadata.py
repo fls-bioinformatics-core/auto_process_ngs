@@ -555,10 +555,9 @@ class ProjectMetadataFile(TabFile.TabFile):
             information about the project
         """
         # Fetch data line for existing project
-        if project_name not in self:
-            raise Exception("Project '%s' not found" %
-                            project_name)
-        project = self.lookup("Project",project_name)[0]
+        project = self.lookup(project_name)
+        # Set project name
+        kws['project_name'] = project_name
         # Set sample names, if supplied
         try:
             kws['sample_names'] = ','.join(kws['sample_names'])
@@ -581,6 +580,24 @@ class ProjectMetadataFile(TabFile.TabFile):
             else:
                 project[field] = value
 
+    def lookup(self,project_name):
+        """
+        Return data for line with specified project name
+
+        Leading comment characters (i.e. '#') are ignored
+        when performing the lookup.
+        """
+        pname = project_name.lstrip('#')
+        for name in (pname,"#%s" % pname):
+            try:
+                return TabFile.TabFile.lookup(self,
+                                              "Project",
+                                              name)[0]
+            except IndexError:
+                pass
+        raise KeyError("'%s': project not found in metadata file"
+                       % project_name)
+
     def save(self,filen=None):
         """Save the data back to file
 
@@ -590,7 +607,7 @@ class ProjectMetadataFile(TabFile.TabFile):
 
         """
         # Sort into project name order
-        self.sort(lambda line: str(line['Project']).rstrip('#'))
+        self.sort(lambda line: str(line['Project']).lstrip('#'))
         # Write to file
         if filen is not None:
             self.__filen = filen
@@ -599,8 +616,14 @@ class ProjectMetadataFile(TabFile.TabFile):
     def __contains__(self,name):
         """
         Internal: check if field 'name' exists
+
+        'name' should be the name of a project; if either the
+        supplied name and/or the project name in the file are
+        commented (i.e. preceeded by '#' symbol), then the
+        leading '#' is ignored.
         """
-        return (name in [p[self._fields[0]] for p in self])
+        return (name.lstrip('#') in
+                [p[self._fields[0]].lstrip('#') for p in self])
 
 class AnalysisProjectQCDirInfo(MetadataDict):
     """Class for storing metadata for a QC output directory
