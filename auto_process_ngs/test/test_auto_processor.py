@@ -160,7 +160,7 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
         self.assertEqual(projects,[])
 
     def test_no_projects_dot_info_no_project_dirs(self):
-        """AutoProcess.get_analysis_projects: no project dirs  (no projects.info)
+        """AutoProcess.get_analysis_projects: no project dirs (no projects.info)
         """
         # Make an auto-process directory
         mockdir = MockAnalysisDirFactory.bcl2fastq2(
@@ -173,9 +173,9 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
         # Remove the projects.info file
         os.remove(os.path.join(mockdir.dirn,"projects.info"))
         print(os.listdir(mockdir.dirn))
-        # Listing the projects should raise an exception
-        self.assertRaises(Exception,
-                          AutoProcess(mockdir.dirn).get_analysis_projects)
+        # No projects should be listed
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        self.assertEqual(projects,[])
 
     def test_projects_dot_info_no_project_dirs(self):
         """AutoProcess.get_analysis_projects: no project dirs
@@ -188,9 +188,9 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
                        "source": "local" },
             top_dir=self.dirn)
         mockdir.create(no_project_dirs=True)
-        # Listing the projects should raise an exception
-        self.assertRaises(Exception,
-                          AutoProcess(mockdir.dirn).get_analysis_projects)
+        # No projects should be listed
+        projects = AutoProcess(mockdir.dirn).get_analysis_projects()
+        self.assertEqual(projects,[])
 
     def test_with_project_dirs(self):
         """AutoProcess.get_analysis_projects: project dirs exist

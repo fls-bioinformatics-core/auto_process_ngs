@@ -844,25 +844,16 @@ class AutoProcess(object):
         Return the analysis projects in a list
 
         By default returns all projects within the analysis
-        directory (including 'undetermined') which are listed
-        in the 'projects.info' metadata file.
+        directory which are listed in the 'projects.info'
+        metadata file (and 'undetermined', which is not).
 
         If the 'pattern' is not None then it should be a simple
         pattern used to match against available names to select
         a subset of projects (see bcf_utils.name_matches).
 
-        If any project in 'projects.info' doesn't have a
-        matching analysis directory then an exception is
-        raised.
-
-        Note:
-
-        - If there is no 'projects.info' file then the projects
-          are taken from those in the 'unaligned' directory of
-          the analysis directory.
-        - If there is no 'unaligned' directory then the projects
-          are determined from the subdirectories in the analysis
-          directory.
+        If any project in 'projects.info' doesn't have an
+        associated analysis directory then it will be omitted
+        from the results.
 
         Arguments:
           pattern (str): optional pattern to select a subset
@@ -876,35 +867,20 @@ class AutoProcess(object):
         projects = []
         if pattern is None:
             pattern = '*'
+        # Get matching projects from metadata file
         for line in project_metadata:
             name = line['Project']
             if not bcf_utils.name_matches(name,pattern):
                 # Name failed to match, ignore
                 continue
-            logging.debug("Acquiring data for project %s" % name)
             # Look for a matching project directory
-            project_dir = None
-            dirs = bcf_utils.list_dirs(self.analysis_dir,startswith=name)
-            logging.debug("Possible matching directories: %s" % dirs)
-            if len(dirs) == 1:
-                # Just a single match
-                project_dir = dirs[0]
+            project_dir = os.path.join(self.analysis_dir,name)
+            if os.path.exists(project_dir):
+                projects.append(AnalysisProject(project_dir))
             else:
-                # Multiple matches, look for an exact match
-                for d in dirs:
-                    if d == name:
-                        project_dir = name
-                    break
-            if project_dir is None:
-                logging.error("Unable to resolve directory for project "
-                              "'%s'" % name)
-                logging.error("Possible dirs: %s" % dirs)
-                raise Exception("Unable to resolve directory for project "
-                                "'%s'" % name)
-            # Attempt to load the project data
-            project_dir = os.path.join(self.analysis_dir,project_dir)
-            projects.append(AnalysisProject(name,project_dir))
-        # Add undetermined reads directory
+                logging.warning("Matching project '%s': no associated "
+                                "directory" % name)
+        # Deal with undetermined
         if bcf_utils.name_matches('undetermined',pattern):
             undetermined_analysis = self.undetermined()
             if undetermined_analysis is not None and \
