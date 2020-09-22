@@ -45,7 +45,8 @@ class TestZipArchive(unittest.TestCase):
                 except OSError as ex:
                     raise OSError("Failed to make %s" % item)
             else:
-                open(item,'w').write('')
+                with open(item,'wt') as fp:
+                    fp.write('')
         # Create the zip archive
         zip_filename = os.path.join(self.dirn,'test.zip')
         self.assertFalse(os.path.exists(zip_filename))
@@ -97,10 +98,10 @@ class TestOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
-                         "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
     def test_outputfiles_with_basedir(self):
         out = OutputFiles(self.wd)
         out.open('test1','test1.txt')
@@ -135,10 +136,11 @@ class TestOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
-                         "test1 already exists\nSome test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "test1 already exists\nSome test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
     def test_outputfiles_reopen(self):
         out = OutputFiles(base_dir=self.wd)
         out.open('test1','test1.txt')
@@ -164,10 +166,11 @@ class TestOutputFiles(unittest.TestCase):
         out.write('test1','Some extra test text')
         out.write('test2','Some different\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
-                         "Some test text\nSome extra test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
-                         "Some different\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "Some test text\nSome extra test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some different\ntest text\n")
     def test_outputfiles_len(self):
         out = OutputFiles(base_dir=self.wd)
         self.assertEqual(len(out),0)
@@ -207,10 +210,10 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'rt').read(),
-                         "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'rt').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
     def test_bufferedoutputfiles_with_gzip(self):
         out = BufferedOutputFiles()
         out.open('test1',os.path.join(self.wd,'test1.txt.gz'))
@@ -222,10 +225,10 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(gzip.open(out.file_name('test1'),'rt').read(),
-                         "Some test text\n")
-        self.assertEqual(gzip.open(out.file_name('test2'),'rt').read(),
-                         "Some more\ntest text\n")
+        with gzip.open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some test text\n")
+        with gzip.open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
     def test_bufferedoutputfiles_with_basedir(self):
         out = BufferedOutputFiles(self.wd)
         out.open('test1','test1.txt')
@@ -249,10 +252,11 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'rt').read(),
-                         "test1 already exists\nSome test text\n")
-        self.assertEqual(open(out.file_name('test2'),'rt').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "test1 already exists\nSome test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
     def test_bufferedoutputfiles_reopen(self):
         out = BufferedOutputFiles(base_dir=self.wd)
         out.open('test1','test1.txt')
@@ -278,10 +282,11 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some extra test text')
         out.write('test2','Some different\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'rt').read(),
-                         "Some test text\nSome extra test text\n")
-        self.assertEqual(open(out.file_name('test2'),'rt').read(),
-                         "Some different\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "Some test text\nSome extra test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some different\ntest text\n")
     def test_bufferedoutputfiles_exceed_maximum_open_files(self):
         # Only allow 2 open files at once internally
         # (and with an artifically small buffer size)
@@ -309,22 +314,26 @@ class TestBufferedOutputFiles(unittest.TestCase):
         # Close everything
         out.close()
         # Check the contents for each file
-        self.assertEqual(open(out.file_name('test1'),'rt').read(),
-                         "test text\n"
-                         "and a bit more\n"
-                         "plus some final\ntext\n")
-        self.assertEqual(open(out.file_name('test2'),'rt').read(),
-                         "different\ntest text\n"
-                         "more but different\n"
-                         "and a last bit\n")
-        self.assertEqual(open(out.file_name('test3'),'rt').read(),
-                         "more test text\n"
-                         "different again\n"
-                         "plus a coda\n")
-        self.assertEqual(open(out.file_name('test4'),'rt').read(),
-                         "yet more\ntest text\n"
-                         "and even more different\ntest text\n"
-                         "et\nFIN\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "test text\n"
+                             "and a bit more\n"
+                             "plus some final\ntext\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "different\ntest text\n"
+                             "more but different\n"
+                             "and a last bit\n")
+        with open(out.file_name('test3'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "more test text\n"
+                             "different again\n"
+                             "plus a coda\n")
+        with open(out.file_name('test4'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "yet more\ntest text\n"
+                             "and even more different\ntest text\n"
+                             "et\nFIN\n")
 
 class TestShowProgressChecker(unittest.TestCase):
     """
@@ -778,8 +787,8 @@ class TestWriteScriptFile(unittest.TestCase):
         self.assertFalse(os.path.exists(script_file))
         write_script_file(script_file,"sleep 50\n#")
         self.assertTrue(os.path.exists(script_file))
-        self.assertEqual(open(script_file).read(),
-                         "sleep 50\n#\n")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),"sleep 50\n#\n")
 
     def test_write_script_file_with_shell(self):
         """write_script_file creates new script file with shell
@@ -788,8 +797,8 @@ class TestWriteScriptFile(unittest.TestCase):
         self.assertFalse(os.path.exists(script_file))
         write_script_file(script_file,"sleep 50\n#",shell='/bin/sh')
         self.assertTrue(os.path.exists(script_file))
-        self.assertEqual(open(script_file).read(),
-                         "#!/bin/sh\nsleep 50\n#\n")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),"#!/bin/sh\nsleep 50\n#\n")
 
     def test_write_script_file_append(self):
         """write_script_file appends to an existing file
@@ -799,5 +808,6 @@ class TestWriteScriptFile(unittest.TestCase):
             fp.write("#\necho Going to sleep\n")
         write_script_file(script_file,"sleep 50\n#",append=True)
         self.assertTrue(os.path.exists(script_file))
-        self.assertEqual(open(script_file).read(),
-                         "#\necho Going to sleep\nsleep 50\n#\n")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#\necho Going to sleep\nsleep 50\n#\n")
