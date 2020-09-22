@@ -36,6 +36,7 @@ import gzip
 import subprocess
 import logging
 from bcftbx.FASTQFile import FastqIterator
+from bcftbx.FASTQFile import get_fastq_file_handle
 from bcftbx.FASTQFile import nreads
 from bcftbx.qc.report import strip_ngs_extensions
 
@@ -468,9 +469,10 @@ def get_read_number(fastq):
     Returns:
       Integer: read number (1 or 2) extracted from the first read.
     """
-    for r in FastqIterator(fastq):
-        seq_id = r.seqid
-        break
+    with get_fastq_file_handle(fastq) as fp:
+        for r in FastqIterator(fp=fp):
+            seq_id = r.seqid
+            break
     return int(seq_id.pair_id)
 
 def get_read_count(fastqs):
@@ -514,9 +516,10 @@ def pair_fastqs(fastqs):
     for fq in [os.path.abspath(fq) for fq in fastqs]:
         # Get header from first read
         seq_id = None
-        for r in FastqIterator(fq):
-            seq_id = r.seqid
-            break
+        with get_fastq_file_handle(fq) as fp:
+            for r in FastqIterator(fp=fp):
+                seq_id = r.seqid
+                break
         if seq_id is None:
             logging.debug("'Bad' file: %s" % fq)
             bad_files.append(fq)
