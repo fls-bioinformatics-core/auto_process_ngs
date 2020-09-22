@@ -526,7 +526,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             try:
                 kw = self._kwmap[field]
             except KeyError as ex:
-                raise ex
+                raise KeyError("Unrecognised field: '%s'" % field)
             # Look up the assigned value
             try:
                 value = kws[kw]
@@ -569,7 +569,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             try:
                 kw = self._kwmap[field]
             except KeyError as ex:
-                raise ex
+                raise KeyError("Unrecognised field: '%s'" % field)
             # Assign the new values
             if kw not in kws:
                 continue
