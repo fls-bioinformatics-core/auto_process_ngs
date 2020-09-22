@@ -418,6 +418,12 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+        # Check the samples listed in the projects.info file
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+ICELL8_ATAC\tUnassigned-Sample1,Unassigned-Sample2\t.\t.\t.\t.\t.\t.
+""")
 
     #@unittest.skip("Skipped")
     def test_make_fastqs_10x_chromium_sc_protocol(self):
