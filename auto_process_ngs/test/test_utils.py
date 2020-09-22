@@ -152,10 +152,11 @@ class TestOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'r').read(),
-                         "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'r').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(open(out.file_name('test2'),'r').read(),
+                             "Some more\ntest text\n")
         # Reopen files
         out.open('test1',append=True)
         out.open('test2')
@@ -268,10 +269,10 @@ class TestBufferedOutputFiles(unittest.TestCase):
         out.write('test1','Some test text')
         out.write('test2','Some more\ntest text')
         out.close()
-        self.assertEqual(open(out.file_name('test1'),'rt').read(),
-                         "Some test text\n")
-        self.assertEqual(open(out.file_name('test2'),'rt').read(),
-                         "Some more\ntest text\n")
+        with open(out.file_name('test1'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some test text\n")
+        with open(out.file_name('test2'),'rt') as fp:
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
         # Reopen files
         out.open('test1',append=True)
         out.open('test2')
