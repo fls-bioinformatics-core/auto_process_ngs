@@ -294,52 +294,55 @@ class MockAnalysisDir(MockIlluminaData):
         # Add top-level logs directory
         os.mkdir(os.path.join(self.dirn,'logs'))
         # Add project dirs
-        projects_info = open(os.path.join(self.dirn,'projects.info'),'w')
-        projects_info.write('#%s\n' % '\t'.join(('Project',
-                                                 'Samples',
-                                                 'User',
-                                                 'Library',
-                                                 'Organism',
-                                                 'PI',
-                                                 'Comments')))
-        for project in self.projects:
-            if project.startswith("Undetermined"):
-                project_name = 'undetermined'
-            else:
-                project_name = project
-            project_metadata = { 'Run': self.run_name,
-                                 'Platform': self.platform }
-            try:
-                for item in self.project_metadata[project_name]:
-                    project_metadata[item] = \
-                                self.project_metadata[project_name][item]
-            except KeyError:
-                pass
-            project_dir = MockAnalysisProject(project_name,
-                                              metadata=project_metadata)
-            sample_names = []
-            for sample in self.samples_in_project(project):
-                sample_names.append(sample)
-                for fq in self.fastqs_in_sample(project,sample):
-                    project_dir.add_fastq(fq)
-            # Add line to projects.info
-            if project_name != 'undetermined':
-                projects_info.write('%s\n' % '\t'.join((project,
-                                                        ','.join(sample_names),
-                                                        '.',
-                                                        '.',
-                                                        '.',
-                                                        '.',
-                                                        '.')))
-                # Add lines to custom_SampleSheet
-                with open(os.path.join(self.dirn,'custom_SampleSheet.csv'),
-                          'a') as fp:
-                    for sample in self.samples_in_project(project):
-                        fp.write('%s,,,,,,%s,\n' % (sample,
-                                                    project_name))
-            # Write the project directory to disk
-            if not no_project_dirs:
-                project_dir.create(top_dir=self.dirn)
+        with open(os.path.join(self.dirn,'projects.info'),
+                  'wt') as projects_info:
+            projects_info.write('#%s\n' % '\t'.join(('Project',
+                                                     'Samples',
+                                                     'User',
+                                                     'Library',
+                                                     'Organism',
+                                                     'PI',
+                                                     'Comments')))
+            for project in self.projects:
+                if project.startswith("Undetermined"):
+                    project_name = 'undetermined'
+                else:
+                    project_name = project
+                project_metadata = { 'Run': self.run_name,
+                                     'Platform': self.platform }
+                try:
+                    for item in self.project_metadata[project_name]:
+                        project_metadata[item] = \
+                            self.project_metadata[project_name][item]
+                except KeyError:
+                    pass
+                project_dir = MockAnalysisProject(project_name,
+                                                  metadata=project_metadata)
+                sample_names = []
+                for sample in self.samples_in_project(project):
+                    sample_names.append(sample)
+                    for fq in self.fastqs_in_sample(project,sample):
+                        project_dir.add_fastq(fq)
+                # Add line to projects.info
+                if project_name != 'undetermined':
+                    projects_info.write('%s\n' % '\t'.join(
+                        (project,
+                         ','.join(sample_names),
+                         '.',
+                         '.',
+                         '.',
+                         '.',
+                         '.')))
+                    # Add lines to custom_SampleSheet
+                    with open(os.path.join(self.dirn,
+                                           'custom_SampleSheet.csv'),
+                              'a') as fp:
+                        for sample in self.samples_in_project(project):
+                            fp.write('%s,,,,,,%s,\n' % (sample,
+                                                        project_name))
+                # Write the project directory to disk
+                if not no_project_dirs:
+                    project_dir.create(top_dir=self.dirn)
         # Finished
         return self.dirn
 
