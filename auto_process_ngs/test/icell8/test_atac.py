@@ -320,8 +320,9 @@ class TestSplitFastqFunction(unittest.TestCase):
                                  os.path.join(self.wd,"test_B001.fastq"),
                                  os.path.join(self.wd,"test_B002.fastq")])
         # Check the contents
-        self.assertEqual(open(os.path.join(self.wd,"test_B000.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with open(os.path.join(self.wd,"test_B000.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
@@ -342,8 +343,9 @@ AAATATGGCGAGGAAAACTGAAAAAGGNGNNNNNNNNA
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEA#/########E
 """)
-        self.assertEqual(open(os.path.join(self.wd,"test_B001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:1
+        with open(os.path.join(self.wd,"test_B001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:12850:1056 1:N:0:1
 CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
@@ -364,8 +366,9 @@ ACAAAAAATTGCTCCCCTATCAATTNTNANNNNNNNNT
 +
 AAAAAEEEEEEEEEEEEEEEEE/EE#E#E########E
 """)
-        self.assertEqual(open(os.path.join(self.wd,"test_B002.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:12602:1058 1:N:0:1
+        with open(os.path.join(self.wd,"test_B002.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:12602:1058 1:N:0:1
 CAGCTAAGAGCATCGAGGGGGCGCCGAGAGNNNNNNGG
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######EE
@@ -441,10 +444,11 @@ class TestAssignReadsFunction(unittest.TestCase):
                                       "B002",
                                       "unassigned_barcodes.txt"))
         # Check the output files
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
 TTTCTGTAGTGTGGCGTGTTGGTGTNGNCNNNNNNNNA
 +
 AAAAAEEEEEEEEEEEEEEEEEEEE#A#E########E
@@ -457,10 +461,11 @@ CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:1
 AACGTGCTCCTTCTATCCGGGCAACACCAACACGCCA
 +
 AAAAAEEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEA
@@ -473,10 +478,11 @@ CTGAAGGGACTTGGGCCATGATAGAAAGTGAGAATTTA
 +
 AAAAAEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:1
 TAAGGCGA
 +
 AAAAAEEE
@@ -489,10 +495,11 @@ CATCCTGT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:1
 CTTGGTTA
 +
 AAAAAEEE
@@ -505,10 +512,11 @@ TGTAGATT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:1
 ACTCTCTTCTAATGGAGGACTGTGTNANANNNNNNNNT
 +
 AAAAAEEEEEEEEEEEEEEEEEEEE#E#E########E
@@ -521,10 +529,11 @@ GACATACTAGGAGACCCAGACAACTACATACCNGCTAA
 +
 AAAAAEEEEEEE/EEAEEAEAEEAEEEEEAE/#/EEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:1
 ACCCTATTGTGTAATGTGCATGACATATGGCATACTAA
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
@@ -537,10 +546,11 @@ GTGTTTAGTGGATTAGCTGGTATGTAGTTGTCTGGGT
 +
 AAAAAEAEEEEEEEEE/EE6EEEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:1
 CGAGGCTG
 +
 AAAAAEEE
@@ -553,10 +563,11 @@ TTCCATAT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:1
 CCCTATCG
 +
 AAAAAEEE
@@ -569,10 +580,11 @@ CCCTATCG
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:1
 ACAAAAAATTGCTCCCCTATCAATTNTNANNNNNNNNT
 +
 AAAAAEEEEEEEEEEEEEEEEE/EE#E#E########E
@@ -585,10 +597,11 @@ AGATATAGCATTCCCACGAATAAATAATATNANNTNTT
 +
 AAAAA6EE/A/A///AEEAEEAEEEEEEEE#/##E#AE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:1
 ATTGCTAATATTCATCCTATGTGGGCAATTGATGAATA
 +
 AAAAAEEEE<EEEEEEEEEEEEEEEEEEEEAEEEEEE/
@@ -601,10 +614,11 @@ CTATTGATGATGCTAGTAGAAGGAGAAATGATGGTGGT
 +
 6AAAAE/AE/A<AAE//EEAEE/EEEEEEEEEE/EEE/
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:1
 AAGAGGCA
 +
 AAAAAEEE
@@ -617,10 +631,11 @@ AAGAGGCA
 +
 AA6A66AA
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:1
 TACTCCTT
 +
 AAAAAEEE
@@ -633,10 +648,11 @@ TACTCCTT
 +
 AA/AAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
@@ -649,10 +665,11 @@ CAGCTGTTCTCATCATGATCTTTATAATTTNNNNNNC
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######E
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:1
 TTTCCACCCAGAAGGATGGGAGCAGATGTTAATAAC
 +
 AAAAAAEEEEEEAEEEEEAAEEEEE/EEEAEEAAEE
@@ -665,10 +682,11 @@ ATATGGTGGAGGGCAGCCATGAAGTCATTCTAAATTTG
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 AGTAGATT
 +
 AAAAAEEE
@@ -681,10 +699,11 @@ AGTAGATT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:1
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:1
 GCCACGTC
 +
 AAA/AEEE
@@ -725,10 +744,11 @@ AAAAAEEE
                                       "B002",
                                       "unassigned_barcodes.txt"))
         # Check the output files
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
 TTTCTGTAGTGTGGCGTGTTGGTGTNGNCNNNNNNNNA
 +
 AAAAAEEEEEEEEEEEEEEEEEEEE#A#E########E
@@ -741,10 +761,11 @@ CTCCTTCTCTGATTGATCAGATAGCTCNTGNNNNNN
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
 AACGTGCTCCTTCTATCCGGGCAACACCAACACGCCA
 +
 AAAAAEEEEEEEEEAEEEEEEEEEEEEEEEEEEEEEA
@@ -757,10 +778,11 @@ CTGAAGGGACTTGGGCCATGATAGAAAGTGAGAATTTA
 +
 AAAAAEEEEEEEEEEEEEEEEEAEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 1:N:0:TAACCAAG+TAAGGCGA
 TAAGGCGA
 +
 AAAAAEEE
@@ -773,10 +795,11 @@ CATCCTGT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "1_S1_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "1_S1_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:9835:1054 2:N:0:TAACCAAG+TAAGGCGA
 CTTGGTTA
 +
 AAAAAEEE
@@ -789,10 +812,11 @@ TGTAGATT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
 ACTCTCTTCTAATGGAGGACTGTGTNANANNNNNNNNT
 +
 AAAAAEEEEEEEEEEEEEEEEEEEE#E#E########E
@@ -805,10 +829,11 @@ GACATACTAGGAGACCCAGACAACTACATACCNGCTAA
 +
 AAAAAEEEEEEE/EEAEEAEAEEAEEEEEAE/#/EEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
 ACCCTATTGTGTAATGTGCATGACATATGGCATACTAA
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
@@ -821,10 +846,11 @@ GTGTTTAGTGGATTAGCTGGTATGTAGTTGTCTGGGT
 +
 AAAAAEAEEEEEEEEE/EE6EEEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 1:N:0:CGATAGGG+CGAGGCTG
 CGAGGCTG
 +
 AAAAAEEE
@@ -837,10 +863,11 @@ TTCCATAT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "2_S2_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "2_S2_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:24409:1053 2:N:0:CGATAGGG+CGAGGCTG
 CCCTATCG
 +
 AAAAAEEE
@@ -853,10 +880,11 @@ CCCTATCG
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
 ACAAAAAATTGCTCCCCTATCAATTNTNANNNNNNNNT
 +
 AAAAAEEEEEEEEEEEEEEEEE/EE#E#E########E
@@ -869,10 +897,11 @@ AGATATAGCATTCCCACGAATAAATAATATNANNTNTT
 +
 AAAAA6EE/A/A///AEEAEEAEEEEEEEE#/##E#AE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
 ATTGCTAATATTCATCCTATGTGGGCAATTGATGAATA
 +
 AAAAAEEEE<EEEEEEEEEEEEEEEEEEEEAEEEEEE/
@@ -885,10 +914,11 @@ CTATTGATGATGCTAGTAGAAGGAGAAATGATGGTGGT
 +
 6AAAAE/AE/A<AAE//EEAEE/EEEEEEEEEE/EEE/
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 1:N:0:AAGGAGTA+AAGAGGCA
 AAGAGGCA
 +
 AAAAAEEE
@@ -901,10 +931,11 @@ AAGAGGCA
 +
 AA6A66AA
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "3_S3_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "3_S3_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:21842:1053 2:N:0:AAGGAGTA+AAGAGGCA
 TACTCCTT
 +
 AAAAAEEE
@@ -917,10 +948,11 @@ TACTCCTT
 +
 AA/AAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_R1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_R1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
@@ -933,10 +965,11 @@ CAGCTGTTCTCATCATGATCTTTATAATTTNNNNNNC
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEE######E
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_R2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_R2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
 TTTCCACCCAGAAGGATGGGAGCAGATGTTAATAAC
 +
 AAAAAAEEEEEEAEEEEEAAEEEEE/EEEAEEAAEE
@@ -949,10 +982,11 @@ ATATGGTGGAGGGCAGCCATGAAGTCATTCTAAATTTG
 +
 AAAAAEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_I1_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_I1_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:GACGTGGC+AGTAGATT
 AGTAGATT
 +
 AAAAAEEE
@@ -965,10 +999,11 @@ AGTAGATT
 +
 AAAAAEEE
 """)
-        self.assertEqual(open(os.path.join(self.wd,
-                                           "B002",
-                                           "10_S4_I2_001.fastq")).read(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
+        with open(os.path.join(self.wd,
+                               "B002",
+                               "10_S4_I2_001.fastq"),'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 2:N:0:GACGTGGC+AGTAGATT
 GCCACGTC
 +
 AAA/AEEE
@@ -1094,8 +1129,9 @@ class TestConcatFastqsFunction(unittest.TestCase):
         self.assertEqual(fastq,
                          os.path.join(self.final_dir,
                                       "PJB1_S1_R1_001.fastq.gz"))
-        self.assertEqual(gzip.open(fastq).read().decode(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with gzip.open(fastq) as fp:
+            self.assertEqual(fp.read().decode(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
@@ -1152,8 +1188,9 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
         self.assertEqual(fastq,
                          os.path.join(self.final_dir,
                                       "PJB1_S1_TTCGTGCA+GATCCAAA_R1_001.fastq.gz"))
-        self.assertEqual(gzip.open(fastq).read().decode(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with gzip.open(fastq) as fp:
+            self.assertEqual(fp.read().decode(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
@@ -1211,8 +1248,9 @@ AAAAAEEEEEEEEEEEEEEEEEEEEEE#EE######
         self.assertEqual(fastq,
                          os.path.join(self.final_dir,
                                       "PJB1_S1_L001_R1_001.fastq.gz"))
-        self.assertEqual(gzip.open(fastq).read().decode(),
-                         """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
+        with gzip.open(fastq) as fp:
+            self.assertEqual(fp.read().decode(),
+                             """@NB500968:115:HWJNYBGX9:1:11101:4820:1056 1:N:0:1
 TAAACATTCTGGGGGTTGGGGTGAGGTNTNNNNNNNNA
 +
 AA/AAEEEEEEEEEEEAEEEEAEAEEE#E########E
