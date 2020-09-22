@@ -86,7 +86,7 @@ class TestMetadataDict(unittest.TestCase):
                                             'chat': 'Chit chat'},
                                 order=('salutation','chat','valediction'))
         metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
+        fp = open(self.metadata_file,'rt')
         for line,expected_key in zip(fp,expected_keys):
             self.assertEqual(line.split('\t')[0],expected_key)
 
@@ -101,7 +101,7 @@ class TestMetadataDict(unittest.TestCase):
                          'Salutation',
                          'Valediction',)
         metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
+        fp = open(self.metadata_file,'rt')
         for line,expected_key in zip(fp,expected_keys):
             self.assertEqual(line.split('\t')[0],expected_key)
 
