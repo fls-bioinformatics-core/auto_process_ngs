@@ -273,7 +273,7 @@ a non-ASCII character here\x80
 - ABCDEFGHIJKLMNOPQRSTUVWXYZ
 - abcdefghijklmnopqrstuvwxyz
 - 01234567890
-- !"$%^&*()_-+=\|/:;'@#~`?
+- !"$%^&*()_-+=\\|/:;'@#~`?
 - {}[]
 - \t\n
 """)
@@ -285,7 +285,7 @@ a non-ASCII character here\x80
 - ABCDEFGHIJKLMNOPQRSTUVWXYZ
 - abcdefghijklmnopqrstuvwxyz
 - 01234567890
-- !"$%^&*()_-+=\|/:;'@#~`?
+- !"$%^&*()_-+=\\|/:;'@#~`?
 - {}[]
 - \t\n
 """))
