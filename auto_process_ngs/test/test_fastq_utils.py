@@ -587,7 +587,8 @@ class TestAssignBarcodesSingleEnd(unittest.TestCase):
         self.wd = tempfile.mkdtemp(suffix='.test_assign_barcodes_single_end')
         # Test file
         self.fastq_in = os.path.join(self.wd,'test.fq')
-        open(self.fastq_in,'w').write(fastq_r1)
+        with open(self.fastq_in,'wt') as fp:
+            fp.write(fastq_r1)
         # Output file
         self.fastq_out = os.path.join(self.wd,'out.fq')
     def tearDown(self):
@@ -600,8 +601,8 @@ class TestAssignBarcodesSingleEnd(unittest.TestCase):
         nreads = assign_barcodes_single_end(self.fastq_in,
                                             self.fastq_out)
         self.assertEqual(nreads,5)
-        self.assertEqual(open(self.fastq_out,'r').read(),
-                         fastq_r1_out)
+        with open(self.fastq_out,'r') as fp:
+            self.assertEqual(fp.read(),fastq_r1_out)
 
 # pair_fastqs
 fastq1_r1 = """@MISEQ:34:000000000-A7PHP:1:1101:12552:1774 1:N:0:TAAGGCGA
