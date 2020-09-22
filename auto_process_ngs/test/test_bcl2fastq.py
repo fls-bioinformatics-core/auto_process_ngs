@@ -722,8 +722,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
 """
         self.assertTrue(os.path.exists(sample_sheet_out))
-        self.assertEqual(open(sample_sheet_out,'r').read(),
-                         expected)
+        with open(sample_sheet_out,'r') as fp:
+            self.assertEqual(fp.read(),expected)
+
     def test_make_custom_sample_sheet_adapter(self):
         """
         make_custom_sample_sheet: update adapter sequence
@@ -760,8 +761,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
 """
         self.assertTrue(os.path.exists(sample_sheet_out))
-        self.assertEqual(open(sample_sheet_out,'r').read(),
-                         expected)
+        with open(sample_sheet_out,'r') as fp:
+            self.assertEqual(fp.read(),expected)
+
     def test_make_custom_sample_sheet_adapter_read2(self):
         """
         make_custom_sample_sheet: update adapter sequence (read2)
@@ -799,8 +801,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
 """
         self.assertTrue(os.path.exists(sample_sheet_out))
-        self.assertEqual(open(sample_sheet_out,'r').read(),
-                         expected)
+        with open(sample_sheet_out,'r') as fp:
+            self.assertEqual(fp.read(),expected)
+
     def test_make_custom_sample_sheet_no_adapters(self):
         """
         make_custom_sample_sheet: remove adapter sequences
@@ -836,8 +839,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
 4,PJB2-1580,PJB2-1580,,,N702,TGACCAAT,N502,TCTTTCCC,PeterBriggs,
 """
         self.assertTrue(os.path.exists(sample_sheet_out))
-        self.assertEqual(open(sample_sheet_out,'r').read(),
-                         expected)
+        with open(sample_sheet_out,'rt') as fp:
+            self.assertEqual(fp.read(),expected)
 
 class TestBasesMaskIsValid(unittest.TestCase):
     """Tests for the bases_mask_is_valid function
