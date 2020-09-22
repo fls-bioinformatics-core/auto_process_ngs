@@ -238,7 +238,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         print("...no cellranger QC summaries found")
     # Collect QC for project directories
     print("Checking project directories")
-    projects = ap.get_analysis_projects_from_dirs(pattern=project_pattern)
+    projects = ap.get_analysis_projects(pattern=project_pattern)
     if projects:
         ap.set_log_dir(ap.get_log_subdir('publish_qc'))
     project_qc = {}
