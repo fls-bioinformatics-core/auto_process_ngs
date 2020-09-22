@@ -199,6 +199,11 @@ class Command(object):
             logging.warning("KeyboardInterrupt: stopping command subprocess")
             p.kill()
             returncode = -1
+        # Close files before finishing
+        if log:
+            fpout.close()
+        if err:
+            fperr.close()
         return returncode
 
     def subprocess_check_output(self,include_err=True,working_dir=None):
