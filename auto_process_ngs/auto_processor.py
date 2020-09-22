@@ -838,6 +838,9 @@ class AutoProcess(object):
         # Get matching projects from metadata file
         for line in project_metadata:
             name = line['Project']
+            if name.startswith('#'):
+                # Ignore commented project
+                continue
             if not bcf_utils.name_matches(name,pattern):
                 # Name failed to match, ignore
                 continue
