@@ -484,22 +484,24 @@ class AutoProcess(object):
         """
         if project_metadata_file is not None:
             self.params['project_metadata'] = project_metadata_file
-        print("Project metadata file: %s" % self.params.project_metadata)
+        logging.debug("Project metadata file: %s" %
+                      self.params.project_metadata)
         filen = os.path.join(self.analysis_dir,
                              self.params.project_metadata)
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
-        print("Unaligned_dir: %s" % self.params.unaligned_dir)
+        logging.debug("Unaligned_dir: %s" % self.params.unaligned_dir)
         illumina_data = IlluminaData.IlluminaData(
             self.analysis_dir,
             unaligned_dir=self.params.unaligned_dir)
         if os.path.exists(filen):
             # Load data from existing file
-            print("Loading project metadata from existing file: %s" % filen)
+            logging.debug("Loading project metadata from existing file: %s" %
+                          filen)
             project_metadata = ProjectMetadataFile(filen)
         else:
             # New (empty) metadata file
-            print("Creating new project metadata file: %s" % filen)
+            logging.debug("Creating new project metadata file: %s" % filen)
             project_metadata = ProjectMetadataFile()
         # Get projects and samples
         projects = {}
@@ -531,6 +533,8 @@ class AutoProcess(object):
                                                 sample_names=sample_names)
         # Save
         project_metadata.save(filen)
+        print("Updated project metadata file '%s'" %
+              self.params.project_metadata)
 
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
