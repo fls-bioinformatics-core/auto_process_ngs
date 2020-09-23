@@ -106,6 +106,7 @@ class TestOutputFiles(unittest.TestCase):
         out = OutputFiles(self.wd)
         out.open('test1','test1.txt')
         out.open('test2','test2.txt')
+        out.close()
         self.assertEqual(
             out.file_name('test1'),os.path.join(self.wd,'test1.txt'))
         self.assertEqual(
@@ -155,8 +156,7 @@ class TestOutputFiles(unittest.TestCase):
         with open(out.file_name('test1'),'rt') as fp:
             self.assertEqual(fp.read(),"Some test text\n")
         with open(out.file_name('test2'),'rt') as fp:
-            self.assertEqual(open(out.file_name('test2'),'r').read(),
-                             "Some more\ntest text\n")
+            self.assertEqual(fp.read(),"Some more\ntest text\n")
         # Reopen files
         out.open('test1',append=True)
         out.open('test2')
@@ -188,6 +188,7 @@ class TestOutputFiles(unittest.TestCase):
         self.assertEqual(len(out),0)
         out.open('test2',append=True)
         self.assertEqual(len(out),1)
+        out.close()
 
 class TestBufferedOutputFiles(unittest.TestCase):
     """
