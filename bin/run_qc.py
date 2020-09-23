@@ -265,6 +265,11 @@ if __name__ == "__main__":
                           dest="working_dir",default=None,
                           help="specify the working directory for the "
                           "pipeline operations")
+    advanced.add_argument('--ignore-metadata',action="store_true",
+                          dest="ignore_metadata",default=False,
+                          help="ignore information from project metadata "
+                          "file even if one is located (default is to use "
+                          "project metadata)")
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -363,7 +368,10 @@ if __name__ == "__main__":
     print("Located %s Fastq%s" % (len(inputs),
                                   's' if len(inputs) != 1 else ''))
     if info_file:
-        print("Located project metadata in %s" % info_file)
+        print("Located project metadata in %s%s" % (info_file,
+                                                    " (will be ignored)"
+                                                    if args.ignore_metadata
+                                                    else ''))
     else:
         print("Unable to locate project metadata")
 
@@ -544,7 +552,7 @@ if __name__ == "__main__":
         os.symlink(fq,os.path.join(fastq_dir,os.path.basename(fq)))
 
     # Set up metadata
-    if info_file:
+    if info_file and not args.ignore_metadata:
         project_metadata.load(info_file)
     if args.name:
         # Set project name to user-supplied value
