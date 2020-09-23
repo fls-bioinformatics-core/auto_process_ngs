@@ -785,8 +785,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                             "Missing file: %s" % filen)
         # Check contents of projects.info
         projects_info = os.path.join(analysis_dir,"projects.info")
-        self.assertEqual(open(projects_info,'r').read(),
-                         """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+        with open(projects_info,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
 AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
 CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
 """)
@@ -864,8 +865,9 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
                             "Missing file: %s" % filen)
         # Check contents of projects.info
         projects_info = os.path.join(analysis_dir,"projects.info")
-        self.assertEqual(open(projects_info,'r').read(),
-                         """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+        with open(projects_info,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
 AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
 CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
 """)

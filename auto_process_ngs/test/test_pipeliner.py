@@ -105,8 +105,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),
-                         "item1\nitem2\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"item1\nitem2\n")
 
     def test_pipeline_with_multiple_commands(self):
         """
@@ -142,8 +142,8 @@ class TestPipeline(unittest.TestCase):
                      for f in ("out1.txt","out2.txt")]
         for out_file in out_files:
             self.assertTrue(os.path.exists(out_file))
-            self.assertEqual(open(out_file,'r').read(),
-                             "item\n")
+            with open(out_file,'rt') as fp:
+                self.assertEqual(fp.read(),"item\n")
 
     def test_pipeline_with_batched_commands(self):
         """
@@ -180,8 +180,8 @@ class TestPipeline(unittest.TestCase):
                      for f in ("out1.txt","out2.txt")]
         for out_file in out_files:
             self.assertTrue(os.path.exists(out_file))
-            self.assertEqual(open(out_file,'r').read(),
-                             "item\n")
+            with open(out_file,'rt') as fp:
+                self.assertEqual(fp.read(),"item\n")
 
     def test_pipeline_sets_pipelineparam_as_task_input(self):
         """
@@ -214,7 +214,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),"goodbye\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"goodbye\n")
 
     def test_pipeline_with_external_scheduler(self):
         """
@@ -246,8 +247,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),
-                         "item1\nitem2\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"item1\nitem2\n")
 
     def test_pipeline_working_dir_is_respected(self):
         """
@@ -283,8 +284,8 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(exit_status,0)
         out_file = os.path.join(self.working_dir,"out.txt")
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),
-                         "item1\nitem2\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"item1\nitem2\n")
 
     def test_pipeline_stops_on_task_failure(self):
         """
@@ -488,8 +489,8 @@ class TestPipeline(unittest.TestCase):
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),
-                         "item1\nitem2\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"item1\nitem2\n")
 
     def test_pipeline_add_runner(self):
         """
@@ -556,7 +557,8 @@ class TestPipeline(unittest.TestCase):
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),"item1\n")
+        with open(out_file,'r') as fp:
+            self.assertEqual(fp.read(),"item1\n")
 
     def test_pipeline_runner_set_default_runner_at_runtime(self):
         """
@@ -605,7 +607,8 @@ class TestPipeline(unittest.TestCase):
         # Check the outputs
         self.assertEqual(exit_status,0)
         self.assertTrue(os.path.exists(out_file))
-        self.assertEqual(open(out_file,'r').read(),"item1\nitem2\n")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"item1\nitem2\n")
 
     @unittest.skipIf(not envmod.__ENVMODULES__,
                      "Environment modules not available")
@@ -1734,18 +1737,19 @@ class TestPipelineCommand(unittest.TestCase):
         self.assertTrue(os.path.isfile(script_file))
         self.assertEqual(os.path.dirname(script_file),
                          self.working_dir)
-        self.assertEqual(open(script_file,'r').read(),
-                         "#!/bin/bash\n"
-                         "echo \"#### COMMAND EchoCmd\"\n"
-                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
-                         "echo \"#### USER $USER\"\n"
-                         "echo \"#### START $(date)\"\n"
-                         "echo \"#### CWD $(pwd)\"\n"
-                         "echo 'hello there'\n"
-                         "exit_code=$?\n"
-                         "echo \"#### END $(date)\"\n"
-                         "echo \"#### EXIT_CODE $exit_code\"\n"
-                         "exit $exit_code")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#!/bin/bash\n"
+                             "echo \"#### COMMAND EchoCmd\"\n"
+                             "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                             "echo \"#### USER $USER\"\n"
+                             "echo \"#### START $(date)\"\n"
+                             "echo \"#### CWD $(pwd)\"\n"
+                             "echo 'hello there'\n"
+                             "exit_code=$?\n"
+                             "echo \"#### END $(date)\"\n"
+                             "echo \"#### EXIT_CODE $exit_code\"\n"
+                             "exit $exit_code")
 
     def test_pipelinecommand_with_modules(self):
         """
@@ -1773,20 +1777,21 @@ class TestPipelineCommand(unittest.TestCase):
         self.assertTrue(os.path.isfile(script_file))
         self.assertEqual(os.path.dirname(script_file),
                          self.working_dir)
-        self.assertEqual(open(script_file,'r').read(),
-                         "#!/bin/bash --login\n"
-                         "echo \"#### COMMAND EchoCmd\"\n"
-                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
-                         "echo \"#### USER $USER\"\n"
-                         "echo \"#### START $(date)\"\n"
-                         "module load apps/fastq-screen/0.13.0\n"
-                         "module load apps/fastqc/0.11.8\n"
-                         "echo \"#### CWD $(pwd)\"\n"
-                         "echo 'hello there'\n"
-                         "exit_code=$?\n"
-                         "echo \"#### END $(date)\"\n"
-                         "echo \"#### EXIT_CODE $exit_code\"\n"
-                         "exit $exit_code")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#!/bin/bash --login\n"
+                             "echo \"#### COMMAND EchoCmd\"\n"
+                             "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                             "echo \"#### USER $USER\"\n"
+                             "echo \"#### START $(date)\"\n"
+                             "module load apps/fastq-screen/0.13.0\n"
+                             "module load apps/fastqc/0.11.8\n"
+                             "echo \"#### CWD $(pwd)\"\n"
+                             "echo 'hello there'\n"
+                             "exit_code=$?\n"
+                             "echo \"#### END $(date)\"\n"
+                             "echo \"#### EXIT_CODE $exit_code\"\n"
+                             "exit $exit_code")
 
     def test_pipelinecommand_with_working_dir(self):
         """
@@ -1813,19 +1818,20 @@ class TestPipelineCommand(unittest.TestCase):
         self.assertTrue(os.path.isfile(script_file))
         self.assertEqual(os.path.dirname(script_file),
                          self.working_dir)
-        self.assertEqual(open(script_file,'r').read(),
-                         "#!/bin/bash\n"
-                         "echo \"#### COMMAND EchoCmd\"\n"
-                         "echo \"#### HOSTNAME $HOSTNAME\"\n"
-                         "echo \"#### USER $USER\"\n"
-                         "echo \"#### START $(date)\"\n"
-                         "cd /tmp/command/wd\n"
-                         "echo \"#### CWD $(pwd)\"\n"
-                         "echo 'hello there'\n"
-                         "exit_code=$?\n"
-                         "echo \"#### END $(date)\"\n"
-                         "echo \"#### EXIT_CODE $exit_code\"\n"
-                         "exit $exit_code")
+        with open(script_file,'rt') as fp:
+            self.assertEqual(fp.read(),
+                             "#!/bin/bash\n"
+                             "echo \"#### COMMAND EchoCmd\"\n"
+                             "echo \"#### HOSTNAME $HOSTNAME\"\n"
+                             "echo \"#### USER $USER\"\n"
+                             "echo \"#### START $(date)\"\n"
+                             "cd /tmp/command/wd\n"
+                             "echo \"#### CWD $(pwd)\"\n"
+                             "echo 'hello there'\n"
+                             "exit_code=$?\n"
+                             "echo \"#### END $(date)\"\n"
+                             "echo \"#### EXIT_CODE $exit_code\"\n"
+                             "exit $exit_code")
 
 class TestPipelineCommandWrapper(unittest.TestCase):
 

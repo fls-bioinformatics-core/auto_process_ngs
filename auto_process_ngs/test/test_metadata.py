@@ -86,9 +86,9 @@ class TestMetadataDict(unittest.TestCase):
                                             'chat': 'Chit chat'},
                                 order=('salutation','chat','valediction'))
         metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
-        for line,expected_key in zip(fp,expected_keys):
-            self.assertEqual(line.split('\t')[0],expected_key)
+        with open(self.metadata_file,'rt') as fp:
+            for line,expected_key in zip(fp,expected_keys):
+                self.assertEqual(line.split('\t')[0],expected_key)
 
     def test_implicit_key_order(self):
         """Check that keys are implicitly ordered on output
@@ -101,9 +101,9 @@ class TestMetadataDict(unittest.TestCase):
                          'Salutation',
                          'Valediction',)
         metadata.save(self.metadata_file)
-        fp = open(self.metadata_file,'rU')
-        for line,expected_key in zip(fp,expected_keys):
-            self.assertEqual(line.split('\t')[0],expected_key)
+        with open(self.metadata_file,'rt') as fp:
+            for line,expected_key in zip(fp,expected_keys):
+                self.assertEqual(line.split('\t')[0],expected_key)
 
     def test_get_null_items(self):
         """Check fetching of items with null values
@@ -299,7 +299,8 @@ class TestProjectMetadataFile(unittest.TestCase):
             self.fail()
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
-        self.assertEqual(open(self.metadata_file,'r').read(),contents)
+        with open(self.metadata_file,'rt') as fp:
+            self.assertEqual(fp.read(),contents)
 
     def test_create_new_project_metadata_file(self):
         """Create and save ProjectMetadataFile with content
@@ -321,7 +322,8 @@ class TestProjectMetadataFile(unittest.TestCase):
         self.assertEqual(len(metadata),2)
         # Save to an actual file and check its contents
         metadata.save(self.metadata_file)
-        self.assertEqual(open(self.metadata_file,'r').read(),contents)
+        with open(self.metadata_file,'rt') as fp:
+            self.assertEqual(fp.read(),contents)
 
     def test_read_existing_project_metadata_file(self):
         """Read contents from existing ProjectMetadataFile
@@ -345,7 +347,8 @@ class TestProjectMetadataFile(unittest.TestCase):
                          PI="Harley",
                          Comments="Squeak!"))
         contents = "#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1-2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nFarley\tF3-4\tFarley G\tChIP-seq\t.\tMouse\tHarley\tSqueak!\n"
-        open(self.metadata_file,'w').write(contents)
+        with open(self.metadata_file,'wt') as fp:
+            fp.write(contents)
         # Load and check contents
         metadata = ProjectMetadataFile(self.metadata_file)
         self.assertEqual(len(metadata),2)

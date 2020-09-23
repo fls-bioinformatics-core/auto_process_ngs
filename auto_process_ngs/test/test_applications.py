@@ -33,12 +33,12 @@ class TestCommand(unittest.TestCase):
     def test_command_handles_forward_slash(self):
         """Check forward slash is handled correctly
         """
-        cmd = Command('find','-name','"*"','-exec','grep','"hello"','{}','\;')
+        cmd = Command('find','-name','"*"','-exec','grep','"hello"','{}','\\;')
         self.assertEqual(cmd.command,'find')
-        self.assertEqual(cmd.args,['-name','"*"','-exec','grep','"hello"','{}','\;'])
+        self.assertEqual(cmd.args,['-name','"*"','-exec','grep','"hello"','{}','\\;'])
         self.assertEqual(cmd.command_line,['find','-name','"*"','-exec',
-                                           'grep','"hello"','{}','\;'])
-        self.assertEqual(str(cmd),'find -name "*" -exec grep "hello" {} \;')
+                                           'grep','"hello"','{}','\\;'])
+        self.assertEqual(str(cmd),'find -name "*" -exec grep "hello" {} \\;')
 
     def test_run_subprocess(self):
         """Run command using subprocess

@@ -146,8 +146,8 @@ class TestCopyFunction(FileopsTestCase):
         status = copy(src_file,tgt_file)
         self.assertEqual(status,0)
         self.assertTrue(os.path.isfile(tgt_file))
-        self.assertEqual(open(tgt_file).read(),
-                         "This is a test file")
+        with open(tgt_file,'rt') as fp:
+            self.assertEqual(fp.read(),"This is a test file")
 
     def test_local_copy_as_link(self):
         """fileops.copy: copy a local file as a link
@@ -161,8 +161,8 @@ class TestCopyFunction(FileopsTestCase):
         status = copy(src_file,tgt_file,link=True)
         self.assertEqual(status,0)
         self.assertTrue(os.path.isfile(tgt_file))
-        self.assertEqual(open(tgt_file).read(),
-                         "This is a test file")
+        with open(tgt_file,'rt') as fp:
+            self.assertEqual(fp.read(),"This is a test file")
         # Convoluted way to check if one file is hard-linked
         # to another (see https://stackoverflow.com/a/41942022)
         stat_src = os.stat(src_file)
@@ -191,10 +191,10 @@ class TestCopytreeFunction(FileopsTestCase):
         self.assertEqual(status,0)
         self.assertTrue(os.path.isdir(tgt_dir))
         self.assertTrue(os.path.isdir(os.path.join(tgt_dir,'subdir')))
-        self.assertEqual(open(os.path.join(tgt_dir,'test1.txt')).read(),
-                         "This is test file 1")
-        self.assertEqual(open(os.path.join(tgt_dir,'subdir','test2.txt')).read(),
-                         "This is test file 2")
+        with open(os.path.join(tgt_dir,'test1.txt'),'rt') as fp:
+            self.assertEqual(fp.read(),"This is test file 1")
+        with open(os.path.join(tgt_dir,'subdir','test2.txt'),'rt') as fp:
+            self.assertEqual(fp.read(),"This is test file 2")
 
 class TestSetGroupFunction(FileopsTestCase):
     """Tests for the 'set_group' function
@@ -264,8 +264,8 @@ class TestUnzip(FileopsTestCase):
         self.assertTrue(os.path.isdir(out_dir))
         out_file = os.path.join(out_dir,'test.txt')
         self.assertTrue(os.path.isfile(out_file))
-        self.assertEqual(open(out_file).read(),
-                         "This is a test file")
+        with open(out_file,'rt') as fp:
+            self.assertEqual(fp.read(),"This is a test file")
 
 class TestRename(FileopsTestCase):
     """Tests for the 'rename' function

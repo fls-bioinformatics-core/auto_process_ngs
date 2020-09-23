@@ -32,9 +32,11 @@ class TestAutoProcessImportProject(unittest.TestCase):
         os.mkdir(project_dir)
         os.mkdir(os.path.join(project_dir,'fastqs'))
         for fq in ('NP01_S1_R1_001.fastq.gz','NP01_S1_R1_001.fastq.gz'):
-            open(os.path.join(project_dir,'fastqs',fq),'w').write('')
-        open(os.path.join(project_dir,'README.info'),'w').write(
-            """Run\t160622_NB5001234_0011_ABCDE5AFXX
+            with open(os.path.join(project_dir,'fastqs',fq),'wt') as fp:
+                fp.write('')
+        with open(os.path.join(project_dir,'README.info'),'wt') as fp:
+            fp.write(
+                """Run\t160622_NB5001234_0011_ABCDE5AFXX
 Platform\tnextseq
 User\tPeter Briggs
 PI\tAnne Cleaves

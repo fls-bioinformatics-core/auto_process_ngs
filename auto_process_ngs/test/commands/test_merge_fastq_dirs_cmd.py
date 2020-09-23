@@ -238,7 +238,8 @@ poll_interval = 0.5
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -290,7 +291,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -341,7 +343,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -391,7 +394,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -440,7 +444,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -489,7 +494,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
@@ -629,7 +635,8 @@ CDE	CDE3,CDE4	.	.	.	.	.	.
         # Check projects.info files
         self._assert_file_exists(os.path.join(analysis_dir,'save.projects.info'))
         self._assert_file_exists(os.path.join(analysis_dir,'projects.info'))
-        projects_info = open(os.path.join(analysis_dir,'projects.info'),'r').read()
+        with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
+            projects_info = fp.read()
         expected = """#Project	Samples	User	Library	SC_Platform	Organism	PI	Comments
 AB	AB1,AB2	.	.	.	.	.	.
 CDE	CDE3,CDE4	.	.	.	.	.	.
