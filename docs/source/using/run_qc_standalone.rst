@@ -42,6 +42,14 @@ determine which metrics are run:
 * ``--name``: sets the name for the project (used in the
   QC report title)
 
+.. note::
+
+   By default ``run_qc.py`` attempts to locate a project
+   metadata file associated with the input files, and will
+   use the metadata defined there unless overridden by the
+   options above; use the ``--ignore-metadata`` option to
+   ignore the project metadata even if it is found.
+
 Specifying the outputs
 ----------------------
 

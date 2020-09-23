@@ -94,6 +94,41 @@ def cleanup_atexit(tmp_project_dir):
               % tmp_project_dir)
         shutil.rmtree(tmp_project_dir)
 
+def find_info_file(start_dir):
+    """
+    Locate project metadata file
+
+    Searches the current directory and its parent
+    directory for a project metadata file ('README.info'),
+    until either one is found or the root of the
+    filesystem is reached.
+
+    Arguments:
+      start_dir (str): path of directory to start
+        searching from
+
+    Returns:
+      String: path to the metadata file, or 'None' if
+        no file can be located.
+    """
+    d = os.path.abspath(start_dir)
+    while True:
+        info_file = os.path.join(d,"README.info")
+        if os.path.exists(info_file):
+            try:
+                # Try to load metadata
+                AnalysisProjectInfo().load(info_file,
+                                           fail_on_error=True)
+                return info_file
+            except Exception:
+                # Failed to load valid metadata file
+                pass
+        # Try next level up
+        d = os.path.dirname(d)
+        if d == os.path.sep:
+            # Run out of directories
+            return None
+
 #######################################################################
 # Main program
 #######################################################################
@@ -230,6 +265,11 @@ if __name__ == "__main__":
                           dest="working_dir",default=None,
                           help="specify the working directory for the "
                           "pipeline operations")
+    advanced.add_argument('--ignore-metadata',action="store_true",
+                          dest="ignore_metadata",default=False,
+                          help="ignore information from project metadata "
+                          "file even if one is located (default is to use "
+                          "project metadata)")
     advanced.add_argument('--no-multiqc',action="store_true",
                           dest="no_multiqc",default=False,
                           help="turn off generation of MultiQC report")
@@ -300,28 +340,18 @@ if __name__ == "__main__":
             logger.fatal("%s: no Fastqs found" % dir_path)
             sys.exit(1)
         # Look for project metadata
-        d = dir_path
-        while True:
-            info_file = os.path.join(d,"README.info")
-            if os.path.exists(info_file):
-                try:
-                    # Try to load metadata
-                    project_metadata.load(info_file,
-                                          fail_on_error=True)
-                    print("Located project metadata in %s" % info_file)
-                    # Fastqs are in a subdirectory of a project directory,
-                    # set it as the default output directory
-                    if not out_dir:
-                        out_dir = d
-                    break
-                except Exception:
-                    # Failed to load valid metadata file
-                    pass
-            # Try next level up
-            d = os.path.dirname(d)
-            if d == os.path.sep:
-                # Run out of directories
-                print("Unable to locate project metadata")
+        info_file = find_info_file(dir_path)
+        if info_file:
+            # Presence of info file indicates Fastqs are in
+            # a subdirectory of a project directory, so set
+            # it as the default output directory
+            if not out_dir:
+                out_dir = os.path.dirname(info_file)
+    else:
+        # Look for a metadata file based on Fastqs
+        for fq in inputs:
+            info_file = find_info_file(os.path.dirname(fq))
+            if info_file:
                 break
     # Filter out index reads
     inputs = [fq for fq in inputs
@@ -337,6 +367,13 @@ if __name__ == "__main__":
             print("  %s" % fq)
     print("Located %s Fastq%s" % (len(inputs),
                                   's' if len(inputs) != 1 else ''))
+    if info_file:
+        print("Located project metadata in %s%s" % (info_file,
+                                                    " (will be ignored)"
+                                                    if args.ignore_metadata
+                                                    else ''))
+    else:
+        print("Unable to locate project metadata")
 
     # Set up environment
     envmodules = dict()
@@ -515,7 +552,8 @@ if __name__ == "__main__":
         os.symlink(fq,os.path.join(fastq_dir,os.path.basename(fq)))
 
     # Set up metadata
-    info_file = os.path.join(project_dir,"README.info")
+    if info_file and not args.ignore_metadata:
+        project_metadata.load(info_file)
     if args.name:
         # Set project name to user-supplied value
         project_metadata['name'] = args.name
@@ -524,6 +562,9 @@ if __name__ == "__main__":
         project_metadata['name'] = os.path.basename(out_dir)
     if args.organism:
         project_metadata['organism'] = args.organism
+
+    # Save out metadata to temporary project dir
+    info_file = os.path.join(project_dir,"README.info")
     print("Writing metadata to %s" % info_file)
     project_metadata.save(info_file)
 
