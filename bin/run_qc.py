@@ -165,9 +165,6 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
-    reporting.add_argument('--multiqc',action='store_true',
-                           dest='run_multiqc', default=False,
-                           help="also generate MultiQC report")
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
     cellranger.add_argument('--10x_transcriptome',action='append',
@@ -233,6 +230,15 @@ if __name__ == "__main__":
                           dest="working_dir",default=None,
                           help="specify the working directory for the "
                           "pipeline operations")
+    advanced.add_argument('--no-multiqc',action="store_true",
+                          dest="no_multiqc",default=False,
+                          help="turn off generation of MultiQC report")
+    # Deprecated options
+    deprecated = p.add_argument_group('Deprecated/redundant options')
+    deprecated.add_argument('--multiqc',action='store_true',
+                            dest='run_multiqc', default=False,
+                            help="redundant: MultiQC report is generated "
+                            "by default (use --no-multiqc to disable)")
 
     # Parse the command line
     args = p.parse_args()
@@ -540,7 +546,7 @@ if __name__ == "__main__":
                       qc_dir=qc_dir,
                       qc_protocol=args.qc_protocol,
                       report_html=out_file,
-                      multiqc=args.run_multiqc)
+                      multiqc=(not args.no_multiqc))
     status = runqc.run(nthreads=nthreads,
                        fastq_subset=args.fastq_screen_subset,
                        fastq_strand_indexes=

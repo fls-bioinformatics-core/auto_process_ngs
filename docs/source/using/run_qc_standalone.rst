@@ -59,7 +59,6 @@ The following options can be used to override the defaults:
   written; if this is a relative path then it will be a
   subdirectory of the top-level output directory
 * ``--filename``: name for the HTML report from the QC
-* ``--multiqc``: turns on generation of MultiQC reports
 
 Running on different platforms: ``--local``
 -------------------------------------------
