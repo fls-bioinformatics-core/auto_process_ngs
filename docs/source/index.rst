@@ -53,6 +53,14 @@ at the `University of Manchester <https://www.manchester.ac.uk/>`_.
    Managing and sharing data <using/managing_data>
    Running QC stand-alone <using/run_qc_standalone>
 
+.. _control-files:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Control files
+
+   projects.info <using/projects_info>
+
 .. _single-cell-docs:
 
 .. toctree::

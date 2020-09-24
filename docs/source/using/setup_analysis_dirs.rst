@@ -11,8 +11,9 @@ This is done using the ``setup_analysis_dirs`` command, for example:
 
    auto_process.py setup_analyis_dirs
 
-This reads the ``projects.info`` metadata file initially created by
-``make_fastqs`` and creates a new subdirectory for each listed project.
+This reads the :doc:`projects.info <projects_info>` metadata file
+(initially created by ``make_fastqs``) and creates a new subdirectory
+for each listed project.
 
 Before runing ``setup_analysis_dirs``, the ``projects.info`` file should
 be edited to fill in the following information for each project:
@@ -28,27 +29,8 @@ be edited to fill in the following information for each project:
 * **SC_Platform**: the single-cell platform used to prepare the samples
   (if appropriate).
 
-The final field is used for any additional comments.
-
-``projects.info`` is a tab-delimited file; "null" values are represented
-by a full stop.
-
-Where there are multiple users, PIs or organisms it is recommended that
-each name be separated by a comma character (e.g. "Human,mouse").
-
-Unknown values should be represented with a question mark i.e. '?'.
-
-Currently there are no canonical lists of allowed values for libraries or
-organism names. However the QC strandedness determination looks up
-available ``STAR`` indexes in the configuration based on the organism
-names, so these should be consistent.
-
-If set then the single-cell platform must be one of:
-
-* ``ICELL8``
-* ``10xGenomics Chromium 3'v2``
-* ``10xGenomics Chromium 3'v3``
-* ``10xGenomics Single Cell ATAC``
+See :doc:`projects_info` for more information on the format of the
+``projects.info`` file and the allowed values for each field.
 
 .. note::
 
