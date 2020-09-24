@@ -733,7 +733,7 @@ class AutoProcess(object):
           Boolean: True if run is paired end, False if single end,
             None if endedness cannot be determined
         """
-        projects = self.get_analysis_projects_from_dirs()
+        projects = self.get_analysis_projects()
         if projects:
             return reduce(lambda x,y: x and y.info.paired_end,
                           projects,True)

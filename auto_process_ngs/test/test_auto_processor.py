@@ -747,3 +747,45 @@ class TestAutoProcessPairedEndMethod(unittest.TestCase):
         # Remove the unaligned dir
         shutil.rmtree(os.path.join(mockdir.dirn,"bcl2fastq"))
         self.assertEqual(AutoProcess(mockdir.dirn).paired_end,None)
+
+    def test_single_end_extra_dir(self):
+        """AutoProcess.paired_end: check for single-ended data (extra dir)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=False,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add an extra project-like directory with Fastq pairs
+        extra_dir = os.path.join(mockdir.dirn,'extra_project')
+        os.mkdir(extra_dir)
+        for fq in ('extra_R1.fastq','extra_R2.fastq,'):
+            with open(os.path.join(extra_dir,fq),'wt') as fp:
+                fp.write('')
+        # Check that paired_end is false
+        self.assertFalse(AutoProcess(mockdir.dirn).paired_end)
+
+    def test_paired_end_extra_dir(self):
+        """AutoProcess.paired_end: check for paired-ended data (extra dir)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Add an extra project-like directory with Fastqs
+        extra_dir = os.path.join(mockdir.dirn,'extra_project')
+        os.mkdir(extra_dir)
+        for fq in ('extra1_R1.fastq','extra2_R1.fastq,'):
+            with open(os.path.join(extra_dir,fq),'wt') as fp:
+                fp.write('')
+        # Check that paired_end is true
+        self.assertTrue(AutoProcess(mockdir.dirn).paired_end)
