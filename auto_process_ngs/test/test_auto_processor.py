@@ -161,9 +161,9 @@ class TestAutoProcessMakeProjectMetadataFile(unittest.TestCase):
             os.path.join(mockdir.dirn,"projects.info")))
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
 """)
 
     def test_make_project_metadata_file_no_bcl2fastq_output(self):
@@ -188,7 +188,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
             os.path.join(mockdir.dirn,"projects.info")))
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
 """)
 
     def test_make_project_metadata_file_exception_if_file_exists(self):
@@ -239,15 +239,15 @@ class TestAutoProcessUpdateProjectMetadataFile(unittest.TestCase):
         mockdir.create(no_project_dirs=True)
         # Create empty projects.info file
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\n")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\n")
         # Update the projects.info file
         AutoProcess(mockdir.dirn).update_project_metadata_file()
         # Check output
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
 """)
 
     def test_update_project_metadata_file_partial_from_bcl2fastq_output(self):
@@ -264,15 +264,15 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         mockdir.create(no_project_dirs=True)
         # Create projects.info file with one project already listed
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nCDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\tKeep me")
         # Update the projects.info file
         AutoProcess(mockdir.dirn).update_project_metadata_file()
         # Check output
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\tKeep me
 """)
 
     def test_update_project_metadata_file_missing_from_bcl2fastq_output(self):
@@ -294,9 +294,9 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me
         # Check output
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
 """)
 
     def test_update_project_metadata_file_comment_out_missing_project(self):
@@ -313,7 +313,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         mockdir.create(no_project_dirs=True)
         # Create projects.info file with one project already listed
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nFG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nFG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me")
         # Update the projects.info file
         AutoProcess(mockdir.dirn).update_project_metadata_file()
         # Check output - missing project kept but commented out
@@ -321,10 +321,10 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
             print(fp.read())
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
-#FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
+#FG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me
 """)
 
     def test_update_project_metadata_file_uncomment_existing_project(self):
@@ -341,15 +341,15 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
         mockdir.create(no_project_dirs=True)
         # Create projects.info file with one project already listed
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\n#CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\n#CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\tKeep me")
         # Update the projects.info file
         AutoProcess(mockdir.dirn).update_project_metadata_file()
         # Check output - missing project kept but commented out
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\tKeep me
 """)
 
     def test_update_project_metadata_file_dont_comment_missing_project_when_dir_is_present(self):
@@ -366,7 +366,7 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me
         mockdir.create(no_project_dirs=True)
         # Create projects.info file with one project already listed
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nFG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nFG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me")
         # Create the corresponding project
         project = MockAnalysisProject('FG',('FG5_S1_R1_001.fastq.gz',
                                             'FG6_S1_R1_001.fastq.gz'))
@@ -378,10 +378,10 @@ CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\tKeep me
             print(fp.read())
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
-FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
+FG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me
 """)
 
     def test_update_project_metadata_file_dont_uncomment_missing_project_when_dir_is_present(self):
@@ -398,7 +398,7 @@ FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me
         mockdir.create(no_project_dirs=True)
         # Create projects.info file with one project already listed
         with open(os.path.join(mockdir.dirn,"projects.info"),'wt') as fp:
-            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\n#FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me")
+            fp.write("#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\n#FG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me")
         # Create the corresponding project
         project = MockAnalysisProject('FG',('FG5_S1_R1_001.fastq.gz',
                                             'FG6_S1_R1_001.fastq.gz'))
@@ -410,10 +410,10 @@ FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me
             print(fp.read())
         with open(os.path.join(mockdir.dirn,"projects.info"),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-AB\tAB1,AB2\t.\t.\t.\t.\t.\t.
-CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.
-#FG\tFG5,FG6\t.\t.\t.\t.\t.\tKeep me
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+AB\tAB1,AB2\t.\t.\t.\t.\t.\t.\t.
+CDE\tCDE3,CDE4\t.\t.\t.\t.\t.\t.\t.
+#FG\tFG5,FG6\t.\t.\t.\t.\t.\t.\tKeep me
 """)
 
 class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
@@ -528,9 +528,9 @@ class TestAutoProcessGetAnalysisProjectsMethod(unittest.TestCase):
         projects_info = os.path.join(mockdir.dirn,"projects.info")
         with open(projects_info,"w") as fp:
             fp.write(
-"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-#AB\tAB1,AB2\tAlan Brown\tRNA-seq\t.\tHuman\tAudrey Benson\t1% PhiX
-CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Eccleston\t1% PhiX
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+#AB\tAB1,AB2\tAlan Brown\tRNA-seq\t.\tHuman\tAudrey Benson\tNextera XT\t1% PhiX
+CDE\tCDE3,CDE4\tClive David Edwards\tChIP-seq\t.\tMouse\tClaudia Divine Eccleston\tNextera XT\t1% PhiX
 """)
         # List the projects
         projects = AutoProcess(mockdir.dirn).get_analysis_projects()
