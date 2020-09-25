@@ -789,3 +789,55 @@ class TestAutoProcessPairedEndMethod(unittest.TestCase):
                 fp.write('')
         # Check that paired_end is true
         self.assertTrue(AutoProcess(mockdir.dirn).paired_end)
+
+class TestAutoProcessUndeterminedMethod(unittest.TestCase):
+    """
+    Tests for the 'undetermined' method
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.dirn = tempfile.mkdtemp(suffix='TestAutoProcess')
+        # Store original location
+        self.pwd = os.getcwd()
+        # Move to working directory
+        os.chdir(self.dirn)
+
+    def tearDown(self):
+        # Return to original dir
+        os.chdir(self.pwd)
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_undetermined(self):
+        """AutoProcess.undetermined: 'undetermined' exists
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Check that undetermined is returned
+        undetermined = AutoProcess(mockdir.dirn).undetermined()
+        self.assertTrue(isinstance(undetermined,AnalysisProject))
+
+    def test_undetermined_missing(self):
+        """AutoProcess.undetermined: 'undetermined' missing
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local" },
+            paired_end=True,
+            top_dir=self.dirn)
+        mockdir.create()
+        # Remove undetermined
+        shutil.rmtree(os.path.join(mockdir.dirn,'undetermined'))
+        # Check that undetermined is returned
+        undetermined = AutoProcess(mockdir.dirn).undetermined()
+        self.assertEqual(undetermined,None)
