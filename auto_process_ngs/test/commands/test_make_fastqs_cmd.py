@@ -421,8 +421,8 @@ Sample2,Sample2,,,D702,CGTGTAGG,D501,ATGTAACT,ICELL8_ATAC,
         # Check the samples listed in the projects.info file
         with open(os.path.join(analysis_dir,'projects.info'),'rt') as fp:
             self.assertEqual(fp.read(),
-                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
-ICELL8_ATAC\tUnassigned-Sample1,Unassigned-Sample2\t.\t.\t.\t.\t.\t.
+                             """#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments
+ICELL8_ATAC\tUnassigned-Sample1,Unassigned-Sample2\t.\t.\t.\t.\t.\t.\t.
 """)
 
     #@unittest.skip("Skipped")
