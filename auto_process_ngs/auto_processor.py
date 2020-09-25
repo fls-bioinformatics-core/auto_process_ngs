@@ -531,7 +531,7 @@ class AutoProcess(object):
             if project_name not in project_metadata:
                 project_metadata.add_project(project_name,
                                              sample_names,
-                                             kit=self.metadata.kit)
+                                             kit=self.metadata.assay)
             else:
                 project_metadata.update_project(project_name,
                                                 sample_names=sample_names)
