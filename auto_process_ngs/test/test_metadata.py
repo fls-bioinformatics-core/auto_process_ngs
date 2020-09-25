@@ -657,18 +657,20 @@ class TestProjectMetadataFile(unittest.TestCase):
         """Output is sorted into project order
         """
         sorted_contents = \
-"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\t.\nXavier\tX3,X4\tXavier C\tChIP-seq\t.\tFly\tLensher\t.\n"""
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tKit\tComments\nCharlie\tC1,C2\tCharlie P\tRNA-seq\t.\tYeast\tMarley\tNextera XT\t.\nXavier\tX3,X4\tXavier C\tChIP-seq\t.\tFly\tLensher\tNextera XT\t.\n"""
         metadata = ProjectMetadataFile()
         metadata.add_project('Xavier',['X3','X4'],
                              user="Xavier C",
                              library_type="ChIP-seq",
                              organism="Fly",
-                             PI="Lensher")
+                             PI="Lensher",
+                             kit="Nextera XT")
         metadata.add_project('Charlie',['C1','C2'],
                              user="Charlie P",
                              library_type="RNA-seq",
                              organism="Yeast",
-                             PI="Marley")
+                             PI="Marley",
+                             kit="Nextera XT")
         metadata.save(self.metadata_file)
         with open(self.metadata_file,'rt') as fp:
             self.assertEqual(fp.read(),sorted_contents)
