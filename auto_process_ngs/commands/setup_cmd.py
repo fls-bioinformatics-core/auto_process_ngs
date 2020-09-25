@@ -314,8 +314,9 @@ def setup(ap,data_dir,analysis_dir=None,sample_sheet=None,
     ap.metadata['assay'] = assay
     ap.metadata['source'] = data_source
     # Make a 'projects.info' metadata file
-    if unaligned_dir is not None:
-        ap.make_project_metadata_file()
+    if not ap.params.project_metadata:
+        if unaligned_dir is not None:
+            ap.make_project_metadata_file()
     # Set flags to allow parameters etc to be saved back
     ap._save_params = True
     ap._save_metadata = True

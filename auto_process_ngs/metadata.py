@@ -490,8 +490,9 @@ class ProjectMetadataFile(TabFile.TabFile):
         # Open the file
         TabFile.TabFile.__init__(self,filen=self.__filen,
                                  column_names=self._fields,
-                                 first_line_is_header=True,
-                                 convert=False)
+                                 skip_first_line=True,
+                                 convert=False,
+                                 keep_commented_lines=True)
         # Add any missing columns
         for field in self._default_fields:
             if field not in self._fields:
@@ -525,7 +526,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             try:
                 kw = self._kwmap[field]
             except KeyError as ex:
-                raise ex
+                raise KeyError("Unrecognised field: '%s'" % field)
             # Look up the assigned value
             try:
                 value = kws[kw]
@@ -554,10 +555,9 @@ class ProjectMetadataFile(TabFile.TabFile):
             information about the project
         """
         # Fetch data line for existing project
-        if project_name not in self:
-            raise Exception("Project '%s' not found" %
-                            project_name)
-        project = self.lookup("Project",project_name)[0]
+        project = self.lookup(project_name)
+        # Set project name
+        kws['project_name'] = project_name
         # Set sample names, if supplied
         try:
             kws['sample_names'] = ','.join(kws['sample_names'])
@@ -569,7 +569,7 @@ class ProjectMetadataFile(TabFile.TabFile):
             try:
                 kw = self._kwmap[field]
             except KeyError as ex:
-                raise ex
+                raise KeyError("Unrecognised field: '%s'" % field)
             # Assign the new values
             if kw not in kws:
                 continue
@@ -580,11 +580,23 @@ class ProjectMetadataFile(TabFile.TabFile):
             else:
                 project[field] = value
 
-    def project(self,name):
-        """Return AttributeDictionary for a project
-
+    def lookup(self,project_name):
         """
-        raise NotImplementedError
+        Return data for line with specified project name
+
+        Leading comment characters (i.e. '#') are ignored
+        when performing the lookup.
+        """
+        pname = project_name.lstrip('#')
+        for name in (pname,"#%s" % pname):
+            try:
+                return TabFile.TabFile.lookup(self,
+                                              "Project",
+                                              name)[0]
+            except IndexError:
+                pass
+        raise KeyError("'%s': project not found in metadata file"
+                       % project_name)
 
     def save(self,filen=None):
         """Save the data back to file
@@ -594,14 +606,24 @@ class ProjectMetadataFile(TabFile.TabFile):
             defaults to the same file as data was read in from)
 
         """
+        # Sort into project name order
+        self.sort(lambda line: str(line['Project']).lstrip('#'))
+        # Write to file
         if filen is not None:
             self.__filen = filen
         self.write(filen=self.__filen,include_header=True)
 
     def __contains__(self,name):
         """
+        Internal: check if field 'name' exists
+
+        'name' should be the name of a project; if either the
+        supplied name and/or the project name in the file are
+        commented (i.e. preceeded by '#' symbol), then the
+        leading '#' is ignored.
         """
-        return (name in [p[self._fields[0]] for p in self])
+        return (name.lstrip('#') in
+                [p[self._fields[0]].lstrip('#') for p in self])
 
 class AnalysisProjectQCDirInfo(MetadataDict):
     """Class for storing metadata for a QC output directory

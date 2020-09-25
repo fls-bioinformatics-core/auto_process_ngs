@@ -396,8 +396,45 @@ class AutoProcess(object):
         return IlluminaData.IlluminaData(self.analysis_dir,
                                          unaligned_dir=unaligned_dir)
 
-    def load_project_metadata(self,project_metadata_file='projects.info',
-                              check=True,update=False):
+    def make_project_metadata_file(self,project_metadata_file='projects.info'):
+        """
+        Create a new project metadata file
+
+        Arguments:
+          project_metadata_file (str): name of the metadata file;
+            relative paths are created under the analysis directory
+            (default: 'projects.info')
+        """
+        # Check metadata file doesn't already exist
+        filen = os.path.join(self.params.analysis_dir,
+                             project_metadata_file)
+        if os.path.exists(filen):
+            raise Exception("%s: file already exists" % filen)
+        # Populate project metadata file from bcl2fastq output dir
+        project_metadata = ProjectMetadataFile()
+        try:
+            # Load data from bcl2fastq output dir
+            illumina_data = self.load_illumina_data()
+            # Populate the metadata file with projects
+            for project in illumina_data.projects:
+                project_name = project.name
+                sample_names = set()
+                for sample in project.samples:
+                    sample_name = sample.name
+                    for fastq in sample.fastq:
+                        sample_names.add(sample_name)
+                sample_names = sorted(list(sample_names))
+                project_metadata.add_project(project_name,sample_names)
+        except IlluminaData.IlluminaDataError as ex:
+            logging.warning("Unable to get project data from bcl2fastq "
+                            "output : %s" % ex)
+        # Save to file
+        project_metadata.save(filen)
+        self.params['project_metadata'] = project_metadata_file
+        print("Created new project metadata file '%s'" %
+              self.params.project_metadata)
+
+    def load_project_metadata(self,project_metadata_file=None):
         """
         Load data from projects metadata file
 
@@ -410,96 +447,20 @@ class AutoProcess(object):
           project_metadata_file (str): name of the metadata file
             relative to the analysis directory (default:
             'projects.info')
-          check (bool): if True then check existing metadata for
-            consistency with fastq files
-          update (bool): if True then update inconsistent metadata
-            (i.e. add missing projects and remove ones that are
-            inconsistent); implies 'check=True'
         """
-        if project_metadata_file is not None:
-            filen = os.path.join(self.params.analysis_dir,
-                                 project_metadata_file)
-        else:
-            filen = None
+        if project_metadata_file is None:
+            project_metadata_file='projects.info'
+        filen = os.path.join(self.params.analysis_dir,
+                             project_metadata_file)
         logging.debug("Project metadata file: %s" % filen)
-        try:
-            illumina_data = self.load_illumina_data()
-        except IlluminaData.IlluminaDataError as ex:
-            logging.warning("Failed to load data from bcl2fastq output "
-                            "(ignored): %s" % ex)
-            illumina_data = None
-        projects_from_dirs = [p for p in
-                              self.get_analysis_projects_from_dirs()
-                              if (p.is_analysis_dir and
-                                  p.name != "undetermined")]
-        if filen is not None and os.path.exists(filen):
+        if os.path.exists(filen):
             # Load existing file and check for consistency
             logging.debug("Loading project metadata from existing file")
             project_metadata = ProjectMetadataFile(filen)
         else:
             # First try to populate basic metadata from existing projects
-            logging.debug("Metadata file not found, guessing basic data")
+            logging.debug("Metadata file not found")
             project_metadata = ProjectMetadataFile()
-            projects = projects_from_dirs
-            if not projects:
-                # Get information from fastq files
-                logging.warning("No existing project directories detected")
-                logging.debug("Use fastq data from 'unaligned' directory")
-                if illumina_data is None:
-                    # Can't even get fastq files
-                    logging.warning("Failed to load fastq data from '%s'" %
-                                    self.params.unaligned_dir)
-                else:
-                    projects = illumina_data.projects
-            # Populate the metadata file list of projects
-            logging.debug("Project\tSample\tFastq")
-            for project in projects:
-                project_name = project.name
-                sample_names = []
-                for sample in project.samples:
-                    sample_name = sample.name
-                    for fastq in sample.fastq:
-                        logging.debug("%s\t%s\t%s" % (project_name,sample_name,fastq))
-                    sample_names.append(sample_name)
-                project_metadata.add_project(project_name,sample_names)
-            # Turn off redundant checking/updating
-            check = False
-            update = False
-        # Perform consistency check or update
-        if check or update:
-            # Check that each project listed actually exists
-            bad_projects = []
-            for line in project_metadata:
-                pname = line['Project']
-                test_project = AnalysisProject(
-                    pname,os.path.join(self.analysis_dir,pname))
-                if not test_project.is_analysis_dir:
-                    # Project doesn't exist
-                    logging.warning("Project '%s' listed in metadata file doesn't exist" \
-                                    % pname)
-                    bad_projects.append(line)
-            # Remove bad projects
-            if update:
-                logging.debug("Removing non-existent projects")
-                for bad_project in bad_projects:
-                    del(bad_project)
-            # Check that all actual projects are listed
-            for project in projects_from_dirs:
-                if len(project_metadata.lookup('Project',project.name)) == 0:
-                    # Project not listed
-                    if project.name != 'undetermined':
-                        logging.warning("Project '%s' not listed in metadata file" %
-                                        project.name)
-                    if update:
-                        # Add line for unlisted project
-                        logging.debug("Adding basic data for project '%s'" % project.name)
-                        sample_names = []
-                        for sample in project.samples:
-                            sample_name = sample.name
-                            for fastq in sample.fastq:
-                                logging.debug("%s\t%s\t%s" % (project.name,sample_name,fastq))
-                            sample_names.append(sample_name)
-                        project_metadata.add_project(project.name,sample_names)
         # Return the metadata object
         return project_metadata
 
@@ -523,27 +484,48 @@ class AutoProcess(object):
         """
         if project_metadata_file is not None:
             self.params['project_metadata'] = project_metadata_file
-        print("Project metadata file: %s" % self.params.project_metadata)
+        logging.debug("Project metadata file: %s" %
+                      self.params.project_metadata)
         filen = os.path.join(self.analysis_dir,
                              self.params.project_metadata)
         if unaligned_dir is not None:
             self.params['unaligned_dir'] = unaligned_dir
-        print("Unaligned_dir: %s" % self.params.unaligned_dir)
+        logging.debug("Unaligned_dir: %s" % self.params.unaligned_dir)
         illumina_data = IlluminaData.IlluminaData(
             self.analysis_dir,
             unaligned_dir=self.params.unaligned_dir)
         if os.path.exists(filen):
             # Load data from existing file
-            print("Loading project metadata from existing file: %s" % filen)
+            logging.debug("Loading project metadata from existing file: %s" %
+                          filen)
             project_metadata = ProjectMetadataFile(filen)
         else:
             # New (empty) metadata file
-            print("Creating new project metadata file: %s" % filen)
+            logging.debug("Creating new project metadata file: %s" % filen)
             project_metadata = ProjectMetadataFile()
-        # Populate/update
+        # Get projects and samples
+        projects = {}
         for project in illumina_data.projects:
-            project_name = project.name
-            sample_names = [s.name for s in project.samples]
+            projects[project.name] = sorted([s.name for s in project.samples])
+        # Add data from metadata file
+        for line in project_metadata:
+            project_name = line['Project']
+            project_is_commented = project_name.startswith('#')
+            # Uncomment project line for now
+            project_name = project_name.lstrip('#')
+            # Add to the list if not found
+            if project_name not in projects:
+                if project_is_commented or \
+                   not os.path.exists(os.path.join(self.analysis_dir,
+                                                   project_name)):
+                    # Comment out project not in latest list
+                    # if already commented or if project directory
+                    # doesn't exist
+                    project_name = "#%s" % project_name
+                projects[project_name] = line['Samples'].split(',')
+        # Populate/update
+        for project_name in projects:
+            sample_names = projects[project_name]
             if project_name not in project_metadata:
                 project_metadata.add_project(project_name,sample_names)
             else:
@@ -551,6 +533,8 @@ class AutoProcess(object):
                                                 sample_names=sample_names)
         # Save
         project_metadata.save(filen)
+        print("Updated project metadata file '%s'" %
+              self.params.project_metadata)
 
     def detect_unaligned_dir(self):
         # Attempt to detect an existing 'bcl2fastq' or 'Unaligned' directory
@@ -749,7 +733,7 @@ class AutoProcess(object):
           Boolean: True if run is paired end, False if single end,
             None if endedness cannot be determined
         """
-        projects = self.get_analysis_projects_from_dirs()
+        projects = self.get_analysis_projects()
         if projects:
             return reduce(lambda x,y: x and y.info.paired_end,
                           projects,True)
@@ -827,18 +811,6 @@ class AutoProcess(object):
             print("No metadata file found")
         self.print_values(self.metadata)
 
-    def make_project_metadata_file(self,project_metadata_file='projects.info'):
-        # Generate a project metadata file based on the fastq
-        # files and directory structure
-        project_metadata = self.load_project_metadata(
-            project_metadata_file=project_metadata_file,
-            update=True)
-        # Save to file
-        filen = os.path.join(self.params.analysis_dir,project_metadata_file)
-        project_metadata.save(filen)
-        self.params['project_metadata'] = project_metadata_file
-        print("Saving project metadata to %s" % self.params.project_metadata)
-
     def get_analysis_projects(self,pattern=None):
         """
         Return the analysis projects in a list
@@ -870,6 +842,9 @@ class AutoProcess(object):
         # Get matching projects from metadata file
         for line in project_metadata:
             name = line['Project']
+            if name.startswith('#'):
+                # Ignore commented project
+                continue
             if not bcf_utils.name_matches(name,pattern):
                 # Name failed to match, ignore
                 continue

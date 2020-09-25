@@ -1032,3 +1032,67 @@ smpl2,smpl2,,,A005,CTTAGGAC,10xGenomics,
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_existing_projects_info_file(self):
+        """make_fastqs: handle existing projects.info file
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,"bcl2fastq"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_M00879_00002_AHGXXXX"))
+        # Make a projects.info file
+        with open(os.path.join(ap.analysis_dir,'projects.info'),"wt") as fp:
+            fp.write(
+"""#Project\tSamples\tUser\tLibrary\tSC_Platform\tOrganism\tPI\tComments
+Proj1\tPR1,PR2\t.\t.\t.\t.\t.\t.
+""")
+        ap.params['project_metadata'] = 'projects.info'
+        # Do the test
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        self.assertTrue(ap.params.project_metadata is not None)
+        make_fastqs(ap,protocol="standard")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_M00879_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_M00879_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_M00879_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs"),
+                       "bcl2fastq",
+                       "barcode_analysis",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)

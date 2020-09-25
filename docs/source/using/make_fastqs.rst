@@ -467,8 +467,9 @@ On completion the ``make_fastqs`` command will produce:
   Fastq files
 * An HTML report on the processing QC (see the section on
   :doc:`Processing QC reports <../output/processing_qc>`)
-* A ``projects.info`` metadata file which is used for setting up
-  analysis project directories (see
+* A :doc:`projects.info <projects_info>` metadata file which
+  is used by the :doc:`setup_analysis_dirs <setup_analysis_dirs>`
+  command when setting up analysis project directories (see
   :doc:`Setting up project directories <setup_analysis_dirs>`)
 
 For standard runs there will additional outputs:

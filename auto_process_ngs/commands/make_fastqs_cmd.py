@@ -441,10 +441,10 @@ def make_fastqs(ap,protocol='standard',platform=None,
         raise Exception("Fastq generation failed")
 
     # Make or update 'projects.info' metadata file
-    if lanes:
-        ap.update_project_metadata_file()
-    else:
+    if not ap.params.project_metadata:
         ap.make_project_metadata_file()
+    else:
+        ap.update_project_metadata_file()
 
     # Finish
     return status
