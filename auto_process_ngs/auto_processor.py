@@ -932,16 +932,12 @@ class AutoProcess(object):
     def undetermined(self):
         # Return analysis project directory for undetermined indices
         # or None if not found
-        dirs = bcf_utils.list_dirs(self.analysis_dir,matches='undetermined')
-        if len(dirs) == 0:
+        undetermined_dir = os.path.join(self.analysis_dir,'undetermined')
+        if os.path.isdir(undetermined_dir):
+            return AnalysisProject(undetermined_dir)
+        else:
             logging.debug("No undetermined analysis directory found")
             return None
-        elif len(dirs) > 1:
-            raise Exception("Found multiple undetermined analysis "
-                            "directories: %s" % ' '.join(dirs))
-        # Attempt to load the analysis project data
-        undetermined_dir = os.path.join(self.analysis_dir,dirs[0])
-        return AnalysisProject(dirs[0],undetermined_dir)
 
     def log_analysis(self):
         # Add a record of the analysis to the logging file
