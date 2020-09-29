@@ -24,6 +24,22 @@ for example:
 
    run_qc.py /mnt/data/project/fastqs.trimmed/*.fastq
 
+.. note::
+
+   You can use more elaborate shell wildcard patterns to select
+   the Fastqs to pass to the QC, for example:
+
+   ::
+
+      run_qc.py /mnt/data/project/fastqs.trimmed/{SC1_*,SC2_*}.trimmed.fastq
+
+   would only select Fastq files matching ``SC1_*.trimmed.fastq``
+   and ``SC2_*.trimmed.fastq``.
+
+   See https://tldp.org/LDP/GNU-Linux-Tools-Summary/html/x11655.htm
+   for more detail on using shell-style wildcards for pattern
+   matching.
+
 Various options are available to control the QC; the following
 sections outline the most useful - see the documentation in the
 :ref:`utilities_run_qc` section for the full set of options.
