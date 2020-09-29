@@ -173,16 +173,6 @@ if __name__ == "__main__":
                    "(default: %s)" % ('taken from job runner'
                                       if not default_nthreads
                                       else default_nthreads,))
-    p.add_argument('--fastq_dir',metavar='SUBDIR',
-                   action='store',dest='fastq_dir',default=None,
-                   help="explicitly specify subdirectory of DIR with "
-                   "Fastq files to run the QC on.")
-    p.add_argument('--modulefiles',action='store',
-                   dest='modulefiles',default=None,
-                   help="comma-separated list of environment "
-                   "modules to load before executing commands "
-                   "(overrides any modules specified in the global "
-                   "settings)")
     # Reporting options
     reporting = p.add_argument_group('Output and reporting')
     reporting.add_argument('-n','--name',action='store',
@@ -279,9 +269,24 @@ if __name__ == "__main__":
                             dest='run_multiqc', default=False,
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
+    deprecated.add_argument('--modulefiles',action='store',
+                            dest='modulefiles',default=None,
+                            help="deprecated: environment modules should "
+                            "be set on per-task basis")
+    deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
+                            action='store',dest='fastq_dir',default=None,
+                            help="unsupported: point DIR directly to Fastq "
+                            "directory")
 
     # Parse the command line
     args = p.parse_args()
+
+    # Check for unsupported options
+    if args.fastq_dir:
+        logger.fatal("'--fastq_dir' option is no longer supported")
+        logger.fatal("Point 'DIR' directly to the directory with the "
+                     "Fastq files instead")
+        sys.exit(1)
 
     # Initialise
     project_metadata = AnalysisProjectInfo()
@@ -316,9 +321,6 @@ if __name__ == "__main__":
     # Get list of Fastqs from directory
     if len(inputs) == 1 and os.path.isdir(inputs[0]):
         dir_path = inputs[0]
-        if args.fastq_dir:
-            # Fastqs subdir was specified
-            dir_path = os.path.join(dir_path,args.fastq_dir)
         if not os.path.isdir(dir_path):
             logger.fatal("%s: directory not found" % dir_path)
             sys.exit(1)
