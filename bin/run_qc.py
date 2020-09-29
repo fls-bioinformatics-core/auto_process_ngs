@@ -285,7 +285,17 @@ if __name__ == "__main__":
     # Parse the command line
     args = p.parse_args()
 
-    # Check for unsupported options
+    # Check for deprecated and unsupported options
+    if args.run_multiqc:
+        logger.warning("'--multiqc' option is redundant; MultiQC is "
+                       "run by default")
+        logger.warning("Use '--no-multiqc' to turn off MultiQC report "
+                       "generation")
+    if args.modulefiles:
+        logger.warning("'--modulefiles' option is deprecated and may not "
+                       "work")
+        logger.warning("Environment modules should be set on a per-task "
+                       "basis in the config file")
     if args.fastq_dir:
         logger.fatal("'--fastq_dir' option is no longer supported")
         logger.fatal("Point 'DIR' directly to the directory with the "
