@@ -147,36 +147,15 @@ if __name__ == "__main__":
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    p.add_argument('-p','--protocol',metavar='PROTOCOL',
-                   action='store',dest='qc_protocol',default=None,
-                   choices=PROTOCOLS,
-                   help="explicitly specify the QC protocol to use; "
-                   "can be one of %s. If not set then protocol will "
-                   "be determined automatically based on directory "
-                   "contents." %
-                   ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    p.add_argument('-n','--name',action='store',
+                   help="name for the project (used in report title)")
     p.add_argument('--organism',metavar='ORGANISM',
                    action='store',dest='organism',default=None,
                    help="explicitly specify organism (e.g. 'human', "
                    "'mouse'). Multiple organisms should be separated "
                    "by commas (e.g. 'human,mouse')")
-    p.add_argument('--fastq_screen_subset',metavar='SUBSET',
-                   action='store',dest='fastq_screen_subset',
-                   default=__settings.qc.fastq_screen_subset,type=int,
-                   help="specify size of subset of total reads to use "
-                   "for fastq_screen (i.e. --subset option); (default "
-                   "%d, set to 0 to use all reads)" %
-                   __settings.qc.fastq_screen_subset)
-    p.add_argument('-t','--threads',action='store',dest="nthreads",
-                   type=int,default=None,
-                   help="number of threads to use for QC script "
-                   "(default: %s)" % ('taken from job runner'
-                                      if not default_nthreads
-                                      else default_nthreads,))
     # Reporting options
     reporting = p.add_argument_group('Output and reporting')
-    reporting.add_argument('-n','--name',action='store',
-                           help="name for the project")
     reporting.add_argument('-o','--out_dir',action='store',
                            help="directory to write outputs to (default: "
                            "project directory (if directory was supplied "
@@ -190,6 +169,31 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    # QC pipeline options
+    qc_options = p.add_argument_group('QC options')
+    qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
+                            action='store',dest='qc_protocol',
+                            default=None,choices=PROTOCOLS,
+                            help="explicitly specify the QC protocol to "
+                            "use; can be one of %s. If not set then "
+                            "protocol will be determined automatically "
+                            "based on directory contents." %
+                            ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
+                            action='store',dest='fastq_screen_subset',
+                            default=__settings.qc.fastq_screen_subset,
+                            type=int,
+                            help="specify size of subset of total reads "
+                            "to use for fastq_screen (i.e. --subset "
+                            "option); (default %d, set to 0 to use all "
+                            "reads)" %
+                            __settings.qc.fastq_screen_subset)
+    qc_options.add_argument('-t','--threads',action='store',
+                            dest="nthreads",type=int,default=None,
+                            help="number of threads to use for QC script "
+                            "(default: %s)" % ('taken from job runner'
+                                               if not default_nthreads
+                                               else default_nthreads,))
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
     cellranger.add_argument('--10x_transcriptome',action='append',
