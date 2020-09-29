@@ -188,9 +188,8 @@ if __name__ == "__main__":
     reporting.add_argument('-n','--name',action='store',
                            help="name for the project")
     reporting.add_argument('-o','--out_dir',action='store',
-                           help="directory to write outputs to (default: "
-                           "project directory (if directory was supplied "
-                           "and is a project; otherwise, use current "
+                           help="top-level directory for reports and "
+                           "QC output subdirectory (default: current "
                            "working directory)")
     reporting.add_argument('--qc_dir',
                            help="explicitly specify QC output directory. "
@@ -341,12 +340,6 @@ if __name__ == "__main__":
             sys.exit(1)
         # Look for project metadata
         info_file = find_info_file(dir_path)
-        if info_file:
-            # Presence of info file indicates Fastqs are in
-            # a subdirectory of a project directory, so set
-            # it as the default output directory
-            if not out_dir:
-                out_dir = os.path.dirname(info_file)
     else:
         # Look for a metadata file based on Fastqs
         for fq in inputs:

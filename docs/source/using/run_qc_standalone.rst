@@ -53,11 +53,8 @@ determine which metrics are run:
 Specifying the outputs
 ----------------------
 
-If a list of Fastqs is supplied then by default the QC reports
-will be written to the current directory, with the QC outputs
-written to a ``qc`` subdirectory. If a directory is supplied as
-input then the reports and ``qc`` subdirectory will be written
-to that directory.
+By default the QC reports are written to the current directory,
+with the QC outputs written to a ``qc`` subdirectory.
 
 The following options can be used to override the defaults:
 
