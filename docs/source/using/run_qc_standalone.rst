@@ -11,13 +11,11 @@ The general invocation is:
    run_qc.py DIR | FASTQ [ FASTQ ... ]
 
 If ``DIR`` is supplied then it should be a directory containing
-the Fastq files to run the QC on, or which has a ``fastqs``
-subdirectory with the Fastqs (use the ``--fastq_dir`` option to
-specify a different subdirectory), for example:
+the Fastq files to run the QC on:
 
 ::
 
-   run_qc.py /mnt/data/project --fastq_dir=fastqs.trimmed
+   run_qc.py /mnt/data/project/fastqs.trimmed/
 
 Alternatively a list of Fastq files can be supplied directly,
 for example:
