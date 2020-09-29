@@ -147,46 +147,15 @@ if __name__ == "__main__":
                    nargs="+",
                    help="directory or list of Fastq files to run the "
                    "QC on")
-    p.add_argument('-p','--protocol',metavar='PROTOCOL',
-                   action='store',dest='qc_protocol',default=None,
-                   choices=PROTOCOLS,
-                   help="explicitly specify the QC protocol to use; "
-                   "can be one of %s. If not set then protocol will "
-                   "be determined automatically based on directory "
-                   "contents." %
-                   ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    p.add_argument('-n','--name',action='store',
+                   help="name for the project (used in report title)")
     p.add_argument('--organism',metavar='ORGANISM',
                    action='store',dest='organism',default=None,
                    help="explicitly specify organism (e.g. 'human', "
                    "'mouse'). Multiple organisms should be separated "
                    "by commas (e.g. 'human,mouse')")
-    p.add_argument('--fastq_screen_subset',metavar='SUBSET',
-                   action='store',dest='fastq_screen_subset',
-                   default=__settings.qc.fastq_screen_subset,type=int,
-                   help="specify size of subset of total reads to use "
-                   "for fastq_screen (i.e. --subset option); (default "
-                   "%d, set to 0 to use all reads)" %
-                   __settings.qc.fastq_screen_subset)
-    p.add_argument('-t','--threads',action='store',dest="nthreads",
-                   type=int,default=None,
-                   help="number of threads to use for QC script "
-                   "(default: %s)" % ('taken from job runner'
-                                      if not default_nthreads
-                                      else default_nthreads,))
-    p.add_argument('--fastq_dir',metavar='SUBDIR',
-                   action='store',dest='fastq_dir',default=None,
-                   help="explicitly specify subdirectory of DIR with "
-                   "Fastq files to run the QC on.")
-    p.add_argument('--modulefiles',action='store',
-                   dest='modulefiles',default=None,
-                   help="comma-separated list of environment "
-                   "modules to load before executing commands "
-                   "(overrides any modules specified in the global "
-                   "settings)")
     # Reporting options
     reporting = p.add_argument_group('Output and reporting')
-    reporting.add_argument('-n','--name',action='store',
-                           help="name for the project")
     reporting.add_argument('-o','--out_dir',action='store',
                            help="top-level directory for reports and "
                            "QC output subdirectory (default: current "
@@ -199,6 +168,31 @@ if __name__ == "__main__":
     reporting.add_argument('-f','--filename',action='store',
                            help="file name for output QC report (default: "
                            "<OUT_DIR>/<QC_DIR_NAME>_report.html)")
+    # QC pipeline options
+    qc_options = p.add_argument_group('QC options')
+    qc_options.add_argument('-p','--protocol',metavar='PROTOCOL',
+                            action='store',dest='qc_protocol',
+                            default=None,choices=PROTOCOLS,
+                            help="explicitly specify the QC protocol to "
+                            "use; can be one of %s. If not set then "
+                            "protocol will be determined automatically "
+                            "based on directory contents." %
+                            ", ".join(["'%s'" % x for x in PROTOCOLS]))
+    qc_options.add_argument('--fastq_screen_subset',metavar='SUBSET',
+                            action='store',dest='fastq_screen_subset',
+                            default=__settings.qc.fastq_screen_subset,
+                            type=int,
+                            help="specify size of subset of total reads "
+                            "to use for fastq_screen (i.e. --subset "
+                            "option); (default %d, set to 0 to use all "
+                            "reads)" %
+                            __settings.qc.fastq_screen_subset)
+    qc_options.add_argument('-t','--threads',action='store',
+                            dest="nthreads",type=int,default=None,
+                            help="number of threads to use for QC script "
+                            "(default: %s)" % ('taken from job runner'
+                                               if not default_nthreads
+                                               else default_nthreads,))
     # Cellranger options
     cellranger = p.add_argument_group('Cellranger/10xGenomics options')
     cellranger.add_argument('--10x_transcriptome',action='append',
@@ -278,9 +272,34 @@ if __name__ == "__main__":
                             dest='run_multiqc', default=False,
                             help="redundant: MultiQC report is generated "
                             "by default (use --no-multiqc to disable)")
+    deprecated.add_argument('--modulefiles',action='store',
+                            dest='modulefiles',default=None,
+                            help="deprecated: environment modules should "
+                            "be set on per-task basis")
+    deprecated.add_argument('--fastq_dir',metavar='SUBDIR',
+                            action='store',dest='fastq_dir',default=None,
+                            help="unsupported: point DIR directly to Fastq "
+                            "directory")
 
     # Parse the command line
     args = p.parse_args()
+
+    # Check for deprecated and unsupported options
+    if args.run_multiqc:
+        logger.warning("'--multiqc' option is redundant; MultiQC is "
+                       "run by default")
+        logger.warning("Use '--no-multiqc' to turn off MultiQC report "
+                       "generation")
+    if args.modulefiles:
+        logger.warning("'--modulefiles' option is deprecated and may not "
+                       "work")
+        logger.warning("Environment modules should be set on a per-task "
+                       "basis in the config file")
+    if args.fastq_dir:
+        logger.fatal("'--fastq_dir' option is no longer supported")
+        logger.fatal("Point 'DIR' directly to the directory with the "
+                     "Fastq files instead")
+        sys.exit(1)
 
     # Initialise
     project_metadata = AnalysisProjectInfo()
@@ -315,9 +334,6 @@ if __name__ == "__main__":
     # Get list of Fastqs from directory
     if len(inputs) == 1 and os.path.isdir(inputs[0]):
         dir_path = inputs[0]
-        if args.fastq_dir:
-            # Fastqs subdir was specified
-            dir_path = os.path.join(dir_path,args.fastq_dir)
         if not os.path.isdir(dir_path):
             logger.fatal("%s: directory not found" % dir_path)
             sys.exit(1)
