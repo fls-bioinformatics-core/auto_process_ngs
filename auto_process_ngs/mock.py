@@ -478,6 +478,7 @@ class UpdateAnalysisDir(DirectoryUpdater):
 
     - add_processing_report
     - add_barcode_analysis
+    - add_10x_mkfastq_qc_output
     - add_cellranger_qc_output
 
     Example usage:
@@ -523,6 +524,22 @@ class UpdateAnalysisDir(DirectoryUpdater):
                   "barcodes.html"):
             self.add_file(os.path.join(barcode_analysis_dir,f))
 
+    def add_10x_mkfastq_qc_output(self,pkg,lanes=None):
+        """
+        Add mock 10xGenomics mkfastq QC report
+
+        Arguments:
+          pkg (str): 10xGenomics package (e.g. 'cellranger',
+            'cellranger-atac' etc)
+          lanes (str): optional, specify lane numbers for
+            the report
+        """
+        self.add_file("%s_qc_summary%s.html"
+                      % (pkg,
+                         "_%s" % lanes
+                         if lanes is not None
+                         else ""))
+
     def add_cellranger_qc_output(self,lanes=None):
         """
         Add mock cellranger QC report
@@ -531,10 +548,8 @@ class UpdateAnalysisDir(DirectoryUpdater):
           lanes (str): optional, specify lane numbers for
             the report
         """
-        self.add_file("cellranger_qc_summary%s.html"
-                      % ("_%s" % lanes
-                         if lanes is not None
-                         else ""))
+        self.add_10x_mkfastq_qc_output(pkg="cellranger",
+                                       lanes=lanes)
 
 class UpdateAnalysisProject(DirectoryUpdater):
     """
