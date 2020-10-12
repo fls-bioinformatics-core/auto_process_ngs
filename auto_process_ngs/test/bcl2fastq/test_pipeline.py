@@ -1745,7 +1745,8 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary_12.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -1819,7 +1820,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                   "statistics.info",
                   "per_lane_statistics.info",
                   "per_lane_sample_stats.info",
-                  "processing_qc.html",):
+                  "processing_qc.html",
+                  "cellranger_qc_summary_7.html",
+                  "cellranger-atac_qc_summary_8.html",):
             with open(os.path.join(analysis_dir,f),'wt') as fp:
                 fp.write("")
         # Do the test
@@ -1891,7 +1894,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary_7.html",
+                      "cellranger-atac_qc_summary_8.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -1962,7 +1967,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                   "statistics.info",
                   "per_lane_statistics.info",
                   "per_lane_sample_stats.info",
-                  "processing_qc.html",):
+                  "processing_qc.html",
+                  "cellranger_qc_summary_7.html",
+                  "cellranger-atac_qc_summary_8.html",):
             with open(os.path.join(analysis_dir,f),'wt') as fp:
                 fp.write("")
         # Do the test
@@ -2030,7 +2037,9 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary_7.html",
+                      "cellranger-atac_qc_summary_8.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -2862,7 +2871,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -2958,7 +2968,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -3022,7 +3033,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                   "statistics.info",
                   "per_lane_statistics.info",
                   "per_lane_sample_stats.info",
-                  "processing_qc.html",):
+                  "processing_qc.html",
+                  "cellranger_qc_summary.html",):
             with open(os.path.join(analysis_dir,f),'wt') as fp:
                 fp.write("")
         # Do the test
@@ -3074,7 +3086,8 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger_qc_summary.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -3170,7 +3183,8 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger-atac_qc_summary.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
@@ -3237,7 +3251,8 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                   "statistics.info",
                   "per_lane_statistics.info",
                   "per_lane_sample_stats.info",
-                  "processing_qc.html",):
+                  "processing_qc.html",
+                  "cellranger-atac_qc_summary.html",):
             with open(os.path.join(analysis_dir,f),'wt') as fp:
                 fp.write("")
         # Do the test
@@ -3287,7 +3302,8 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                       "statistics_full.info",
                       "per_lane_statistics.info",
                       "per_lane_sample_stats.info",
-                      "processing_qc.html"):
+                      "processing_qc.html",
+                      "cellranger-atac_qc_summary.html",):
             self.assertTrue(os.path.isfile(
                 os.path.join(analysis_dir,filen)),
                             "Missing file: %s" % filen)
