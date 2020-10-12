@@ -226,16 +226,18 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if not barcodes_files:
         print("...no barcode analysis found")
     # Collect 10xGenomics cellranger QC summaries
-    print("Checking for 10xGenomics cellranger QC summaries")
+    print("Checking for 10xGenomics mkfastq QC summaries")
     cellranger_qc_html = []
     for filen in os.listdir(ap.analysis_dir):
-        if filen.startswith("cellranger_qc_summary") and \
-           filen.endswith(".html"):
-            print("...found %s" % filen)
-            cellranger_qc_html.append(
-                os.path.join(ap.analysis_dir,filen))
+        for pkg in ("cellranger",
+                    "cellranger-atac",):
+            if filen.startswith("%s_qc_summary" % pkg) and \
+               filen.endswith(".html"):
+                print("...found %s" % filen)
+                cellranger_qc_html.append(
+                    os.path.join(ap.analysis_dir,filen))
     if not cellranger_qc_html:
-        print("...no cellranger QC summaries found")
+        print("...no 10xGenomics mkfastq QC summaries found")
     # Collect QC for project directories
     print("Checking project directories")
     projects = ap.get_analysis_projects(pattern=project_pattern)
