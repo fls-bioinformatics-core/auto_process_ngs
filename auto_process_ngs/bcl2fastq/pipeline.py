@@ -20,7 +20,7 @@ Pipeline task classes:
 - RunBcl2Fastq
 - GetBasesMaskIcell8
 - GetBasesMaskIcell8Atac
-- GetCellranger
+- Get10xPackage
 - DemultiplexIcell8Atac
 - MergeFastqDirs
 - Run10xMkfastq
@@ -1148,9 +1148,9 @@ class MakeFastqs(Pipeline):
                 if get_cellranger is None:
                     # Create a new task only if one doesn't already
                     # exist
-                    get_cellranger = GetCellranger(
+                    get_cellranger = Get10xPackage(
                         "Get information on cellranger",
-                        require_cellranger="cellranger")
+                        require_package="cellranger")
                     self.add_task(get_cellranger,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
@@ -1174,8 +1174,8 @@ class MakeFastqs(Pipeline):
                     jobinterval=self.params.cellranger_jobinterval,
                     localcores=self.params.cellranger_localcores,
                     localmem=self.params.cellranger_localmem,
-                    pkg_exe=get_cellranger.output.cellranger_exe,
-                    pkg_version=get_cellranger.output.cellranger_version,
+                    pkg_exe=get_cellranger.output.package_exe,
+                    pkg_version=get_cellranger.output.package_version,
                     bcl2fastq_exe=get_bcl2fastq_for_10x.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x.output.bcl2fastq_version,
@@ -1210,9 +1210,9 @@ class MakeFastqs(Pipeline):
                 if get_cellranger_atac is None:
                     # Create a new task only if one doesn't already
                     # exist
-                    get_cellranger_atac = GetCellranger(
+                    get_cellranger_atac = Get10xPackage(
                         "Get information on cellranger-atac",
-                        require_cellranger="cellranger-atac")
+                        require_package="cellranger-atac")
                     self.add_task(get_cellranger_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
@@ -1236,9 +1236,9 @@ class MakeFastqs(Pipeline):
                     jobinterval=self.params.cellranger_jobinterval,
                     localcores=self.params.cellranger_localcores,
                     localmem=self.params.cellranger_localmem,
-                    pkg_exe=get_cellranger_atac.output.cellranger_exe,
+                    pkg_exe=get_cellranger_atac.output.package_exe,
                     pkg_version=\
-                    get_cellranger_atac.output.cellranger_version,
+                    get_cellranger_atac.output.package_version,
                     bcl2fastq_exe=\
                     get_bcl2fastq_for_10x_atac.output.bcl2fastq_exe,
                     bcl2fastq_version=\
@@ -1356,7 +1356,7 @@ class MakeFastqs(Pipeline):
                 break
         if get_cellranger:
             self.params._cellranger_info.set(
-                get_cellranger.output.cellranger_info)
+                get_cellranger.output.package_info)
 
         # Update outputs associated with stats
         if self._fastq_statistics:
@@ -2149,61 +2149,61 @@ class GetBasesMaskIcell8Atac(PipelineTask):
         print("Bases mask for ICELL8 ATAC: %s" % bases_mask)
         self.output.bases_mask.set(bases_mask)
 
-class GetCellranger(PipelineFunctionTask):
+class Get10xPackage(PipelineFunctionTask):
     """
-    Get information on the cellranger executable
+    Get information on 10xGenomics software package
     """
-    def init(self,require_cellranger):
+    def init(self,require_package):
         """
-        Initialise the GetCellranger task
+        Initialise the Get10xPackage task
 
         Arguments:
-          require_cellranger (str): name of the cellranger
-            executable that is required (should be either
-            'cellranger' or 'cellranger-atac')
+          require_package (str): name of the 10xGenomics
+            package executable that is required (e.g. 'cellranger',
+            'cellranger-atac')
 
         Outputs:
-          cellranger_exe (str): path to the cellranger executable
-          cellranger_package (str): name of the cellranger package
-          cellranger_version (str): the cellranger version
-          cellranger_info (tuple): tuple consisting of
+          package_name (str): name of the package
+          package_exe (str): path to the package executable
+          package_version (str): the package version
+          package_info (tuple): tuple consisting of
             (exe,package,version)
         """
-        self.add_output('cellranger_exe',Param(type=str))
-        self.add_output('cellranger_package',Param(type=str))
-        self.add_output('cellranger_version',Param(type=str))
-        self.add_output('cellranger_info',Param())
+        self.add_output('package_name',Param(type=str))
+        self.add_output('package_exe',Param(type=str))
+        self.add_output('package_version',Param(type=str))
+        self.add_output('package_info',Param())
     def setup(self):
-        print("Look for %s" % self.args.require_cellranger)
-        self.add_call("Check %s" % self.args.require_cellranger,
-                      self.get_cellranger,
-                      self.args.require_cellranger)
-    def get_cellranger(self,require_cellranger):
-        # Look for cellranger
-        cellranger_exe = find_program(require_cellranger)
-        if not cellranger_exe:
-            raise Exception("No appropriate cellranger software "
-                            "located")
+        print("Look for %s" % self.args.require_package)
+        self.add_call("Check %s" % self.args.require_package,
+                      self.get_10x_package,
+                      self.args.require_package)
+    def get_10x_package(self,require_package):
+        # Look for 10xGenomics package
+        package_exe = find_program(require_package)
+        if not package_exe:
+            raise Exception("No appropriate %s software located" %
+                            os.path.basename(require_package))
         # Get information on the version etc
-        cellranger_package = cellranger_info(cellranger_exe)
-        # Return the information on cellranger
-        return (cellranger_exe,cellranger_package[1],cellranger_package[2])
+        package_info = cellranger_info(package_exe)
+        # Return the information on the package
+        return (package_exe,package_info[1],package_info[2])
     def finish(self):
-        cellranger = self.result()[0]
-        cellranger_exe = cellranger[0]
-        cellranger_package = cellranger[1]
-        cellranger_version = cellranger[2]
-        # Set outputs with info on cellranger executable
-        self.output.cellranger_exe.set(cellranger_exe)
-        self.output.cellranger_package.set(cellranger_package)
-        self.output.cellranger_version.set(cellranger_version)
-        self.output.cellranger_info.set((cellranger_exe,
-                                         cellranger_package,
-                                         cellranger_version))
+        package = self.result()[0]
+        package_exe = package[0]
+        package_name = package[1]
+        package_version = package[2]
+        # Set outputs with info on package executable
+        self.output.package_exe.set(package_exe)
+        self.output.package_name.set(package_name)
+        self.output.package_version.set(package_version)
+        self.output.package_info.set((package_exe,
+                                      package_name,
+                                      package_version))
         # Report what was found
-        print("Cellranger exe    : %s" % cellranger_exe)
-        print("Cellranger package: %s" % cellranger_package)
-        print("Cellranger version: %s" % cellranger_version)
+        print("Package exe    : %s" % package_exe)
+        print("Package name   : %s" % package_name)
+        print("Package version: %s" % package_version)
 
 class DemultiplexIcell8Atac(PipelineTask):
     """
