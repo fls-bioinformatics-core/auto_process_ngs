@@ -410,41 +410,33 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     params_tbl.add_row(param="Endedness",
                        value=('Paired end' if ap.paired_end
                               else 'Single end'))
-    # Software information
+    # Processing software information
     try:
         processing_software = ast.literal_eval(
             ap.metadata.processing_software)
     except ValueError:
-        processing_software = None
-    if processing_software:
+        processing_software = dict()
+    if not processing_software:
+        # Fallback to using legacy metadata items
         try:
-            bcl2fastq_software = processing_software['bcl2fastq']
-        except KeyError:
-            bcl2fastq_software = None
-        try:
-            cellranger_software = processing_software['cellranger']
-        except KeyError:
-            cellranger_software = None
-    else:
-        # Fallback to legacy metadata items
-        try:
-            bcl2fastq_software = ast.literal_eval(
+            processing_software['bcl2fastq_software'] = ast.literal_eval(
                 ap.metadata.bcl2fastq_software)
         except ValueError:
-            bcl2fastq_software = None
+            pass
         try:
-            cellranger_software = ast.literal_eval(
+            processing_software['cellranger_software'] = ast.literal_eval(
                 ap.metadata.cellranger_software)
         except ValueError:
-            cellranger_software = None
-    params_tbl.add_row(param="Bcl2fastq",
-                       value=('unspecified' if not bcl2fastq_software else
-                              "%s %s" % (bcl2fastq_software[1],
-                                         bcl2fastq_software[2])))
-    params_tbl.add_row(param="Cellranger",
-                       value=('unspecified' if not cellranger_software else
-                              "%s %s" % (cellranger_software[1],
-                                         cellranger_software[2])))
+            pass
+    for pkg in ("bcl2fastq","cellranger","cellranger-atac"):
+        try:
+            package_info = processing_software[pkg]
+        except KeyError:
+            package_info = None
+        params_tbl.add_row(param=pkg.title(),
+                           value=('unspecified' if not package_info else
+                                  "%s %s" % (package_info[1],
+                                             package_info[2])))
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)
