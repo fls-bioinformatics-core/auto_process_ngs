@@ -437,6 +437,9 @@ def make_fastqs(ap,protocol='standard',platform=None,
             processing_software['bcl2fastq'] = outputs.bcl2fastq_info
         if outputs.cellranger_info:
             processing_software['cellranger'] = outputs.cellranger_info
+        if outputs.cellranger_atac_info:
+            processing_software['cellranger-atac'] = \
+                                                outputs.cellranger_atac_info
         ap.metadata['processing_software'] = processing_software
         # Legacy metadata items
         ap.metadata['bcl2fastq_software'] = make_fastqs.output.bcl2fastq_info

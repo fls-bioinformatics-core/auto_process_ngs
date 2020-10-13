@@ -340,6 +340,7 @@ class MakeFastqs(Pipeline):
         self.add_param('_platform')
         self.add_param('_bcl2fastq_info')
         self.add_param('_cellranger_info')
+        self.add_param('_cellranger_atac_info')
         self.add_param('_missing_fastqs',type=list)
 
         # Define runners
@@ -361,6 +362,8 @@ class MakeFastqs(Pipeline):
         self.add_output('acquired_primary_data',Param())
         self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
         self.add_output('cellranger_info',self.params._cellranger_info)
+        self.add_output('cellranger_atac_info',
+                        self.params._cellranger_atac_info)
         self.add_output('stats_file',Param())
         self.add_output('stats_full',Param())
         self.add_output('per_lane_stats',Param())
@@ -1348,15 +1351,13 @@ class MakeFastqs(Pipeline):
             self.params._bcl2fastq_info.set(
                 get_bcl2fastq.output.bcl2fastq_info)
 
-        # Update outputs with cellranger information
-        for get_cellranger_task in (get_cellranger,
-                                    get_cellranger_atac,):
-            if get_cellranger_task:
-                get_cellranger = get_cellranger_task
-                break
+        # Update outputs with 10x package information
         if get_cellranger:
             self.params._cellranger_info.set(
                 get_cellranger.output.package_info)
+        if get_cellranger_atac:
+            self.params._cellranger_atac_info.set(
+                get_cellranger_atac.output.package_info)
 
         # Update outputs associated with stats
         if self._fastq_statistics:
