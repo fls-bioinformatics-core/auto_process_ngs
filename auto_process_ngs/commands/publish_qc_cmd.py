@@ -410,20 +410,37 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     params_tbl.add_row(param="Endedness",
                        value=('Paired end' if ap.paired_end
                               else 'Single end'))
+    # Software information
     try:
-        bcl2fastq_software = ast.literal_eval(
-            ap.metadata.bcl2fastq_software)
+        processing_software = ast.literal_eval(
+            ap.metadata.processing_software)
     except ValueError:
-        bcl2fastq_software = None
+        processing_software = None
+    if processing_software:
+        try:
+            bcl2fastq_software = processing_software['bcl2fastq']
+        except KeyError:
+            bcl2fastq_software = None
+        try:
+            cellranger_software = processing_software['cellranger']
+        except KeyError:
+            cellranger_software = None
+    else:
+        # Fallback to legacy metadata items
+        try:
+            bcl2fastq_software = ast.literal_eval(
+                ap.metadata.bcl2fastq_software)
+        except ValueError:
+            bcl2fastq_software = None
+        try:
+            cellranger_software = ast.literal_eval(
+                ap.metadata.cellranger_software)
+        except ValueError:
+            cellranger_software = None
     params_tbl.add_row(param="Bcl2fastq",
                        value=('unspecified' if not bcl2fastq_software else
                               "%s %s" % (bcl2fastq_software[1],
                                          bcl2fastq_software[2])))
-    try:
-        cellranger_software = ast.literal_eval(
-            ap.metadata.cellranger_software)
-    except ValueError:
-        cellranger_software = None
     params_tbl.add_row(param="Cellranger",
                        value=('unspecified' if not cellranger_software else
                               "%s %s" % (cellranger_software[1],

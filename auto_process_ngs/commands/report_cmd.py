@@ -288,17 +288,35 @@ def report_summary(ap):
         platform = 'unknown'
     if ap.metadata.run_number is not None:
         run_number = ap.metadata.run_number
+    # Software information
+    try:
+        processing_software = ast.literal_eval(
+            ap.metadata.processing_software)
+    except ValueError:
+        processing_software = None
+    if processing_software:
+        bcl2fastq_software = processing_software['bcl2fastq']
+        cellranger_software = processing_software['cellranger']
+    else:
+        # Fallback to legacy metadata items
+        try:
+            bcl2fastq_software = ast.literal_eval(
+                ap.metadata.bcl2fastq_software)
+        except ValueError:
+            bcl2fastq_software = None
+        try:
+            cellranger_software = ast.literal_eval(
+                ap.metadata.cellranger_software)
+        except ValueError:
+            cellranger_software = None
     try:
         bcl2fastq_software = ast.literal_eval(
             ap.metadata.bcl2fastq_software)
     except ValueError:
         bcl2fastq_software = None
-    try:
-        cellranger_software = ast.literal_eval(
-            ap.metadata.cellranger_software)
+    if cellranger_software:
         report_items.append('Cellranger')
-    except ValueError:
-        cellranger_software = None
+    # Assay/kit information
     if ap.metadata.assay is not None:
         assay = ap.metadata.assay
         report_items.append('Assay')

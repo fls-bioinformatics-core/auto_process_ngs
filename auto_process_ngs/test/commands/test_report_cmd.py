@@ -484,6 +484,8 @@ Additional notes/comments:
             'miseq',
             metadata={ "source": "testing",
                        "run_number": 87,
+                       "processing_software":
+                       "{ 'bcl2fastq': ('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14'), 'cellranger': ('/usr/bin/cellranger', 'cellranger', '3.0.1') }",
                        "bcl2fastq_software":
                        "('/usr/bin/bcl2fastq', 'bcl2fastq', '2.17.1.14')",
                        "cellranger_software":

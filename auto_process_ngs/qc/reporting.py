@@ -896,6 +896,27 @@ class QCReport(Document):
             'fastq_screen': 'FastqScreen',
             'fastq_strand': 'FastqStrand',
         }
+        # Collect processing software metadata
+        try:
+            processing_software = ast.literal_eval(
+                self.run_metadata.processing_software)
+        except ValueError:
+            processing_software = dict()
+        if not processing_software:
+            # Fallback to legacy metadata items
+            try:
+                bcl2fastq_software = ast.literal_eval(
+                    self.run_metadata.bcl2fastq_software)
+            except ValueError:
+                bcl2fastq_software = None
+            processing_software['bcl2fastq'] = bcl2fastq_software
+            try:
+                cellranger_software = ast.literal_eval(
+                    self.run_metadata.cellranger_software)
+            except ValueError:
+                cellranger_software = None
+            processing_software['cellranger'] = cellranger_software
+        # Report software packages
         for pkg in software_packages:
             # Acquire the value
             try:
@@ -905,28 +926,18 @@ class QCReport(Document):
                     # No value set, skip this item
                     continue
             except KeyError:
-                if pkg == 'bcl2fastq':
-                    try:
-                        bcl2fastq = ast.literal_eval(
-                            self.run_metadata.bcl2fastq_software)
-                        value = bcl2fastq[2]
-                    except ValueError:
-                        continue
-                elif pkg == 'cellranger':
-                    try:
-                        cellranger = ast.literal_eval(
-                            self.run_metadata.cellranger_software)
-                        software_names['cellranger'] = cellranger[1].title()
-                        value = cellranger[2]
-                    except ValueError:
-                        continue
-                elif pkg not in software_names:
-                    # Unrecognised package name
-                    raise Exception("Unrecognised software package "
-                                    "item to report: '%s'" % pkg)
-                else:
-                    # No value set, skip this item
+                try:
+                    value = processing_software[pkg][2]
+                except KeyError:
+                    # Not processing software
                     continue
+                except TypeError:
+                    # Not valid data
+                    continue
+            if pkg not in software_names:
+                # Unrecognised package name
+                raise Exception("Unrecognised software package "
+                                    "item to report: '%s'" % pkg)
             # Add to the metadata table
             self.software_table.add_row(
                 program=software_names[pkg],
