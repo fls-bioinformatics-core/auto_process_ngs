@@ -317,9 +317,12 @@ class AnalysisDirMetadata(MetadataDict):
     source: source of the data (e.g. local facility)
     platform: sequencing platform e.g. 'miseq'
     assay: the 'assay' from the IEM SampleSheet e.g. 'Nextera XT'
+    processing_software: dictionary of software packages used in
+      in the processing
     bcl2fastq_software: info on the Bcl conversion software used
+      (deprecated)
     cellranger_software: info on the 10xGenomics cellranger software
-      used
+      used (deprecated)
     instrument_name: name/i.d. for the sequencing instrument
     instrument_datestamp: datestamp from the sequencing instrument
     instrument_run_number: the run number from the sequencing
@@ -344,6 +347,7 @@ class AnalysisDirMetadata(MetadataDict):
                                   'source': 'source',
                                   'platform':'platform',
                                   'assay': 'assay',
+                                  'processing_software': 'processing_software',
                                   'bcl2fastq_software': 'bcl2fastq_software',
                                   'cellranger_software': 'cellranger_software',
                                   'instrument_name': 'instrument_name',
