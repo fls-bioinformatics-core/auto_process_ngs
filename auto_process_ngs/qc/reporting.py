@@ -886,12 +886,14 @@ class QCReport(Document):
         """
         software_packages = ['bcl2fastq',
                              'cellranger',
+                             'cellranger-atac',
                              'fastqc',
                              'fastq_screen',
                              'fastq_strand',]
         software_names = {
             'bcl2fastq': 'Bcl2fastq',
             'cellranger': 'Cellranger',
+            'cellranger-atac': 'Cellranger-atac',
             'fastqc': 'FastQC',
             'fastq_screen': 'FastqScreen',
             'fastq_strand': 'FastqStrand',
@@ -905,17 +907,15 @@ class QCReport(Document):
         if not processing_software:
             # Fallback to legacy metadata items
             try:
-                bcl2fastq_software = ast.literal_eval(
+                processing_software['bcl2fastq'] = ast.literal_eval(
                     self.run_metadata.bcl2fastq_software)
             except ValueError:
-                bcl2fastq_software = None
-            processing_software['bcl2fastq'] = bcl2fastq_software
+                pass
             try:
-                cellranger_software = ast.literal_eval(
+                processing_software['cellranger'] = ast.literal_eval(
                     self.run_metadata.cellranger_software)
             except ValueError:
-                cellranger_software = None
-            processing_software['cellranger'] = cellranger_software
+                pass
         # Report software packages
         for pkg in software_packages:
             # Acquire the value
