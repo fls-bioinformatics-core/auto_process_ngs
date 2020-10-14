@@ -13,6 +13,7 @@ Chromium SC 3'v2 system:
 - MetricSummary
 - AtacSummary
 - flow_cell_id
+- has_10x_indices
 - has_chromium_sc_indices
 - cellranger_info
 - make_qc_summary_html
@@ -223,25 +224,28 @@ def flow_cell_id(run_name):
     ds,inst,run,prefix,flow_cell_id = split_run_name_full(run_name)
     return flow_cell_id
 
-def has_chromium_sc_indices(sample_sheet):
+def has_10x_indices(sample_sheet):
     """
-    Check if a sample sheet contains Chromium SC indices
-
-    The Chromium SC indices can be obtained from:
-
-    https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm
+    Check if a sample sheet contains 10xGenomics-format indices
 
     The Chromium SC 3'v2 indices are of the form:
 
     SI-GA-[A-H][1-12]
 
-    e.g. 'SI-GA-B11'
+    e.g. 'SI-GA-B11' (see
+    https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm)
 
-    For scATAC-seq the indices are of the form:
+    For scATAC-seq the indices are assumed to be of the form:
 
     SI-NA-[A-H][1-12]
 
     e.g. 'SI-NA-G9'
+
+    For Visium data the indices are assumed to be of the form:
+
+    SI-TT-[A-H][1-12]
+
+    e.g. 'SI-TT-B1'
 
     Arguments:
       sample_sheet (str): path to the sample sheet CSV
@@ -249,9 +253,9 @@ def has_chromium_sc_indices(sample_sheet):
 
     Returns:
       Boolean: True if the sample sheet contains at least
-        one Chromium SC index, False if not.
+        one 10xGenomics-style index, False if not.
     """
-    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[0-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA|TT)-[A-H](1[0-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         try:
@@ -260,6 +264,14 @@ def has_chromium_sc_indices(sample_sheet):
         except KeyError:
             pass
     return False
+
+def has_chromium_sc_indices(sample_sheet):
+    """
+    Wrapper for 'has_10x_indices'.
+
+    Maintained for backwards compatibility
+    """
+    return has_10x_indices(sample_sheet)
 
 def get_bases_mask_10x_atac(runinfo_xml):
     """

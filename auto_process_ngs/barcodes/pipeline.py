@@ -32,7 +32,6 @@ from ..applications import Command
 from ..bcl2fastq_utils import get_nmismatches
 from ..bcl2fastq_utils import bases_mask_is_valid
 from ..bcl2fastq_utils import check_barcode_collisions
-from ..tenx_genomics_utils import has_chromium_sc_indices
 from ..pipeliner import Pipeline
 from ..pipeliner import PipelineTask
 from ..pipeliner import PipelineCommandWrapper
