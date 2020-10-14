@@ -3150,7 +3150,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                          (os.path.join(self.bin,"bcl2fastq"),
                           "bcl2fastq",
                           "2.20.0.422"))
-        self.assertEqual(p.output.cellranger_info,
+        self.assertEqual(p.output.cellranger_atac_info,
                          (os.path.join(self.bin,"cellranger-atac"),
                           "cellranger-atac",
                           "2.2.0"))
@@ -3269,7 +3269,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                          (os.path.join(self.bin,"bcl2fastq"),
                           "bcl2fastq",
                           "2.20.0.422"))
-        self.assertEqual(p.output.cellranger_info,
+        self.assertEqual(p.output.cellranger_atac_info,
                          (os.path.join(self.bin,"cellranger-atac"),
                           "cellranger-atac",
                           "2.2.0"))
