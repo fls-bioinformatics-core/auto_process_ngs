@@ -86,6 +86,7 @@ from ..pipeliner import PipelineParam as Param
 from ..pipeliner import resolve_parameter
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import cellranger_info
+from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import make_qc_summary_html
 from .reporting import ProcessingQCReport
@@ -105,7 +106,13 @@ PROTOCOLS = ('standard',
              'icell8',
              'icell8_atac',
              '10x_chromium_sc',
-             '10x_atac',)
+             '10x_atac',
+             '10x_visium',)
+
+# 10xGenomics protocols
+PROTOCOLS_10X = ('10x_chromium_sc',
+                 '10x_atac',
+                 '10x_visium',)
 
 # Valid attribute names for lane subsets
 
@@ -341,6 +348,7 @@ class MakeFastqs(Pipeline):
         self.add_param('_bcl2fastq_info')
         self.add_param('_cellranger_info')
         self.add_param('_cellranger_atac_info')
+        self.add_param('_spaceranger_info')
         self.add_param('_missing_fastqs',type=list)
 
         # Define runners
@@ -349,12 +357,14 @@ class MakeFastqs(Pipeline):
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
+        self.add_runner('spaceranger_runner')
         self.add_runner('stats_runner')
 
         # Define module environment modules
         self.add_envmodules('bcl2fastq')
         self.add_envmodules('cellranger_mkfastq')
         self.add_envmodules('cellranger_atac_mkfastq')
+        self.add_envmodules('spaceranger_mkfastq')
 
         # Pipeline outputs
         self.add_output('platform',self.params._platform)
@@ -364,6 +374,7 @@ class MakeFastqs(Pipeline):
         self.add_output('cellranger_info',self.params._cellranger_info)
         self.add_output('cellranger_atac_info',
                         self.params._cellranger_atac_info)
+        self.add_output('spaceranger_info',self.params._spaceranger_info)
         self.add_output('stats_file',Param())
         self.add_output('stats_full',Param())
         self.add_output('per_lane_stats',Param())
@@ -480,25 +491,27 @@ class MakeFastqs(Pipeline):
         # Check that barcodes are consistent with protocols
         for s in self.subsets:
             protocol = s['protocol']
+            if protocol not in PROTOCOLS:
+                raise Exception("Protocol '%s': not recognised" %
+                                protocol)
             masked_index = s['masked_index']
             if masked_index == '__10X__':
                 # 10xGenomics barcodes
-                if protocol not in ('10x_chromium_sc','10x_atac',):
+                if protocol not in PROTOCOLS_10X:
                     raise Exception("Protocol '%s': can't handle "
                                     "10xGenomics barcodes" % protocol)
             else:
                 # Standard barcodes
-                if protocol in ('10x_chromium_sc','10x_atac',):
+                if protocol in PROTOCOLS_10X:
                     raise Exception("Protocol '%s': needs 10xGenomics "
-                                    "barcodes" % protocol)
+                                    "barcodes ('%s' not valid)" %
+                                    (protocol,masked_index))
             
         # Update parameters on each subset according to the
         # assigned protocol (overriding pipeline defaults)
         for s in self.subsets:
             protocol = s['protocol']
-            if protocol == 'standard':
-                pass
-            elif protocol == 'mirna':
+            if protocol == 'mirna':
                 # miRNA-seq protocol
                 # Set minimum trimmed read length and turn off masking
                 self._update_subset(s,
@@ -524,10 +537,11 @@ class MakeFastqs(Pipeline):
                 # Turn off barcode analysis
                 self._update_subset(s,
                                     analyse_barcodes=False)
-            else:
-                # Unknown protocol
-                raise Exception("Unknown protocol '%s' assigned for "
-                                "lanes %s" % (protocol,s['lanes']))
+            elif protocol == '10x_visium':
+                # 10xGenomics Visium
+                # Turn off barcode analysis
+                self._update_subset(s,
+                                    analyse_barcodes=False)
             
         # Finally update parameters for user-defined
         # lane subsets (overriding both pipeline and
@@ -592,9 +606,13 @@ class MakeFastqs(Pipeline):
         if s is None or s == "":
             # No sequence
             return "__NO_SEQUENCE__"
-        if barcode_is_10xgenomics(s):
-            # 10xGenomics index sequence
-            return "__10X__"
+        if s.startswith('SI-'):
+            # Possible 10xGenomics index sequence
+            try:
+                if barcode_is_10xgenomics('-'.join(s.split('-')[0:3])):
+                    return "__10X__"
+            except IndexError:
+                pass
         for c in "ACGT":
             # Mask bases with 'N's
             s = s.replace(c,'N')
@@ -831,8 +849,10 @@ class MakeFastqs(Pipeline):
         get_bcl2fastq = None
         get_bcl2fastq_for_10x = None
         get_bcl2fastq_for_10x_atac = None
+        get_bcl2fastq_for_10x_visium = None
         get_cellranger = None
         get_cellranger_atac = None
+        get_spaceranger = None
 
         # For each subset, add the appropriate set of
         # tasks for the protocol
@@ -1264,6 +1284,71 @@ class MakeFastqs(Pipeline):
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
 
+            # 10x Visium
+            if protocol == "10x_visium":
+                # Get bcl2fastq information
+                if get_bcl2fastq_for_10x_visium is None:
+                    get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
+                        "Get information on bcl2fastq for spaceranger",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
+                    self.add_task(get_bcl2fastq_for_10x_visium,
+                                  envmodules=\
+                                  self.envmodules['spaceranger_mkfastq'])
+                # Get spaceranger information
+                if get_spaceranger is None:
+                    # Create a new task only if one doesn't already
+                    # exist
+                    get_spaceranger = Get10xPackage(
+                        "Get information on spaceranger",
+                        require_package="spaceranger")
+                    self.add_task(get_spaceranger,
+                                  envmodules=\
+                                  self.envmodules['spaceranger_mkfastq'])
+                # Run cellranger mkfastq
+                run_spaceranger_mkfastq = Run10xMkfastq(
+                    "Run spaceranger mkfastq%s" %
+                    (" for lanes %s" % ','.join([str(x) for x in lanes])
+                     if lanes else ""),
+                    fetch_primary_data.output.run_dir,
+                    bcl2fastq_out_dir,
+                    make_sample_sheet.output.custom_sample_sheet,
+                    platform=identify_platform.output.platform,
+                    bases_mask=bases_mask,
+                    minimum_trimmed_read_length=\
+                    minimum_trimmed_read_length,
+                    mask_short_adapter_reads=\
+                    mask_short_adapter_reads,
+                    jobmode=self.params.cellranger_jobmode,
+                    mempercore=self.params.cellranger_mempercore,
+                    maxjobs=self.params.cellranger_maxjobs,
+                    jobinterval=self.params.cellranger_jobinterval,
+                    localcores=self.params.cellranger_localcores,
+                    localmem=self.params.cellranger_localmem,
+                    pkg_exe=get_spaceranger.output.package_exe,
+                    pkg_version=\
+                    get_spaceranger.output.package_version,
+                    bcl2fastq_exe=\
+                    get_bcl2fastq_for_10x_visium.output.bcl2fastq_exe,
+                    bcl2fastq_version=\
+                    get_bcl2fastq_for_10x_visium.output.bcl2fastq_version,
+                    skip_mkfastq=final_output_exists
+                )
+                self.add_task(run_spaceranger_mkfastq,
+                              runner=self.runners['spaceranger_runner'],
+                              envmodules=\
+                              self.envmodules['spaceranger_mkfastq'],
+                              requires=(get_spaceranger,
+                                        get_bcl2fastq_for_10x_visium,
+                                        make_sample_sheet,
+                                        fetch_primary_data,
+                                        identify_platform,
+                                        restore_backup,))
+                # Add task to list of tasks that downstream
+                # tasks need to wait for
+                fastq_generation_tasks.append(run_spaceranger_mkfastq)
+                # Add output directory to list
+                bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+
         # Merge Fastqs
         if len(self.subsets) > 1:
             merge_fastq_dirs = MergeFastqDirs(
@@ -1343,7 +1428,8 @@ class MakeFastqs(Pipeline):
         # Update outputs with bcl2fastq information
         for get_bcl2fastq_task in (get_bcl2fastq,
                                    get_bcl2fastq_for_10x,
-                                   get_bcl2fastq_for_10x_atac,):
+                                   get_bcl2fastq_for_10x_atac,
+                                   get_bcl2fastq_for_10x_visium,):
             if get_bcl2fastq_task:
                 get_bcl2fastq = get_bcl2fastq_task
                 break
@@ -1358,6 +1444,9 @@ class MakeFastqs(Pipeline):
         if get_cellranger_atac:
             self.params._cellranger_atac_info.set(
                 get_cellranger_atac.output.package_info)
+        if get_spaceranger:
+            self.params._spaceranger_info.set(
+                get_spaceranger.output.package_info)
 
         # Update outputs associated with stats
         if self._fastq_statistics:
@@ -2186,7 +2275,11 @@ class Get10xPackage(PipelineFunctionTask):
             raise Exception("No appropriate %s software located" %
                             os.path.basename(require_package))
         # Get information on the version etc
-        package_info = cellranger_info(package_exe)
+        if require_package in ('cellranger',
+                               'cellranger-atac',):
+            package_info = cellranger_info(package_exe)
+        elif require_package == 'spaceranger':
+            package_info = spaceranger_info(package_exe)
         # Return the information on the package
         return (package_exe,package_info[1],package_info[2])
     def finish(self):
@@ -2468,7 +2561,7 @@ class Run10xMkfastq(PipelineTask):
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        elif self.pkg == 'cellranger':
+        elif self.pkg in ('cellranger','spaceranger'):
             # scRNA-seq
             if self.args.bases_mask == "auto":
                 bases_mask = None
@@ -2558,9 +2651,14 @@ class Run10xMkfastq(PipelineTask):
             # Verify outputs
             illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
                                          os.path.basename(self.tmp_out_dir))
-            if verify_run_against_sample_sheet(illumina_data,
-                                               self.args.sample_sheet,
-                                               include_sample_dir=True):
+            if self.pkg in ('cellranger','cellranger-atac'):
+                include_sample_dir = True
+            elif self.pkg == 'spaceranger':
+                include_sample_dir = False
+            if verify_run_against_sample_sheet(
+                    illumina_data,
+                    self.args.sample_sheet,
+                    include_sample_dir=include_sample_dir):
                 print("Verified outputs against samplesheet")
             else:
                 # Verification failed
