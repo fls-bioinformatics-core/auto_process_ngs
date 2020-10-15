@@ -44,6 +44,7 @@ class TestSettings(unittest.TestCase):
         self.assertEqual(s.modulefiles.bcl2fastq,None)
         self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
+        self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
         self.assertEqual(s.modulefiles.illumina_qc,None)
         self.assertEqual(s.modulefiles.fastq_strand,None)
         self.assertEqual(s.modulefiles.cellranger,None)
@@ -93,6 +94,7 @@ nprocessors = 8
         self.assertEqual(s.modulefiles.bcl2fastq,None)
         self.assertEqual(s.modulefiles.cellranger_mkfastq,None)
         self.assertEqual(s.modulefiles.cellranger_atac_mkfastq,None)
+        self.assertEqual(s.modulefiles.spaceranger_mkfastq,None)
         self.assertEqual(s.modulefiles.run_qc,None)
         # Fastq_stats
         self.assertEqual(s.fastq_stats.nprocessors,8)
