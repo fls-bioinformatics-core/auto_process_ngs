@@ -344,6 +344,46 @@ class TestCellrangerInfo(unittest.TestCase):
         self.assertEqual(cellranger_info(name='cellranger-atac'),
                          (cellranger_atac,'cellranger-atac','1.0.1'))
 
+class TestSpacerangerInfo(unittest.TestCase):
+    """
+    Tests for the spaceranger_info function
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestSpacerangerInfo")
+        # Store the original state of PATH env var
+        self.original_path = os.environ['PATH']
+    def tearDown(self):
+        # Restore the PATH env var
+        os.environ['PATH'] = self.original_path
+        # Remove temp dir
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def _make_mock_spaceranger_110(self):
+        # Make a fake spaceranger 1.0.1 executable
+        spaceranger_110 = os.path.join(self.wd,"spaceranger")
+        with open(spaceranger_110,'w') as fp:
+            fp.write("#!/bin/bash\necho -n spaceranger 1.1.0")
+        os.chmod(spaceranger_110,0o775)
+        return spaceranger_110
+
+    def test_spaceranger_110(self):
+        """spaceranger_info: collect info for spaceranger 1.1.0
+        """
+        spaceranger = self._make_mock_spaceranger_110()
+        self.assertEqual(spaceranger_info(path=spaceranger),
+                         (spaceranger,'spaceranger','1.1.0'))
+
+    def test_spaceranger_110_on_path(self):
+        """spaceranger_info: collect info for spaceranger 1.1.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        spaceranger = self._make_mock_spaceranger_110()
+        self.assertEqual(spaceranger_info(name='spaceranger'),
+                         (spaceranger,'spaceranger','1.1.0'))
+
 class TestMetricsSummary(unittest.TestCase):
     """
     Tests for the 'MetricsSummary' class

@@ -547,10 +547,69 @@ def cellranger_info(path=None,name=None):
                                    (line,ex))
     else:
         # No package supplied or located
-        logger.warning("Unable to identify cellranger package "
-                       "from '%s'" % cellranger_path)
+        logger.warning("Unable to identify %s package from '%s'" %
+                       (name,cellranger_path))
     # Return what we found
     return (cellranger_path,package_name,package_version)
+
+def spaceranger_info(path=None,name=None):
+    """
+    Retrieve information on the spaceranger software
+
+    If called without any arguments this will locate the first
+    spaceranger executable that is available on the user's PATH,
+    and attempts to extract the version.
+
+    Alternatively if the path to an executable is supplied then
+    the version will be determined from that instead.
+
+    If no version is identified then the script path is still
+    returned, but without any version info.
+
+    If a 'path' is supplied then the package name will be taken
+    from the basename; otherwise the package name can be supplied
+    via the 'name' argument. If neither are supplied then the
+    package name defaults to 'cellranger'.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the spaceranger program, PACKAGE is
+        'spaceranger', and VERSION is the package version. If any
+        value can't be determined then it will be returned as an
+        empty string.
+    """
+    # Initialise
+    spaceranger_path = ''
+    if name is None:
+        if path:
+            name = os.path.basename(path)
+        else:
+            name = 'spaceranger'
+    package_name = name
+    package_version = ''
+    # Locate the core script
+    if not path:
+        spaceranger_path = find_program(package_name)
+    else:
+        spaceranger_path = os.path.abspath(path)
+    # Identify the version
+    if os.path.basename(spaceranger_path) == package_name:
+        # Run the program to get the version
+        version_cmd = Command(spaceranger_path,'--version')
+        output = version_cmd.subprocess_check_output()[1]
+        # Extract version from line of the from
+        # spaceranger 1.1.0
+        try:
+            package_version = output.split()[-1]
+        except Exception as ex:
+            logger.warning("Unable to get version from '%s': %s" %
+                           (line,ex))
+    else:
+        # No package supplied or located
+        logger.warning("Unable to identify spaceranger package "
+                       "from '%s'" % spaceranger_path)
+    # Return what we found
+    return (spaceranger_path,package_name,package_version)
 
 def run_cellranger_mkfastq(sample_sheet,
                            primary_data_dir,
