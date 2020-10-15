@@ -230,7 +230,8 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     cellranger_qc_html = []
     for filen in os.listdir(ap.analysis_dir):
         for pkg in ("cellranger",
-                    "cellranger-atac",):
+                    "cellranger-atac",
+                    "spaceranger",):
             if filen.startswith("%s_qc_summary" % pkg) and \
                filen.endswith(".html"):
                 print("...found %s" % filen)
@@ -428,7 +429,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 ap.metadata.cellranger_software)
         except ValueError:
             pass
-    for pkg in ("bcl2fastq","cellranger","cellranger-atac"):
+    for pkg in ("bcl2fastq","cellranger","cellranger-atac","spaceranger"):
         try:
             package_info = processing_software[pkg]
         except KeyError:
@@ -468,10 +469,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         fileops.mkdir(barcodes_dirn)
         for filen in barcodes_files:
             fileops.copy(filen,barcodes_dirn)
-    # 10xGenomics cellranger QC summaries
+    # 10xGenomics mkfastq QC summaries
     if cellranger_qc_html:
         cellranger_qc = index_page.add_section(
-            "QC summary: cellranger mkfastq")
+            "QC summary: 10xGenomics mkfastq")
         for qc_html in cellranger_qc_html:
             # Check for optional lane list at tail of QC summary
             # e.g. cellranger_qc_summary_45.html
