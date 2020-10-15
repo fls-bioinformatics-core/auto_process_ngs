@@ -1714,7 +1714,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -1789,8 +1789,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"))
         MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger-atac"),
-                                 reads=('R1','R2','R3','I1',))
+                                              "cellranger-atac"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Set up mock outputs in analysis directory to mimic
@@ -1852,7 +1851,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -1939,8 +1938,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         MockCellrangerExe.create(os.path.join(self.bin,
                                               "cellranger"))
         MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger-atac"),
-                                 reads=('R1','R2','R3','I1',))
+                                              "cellranger-atac"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Set up mock outputs in analysis directory to mimic
@@ -1999,7 +1997,7 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index_I
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -2841,7 +2839,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -2938,7 +2936,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -3056,7 +3054,7 @@ smpl2,smpl2,,,A005,SI-GA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_info,
                          (os.path.join(self.bin,"cellranger"),
                           "cellranger",
-                          "2.2.0"))
+                          "3.1.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -3130,8 +3128,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger-atac"),
-                                 reads=('R1','R2','R3','I1',))
+                                              "cellranger-atac"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         analysis_dir = os.path.join(self.wd,"analysis")
@@ -3153,7 +3150,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_atac_info,
                          (os.path.join(self.bin,"cellranger-atac"),
                           "cellranger-atac",
-                          "2.2.0"))
+                          "1.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
@@ -3227,8 +3224,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
         MockCellrangerExe.create(os.path.join(self.bin,
-                                              "cellranger-atac"),
-                                 reads=('R1','R2','R3','I1',))
+                                              "cellranger-atac"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Set up mock outputs in analysis directory to mimic
@@ -3272,7 +3268,7 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
         self.assertEqual(p.output.cellranger_atac_info,
                          (os.path.join(self.bin,"cellranger-atac"),
                           "cellranger-atac",
-                          "2.2.0"))
+                          "1.2.0"))
         self.assertTrue(p.output.acquired_primary_data)
         self.assertEqual(p.output.stats_file,
                          os.path.join(analysis_dir,"statistics.info"))
