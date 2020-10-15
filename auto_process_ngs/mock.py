@@ -1012,7 +1012,7 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                            assert_mask_short_adapter_reads=%s,
                            assert_adapter=%s,
                            assert_adapter2=%s,
-                           version='%s').main(sys.argv[1:]))
+                           version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    missing_fastqs,
                    ("\"%s\"" % platform
@@ -1031,7 +1031,9 @@ sys.exit(MockBcl2fastq2Exe(exit_code=%s,
                    ("\"%s\"" % assert_adapter2
                     if assert_adapter2 is not None
                     else None),
-                   version))
+                   ("\"%s\"" % version
+                    if version is not None
+                    else None)))
             os.chmod(path,0o775)
         with open(path,'r') as fp:
             print("bcl2fastq:")
