@@ -33,10 +33,15 @@ It is also possible to make mock executables which mimick some of
 the external software required for parts of the pipeline:
 
 - MockBcl2fastq2Exe
-- MockCellrangerExe
+- Mock10xPackageExe
 - MockIlluminaQCSh
 - MockMultiQC
 - MockFastqStrandPy
+
+There also is a wrapper for the 'Mock10xPackageExe' class which
+is maintained for backwards compatibility:
+
+- MockCellrangerExe
 
 There are supporting standalone functions for mocking outputs:
 
@@ -1212,18 +1217,19 @@ bcl2fastq v%s
         shutil.rmtree(tmpname)
         return self._exit_code
 
-class MockCellrangerExe(object):
+class Mock10xPackageExe(object):
     """
-    Create mock cellranger executable
+    Create mock 10xGenomics pipeline executable
 
-    This class can be used to create a mock cellranger
-    executable, which in turn can be used in place of
-    the actual cellranger software for testing purposes.
+    This class can be used to create a mock 10xGenomics
+    pipeline executable, which in turn can be used in
+    place of the actual pipeline software (e.g. cellranger)
+    for testing purposes.
 
     To create a mock executable, use the 'create' static
     method, e.g.
 
-    >>> MockCellrangerExe.create("/tmpbin/cellranger")
+    >>> Mock10xPackageExe.create("/tmpbin/cellranger")
 
     The resulting executable will generate mock outputs
     when run on actual or mock Illumina sequencer output
@@ -1241,9 +1247,9 @@ class MockCellrangerExe(object):
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
-               reads=None):
+               reads=None,version=None):
         """
-        Create a "mock" cellranger executable
+        Create a "mock" 10xGenomics package executable
 
         Arguments:
           path (str): path to the new executable
@@ -1262,8 +1268,9 @@ class MockCellrangerExe(object):
             check that the supplied bases mask
             matches this value (not implemented)
           reads (list): list of 'reads' that
-            will be created (default: ``('R1','R2',
-            'I1',)``)
+            will be created
+          version (str): version of package to
+            report
         """
         path = os.path.abspath(path)
         print("Building mock executable: %s" % path)
@@ -1272,12 +1279,13 @@ class MockCellrangerExe(object):
         with open(path,'w') as fp:
             fp.write("""#!/usr/bin/env python
 import sys
-from auto_process_ngs.mock import MockCellrangerExe
-sys.exit(MockCellrangerExe(path=sys.argv[0],
+from auto_process_ngs.mock import Mock10xPackageExe
+sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            exit_code=%s,
                            platform=%s,
                            assert_bases_mask=%s,
-                           reads=%s).main(sys.argv[1:]))
+                           reads=%s,
+                           version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    ("\"%s\"" % platform
                     if platform is not None
@@ -1285,28 +1293,45 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
                     else None),
-                   reads))
+                   reads,
+                   ("\"%s\"" % version
+                    if version is not None
+                    else None)))
             os.chmod(path,0o775)
         with open(path,'r') as fp:
-            print("cellranger:")
+            print("%s:" % os.path.basename(path))
             print("%s" % fp.read())
         return path
 
-    def __init__(self,path=None,
+    def __init__(self,path,
                  exit_code=0,
                  platform=None,
                  assert_bases_mask=None,
-                 reads=None):
+                 reads=None,
+                 version=None):
         """
-        Internal: configure the mock cellranger
+        Internal: configure the mock 10xGenomics package
         """
         self._path = path
-        self._version = "2.2.0"
+        self._package_name = os.path.basename(self._path)
+        if version is None:
+            if self._package_name == 'cellranger':
+                self._version = '3.1.0'
+            elif self._package_name == 'cellranger-atac':
+                self._version = '1.2.0'
+            elif self._package_name == 'spaceranger':
+                self._version = '1.1.0'
+        else:
+            self._version = version
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
         if reads is None:
-            self._reads = ('R1','R2','I1',)
+            if self._package_name in ('cellranger',
+                                      'spaceranger',):
+                self._reads = ('R1','R2','I1',)
+            elif self._package_name == 'cellranger-atac':
+                self._reads = ('R1','R2','I1','I2',)
         else:
             self._reads = tuple(reads)
 
@@ -1415,7 +1440,7 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
 
     def main(self,args):
         """
-        Internal: provides mock cellranger functionality
+        Internal: provides mock 10xGenomics package functionality
         """
         # Store command line
         cmdline = "%s" % ' '.join(args)
@@ -1424,16 +1449,17 @@ sys.exit(MockCellrangerExe(path=sys.argv[0],
             cmd = " %s" % args[0]
         except IndexError:
             cmd = ''
-        # Get executable name
-        cellranger_exe = os.path.basename(self._path)
         # Construct header
-        header = """%s
+        if self._package_name in ('cellranger','cellranger-atac'):
+            header = """%s
 %s%s (%s)
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
-""" % (self._path,cellranger_exe,cmd,self._version)
+""" % (self._path,self._package_name,cmd,self._version)
+        elif self._package_name in ('spaceranger,'):
+            header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
-        print(header)
+        sys.stdout.write(header)
         if cmd == " --version" or not cmd:
             return self._exit_code
         # Build top-level parser
@@ -1462,10 +1488,10 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         count.add_argument("--id",action="store")
         count.add_argument("--fastqs",action="store")
         count.add_argument("--sample",action="store")
-        if cellranger_exe == "cellranger":
+        if self._package_name == "cellranger":
             count.add_argument("--transcriptome",action="store")
             count.add_argument("--chemistry",action="store")
-        elif cellranger_exe == "cellranger-atac":
+        elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
         count.add_argument("--jobmode",action="store")
         count.add_argument("--localcores",action="store")
@@ -1498,6 +1524,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 lanes = IlluminaRun(args.run).lanes
             print("Lanes: %s" % lanes)
             # Generate mock output based on inputs
+            if self._package_name in ('cellranger',
+                                      'cellranger-atac',):
+                force_sample_dir = True
+            elif self._package_name == 'spaceranger':
+                force_sample_dir = False
             tmpname = "tmp.%s" % uuid.uuid4()
             output = MockIlluminaData(name=tmpname,
                                       package="bcl2fastq2",
@@ -1505,7 +1536,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             s = SampleSheetPredictor(sample_sheet_file=sample_sheet)
             s.set(paired_end=True,
                   lanes=lanes,
-                  force_sample_dir=True)
+                  force_sample_dir=force_sample_dir)
             for project in s.projects:
                 print("Adding project: %s" % project.name)
                 for sample in project.samples:
@@ -1529,7 +1560,7 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                         "Undetermined_S0_L%03d_%s_001.fastq.gz"
                         % (lane,r))
             # Build the output directory
-            output.create(force_sample_dir=True)
+            output.create(force_sample_dir=force_sample_dir)
             # Move to final location
             os.rename(os.path.join(tmpname,"bcl2fastq"),
                       output_dir)
@@ -1948,6 +1979,13 @@ sys.exit(MockFastqStrandPy(no_outputs=%s,
                     fp.write("%s	13.13	93.21\n" % genome)
         # Exit
         return self._exit_code
+
+class MockCellrangerExe(Mock10xPackageExe):
+    """
+    Wrapper for Mock10xPackageExe
+
+    Maintained for backwards-compatibility
+    """
 
 #######################################################################
 # Functions for creating mock data
