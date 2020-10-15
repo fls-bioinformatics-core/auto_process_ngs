@@ -483,10 +483,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             else:
                 lanes = None
             fileops.copy(qc_html,dirn)
-            cellranger_qc.add(Link("QC summary for %s" %
-                                   ("all lanes" if lanes is None
-                                    else "lanes %s" % lanes),
-                                   os.path.basename(qc_html)))
+            cellranger_qc.add(Link("%s: QC summary for %s" %
+                                   (os.path.basename(qc_html).split('_')[0].title(),
+                                    ("all lanes" if lanes is None
+                                     else "lanes %s" % lanes)),
+                                    os.path.basename(qc_html)))
     if projects:
         # Table of projects
         projects_summary = index_page.add_section("QC Reports")
