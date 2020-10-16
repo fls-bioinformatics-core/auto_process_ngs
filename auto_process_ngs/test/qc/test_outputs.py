@@ -1074,3 +1074,49 @@ class TestExpectedOutputs(unittest.TestCase):
         for r in reference_outputs:
             self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
                             "%s not found in expected" % r)
+
+    def test_expected_outputs_10x_visium(self):
+        """
+        expected_outputs: 10xGenomics Visium
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           "10xGenomics Visium" })
+        p.create(top_dir=self.wd)
+        # Make mock fastq_strand
+        mock_fastq_strand_conf = os.path.join(self.wd,
+                                              p.name,
+                                              "fastq_strand.conf")
+        with open(mock_fastq_strand_conf,'w') as fp:
+            fp.write("")
+        reference_outputs = ("qc/PJB1_S1_R1_001_fastqc",
+                             "qc/PJB1_S1_R1_001_fastqc.html",
+                             "qc/PJB1_S1_R1_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_fastqc",
+                             "qc/PJB1_S1_R2_001_fastqc.html",
+                             "qc/PJB1_S1_R2_001_fastqc.zip",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_model_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.png",
+                             "qc/PJB1_S1_R2_001_other_organisms_screen.txt",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.png",
+                             "qc/PJB1_S1_R2_001_rRNA_screen.txt",
+                             "qc/PJB1_S1_R2_001_fastq_strand.txt",)
+        expected = expected_outputs(AnalysisProject(p.name,
+                                                    os.path.join(self.wd,
+                                                                 p.name)),
+                                    "qc",
+                                    fastq_strand_conf=mock_fastq_strand_conf,
+                                    cellranger_refdata=None,
+                                    qc_protocol="10x_Visium")
+        for e in expected:
+            print(e)
+            self.assertTrue(e in [os.path.join(self.wd,p.name,r)
+                                  for r in reference_outputs],
+                            "%s not found in reference" % e)
+        for r in reference_outputs:
+            self.assertTrue(os.path.join(self.wd,p.name,r) in expected,
+                            "%s not found in expected" % r)

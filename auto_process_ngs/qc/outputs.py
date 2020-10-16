@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc/outputs: utilities to predict and check QC pipeline outputs
-#     Copyright (C) University of Manchester 2019 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
 #
 """
 Provides utility functions for QC outputs.
@@ -213,7 +213,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
         # Fastq_screen
         if qc_protocol in ('singlecell',
                            '10x_scRNAseq',
-                           '10x_snRNAseq',):
+                           '10x_snRNAseq',
+                           '10x_Visium',):
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -276,7 +277,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
             fq_pair = (fq_group[0],fq_group[2])
         elif qc_protocol in ('singlecell',
                              '10x_scRNAseq',
-                             '10x_snRNAseq',):
+                             '10x_snRNAseq',
+                             '10x_Visium',):
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -397,9 +399,10 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         # Fastq_screen
         if (qc_protocol in ('singlecell',
                             '10x_scRNAseq',
-                            '10x_snRNAseq',)) \
+                            '10x_snRNAseq',
+                            '10x_Visium',)) \
             and project.fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell
+            # No screens for R1 for single cell or Visium
             continue
         for screen in FASTQ_SCREENS:
             for output in [os.path.join(qc_dir,f)
@@ -413,7 +416,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
             # Strand stats output
             if qc_protocol in ('singlecell',
                                '10x_scRNAseq',
-                               '10x_snRNAseq',):
+                               '10x_snRNAseq',
+                               '10x_Visium',):
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))
