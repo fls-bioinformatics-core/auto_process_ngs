@@ -1331,6 +1331,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                 self._version = '3.1.0'
             elif self._package_name == 'cellranger-atac':
                 self._version = '1.2.0'
+            elif self._package_name == 'cellranger-arc':
+                self._version = '1.0.0'
             elif self._package_name == 'spaceranger':
                 self._version = '1.1.0'
         else:
@@ -1342,7 +1344,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
             if self._package_name in ('cellranger',
                                       'spaceranger',):
                 self._reads = ('R1','R2','I1',)
-            elif self._package_name == 'cellranger-atac':
+            elif self._package_name in ('cellranger-atac',
+                                        'cellranger-arc'):
                 self._reads = ('R1','R2','I1','I2',)
         else:
             self._reads = tuple(reads)
@@ -1468,6 +1471,9 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,self._package_name,cmd,self._version)
+        elif self._package_name in ('cellranger-arc',):
+            header = "%s %s-%s" % (self._package_name,self._package_name,
+                                   self._version)
         elif self._package_name in ('spaceranger,'):
             header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
@@ -1539,7 +1545,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if self._package_name in ('cellranger',
                                       'cellranger-atac',):
                 force_sample_dir = True
-            elif self._package_name == 'spaceranger':
+            elif self._package_name in ('cellranger-arc',
+                                        'spaceranger',):
                 force_sample_dir = False
             tmpname = "tmp.%s" % uuid.uuid4()
             output = MockIlluminaData(name=tmpname,
