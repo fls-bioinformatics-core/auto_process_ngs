@@ -212,6 +212,24 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         self.assertEqual(determine_qc_protocol(project),
                          "ICELL8_scATAC")
 
+    def test_determine_qc_protocol_10x_visium(self):
+        """determine_qc_protocol: spatial RNA-seq run (10xGenomics Visium)
+        """
+        # Make mock analysis project
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),
+                                metadata={'Single cell platform':
+                                          "10xGenomics Visium",
+                                          'Library type':
+                                          "scATAC-seq"})
+        p.create(top_dir=self.wd)
+        project = AnalysisProject("PJB",
+                                  os.path.join(self.wd,"PJB"))
+        self.assertEqual(determine_qc_protocol(project),
+                         "10x_Visium")
+
 class TestVerifyQCFunction(unittest.TestCase):
     """
     Tests for verify_qc function
