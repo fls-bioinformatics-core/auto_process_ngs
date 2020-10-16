@@ -132,6 +132,8 @@ class Settings(object):
                                                     'cellranger_mkfastq')
         self.modulefiles['cellranger_atac_mkfastq'] = config.get('modulefiles',
                                                     'cellranger_atac_mkfastq')
+        self.modulefiles['cellranger_arc_mkfastq'] = config.get('modulefiles',
+                                                    'cellranger_arc_mkfastq')
         self.modulefiles['spaceranger_mkfastq'] = config.get('modulefiles',
                                                     'spaceranger_mkfastq')
         self.modulefiles['run_qc'] = config.get('modulefiles','run_qc')
