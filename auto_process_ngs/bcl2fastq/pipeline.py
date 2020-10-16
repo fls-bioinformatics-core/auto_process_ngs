@@ -107,12 +107,14 @@ PROTOCOLS = ('standard',
              'icell8_atac',
              '10x_chromium_sc',
              '10x_atac',
-             '10x_visium',)
+             '10x_visium',
+             '10x_multiome',)
 
 # 10xGenomics protocols
 PROTOCOLS_10X = ('10x_chromium_sc',
                  '10x_atac',
-                 '10x_visium',)
+                 '10x_visium',
+                 '10x_multiome',)
 
 # Valid attribute names for lane subsets
 
@@ -348,6 +350,7 @@ class MakeFastqs(Pipeline):
         self.add_param('_bcl2fastq_info')
         self.add_param('_cellranger_info')
         self.add_param('_cellranger_atac_info')
+        self.add_param('_cellranger_arc_info')
         self.add_param('_spaceranger_info')
         self.add_param('_missing_fastqs',type=list)
 
@@ -357,6 +360,7 @@ class MakeFastqs(Pipeline):
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
+        self.add_runner('cellranger_arc_runner')
         self.add_runner('spaceranger_runner')
         self.add_runner('stats_runner')
 
@@ -364,6 +368,7 @@ class MakeFastqs(Pipeline):
         self.add_envmodules('bcl2fastq')
         self.add_envmodules('cellranger_mkfastq')
         self.add_envmodules('cellranger_atac_mkfastq')
+        self.add_envmodules('cellranger_arc_mkfastq')
         self.add_envmodules('spaceranger_mkfastq')
 
         # Pipeline outputs
@@ -375,6 +380,8 @@ class MakeFastqs(Pipeline):
         self.add_output('cellranger_atac_info',
                         self.params._cellranger_atac_info)
         self.add_output('spaceranger_info',self.params._spaceranger_info)
+        self.add_output('cellranger_arc_info',
+                        self.params._cellranger_arc_info)
         self.add_output('stats_file',Param())
         self.add_output('stats_full',Param())
         self.add_output('per_lane_stats',Param())
@@ -539,6 +546,11 @@ class MakeFastqs(Pipeline):
                                     analyse_barcodes=False)
             elif protocol == '10x_visium':
                 # 10xGenomics Visium
+                # Turn off barcode analysis
+                self._update_subset(s,
+                                    analyse_barcodes=False)
+            elif protocol == '10x_multiome':
+                # 10xGenomics multiome
                 # Turn off barcode analysis
                 self._update_subset(s,
                                     analyse_barcodes=False)
@@ -850,8 +862,10 @@ class MakeFastqs(Pipeline):
         get_bcl2fastq_for_10x = None
         get_bcl2fastq_for_10x_atac = None
         get_bcl2fastq_for_10x_visium = None
+        get_bcl2fastq_for_10x_multiome = None
         get_cellranger = None
         get_cellranger_atac = None
+        get_cellranger_arc = None
         get_spaceranger = None
 
         # For each subset, add the appropriate set of
@@ -1349,6 +1363,71 @@ class MakeFastqs(Pipeline):
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
 
+            # 10x multiome
+            if protocol == "10x_multiome":
+                # Get bcl2fastq information
+                if get_bcl2fastq_for_10x_multiome is None:
+                    get_bcl2fastq_for_10x_multiome = GetBcl2Fastq(
+                        "Get information on bcl2fastq for cellranger-arc",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
+                    self.add_task(get_bcl2fastq_for_10x_multiome,
+                                  envmodules=\
+                                  self.envmodules['cellranger_arc_mkfastq'])
+                # Get cellranger-atac information
+                if get_cellranger_arc is None:
+                    # Create a new task only if one doesn't already
+                    # exist
+                    get_cellranger_arc = Get10xPackage(
+                        "Get information on cellranger-arc",
+                        require_package="cellranger-arc")
+                    self.add_task(get_cellranger_arc,
+                                  envmodules=\
+                                  self.envmodules['cellranger_arc_mkfastq'])
+                # Run cellranger mkfastq
+                run_cellranger_mkfastq = Run10xMkfastq(
+                    "Run cellranger-arc mkfastq%s" %
+                    (" for lanes %s" % ','.join([str(x) for x in lanes])
+                     if lanes else ""),
+                    fetch_primary_data.output.run_dir,
+                    bcl2fastq_out_dir,
+                    make_sample_sheet.output.custom_sample_sheet,
+                    platform=identify_platform.output.platform,
+                    bases_mask=bases_mask,
+                    minimum_trimmed_read_length=\
+                    minimum_trimmed_read_length,
+                    mask_short_adapter_reads=\
+                    mask_short_adapter_reads,
+                    jobmode=self.params.cellranger_jobmode,
+                    mempercore=self.params.cellranger_mempercore,
+                    maxjobs=self.params.cellranger_maxjobs,
+                    jobinterval=self.params.cellranger_jobinterval,
+                    localcores=self.params.cellranger_localcores,
+                    localmem=self.params.cellranger_localmem,
+                    pkg_exe=get_cellranger_arc.output.package_exe,
+                    pkg_version=\
+                    get_cellranger_arc.output.package_version,
+                    bcl2fastq_exe=\
+                    get_bcl2fastq_for_10x_multiome.output.bcl2fastq_exe,
+                    bcl2fastq_version=\
+                    get_bcl2fastq_for_10x_multiome.output.bcl2fastq_version,
+                    skip_mkfastq=final_output_exists
+                )
+                self.add_task(run_cellranger_mkfastq,
+                              runner=self.runners['cellranger_runner'],
+                              envmodules=\
+                              self.envmodules['cellranger_arc_mkfastq'],
+                              requires=(get_cellranger_arc,
+                                        get_bcl2fastq_for_10x_multiome,
+                                        make_sample_sheet,
+                                        fetch_primary_data,
+                                        identify_platform,
+                                        restore_backup,))
+                # Add task to list of tasks that downstream
+                # tasks need to wait for
+                fastq_generation_tasks.append(run_cellranger_mkfastq)
+                # Add output directory to list
+                bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+
         # Merge Fastqs
         if len(self.subsets) > 1:
             merge_fastq_dirs = MergeFastqDirs(
@@ -1429,7 +1508,8 @@ class MakeFastqs(Pipeline):
         for get_bcl2fastq_task in (get_bcl2fastq,
                                    get_bcl2fastq_for_10x,
                                    get_bcl2fastq_for_10x_atac,
-                                   get_bcl2fastq_for_10x_visium,):
+                                   get_bcl2fastq_for_10x_visium,
+                                   get_bcl2fastq_for_10x_multiome,):
             if get_bcl2fastq_task:
                 get_bcl2fastq = get_bcl2fastq_task
                 break
@@ -1447,6 +1527,9 @@ class MakeFastqs(Pipeline):
         if get_spaceranger:
             self.params._spaceranger_info.set(
                 get_spaceranger.output.package_info)
+        if get_cellranger_arc:
+            self.params._cellranger_arc_info.set(
+                get_cellranger_arc.output.package_info)
 
         # Update outputs associated with stats
         if self._fastq_statistics:
@@ -2276,10 +2359,13 @@ class Get10xPackage(PipelineFunctionTask):
                             os.path.basename(require_package))
         # Get information on the version etc
         if require_package in ('cellranger',
-                               'cellranger-atac',):
+                               'cellranger-atac',
+                               'cellranger-arc',):
             package_info = cellranger_info(package_exe)
         elif require_package == 'spaceranger':
             package_info = spaceranger_info(package_exe)
+        else:
+            raise Exception("%s: unknown 10xGenomics package")
         # Return the information on the package
         return (package_exe,package_info[1],package_info[2])
     def finish(self):
@@ -2561,7 +2647,9 @@ class Run10xMkfastq(PipelineTask):
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        elif self.pkg in ('cellranger','spaceranger'):
+        elif self.pkg in ('cellranger',
+                          'cellranger-arc',
+                          'spaceranger'):
             # scRNA-seq
             if self.args.bases_mask == "auto":
                 bases_mask = None
@@ -2653,7 +2741,7 @@ class Run10xMkfastq(PipelineTask):
                                          os.path.basename(self.tmp_out_dir))
             if self.pkg in ('cellranger','cellranger-atac'):
                 include_sample_dir = True
-            elif self.pkg == 'spaceranger':
+            elif self.pkg in ('cellranger-arc','spaceranger'):
                 include_sample_dir = False
             if verify_run_against_sample_sheet(
                     illumina_data,
