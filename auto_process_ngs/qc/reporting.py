@@ -887,6 +887,7 @@ class QCReport(Document):
         software_packages = ['bcl2fastq',
                              'cellranger',
                              'cellranger-atac',
+                             'spaceranger',
                              'fastqc',
                              'fastq_screen',
                              'fastq_strand',]
@@ -894,6 +895,7 @@ class QCReport(Document):
             'bcl2fastq': 'Bcl2fastq',
             'cellranger': 'Cellranger',
             'cellranger-atac': 'Cellranger-atac',
+            'spaceranger': 'Spaceranger',
             'fastqc': 'FastQC',
             'fastq_screen': 'FastqScreen',
             'fastq_strand': 'FastqStrand',
@@ -934,7 +936,7 @@ class QCReport(Document):
                 except TypeError:
                     # Not valid data
                     continue
-            if pkg not in software_names:
+            if pkg not in software_packages:
                 # Unrecognised package name
                 raise Exception("Unrecognised software package "
                                     "item to report: '%s'" % pkg)
