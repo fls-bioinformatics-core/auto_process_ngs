@@ -1596,11 +1596,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             # Outs
             outs_dir = os.path.join(top_dir,"outs")
             os.mkdir(outs_dir)
-            if cellranger_exe == "cellranger":
+            if self._package_name == "cellranger":
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(mock10xdata.METRICS_SUMMARY)
-            elif cellranger_exe == "cellranger-atac":
+            elif self._package_name == "cellranger-atac":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
                     fp.write(mock10xdata.ATAC_SUMMARY)
