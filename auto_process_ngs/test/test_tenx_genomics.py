@@ -309,6 +309,13 @@ class TestCellrangerInfo(unittest.TestCase):
             fp.write("#!/bin/bash\ncat <<EOF\ncellranger-atac  (1.0.1)\nCopyright (c) 2018 10x Genomics, Inc.  All rights reserved.\n-------------------------------------------------------------------------------\n\nUsage:\n    cellranger-atac mkfastq\n\n    cellranger-atac count\n\n    cellranger-atac testrun\n    cellranger-atac upload\n    cellranger-atac sitecheckEOF")
         os.chmod(cellranger_atac_101,0o775)
         return cellranger_atac_101
+    def _make_mock_cellranger_arc_100(self):
+        # Make a fake cellranger-atac 1.0.0 executable
+        cellranger_arc_100 = os.path.join(self.wd,"cellranger-arc")
+        with open(cellranger_arc_100,'w') as fp:
+            fp.write("#!/bin/bash\necho -n cellranger-arc cellranger-arc-1.0.0")
+        os.chmod(cellranger_arc_100,0o775)
+        return cellranger_arc_100
 
     def test_cellranger_201(self):
         """cellranger_info: collect info for cellranger 2.0.1
@@ -343,6 +350,23 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_atac = self._make_mock_cellranger_atac_101()
         self.assertEqual(cellranger_info(name='cellranger-atac'),
                          (cellranger_atac,'cellranger-atac','1.0.1'))
+
+    def test_cellranger_arc_100(self):
+        """cellranger_info: collect info for cellranger-arc 1.0.0
+        """
+        cellranger_arc = self._make_mock_cellranger_arc_100()
+        self.assertEqual(cellranger_info(path=cellranger_arc),
+                         (cellranger_arc,'cellranger-arc','1.0.0'))
+
+    def test_cellranger_arc_100_on_path(self):
+        """cellranger_info: collect info for cellranger-arc 1.0.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        cellranger_arc = self._make_mock_cellranger_arc_100()
+        self.assertEqual(cellranger_info(name='cellranger-arc'),
+                         (cellranger_arc,'cellranger-arc','1.0.0'))
 
 class TestSpacerangerInfo(unittest.TestCase):
     """

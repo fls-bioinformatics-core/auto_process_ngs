@@ -7,8 +7,8 @@
 """
 tenx_genomics_utils.py
 
-Utility classes and functions for processing the outputs from 10xGenomics's
-Chromium SC 3'v2 system:
+Utility classes and functions for processing the outputs from 10xGenomics
+platforms:
 
 - MetricSummary
 - AtacSummary
@@ -538,14 +538,24 @@ def cellranger_info(path=None,name=None):
         version_cmd = Command(cellranger_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
         for line in output.split('\n'):
-            if line.startswith(package_name):
+            if package_name in ('cellranger',
+                                'cellranger-atac',):
+                if line.startswith(package_name):
+                    # Extract version from line of the form
+                    # cellranger  (2.0.1)
+                    try:
+                        package_version = line.split('(')[-1].strip(')')
+                    except Exception as ex:
+                        logger.warning("Unable to get version from '%s': "
+                                       "%s" % (line,ex))
+            elif package_name == 'cellranger-arc':
                 # Extract version from line of the form
-                # cellranger  (2.0.1)
+                # cellranger-arc cellranger-arc-1.0.0
                 try:
-                    package_version = line.split('(')[-1].strip(')')
+                    package_version = line.split('-')[-1]
                 except Exception as ex:
-                    logger.warning("Unable to get version from '%s': %s" %
-                                   (line,ex))
+                    logger.warning("Unable to get version from '%s': "
+                                   "%s" % (line,ex))
     else:
         # No package supplied or located
         logger.warning("Unable to identify %s package from '%s'" %
