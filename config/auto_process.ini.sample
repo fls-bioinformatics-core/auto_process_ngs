@@ -13,6 +13,7 @@ make_fastqs = None
 bcl2fastq = None
 cellranger_mkfastq = None
 cellranger_atac_mkfastq = None
+cellranger_arc_mkfastq = None
 spaceranger_mkfastq = None
 run_qc = None
 illumina_qc = None
