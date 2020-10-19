@@ -735,7 +735,8 @@ class RunIlluminaQC(PipelineTask):
             if self.args.qc_protocol in ('singlecell',
                                          '10x_scRNAseq',
                                          '10x_snRNAseq',
-                                         '10x_Visium',) \
+                                         '10x_Visium',
+                                         '10x_Multiome_GEX',) \
                 and self.args.fastq_attrs(fastq).read_number == 1:
                 cmd.add_args('--no-screens')
             # Add the command
