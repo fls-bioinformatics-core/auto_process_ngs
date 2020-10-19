@@ -599,14 +599,13 @@ mouse = /data/cellranger/atac_references/mm10
                 self.assertTrue(multiqc in z.namelist())
 
     def test_run_qc_10x_visium(self):
-        """run_qc: 10x Visium spatial RNA-seq with strandedness and single library analysis
+        """run_qc: 10x Visium spatial RNA-seq with strandedness
         """
         # Make mock illumina_qc.sh and multiqc
         MockIlluminaQcSh.create(os.path.join(self.bin,
                                              "illumina_qc.sh"))
         MockFastqStrandPy.create(os.path.join(self.bin,
                                               "fastq_strand.py"))
-        MockCellrangerExe.create(os.path.join(self.bin,"cellranger"))
         MockMultiQC.create(os.path.join(self.bin,"multiqc"))
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
