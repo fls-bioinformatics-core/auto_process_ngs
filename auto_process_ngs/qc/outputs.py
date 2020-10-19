@@ -201,7 +201,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
     fastqs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        if qc_protocol == '10x_scATAC':
+        if qc_protocol in ('10x_scATAC',
+                           '10x_multiome_atac',):
             if project.fastq_attrs(fastq).read_number == 2:
                 # Ignore the R2 reads for 10x single-cell ATAC
                 continue
@@ -272,7 +273,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
                                 project.fastq_attrs),
             fastq_attrs=project.fastq_attrs):
         # Strand stats output
-        if qc_protocol == '10x_scATAC':
+        if qc_protocol in ('10x_scATAC',
+                           '10x_multiome_atac',):
             # Strand stats output based on R1/R3 pair
             fq_pair = (fq_group[0],fq_group[2])
         elif qc_protocol in ('singlecell',
@@ -388,7 +390,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
     outputs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        if qc_protocol == '10x_scATAC' and \
+        if qc_protocol in ('10x_scATAC','10x_multiome_atac') and \
            project.fastq_attrs(fastq).read_number == 2:
             # No outputs for R2 for 10x single cell ATAC-seq
             continue
