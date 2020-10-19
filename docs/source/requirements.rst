@@ -34,6 +34,7 @@ Pipeline stage      Software packages  Notes
 make_fastqs         `bcl2fastq 2.17`_  2.17+ recommended
 make_fastqs         `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 make_fastqs         `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
+make_fastqs         `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 make_fastqs         `spaceranger`_     10xGenomics Visium spatial RNA-seq data only
 run_qc              `fastqc`_
 run_qc              `fastq_screen`_
@@ -51,6 +52,7 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _bcl2fastq1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger-atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
+.. _cellranger-arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
 .. _spaceranger: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/what-is-space-ranger
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
