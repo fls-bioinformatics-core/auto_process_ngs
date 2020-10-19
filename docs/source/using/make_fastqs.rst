@@ -26,12 +26,14 @@ Protocol option          Used for
 ``mirna``                miRNA-seq data
 ``icell8``               ICELL8 single-cell RNA-seq data
 ``icell8_atac``          ICELL8 single-cell ATAC-seq data
-``10x_chromium_sc``      10xGenomics Chromium single-cell
+``10x_chromium_sc``      10xGenomics Chromium single cell
                          RNA-seq data
-``10x_atac``             10xGenomics Chromium single-cell
+``10x_atac``             10xGenomics Chromium single cell
                          ATAC-seq data
 ``10x_visium``           10xGenomics Visium spatial RNA-seq
                          data
+``10x_multiome``         10xGenomics Multiome single cell
+                         ATAC + GEX data
 ======================== =====================================
 
 The protocols are described in the section :ref:`make_fastqs-protocols`;
@@ -86,6 +88,7 @@ the sections below:
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
 * :ref:`make_fastqs-10x_atac-protocol`
 * :ref:`make_fastqs-10x_visium-protocol`
+* :ref:`make_fastqs-10x_multiome-protocol`
 
 .. _make_fastqs-standard-protocol:
 
@@ -230,6 +233,31 @@ This will generate the Fastqs in the specified output directory
 
    ``make_fastqs`` offers various options for controlling the
    behaviour of ``cellranger-atac mkfastqs``, for example setting the
+   jobmode (see :ref:`10xgenomics-additional-options`).
+
+.. _make_fastqs-10x_atac-protocol:
+
+10xGenomics single cell Multiome ATAC + GEX data (``--protocol=10x_multiome``)
+******************************************************************************
+
+Fastq generation can be performed for 10xGenomics single cell
+multiome ATAC and gene expression (GEX) data by using the
+``--protocol=10x_multiome`` option:
+
+::
+
+    auto_process.py make_fastqs --protocol=10x_multiome ...
+
+which fetches the data and runs ``cellranger-atac mkfastq``.
+
+This will generate the Fastqs in the specified output directory
+(e.g. ``bcl2fastq``) along with an HTML report derived from the
+``cellranger-arc`` JSON QC summary file, statistics for the Fastqs.
+
+.. note::
+
+   ``make_fastqs`` offers various options for controlling the
+   behaviour of ``cellranger-arc mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
 .. _make_fastqs-10x_visium-protocol:
