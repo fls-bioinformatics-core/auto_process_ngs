@@ -3791,6 +3791,30 @@ smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
+    def test_makefastqs_exception_for_invalid_protocol(self):
+        """
+        MakeFastqs: raise exception for invalid protocol
+        """
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_M00879_00002_AHGXXXX",
+            "miseq",
+            top_dir=self.wd)
+        illumina_run.create()
+        run_dir = illumina_run.dirn
+        # Sample sheet
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'wt') as fp:
+            fp.write(SampleSheets.miseq)
+        # Supplying an unrecognised protocol should raise
+        # an exception
+        self.assertRaises(Exception,
+                          MakeFastqs,
+                          run_dir,
+                          sample_sheet,
+                          protocol="not_unimplemented")
+
+    #@unittest.skip("Skipped")
     def test_makefastqs_exception_for_invalid_barcodes(self):
         """
         MakeFastqs: raise exception for invalid barcodes
