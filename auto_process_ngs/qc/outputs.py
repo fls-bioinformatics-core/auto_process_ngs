@@ -215,7 +215,8 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
         if qc_protocol in ('singlecell',
                            '10x_scRNAseq',
                            '10x_snRNAseq',
-                           '10x_Visium',):
+                           '10x_Visium',
+                           '10x_multiome_gex',):
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -280,7 +281,8 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
         elif qc_protocol in ('singlecell',
                              '10x_scRNAseq',
                              '10x_snRNAseq',
-                             '10x_Visium',):
+                             '10x_Visium',
+                             '10x_multiome_gex',):
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -402,9 +404,11 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
         if (qc_protocol in ('singlecell',
                             '10x_scRNAseq',
                             '10x_snRNAseq',
-                            '10x_Visium',)) \
+                            '10x_Visium',
+                            '10x_multiome_gex',)) \
             and project.fastq_attrs(fastq).read_number == 1:
-            # No screens for R1 for single cell or Visium
+            # No screens for R1 for single cell, Visium or
+            # multiome GEX
             continue
         for screen in FASTQ_SCREENS:
             for output in [os.path.join(qc_dir,f)
@@ -419,7 +423,8 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
             if qc_protocol in ('singlecell',
                                '10x_scRNAseq',
                                '10x_snRNAseq',
-                               '10x_Visium',):
+                               '10x_Visium',
+                               '10x_multiome_gex',):
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))
