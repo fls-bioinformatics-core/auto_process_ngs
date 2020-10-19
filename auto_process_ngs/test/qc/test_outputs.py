@@ -1172,7 +1172,7 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_multiome_atac")
+                                    qc_protocol="10x_Multiome_ATAC")
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)
@@ -1225,7 +1225,7 @@ class TestExpectedOutputs(unittest.TestCase):
                                     "qc",
                                     fastq_strand_conf=mock_fastq_strand_conf,
                                     cellranger_refdata=None,
-                                    qc_protocol="10x_multiome_gex")
+                                    qc_protocol="10x_Multiome_GEX")
         for e in expected:
             print(e)
             self.assertTrue(e in [os.path.join(self.wd,p.name,r)

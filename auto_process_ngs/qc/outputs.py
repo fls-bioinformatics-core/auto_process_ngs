@@ -202,7 +202,7 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
         if qc_protocol in ('10x_scATAC',
-                           '10x_multiome_atac',):
+                           '10x_Multiome_ATAC',):
             if project.fastq_attrs(fastq).read_number == 2:
                 # Ignore the R2 reads for 10x single-cell ATAC
                 continue
@@ -216,7 +216,7 @@ def check_illumina_qc_outputs(project,qc_dir,qc_protocol=None):
                            '10x_scRNAseq',
                            '10x_snRNAseq',
                            '10x_Visium',
-                           '10x_multiome_gex',):
+                           '10x_Multiome_GEX',):
             if project.fastq_attrs(fastq).read_number == 1:
                 # No screens for R1 for single cell
                 continue
@@ -275,14 +275,14 @@ def check_fastq_strand_outputs(project,qc_dir,fastq_strand_conf,
             fastq_attrs=project.fastq_attrs):
         # Strand stats output
         if qc_protocol in ('10x_scATAC',
-                           '10x_multiome_atac',):
+                           '10x_Multiome_ATAC',):
             # Strand stats output based on R1/R3 pair
             fq_pair = (fq_group[0],fq_group[2])
         elif qc_protocol in ('singlecell',
                              '10x_scRNAseq',
                              '10x_snRNAseq',
                              '10x_Visium',
-                             '10x_multiome_gex',):
+                             '10x_Multiome_GEX',):
             # Strand stats output based on R2
             fq_pair = (fq_group[1],)
         else:
@@ -392,7 +392,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
     outputs = set()
     for fastq in remove_index_fastqs(project.fastqs,
                                      project.fastq_attrs):
-        if qc_protocol in ('10x_scATAC','10x_multiome_atac') and \
+        if qc_protocol in ('10x_scATAC','10x_Multiome_ATAC') and \
            project.fastq_attrs(fastq).read_number == 2:
             # No outputs for R2 for 10x single cell ATAC-seq
             continue
@@ -405,7 +405,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                             '10x_scRNAseq',
                             '10x_snRNAseq',
                             '10x_Visium',
-                            '10x_multiome_gex',)) \
+                            '10x_Multiome_GEX',)) \
             and project.fastq_attrs(fastq).read_number == 1:
             # No screens for R1 for single cell, Visium or
             # multiome GEX
@@ -424,7 +424,7 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                '10x_scRNAseq',
                                '10x_snRNAseq',
                                '10x_Visium',
-                               '10x_multiome_gex',):
+                               '10x_Multiome_GEX',):
                 # Strand stats output based on R2
                 output = os.path.join(qc_dir,
                                       fastq_strand_output(fq_group[1]))

@@ -250,7 +250,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_multiome_ATAC")
+                         "10x_Multiome_ATAC")
 
     def test_determine_qc_protocol_10x_multiome_gex(self):
         """determine_qc_protocol: single cell multiome GEX run (10xGenomics Multiome GEX)
@@ -270,7 +270,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))
         self.assertEqual(determine_qc_protocol(project),
-                         "10x_multiome_GEX")
+                         "10x_Multiome_GEX")
 
 class TestVerifyQCFunction(unittest.TestCase):
     """
