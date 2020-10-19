@@ -74,6 +74,7 @@ The following values are valid options for the single cell platform
 * ``10xGenomics Chromium 3'v2``
 * ``10xGenomics Chromium 3'v3``
 * ``10xGenomics Single Cell ATAC``
+* ``10xGenomics Single Cell Multiome``
 * ``ICELL8``
 * ``ICELL8 ATAC``
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     setup_analysis_dirs_cmd.py: implement 'setup_analysis_dirs' command
-#     Copyright (C) University of Manchester 2018 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 #########################################################################
 
@@ -106,6 +106,7 @@ def setup_analysis_dirs(ap,
                                    '10xGenomics Chromium 3\'v3',
                                    '10xGenomics Single Cell ATAC',
                                    '10xGenomics Visium',
+                                   '10xGenomics Single Cell Multiome',
                                    'ICELL8',
                                    'ICELL8 ATAC'):
                 logger.error("Unknown single cell platform for '%s': "
