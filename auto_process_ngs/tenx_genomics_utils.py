@@ -16,6 +16,7 @@ Chromium SC 3'v2 system:
 - has_10x_indices
 - has_chromium_sc_indices
 - cellranger_info
+- spaceranger_info
 - make_qc_summary_html
 - build_fastq_path_dir
 - run_cellranger_mkfastq
