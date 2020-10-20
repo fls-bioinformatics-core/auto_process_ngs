@@ -434,10 +434,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             package_info = processing_software[pkg]
         except KeyError:
             package_info = None
-        params_tbl.add_row(param=pkg.title(),
-                           value=('unspecified' if not package_info else
-                                  "%s %s" % (package_info[1],
-                                             package_info[2])))
+        if package_info:
+            params_tbl.add_row(param=pkg.title(),
+                               value="%s %s" % (package_info[1],
+                                                package_info[2]))
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)
