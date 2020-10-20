@@ -56,9 +56,15 @@ The following conventions are used for data item syntax:
   ignored
 
 Currently there are no canonical lists of allowed values for libraries
-or organism names. The organism name(s) are used to look up appropriate
-reference data files for the QC pipeline in the configuration file, so
-names that are used should be consistent with the configuration.
+or organism names, however:
+
+* Organism name(s) are used to look up appropriate reference data files
+  for the QC pipeline in the configuration file, so names that are used
+  should be consistent with the configuration;
+* Some combinations of single cell platform and library type are used
+  to determine the appropriate :doc:`QC protocol <run_qc>` for the
+  data, in which case the single cell platform and library values
+  must be a valid combination; see the table below.
 
 .. note::
 
@@ -69,14 +75,19 @@ names that are used should be consistent with the configuration.
    ``d_melanogaster``)
 
 The following values are valid options for the single cell platform
-(if set; use ``.`` if the project doesn't have single cell data):
+and corresponding associated library types; use ``.`` if the project
+doesn't have single cell data:
 
-* ``10xGenomics Chromium 3'v2``
-* ``10xGenomics Chromium 3'v3``
-* ``10xGenomics Single Cell ATAC``
-* ``10xGenomics Single Cell Multiome``
-* ``ICELL8``
-* ``ICELL8 ATAC``
+===================================== ==============================
+Single cell platform                  Library types
+===================================== ==============================
+``10xGenomics Chromium 3'v3``         ``scRNA-seq``, ``snRNA-seq``
+``10xGenomics Chromium 3'v2``         ``scRNA-seq``, ``snRNA-seq``
+``10xGenomics Single Cell ATAC``      ``scATAC-seq``, ``snATAC-seq``
+``10xGenomics Single Cell Multiome``  ``ATAC``, ``GEX``
+``ICELL8``                            ``scRNA-seq``
+``ICELL8 ATAC``                       ``scATAC-seq``
+===================================== ==============================
 
 .. note::
 

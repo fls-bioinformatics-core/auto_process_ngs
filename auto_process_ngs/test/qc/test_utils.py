@@ -245,7 +245,7 @@ class TestDetermineQCProtocolFunction(unittest.TestCase):
                                 metadata={'Single cell platform':
                                           "10xGenomics Single Cell Multiome",
                                           'Library type':
-                                          "scATAC-seq"})
+                                          "ATAC"})
         p.create(top_dir=self.wd)
         project = AnalysisProject("PJB",
                                   os.path.join(self.wd,"PJB"))

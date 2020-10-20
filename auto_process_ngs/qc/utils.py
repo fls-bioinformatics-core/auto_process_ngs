@@ -73,7 +73,7 @@ def determine_qc_protocol(project):
         protocol = "10x_Visium"
     # Multiome ATAC+GEX
     if project.info.single_cell_platform == "10xGenomics Single Cell Multiome":
-        if library_type == "scATAC-seq":
+        if library_type == "ATAC":
             # 10xGenomics single cell Multiome ATAC
             protocol = "10x_Multiome_ATAC"
         elif library_type == "GEX":
