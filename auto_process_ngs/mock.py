@@ -1259,7 +1259,8 @@ class Mock10xPackageExe(object):
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
-               reads=None,version=None):
+               reads=None,multiome_data=None,
+               version=None):
         """
         Create a "mock" 10xGenomics package executable
 
@@ -1281,6 +1282,8 @@ class Mock10xPackageExe(object):
             matches this value (not implemented)
           reads (list): list of 'reads' that
             will be created
+          multiome_data (str): either 'GEX' or
+            'ATAC' (when mocking 'cellranger-arc')
           version (str): version of package to
             report
         """
@@ -1297,6 +1300,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            platform=%s,
                            assert_bases_mask=%s,
                            reads=%s,
+                           multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    ("\"%s\"" % platform
@@ -1306,6 +1310,9 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                     if assert_bases_mask is not None
                     else None),
                    reads,
+                   ("\"%s\"" % multiome_data
+                    if multiome_data is not None
+                    else None),
                    ("\"%s\"" % version
                     if version is not None
                     else None)))
@@ -1320,6 +1327,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  platform=None,
                  assert_bases_mask=None,
                  reads=None,
+                 multiome_data=None,
                  version=None):
         """
         Internal: configure the mock 10xGenomics package
@@ -1340,13 +1348,20 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        self._multiome_data = multiome_data
+        if self._package_name == 'cellranger-arc':
+            assert self._multiome_data is not None
         if reads is None:
             if self._package_name in ('cellranger',
                                       'spaceranger',):
                 self._reads = ('R1','R2','I1',)
-            elif self._package_name in ('cellranger-atac',
-                                        'cellranger-arc'):
-                self._reads = ('R1','R2','I1','I2',)
+            elif self._package_name == 'cellranger-atac':
+                self._reads = ('R1','R2','R3','I1',)
+            elif self._package_name == 'cellranger-arc':
+                if self._multiome_data == 'GEX':
+                    self._reads = ('R1','R2','I1',)
+                elif self._multiome_data == 'ATAC':
+                    self._reads = ('R1','R2','R3','I1',)
         else:
             self._reads = tuple(reads)
 
@@ -1545,8 +1560,12 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if self._package_name in ('cellranger',
                                       'cellranger-atac',):
                 force_sample_dir = True
-            elif self._package_name in ('cellranger-arc',
-                                        'spaceranger',):
+            elif self._package_name == 'cellranger-arc':
+                if self._multiome_data == 'GEX':
+                    force_sample_dir = False
+                elif self._multiome_data == 'ATAC':
+                    force_sample_dir = True
+            elif self._package_name == 'spaceranger':
                 force_sample_dir = False
             tmpname = "tmp.%s" % uuid.uuid4()
             output = MockIlluminaData(name=tmpname,
