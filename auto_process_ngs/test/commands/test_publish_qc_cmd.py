@@ -776,6 +776,43 @@ poll_interval = 0.5
                              item)
             self.assertTrue(os.path.exists(f),"Missing %s" % f)
 
+    def test_publish_qc_with_multiple_10x_mkfastq_qc(self):
+        """publish_qc: publish 10xGenomics mkfastq QC output (multiple packages)
+        """
+        # Make an auto-process directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '160621_K00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ "run_number": 87,
+                       "source": "local",
+                       "instrument_datestamp": "160621" },
+            top_dir=self.dirn)
+        mockdir.create(no_project_dirs=True)
+        ap = AutoProcess(mockdir.dirn,
+                         settings=self.settings)
+        # Add processing and cellranger QC reports
+        UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("cellranger-atac",
+                                                        lanes="45")
+        UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("cellranger",
+                                                        lanes="78")
+        # Make a mock publication area
+        publication_dir = os.path.join(self.dirn,'QC')
+        os.mkdir(publication_dir)
+        # Publish
+        publish_qc(ap,location=publication_dir)
+        # Check outputs
+        outputs = ["index.html",
+                   "processing_qc.html",
+                   "cellranger-atac_qc_summary_45.html",
+                   "cellranger_qc_summary_78.html"]
+        # Do checks
+        for item in outputs:
+            f = os.path.join(publication_dir,
+                             "160621_K00879_0087_000000000-AGEW9_analysis",
+                             item)
+            self.assertTrue(os.path.exists(f),"Missing %s" % f)
+
     def test_publish_qc_with_cellranger_count(self):
         """publish_qc: project with cellranger count output
         """

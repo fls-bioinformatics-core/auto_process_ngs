@@ -267,6 +267,7 @@ class TestAnalysisDirMetadata(unittest.TestCase):
         self.assertEqual(metadata.platform,None)
         self.assertEqual(metadata.source,None)
         self.assertEqual(metadata.assay,None)
+        self.assertEqual(metadata.processing_software,None)
         self.assertEqual(metadata.bcl2fastq_software,None)
         self.assertEqual(metadata.cellranger_software,None)
         self.assertEqual(metadata.instrument_name,None)

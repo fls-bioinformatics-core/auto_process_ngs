@@ -226,16 +226,19 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     if not barcodes_files:
         print("...no barcode analysis found")
     # Collect 10xGenomics cellranger QC summaries
-    print("Checking for 10xGenomics cellranger QC summaries")
+    print("Checking for 10xGenomics mkfastq QC summaries")
     cellranger_qc_html = []
     for filen in os.listdir(ap.analysis_dir):
-        if filen.startswith("cellranger_qc_summary") and \
-           filen.endswith(".html"):
-            print("...found %s" % filen)
-            cellranger_qc_html.append(
-                os.path.join(ap.analysis_dir,filen))
+        for pkg in ("cellranger",
+                    "cellranger-atac",
+                    "spaceranger",):
+            if filen.startswith("%s_qc_summary" % pkg) and \
+               filen.endswith(".html"):
+                print("...found %s" % filen)
+                cellranger_qc_html.append(
+                    os.path.join(ap.analysis_dir,filen))
     if not cellranger_qc_html:
-        print("...no cellranger QC summaries found")
+        print("...no 10xGenomics mkfastq QC summaries found")
     # Collect QC for project directories
     print("Checking project directories")
     projects = ap.get_analysis_projects(pattern=project_pattern)
@@ -408,24 +411,33 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     params_tbl.add_row(param="Endedness",
                        value=('Paired end' if ap.paired_end
                               else 'Single end'))
+    # Processing software information
     try:
-        bcl2fastq_software = ast.literal_eval(
-            ap.metadata.bcl2fastq_software)
+        processing_software = ast.literal_eval(
+            ap.metadata.processing_software)
     except ValueError:
-        bcl2fastq_software = None
-    params_tbl.add_row(param="Bcl2fastq",
-                       value=('unspecified' if not bcl2fastq_software else
-                              "%s %s" % (bcl2fastq_software[1],
-                                         bcl2fastq_software[2])))
-    try:
-        cellranger_software = ast.literal_eval(
-            ap.metadata.cellranger_software)
-    except ValueError:
-        cellranger_software = None
-    params_tbl.add_row(param="Cellranger",
-                       value=('unspecified' if not cellranger_software else
-                              "%s %s" % (cellranger_software[1],
-                                         cellranger_software[2])))
+        processing_software = dict()
+    if not processing_software:
+        # Fallback to using legacy metadata items
+        try:
+            processing_software['bcl2fastq_software'] = ast.literal_eval(
+                ap.metadata.bcl2fastq_software)
+        except ValueError:
+            pass
+        try:
+            processing_software['cellranger_software'] = ast.literal_eval(
+                ap.metadata.cellranger_software)
+        except ValueError:
+            pass
+    for pkg in ("bcl2fastq","cellranger","cellranger-atac","spaceranger"):
+        try:
+            package_info = processing_software[pkg]
+        except KeyError:
+            package_info = None
+        if package_info:
+            params_tbl.add_row(param=pkg.title(),
+                               value="%s %s" % (package_info[1],
+                                                package_info[2]))
     params_tbl.add_row(param="Reference",
                        value=ap.run_reference_id)
     general_info.add(params_tbl)
@@ -457,10 +469,10 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
         fileops.mkdir(barcodes_dirn)
         for filen in barcodes_files:
             fileops.copy(filen,barcodes_dirn)
-    # 10xGenomics cellranger QC summaries
+    # 10xGenomics mkfastq QC summaries
     if cellranger_qc_html:
         cellranger_qc = index_page.add_section(
-            "QC summary: cellranger mkfastq")
+            "QC summary: 10xGenomics mkfastq")
         for qc_html in cellranger_qc_html:
             # Check for optional lane list at tail of QC summary
             # e.g. cellranger_qc_summary_45.html
@@ -471,10 +483,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
             else:
                 lanes = None
             fileops.copy(qc_html,dirn)
-            cellranger_qc.add(Link("QC summary for %s" %
-                                   ("all lanes" if lanes is None
-                                    else "lanes %s" % lanes),
-                                   os.path.basename(qc_html)))
+            cellranger_qc.add(Link("%s: QC summary for %s" %
+                                   (os.path.basename(qc_html).split('_')[0].title(),
+                                    ("all lanes" if lanes is None
+                                     else "lanes %s" % lanes)),
+                                    os.path.basename(qc_html)))
     if projects:
         # Table of projects
         projects_summary = index_page.add_section("QC Reports")

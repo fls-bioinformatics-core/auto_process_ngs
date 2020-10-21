@@ -13,8 +13,10 @@ Chromium SC 3'v2 system:
 - MetricSummary
 - AtacSummary
 - flow_cell_id
+- has_10x_indices
 - has_chromium_sc_indices
 - cellranger_info
+- spaceranger_info
 - make_qc_summary_html
 - build_fastq_path_dir
 - run_cellranger_mkfastq
@@ -223,25 +225,28 @@ def flow_cell_id(run_name):
     ds,inst,run,prefix,flow_cell_id = split_run_name_full(run_name)
     return flow_cell_id
 
-def has_chromium_sc_indices(sample_sheet):
+def has_10x_indices(sample_sheet):
     """
-    Check if a sample sheet contains Chromium SC indices
-
-    The Chromium SC indices can be obtained from:
-
-    https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm
+    Check if a sample sheet contains 10xGenomics-format indices
 
     The Chromium SC 3'v2 indices are of the form:
 
     SI-GA-[A-H][1-12]
 
-    e.g. 'SI-GA-B11'
+    e.g. 'SI-GA-B11' (see
+    https://support.10xgenomics.com/permalink/27rGqWvNYYuqkgeS66sksm)
 
-    For scATAC-seq the indices are of the form:
+    For scATAC-seq the indices are assumed to be of the form:
 
     SI-NA-[A-H][1-12]
 
     e.g. 'SI-NA-G9'
+
+    For Visium data the indices are assumed to be of the form:
+
+    SI-TT-[A-H][1-12]
+
+    e.g. 'SI-TT-B1'
 
     Arguments:
       sample_sheet (str): path to the sample sheet CSV
@@ -249,9 +254,9 @@ def has_chromium_sc_indices(sample_sheet):
 
     Returns:
       Boolean: True if the sample sheet contains at least
-        one Chromium SC index, False if not.
+        one 10xGenomics-style index, False if not.
     """
-    index_pattern = re.compile(r"SI-(GA|NA)-[A-H](1[0-2]|[1-9])$")
+    index_pattern = re.compile(r"SI-(GA|NA|TT)-[A-H](1[0-2]|[1-9])$")
     s = SampleSheet(sample_sheet)
     for line in s:
         try:
@@ -260,6 +265,14 @@ def has_chromium_sc_indices(sample_sheet):
         except KeyError:
             pass
     return False
+
+def has_chromium_sc_indices(sample_sheet):
+    """
+    Wrapper for 'has_10x_indices'.
+
+    Maintained for backwards compatibility
+    """
+    return has_10x_indices(sample_sheet)
 
 def get_bases_mask_10x_atac(runinfo_xml):
     """
@@ -535,10 +548,69 @@ def cellranger_info(path=None,name=None):
                                    (line,ex))
     else:
         # No package supplied or located
-        logger.warning("Unable to identify cellranger package "
-                       "from '%s'" % cellranger_path)
+        logger.warning("Unable to identify %s package from '%s'" %
+                       (name,cellranger_path))
     # Return what we found
     return (cellranger_path,package_name,package_version)
+
+def spaceranger_info(path=None,name=None):
+    """
+    Retrieve information on the spaceranger software
+
+    If called without any arguments this will locate the first
+    spaceranger executable that is available on the user's PATH,
+    and attempts to extract the version.
+
+    Alternatively if the path to an executable is supplied then
+    the version will be determined from that instead.
+
+    If no version is identified then the script path is still
+    returned, but without any version info.
+
+    If a 'path' is supplied then the package name will be taken
+    from the basename; otherwise the package name can be supplied
+    via the 'name' argument. If neither are supplied then the
+    package name defaults to 'cellranger'.
+
+    Returns:
+      Tuple: tuple consisting of (PATH,PACKAGE,VERSION) where PATH
+        is the full path for the spaceranger program, PACKAGE is
+        'spaceranger', and VERSION is the package version. If any
+        value can't be determined then it will be returned as an
+        empty string.
+    """
+    # Initialise
+    spaceranger_path = ''
+    if name is None:
+        if path:
+            name = os.path.basename(path)
+        else:
+            name = 'spaceranger'
+    package_name = name
+    package_version = ''
+    # Locate the core script
+    if not path:
+        spaceranger_path = find_program(package_name)
+    else:
+        spaceranger_path = os.path.abspath(path)
+    # Identify the version
+    if os.path.basename(spaceranger_path) == package_name:
+        # Run the program to get the version
+        version_cmd = Command(spaceranger_path,'--version')
+        output = version_cmd.subprocess_check_output()[1]
+        # Extract version from line of the from
+        # spaceranger 1.1.0
+        try:
+            package_version = output.split()[-1]
+        except Exception as ex:
+            logger.warning("Unable to get version from '%s': %s" %
+                           (line,ex))
+    else:
+        # No package supplied or located
+        logger.warning("Unable to identify spaceranger package "
+                       "from '%s'" % spaceranger_path)
+    # Return what we found
+    return (spaceranger_path,package_name,package_version)
 
 def run_cellranger_mkfastq(sample_sheet,
                            primary_data_dir,

@@ -30,6 +30,8 @@ Protocol option          Used for
                          RNA-seq data
 ``10x_atac``             10xGenomics Chromium single-cell
                          ATAC-seq data
+``10x_visium``           10xGenomics Visium spatial RNA-seq
+                         data
 ======================== =====================================
 
 The protocols are described in the section :ref:`make_fastqs-protocols`;
@@ -83,6 +85,7 @@ the sections below:
 * :ref:`make_fastqs-icell8-atac-protocol`
 * :ref:`make_fastqs-10x_chromium_sc-protocol`
 * :ref:`make_fastqs-10x_atac-protocol`
+* :ref:`make_fastqs-10x_visium-protocol`
 
 .. _make_fastqs-standard-protocol:
 
@@ -229,6 +232,30 @@ This will generate the Fastqs in the specified output directory
    behaviour of ``cellranger-atac mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
+.. _make_fastqs-10x_visium-protocol:
+
+10xGenomics spatial RNA-seq data (``--protocol=10x_visium``)
+************************************************************
+
+Fastq generation can be performed for 10xGenomics spatial RNA-seq
+ata by using the ``--protocol=10x_visium`` option:
+
+::
+
+    auto_process.py make_fastqs --protocol=10x_visium ...
+
+which fetches the data and runs ``spaceranger mkfastq``.
+
+This will generate the Fastqs in the specified output directory
+(e.g. ``bcl2fastq``) along with an HTML report derived from the
+``spaceranger`` JSON QC summary file, statistics for the Fastqs.
+
+.. note::
+
+   ``make_fastqs`` offers various options for controlling the
+   behaviour of ``spaceranger mkfastqs``, for example setting the
+   jobmode (see :ref:`10xgenomics-additional-options`).
+
 .. _make_fastqs-commonly-used-options:
 
 Commonly used options
@@ -284,12 +311,12 @@ sequences to empty strings).
 When adapter trimming is performed two additional operations are
 applied:
 
- * **Minium read length** is enforced for reads which are shorter
-   than this length after trimming, by padding them with ``N``s
-   up to the minimum length
- * **Masking of short reads** is performed for reads below a
-   masking threshold length, by masking *all* bases in the read
-   with ``N``s
+* **Minium read length** is enforced for reads which are shorter
+  than this length after trimming, by padding them with N's
+  up to the minimum length
+* **Masking of short reads** is performed for reads below a
+  masking threshold length, by masking *all* bases in the read
+  with N's
 
 Minimum read length defaults to 35 bases but can set explicitly by
 using the ``--minimum-trimmed-read-length`` option; the masking

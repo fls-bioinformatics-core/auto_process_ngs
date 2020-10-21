@@ -69,10 +69,15 @@ names that are used should be consistent with the configuration.
    ``d_melanogaster``)
 
 The following values are valid options for the single cell platform
-(if set; use ``.`` if the project doesn't have a single cell data):
+(if set; use ``.`` if the project doesn't have single cell data):
 
 * ``10xGenomics Chromium 3'v2``
 * ``10xGenomics Chromium 3'v3``
 * ``10xGenomics Single Cell ATAC``
 * ``ICELL8``
 * ``ICELL8 ATAC``
+
+.. note::
+
+   For 10xGenomics Visium spatial RNA-seq data, set this to
+   ``10xGenomics Visium``.

@@ -31,9 +31,9 @@ class TestFlowCellId(unittest.TestCase):
         self.assertEqual(flow_cell_id("170426_K00311_0033_AHJCY7BBXX"),
                          "HJCY7BBXX")
 
-class TestHasChromiumSCIndices(unittest.TestCase):
+class TestHas10xindices(unittest.TestCase):
     """
-    Tests for the 'has_chromium_sc_indices' function
+    Tests for the 'has_10x_indices' function
     """
     def setUp(self):
         # Sample sheet contents
@@ -87,6 +87,22 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Pro
 2,smpl2,smpl2,,,A005,SI-NA-B1,10xGenomics,
 3,smpl3,smpl3,,,A006,SI-NA-C1,10xGenomics,
 4,smpl4,smpl4,,,A007,SI-NA-D1,10xGenomics,
+"""
+        self.sample_sheet_with_visium_indices = """[Header]
+IEMFileVersion,4
+
+[Reads]
+76
+76
+
+[Settings]
+Adapter,AGATCGGAAGAGCACACGTCTGAACTCCAGTCA
+AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT
+
+[Data]
+Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,I5_Index,index2,Sample_Project,Description
+1,smpl1,smpl1,,,A001,SI-TT-A1,,SI-TT-A1,,10xGenomics,
+2,smpl2,smpl2,,,A005,SI-TT-B1,,SI-TT-B1,,10xGenomics,
 """
         self.sample_sheet_standard_indices = """[Header]
 IEMFileVersion,4
@@ -157,46 +173,53 @@ Lane,Sample_ID,Sample_Name,Sample_Plate,Sample_Well,Sample_Project,Description
         return sample_sheet_csv
     def test_sample_sheet_all_chromium_sc_3_v2_indices(self):
         """
-        has_chromium_indices: sample sheet with Chromium SC 3'v2 indices only
+        has_10x_indices: sample sheet with Chromium SC 3'v2 indices only
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_chromium_indices)
-        self.assertTrue(has_chromium_sc_indices(s))
+        self.assertTrue(has_10x_indices(s))
     def test_sample_sheet_with_star10_chromium_sc_3_v2_index(self):
         """
-        has_chromium_indices: sample sheet with '*10' Chromium SC 3'v2 index
+        has_10x_indices: sample sheet with '*10' Chromium SC 3'v2 index
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_chromium_indices_A10)
-        self.assertTrue(has_chromium_sc_indices(s))
+        self.assertTrue(has_10x_indices(s))
     def test_sample_sheet_all_sc_atac_indices(self):
         """
-        has_chromium_indices: sample sheet with 10x scATAC-seq indices only
+        has_10x_indices: sample sheet with 10x scATAC-seq indices only
         """
         s = self._make_sample_sheet(
             self.sample_sheet_with_atac_indices)
-        self.assertTrue(has_chromium_sc_indices(s))
+        self.assertTrue(has_10x_indices(s))
+    def test_sample_sheet_all_sc_atac_indices(self):
+        """
+        has_10x_indices: sample sheet with 10x Visium indices only
+        """
+        s = self._make_sample_sheet(
+            self.sample_sheet_with_visium_indices)
+        self.assertTrue(has_10x_indices(s))
     def test_sample_sheet_no_chromium_indices(self):
         """
-        has_chromium_indices: sample sheet with no Chromium SC indices
+        has_10x_indices: sample sheet with no Chromium SC indices
         """
         s = self._make_sample_sheet(
             self.sample_sheet_standard_indices)
-        self.assertFalse(has_chromium_sc_indices(s))
+        self.assertFalse(has_10x_indices(s))
     def test_sample_sheet_no_indices(self):
         """
-        has_chromium_indices: sample sheet with no indices
+        has_10x_indices: sample sheet with no indices
         """
         s = self._make_sample_sheet(
             self.sample_sheet_no_indices)
-        self.assertFalse(has_chromium_sc_indices(s))
+        self.assertFalse(has_10x_indices(s))
     def test_sample_sheet_some_chromium_sc_3_v2_indices(self):
         """
-        has_chromium_indices: sample sheet with some Chromium SC 3'v2 indices
+        has_10x_indices: sample sheet with some Chromium SC 3'v2 indices
         """
         s = self._make_sample_sheet(
             self.sample_sheet_mixed_indices)
-        self.assertTrue(has_chromium_sc_indices(s))
+        self.assertTrue(has_10x_indices(s))
 
 class TestGetBasesMask10xAtac(unittest.TestCase):
     """
@@ -320,6 +343,46 @@ class TestCellrangerInfo(unittest.TestCase):
         cellranger_atac = self._make_mock_cellranger_atac_101()
         self.assertEqual(cellranger_info(name='cellranger-atac'),
                          (cellranger_atac,'cellranger-atac','1.0.1'))
+
+class TestSpacerangerInfo(unittest.TestCase):
+    """
+    Tests for the spaceranger_info function
+    """
+    def setUp(self):
+        # Make temporary working dir
+        self.wd = tempfile.mkdtemp(suffix="TestSpacerangerInfo")
+        # Store the original state of PATH env var
+        self.original_path = os.environ['PATH']
+    def tearDown(self):
+        # Restore the PATH env var
+        os.environ['PATH'] = self.original_path
+        # Remove temp dir
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+    def _make_mock_spaceranger_110(self):
+        # Make a fake spaceranger 1.0.1 executable
+        spaceranger_110 = os.path.join(self.wd,"spaceranger")
+        with open(spaceranger_110,'w') as fp:
+            fp.write("#!/bin/bash\necho -n spaceranger 1.1.0")
+        os.chmod(spaceranger_110,0o775)
+        return spaceranger_110
+
+    def test_spaceranger_110(self):
+        """spaceranger_info: collect info for spaceranger 1.1.0
+        """
+        spaceranger = self._make_mock_spaceranger_110()
+        self.assertEqual(spaceranger_info(path=spaceranger),
+                         (spaceranger,'spaceranger','1.1.0'))
+
+    def test_spaceranger_110_on_path(self):
+        """spaceranger_info: collect info for spaceranger 1.1.0 from PATH
+        """
+        os.environ['PATH'] = "%s%s%s" % (os.environ['PATH'],
+                                         os.pathsep,
+                                         self.wd)
+        spaceranger = self._make_mock_spaceranger_110()
+        self.assertEqual(spaceranger_info(name='spaceranger'),
+                         (spaceranger,'spaceranger','1.1.0'))
 
 class TestMetricsSummary(unittest.TestCase):
     """

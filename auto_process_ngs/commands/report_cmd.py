@@ -288,17 +288,28 @@ def report_summary(ap):
         platform = 'unknown'
     if ap.metadata.run_number is not None:
         run_number = ap.metadata.run_number
+    # Processing software information
     try:
-        bcl2fastq_software = ast.literal_eval(
-            ap.metadata.bcl2fastq_software)
+        processing_software = ast.literal_eval(
+            ap.metadata.processing_software)
     except ValueError:
-        bcl2fastq_software = None
-    try:
-        cellranger_software = ast.literal_eval(
-            ap.metadata.cellranger_software)
-        report_items.append('Cellranger')
-    except ValueError:
-        cellranger_software = None
+        processing_software = dict()
+    if not processing_software:
+        # Fallback to legacy metadata items
+        try:
+            processing_software['bcl2fastq'] = ast.literal_eval(
+                ap.metadata.bcl2fastq_software)
+        except ValueError:
+            pass
+        try:
+            processing_software['cellranger'] = ast.literal_eval(
+                ap.metadata.cellranger_software)
+        except ValueError:
+            pass
+    for pkg in ('cellranger','cellranger-atac'):
+        if pkg in processing_software:
+            report_items.append(pkg.title())
+    # Assay/kit information
     if ap.metadata.assay is not None:
         assay = ap.metadata.assay
         report_items.append('Assay')
@@ -332,13 +343,23 @@ def report_summary(ap):
             value = ('Paired end' if analysis_dir.paired_end else
                      'Single end')
         elif item == 'Bcl2fastq':
-            value = ('Unknown' if not bcl2fastq_software else
-                     "%s %s" % (bcl2fastq_software[1],
-                                bcl2fastq_software[2]))
+            if 'bcl2fastq' in processing_software:
+                value = "%s %s" % (processing_software['bcl2fastq'][1],
+                                   processing_software['bcl2fastq'][2])
+            else:
+                value = 'Unknown'
         elif item == 'Cellranger':
-            value = ('Unknown' if not cellranger_software else
-                     "%s %s" % (cellranger_software[1],
-                                cellranger_software[2]))
+            if 'cellranger' in processing_software:
+                value = "%s %s" % (processing_software['cellranger'][1],
+                                   processing_software['cellranger'][2])
+            else:
+                value = 'Unknown'
+        elif item == 'Cellranger-atac':
+            if 'cellranger-atac' in processing_software:
+                value = "%s %s" % (processing_software['cellranger-atac'][1],
+                                   processing_software['cellranger-atac'][2])
+            else:
+                value = 'Unknown'
         elif item == 'Assay':
             value = assay
         else:

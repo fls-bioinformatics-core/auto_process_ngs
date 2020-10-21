@@ -13,6 +13,7 @@ import os
 import time
 import shutil
 import gzip
+import ast
 import logging
 from ..bcl2fastq.pipeline import PROTOCOLS
 from ..bcl2fastq.pipeline import MakeFastqs
@@ -330,6 +331,7 @@ def make_fastqs(ap,protocol='standard',platform=None,
         'demultiplex_icell8_atac_runner': ap.settings.runners.bcl2fastq,
         'cellranger_runner': ap.settings.runners.cellranger,
         'cellranger_atac_runner': ap.settings.runners.cellranger,
+        'spaceranger_runner': ap.settings.runners.cellranger,
         'stats_runner': ap.settings.runners.stats,
     }
     if runner is not None:
@@ -342,7 +344,8 @@ def make_fastqs(ap,protocol='standard',platform=None,
     envmodules = {}
     for name in ('bcl2fastq',
                  'cellranger_mkfastq',
-                 'cellranger_atac_mkfastq',):
+                 'cellranger_atac_mkfastq',
+                 'spaceranger_mkfastq',):
         try:
             envmodules[name] = ap.settings.modulefiles[name]
         except KeyError:
@@ -423,7 +426,26 @@ def make_fastqs(ap,protocol='standard',platform=None,
 
     # Update the metadata
     if status == 0:
+        # Platform
         ap.metadata['platform'] = make_fastqs.output.platform
+        # Software used for processing
+        try:
+            processing_software = ast.literal_eval(
+                ap.metadata.processing_software)
+        except ValueError:
+            processing_software = dict()
+        outputs = make_fastqs.output
+        if outputs.bcl2fastq_info:
+            processing_software['bcl2fastq'] = outputs.bcl2fastq_info
+        if outputs.cellranger_info:
+            processing_software['cellranger'] = outputs.cellranger_info
+        if outputs.cellranger_atac_info:
+            processing_software['cellranger-atac'] = \
+                                                outputs.cellranger_atac_info
+        if outputs.spaceranger_info:
+            processing_software['spaceranger'] = outputs.spaceranger_info
+        ap.metadata['processing_software'] = processing_software
+        # Legacy metadata items
         ap.metadata['bcl2fastq_software'] = make_fastqs.output.bcl2fastq_info
         ap.metadata['cellranger_software'] = make_fastqs.output.cellranger_info
 

@@ -20,10 +20,10 @@ Pipeline task classes:
 - RunBcl2Fastq
 - GetBasesMaskIcell8
 - GetBasesMaskIcell8Atac
-- GetCellranger
+- Get10xPackage
 - DemultiplexIcell8Atac
 - MergeFastqDirs
-- RunCellrangerMkfastq
+- Run10xMkfastq
 - FastqStatistics
 - ReportProcessingQC
 
@@ -86,6 +86,7 @@ from ..pipeliner import PipelineParam as Param
 from ..pipeliner import resolve_parameter
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import cellranger_info
+from ..tenx_genomics_utils import spaceranger_info
 from ..tenx_genomics_utils import get_bases_mask_10x_atac
 from ..tenx_genomics_utils import make_qc_summary_html
 from .reporting import ProcessingQCReport
@@ -105,7 +106,13 @@ PROTOCOLS = ('standard',
              'icell8',
              'icell8_atac',
              '10x_chromium_sc',
-             '10x_atac',)
+             '10x_atac',
+             '10x_visium',)
+
+# 10xGenomics protocols
+PROTOCOLS_10X = ('10x_chromium_sc',
+                 '10x_atac',
+                 '10x_visium',)
 
 # Valid attribute names for lane subsets
 
@@ -340,6 +347,8 @@ class MakeFastqs(Pipeline):
         self.add_param('_platform')
         self.add_param('_bcl2fastq_info')
         self.add_param('_cellranger_info')
+        self.add_param('_cellranger_atac_info')
+        self.add_param('_spaceranger_info')
         self.add_param('_missing_fastqs',type=list)
 
         # Define runners
@@ -348,12 +357,14 @@ class MakeFastqs(Pipeline):
         self.add_runner('demultiplex_icell8_atac_runner')
         self.add_runner('cellranger_runner')
         self.add_runner('cellranger_atac_runner')
+        self.add_runner('spaceranger_runner')
         self.add_runner('stats_runner')
 
         # Define module environment modules
         self.add_envmodules('bcl2fastq')
         self.add_envmodules('cellranger_mkfastq')
         self.add_envmodules('cellranger_atac_mkfastq')
+        self.add_envmodules('spaceranger_mkfastq')
 
         # Pipeline outputs
         self.add_output('platform',self.params._platform)
@@ -361,6 +372,9 @@ class MakeFastqs(Pipeline):
         self.add_output('acquired_primary_data',Param())
         self.add_output('bcl2fastq_info',self.params._bcl2fastq_info)
         self.add_output('cellranger_info',self.params._cellranger_info)
+        self.add_output('cellranger_atac_info',
+                        self.params._cellranger_atac_info)
+        self.add_output('spaceranger_info',self.params._spaceranger_info)
         self.add_output('stats_file',Param())
         self.add_output('stats_full',Param())
         self.add_output('per_lane_stats',Param())
@@ -477,25 +491,27 @@ class MakeFastqs(Pipeline):
         # Check that barcodes are consistent with protocols
         for s in self.subsets:
             protocol = s['protocol']
+            if protocol not in PROTOCOLS:
+                raise Exception("Protocol '%s': not recognised" %
+                                protocol)
             masked_index = s['masked_index']
             if masked_index == '__10X__':
                 # 10xGenomics barcodes
-                if protocol not in ('10x_chromium_sc','10x_atac',):
+                if protocol not in PROTOCOLS_10X:
                     raise Exception("Protocol '%s': can't handle "
                                     "10xGenomics barcodes" % protocol)
             else:
                 # Standard barcodes
-                if protocol in ('10x_chromium_sc','10x_atac',):
+                if protocol in PROTOCOLS_10X:
                     raise Exception("Protocol '%s': needs 10xGenomics "
-                                    "barcodes" % protocol)
+                                    "barcodes ('%s' not valid)" %
+                                    (protocol,masked_index))
             
         # Update parameters on each subset according to the
         # assigned protocol (overriding pipeline defaults)
         for s in self.subsets:
             protocol = s['protocol']
-            if protocol == 'standard':
-                pass
-            elif protocol == 'mirna':
+            if protocol == 'mirna':
                 # miRNA-seq protocol
                 # Set minimum trimmed read length and turn off masking
                 self._update_subset(s,
@@ -521,10 +537,11 @@ class MakeFastqs(Pipeline):
                 # Turn off barcode analysis
                 self._update_subset(s,
                                     analyse_barcodes=False)
-            else:
-                # Unknown protocol
-                raise Exception("Unknown protocol '%s' assigned for "
-                                "lanes %s" % (protocol,s['lanes']))
+            elif protocol == '10x_visium':
+                # 10xGenomics Visium
+                # Turn off barcode analysis
+                self._update_subset(s,
+                                    analyse_barcodes=False)
             
         # Finally update parameters for user-defined
         # lane subsets (overriding both pipeline and
@@ -589,9 +606,13 @@ class MakeFastqs(Pipeline):
         if s is None or s == "":
             # No sequence
             return "__NO_SEQUENCE__"
-        if barcode_is_10xgenomics(s):
-            # 10xGenomics index sequence
-            return "__10X__"
+        if s.startswith('SI-'):
+            # Possible 10xGenomics index sequence
+            try:
+                if barcode_is_10xgenomics('-'.join(s.split('-')[0:3])):
+                    return "__10X__"
+            except IndexError:
+                pass
         for c in "ACGT":
             # Mask bases with 'N's
             s = s.replace(c,'N')
@@ -828,8 +849,10 @@ class MakeFastqs(Pipeline):
         get_bcl2fastq = None
         get_bcl2fastq_for_10x = None
         get_bcl2fastq_for_10x_atac = None
+        get_bcl2fastq_for_10x_visium = None
         get_cellranger = None
         get_cellranger_atac = None
+        get_spaceranger = None
 
         # For each subset, add the appropriate set of
         # tasks for the protocol
@@ -1148,14 +1171,14 @@ class MakeFastqs(Pipeline):
                 if get_cellranger is None:
                     # Create a new task only if one doesn't already
                     # exist
-                    get_cellranger = GetCellranger(
+                    get_cellranger = Get10xPackage(
                         "Get information on cellranger",
-                        require_cellranger="cellranger")
+                        require_package="cellranger")
                     self.add_task(get_cellranger,
                                   envmodules=\
                                   self.envmodules['cellranger_mkfastq'])
                 # Run cellranger mkfastq
-                run_cellranger_mkfastq = RunCellrangerMkfastq(
+                run_cellranger_mkfastq = Run10xMkfastq(
                     "Run cellranger mkfastq%s" %
                     (" for lanes %s" % ','.join([str(x) for x in lanes])
                      if lanes else ""),
@@ -1168,18 +1191,18 @@ class MakeFastqs(Pipeline):
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
-                    cellranger_jobmode=self.params.cellranger_jobmode,
-                    cellranger_mempercore=self.params.cellranger_mempercore,
-                    cellranger_maxjobs=self.params.cellranger_maxjobs,
-                    cellranger_jobinterval=self.params.cellranger_jobinterval,
-                    cellranger_localcores=self.params.cellranger_localcores,
-                    cellranger_localmem=self.params.cellranger_localmem,
-                    cellranger_exe=get_cellranger.output.cellranger_exe,
-                    cellranger_version=get_cellranger.output.cellranger_version,
+                    jobmode=self.params.cellranger_jobmode,
+                    mempercore=self.params.cellranger_mempercore,
+                    maxjobs=self.params.cellranger_maxjobs,
+                    jobinterval=self.params.cellranger_jobinterval,
+                    localcores=self.params.cellranger_localcores,
+                    localmem=self.params.cellranger_localmem,
+                    pkg_exe=get_cellranger.output.package_exe,
+                    pkg_version=get_cellranger.output.package_version,
                     bcl2fastq_exe=get_bcl2fastq_for_10x.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x.output.bcl2fastq_version,
-                    skip_cellranger=final_output_exists
+                    skip_mkfastq=final_output_exists
                 )
                 self.add_task(run_cellranger_mkfastq,
                               runner=self.runners['cellranger_runner'],
@@ -1210,14 +1233,14 @@ class MakeFastqs(Pipeline):
                 if get_cellranger_atac is None:
                     # Create a new task only if one doesn't already
                     # exist
-                    get_cellranger_atac = GetCellranger(
+                    get_cellranger_atac = Get10xPackage(
                         "Get information on cellranger-atac",
-                        require_cellranger="cellranger-atac")
+                        require_package="cellranger-atac")
                     self.add_task(get_cellranger_atac,
                                   envmodules=\
                                   self.envmodules['cellranger_atac_mkfastq'])
                 # Run cellranger mkfastq
-                run_cellranger_mkfastq = RunCellrangerMkfastq(
+                run_cellranger_mkfastq = Run10xMkfastq(
                     "Run cellranger-atac mkfastq%s" %
                     (" for lanes %s" % ','.join([str(x) for x in lanes])
                      if lanes else ""),
@@ -1230,20 +1253,20 @@ class MakeFastqs(Pipeline):
                     minimum_trimmed_read_length,
                     mask_short_adapter_reads=\
                     mask_short_adapter_reads,
-                    cellranger_jobmode=self.params.cellranger_jobmode,
-                    cellranger_mempercore=self.params.cellranger_mempercore,
-                    cellranger_maxjobs=self.params.cellranger_maxjobs,
-                    cellranger_jobinterval=self.params.cellranger_jobinterval,
-                    cellranger_localcores=self.params.cellranger_localcores,
-                    cellranger_localmem=self.params.cellranger_localmem,
-                    cellranger_exe=get_cellranger_atac.output.cellranger_exe,
-                    cellranger_version=\
-                    get_cellranger_atac.output.cellranger_version,
+                    jobmode=self.params.cellranger_jobmode,
+                    mempercore=self.params.cellranger_mempercore,
+                    maxjobs=self.params.cellranger_maxjobs,
+                    jobinterval=self.params.cellranger_jobinterval,
+                    localcores=self.params.cellranger_localcores,
+                    localmem=self.params.cellranger_localmem,
+                    pkg_exe=get_cellranger_atac.output.package_exe,
+                    pkg_version=\
+                    get_cellranger_atac.output.package_version,
                     bcl2fastq_exe=\
                     get_bcl2fastq_for_10x_atac.output.bcl2fastq_exe,
                     bcl2fastq_version=\
                     get_bcl2fastq_for_10x_atac.output.bcl2fastq_version,
-                    skip_cellranger=final_output_exists
+                    skip_mkfastq=final_output_exists
                 )
                 self.add_task(run_cellranger_mkfastq,
                               runner=self.runners['cellranger_runner'],
@@ -1258,6 +1281,71 @@ class MakeFastqs(Pipeline):
                 # Add task to list of tasks that downstream
                 # tasks need to wait for
                 fastq_generation_tasks.append(run_cellranger_mkfastq)
+                # Add output directory to list
+                bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
+
+            # 10x Visium
+            if protocol == "10x_visium":
+                # Get bcl2fastq information
+                if get_bcl2fastq_for_10x_visium is None:
+                    get_bcl2fastq_for_10x_visium = GetBcl2Fastq(
+                        "Get information on bcl2fastq for spaceranger",
+                        require_bcl2fastq=self.params.require_bcl2fastq)
+                    self.add_task(get_bcl2fastq_for_10x_visium,
+                                  envmodules=\
+                                  self.envmodules['spaceranger_mkfastq'])
+                # Get spaceranger information
+                if get_spaceranger is None:
+                    # Create a new task only if one doesn't already
+                    # exist
+                    get_spaceranger = Get10xPackage(
+                        "Get information on spaceranger",
+                        require_package="spaceranger")
+                    self.add_task(get_spaceranger,
+                                  envmodules=\
+                                  self.envmodules['spaceranger_mkfastq'])
+                # Run cellranger mkfastq
+                run_spaceranger_mkfastq = Run10xMkfastq(
+                    "Run spaceranger mkfastq%s" %
+                    (" for lanes %s" % ','.join([str(x) for x in lanes])
+                     if lanes else ""),
+                    fetch_primary_data.output.run_dir,
+                    bcl2fastq_out_dir,
+                    make_sample_sheet.output.custom_sample_sheet,
+                    platform=identify_platform.output.platform,
+                    bases_mask=bases_mask,
+                    minimum_trimmed_read_length=\
+                    minimum_trimmed_read_length,
+                    mask_short_adapter_reads=\
+                    mask_short_adapter_reads,
+                    jobmode=self.params.cellranger_jobmode,
+                    mempercore=self.params.cellranger_mempercore,
+                    maxjobs=self.params.cellranger_maxjobs,
+                    jobinterval=self.params.cellranger_jobinterval,
+                    localcores=self.params.cellranger_localcores,
+                    localmem=self.params.cellranger_localmem,
+                    pkg_exe=get_spaceranger.output.package_exe,
+                    pkg_version=\
+                    get_spaceranger.output.package_version,
+                    bcl2fastq_exe=\
+                    get_bcl2fastq_for_10x_visium.output.bcl2fastq_exe,
+                    bcl2fastq_version=\
+                    get_bcl2fastq_for_10x_visium.output.bcl2fastq_version,
+                    skip_mkfastq=final_output_exists
+                )
+                self.add_task(run_spaceranger_mkfastq,
+                              runner=self.runners['spaceranger_runner'],
+                              envmodules=\
+                              self.envmodules['spaceranger_mkfastq'],
+                              requires=(get_spaceranger,
+                                        get_bcl2fastq_for_10x_visium,
+                                        make_sample_sheet,
+                                        fetch_primary_data,
+                                        identify_platform,
+                                        restore_backup,))
+                # Add task to list of tasks that downstream
+                # tasks need to wait for
+                fastq_generation_tasks.append(run_spaceranger_mkfastq)
                 # Add output directory to list
                 bcl2fastq_out_dirs.append(bcl2fastq_out_dir)
 
@@ -1340,7 +1428,8 @@ class MakeFastqs(Pipeline):
         # Update outputs with bcl2fastq information
         for get_bcl2fastq_task in (get_bcl2fastq,
                                    get_bcl2fastq_for_10x,
-                                   get_bcl2fastq_for_10x_atac,):
+                                   get_bcl2fastq_for_10x_atac,
+                                   get_bcl2fastq_for_10x_visium,):
             if get_bcl2fastq_task:
                 get_bcl2fastq = get_bcl2fastq_task
                 break
@@ -1348,15 +1437,16 @@ class MakeFastqs(Pipeline):
             self.params._bcl2fastq_info.set(
                 get_bcl2fastq.output.bcl2fastq_info)
 
-        # Update outputs with cellranger information
-        for get_cellranger_task in (get_cellranger,
-                                    get_cellranger_atac,):
-            if get_cellranger_task:
-                get_cellranger = get_cellranger_task
-                break
+        # Update outputs with 10x package information
         if get_cellranger:
             self.params._cellranger_info.set(
-                get_cellranger.output.cellranger_info)
+                get_cellranger.output.package_info)
+        if get_cellranger_atac:
+            self.params._cellranger_atac_info.set(
+                get_cellranger_atac.output.package_info)
+        if get_spaceranger:
+            self.params._spaceranger_info.set(
+                get_spaceranger.output.package_info)
 
         # Update outputs associated with stats
         if self._fastq_statistics:
@@ -2149,61 +2239,65 @@ class GetBasesMaskIcell8Atac(PipelineTask):
         print("Bases mask for ICELL8 ATAC: %s" % bases_mask)
         self.output.bases_mask.set(bases_mask)
 
-class GetCellranger(PipelineFunctionTask):
+class Get10xPackage(PipelineFunctionTask):
     """
-    Get information on the cellranger executable
+    Get information on 10xGenomics software package
     """
-    def init(self,require_cellranger):
+    def init(self,require_package):
         """
-        Initialise the GetCellranger task
+        Initialise the Get10xPackage task
 
         Arguments:
-          require_cellranger (str): name of the cellranger
-            executable that is required (should be either
-            'cellranger' or 'cellranger-atac')
+          require_package (str): name of the 10xGenomics
+            package executable that is required (e.g. 'cellranger',
+            'cellranger-atac')
 
         Outputs:
-          cellranger_exe (str): path to the cellranger executable
-          cellranger_package (str): name of the cellranger package
-          cellranger_version (str): the cellranger version
-          cellranger_info (tuple): tuple consisting of
+          package_name (str): name of the package
+          package_exe (str): path to the package executable
+          package_version (str): the package version
+          package_info (tuple): tuple consisting of
             (exe,package,version)
         """
-        self.add_output('cellranger_exe',Param(type=str))
-        self.add_output('cellranger_package',Param(type=str))
-        self.add_output('cellranger_version',Param(type=str))
-        self.add_output('cellranger_info',Param())
+        self.add_output('package_name',Param(type=str))
+        self.add_output('package_exe',Param(type=str))
+        self.add_output('package_version',Param(type=str))
+        self.add_output('package_info',Param())
     def setup(self):
-        print("Look for %s" % self.args.require_cellranger)
-        self.add_call("Check %s" % self.args.require_cellranger,
-                      self.get_cellranger,
-                      self.args.require_cellranger)
-    def get_cellranger(self,require_cellranger):
-        # Look for cellranger
-        cellranger_exe = find_program(require_cellranger)
-        if not cellranger_exe:
-            raise Exception("No appropriate cellranger software "
-                            "located")
+        print("Look for %s" % self.args.require_package)
+        self.add_call("Check %s" % self.args.require_package,
+                      self.get_10x_package,
+                      self.args.require_package)
+    def get_10x_package(self,require_package):
+        # Look for 10xGenomics package
+        package_exe = find_program(require_package)
+        if not package_exe:
+            raise Exception("No appropriate %s software located" %
+                            os.path.basename(require_package))
         # Get information on the version etc
-        cellranger_package = cellranger_info(cellranger_exe)
-        # Return the information on cellranger
-        return (cellranger_exe,cellranger_package[1],cellranger_package[2])
+        if require_package in ('cellranger',
+                               'cellranger-atac',):
+            package_info = cellranger_info(package_exe)
+        elif require_package == 'spaceranger':
+            package_info = spaceranger_info(package_exe)
+        # Return the information on the package
+        return (package_exe,package_info[1],package_info[2])
     def finish(self):
-        cellranger = self.result()[0]
-        cellranger_exe = cellranger[0]
-        cellranger_package = cellranger[1]
-        cellranger_version = cellranger[2]
-        # Set outputs with info on cellranger executable
-        self.output.cellranger_exe.set(cellranger_exe)
-        self.output.cellranger_package.set(cellranger_package)
-        self.output.cellranger_version.set(cellranger_version)
-        self.output.cellranger_info.set((cellranger_exe,
-                                         cellranger_package,
-                                         cellranger_version))
+        package = self.result()[0]
+        package_exe = package[0]
+        package_name = package[1]
+        package_version = package[2]
+        # Set outputs with info on package executable
+        self.output.package_exe.set(package_exe)
+        self.output.package_name.set(package_name)
+        self.output.package_version.set(package_version)
+        self.output.package_info.set((package_exe,
+                                      package_name,
+                                      package_version))
         # Report what was found
-        print("Cellranger exe    : %s" % cellranger_exe)
-        print("Cellranger package: %s" % cellranger_package)
-        print("Cellranger version: %s" % cellranger_version)
+        print("Package exe    : %s" % package_exe)
+        print("Package name   : %s" % package_name)
+        print("Package version: %s" % package_version)
 
 class DemultiplexIcell8Atac(PipelineTask):
     """
@@ -2350,22 +2444,22 @@ class DemultiplexIcell8Atac(PipelineTask):
             print("Moving output to final location: %s" % self.args.out_dir)
             os.rename(bcl2fastq_dir,self.args.out_dir)
 
-class RunCellrangerMkfastq(PipelineTask):
+class Run10xMkfastq(PipelineTask):
     """
-    Runs 'cellranger[-atac] mkfastq' to generate Fastqs
+    Runs 10xGenomics 'mkfastq' to generate Fastqs
     """
     def init(self,run_dir,out_dir,sample_sheet,bases_mask='auto',
              minimum_trimmed_read_length=None,
              mask_short_adapter_reads=None,
-             cellranger_jobmode='local',cellranger_maxjobs=None,
-             cellranger_mempercore=None,cellranger_jobinterval=None,
-             cellranger_localcores=None,cellranger_localmem=None,
+             jobmode='local',maxjobs=None,
+             mempercore=None,jobinterval=None,
+             localcores=None,localmem=None,
              create_empty_fastqs=False,platform=None,
-             cellranger_exe=None,cellranger_version=None,
+             pkg_exe=None,pkg_version=None,
              bcl2fastq_exe=None,bcl2fastq_version=None,
-             skip_cellranger=False):
+             skip_mkfastq=False):
         """
-        Initialise the RunCellrangerMkfastq task
+        Initialise the Run10xMkfastq task
 
         Arguments:
           run_dir (str): path to the directory with
@@ -2378,33 +2472,34 @@ class RunCellrangerMkfastq(PipelineTask):
             to cellranger via --minimum-trimmed-read-length
           mask_short_adapter_reads (int): if set then supply to
             cellranger via --mask-short-adapter-reads
-          cellranger_jobmode (str): jobmode to use for
+          jobmode (str): jobmode to use for
             running cellranger
-          cellranger_maxjobs (int): maximum number of concurrent
-            jobs for cellrange to run
-          cellranger_mempercore (int): amount of memory available
+          maxjobs (int): maximum number of concurrent
+            jobs for 10xGenomics mkfastq to run
+          mempercore (int): amount of memory available
             per core (for jobmode other than 'local')
-          cellranger_jobinterval (int): time to pause inbetween
-            starting cellranger jobs
-          cellranger_localcores (int): number of cores available
-            to cellranger in jobmode 'local'
-          cellranger_localmem (int): amount of memory available
-            to cellranger in jobmode 'local'
+          jobinterval (int): time to pause inbetween
+            starting 10xGenomics mkfastq jobs
+          localcores (int): number of cores available
+            to 10xGenomics mkfastq in jobmode 'local'
+          localmem (int): amount of memory available
+            to 10xGenomics mkfastq in jobmode 'local'
           create_empty_fastqs (bool): if True then create empty
             placeholder Fastq files for any that are missing
-            on successful completion of cellranger
+            on successful completion of 10xGenomics mkfastq
           platform (str): optional, sequencing platform that
             generated the data
-          cellranger_exe (str): the path to the cellranger
-            executable to use
-          cellranger_version (str): the version string for the
-            cellranger package
+          pkg_exe (str): the path to the 10xGenomics
+            software package to use (e.g. 'cellranger',
+            'cellranger-atac', 'spaceranger')
+          pkg_version (str): the version string for the
+            10xGenomics package
           bcl2fastq_exe (str): the path to the bcl2fastq
             executable to use
           bcl2fastq_version (str): the version string for the
             bcl2fastq package
-          skip_cellranger (bool): if True then skip running
-            cellranger mkfastq within the task
+          skip_mkfastq (bool): if True then skip running
+            the 'mkfastq' step within the task
 
         Outputs:
             missing_fastqs: list of Fastqs missing after
@@ -2412,16 +2507,19 @@ class RunCellrangerMkfastq(PipelineTask):
 
         """
         # Internal variables
+        self.pkg = None
         self.tmp_out_dir = None
         self.lanes = None
-        self.cellranger_out_dir = None
+        self.mkfastq_out_dir = None
         self.mro_file = None
         # Outputs
         self.add_output('missing_fastqs',list())
     def setup(self):
-        # Check if cellranger should be skipped
-        if self.args.skip_cellranger:
-            print("Skipping cellranger mkfastq")
+        # 10xGenomics software package
+        self.pkg = os.path.basename(self.args.pkg_exe)
+        # Check if mkfastq should be skipped
+        if self.args.skip_mkfastq:
+            print("Skipping %s mkfastq" % self.pkg)
             return
         # Check if outputs already exist
         if os.path.exists(self.args.out_dir):
@@ -2443,11 +2541,11 @@ class RunCellrangerMkfastq(PipelineTask):
             lanes_suffix = "_%s" % ''.join([str(l) for l in self.lanes])
         else:
             lanes_suffix = ""
-        self.cellranger_out_dir = "%s%s" % (illumina_run.runinfo.flowcell,
-                                            lanes_suffix)
-        self.mro_file = "__%s.mro" % self.cellranger_out_dir
+        self.mkfastq_out_dir = "%s%s" % (illumina_run.runinfo.flowcell,
+                                         lanes_suffix)
+        self.mro_file = "__%s.mro" % self.mkfastq_out_dir
         # Set bases mask
-        if self.args.cellranger_exe.endswith("-atac"):
+        if self.pkg == "cellranger-atac":
             # scATAC-seq
             bases_mask = self.args.bases_mask
             if bases_mask is None:
@@ -2463,12 +2561,15 @@ class RunCellrangerMkfastq(PipelineTask):
                 if not bases_mask_is_valid(bases_mask):
                     raise Exception("Invalid bases mask: '%s'" %
                                     bases_mask)
-        else:
+        elif self.pkg in ('cellranger','spaceranger'):
             # scRNA-seq
             if self.args.bases_mask == "auto":
                 bases_mask = None
             else:
                 bases_mask = self.args.bases_mask
+        else:
+            raise Exception("%s: unsupported 10xGenomics package" %
+                            self.pkg)
         # Check if outputs already exist
         if os.path.exists(self.args.out_dir):
             print("Output directory %s already exists" %
@@ -2483,13 +2584,13 @@ class RunCellrangerMkfastq(PipelineTask):
             self.args.minimum_trimmed_read_length,
             'mask_short_adapter_reads':
             self.args.mask_short_adapter_reads,
-            'cellranger_jobmode': self.args.cellranger_jobmode,
-            'cellranger_maxjobs': self.args.cellranger_maxjobs,
-            'cellranger_mempercore': self.args.cellranger_mempercore,
-            'cellranger_jobinterval': self.args.cellranger_jobinterval,
-            'cellranger_localcores': self.args.cellranger_localcores,
-            'cellranger_localmem': self.args.cellranger_localmem,
-            'cellranger_working_dir': self.cellranger_out_dir,
+            'cellranger_jobmode': self.args.jobmode,
+            'cellranger_maxjobs': self.args.maxjobs,
+            'cellranger_mempercore': self.args.mempercore,
+            'cellranger_jobinterval': self.args.jobinterval,
+            'cellranger_localcores': self.args.localcores,
+            'cellranger_localmem': self.args.localmem,
+            'cellranger_working_dir': self.args.out_dir,
             'cellranger_mro_file': self.mro_file
         }
         # Report settings
@@ -2515,45 +2616,49 @@ class RunCellrangerMkfastq(PipelineTask):
         self.tmp_out_dir = os.path.abspath("__%s.work" %
                                            os.path.basename(
                                                self.args.out_dir))
-        # Build command to run cellranger
-        cellranger_cmd = Command(self.args.cellranger_exe,
-                                 "mkfastq",
-                                 "--run",self.args.run_dir,
-                                 "--samplesheet",self.args.sample_sheet,
-                                 "--output-dir",self.tmp_out_dir,
-                                 "--qc")
+        # Build command to run 'mkfastq'
+        mkfastq_cmd = Command(self.args.pkg_exe,
+                              "mkfastq",
+                              "--run",self.args.run_dir,
+                              "--samplesheet",self.args.sample_sheet,
+                              "--output-dir",self.tmp_out_dir,
+                              "--qc")
         if self.lanes:
-            cellranger_cmd.add_args("--lanes",
-                                    ','.join([str(l) for l in self.lanes]))
+            mkfastq_cmd.add_args("--lanes",
+                                 ','.join([str(l) for l in self.lanes]))
         if bases_mask:
-            cellranger_cmd.add_args("--use-bases-mask=%s" % bases_mask)
+            mkfastq_cmd.add_args("--use-bases-mask=%s" % bases_mask)
         if self.args.minimum_trimmed_read_length:
-            cellranger_cmd.add_args('--minimum-trimmed-read-length',
-                                    self.args.minimum_trimmed_read_length)
+            mkfastq_cmd.add_args('--minimum-trimmed-read-length',
+                                 self.args.minimum_trimmed_read_length)
         if self.args.mask_short_adapter_reads:
-            cellranger_cmd.add_args('--mask-short-adapter-reads',
-                                    self.args.mask_short_adapter_reads)
-            add_cellranger_args(
-                cellranger_cmd,
-                jobmode=self.args.cellranger_jobmode,
-                mempercore=self.args.cellranger_mempercore,
-                maxjobs=self.args.cellranger_maxjobs,
-                jobinterval=self.args.cellranger_jobinterval,
-                localcores=self.args.cellranger_localcores,
-                localmem=self.args.cellranger_localmem
-            )
-        print("Running %s" % cellranger_cmd)
-        self.add_cmd(PipelineCommandWrapper(
-            "Run %s" % os.path.basename(self.args.cellranger_exe),
-            *cellranger_cmd.command_line))
+            mkfastq_cmd.add_args('--mask-short-adapter-reads',
+                                 self.args.mask_short_adapter_reads)
+        add_cellranger_args(
+            mkfastq_cmd,
+            jobmode=self.args.jobmode,
+            mempercore=self.args.mempercore,
+            maxjobs=self.args.maxjobs,
+            jobinterval=self.args.jobinterval,
+            localcores=self.args.localcores,
+            localmem=self.args.localmem
+        )
+        print("Running %s" % mkfastq_cmd)
+        self.add_cmd(PipelineCommandWrapper("Run %s" % self.pkg,
+                                            *mkfastq_cmd.command_line))
     def finish(self):
         if self.tmp_out_dir:
             # Verify outputs
             illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
                                          os.path.basename(self.tmp_out_dir))
-            if verify_run_against_sample_sheet(illumina_data,
-                                               self.args.sample_sheet,
-                                               include_sample_dir=True):
+            if self.pkg in ('cellranger','cellranger-atac'):
+                include_sample_dir = True
+            elif self.pkg == 'spaceranger':
+                include_sample_dir = False
+            if verify_run_against_sample_sheet(
+                    illumina_data,
+                    self.args.sample_sheet,
+                    include_sample_dir=include_sample_dir):
                 print("Verified outputs against samplesheet")
             else:
                 # Verification failed
@@ -2581,20 +2686,21 @@ class RunCellrangerMkfastq(PipelineTask):
                     raise Exception("Failed to verify outputs against "
                                     "samplesheet")
             # Check outputs and QC summary report
-            if not os.path.isdir(self.cellranger_out_dir):
+            if not os.path.isdir(self.mkfastq_out_dir):
                 raise Exception("No output directory '%s'" %
-                                self.cellranger_out_dir)
-            json_file = os.path.join(self.cellranger_out_dir,
+                                self.mkfastq_out_dir)
+            json_file = os.path.join(self.mkfastq_out_dir,
                                      "outs",
                                      "qc_summary.json")
             if not os.path.exists(json_file):
-                raise Exception("cellranger mkfastq failed to make "
-                                "JSON QC summary file (%s not found)"
-                                % json_file)
+                raise Exception("%s mkfastq failed to make JSON QC summary "
+                                "file (%s not found)" % (self.pkg,
+                                                         json_file))
             # Make HTML QC summary
-            html_file = "cellranger_qc_summary%s.html" % \
-                        (("_%s" % ''.join([str(l) for l in self.lanes])
-                         if self.lanes is not None else ""),)
+            html_file = "%s_qc_summary%s.html" % \
+                        (self.pkg,
+                         "_%s" % ''.join([str(l) for l in self.lanes])
+                         if self.lanes is not None else "")
             make_qc_summary_html(json_file,html_file)
             # Move outputs to final location
             print("Moving output to final location")

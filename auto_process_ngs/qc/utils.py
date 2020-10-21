@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     utils: utility classes and functions for QC
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 """
 Provides utility classes and functions for analysis project QC.
@@ -67,6 +67,10 @@ def determine_qc_protocol(project):
             elif single_cell_platform == "ICELL8":
                 # ICELL8 scATAC-seq
                 protocol = "ICELL8_scATAC"
+    # Spatial RNA-seq
+    if project.info.single_cell_platform == "10xGenomics Visium":
+        # 10xGenomics Visium spatial transcriptomics
+        protocol = "10x_Visium"
     return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,

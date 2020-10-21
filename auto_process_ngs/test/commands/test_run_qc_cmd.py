@@ -597,3 +597,83 @@ mouse = /data/cellranger/atac_references/mm10
                         p,'170901_M00879_0087_000000000-AGEW9'),
                     "multiqc_report.html")
                 self.assertTrue(multiqc in z.namelist())
+
+    def test_run_qc_10x_visium(self):
+        """run_qc: 10x Visium spatial RNA-seq with strandedness
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockFastqStrandPy.create(os.path.join(self.bin,
+                                              "fastq_strand.py"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock analysis directory
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '170901_M00879_0087_000000000-AGEW9',
+            'miseq',
+            metadata={ "instrument_datestamp": "170901" },
+            project_metadata={ "AB": { "Organism": "human",
+                                       "Single cell platform":
+                                       "10xGenomics Visium",
+                                       "Library type": "RNA-seq", },
+                               "CDE": { "Organism": "mouse",
+                                        "Single cell platform":
+                                        "10xGenomics Visium",
+                                        "Library type": "RNA-seq", } },
+            top_dir=self.dirn)
+        mockdir.create()
+        # Settings file with fastq_strand indexes and
+        # polling interval
+        settings_ini = os.path.join(self.dirn,"auto_process.ini")
+        with open(settings_ini,'w') as s:
+            s.write("""[general]
+poll_interval = 1.0
+
+[fastq_strand_indexes]
+human = /data/genomeIndexes/hg38/STAR
+mouse = /data/genomeIndexes/mm10/STAR
+""")
+        # Make autoprocess instance
+        ap = AutoProcess(analysis_dir=mockdir.dirn,
+                         settings=Settings(settings_ini))
+        # Run the QC
+        status = run_qc(ap,
+                        run_multiqc=True,
+                        max_jobs=1)
+        self.assertEqual(status,0)
+        # Check the fastq_strand_conf files were created
+        for p in ("AB","CDE"):
+            self.assertTrue(os.path.exists(
+                os.path.join(mockdir.dirn,p,"qc","fastq_strand.conf")))
+        # Check fastq_strand outputs are present
+        for p in ("AB","CDE"):
+            fastq_strand_outputs = list(
+                filter(lambda f:
+                       f.endswith("fastq_strand.txt"),
+                       os.listdir(os.path.join(
+                           mockdir.dirn,p,"qc"))))
+            self.assertTrue(len(fastq_strand_outputs) > 0)
+        # Check output and reports
+        for p in ("AB","CDE","undetermined"):
+            for f in ("qc",
+                      "qc_report.html",
+                      "qc_report.%s.%s.zip" % (
+                          p,
+                          '170901_M00879_0087_000000000-AGEW9'),
+                      "multiqc_report.html"):
+                self.assertTrue(os.path.exists(os.path.join(mockdir.dirn,
+                                                            p,f)),
+                                "Missing %s in project '%s'" % (f,p))
+            # Check zip file has MultiQC report
+            zip_file = os.path.join(mockdir.dirn,p,
+                                    "qc_report.%s.%s.zip" % (
+                                        p,
+                                        '170901_M00879_0087_000000000-AGEW9'))
+            with zipfile.ZipFile(zip_file) as z:
+                multiqc = os.path.join(
+                    "qc_report.%s.%s" % (
+                        p,'170901_M00879_0087_000000000-AGEW9'),
+                    "multiqc_report.html")
+                self.assertTrue(multiqc in z.namelist())

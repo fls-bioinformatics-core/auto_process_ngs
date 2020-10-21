@@ -29,7 +29,7 @@ from auto_process_ngs.barcodes.analysis import Reporter
 from auto_process_ngs.barcodes.analysis import report_barcodes
 from auto_process_ngs.bcl2fastq_utils import make_custom_sample_sheet
 from auto_process_ngs.bcl2fastq_utils import check_barcode_collisions
-from auto_process_ngs.tenx_genomics_utils import has_chromium_sc_indices
+from auto_process_ngs.tenx_genomics_utils import has_10x_indices
 
 from auto_process_ngs import get_version
 __version__ = get_version()
@@ -233,8 +233,8 @@ if __name__ == '__main__':
                     else:
                         s = make_custom_sample_sheet(sample_sheet,
                                                      fp.name)
-                    if has_chromium_sc_indices(fp.name):
-                        logging.warning("Lane %s has 10xGenomics Chromium "
+                    if has_10x_indices(fp.name):
+                        logging.warning("Lane %s has 10xGenomics-style "
                                         "indices in sample sheet; not "
                                         "matching against samplesheet for "
                                         "this lane" % lane)

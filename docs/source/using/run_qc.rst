@@ -25,6 +25,7 @@ QC protocol       Used for
 ``10x_scATAC``    10xGenomics single cell & single nuclei ATAC-seq
 ``10x_scRNAseq``  10xGenomics single cell RNA-seq
 ``10x_snRNAseq``  10xGenomics single nuclei RNA-seq
+``10x_Visium``    10xGenomics Visium spatial RNA-seq
 ``singlecell``    ICELL8 single cell RNA-seq
 ``ICELL8_scATAC`` ICELL8 single cell ATAC-seq
 ================= ==========================
@@ -43,7 +44,8 @@ each Fastq file in the project:
    of the sequence data
 
 For the single-cell and single-nuclei RNA-seq data from ICELL8 and
-10xGenomics Chromium platforms:
+10xGenomics Chromium platforms, and for 10xGenomics Visium RNA-seq
+data:
 
  * `fastqc`_ is run for each Fastq file
  * `fastq_screen`_ and `fastq_strand`_ are run on just the R2
