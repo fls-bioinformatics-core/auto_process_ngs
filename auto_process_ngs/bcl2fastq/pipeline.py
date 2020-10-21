@@ -2737,16 +2737,22 @@ class Run10xMkfastq(PipelineTask):
     def finish(self):
         if self.tmp_out_dir:
             # Verify outputs
+            #
+            # Note: some 10x packages force the addition of a 'sample
+            # name' subdirectory level (e.g. cellranger, cellranger-atac),
+            # some don't (e.g. spaceranger), and some do both (e.g.
+            # cellranger-arc) depending on the type of data
+            # So we check both and see if either matches the prediction
             illumina_data = IlluminaData(os.path.dirname(self.tmp_out_dir),
                                          os.path.basename(self.tmp_out_dir))
-            if self.pkg in ('cellranger','cellranger-atac'):
-                include_sample_dir = True
-            elif self.pkg in ('cellranger-arc','spaceranger'):
-                include_sample_dir = False
-            if verify_run_against_sample_sheet(
+            for include_sample_dir in (True,False):
+                verified = verify_run_against_sample_sheet(
                     illumina_data,
                     self.args.sample_sheet,
-                    include_sample_dir=include_sample_dir):
+                    include_sample_dir=include_sample_dir)
+                if verified:
+                    break
+            if verified:
                 print("Verified outputs against samplesheet")
             else:
                 # Verification failed
