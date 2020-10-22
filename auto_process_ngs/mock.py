@@ -1348,7 +1348,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
-        self._multiome_data = multiome_data
+        self._multiome_data = str(multiome_data).upper()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
         if reads is None:
