@@ -634,8 +634,8 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
                             "Missing file: %s" % filen)
 
     #@unittest.skip("Skipped")
-    def test_make_fastqs_10x_multiome_protocol(self):
-        """make_fastqs: 10x_multiome protocol
+    def test_make_fastqs_10x_multiome_protocol_gex(self):
+        """make_fastqs: 10x_multiome protocol (GEX data)
         """
         # Sample sheet with 10xGenomics indices
         samplesheet_10x_atac_indices = """[Data]
@@ -657,7 +657,78 @@ smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
         MockBcl2fastq2Exe.create(os.path.join(self.bin,
                                               "bcl2fastq"))
         Mock10xPackageExe.create(os.path.join(self.bin,
-                                              "cellranger-arc"))
+                                              "cellranger-arc"),
+                                 multiome_data="GEX")
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Do the test
+        ap = AutoProcess(settings=self.settings)
+        ap.setup(os.path.join(self.wd,
+                              "171020_NB500968_00002_AHGXXXX"),
+                 sample_sheet=sample_sheet)
+        self.assertTrue(ap.params.sample_sheet is not None)
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertTrue(ap.params.primary_data_dir is None)
+        self.assertFalse(ap.params.acquired_primary_data)
+        make_fastqs(ap,protocol="10x_multiome")
+        # Check parameters
+        self.assertEqual(ap.params.bases_mask,"auto")
+        self.assertEqual(ap.params.primary_data_dir,
+                         os.path.join(self.wd,
+                                      "171020_NB500968_00002_AHGXXXX_analysis",
+                                      "primary_data"))
+        self.assertTrue(ap.params.acquired_primary_data)
+        self.assertEqual(ap.params.unaligned_dir,"bcl2fastq")
+        self.assertEqual(ap.params.barcode_analysis_dir,"barcode_analysis")
+        self.assertEqual(ap.params.stats_file,"statistics.info")
+        # Check outputs
+        analysis_dir = os.path.join(
+            self.wd,
+            "171020_NB500968_00002_AHGXXXX_analysis")
+        for subdir in (os.path.join("primary_data",
+                                    "171020_NB500968_00002_AHGXXXX"),
+                       os.path.join("logs",
+                                    "002_make_fastqs_10x_multiome"),
+                       "bcl2fastq",):
+            self.assertTrue(os.path.isdir(
+                os.path.join(analysis_dir,subdir)),
+                            "Missing subdir: %s" % subdir)
+        for filen in ("statistics.info",
+                      "statistics_full.info",
+                      "per_lane_statistics.info",
+                      "per_lane_sample_stats.info",
+                      "projects.info",
+                      "processing_qc.html"):
+            self.assertTrue(os.path.isfile(
+                os.path.join(analysis_dir,filen)),
+                            "Missing file: %s" % filen)
+
+    #@unittest.skip("Skipped")
+    def test_make_fastqs_10x_multiome_protocol_atac(self):
+        """make_fastqs: 10x_multiome protocol (ATAC data)
+        """
+        # Sample sheet with 10xGenomics indices
+        samplesheet_10x_atac_indices = """[Data]
+Sample_ID,Sample_Name,Sample_Plate,Sample_Well,I7_Index_ID,index,Sample_Project,Description
+smpl1,smpl1,,,A001,SI-TT-A1,10xGenomics,
+smpl2,smpl2,,,A005,SI-TT-B1,10xGenomics,
+"""
+        sample_sheet = os.path.join(self.wd,"SampleSheet.csv")
+        with open(sample_sheet,'w') as fp:
+            fp.write(samplesheet_10x_atac_indices)
+        # Create mock source data
+        illumina_run = MockIlluminaRun(
+            "171020_NB500968_00002_AHGXXXX",
+            "nextseq",
+            bases_mask="y101,I8,I8,y101",
+            top_dir=self.wd)
+        illumina_run.create()
+        # Create mock bcl2fastq and cellranger-atac
+        MockBcl2fastq2Exe.create(os.path.join(self.bin,
+                                              "bcl2fastq"))
+        Mock10xPackageExe.create(os.path.join(self.bin,
+                                              "cellranger-arc"),
+                                 multiome_data="ATAC")
         os.environ['PATH'] = "%s:%s" % (self.bin,
                                         os.environ['PATH'])
         # Do the test
