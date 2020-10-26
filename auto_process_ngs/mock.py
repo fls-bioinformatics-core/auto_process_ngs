@@ -753,13 +753,17 @@ class UpdateAnalysisProject(DirectoryUpdater):
         zip_file.close()
         self._reload_project()
 
-    def add_cellranger_count_outputs(self,qc_dir=None,legacy=False):
+    def add_cellranger_count_outputs(self,qc_dir=None,cellranger='cellranger',
+                                     legacy=False):
         """
         Add mock 'cellranger count' outputs to project
 
         Arguments:
           qc_dir (str): specify non-default QC output
             directory
+          cellranger (str): specify the 10xGenomics software
+            package to add outputs for (defaults to
+            'cellranger'; alternatives are 'cellranger-atac')
           legacy (bool): if True then generate 'legacy'
             style cellranger outputs
         """
@@ -776,6 +780,12 @@ class UpdateAnalysisProject(DirectoryUpdater):
                 self.add_subdir(self._project.qc_dir)
             self.add_subdir(os.path.join(self._project.qc_dir,
                                          "cellranger_count"))
+        if cellranger == 'cellranger':
+            cellranger_output_files = ("web_summary.html",
+                                       "metrics_summary.csv")
+        elif cellranger == 'cellranger-atac':
+            cellranger_output_files = ("web_summary.html",
+                                       "summary.csv")
         for sample in self._project.samples:
             if legacy:
                 sample_dir = os.path.join(self._project.dirn,
@@ -787,7 +797,7 @@ class UpdateAnalysisProject(DirectoryUpdater):
                                           sample.name)
             self.add_subdir(sample_dir)
             self.add_subdir(os.path.join(sample_dir,"outs"))
-            for f in ("web_summary.html","metrics_summary.csv"):
+            for f in cellranger_output_files:
                 self.add_file(os.path.join(sample_dir,"outs",f))
             for f in ("_cmdline",):
                 self.add_file(os.path.join(sample_dir,f))
