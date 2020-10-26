@@ -97,7 +97,7 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/metrics_summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_count_output(self):
+    def test_cellranger_count_output_with_sample(self):
         """cellranger_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -135,7 +135,7 @@ class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_atac_count_output(self):
+    def test_cellranger_atac_count_output_with_sample(self):
         """cellranger_atac_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -645,7 +645,7 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
             include_fastq_strand=False,
             include_multiqc=False)
         # Check the outputs
-        self.assertEqual(check_cellranger_count_outputs(project),["PJB1",])
+        self.assertEqual(check_cellranger_atac_count_outputs(project),["PJB1",])
 
     def test_check_cellranger_atac_count_outputs_10x_scATAC_present(self):
         """
@@ -663,9 +663,10 @@ class TestCheckCellrangerAtacCountOutputs(unittest.TestCase):
             protocol="10x_scATAC",
             include_fastq_strand=False,
             include_multiqc=False)
-        UpdateAnalysisProject(project).add_cellranger_count_outputs()
+        UpdateAnalysisProject(project).add_cellranger_count_outputs(
+            cellranger="cellranger-atac")
         # Check the outputs
-        self.assertEqual(check_cellranger_count_outputs(project),[])
+        self.assertEqual(check_cellranger_atac_count_outputs(project),[])
 
 class TestExpectedOutputs(unittest.TestCase):
     """
