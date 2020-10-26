@@ -97,7 +97,7 @@ class TestCellrangerCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/metrics_summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_count_output(self):
+    def test_cellranger_count_output_with_sample(self):
         """cellranger_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
@@ -135,7 +135,7 @@ class TestCellrangerAtacCountOutputFunction(unittest.TestCase):
                           'cellranger_count/PJB2/outs/summary.csv',
                           'cellranger_count/PJB2/outs/web_summary.html'))
 
-    def test_cellranger_atac_count_output(self):
+    def test_cellranger_atac_count_output_with_sample(self):
         """cellranger_atac_count_output: check for project and sample
         """
         project = AnalysisProject("PJB",os.path.join(self.wd,"PJB"))
