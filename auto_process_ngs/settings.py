@@ -250,6 +250,14 @@ class Settings(object):
                 self['10xgenomics_atac_genome_references'][genome] = reference
         except NoSectionError:
             logging.debug("No 10xgenomics scATAC-seq genome references defined")
+        # 10xGenomics cellranger ARC single cell multiome
+        # reference datasets
+        self.add_section('10xgenomics_multiome_references')
+        try:
+            for genome,reference in config.items('10xgenomics_multiome_references'):
+                self['10xgenomics_multiome_references'][genome] = reference
+        except NoSectionError:
+            logging.debug("No 10xgenomics multiome references defined")
         # fastq_stats
         self.add_section('fastq_stats')
         self.fastq_stats['nprocessors'] = config.getint('fastq_stats','nprocessors',None)
