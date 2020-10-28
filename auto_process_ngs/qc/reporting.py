@@ -48,6 +48,7 @@ from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import encode_png
+from ..utils import ZipArchive
 from .. import get_version
 
 # Module specific logger
@@ -264,7 +265,8 @@ class QCReporter(object):
 
     def report(self,title=None,filename=None,qc_dir=None,
                qc_protocol=None,report_attrs=None,
-               summary_fields=None,relative_links=False):
+               summary_fields=None,relative_links=False,
+               make_zip=False):
         """
         Report the QC for the project
 
@@ -284,6 +286,9 @@ class QCReporter(object):
           relative_links (boolean): optional, if set to True
             then use relative paths for links in the report
             (default is to use absolute paths)
+          make_zip (boolean): if True then also create a ZIP
+            archive of the QC report and outputs (default is
+            not to create the ZIP archive)
 
         Returns:
           String: filename of the output HTML report.
@@ -310,6 +315,40 @@ class QCReporter(object):
         report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
         report.write(filename)
+        # Make ZIP file
+        if make_zip:
+            # Name for ZIP file
+            out_dir = os.path.dirname(filename)
+            basename = os.path.splitext(os.path.basename(filename))[0]
+            run_name = self._project.info.run
+            zip_prefix = "%s.%s%s" % (basename,
+                                      self._project.name,
+                                      '.%s' % run_name if run_name else '')
+            logging.debug("ZIP prefix: %s" % zip_prefix)
+            zip_name = os.path.join(out_dir,"%s.zip" % zip_prefix)
+            logging.debug("ZIP file: %s" % zip_name)
+            # QC directory
+            if qc_dir is None:
+                qc_dir = self._project.qc_dir
+            else:
+                if not os.path.isabs(qc_dir):
+                    qc_dir = os.path.join(self._project.dirn,
+                                          qc_dir)
+            # Create ZIP archive
+            zip_file = ZipArchive(zip_name,
+                                  relpath=os.path.dirname(qc_dir),
+                                  prefix=zip_prefix)
+            # Add the report
+            zip_file.add_file(filename)
+            # Add the QC outputs
+            logging.debug("Adding QC outputs for %s" % self._project.name)
+            for f in report.output_files:
+                ff = os.path.join(qc_dir,f)
+                if os.path.exists(ff):
+                    zip_file.add(ff)
+                else:
+                    logging.warning("%s: missing file '%s'" % (zip_file,
+                                                               ff))
         # Return the output filename
         return filename
 
