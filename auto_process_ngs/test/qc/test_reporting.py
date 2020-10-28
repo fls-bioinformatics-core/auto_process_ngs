@@ -6,6 +6,7 @@ import unittest
 import os
 import tempfile
 import shutil
+import zipfile
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
@@ -144,6 +145,45 @@ class TestQCReporter(unittest.TestCase):
         reporter.report(filename=os.path.join(self.wd,'report.non_canonical.html'))
         self.assertTrue(os.path.exists(
             os.path.join(self.wd,'report.non_canonical.html')))
+    def test_qcreporter_single_end_make_zip_file(self):
+        """QCReporter: single-end data: make ZIP file
+        """
+        analysis_dir = self._make_analysis_project(paired_end=False)
+        project = AnalysisProject('PJB',analysis_dir)
+        reporter = QCReporter(project)
+        self.assertEqual(reporter.name,'PJB')
+        self.assertFalse(reporter.paired_end)
+        self.assertTrue(reporter.verify())
+        reporter.report(filename=os.path.join(self.wd,
+                                              'PJB',
+                                              'report.SE.html'),
+                        make_zip=True)
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'PJB','report.SE.html')))
+        self.assertTrue(os.path.exists(
+            os.path.join(self.wd,'PJB','report.SE.PJB.zip')))
+        contents = zipfile.ZipFile(
+            os.path.join(self.wd,'PJB',
+                         'report.SE.PJB.zip')).namelist()
+        print(contents)
+        expected = (
+            'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_other_organisms_screen.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_other_organisms_screen.txt',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_rRNA_screen.png',
+            'report.SE.PJB/qc/PJB1_S1_R1_001_rRNA_screen.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_fastqc.html',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_model_organisms_screen.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_model_organisms_screen.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_other_organisms_screen.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_other_organisms_screen.txt',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_rRNA_screen.png',
+            'report.SE.PJB/qc/PJB2_S2_R1_001_rRNA_screen.txt')
+        for f in expected:
+            self.assertTrue(f in contents,"%s is missing from ZIP file" % f)
 
 class TestFastqSet(unittest.TestCase):
     def test_fastqset_PE(self):

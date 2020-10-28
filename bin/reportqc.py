@@ -14,7 +14,6 @@ import argparse
 import logging
 from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
-from auto_process_ngs.utils import ZipArchive
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.reporting import QCReporter
@@ -30,82 +29,6 @@ reportqc
 Utility to verify and report on QC outputs from
 auto_process pipeline.
 """
-
-#######################################################################
-# Functions
-#######################################################################
-
-def zip_report(project,report_html,qc_dir=None,qc_protocol=None):
-    """
-    Create ZIP archive for a QC report
-
-    Arguments:
-      project (AnalysisProject): project object
-      report_html (str): HTML QC report
-      qc_dir (str): optional name of subdirectory
-        containing QC outputs (defaults to default
-        QC subdir from the project)
-      qc_protocol (str): QC protocol to gather
-        outputs from
-
-    Returns:
-      String: path to the output ZIP file.
-    """
-    print("Making ZIP file:")
-    print("-- Project name        : %s" % project.name)
-    print("-- Run                 : %s" % project.info.run)
-    print("-- Protocol            : %s" % qc_protocol)
-    print("-- QC dir              : %s" % qc_dir)
-    print("-- Single cell platform: %s" % project.info.single_cell_platform)
-    # Name for ZIP file
-    report_dir = os.path.dirname(report_html)
-    basename = os.path.splitext(os.path.basename(report_html))[0]
-    run_name = project.info.run
-    zip_prefix = "%s.%s%s" % (basename,
-                              project.name,
-                              '.%s' % run_name if run_name else '')
-    print("-- ZIP prefix          : %s" % zip_prefix)
-    report_zip = os.path.join(report_dir,"%s.zip" % zip_prefix)
-    # Create ZIP archive
-    zip_file = ZipArchive(report_zip,
-                          relpath=os.path.dirname(qc_dir),
-                          prefix=zip_prefix)
-    # Get QC dir if not set
-    if qc_dir is None:
-        qc_dir = project.qc_dir
-    # Add the HTML report
-    zip_file.add_file(report_html)
-    # Add the QC outputs
-    logging.debug("Adding QC outputs for %s" % project.name)
-    for f in expected_outputs(project,qc_dir,
-                              fastq_strand_conf=
-                              os.path.join(qc_dir,"fastq_strand.conf"),
-                              cellranger_refdata=
-                              project.qc_info(qc_dir).cellranger_refdata,
-                              qc_protocol=qc_protocol):
-        if f.endswith('.zip'):
-            # Exclude .zip file
-            continue
-        if os.path.exists(f):
-            zip_file.add(f)
-        else:
-            logging.warning("ZIP: missing file '%s'" % f)
-    # MultiQC output
-    multiqc = os.path.join(report_dir,
-                           "multi%s_report.html" %
-                           os.path.basename(qc_dir))
-    if os.path.exists(multiqc):
-        zip_file.add(multiqc)
-    # ICELL8 reports
-    icell8_reports = (os.path.join("stats","icell8_stats.xlsx"),
-                      "icell8_processing.html",
-                      "icell8_processing_data",)
-    for f in icell8_reports:
-        f = os.path.join(project.dirn,f)
-        if os.path.exists(f):
-            zip_file.add(f)
-    # Finished
-    return report_zip
 
 #######################################################################
 # Main program
@@ -291,13 +214,9 @@ def main():
                                         qc_protocol=protocol,
                                         title=args.title,
                                         filename=out_file,
-                                        relative_links=True)
+                                        relative_links=True,
+                                        make_zip=args.zip)
         print("Wrote QC report to %s" % out_file)
-        # Generate ZIP archive
-        if args.zip:
-            report_zip = zip_report(p,report_html,qc_dir,
-                                    qc_protocol=protocol)
-            print("ZIP archive: %s" % report_zip)
     # Finish with appropriate exit code
     print("%s completed: exit code %s (%s)" %
           (os.path.basename(sys.argv[0]),

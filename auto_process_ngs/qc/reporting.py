@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 
 #######################################################################
@@ -48,6 +48,7 @@ from .plots import ufastqcplot
 from .plots import uboxplot
 from .plots import ustrandplot
 from .plots import encode_png
+from ..utils import ZipArchive
 from .. import get_version
 
 # Module specific logger
@@ -264,7 +265,8 @@ class QCReporter(object):
 
     def report(self,title=None,filename=None,qc_dir=None,
                qc_protocol=None,report_attrs=None,
-               summary_fields=None,relative_links=False):
+               summary_fields=None,relative_links=False,
+               make_zip=False):
         """
         Report the QC for the project
 
@@ -284,6 +286,9 @@ class QCReporter(object):
           relative_links (boolean): optional, if set to True
             then use relative paths for links in the report
             (default is to use absolute paths)
+          make_zip (boolean): if True then also create a ZIP
+            archive of the QC report and outputs (default is
+            not to create the ZIP archive)
 
         Returns:
           String: filename of the output HTML report.
@@ -310,6 +315,40 @@ class QCReporter(object):
         report.add_css_rule(QC_REPORT_CSS_STYLES)
         # Write the report
         report.write(filename)
+        # Make ZIP file
+        if make_zip:
+            # Name for ZIP file
+            out_dir = os.path.dirname(filename)
+            basename = os.path.splitext(os.path.basename(filename))[0]
+            run_name = self._project.info.run
+            zip_prefix = "%s.%s%s" % (basename,
+                                      self._project.name,
+                                      '.%s' % run_name if run_name else '')
+            logging.debug("ZIP prefix: %s" % zip_prefix)
+            zip_name = os.path.join(out_dir,"%s.zip" % zip_prefix)
+            logging.debug("ZIP file: %s" % zip_name)
+            # QC directory
+            if qc_dir is None:
+                qc_dir = self._project.qc_dir
+            else:
+                if not os.path.isabs(qc_dir):
+                    qc_dir = os.path.join(self._project.dirn,
+                                          qc_dir)
+            # Create ZIP archive
+            zip_file = ZipArchive(zip_name,
+                                  relpath=os.path.dirname(qc_dir),
+                                  prefix=zip_prefix)
+            # Add the report
+            zip_file.add_file(filename)
+            # Add the QC outputs
+            logging.debug("Adding QC outputs for %s" % self._project.name)
+            for f in report.output_files:
+                ff = os.path.join(qc_dir,f)
+                if os.path.exists(ff):
+                    zip_file.add(ff)
+                else:
+                    logging.warning("%s: missing file '%s'" % (zip_file,
+                                                               ff))
         # Return the output filename
         return filename
 
@@ -648,6 +687,7 @@ class QCReport(Document):
         Internal: determine which QC outputs are present
         """
         outputs = set()
+        output_files = []
         software = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = os.listdir(self.qc_dir)
@@ -681,6 +721,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,screen)).version)
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
+            # Store the screen files
+            output_files.extend(screens)
         # Look for fastqc outputs
         fastqcs = list(filter(lambda f:
                               f.endswith("_fastqc.html"),
@@ -703,6 +745,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,fastqc)).version)
             if versions:
                 software['fastqc'] = sorted(list(versions))
+            # Store the fastqc files
+            output_files.extend(fastqcs)
         # Look for fastq_strand outputs
         fastq_strand = list(filter(lambda f:
                                    f.endswith("_fastq_strand.txt"),
@@ -721,6 +765,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,f)).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
+            # Store the fastq_strand files
+            output_files.extend(fastq_strand)
         # Look for ICELL8 outputs
         print("Checking for ICELL8 reports in %s/stats" %
               self.project.dirn)
@@ -729,10 +775,12 @@ class QCReport(Document):
                                          "icell8_stats.xlsx")
         if os.path.exists(icell8_stats_xlsx):
             outputs.add("icell8_stats")
+            output_files.append(icell8_stats_xlsx)
         icell8_report_html = os.path.join(self.project.dirn,
                                           "icell8_processing.html")
         if os.path.exists(icell8_report_html):
             outputs.add("icell8_report")
+            output_files.append(icell8_report_html)
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(self.qc_dir,
                                             "cellranger_count")
@@ -742,7 +790,13 @@ class QCReport(Document):
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
                     os.listdir(cellranger_count_dir)):
-                cellranger_samples.append(d)
+                web_summary_html = os.path.join(cellranger_count_dir,
+                                                d,
+                                                "outs",
+                                                "web_summary.html")
+                if os.path.exists(web_summary_html):
+                    cellranger_samples.append(d)
+                    output_files.append(web_summary_html)
             if cellranger_samples:
                 outputs.add("cellranger_count")
         # Look for MultiQC report
@@ -752,6 +806,7 @@ class QCReport(Document):
                                       % os.path.basename(self.qc_dir))
         if os.path.isfile(multiqc_report):
             outputs.add("multiqc")
+            output_files.append(multiqc_report)
         # Fastqs sorted by sample name
         self.fastqs = sorted(list(fastq_names),
                              key=lambda fq: split_sample_name(
@@ -779,6 +834,8 @@ class QCReport(Document):
         self.outputs = sorted(list(outputs))
         # Software versions
         self.software = software
+        # Output files
+        self.output_files = sorted(output_files)
         return self.outputs
 
     def report_metadata(self):
