@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reporting: report QC from analysis projects
-#     Copyright (C) University of Manchester 2018-2019 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
 #
 
 #######################################################################
@@ -648,6 +648,7 @@ class QCReport(Document):
         Internal: determine which QC outputs are present
         """
         outputs = set()
+        output_files = []
         software = {}
         print("Scanning contents of %s" % self.qc_dir)
         files = os.listdir(self.qc_dir)
@@ -681,6 +682,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,screen)).version)
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
+            # Store the screen files
+            output_files.extend(screens)
         # Look for fastqc outputs
         fastqcs = list(filter(lambda f:
                               f.endswith("_fastqc.html"),
@@ -703,6 +706,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,fastqc)).version)
             if versions:
                 software['fastqc'] = sorted(list(versions))
+            # Store the fastqc files
+            output_files.extend(fastqcs)
         # Look for fastq_strand outputs
         fastq_strand = list(filter(lambda f:
                                    f.endswith("_fastq_strand.txt"),
@@ -721,6 +726,8 @@ class QCReport(Document):
                     os.path.join(self.qc_dir,f)).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
+            # Store the fastq_strand files
+            output_files.extend(fastq_strand)
         # Look for ICELL8 outputs
         print("Checking for ICELL8 reports in %s/stats" %
               self.project.dirn)
@@ -729,10 +736,12 @@ class QCReport(Document):
                                          "icell8_stats.xlsx")
         if os.path.exists(icell8_stats_xlsx):
             outputs.add("icell8_stats")
+            output_files.append(icell8_stats_xlsx)
         icell8_report_html = os.path.join(self.project.dirn,
                                           "icell8_processing.html")
         if os.path.exists(icell8_report_html):
             outputs.add("icell8_report")
+            output_files.append(icell8_report_html)
         # Look for cellranger_count outputs
         cellranger_count_dir = os.path.join(self.qc_dir,
                                             "cellranger_count")
@@ -742,7 +751,13 @@ class QCReport(Document):
                     lambda f:
                     os.path.isdir(os.path.join(cellranger_count_dir,f)),
                     os.listdir(cellranger_count_dir)):
-                cellranger_samples.append(d)
+                web_summary_html = os.path.join(cellranger_count_dir,
+                                                d,
+                                                "outs",
+                                                "web_summary.html")
+                if os.path.exists(web_summary_html):
+                    cellranger_samples.append(d)
+                    output_files.append(web_summary_html)
             if cellranger_samples:
                 outputs.add("cellranger_count")
         # Look for MultiQC report
@@ -752,6 +767,7 @@ class QCReport(Document):
                                       % os.path.basename(self.qc_dir))
         if os.path.isfile(multiqc_report):
             outputs.add("multiqc")
+            output_files.append(multiqc_report)
         # Fastqs sorted by sample name
         self.fastqs = sorted(list(fastq_names),
                              key=lambda fq: split_sample_name(
@@ -779,6 +795,8 @@ class QCReport(Document):
         self.outputs = sorted(list(outputs))
         # Software versions
         self.software = software
+        # Output files
+        self.output_files = sorted(output_files)
         return self.outputs
 
     def report_metadata(self):
