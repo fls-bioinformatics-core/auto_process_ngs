@@ -188,6 +188,22 @@ class AnalysisDir(object):
     It is also possible to have one or more subdirectories containing
     outputs from the CASAVA or bclToFastq processing software.
 
+    Properties:
+
+    analysis_dir: full path to the directory
+    run_name: the name of the parent sequencing run
+    metadata: metadata items associated with the run
+    projects: list of AnalysisProject objects
+    undetermined: AnalysisProject object for 'undetermined'
+    sequencing_data: list of IlluminaData objects
+    projects_metadata: metadata from the 'projects.info' file
+    datestamp: datestamp extracted from run name
+    instrument_name: instrument name extracted from run name
+    instrument_run_number: run number extracted from run name
+    n_projects: number of projects
+    n_sequencing_data: number of sequencing data directories
+    paired_end: whether data are paired ended
+
     """
     def __init__(self,analysis_dir):
         """Create a new AnalysisDir instance for a specified directory
