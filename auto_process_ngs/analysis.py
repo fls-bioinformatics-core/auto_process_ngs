@@ -249,7 +249,7 @@ class AnalysisDir(object):
             self.projects_metadata = None
         # Run name
         try:
-            self.run_name = self.metadata.run
+            self.run_name = self.metadata.run_name
         except AttributeError:
             self.run_name = self._analysis_dir[0:-len('_analysis')]
         self.run_name = os.path.basename(self.run_name)
