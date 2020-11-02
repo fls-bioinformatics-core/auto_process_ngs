@@ -26,6 +26,9 @@ Functions:
 
 - run_reference_id:
 - split_sample_name:
+- match_run_id:
+- locate_run:
+- locate_project:
 - copy_analysis_project:
 """
 
@@ -1310,6 +1313,252 @@ def split_sample_name(s):
         if part.isdigit():
             parts[i] = int(part)
     return parts
+
+def split_sample_reference(s):
+    """
+    Split a '[RUN][:PROJECT[/SAMPLE]]' reference id
+
+    Decomposes a reference id of the form:
+
+    [RUN][:PROJECT[/SAMPLE]]
+
+    where:
+
+    - RUN is a run identifier (either a run name e.g.
+      '201027_SN00284_0000161_AHXXJHJH', a reference id e.g.
+      'HISEQ_201027/161#122', or a path to an analysis
+      directory)
+    - PROJECT is the name of a project within the run, and
+    - SAMPLE is a sample name.
+
+    A subset of elements can be present, in which case
+    the missing components will be returned as None.
+
+    Returns:
+      Tuple: tuple of the form (RUN,PROJECT,SAMPLE)
+        extracted from the supplied reference id;
+        missing elements are set to None.
+    """
+    # Try to extract run name first
+    if ':' in s:
+        run,name = s.split(':')
+    else:
+        # Either a run or a sample specification
+        if '#' in s:
+            # Definitely a run reference id
+            # Note: this test is quite weak!
+            run = s
+            name = None
+        else:
+            # Assume it's PROJECT[/SAMPLE]
+            run = None
+            name = s
+    # Extract project and sample names
+    if name:
+        if '/' in name:
+            # Split PROJECT/SAMPLE
+            project,sample = name.split('/')
+        elif run is None:
+            # There was no leading RUN
+            # so assume this is just SAMPLE
+            project = None
+            sample = name
+        else:
+            # There was a leading RUN
+            # so assume this is just PROJECT
+            project = name
+            sample = None
+    else:
+        # RUN but no PROJECT and/or SAMPLE
+        project = None
+        sample = None
+    # Normalise outputs: make sure empty values
+    # are replaced with None
+    run = run if run else None
+    project = project if project else None
+    sample = sample if sample else None
+    return (run,project,sample)
+
+def match_run_id(run,d):
+    """
+    Check if a directory matches a run identifier
+
+    The identifier can be any one of:
+
+    - a path to an analysis directory (e.g.
+      '/path/to/201029_SN01234_0000123_AHXXXX_analysis')
+    - the name of an analysis directory (e.g.
+      '201029_SN01234_0000123_AHXXXX_analysis')
+    - the name of a sequencing run associated with an
+      analysis directory (e.g. '201029_SN01234_0000123_AHXXXX')
+    - a run identifier (e.g. 'HISEQ_201029#123')
+
+    Arguments:
+      run (str): run identifier
+      d (str): path to a run to check against
+        the supplied identifier
+    """
+    # Check if run specification is actually a path
+    logger.debug("%s: checking full path" % d)
+    if d == run:
+        return True
+    # Check if name matches
+    if os.path.basename(d) == run:
+        return True
+    # Attempt to load as an analysis dir
+    try:
+        analysis_dir = AnalysisDir(d)
+        # Check run name
+        logger.debug("%s: run name = %s" % (d,analysis_dir.run_name))
+        if analysis_dir.run_name == run:
+            return d
+        # Check run reference ID
+        run_id = run_reference_id(
+            analysis_dir.run_name,
+            platform=analysis_dir.metadata.platform,
+            facility_run_number=analysis_dir.metadata.run_number)
+        logger.debug("%s: run ID = %s" % (d,run_id))
+        if run_id == run:
+            return True
+    except Exception as ex:
+        # Not an analysis directory
+        logger.debug("%s: exception: %s" % (d,ex))
+        pass
+    return False
+
+def locate_run(run,start_dir=None,ascend=False):
+    """
+    Locate an analysis directory
+
+    Searches the file system to locate an analysis
+    directory which matches the supplied run
+    identifier.
+
+    The identifier can be any one of:
+
+    - a path to an analysis directory (e.g.
+      '/path/to/201029_SN01234_0000123_AHXXXX_analysis')
+    - the name of an analysis directory (e.g.
+      '201029_SN01234_0000123_AHXXXX_analysis')
+    - the name of a sequencing run associated with an
+      analysis directory (e.g. '201029_SN01234_0000123_AHXXXX')
+    - a run identifier (e.g. 'HISEQ_201029#123')
+
+    Arguments:
+      run (str): identifier for the run to locate
+      start_dir (str): optional path to start
+        searching from (defaults to the current
+        directory)
+      ascend (bool): if True then search by
+        ascending into parent directories of
+        'start_dir' (default is to search by
+        descending into its subdirectories)
+
+    Returns:
+      String: path to the analysis directory, or
+        None if the specified analysis directory can't
+        be located.
+    """
+    # Set starting directory
+    if start_dir is None:
+        d = os.getcwd()
+    else:
+        d = os.path.abspath(start_dir)
+    # Check if 'run' is actually a path
+    logger.debug("%s: checking full path" % d)
+    if match_run_id(run,d):
+        return d
+    # Current directory doesn't match
+    if not ascend:
+        # Search the subdirectories recursively
+        for subdir in [os.path.join(d,sd) for sd in os.listdir(d)
+                       if os.path.isdir(os.path.join(d,sd))]:
+            logger.debug("Going into %s" % subdir)
+            d = locate_run(run,start_dir=subdir)
+            if d:
+                # Found in subdirectory
+                return d
+    else:
+        # Check the subdirectories of the current directory
+        for subdir in [os.path.join(d,sd) for sd in os.listdir(d)
+                       if os.path.isdir(os.path.join(d,sd))]:
+            logger.debug("Checking %s" % subdir)
+            if match_run_id(run,subdir):
+                # Found in subdirectory
+                return subdir
+        # Move up a level and try again
+        if d != os.sep:
+            parent_dir = os.path.dirname(d)
+            logger.debug("%s: ascending to %s" % (d,parent_dir))
+            d = locate_run(run,start_dir=parent_dir,ascend=True)
+            if d:
+                # Found in parent
+                return d
+        else:
+            # Reached filesystem root
+            logger.debug("Reached filesystem root")
+    # Run not found
+    return None
+
+def locate_project(project_id,start_dir=None,ascend=False):
+    """
+    Locate an analysis project
+
+    Searches the file system to locate an analysis
+    project which matches the supplied project
+    identifier.
+
+    The identifier can be either:
+
+    - a path to an analysis project (e.g.
+      '/path/to/201029_SN01234_0000123_AHXXXX_analysis/AB'),
+      or
+    - a valid project identifier (e.g.
+      '201029_SN01234_0000123_AHXXXX_analysis:AB',
+      'HISEQ_201029#123:AB' etc)
+
+    Arguments:
+      project_id (str): identifier for the project
+        to locate
+      start_dir (str): optional path to start
+        searching from (defaults to the current
+        directory)
+      ascend (bool): if True then search by
+        ascending into parent directories of
+        'start_dir' (default is to search by
+        descending into its subdirectories)
+
+    Returns:
+      AnalysisProject: path to the analysis project,
+        or None if the specified project can't be
+        located.
+    """
+    # Set starting directory
+    if start_dir is None:
+        d = os.getcwd()
+    else:
+        d = os.path.abspath(start_dir)
+    # Check if 'project' is actually a path
+    project = os.path.join(d,project_id)
+    logger.debug("%s: checking full path" % project)
+    if os.path.exists(project):
+        return AnalysisProject(project)
+    # Assume it's a run/project/sample specification
+    run,project,sample = split_sample_reference(project_id)
+    # Locate the run
+    run = locate_run(run,start_dir=start_dir,ascend=ascend)
+    if not run:
+        return None
+    # Look for the project
+    try:
+        for p in AnalysisDir(run).projects:
+            if p.name == project:
+                return p
+    except Exception:
+        d = os.path.join(run,project)
+        if os.path.exists(d):
+            return AnalysisProject(d)
+    return None
 
 def copy_analysis_project(project,fastq_dir=None):
     """

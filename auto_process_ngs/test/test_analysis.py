@@ -1354,6 +1354,296 @@ class TestSplitSampleNameFunction(unittest.TestCase):
         self.assertEqual(split_sample_name("PJB0001"),["PJB",1])
         self.assertEqual(split_sample_name("PJB_1-10"),["PJB_",1,"-",10])
 
+class TestSplitSampleReference(unittest.TestCase):
+    """
+    Tests for the 'split_sample_reference' function
+    """
+    def test_split_sample_reference(self):
+        """
+        split_sample_reference: check references are split correctly
+        """
+        self.assertEqual(
+            split_sample_reference("NEXTSEQ_201029#121"),
+            ("NEXTSEQ_201029#121",None,None))
+        self.assertEqual(
+            split_sample_reference("NEXTSEQ_201029#121:PJB"),
+            ("NEXTSEQ_201029#121","PJB",None))
+        self.assertEqual(
+            split_sample_reference("NEXTSEQ_201029#121:PJB/PJB_GEX"),
+            ("NEXTSEQ_201029#121","PJB","PJB_GEX"))
+        self.assertEqual(
+            split_sample_reference("/data/201029_NB00122_000121_AJHJXXX:PJB/PJB_GEX"),
+            ("/data/201029_NB00122_000121_AJHJXXX","PJB","PJB_GEX"))
+        self.assertEqual(
+            split_sample_reference(":PJB"),
+            (None,"PJB",None))
+        self.assertEqual(
+            split_sample_reference(":PJB/PJB_GEX"),
+            (None,"PJB","PJB_GEX"))
+        self.assertEqual(
+            split_sample_reference("PJB/PJB_GEX"),
+            (None,"PJB","PJB_GEX"))
+        self.assertEqual(
+            split_sample_reference("/PJB_GEX"),
+            (None,None,"PJB_GEX"))
+        self.assertEqual(
+            split_sample_reference("PJB_GEX"),
+            (None,None,"PJB_GEX"))
+
+class TestMatchRunId(unittest.TestCase):
+    """
+    Tests for the 'match_run_id' function
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestMatchRunId')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_match_run_id(self):
+        """
+        match_run_id: check that different specifications match run
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.dirn)
+        mockdir.create()
+        run_dir = mockdir.dirn
+        # Run is a full path
+        self.assertTrue(
+            match_run_id(
+                os.path.join(
+                    self.dirn,
+                    "201029_SN00879_0087_000000000-AGEW9_analysis"),run_dir))
+        # Run is a name
+        self.assertTrue(
+            match_run_id("201029_SN00879_0087_000000000-AGEW9_analysis",
+                         run_dir))
+        # Run is a sequencing run name
+        self.assertTrue(
+            match_run_id("201029_SN00879_0087_000000000-AGEW9",run_dir))
+        # Run is a reference ID
+        self.assertTrue(
+            match_run_id("HISEQ_201029#87",run_dir))
+        # Run doesn't match
+        self.assertFalse(
+            match_run_id("UNKNOWN_201029#87",run_dir))
+
+class TestLocateRun(unittest.TestCase):
+    """
+    Tests for the 'locate_run' function
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestLocateRun')
+        self.topdir = os.path.join(self.dirn,"analysis")
+        os.mkdir(self.topdir)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_locate_run(self):
+        """
+        locate_run: find matching run from different specifications
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.topdir)
+        mockdir.create()
+        run_dir = mockdir.dirn
+        # Run is a full path
+        self.assertEqual(run_dir,
+                         locate_run(os.path.join(
+                             self.topdir,
+                             "201029_SN00879_0087_000000000-AGEW9_analysis"),
+                                    start_dir=self.dirn))
+        # Run is a name
+        self.assertEqual(run_dir,
+                         locate_run(
+                             "201029_SN00879_0087_000000000-AGEW9_analysis",
+                             start_dir=self.dirn))
+        # Run is a sequencing run name
+        self.assertEqual(run_dir,
+                         locate_run("201029_SN00879_0087_000000000-AGEW9",
+                                    start_dir=self.dirn))
+        # Run is a reference ID
+        self.assertEqual(run_dir,
+                         locate_run("HISEQ_201029#87",start_dir=self.dirn))
+        # Start from run directory
+        self.assertEqual(run_dir,
+                         locate_run(os.path.join(
+                             self.topdir,
+                             "201029_SN00879_0087_000000000-AGEW9_analysis"),
+                                    start_dir=run_dir))
+        self.assertEqual(run_dir,
+                         locate_run(
+                             "201029_SN00879_0087_000000000-AGEW9_analysis",
+                             start_dir=run_dir))
+        self.assertEqual(run_dir,
+                         locate_run("201029_SN00879_0087_000000000-AGEW9",
+                                    start_dir=run_dir))
+        self.assertEqual(run_dir,
+                         locate_run("HISEQ_201029#87",start_dir=run_dir))
+        # Run doesn't exist
+        self.assertEqual(None,locate_run("UNKNOWN",start_dir=self.dirn))
+
+    def test_locate_run_ascend(self):
+        """
+        locate_run: ascend directory structure when searching
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.topdir)
+        mockdir.create()
+        run_dir = mockdir.dirn
+        mockdir2 = MockAnalysisDirFactory.bcl2fastq2(
+            '201017_SN00879_0086_000000000-BHWXX',
+            'hiseq',
+            metadata={ 'run_number': 86, },
+            top_dir=self.topdir)
+        mockdir2.create()
+        # Ascend from project in second run to locate first run
+        # Run is an analysis directory name
+        self.assertEqual(run_dir,
+                         locate_run(
+                             "201029_SN00879_0087_000000000-AGEW9_analysis",
+                             start_dir=os.path.join(mockdir2.dirn,"AB"),
+                             ascend=True))
+        # Run is a sequencing run name
+        self.assertEqual(run_dir,
+                         locate_run(
+                             "201029_SN00879_0087_000000000-AGEW9",
+                             start_dir=os.path.join(mockdir2.dirn,"AB"),
+                             ascend=True))
+        # Run is a reference ID
+        self.assertEqual(run_dir,
+                         locate_run(
+                             "HISEQ_201029#87",
+                             start_dir=os.path.join(mockdir2.dirn,"AB"),
+                             ascend=True))
+        # Run doesn't exist
+        self.assertEqual(None,
+                         locate_run(
+                             "UNKNOWN",
+                             start_dir=os.path.join(mockdir2.dirn,"AB"),
+                             ascend=True))
+
+class TestLocateProject(unittest.TestCase):
+    """
+    Tests for the 'locate_project' function
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestLocateProject')
+        self.topdir = os.path.join(self.dirn,"analysis")
+        os.mkdir(self.topdir)
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_locate_project(self):
+        """
+        locate_project: find matching project from different specifications
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.topdir)
+        mockdir.create()
+        project_dir = os.path.join(mockdir.dirn,"AB")
+        # Project supplied as a full path
+        self.assertEqual(project_dir,
+                         locate_project(os.path.join(
+                             self.topdir,
+                             "201029_SN00879_0087_000000000-AGEW9_analysis",
+                             "AB"),
+                                        start_dir=self.dirn).dirn)
+        # Project specification where run is a full path
+        self.assertEqual(project_dir,
+                         locate_project(os.path.join(
+                             self.topdir,
+                             "201029_SN00879_0087_000000000-AGEW9_analysis:AB"),
+                             start_dir=self.dirn).dirn)
+        # Project specification where run is a name
+        self.assertEqual(project_dir,
+                         locate_project(
+                             "201029_SN00879_0087_000000000-AGEW9_analysis:AB",
+                             start_dir=self.dirn).dirn)
+        # Project specification where run is a sequencing run name
+        self.assertEqual(project_dir,
+                         locate_project(
+                             "201029_SN00879_0087_000000000-AGEW9:AB",
+                             start_dir=self.dirn).dirn)
+        # Project specification where run is a reference ID
+        self.assertEqual(project_dir,
+                         locate_project("HISEQ_201029#87:AB",
+                                        start_dir=self.dirn).dirn)
+        # Project specification also specifies a sample
+        self.assertEqual(project_dir,
+                         locate_project("HISEQ_201029#87:AB/AB1",
+                                        start_dir=self.dirn).dirn)
+        # Project doesn't exist
+        self.assertEqual(None,locate_run("UNKNOWN:AB",start_dir=self.dirn))
+
+    def test_locate_project_ascend(self):
+        """
+        locate_project: ascend directory structure when searching
+        """
+        mockdir = MockAnalysisDirFactory.bcl2fastq2(
+            '201029_SN00879_0087_000000000-AGEW9',
+            'hiseq',
+            metadata={ 'run_number': 87, },
+            top_dir=self.topdir)
+        mockdir.create()
+        project_dir = os.path.join(mockdir.dirn,"AB")
+        mockdir2 = MockAnalysisDirFactory.bcl2fastq2(
+            '201017_SN00879_0086_000000000-BHWXX',
+            'hiseq',
+            metadata={ 'run_number': 86, },
+            top_dir=self.topdir)
+        mockdir2.create()
+        # Start from different project in same run
+        self.assertEqual(
+            project_dir,
+            locate_project("HISEQ_201029#87:AB",
+                           start_dir=os.path.join(mockdir.dirn,"CDE"),
+                           ascend=True).dirn)
+        # Start from different project in different run
+        self.assertEqual(
+            project_dir,
+            locate_project("HISEQ_201029#87:AB",
+                           start_dir=os.path.join(mockdir2.dirn,"AB"),
+                           ascend=True).dirn)
+
+    def test_locate_project_not_in_analysis_dir(self):
+        """
+        locate_project: find project not inside an analysis directory
+        """
+        p = MockAnalysisProject("PJB",("PJB1_S1_R1_001.fastq.gz",
+                                       "PJB1_S1_R2_001.fastq.gz",
+                                       "PJB2_S2_R1_001.fastq.gz",
+                                       "PJB2_S2_R2_001.fastq.gz"),)
+        p.create(top_dir=self.dirn)
+        project_dir = os.path.join(self.dirn,"PJB")
+        # Project supplied as a full path
+        self.assertEqual(project_dir,
+                         locate_project(
+                             os.path.join(self.dirn,"PJB"),
+                             start_dir=self.dirn).dirn)
+        # Project supplied as a DIR:PROJECT
+        self.assertEqual(project_dir,
+                         locate_project(
+                             "%s:PJB" % self.dirn,
+                             start_dir=self.dirn).dirn)
+
 class TestCopyAnalysisProject(unittest.TestCase):
     """
     Tests for the 'copy_analysis_project' function
