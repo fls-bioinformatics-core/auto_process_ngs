@@ -256,6 +256,9 @@ class MetadataDict(bcf_utils.AttributeDictionary):
                 null_items.append(key)
         return null_items
 
+    def __len__(self):
+        return len([k for k in self.__key_order if self[k] is not None])
+
 class AnalysisDirParameters(MetadataDict):
     """Class for storing parameters in an analysis directory
 

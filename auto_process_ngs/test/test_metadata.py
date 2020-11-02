@@ -238,6 +238,24 @@ class TestMetadataDict(unittest.TestCase):
                           strict=False,
                           fail_on_error=True)
 
+    def test_len(self):
+        """
+        Metadata: check 'len' functionality
+        """
+        # Empty metadata class
+        metadata = MetadataDict(
+            attributes={
+                'salutation':'salutation',
+                'valediction':'valediction'
+            })
+        self.assertEqual(len(metadata),0)
+        # Set one item
+        metadata['salutation'] = "hello"
+        self.assertEqual(len(metadata),1)
+        # Set two items
+        metadata['valediction'] = "goodbye"
+        self.assertEqual(len(metadata),2)
+
 class TestAnalysisDirParameters(unittest.TestCase):
     """Tests for the AnalysisDirParameters class
     """
