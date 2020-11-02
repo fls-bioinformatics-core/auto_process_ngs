@@ -13,12 +13,15 @@ Provides the following functions:
 - fastq_strand_output: get name for fastq_strand.py output
 - cellranger_count_output: get names for cellranger count output
 - cellranger_atac_count_output: get names for cellranger-atac count output
+- cellranger_arc_count_output: get names for cellranger-arc count output
 - check_illumina_qc_outputs: fetch Fastqs without illumina_qc.sh outputs
 - check_fastq_strand_outputs: fetch Fastqs without fastq_strand.py outputs
 - check_cellranger_count_outputs: fetch sample names without cellranger
   count outputs
 - check_cellranger_atac_count_outputs: fetch sample names without
   cellranger-atac count outputs
+- check_cellranger_arc_count_outputs: fetch sample names without
+  cellranger-arc count outputs
 - expected_outputs: return expected QC outputs for a project
 """
 
@@ -144,6 +147,42 @@ def cellranger_atac_count_output(project,sample_name=None):
     Generate list of 'cellranger-atac count' outputs
 
     Given an AnalysisProject, the outputs from 'cellranger-atac
+    count' will look like:
+
+    - cellranger_count/{SAMPLE_n}/outs/summary.csv
+    - cellranger_count/{SAMPLE_n}/outs/web_summary.html
+
+    for each SAMPLE_n in the project.
+
+    If a sample name is supplied then outputs are limited
+    to those for that sample
+
+    Arguments:
+      project (AnalysisProject): project to generate
+        output names for
+      sample_name (str): sample to limit outputs to
+
+    Returns:
+       tuple: cellranger count outputs (without leading paths)
+    """
+    outputs = []
+    # Metrics and web summary files
+    for sample in project.samples:
+        if sample_name and sample_name != sample.name:
+            continue
+        sample_count_dir = os.path.join("cellranger_count",
+                                        sample.name)
+        for f in ("summary.csv",
+                  "web_summary.html"):
+            outputs.append(os.path.join(sample_count_dir,
+                                        "outs",f))
+    return tuple(outputs)
+
+def cellranger_arc_count_output(project,sample_name=None):
+    """
+    Generate list of 'cellranger-arc count' outputs
+
+    Given an AnalysisProject, the outputs from 'cellranger-arc
     count' will look like:
 
     - cellranger_count/{SAMPLE_n}/outs/summary.csv
@@ -352,6 +391,38 @@ def check_cellranger_atac_count_outputs(project,qc_dir=None):
                 samples.add(sample.name)
     return sorted(list(samples))
 
+def check_cellranger_arc_count_outputs(project,qc_dir=None):
+    """
+    Return samples missing QC outputs from 'cellranger-arc count'
+
+    Returns a list of the samples from a project for which
+    one or more associated outputs from `cellranger-arc count`
+    don't exist in the specified QC directory.
+
+    Arguments:
+      project (AnalysisProject): project to check the
+        QC outputs for
+      qc_dir (str): path to QC directory (if not the default
+        QC directory for the project)
+
+    Returns:
+      List: list of sample names with missing outputs
+    """
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    qc_dir = os.path.abspath(qc_dir)
+    samples = set()
+    for sample in project.samples:
+        if not os.path.exists(os.path.join(qc_dir,
+                                           "libraries.%s.csv"
+                                           % sample.name)):
+            # Skip if there is no libraries.csv for the sample
+            continue
+        for output in cellranger_arc_count_output(project,sample.name):
+            if not os.path.exists(os.path.join(qc_dir,output)):
+                samples.add(sample.name)
+    return sorted(list(samples))
+
 def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                      cellranger_refdata=None,qc_protocol=None):
     """
@@ -434,11 +505,24 @@ def expected_outputs(project,qc_dir,fastq_strand_conf=None,
                                       fastq_strand_output(fq_group[0]))
             outputs.add(output)
     # Cellranger count output
-    if qc_protocol in ('10x_scRNAseq','10x_snRNAseq',) and \
-       cellranger_refdata is not None:
-        for output in cellranger_count_output(project):
-            outputs.add(os.path.join(qc_dir,output))
-    elif qc_protocol == '10x_scATAC':
-        for output in cellranger_atac_count_output(project):
-            outputs.add(os.path.join(qc_dir,output))
+    if cellranger_refdata is not None:
+        if qc_protocol in ('10x_scRNAseq','10x_snRNAseq',):
+            for output in cellranger_count_output(project):
+                outputs.add(os.path.join(qc_dir,output))
+        elif qc_protocol == '10x_scATAC':
+            for output in cellranger_atac_count_output(project):
+                outputs.add(os.path.join(qc_dir,output))
+        elif qc_protocol in ('10x_Multiome_ATAC','10x_Multiome_GEX',):
+            # Only expect single library analysis output for 10x
+            # single cell multiome data if there is a
+            # 'libraries.<SAMPLE>.csv' file linking GEX and ATAC
+            # datasets
+            for sample in project.samples:
+                if os.path.exists(os.path.join(qc_dir,
+                                               "libraries.%s.csv"
+                                               % sample.name)):
+                    for output in cellranger_arc_count_output(
+                            project,
+                            sample_name=sample.name):
+                        outputs.add(os.path.join(qc_dir,output))
     return sorted(list(outputs))
