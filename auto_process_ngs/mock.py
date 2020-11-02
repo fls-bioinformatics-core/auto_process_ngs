@@ -783,7 +783,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         if cellranger == 'cellranger':
             cellranger_output_files = ("web_summary.html",
                                        "metrics_summary.csv")
-        elif cellranger == 'cellranger-atac':
+        elif cellranger in ('cellranger-atac',
+                            'cellranger-arc',):
             cellranger_output_files = ("web_summary.html",
                                        "summary.csv")
         for sample in self._project.samples:
@@ -1526,6 +1527,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             count.add_argument("--chemistry",action="store")
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
+        elif self._package_name == "cellranger-arc":
+            count.add_argument("--reference",action="store")
+            count.add_argument("--libraries",action="store")
         count.add_argument("--jobmode",action="store")
         count.add_argument("--localcores",action="store")
         count.add_argument("--localmem",action="store")
@@ -1627,6 +1631,19 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             ###############
             # count command
             ###############
+            missing_args = []
+            if self._package_name == "cellranger-arc":
+                if args.reference is None:
+                    missing_args.append("--reference <PATH>")
+                if args.libraries is None:
+                    missing_args.append("--libraries <CSV>")
+            if missing_args:
+                sys.stderr.write("error: The following required arguments were not provided:\n")
+                for missing_arg in missing_args:
+                    sys.stderr.write("    %s\n" % missing_arg)
+                sys.stderr.write("\nUSAGE:\n    cellranger-arc count --id <ID> --reference <PATH> --libraries <CSV> --jobmode <MODE>\n\nFor more information try --help\n")
+                sys.exit(1)
+            # Build outputs
             top_dir = str(args.id)
             os.mkdir(top_dir)
             # Outs
@@ -1636,7 +1653,8 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(mock10xdata.METRICS_SUMMARY)
-            elif self._package_name == "cellranger-atac":
+            elif self._package_name in ("cellranger-atac",
+                                        "cellranger-arc",):
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
                     fp.write(mock10xdata.ATAC_SUMMARY)
