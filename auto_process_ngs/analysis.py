@@ -207,32 +207,39 @@ class AnalysisDir(object):
         self.undetermined = None
         # Metadata
         self.metadata = AnalysisDirMetadata()
-        try:
-            metadata_file = os.path.join(self._analysis_dir,
-                                         "metadata.info")
-            self.metadata.load(metadata_file)
-        except Exception as ex:
-            logger.warning("Failed to load metadata file %s: %s" %
-                           (metadata_file,ex))
-            logger.warning("Attempting to load parameter file")
+        metadata_file = os.path.join(self._analysis_dir,
+                                     "metadata.info")
+        if os.path.exists(metadata_file):
             try:
-                params = AnalysisDirParameters()
-                parameter_file = os.path.join(self._analysis_dir,
-                                         "auto_process.info")
-                params.load(parameter_file,strict=False)
+                self.metadata.load(metadata_file)
+            except Exception as ex:
+                logger.debug("Failed to load metadata from %s: %s" %
+                             (metadata_file,ex))
+        if not self.metadata:
+            # No metadata loaded, try parameter file instead
+            logger.debug("Attempting to load parameter file")
+            parameter_file = os.path.join(self._analysis_dir,
+                                          "auto_process.info")
+            params = AnalysisDirParameters()
+            if os.path.exists(parameter_file):
+                try:
+                    params.load(parameter_file,strict=False)
+                except Exception as ex:
+                    logger.warning("Failed to load parameters from %s: %s"
+                                   % (parameter_file,ex))
+            if params:
                 # Attempt to acquire values from parameters
                 for param in ('platform','run_number','source','assay'):
                     if param not in params:
-                        print("-- %s: missing" % param)
+                        logger.debug("-- %s: missing" % param)
                         continue
-                    print("-- %s: setting to '%s'" % (param,
-                                                      params[param]))
+                    logger.debug("-- %s: setting to '%s'" % (param,
+                                                             params[param]))
                     self.metadata[param] = params[param]
-            except Exception as ex:
-                # No parameter file either
-                logger.warning("Failed to load parameters: %s" % ex)
-                logger.warning("Perhaps this is not an auto_process project?")
-                raise ex
+            else:
+                # No metadata or parameter data loaded
+                raise Exception("Failed to load parameters: %s is not an "
+                                "analysis directory?" % self._analysis_dir)
         # Projects metadata
         try:
             self.projects_metadata = ProjectMetadataFile(
