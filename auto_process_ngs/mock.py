@@ -1653,11 +1653,14 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(mock10xdata.METRICS_SUMMARY)
-            elif self._package_name in ("cellranger-atac",
-                                        "cellranger-arc",):
+            elif self._package_name in "cellranger-atac":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
                     fp.write(mock10xdata.ATAC_SUMMARY)
+            elif self._package_name == "cellranger-arc":
+                summary_file = os.path.join(outs_dir,"summary.csv")
+                with open(summary_file,'w') as fp:
+                    fp.write(mock10xdata.MULTIOME_SUMMARY)
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")
