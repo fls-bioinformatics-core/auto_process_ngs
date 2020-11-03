@@ -345,6 +345,7 @@ for individual tasks with the Fastq generation pipeline:
 * ``bcl2fastq``
 * ``cellranger_mkfastq``
 * ``cellranger_atac_mkfastq``
+* ``cellranger_arc_mkfastq``
 
 If any of these are defined then they will be loaded for the relevant
 tasks in the Fastq generation pipeline.

@@ -235,7 +235,7 @@ This will generate the Fastqs in the specified output directory
    behaviour of ``cellranger-atac mkfastqs``, for example setting the
    jobmode (see :ref:`10xgenomics-additional-options`).
 
-.. _make_fastqs-10x_atac-protocol:
+.. _make_fastqs-10x_multiome-protocol:
 
 10xGenomics single cell Multiome ATAC + GEX data (``--protocol=10x_multiome``)
 ******************************************************************************
@@ -253,6 +253,9 @@ which fetches the data and runs ``cellranger-atac mkfastq``.
 This will generate the Fastqs in the specified output directory
 (e.g. ``bcl2fastq``) along with an HTML report derived from the
 ``cellranger-arc`` JSON QC summary file, statistics for the Fastqs.
+
+By default adapter trimming is automatically disabled by removing
+the adapter sequences in the sample sheet.
 
 .. note::
 

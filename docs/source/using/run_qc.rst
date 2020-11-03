@@ -63,8 +63,16 @@ In addition for 10xGenomics scRNA-seq, snRNA-seq and scATAC data:
  * Single library analysis is run using the ``count`` command of
    either `cellranger`_ or `cellranger_atac`_ (as appropriate)
 
+.. note::
+
+   If a ``10x_multiome_libraries.info`` file is present then the
+   single library will be run for single cell multiome data via
+   the ``count`` command of `cellranger_arc`_ (see
+   :ref:`10x_multiome_libraries_info`).
+
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger_atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
+.. _cellranger_arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
 
 `multiQC`_ is also run to summarise the QC from all the Fastqs in the
 project.
