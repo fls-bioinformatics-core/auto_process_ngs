@@ -551,8 +551,10 @@ class MakeFastqs(Pipeline):
                                     analyse_barcodes=False)
             elif protocol == '10x_multiome':
                 # 10xGenomics multiome
-                # Turn off barcode analysis
+                # Turn off barcode analysis and
+                # disable adapter trimming
                 self._update_subset(s,
+                                    trim_adapters=False,
                                     analyse_barcodes=False)
             
         # Finally update parameters for user-defined
