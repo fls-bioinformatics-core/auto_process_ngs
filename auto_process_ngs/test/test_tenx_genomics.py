@@ -15,6 +15,7 @@ from auto_process_ngs.mock import MockCellrangerExe
 from auto_process_ngs.mock import MockAnalysisProject
 from auto_process_ngs.mock10xdata import METRICS_SUMMARY
 from auto_process_ngs.mock10xdata import ATAC_SUMMARY
+from auto_process_ngs.mock10xdata import MULTIOME_SUMMARY
 from auto_process_ngs.tenx_genomics_utils import *
 
 # Set to False to keep test output dirs
@@ -441,6 +442,28 @@ class TestAtacSummary(unittest.TestCase):
         self.assertEqual(s.cells_detected,6748)
         self.assertEqual(s.annotated_cells,5682)
 
+class TestMultiomeSummary(unittest.TestCase):
+    """
+    Tests for the 'MultiomeSummary' class
+    """
+    def setUp(self):
+        # Create a temp working dir
+        self.wd = tempfile.mkdtemp(suffix='TestMultiomeSummary')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        if REMOVE_TEST_OUTPUTS:
+            shutil.rmtree(self.wd)
+
+    def test_atac_summary_multiome(self):
+        """MultiomeSummary: check estimated number of cells are extracted
+        """
+        summary_csv = os.path.join(self.wd,"summary.csv")
+        with open(summary_csv,'w') as fp:
+            fp.write(MULTIOME_SUMMARY)
+        s = MultiomeSummary(summary_csv)
+        self.assertEqual(s.estimated_number_of_cells,744)
+
 class TestRunCellrangerMkfastq(unittest.TestCase):
     """
     Tests for the 'run_cellranger_mkfastq' function
@@ -738,6 +761,68 @@ class TestSetCellCountForProject(unittest.TestCase):
         self.assertEqual(AnalysisProject("PJB1",
                                          project_dir).info.number_of_cells,
                          5682)
+    def test_set_cell_count_for_multiome_atac_project(self):
+        """
+        set_cell_count_for_project: test for single cell multiome ATAC
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell Multiome",
+            "ATAC")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                            "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(MULTIOME_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         744)
+    def test_set_cell_count_for_multiome_gex_project(self):
+        """
+        set_cell_count_for_project: test for single cell multiome GEX
+        """
+        # Set up mock project
+        project_dir = self._make_mock_analysis_project(
+            "10xGenomics Single Cell Multiome",
+            "ATAC")
+        # Add metrics_summary.csv
+        counts_dir = os.path.join(project_dir,
+                                  "qc",
+                                  "cellranger_count",
+                                  "PJB1",
+                                  "outs")
+        mkdirs(counts_dir)
+        summary_file = os.path.join(counts_dir,
+                                            "summary.csv")
+        with open(summary_file,'w') as fp:
+            fp.write(MULTIOME_SUMMARY)
+        # Check initial cell count
+        print("Checking number of cells")
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         None)
+        # Update the cell counts
+        print("Updating number of cells")
+        set_cell_count_for_project(project_dir)
+        # Check updated cell count
+        self.assertEqual(AnalysisProject("PJB1",
+                                         project_dir).info.number_of_cells,
+                         744)
     def test_set_cell_count_project_missing_library_type(self):
         """
         set_cell_count_for_project: test for scRNA-seq when library not set
