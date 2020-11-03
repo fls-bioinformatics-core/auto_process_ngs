@@ -351,6 +351,7 @@ class QCPipeline(Pipeline):
                     qc_dir
                 )
                 self.add_task(make_cellranger_libraries,
+                              requires=(setup_qc_dirs,),
                               log_dir=log_dir)
                 check_cellranger_count_requires.append(
                     make_cellranger_libraries)
