@@ -944,6 +944,7 @@ class QCReport(Document):
         software_packages = ['bcl2fastq',
                              'cellranger',
                              'cellranger-atac',
+                             'cellranger-arc',
                              'spaceranger',
                              'fastqc',
                              'fastq_screen',
@@ -951,7 +952,8 @@ class QCReport(Document):
         software_names = {
             'bcl2fastq': 'Bcl2fastq',
             'cellranger': 'Cellranger',
-            'cellranger-atac': 'Cellranger-atac',
+            'cellranger-atac': 'Cellranger ATAC',
+            'cellranger-arc': 'Cellranger ARC',
             'spaceranger': 'Spaceranger',
             'fastqc': 'FastQC',
             'fastq_screen': 'FastqScreen',

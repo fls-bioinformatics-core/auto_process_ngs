@@ -792,6 +792,10 @@ poll_interval = 0.5
                          settings=self.settings)
         # Add processing and cellranger QC reports
         UpdateAnalysisDir(ap).add_processing_report()
+        UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("cellranger-arc",
+                                                        lanes="12")
+        UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("spaceranger",
+                                                        lanes="3")
         UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("cellranger-atac",
                                                         lanes="45")
         UpdateAnalysisDir(ap).add_10x_mkfastq_qc_output("cellranger",
@@ -804,6 +808,8 @@ poll_interval = 0.5
         # Check outputs
         outputs = ["index.html",
                    "processing_qc.html",
+                   "cellranger-arc_qc_summary_12.html",
+                   "spaceranger_qc_summary_3.html",
                    "cellranger-atac_qc_summary_45.html",
                    "cellranger_qc_summary_78.html"]
         # Do checks

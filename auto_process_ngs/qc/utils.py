@@ -71,6 +71,14 @@ def determine_qc_protocol(project):
     if project.info.single_cell_platform == "10xGenomics Visium":
         # 10xGenomics Visium spatial transcriptomics
         protocol = "10x_Visium"
+    # Multiome ATAC+GEX
+    if project.info.single_cell_platform == "10xGenomics Single Cell Multiome":
+        if library_type == "ATAC":
+            # 10xGenomics single cell Multiome ATAC
+            protocol = "10x_Multiome_ATAC"
+        elif library_type == "GEX":
+            # 10xGenomics single cell Multiome gene expression
+            protocol = "10x_Multiome_GEX"
     return protocol
 
 def verify_qc(project,qc_dir=None,fastq_dir=None,qc_protocol=None,

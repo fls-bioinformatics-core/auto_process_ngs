@@ -783,7 +783,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         if cellranger == 'cellranger':
             cellranger_output_files = ("web_summary.html",
                                        "metrics_summary.csv")
-        elif cellranger == 'cellranger-atac':
+        elif cellranger in ('cellranger-atac',
+                            'cellranger-arc',):
             cellranger_output_files = ("web_summary.html",
                                        "summary.csv")
         for sample in self._project.samples:
@@ -1259,7 +1260,8 @@ class Mock10xPackageExe(object):
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
-               reads=None,version=None):
+               reads=None,multiome_data=None,
+               version=None):
         """
         Create a "mock" 10xGenomics package executable
 
@@ -1281,6 +1283,8 @@ class Mock10xPackageExe(object):
             matches this value (not implemented)
           reads (list): list of 'reads' that
             will be created
+          multiome_data (str): either 'GEX' or
+            'ATAC' (when mocking 'cellranger-arc')
           version (str): version of package to
             report
         """
@@ -1297,6 +1301,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            platform=%s,
                            assert_bases_mask=%s,
                            reads=%s,
+                           multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
             """ % (exit_code,
                    ("\"%s\"" % platform
@@ -1306,6 +1311,9 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                     if assert_bases_mask is not None
                     else None),
                    reads,
+                   ("\"%s\"" % multiome_data
+                    if multiome_data is not None
+                    else None),
                    ("\"%s\"" % version
                     if version is not None
                     else None)))
@@ -1320,6 +1328,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  platform=None,
                  assert_bases_mask=None,
                  reads=None,
+                 multiome_data=None,
                  version=None):
         """
         Internal: configure the mock 10xGenomics package
@@ -1331,6 +1340,8 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                 self._version = '3.1.0'
             elif self._package_name == 'cellranger-atac':
                 self._version = '1.2.0'
+            elif self._package_name == 'cellranger-arc':
+                self._version = '1.0.0'
             elif self._package_name == 'spaceranger':
                 self._version = '1.1.0'
         else:
@@ -1338,12 +1349,20 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        self._multiome_data = str(multiome_data).upper()
+        if self._package_name == 'cellranger-arc':
+            assert self._multiome_data is not None
         if reads is None:
             if self._package_name in ('cellranger',
                                       'spaceranger',):
                 self._reads = ('R1','R2','I1',)
             elif self._package_name == 'cellranger-atac':
-                self._reads = ('R1','R2','I1','I2',)
+                self._reads = ('R1','R2','R3','I1',)
+            elif self._package_name == 'cellranger-arc':
+                if self._multiome_data == 'GEX':
+                    self._reads = ('R1','R2','I1',)
+                elif self._multiome_data == 'ATAC':
+                    self._reads = ('R1','R2','R3','I1',)
         else:
             self._reads = tuple(reads)
 
@@ -1468,6 +1487,9 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,self._package_name,cmd,self._version)
+        elif self._package_name in ('cellranger-arc',):
+            header = "%s %s-%s" % (self._package_name,self._package_name,
+                                   self._version)
         elif self._package_name in ('spaceranger,'):
             header = "%s %s" % (self._package_name,self._version)
         # Handle version request or no args
@@ -1505,6 +1527,9 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             count.add_argument("--chemistry",action="store")
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
+        elif self._package_name == "cellranger-arc":
+            count.add_argument("--reference",action="store")
+            count.add_argument("--libraries",action="store")
         count.add_argument("--jobmode",action="store")
         count.add_argument("--localcores",action="store")
         count.add_argument("--localmem",action="store")
@@ -1539,6 +1564,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             if self._package_name in ('cellranger',
                                       'cellranger-atac',):
                 force_sample_dir = True
+            elif self._package_name == 'cellranger-arc':
+                if self._multiome_data == 'GEX':
+                    force_sample_dir = False
+                elif self._multiome_data == 'ATAC':
+                    force_sample_dir = True
             elif self._package_name == 'spaceranger':
                 force_sample_dir = False
             tmpname = "tmp.%s" % uuid.uuid4()
@@ -1601,6 +1631,19 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
             ###############
             # count command
             ###############
+            missing_args = []
+            if self._package_name == "cellranger-arc":
+                if args.reference is None:
+                    missing_args.append("--reference <PATH>")
+                if args.libraries is None:
+                    missing_args.append("--libraries <CSV>")
+            if missing_args:
+                sys.stderr.write("error: The following required arguments were not provided:\n")
+                for missing_arg in missing_args:
+                    sys.stderr.write("    %s\n" % missing_arg)
+                sys.stderr.write("\nUSAGE:\n    cellranger-arc count --id <ID> --reference <PATH> --libraries <CSV> --jobmode <MODE>\n\nFor more information try --help\n")
+                sys.exit(1)
+            # Build outputs
             top_dir = str(args.id)
             os.mkdir(top_dir)
             # Outs
@@ -1610,10 +1653,14 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
                 metrics_file = os.path.join(outs_dir,"metrics_summary.csv")
                 with open(metrics_file,'w') as fp:
                     fp.write(mock10xdata.METRICS_SUMMARY)
-            elif self._package_name == "cellranger-atac":
+            elif self._package_name in "cellranger-atac":
                 summary_file = os.path.join(outs_dir,"summary.csv")
                 with open(summary_file,'w') as fp:
                     fp.write(mock10xdata.ATAC_SUMMARY)
+            elif self._package_name == "cellranger-arc":
+                summary_file = os.path.join(outs_dir,"summary.csv")
+                with open(summary_file,'w') as fp:
+                    fp.write(mock10xdata.MULTIOME_SUMMARY)
             web_summary_file = os.path.join(outs_dir,"web_summary.html")
             with open(web_summary_file,'w') as fp:
                 fp.write("PLACEHOLDER FOR WEB_SUMMARY.HTML")

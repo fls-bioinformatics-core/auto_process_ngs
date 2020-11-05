@@ -755,6 +755,260 @@ class TestQCPipeline(unittest.TestCase):
                                                         "PJB",f)),
                             "Missing %s" % f)
 
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_atac(self):
+        """QCPipeline: single cell multiome ATAC QC run
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome ATAC analysis project
+        p = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R2_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R3_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R1_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R2_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R3_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'ATAC' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human': '/data/hg38/cellranger' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_ATAC.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_ATAC",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_gex(self):
+        """QCPipeline: single cell multiome GEX QC run
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome GEX analysis project
+        p = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                           "PJB1_GEX_S1_R2_001.fastq.gz",
+                                           "PJB2_GEX_S2_R1_001.fastq.gz",
+                                           "PJB2_GEX_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'GEX' })
+        p.create(top_dir=self.wd)
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human': '/data/hg38/cellranger' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_GEX.zip",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_GEX",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_atac_with_cellranger_arc_count(self):
+        """QCPipeline: single cell multiome ATAC QC run with 'cellranger-arc count'
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome ATAC analysis project
+        p = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R2_001.fastq.gz",
+                                            "PJB1_ATAC_S1_R3_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R1_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R2_001.fastq.gz",
+                                            "PJB2_ATAC_S2_R3_001.fastq.gz"),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'ATAC' })
+        p.create(top_dir=self.wd)
+        # Make mock multiome GEX analysis project
+        p2 = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                            "PJB1_GEX_S1_R2_001.fastq.gz",
+                                            "PJB2_GEX_S2_R1_001.fastq.gz",
+                                            "PJB2_GEX_S2_R2_001.fastq.gz",),
+                                 metadata={ 'Organism': 'Human',
+                                            'Single cell platform':
+                                            '10xGenomics Single Cell Multiome',
+                                            'Library type': 'GEX' })
+        p2.create(top_dir=self.wd)
+        # Add the 10x_multiome_libraries.info file
+        with open(os.path.join(self.wd,
+                               "PJB_ATAC",
+                               "10x_multiome_libraries.info"),'wt') as fp:
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB1_ATAC",
+                sample2="PJB1_GEX",
+                working_dir=self.wd,
+                project="PJB_GEX"))
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB2_ATAC",
+                sample2="PJB2_GEX",
+                working_dir=self.wd,
+                project="PJB_GEX"))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_ATAC")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human': '/data/hg38/cellranger' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_ATAC.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/PJB1_ATAC/_cmdline",
+                  "qc/cellranger_count/PJB1_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/PJB1_ATAC/outs/summary.csv",
+                  "qc/cellranger_count/PJB2_ATAC/_cmdline",
+                  "qc/cellranger_count/PJB2_ATAC/outs/web_summary.html",
+                  "qc/cellranger_count/PJB2_ATAC/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/PJB1_ATAC/_cmdline",
+                  "cellranger_count/PJB1_ATAC/outs/web_summary.html",
+                  "cellranger_count/PJB1_ATAC/outs/summary.csv",
+                  "cellranger_count/PJB2_ATAC/_cmdline",
+                  "cellranger_count/PJB2_ATAC/outs/web_summary.html",
+                  "cellranger_count/PJB2_ATAC/outs/summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_ATAC",f)),
+                            "Missing %s" % f)
+
+    #@unittest.skip("Skipped")
+    def test_qcpipeline_multiome_gex_with_cellranger_arc_count(self):
+        """QCPipeline: single cell multiome GEX QC run with 'cellranger-arc count'
+        """
+        # Make mock illumina_qc.sh and multiqc
+        MockIlluminaQcSh.create(os.path.join(self.bin,
+                                             "illumina_qc.sh"))
+        MockMultiQC.create(os.path.join(self.bin,"multiqc"))
+        MockFastqStrandPy.create(os.path.join(self.bin,"fastq_strand.py"))
+        MockCellrangerExe.create(os.path.join(self.bin,"cellranger-arc"))
+        os.environ['PATH'] = "%s:%s" % (self.bin,
+                                        os.environ['PATH'])
+        # Make mock multiome GEX analysis project
+        p = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
+                                           "PJB1_GEX_S1_R2_001.fastq.gz",
+                                           "PJB2_GEX_S2_R1_001.fastq.gz",
+                                           "PJB2_GEX_S2_R2_001.fastq.gz",),
+                                metadata={ 'Organism': 'Human',
+                                           'Single cell platform':
+                                           '10xGenomics Single Cell Multiome',
+                                           'Library type': 'GEX' })
+        p.create(top_dir=self.wd)
+        # Make mock multiome ATAC analysis project
+        p2 = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
+                                             "PJB1_ATAC_S1_R2_001.fastq.gz",
+                                             "PJB1_ATAC_S1_R3_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R1_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R2_001.fastq.gz",
+                                             "PJB2_ATAC_S2_R3_001.fastq.gz"),
+                                 metadata={ 'Organism': 'Human',
+                                            'Single cell platform':
+                                            '10xGenomics Single Cell Multiome',
+                                            'Library type': 'ATAC' })
+        p2.create(top_dir=self.wd)
+        # Add the 10x_multiome_libraries.info file
+        with open(os.path.join(self.wd,
+                               "PJB_GEX",
+                               "10x_multiome_libraries.info"),'wt') as fp:
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB1_GEX",
+                sample2="PJB1_ATAC",
+                working_dir=self.wd,
+                project="PJB_ATAC"))
+            fp.write("{sample1}\t{working_dir}:{project}/{sample2}\n".format(
+                sample1="PJB2_GEX",
+                sample2="PJB2_ATAC",
+                working_dir=self.wd,
+                project="PJB_ATAC"))
+        # Set up and run the QC
+        runqc = QCPipeline()
+        runqc.add_project(AnalysisProject(os.path.join(self.wd,"PJB_GEX")),
+                          multiqc=True)
+        status = runqc.run(fastq_strand_indexes=
+                           { 'human': '/data/hg38/star_index' },
+                           cellranger_arc_references=
+                           { 'human': '/data/hg38/cellranger' },
+                           poll_interval=0.5,
+                           max_jobs=1,
+                           runners={ 'default': SimpleJobRunner(), })
+        # Check output and reports
+        self.assertEqual(status,0)
+        for f in ("qc",
+                  "qc_report.html",
+                  "qc_report.PJB_GEX.zip",
+                  "qc/cellranger_count",
+                  "qc/cellranger_count/PJB1_GEX/_cmdline",
+                  "qc/cellranger_count/PJB1_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/PJB1_GEX/outs/summary.csv",
+                  "qc/cellranger_count/PJB2_GEX/_cmdline",
+                  "qc/cellranger_count/PJB2_GEX/outs/web_summary.html",
+                  "qc/cellranger_count/PJB2_GEX/outs/summary.csv",
+                  "cellranger_count",
+                  "cellranger_count/PJB1_GEX/_cmdline",
+                  "cellranger_count/PJB1_GEX/outs/web_summary.html",
+                  "cellranger_count/PJB1_GEX/outs/summary.csv",
+                  "cellranger_count/PJB2_GEX/_cmdline",
+                  "cellranger_count/PJB2_GEX/outs/web_summary.html",
+                  "cellranger_count/PJB2_GEX/outs/summary.csv",
+                  "multiqc_report.html"):
+            self.assertTrue(os.path.exists(os.path.join(self.wd,
+                                                        "PJB_GEX",f)),
+                            "Missing %s" % f)
+
     def test_qcpipeline_with_10x_scRNAseq_no_project_metadata(self):
         """QCPipeline: single cell RNA-seq QC run with no project metadata
         """

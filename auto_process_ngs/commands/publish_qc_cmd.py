@@ -231,6 +231,7 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
     for filen in os.listdir(ap.analysis_dir):
         for pkg in ("cellranger",
                     "cellranger-atac",
+                    "cellranger-arc",
                     "spaceranger",):
             if filen.startswith("%s_qc_summary" % pkg) and \
                filen.endswith(".html"):
@@ -429,7 +430,11 @@ def publish_qc(ap,projects=None,location=None,ignore_missing_qc=False,
                 ap.metadata.cellranger_software)
         except ValueError:
             pass
-    for pkg in ("bcl2fastq","cellranger","cellranger-atac","spaceranger"):
+    for pkg in ("bcl2fastq",
+                "cellranger",
+                "cellranger-atac",
+                "cellranger-arc",
+                "spaceranger"):
         try:
             package_info = processing_software[pkg]
         except KeyError:

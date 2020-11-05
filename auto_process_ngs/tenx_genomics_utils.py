@@ -7,8 +7,8 @@
 """
 tenx_genomics_utils.py
 
-Utility classes and functions for processing the outputs from 10xGenomics's
-Chromium SC 3'v2 system:
+Utility classes and functions for processing the outputs from 10xGenomics
+platforms:
 
 - MetricSummary
 - AtacSummary
@@ -19,6 +19,7 @@ Chromium SC 3'v2 system:
 - spaceranger_info
 - make_qc_summary_html
 - build_fastq_path_dir
+- set_cell_count_for_project
 - run_cellranger_mkfastq
 - run_cellranger_count
 - run_cellranger_count_for_project
@@ -203,6 +204,35 @@ class AtacSummary(TabFile):
         Return the number of annotated cells
         """
         return self[0]['annotated_cells']
+
+class MultiomeSummary(TabFile):
+    """
+    Extract data from summary.csv file for multiome GEX-ATAC
+
+    Utility class for extracting data from a 'summary.csv'
+    file output from running 'cellranger-arc count'.
+
+    The file consists of two lines: the first is a
+    header line, the second consists of corresponding
+    data values.
+    """
+    def __init__(self,f):
+        """
+        Create a new MultiomeSummary instance
+
+        Arguments:
+          f (str): path to the 'summary.csv' file
+        """
+        TabFile.__init__(self,
+                         filen=f,
+                         first_line_is_header=True,
+                         delimiter=',')
+    @property
+    def estimated_number_of_cells(self):
+        """
+        Return the estimated number of cells
+        """
+        return self[0]['Estimated number of cells']
 
 #######################################################################
 # Functions
@@ -446,17 +476,34 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
     if qc_dir is None:
         qc_dir = project.qc_dir
     qc_dir = os.path.abspath(qc_dir)
+    # Determine which 10x pipeline was used
+    single_cell_platform = project.info.single_cell_platform
+    if single_cell_platform in ("10xGenomics Chromium 3'v2",
+                                "10xGenomics Chromium 3'v3",):
+        pipeline = "cellranger"
+    elif single_cell_platform == "10xGenomics Single Cell ATAC":
+        pipeline = "cellranger-atac"
+    elif single_cell_platform == "10xGenomics Single Cell Multiome":
+        pipeline = "cellranger-arc"
+    else:
+        raise NotImplementedError("Not implemented for platform '%s'"
+                                  % single_cell_platform)
     # Loop over samples and collect cell numbers for each
     number_of_cells = 0
     for sample in project.samples:
-        # Look for single cell/nuclei RNA-seq output
-        metrics_summary_csv = os.path.join(
-            qc_dir,
-            "cellranger_count",
-            sample.name,
-            "outs",
-            "metrics_summary.csv")
-        if os.path.exists(metrics_summary_csv):
+        outs_dir = os.path.join(qc_dir,
+                                "cellranger_count",
+                                sample.name,
+                                "outs")
+        if pipeline == "cellranger":
+            # Single cell/nuclei RNA-seq output
+            metrics_summary_csv = os.path.join(outs_dir,"metrics_summary.csv")
+            if not os.path.exists(metrics_summary_csv):
+                # Not found
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': missing file '%s'" %
+                                (sample.name,metrics_summary_csv))
+                return 1
             # Extract cell numbers
             try:
                 with open(metrics_summary_csv,'rt') as fp:
@@ -467,14 +514,16 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-        # Look for single cell ATAC-seq output
-        summary_csv = os.path.join(
-            qc_dir,
-            "cellranger_count",
-            sample.name,
-            "outs",
-            "summary.csv")
-        if os.path.exists(summary_csv):
+        elif pipeline == "cellranger-atac":
+            # Single cell ATAC-seq output
+            summary_csv = os.path.join(outs_dir,"summary.csv")
+            if not os.path.exists(summary_csv):
+                # Not found
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': missing file '%s'" %
+                                (sample.name,summary_csv))
+                return 1
+            # Extract cell numbers
             try:
                 number_of_cells += AtacSummary(summary_csv).annotated_cells
                 continue
@@ -482,11 +531,23 @@ def set_cell_count_for_project(project_dir,qc_dir=None):
                 logger.critical("Failed to add cell count for sample "
                                 "'%s': %s" % (sample.name,ex))
                 return 1
-        # Reaching this point means that no data was
-        # found - treat this as an error
-        logger.critical("No single library output found for sample "
-                        "'%s': unable to get cell count" % sample.name)
-        return 1
+        elif pipeline == "cellranger-arc":
+            # Single cell multiome output
+            summary_csv = os.path.join(outs_dir,"summary.csv")
+            if not os.path.exists(summary_csv):
+                # Not found
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': missing file '%s'" %
+                                (sample.name,summary_csv))
+                return 1
+            # Extract cell numbers
+            try:
+                number_of_cells += MultiomeSummary(summary_csv).estimated_number_of_cells
+                continue
+            except Exception as ex:
+                logger.critical("Failed to add cell count for sample "
+                                "'%s': %s" % (sample.name,ex))
+                return 1
     # Store in the project metadata
     project.info['number_of_cells'] = number_of_cells
     project.info.save()
@@ -538,14 +599,24 @@ def cellranger_info(path=None,name=None):
         version_cmd = Command(cellranger_path,'--version')
         output = version_cmd.subprocess_check_output()[1]
         for line in output.split('\n'):
-            if line.startswith(package_name):
+            if package_name in ('cellranger',
+                                'cellranger-atac',):
+                if line.startswith(package_name):
+                    # Extract version from line of the form
+                    # cellranger  (2.0.1)
+                    try:
+                        package_version = line.split('(')[-1].strip(')')
+                    except Exception as ex:
+                        logger.warning("Unable to get version from '%s': "
+                                       "%s" % (line,ex))
+            elif package_name == 'cellranger-arc':
                 # Extract version from line of the form
-                # cellranger  (2.0.1)
+                # cellranger-arc cellranger-arc-1.0.0
                 try:
-                    package_version = line.split('(')[-1].strip(')')
+                    package_version = line.split('-')[-1]
                 except Exception as ex:
-                    logger.warning("Unable to get version from '%s': %s" %
-                                   (line,ex))
+                    logger.warning("Unable to get version from '%s': "
+                                   "%s" % (line,ex))
     else:
         # No package supplied or located
         logger.warning("Unable to identify %s package from '%s'" %

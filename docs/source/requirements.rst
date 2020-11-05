@@ -34,6 +34,7 @@ Pipeline stage      Software packages  Notes
 make_fastqs         `bcl2fastq 2.17`_  2.17+ recommended
 make_fastqs         `cellranger`_      10xGenomics Chromium single-cell RNA-seq data only
 make_fastqs         `cellranger-atac`_ 10xGenomics Chromium single-cell ATAC-seq data only
+make_fastqs         `cellranger-arc`_  10xGenomics Multiome ATAC + GEX data
 make_fastqs         `spaceranger`_     10xGenomics Visium spatial RNA-seq data only
 run_qc              `fastqc`_
 run_qc              `fastq_screen`_
@@ -51,6 +52,7 @@ process_icell8      `bowtie2`_         Required by fastq_screen
 .. _bcl2fastq1.8.4: http://support.illumina.com/downloads/bcl2fastq_conversion_software_184.html
 .. _cellranger: https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/what-is-cell-ranger
 .. _cellranger-atac: https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/what-is-cell-ranger-atac
+.. _cellranger-arc: https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/what-is-cell-ranger-arc
 .. _spaceranger: https://support.10xgenomics.com/spatial-gene-expression/software/pipelines/latest/what-is-space-ranger
 .. _fastqc:  http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
 .. _fastq_screen: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/
@@ -112,12 +114,15 @@ defined in the ``fastq_strand_indexes`` section of the
 
 For 10xGenomics single cell data, the single library analysis
 requires appropriate compatible reference data for
-``cellranger[-atac] count``:
+``cellranger[-atac|-arc] count``:
 
 * **scRNA-seq data**: transcriptome reference data set
 * **snRNA-seq data**: "pre-mRNA" reference data set (which
   includes both intronic and exonic information)
-* **sc/snATAC-seq**: 
+* **sc/snATAC-seq**: Cell Ranger ATAC compatible genome
+  reference
+* **single cell multiome GEX+ATAC data**: ``cellranger-arc``
+  compatible reference package
 
 The reference data sets can be assigned to different organisms
 in the ``10xgenomics_transcriptomes``,
@@ -141,15 +146,24 @@ For example:
    human = /data/cellranger/refdata-cellranger-atac-GRCh38-1.0.1
    mouse = /data/cellranger/refdata-cellranger-atac-mm10-1.0.1
 
-Alternatively reference data sets can be specified at run-time
-using the ``--10x_transcriptome`` and ``--10x_premrna_reference``
-command line options of ``run_qc`` and the ``run_qc.py`` utility.
+   [10xgenomics_multiome_references]
+   human = /data/cellranger/refdata-cellranger-arc-GRCh38-2020-A
+   mouse = /data/cellranger/refdata-cellranger-arc-mm10-2020-A
 
-10xGenomics provide a number of reference data sets for scRNA-seq
-and ATAC-seq data, which can be downloaded via:
+.. note::
+
+   Alternatively reference data sets can be specified at run-time
+   for single cell and single nuclei RNA-seq using the
+   ``--10x_transcriptome`` and ``--10x_premrna_reference``
+   command line options respectively with the ``run_qc`` command
+   and the ``run_qc.py`` utility.
+
+10xGenomics provide a number of reference data sets for scRNA-seq,
+ATAC-seq and single cell multiome data, which can be downloaded via:
 
 * https://support.10xgenomics.com/single-cell-gene-expression/software/pipelines/latest/installation
 * https://support.10xgenomics.com/single-cell-atac/software/pipelines/latest/installation
+* https://support.10xgenomics.com/single-cell-multiome-atac-gex/software/pipelines/latest/installation
 
 There are also instructions for constructing reference data for
 novel organisms that are not supported by 10xGenomics.

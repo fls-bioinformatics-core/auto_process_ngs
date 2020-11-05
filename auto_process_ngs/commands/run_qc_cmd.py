@@ -176,6 +176,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
     cellranger_localcores = cellranger_settings.cellranger_localcores
     cellranger_localmem = cellranger_settings.cellranger_localmem
     cellranger_atac_references = ap.settings['10xgenomics_atac_genome_references']
+    cellranger_multiome_references = ap.settings['10xgenomics_multiome_references']
     # Run the QC
     status = runqc.run(nthreads=nthreads,
                        fastq_strand_indexes=
@@ -184,6 +185,7 @@ def run_qc(ap,projects=None,max_jobs=4,ungzip_fastqs=False,
                        cellranger_premrna_references=\
                        cellranger_premrna_references,
                        cellranger_atac_references=cellranger_atac_references,
+                       cellranger_arc_references=cellranger_multiome_references,
                        cellranger_chemistry=cellranger_chemistry,
                        cellranger_jobmode=cellranger_jobmode,
                        cellranger_maxjobs=max_jobs,
