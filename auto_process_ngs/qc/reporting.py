@@ -719,7 +719,7 @@ class QCReport(Document):
         Arguments:
           project (AnalysisProject): project to report QC for
           title (str): title for the report (defaults to
-            "QC report: <PROJECT_NAME")
+            "QC report: <PROJECT_NAME>")
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
