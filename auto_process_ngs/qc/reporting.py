@@ -352,6 +352,287 @@ class QCReporter(object):
         # Return the output filename
         return filename
 
+class QCProject(object):
+    """
+    Gather information about the QC associated with a project
+
+    Collects data about the QC for an AnalysisProject and
+    makes it available via the following properties:
+
+    - project: the AnalysisProject instance
+    - qc_dir: the directory to examine for QC outputs
+    - run_metadata: AnalysisDirMetadata instance with
+      metadata from the parent run (if present)
+    - processing_software: dictionary with information on
+      software used to process the initial data
+
+    Properties that shortcut to properties of the parent
+    AnalysisProject:
+
+    - name: project name
+    - comments: comments associated with the project
+    - info: shortcut to the project's AnalysisProjectMetadata
+      instance
+    - qc_info: shortcut to the QC directory's
+      AnalysisProjectQCDirInfo instance
+    - fastq_attrs: class to use for extracting data from
+      Fastq file names
+
+    Properties based on artefacts detected in the QC
+    directory:
+
+    - fastqs: sorted list of Fastq names
+    - reads: list of reads (e.g. 'r1', 'r2', 'i1' etc)
+    - samples: sorted list of sample names extracted
+      from Fastqs
+    - outputs: list of QC output categories detected (see
+      below for valid values)
+    - output_files: list of QC output files
+    - software: dictionary with information on the
+      QC software packages
+
+    The following are valid values for the 'outputs'
+    property:
+
+    - 'fastqc_[r1...]'
+    - 'screens_[r1...]'
+    - 'strandedness'
+    - 'icell8_stats'
+    - 'icell8_report'
+    - 'cellranger_count'
+    - 'multiqc'
+    """
+    def __init__(self,project,qc_dir=None):
+        """
+        Create a new QCProject instance
+
+        Arguments:
+          project (AnalysisProject): project to report QC for
+          qc_dir (str): path to the QC output dir; relative
+            path will be treated as a subdirectory of the
+            project
+        """
+        logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
+        # Status of report
+        self.status = True
+        # Store project
+        self.project = project
+        # Sort out target QC dir
+        if qc_dir is None:
+            qc_dir = self.project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(self.project.dirn,
+                                      qc_dir)
+        self.qc_dir = qc_dir
+        logger.debug("QCProject: qc_dir (final): %s" % self.qc_dir)
+        # How to handle Fastq names
+        self.fastq_attrs = self.project.fastq_attrs
+        # Detect outputs
+        self._detect_outputs()
+        # Expose metadata from parent run
+        self.run_metadata = AnalysisDirMetadata()
+        run_metadata_file = os.path.join(
+            os.path.dirname(os.path.abspath(self.project.dirn)),
+            "metadata.info")
+        if os.path.exists(run_metadata_file):
+            print("Loading run metadata from %s" % run_metadata_file)
+            self.run_metadata.load(run_metadata_file)
+        else:
+            logger.warning("Run metadata file '%s' not found"
+                           % run_metadata_file)
+        # Collect processing software metadata
+        try:
+            self.processing_software = ast.literal_eval(
+                self.run_metadata.processing_software)
+        except ValueError:
+            self.processing_software = dict()
+        if not self.processing_software:
+            # Fallback to legacy metadata items
+            try:
+                self.processing_software['bcl2fastq'] = ast.literal_eval(
+                    self.run_metadata.bcl2fastq_software)
+            except ValueError:
+                pass
+            try:
+                self.processing_software['cellranger'] = ast.literal_eval(
+                    self.run_metadata.cellranger_software)
+            except ValueError:
+                pass
+        # Expose project metadata
+        self.info = self.project.info
+        # Expose QC info
+        self.qc_info = self.project.qc_info(self.qc_dir)
+
+    @property
+    def name(self):
+        """
+        Name of project
+        """
+        return project.name
+
+    @property
+    def comments(self):
+        """
+        Comments associated with the project
+        """
+        return self.project.info.comments
+
+    def _detect_outputs(self):
+        """
+        Internal: determine which QC outputs are present
+        """
+        outputs = set()
+        output_files = []
+        software = {}
+        print("Scanning contents of %s" % self.qc_dir)
+        files = os.listdir(self.qc_dir)
+        print("\t- %d objects found" % len(files))
+        logger.debug("files: %s" % files)
+        # Look for screen files
+        screens = list(filter(lambda f:
+                              f.endswith("_screen.txt") or
+                              f.endswith("_screen.png"),
+                              files))
+        logger.debug("Screens: %s" % screens)
+        print("\t- %d fastq_screen files" % len(screens))
+        fastq_names = set()
+        if screens:
+            versions = set()
+            # Pull out the Fastq names from the .txt files
+            for screen in list(filter(lambda s:
+                                      s.endswith("_screen.txt"),
+                                      screens)):
+                screen_base = os.path.splitext(screen)[0]
+                s = os.path.basename(screen_base)[:-len("_screen")]
+                for name in FASTQ_SCREENS:
+                    if s.endswith("_%s" % name):
+                        fq = self.fastq_attrs(s[:-len("_%s" % name)])
+                        outputs.add("screens_%s%s" %
+                                    (('i' if fq.is_index_read else 'r'),
+                                     (fq.read_number
+                                      if fq.read_number is not None else '1')))
+                        fastq_names.add(s[:-len("_%s" % name)])
+                versions.add(Fastqscreen(
+                    os.path.join(self.qc_dir,screen)).version)
+            if versions:
+                software['fastq_screen'] = sorted(list(versions))
+            # Store the screen files
+            output_files.extend(screens)
+        # Look for fastqc outputs
+        fastqcs = list(filter(lambda f:
+                              f.endswith("_fastqc.html"),
+                              files))
+        logger.debug("Fastqc: %s" % fastqcs)
+        print("\t- %d fastqc files" % len(fastqcs))
+        if fastqcs:
+            versions = set()
+            # Pull out the Fastq names from the Fastqc files
+            for fastqc in fastqcs:
+                fastqc = os.path.splitext(fastqc)[0]
+                f = os.path.basename(fastqc)[:-len("_fastqc")]
+                fastq_names.add(f)
+                fq = self.fastq_attrs(f)
+                outputs.add("fastqc_%s%s" %
+                            (('i' if fq.is_index_read else 'r'),
+                             (fq.read_number
+                              if fq.read_number is not None else '1')))
+                versions.add(Fastqc(
+                    os.path.join(self.qc_dir,fastqc)).version)
+            if versions:
+                software['fastqc'] = sorted(list(versions))
+            # Store the fastqc files
+            output_files.extend(fastqcs)
+        # Look for fastq_strand outputs
+        fastq_strand = list(filter(lambda f:
+                                   f.endswith("_fastq_strand.txt"),
+                                   files))
+        logger.debug("fastq_strand: %s" % fastq_strand)
+        print("\t- %d fastq_strand files" % len(fastq_strand))
+        if fastq_strand:
+            outputs.add("strandedness")
+            versions = set()
+            for f in fastq_strand:
+                fq = self.fastq_attrs(os.path.splitext(f)[0])
+                fastq_names.add(
+                    os.path.basename(
+                        os.path.splitext(f)[0])[:-len("_fastq_strand")])
+                versions.add(Fastqstrand(
+                    os.path.join(self.qc_dir,f)).version)
+            if versions:
+                software['fastq_strand'] = sorted(list(versions))
+            # Store the fastq_strand files
+            output_files.extend(fastq_strand)
+        # Look for ICELL8 outputs
+        print("Checking for ICELL8 reports in %s/stats" %
+              self.project.dirn)
+        icell8_stats_xlsx = os.path.join(self.project.dirn,
+                                         "stats",
+                                         "icell8_stats.xlsx")
+        if os.path.exists(icell8_stats_xlsx):
+            outputs.add("icell8_stats")
+            output_files.append(icell8_stats_xlsx)
+        icell8_report_html = os.path.join(self.project.dirn,
+                                          "icell8_processing.html")
+        if os.path.exists(icell8_report_html):
+            outputs.add("icell8_report")
+            output_files.append(icell8_report_html)
+        # Look for cellranger_count outputs
+        cellranger_count_dir = os.path.join(self.qc_dir,
+                                            "cellranger_count")
+        cellranger_samples = []
+        if os.path.isdir(cellranger_count_dir):
+            for d in filter(
+                    lambda f:
+                    os.path.isdir(os.path.join(cellranger_count_dir,f)),
+                    os.listdir(cellranger_count_dir)):
+                web_summary_html = os.path.join(cellranger_count_dir,
+                                                d,
+                                                "outs",
+                                                "web_summary.html")
+                if os.path.exists(web_summary_html):
+                    cellranger_samples.append(d)
+                    output_files.append(web_summary_html)
+            if cellranger_samples:
+                outputs.add("cellranger_count")
+        # Look for MultiQC report
+        print("Checking for MultiQC report in %s" % self.project.dirn)
+        multiqc_report = os.path.join(self.project.dirn,
+                                      "multi%s_report.html"
+                                      % os.path.basename(self.qc_dir))
+        if os.path.isfile(multiqc_report):
+            outputs.add("multiqc")
+            output_files.append(multiqc_report)
+        # Fastqs sorted by sample name
+        self.fastqs = sorted(list(fastq_names),
+                             key=lambda fq: split_sample_name(
+                                 self.fastq_attrs(fq).sample_name))
+        # Determine reads
+        reads = set()
+        for fastq in self.fastqs:
+            fq = self.fastq_attrs(fastq)
+            if fq.is_index_read:
+                reads.add("i%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
+            else:
+                reads.add("r%s" % (fq.read_number
+                                   if fq.read_number is not None else '1'))
+        self.reads = sorted(list(reads))
+        # Samples
+        samples = set([self.fastq_attrs(fq).sample_name
+                       for fq in self.fastqs] +
+                      [s.name for s in self.project.samples])
+        for s in cellranger_samples:
+            samples.add(s)
+        self.samples = sorted(list(samples),
+                              key=lambda s: split_sample_name(s))
+        # QC outputs
+        self.outputs = sorted(list(outputs))
+        # Software versions
+        self.software = software
+        # Output files
+        self.output_files = sorted(output_files)
+
 class FastqSet(object):
     """
     Class describing a set of Fastq files
