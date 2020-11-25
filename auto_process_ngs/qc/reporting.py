@@ -409,8 +409,6 @@ class QCProject(object):
             project
         """
         logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
-        # Status of report
-        self.status = True
         # Store project
         self.project = project
         # Sort out target QC dir
