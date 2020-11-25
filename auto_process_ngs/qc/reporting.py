@@ -264,9 +264,8 @@ class QCReporter(object):
         return verified
 
     def report(self,title=None,filename=None,qc_dir=None,
-               qc_protocol=None,report_attrs=None,
-               summary_fields=None,relative_links=False,
-               make_zip=False):
+               report_attrs=None,summary_fields=None,
+               relative_links=False,make_zip=False):
         """
         Report the QC for the project
 
@@ -277,8 +276,6 @@ class QCReporter(object):
             the output report file (defaults to
             '<PROJECT_NAME>.qc_report.html')
           qc_dir (str): path to the QC output dir
-          qc_protocol (str): QC protocol to report against
-            (optional)
           report_attrs (list): optional, list of elements to
             report for each Fastq pair
           summary_fields (list): optional, list of fields to
@@ -307,7 +304,6 @@ class QCReporter(object):
         report = QCReport(self._project,
                           title=title,
                           qc_dir=qc_dir,
-                          qc_protocol=qc_protocol,
                           report_attrs=report_attrs,
                           summary_fields=summary_fields,
                           relpath=relpath)
@@ -717,8 +713,8 @@ class QCReport(Document):
     - fastq_screen: FastQCScreen report
     - program_versions: program versions
     """
-    def __init__(self,project,title=None,qc_dir=None,qc_protocol=None,
-                 report_attrs=None,summary_fields=None,relpath=None):
+    def __init__(self,project,title=None,qc_dir=None,report_attrs=None,
+                 summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
 
@@ -729,8 +725,6 @@ class QCReport(Document):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
-          qc_protocol (str): QC protocol to report against
-            (optional)
           report_attrs (list): list of elements to report for
             each Fastq pair
           summary_fields (list): list of fields to report for
