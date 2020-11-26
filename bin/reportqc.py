@@ -16,8 +16,9 @@ from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.applications import Command
 from auto_process_ngs.qc.constants import PROTOCOLS
-from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.outputs import expected_outputs
+from auto_process_ngs.qc.reporting import verify
+from auto_process_ngs.qc.reporting import report
 from auto_process_ngs.qc.utils import determine_qc_protocol
 from auto_process_ngs import get_version
 
@@ -144,15 +145,13 @@ def main():
         print("Fastqs dir        : %s" % p.fastq_dir)
         print("-"*(len('Project: ')+len(p.name)))
         print("%d samples | %d fastqs" % (len(p.samples),len(p.fastqs)))
-        # Setup reporter
-        qc_reporter = QCReporter(p)
         # Verification step
         if len(p.fastqs) == 0:
             logging.critical("No Fastqs!")
             verified = False
         else:
             try:
-                verified = qc_reporter.verify(qc_dir,protocol)
+                verified = verify(p,qc_dir,protocol)
             except Exception as ex:
                 logging.critical("Error: %s" % ex)
                 verified = False
@@ -210,11 +209,11 @@ def main():
             else:
                 print("MultiQC: %s (already exists)" % multiqc_report)
         # Generate report
-        report_html= qc_reporter.report(qc_dir=qc_dir,
-                                        title=args.title,
-                                        filename=out_file,
-                                        relative_links=True,
-                                        make_zip=args.zip)
+        report_html= report(p,qc_dir=qc_dir,
+                            title=args.title,
+                            filename=out_file,
+                            relative_links=True,
+                            make_zip=args.zip)
         print("Wrote QC report to %s" % out_file)
     # Finish with appropriate exit code
     print("%s completed: exit code %s (%s)" %
