@@ -770,6 +770,8 @@ class QCReport(Document):
         if relpath is not None:
             relpath = os.path.normpath(os.path.abspath(relpath))
         self.relpath = relpath
+        # Output files
+        self.output_files = [f for f in project.output_files]
         # Field descriptions for summary table
         self.field_descriptions = {
             'sample': 'Sample',
@@ -903,7 +905,7 @@ class QCReport(Document):
                                        css_classes=("info",))
         comments_list = List()
         try:
-            if self.project.comments:
+            if project.comments:
                 for comment in project.comments.split(';'):
                     comments_list.add_item(comment.strip())
             else:
