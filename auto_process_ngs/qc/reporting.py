@@ -374,7 +374,7 @@ class QCProject(object):
         """
         Name of project
         """
-        return project.name
+        return self.project.name
 
     @property
     def comments(self):
