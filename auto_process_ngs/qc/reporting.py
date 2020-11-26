@@ -203,15 +203,6 @@ class QCReporter(object):
            project (AnalysisProject): project to report QC for
         """
         self._project = project
-        self._parent_dir = os.path.dirname(self._project.dirn)
-
-    @property
-    def name(self):
-        return self._project.name
-
-    @property
-    def paired_end(self):
-        return self._project.info.paired_end
 
     def verify(self,qc_dir=None,qc_protocol=None):
         """
@@ -228,40 +219,9 @@ class QCReporter(object):
           Boolean: Returns True if all expected QC products
             are present, False if not.
         """
-        logger.debug("QCReporter.verify: qc_dir (initial): %s" % qc_dir)
-        if qc_dir is None:
-            qc_dir = self._project.qc_dir
-        else:
-            if not os.path.isabs(qc_dir):
-                qc_dir = os.path.join(self._project.dirn,
-                                      qc_dir)
-        logger.debug("QCReporter.verify: qc_dir (final)  : %s" % qc_dir)
-        for dirn in (self._project.dirn,qc_dir):
-            fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
-            if os.path.exists(fastq_strand_conf):
-                break
-            fastq_strand_conf = None
-        logger.debug("QCReporter.verify: fastq_strand conf file : %s" %
-                     fastq_strand_conf)
-        cellranger_refdata = None
-        qc_info_file = os.path.join(qc_dir,"qc.info")
-        if os.path.exists(qc_info_file):
-            qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
-            try:
-                cellranger_refdata = qc_info['cellranger_refdata']
-            except KeyError:
-                pass
-        logger.debug("QCReporter.verify: cellranger reference data : %s" %
-                     cellranger_refdata)
-        verified = True
-        for f in expected_outputs(self._project,qc_dir,
-                                  fastq_strand_conf=fastq_strand_conf,
-                                  cellranger_refdata=cellranger_refdata,
-                                  qc_protocol=qc_protocol):
-            if not os.path.exists(f):
-                print("Missing: %s" % f)
-                verified = False
-        return verified
+        return verify(self._project,
+                      qc_dir=qc_dir,
+                      qc_protocol=qc_protocol)
 
     def report(self,title=None,filename=None,qc_dir=None,
                report_attrs=None,summary_fields=None,
@@ -290,63 +250,14 @@ class QCReporter(object):
         Returns:
           String: filename of the output HTML report.
         """
-        # Set title and output destination
-        if title is None:
-            title = "%s: QC report" % self.name
-        if filename is None:
-            filename = "%s.qc_report.html" % self.name
-        # Use relative paths for links
-        if relative_links:
-            relpath = os.path.dirname(filename)
-        else:
-            relpath = None
-        # Initialise report
-        report = QCReport(self._project,
-                          title=title,
-                          qc_dir=qc_dir,
-                          report_attrs=report_attrs,
-                          summary_fields=summary_fields,
-                          relpath=relpath)
-        # Styles
-        report.add_css_rule(QC_REPORT_CSS_STYLES)
-        # Write the report
-        report.write(filename)
-        # Make ZIP file
-        if make_zip:
-            # Name for ZIP file
-            out_dir = os.path.dirname(filename)
-            basename = os.path.splitext(os.path.basename(filename))[0]
-            run_name = self._project.info.run
-            zip_prefix = "%s.%s%s" % (basename,
-                                      self._project.name,
-                                      '.%s' % run_name if run_name else '')
-            logging.debug("ZIP prefix: %s" % zip_prefix)
-            zip_name = os.path.join(out_dir,"%s.zip" % zip_prefix)
-            logging.debug("ZIP file: %s" % zip_name)
-            # QC directory
-            if qc_dir is None:
-                qc_dir = self._project.qc_dir
-            else:
-                if not os.path.isabs(qc_dir):
-                    qc_dir = os.path.join(self._project.dirn,
-                                          qc_dir)
-            # Create ZIP archive
-            zip_file = ZipArchive(zip_name,
-                                  relpath=os.path.dirname(qc_dir),
-                                  prefix=zip_prefix)
-            # Add the report
-            zip_file.add_file(filename)
-            # Add the QC outputs
-            logging.debug("Adding QC outputs for %s" % self._project.name)
-            for f in report.output_files:
-                ff = os.path.join(qc_dir,f)
-                if os.path.exists(ff):
-                    zip_file.add(ff)
-                else:
-                    logging.warning("%s: missing file '%s'" % (zip_file,
-                                                               ff))
-        # Return the output filename
-        return filename
+        return report(self._project,
+                      title=title,
+                      filename=filename,
+                      qc_dir=qc_dir,
+                      report_attrs=report_attrs,
+                      summary_fields=summary_fields,
+                      relative_links=relative_links,
+                      make_zip=make_zip)
 
 class QCProject(object):
     """
@@ -1813,6 +1724,143 @@ class QCReportFastq(object):
 #######################################################################
 # Functions
 #######################################################################
+
+def verify(project,qc_dir=None,qc_protocol=None):
+    """
+    Check the QC outputs are correct for a project
+
+    Arguments:
+      project (AnalysisProject): project to verify QC for
+      qc_dir (str): path to the QC output dir; relative
+        path will be treated as a subdirectory of the
+        project being checked.
+      qc_protocol (str): QC protocol to verify against
+        (optional)
+
+     Returns:
+       Boolean: Returns True if all expected QC products
+         are present, False if not.
+    """
+    logger.debug("verify: qc_dir (initial): %s" % qc_dir)
+    if qc_dir is None:
+        qc_dir = project.qc_dir
+    else:
+        if not os.path.isabs(qc_dir):
+            qc_dir = os.path.join(project.dirn,
+                                  qc_dir)
+    logger.debug("verify: qc_dir (final)  : %s" % qc_dir)
+    for dirn in (project.dirn,qc_dir):
+        fastq_strand_conf = os.path.join(dirn,"fastq_strand.conf")
+        if os.path.exists(fastq_strand_conf):
+            break
+        fastq_strand_conf = None
+    logger.debug("verify: fastq_strand conf file : %s" %
+                 fastq_strand_conf)
+    cellranger_refdata = None
+    qc_info_file = os.path.join(qc_dir,"qc.info")
+    if os.path.exists(qc_info_file):
+        qc_info = AnalysisProjectQCDirInfo(filen=qc_info_file)
+        try:
+            cellranger_refdata = qc_info['cellranger_refdata']
+        except KeyError:
+            pass
+    logger.debug("verify: cellranger reference data : %s" %
+                 cellranger_refdata)
+    verified = True
+    for f in expected_outputs(project,qc_dir,
+                              fastq_strand_conf=fastq_strand_conf,
+                              cellranger_refdata=cellranger_refdata,
+                              qc_protocol=qc_protocol):
+        if not os.path.exists(f):
+            print("Missing: %s" % f)
+            verified = False
+    return verified
+
+def report(project,title=None,filename=None,qc_dir=None,
+           report_attrs=None,summary_fields=None,
+           relative_links=False,make_zip=False):
+    """
+    Report the QC for a project
+
+    Arguments:
+      project (AnalysisProject): project to report QC for
+      title (str): optional, specify title for the report
+        (defaults to '<PROJECT_NAME>: QC report')
+        filename (str): optional, specify path and name for
+        the output report file (defaults to
+        '<PROJECT_NAME>.qc_report.html')
+      qc_dir (str): path to the QC output dir
+        report_attrs (list): optional, list of elements to
+        report for each Fastq pair
+      summary_fields (list): optional, list of fields to
+        report for each sample in the summary table
+        relative_links (boolean): optional, if set to True
+        then use relative paths for links in the report
+        (default is to use absolute paths)
+      make_zip (boolean): if True then also create a ZIP
+        archive of the QC report and outputs (default is
+        not to create the ZIP archive)
+
+    Returns:
+      String: filename of the output HTML report.
+    """
+    # Set title and output destination
+    if title is None:
+        title = "%s: QC report" % project.name
+    if filename is None:
+        filename = "%s.qc_report.html" % project.name
+    # Use relative paths for links
+    if relative_links:
+        relpath = os.path.dirname(filename)
+    else:
+        relpath = None
+    # Initialise report
+    report = QCReport(project,
+                      title=title,
+                      qc_dir=qc_dir,
+                      report_attrs=report_attrs,
+                      summary_fields=summary_fields,
+                      relpath=relpath)
+    # Styles
+    report.add_css_rule(QC_REPORT_CSS_STYLES)
+    # Write the report
+    report.write(filename)
+    # Make ZIP file
+    if make_zip:
+        # Name for ZIP file
+        out_dir = os.path.dirname(filename)
+        basename = os.path.splitext(os.path.basename(filename))[0]
+        run_name = project.info.run
+        zip_prefix = "%s.%s%s" % (basename,
+                                  project.name,
+                                  '.%s' % run_name if run_name else '')
+        logging.debug("ZIP prefix: %s" % zip_prefix)
+        zip_name = os.path.join(out_dir,"%s.zip" % zip_prefix)
+        logging.debug("ZIP file: %s" % zip_name)
+        # QC directory
+        if qc_dir is None:
+            qc_dir = project.qc_dir
+        else:
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(project.dirn,
+                                      qc_dir)
+        # Create ZIP archive
+        zip_file = ZipArchive(zip_name,
+                              relpath=os.path.dirname(qc_dir),
+                              prefix=zip_prefix)
+        # Add the report
+        zip_file.add_file(filename)
+        # Add the QC outputs
+        logging.debug("Adding QC outputs for %s" % project.name)
+        for f in report.output_files:
+            ff = os.path.join(qc_dir,f)
+            if os.path.exists(ff):
+                zip_file.add(ff)
+            else:
+                logging.warning("%s: missing file '%s'" % (zip_file,
+                                                           ff))
+    # Return the output filename
+    return filename
 
 def pretty_print_reads(n):
     """
