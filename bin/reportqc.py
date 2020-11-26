@@ -211,7 +211,6 @@ def main():
                 print("MultiQC: %s (already exists)" % multiqc_report)
         # Generate report
         report_html= qc_reporter.report(qc_dir=qc_dir,
-                                        qc_protocol=protocol,
                                         title=args.title,
                                         filename=out_file,
                                         relative_links=True,
