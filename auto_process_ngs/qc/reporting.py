@@ -370,6 +370,19 @@ class QCProject(object):
         self.qc_info = self.project.qc_info(self.qc_dir)
 
     @property
+    def id(self):
+        """
+        Identifier for the project
+
+        This is a string of the form:
+
+        <RUN_ID>:<PROJECT_NAME>
+
+        e.g. ``MINISEQ_201120#22:PJB``
+        """
+        return "%s:%s" % (self.run_id,self.name)
+
+    @property
     def name(self):
         """
         Name of project
@@ -382,6 +395,54 @@ class QCProject(object):
         Comments associated with the project
         """
         return self.project.info.comments
+
+    @property
+    def run_id(self):
+        """
+        Identifier for parent run
+
+        This is the standard identifier constructed
+        from the platform, datestamp and facility
+        run number (e.g. ``MINISEQ_201120#22``).
+
+        If an identifier can't be constructed then
+        ``None`` is returned.
+        """
+        try:
+            return run_reference_id(self.info['run'],
+                                    platform=self.info['platform'],
+                                    facility_run_number=
+                                    self.run_metadata['run_number'])
+        except (AttributeError,TypeError) as ex:
+            logger.warning("Run reference ID can't be "
+                           "determined: %s (ignored)" % ex)
+            return None
+
+    def software_info(self,pkg):
+        """
+        Get information on software package
+
+        Arguments:
+          pkg (string): name of software package to
+            get information about
+
+        Returns:
+          String: software version information, or
+            None if no information is stored.
+        """
+        # Acquire the value
+        try:
+            if self.software[pkg]:
+                return ','.join(self.software[pkg])
+        except KeyError:
+            try:
+                return self.processing_software[pkg][2]
+            except KeyError:
+                # Not processing software
+                return None
+            except TypeError:
+                # Not valid data
+                return None
 
     def _detect_outputs(self):
         """
