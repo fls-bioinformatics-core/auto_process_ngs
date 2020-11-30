@@ -1945,3 +1945,20 @@ def pretty_print_reads(n):
         n = n[3:]
     if n: n0.append(n)
     return (','.join(n0))[::-1]
+
+def sanitize_name(s,new_char='_'):
+    """
+    Replace 'unsafe' characters in HTML link targets
+
+    Replaces 'unsafe' characters in a string used as a
+    link target in an HTML document with underscore
+    characters.
+
+    Arguments:
+      s (str): string to sanitize
+      replace_with (str): string to replace 'unsafe'
+        characters with (default: '_')
+    """
+    for c in ('#',':','/'):
+        s = s.replace(c,new_char)
+    return s
