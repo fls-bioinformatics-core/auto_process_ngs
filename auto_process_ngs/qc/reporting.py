@@ -1158,7 +1158,8 @@ class QCReportFastqGroup(object):
     update_summary_table: add line to summary table for
       the group
     """
-    def __init__(self,fastqs,qc_dir,fastq_attrs=AnalysisFastq):
+    def __init__(self,fastqs,qc_dir,project_id=None,
+                 fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastqGroup
 
@@ -1168,10 +1169,12 @@ class QCReportFastqGroup(object):
           qc_dir (str): path to the QC output dir; relative
             path will be treated as a subdirectory of the
             project
+          project_id (str): identifier for the project
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
         self.qc_dir = qc_dir
+        self.project_id = project_id
         self.fastq_attrs = fastq_attrs
         # Assign fastqs to reads
         self.fastqs = defaultdict(lambda: None)
@@ -1189,6 +1192,7 @@ class QCReportFastqGroup(object):
             self.fastqs[read] = fastq
             self.reporters[read] = QCReportFastq(fastq,
                                                  self.qc_dir,
+                                                 self.project_id,
                                                  fastq_attrs=
                                                  self.fastq_attrs)
             self.reads.add(read)
@@ -1304,7 +1308,7 @@ class QCReportFastqGroup(object):
 
     def report(self,sample_report,attrs=None,relpath=None):
         """
-        Add report for Fastq pair to a document section
+        Add report for Fastq group to a document section
 
         Creates a new subsection in 'sample_report' for the
         Fastq pair, within which are additional subsections
@@ -1563,20 +1567,25 @@ class QCReportFastq(object):
     ufastqcplot
     uscreenplot
     """
-    def __init__(self,fastq,qc_dir,fastq_attrs=AnalysisFastq):
+    def __init__(self,fastq,qc_dir,project_id=None,fastq_attrs=AnalysisFastq):
         """
         Create a new QCReportFastq instance
 
         Arguments:
           fastq (str): path to Fastq file
           qc_dir (str): path to QC directory
+          project_id (str): identifier for the parent project
           fastq_attrs (BaseFastqAttrs): class for extracting
             data from Fastq names
         """
         # Source data
         self.name = os.path.basename(fastq)
         self.path = os.path.abspath(fastq)
+        self.project_id = project_id
         self.safe_name = strip_ngs_extensions(self.name)
+        if self.project_id:
+            self.safe_name = "%s_%s" % (sanitize_name(self.project_id),
+                                        self.safe_name)
         self.fastq_attrs = fastq_attrs
         # Sample name
         self.sample_name = fastq_attrs(self.name).sample_name
