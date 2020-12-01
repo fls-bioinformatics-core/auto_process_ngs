@@ -739,7 +739,7 @@ class QCReport(Document):
         'fastq_screen': 'FastqScreen',
         'fastq_strand': 'FastqStrand',
     }
-    def __init__(self,*projects,title=None,qc_dir=None,report_attrs=None,
+    def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
                  summary_fields=None,relpath=None):
         """
         Create a new QCReport instance
@@ -1976,7 +1976,7 @@ def report(project,title=None,filename=None,qc_dir=None,
     else:
         relpath = None
     # Initialise report
-    report = QCReport(project,
+    report = QCReport((project,),
                       title=title,
                       qc_dir=qc_dir,
                       report_attrs=report_attrs,
