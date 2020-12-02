@@ -301,6 +301,7 @@ class TestReportFunction(unittest.TestCase):
     def setUp(self):
         # Temporary working dir (if needed)
         self.wd = None
+        self.top_dir = None
     def tearDown(self):
         # Remove temporary working dir
         if not REMOVE_TEST_OUTPUTS:
@@ -311,7 +312,9 @@ class TestReportFunction(unittest.TestCase):
         # Create a temporary working directory
         if self.wd is None:
             self.wd = tempfile.mkdtemp(suffix='.test_QCReporter')
-    def _make_analysis_project(self,paired_end=True,fastq_dir=None,
+            self.top_dir = os.path.join(self.wd,"Test")
+            os.mkdir(self.top_dir)
+    def _make_analysis_project(self,name="PJB",paired_end=True,fastq_dir=None,
                                qc_dir="qc",fastq_names=None):
         # Create a mock Analysis Project directory
         self._make_working_dir()
@@ -327,66 +330,66 @@ class TestReportFunction(unittest.TestCase):
                 for read in reads:
                     fq = "%s_S%d_R%d_001.fastq.gz" % (sname,i,read)
                     fastq_names.append(fq)
-        self.analysis_dir = MockAnalysisProject('PJB',fastq_names)
+        self.analysis_dir = MockAnalysisProject(name,fastq_names)
         # Create the mock directory
-        self.analysis_dir.create(top_dir=self.wd)
+        self.analysis_dir.create(top_dir=self.top_dir)
         # Populate with fake QC products
-        qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
-        qc_logs = os.path.join(qc_dir,'logs')
-        os.mkdir(qc_dir)
-        os.mkdir(qc_logs)
-        for fq in fastq_names:
-            # FastQC
-            MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
-            # Fastq_screen
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
-        return os.path.join(self.wd,self.analysis_dir.name)
+        project_dir = os.path.join(self.top_dir,self.analysis_dir.name)
+        UpdateAnalysisProject(AnalysisProject(project_dir)).\
+            add_qc_outputs(qc_dir=qc_dir,
+                           include_report=False,
+                           include_zip_file=False,
+                           include_multiqc=False)
+        return project_dir
     def test_report_single_end(self):
         """report: single-end data
         """
         analysis_dir = self._make_analysis_project(paired_end=False)
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,'report.SE.html'))
+        report(project,filename=os.path.join(self.top_dir,
+                                             'report.SE.html'))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.SE.html')))
+            os.path.join(self.top_dir,'report.SE.html')))
     def test_report_paired_end(self):
         """report: paired-end data
         """
         analysis_dir = self._make_analysis_project(paired_end=True)
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,'report.PE.html'))
+        report(project,filename=os.path.join(self.top_dir,
+                                             'report.PE.html'))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
+            os.path.join(self.top_dir,'report.PE.html')))
     def test_report_paired_end_with_non_default_fastq_dir(self):
         """report: paired-end data with non-default fastq dir
         """
         analysis_dir = self._make_analysis_project(paired_end=True,
                                                    fastq_dir="fastqs.non_default")
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,'report.PE.html'))
+        report(project,filename=os.path.join(self.top_dir,
+                                             'report.PE.html'))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
+            os.path.join(self.top_dir,'report.PE.html')))
     def test_report_paired_end_with_no_fastq_dir(self):
         """report: paired-end data with no fastq dir
         """
         analysis_dir = self._make_analysis_project(paired_end=True,
                                                    fastq_dir=".")
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,'report.PE.html'))
+        report(project,filename=os.path.join(self.top_dir,
+                                             'report.PE.html'))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
+            os.path.join(self.top_dir,'report.PE.html')))
     def test_report_paired_end_with_non_default_qc_dir(self):
         """report: paired-end data with non-default QC dir
         """
         analysis_dir = self._make_analysis_project(paired_end=True,
                                                    qc_dir="qc.non_default")
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,'report.PE.html'),
+        report(project,filename=os.path.join(self.top_dir,
+                                             'report.PE.html'),
                qc_dir="qc.non_default")
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.PE.html')))
+            os.path.join(self.top_dir,'report.PE.html')))
     def test_report_paired_end_with_non_canonical_fastq_names(self):
         """report: paired-end data with non-canonical fastq names
         """
@@ -399,24 +402,25 @@ class TestReportFunction(unittest.TestCase):
              "PJB2_S2_R2_001_paired.fastq.gz",))
         project = AnalysisProject('PJB',analysis_dir)
         report(project,
-               filename=os.path.join(self.wd,'report.non_canonical.html'))
+               filename=os.path.join(self.top_dir,
+                                     'report.non_canonical.html'))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'report.non_canonical.html')))
+            os.path.join(self.top_dir,'report.non_canonical.html')))
     def test_report_single_end_make_zip_file(self):
         """report: single-end data: make ZIP file
         """
         analysis_dir = self._make_analysis_project(paired_end=False)
         project = AnalysisProject('PJB',analysis_dir)
-        report(project,filename=os.path.join(self.wd,
+        report(project,filename=os.path.join(self.top_dir,
                                              'PJB',
                                              'report.SE.html'),
                make_zip=True)
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'PJB','report.SE.html')))
+            os.path.join(self.top_dir,'PJB','report.SE.html')))
         self.assertTrue(os.path.exists(
-            os.path.join(self.wd,'PJB','report.SE.PJB.zip')))
+            os.path.join(self.top_dir,'PJB','report.SE.PJB.zip')))
         contents = zipfile.ZipFile(
-            os.path.join(self.wd,'PJB',
+            os.path.join(self.top_dir,'PJB',
                          'report.SE.PJB.zip')).namelist()
         print(contents)
         expected = (
