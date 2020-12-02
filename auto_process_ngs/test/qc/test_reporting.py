@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import zipfile
 from auto_process_ngs.mock import MockAnalysisProject
+from auto_process_ngs.mock import UpdateAnalysisProject
 from auto_process_ngs.mockqc import MockQCOutputs
 from auto_process_ngs.analysis import AnalysisProject
 from auto_process_ngs.analysis import AnalysisSample
@@ -243,18 +244,13 @@ class TestVerifyFunction(unittest.TestCase):
         # Create the mock directory
         self.analysis_dir.create(top_dir=self.wd)
         # Populate with fake QC products
-        qc_dir = os.path.join(self.wd,self.analysis_dir.name,qc_dir)
-        qc_logs = os.path.join(qc_dir,'logs')
-        os.mkdir(qc_dir)
-        os.mkdir(qc_logs)
-        for fq in fastq_names:
-            # FastQC
-            MockQCOutputs.fastqc_v0_11_2(fq,qc_dir)
-            # Fastq_screen
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'model_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'other_organisms')
-            MockQCOutputs.fastq_screen_v0_9_2(fq,qc_dir,'rRNA')
-        return os.path.join(self.wd,self.analysis_dir.name)
+        project_dir = os.path.join(self.wd,self.analysis_dir.name)
+        UpdateAnalysisProject(AnalysisProject(project_dir)).\
+            add_qc_outputs(qc_dir=qc_dir,
+                           include_report=False,
+                           include_zip_file=False,
+                           include_multiqc=False)
+        return project_dir
     def test_verify_single_end(self):
         """verify: single-end data
         """
