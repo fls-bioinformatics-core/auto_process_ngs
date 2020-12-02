@@ -625,6 +625,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                        protocol="standardPE",
                        include_fastq_strand=True,
                        include_multiqc=True,
+                       include_report=True,
+                       include_zip_file=True,
                        legacy_zip_name=False):
         """
         Add mock QC outputs
@@ -640,6 +642,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             add mock fastq_strand.py outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
+          include_report (bool): if True then add
+            mock QC report outputs
+          include_zip_file (bool): if True then add
+            mock ZIP archive for QC report
           legacy_zip_name (bool): if True then use
             old-style naming convention for ZIP file
             with QC outputs
@@ -688,34 +694,36 @@ class UpdateAnalysisProject(DirectoryUpdater):
         qc_info['fastq_dir'] = self._project.fastq_dir
         qc_info.save()
         # Make mock report
-        fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
-        qc_name = "qc%s_report" % fastq_set_name
-        self.add_file("%s.html" % qc_name)
-        # Make mock ZIP archive
-        analysis_name = os.path.basename(self._parent_dir())
-        if not legacy_zip_name:
-            zip_prefix = "%s.%s%s" % (qc_name,
-                                      self._project.name,
-                                      ".%s" % self._project.info.run
-                                      if self._project.info.run else '')
-        else:
-            zip_prefix = "%s.%s.%s" % (qc_name,
-                                       self._project.name,
-                                       analysis_name)
-        report_zip = os.path.join(self._project.dirn,
-                                  "%s.zip" % zip_prefix)
-        print("Building ZIP archive: %s" % report_zip)
-        zip_file = ZipArchive(report_zip,
-                              relpath=self._project.dirn,
-                              prefix=zip_prefix)
-        zip_file.add_file(os.path.join(self._project.dirn,
-                                       "%s.html" % qc_name))
-        zip_file.add(self._project.qc_dir)
-        zip_file.close()
+        if include_report:
+            fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
+            qc_name = "qc%s_report" % fastq_set_name
+            self.add_file("%s.html" % qc_name)
         # MultiQC report
         if include_multiqc:
             multiqc_name = "multiqc%s_report" % fastq_set_name
             self.add_file("%s.html" % multiqc_name)
+        # Make mock ZIP archive
+        if include_zip_file:
+            analysis_name = os.path.basename(self._parent_dir())
+            if not legacy_zip_name:
+                zip_prefix = "%s.%s%s" % (qc_name,
+                                          self._project.name,
+                                          ".%s" % self._project.info.run
+                                          if self._project.info.run else '')
+            else:
+                zip_prefix = "%s.%s.%s" % (qc_name,
+                                           self._project.name,
+                                           analysis_name)
+            report_zip = os.path.join(self._project.dirn,
+                                      "%s.zip" % zip_prefix)
+            print("Building ZIP archive: %s" % report_zip)
+            zip_file = ZipArchive(report_zip,
+                                  relpath=self._project.dirn,
+                                  prefix=zip_prefix)
+            zip_file.add_file(os.path.join(self._project.dirn,
+                                           "%s.html" % qc_name))
+            zip_file.add(self._project.qc_dir)
+            zip_file.close()
         # Reload the project
         self._reload_project()
 
