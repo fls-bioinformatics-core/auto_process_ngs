@@ -372,6 +372,9 @@ class ZipArchive(object):
         """
         if self._relpath:
             zip_pth = os.path.relpath(filen,self._relpath)
+            if zip_pth.startswith('..'):
+                raise Exception("Error adding a file outside %s (%s)" %
+                                (self._relpath,filen))
         else:
             zip_pth = filen
         if self._prefix:
