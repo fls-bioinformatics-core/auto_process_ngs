@@ -277,6 +277,7 @@ class QCProject(object):
     AnalysisProject:
 
     - name: project name
+    - dirn: path to associated directory
     - comments: comments associated with the project
     - info: shortcut to the project's AnalysisProjectMetadata
       instance
@@ -319,6 +320,8 @@ class QCProject(object):
             path will be treated as a subdirectory of the
             project
         """
+        logger.debug("QCProject: project         : %s" % project.name)
+        logger.debug("QCProject: project dir     : %s" % project.dirn)
         logger.debug("QCProject: qc_dir (initial): %s" % qc_dir)
         # Store project
         self.project = project
@@ -388,6 +391,13 @@ class QCProject(object):
         Name of project
         """
         return self.project.name
+
+    @property
+    def dirn(self):
+        """
+        Path to project directory
+        """
+        return self.project.dirn
 
     @property
     def comments(self):
