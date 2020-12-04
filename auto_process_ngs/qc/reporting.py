@@ -382,8 +382,14 @@ class QCProject(object):
         <RUN_ID>:<PROJECT_NAME>
 
         e.g. ``MINISEQ_201120#22:PJB``
+
+        If the run id can't be determined then the name
+        of the parent directory is used instead.
         """
-        return "%s:%s" % (self.run_id,self.name)
+        run_id = self.run_id
+        if not run_id:
+            run_id = os.path.basename(os.path.dirname(self.dirn))
+        return "%s:%s" % (run_id,self.name)
 
     @property
     def name(self):
