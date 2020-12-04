@@ -13,6 +13,7 @@ import os
 import logging
 import time
 import ast
+import shutil
 from collections import defaultdict
 from bcftbx.IlluminaData import IlluminaFastq
 from bcftbx.TabFile import TabFile
@@ -250,7 +251,7 @@ class QCReporter(object):
         Returns:
           String: filename of the output HTML report.
         """
-        return report(self._project,
+        return report((self._project,),
                       title=title,
                       filename=filename,
                       qc_dir=qc_dir,
@@ -767,7 +768,7 @@ class QCReport(Document):
         'fastq_strand': 'FastqStrand',
     }
     def __init__(self,projects,title=None,qc_dir=None,report_attrs=None,
-                 summary_fields=None,relpath=None):
+                 summary_fields=None,relpath=None,data_dir=None):
         """
         Create a new QCReport instance
 
@@ -785,11 +786,17 @@ class QCReport(Document):
             each sample in the summary table
           relpath (str): if set then make link paths
             relative to 'relpath'
+          data_dir (str): if set then copy external data
+            files to this directory and make link paths
+            to these copies; relative path will be treated
+            as a subdirectory of the project
         """
         # Convert projects to QCProjects
         projects = [QCProject(p,qc_dir=qc_dir) for p in projects]
         # Flag to indicate if report references multiple projects
         self.multi_project = (len(projects) > 1)
+        # Primary project
+        primary_project = projects[0]
         # Set up title
         if title is None:
             if self.multi_project:
@@ -797,7 +804,7 @@ class QCReport(Document):
                     ', '.join([p.id for p in projects[0:-1]]),
                     projects[-1].id)
             else:
-                title = "QC report: %s" % projects[0].name
+                title = "QC report: %s" % primary_project.name
         # Initialise superclass
         Document.__init__(self,title)
         # Collect initial QC data across all projects
@@ -818,14 +825,12 @@ class QCReport(Document):
                 if project.software_info(pkg):
                     self.software.append(pkg)
                     break
-        # Flag to indicate report references multiple projects
-        self.multi_project = (len(projects) > 1)
-        # Set up title
-        if title is None:
-            if self.multi_project:
-                title = "QC report: %s" % ', '.join([p.id for p in projects])
-            else:
-                title = "QC report: %s" % project[0].name
+        # Use data directory?
+        if data_dir is not None:
+            if not os.path.abspath(data_dir):
+                data_dir = os.path.join(primary_project.dirn,data_dir)
+            data_dir = os.path.normpath(data_dir)
+        self.data_dir = data_dir
         # Relative paths
         if relpath is not None:
             relpath = os.path.normpath(os.path.abspath(relpath))
@@ -839,6 +844,8 @@ class QCReport(Document):
         self.preamble = self._init_preamble_section()
         self.warnings = self._init_warnings_section()
         self.summary = self._init_summary_section(project)
+        # Initialise data directory
+        self._init_data_dir(projects)
         # Report each project
         for project in projects:
             # Report QC data for project
@@ -970,33 +977,6 @@ class QCReport(Document):
                 version=None)
         self.software_table = software_table
 
-    def add_summary_table(self,project,fields):
-        """
-        Create a new table for summarising samples from a project
-
-        Associated CSS classes are 'summary' and 'fastq_summary'
-        """
-        # Add header For multi-project
-        if self.multi_project:
-            summary = self.summary.add_subsection(
-                project.id,
-                name=sanitize_name(project.id))
-        else:
-            summary = self.summary
-        # Create the table
-        summary_tbl = Table(fields,**self.field_descriptions)
-        summary_tbl.add_css_classes('summary','fastq_summary')
-        # Append to the summary section
-        summary.add(
-            "%d sample%s | %d fastq%s" % (
-                len(project.samples),
-                ('s' if len(project.samples) != 1 else ''),
-                len(project.fastqs),
-                ('s' if len(project.fastqs) != 1 else ''))
-        )
-        summary.add(summary_tbl)
-        return summary_tbl
-
     def _init_preamble_section(self):
         """
         Internal: set up a "preamble" section
@@ -1045,6 +1025,79 @@ class QCReport(Document):
         warnings.add(Para(WarningIcon(size=50),
                           "There are issues with this project"))
         return warnings
+
+    def _init_data_dir(self,projects):
+        """
+        Internal: initialise the data directory
+
+        Creates directory, copies QC artefacts and updates the
+        list of output files associated with the report
+        """
+        if not self.data_dir:
+            return
+        # Create directory if it doesn't exist
+        if not os.path.exists(self.data_dir):
+            print("Creating data directory: %s" % self.data_dir)
+            os.mkdir(self.data_dir)
+        # Copy QC artefacts from each project
+        output_files = []
+        for project in projects:
+            # Set up a project-specific top-level directory
+            project_data_dir = os.path.join(self.data_dir,
+                                            sanitize_name(project.id))
+            if not os.path.exists(project_data_dir):
+                logging.debug("Creating subdirectory %s" %
+                              project_data_dir)
+                os.makedirs(project_data_dir)
+            for output_file in project.output_files:
+                # Convert file paths to be relative to project dir
+                output_file = os.path.relpath(output_file,
+                                              project.dirn)
+                # Make a copy of the file in the data dir
+                subdir = os.path.dirname(output_file)
+                # File includes a leading directory path so
+                # build a copy of this first
+                if subdir:
+                    subdir = os.path.join(project_data_dir,subdir)
+                    if not os.path.exists(subdir):
+                        os.makedirs(subdir)
+                # Copy the file
+                src = os.path.join(project.dirn,output_file)
+                dest = os.path.join(project_data_dir,output_file)
+                logging.debug("-- copying %s to %s" % (output_file,
+                                                       dest))
+                shutil.copyfile(src,dest)
+                # Add to the updated list of output files
+                output_files.append(dest)
+        # Update the list of files
+        self.output_files = output_files
+
+    def add_summary_table(self,project,fields):
+        """
+        Create a new table for summarising samples from a project
+
+        Associated CSS classes are 'summary' and 'fastq_summary'
+        """
+        # Add header For multi-project
+        if self.multi_project:
+            summary = self.summary.add_subsection(
+                project.id,
+                name=sanitize_name(project.id))
+        else:
+            summary = self.summary
+        # Create the table
+        summary_tbl = Table(fields,**self.field_descriptions)
+        summary_tbl.add_css_classes('summary','fastq_summary')
+        # Append to the summary section
+        summary.add(
+            "%d sample%s | %d fastq%s" % (
+                len(project.samples),
+                ('s' if len(project.samples) != 1 else ''),
+                len(project.fastqs),
+                ('s' if len(project.fastqs) != 1 else ''))
+        )
+        summary.add(summary_tbl)
+        return summary_tbl
 
     def report_metadata(self,project):
         """
@@ -1185,9 +1238,15 @@ class QCReport(Document):
                    project.fastq_attrs(fq).sample_name == sample,
                    project.fastqs)))
         fastq_groups = group_fastqs_by_name(fastqs,project.fastq_attrs)
+        # Location of QC artefacts
+        qc_dir = project.qc_dir
+        if self.data_dir:
+            qc_dir = os.path.join(self.data_dir,
+                                  sanitize_name(project.id),
+                                  os.path.basename(qc_dir))
         # Report number of fastqs and reads
         reads = QCReportFastqGroup(fastq_groups[0],
-                                   qc_dir=project.qc_dir,
+                                   qc_dir=qc_dir,
                                    project_id=project.id,
                                    fastq_attrs=project.fastq_attrs).reads
         if len(reads) == 1:
@@ -1213,7 +1272,7 @@ class QCReport(Document):
         for fastqs in fastq_groups:
             # Report Fastq pair
             fastq_group = QCReportFastqGroup(fastqs,
-                                             qc_dir=project.qc_dir,
+                                             qc_dir=qc_dir,
                                              project_id=project.id,
                                              fastq_attrs=project.fastq_attrs)
             fastq_group.report(sample_report,
@@ -1560,7 +1619,8 @@ class QCReportFastqGroup(object):
                 if field[:-1].endswith("_r"):
                     read = field.split("_")[-1]
                     if read not in self.reads:
-                        print("Dropping %s" % field)
+                        logging.warning("Dropping '%s' from summary table"
+                                        % field)
                         continue
                 updated_fields.append(field)
             fields = updated_fields
@@ -1697,6 +1757,7 @@ class QCReportFastq(object):
             data from Fastq names
         """
         # Source data
+        logging.debug("******** QCREPORTFASTQ ************")
         self.name = os.path.basename(fastq)
         self.path = os.path.abspath(fastq)
         self.project_id = project_id
@@ -1707,7 +1768,14 @@ class QCReportFastq(object):
         self.fastq_attrs = fastq_attrs
         # Sample name
         self.sample_name = fastq_attrs(self.name).sample_name
+        logging.debug("Name  : %s" % self.name)
+        logging.debug("Path  : %s" % self.path)
+        logging.debug("ID    : %s" % self.project_id)
+        logging.debug("Nsafe : %s" % self.safe_name)
+        logging.debug("QCDir : %s" % qc_dir)
         # FastQC
+        logging.debug("Fastqc: %s" %
+                      os.path.join(qc_dir,fastqc_output(fastq)[0]))
         try:
             self.fastqc = Fastqc(os.path.join(
                 qc_dir,fastqc_output(fastq)[0]))
@@ -1960,31 +2028,36 @@ def verify(project,qc_dir=None,qc_protocol=None):
                               cellranger_refdata=cellranger_refdata,
                               qc_protocol=qc_protocol):
         if not os.path.exists(f):
-            print("Missing: %s" % f)
+            logging.debug("Missing: %s" % f)
             verified = False
     return verified
 
-def report(project,title=None,filename=None,qc_dir=None,
+def report(projects,title=None,filename=None,qc_dir=None,
            report_attrs=None,summary_fields=None,
-           relative_links=False,make_zip=False):
+           relative_links=False,use_data_dir=False,
+           make_zip=False):
     """
     Report the QC for a project
 
     Arguments:
-      project (AnalysisProject): project to report QC for
+      projects (list): AnalysisProject instances to report
+        QC for
       title (str): optional, specify title for the report
         (defaults to '<PROJECT_NAME>: QC report')
-        filename (str): optional, specify path and name for
+      filename (str): optional, specify path and name for
         the output report file (defaults to
         '<PROJECT_NAME>.qc_report.html')
       qc_dir (str): path to the QC output dir
-        report_attrs (list): optional, list of elements to
+      report_attrs (list): optional, list of elements to
         report for each Fastq pair
       summary_fields (list): optional, list of fields to
         report for each sample in the summary table
         relative_links (boolean): optional, if set to True
         then use relative paths for links in the report
         (default is to use absolute paths)
+      use_data_dir (boolean): if True then copy QC
+        artefacts to a data directory parallel to the
+        output report file
       make_zip (boolean): if True then also create a ZIP
         archive of the QC report and outputs (default is
         not to create the ZIP archive)
@@ -1992,22 +2065,28 @@ def report(project,title=None,filename=None,qc_dir=None,
     Returns:
       String: filename of the output HTML report.
     """
-    # Set title and output destination
-    if title is None:
-        title = "%s: QC report" % project.name
+    # Primary project
+    project = projects[0]
+    # Set output destination
     if filename is None:
         filename = "%s.qc_report.html" % project.name
+    # Use data directory
+    if use_data_dir:
+        data_dir = "%s_data" % os.path.splitext(filename)[0]
+    else:
+        data_dir = None
     # Use relative paths for links
     if relative_links:
         relpath = os.path.dirname(filename)
     else:
         relpath = None
     # Initialise report
-    report = QCReport((project,),
+    report = QCReport(projects,
                       title=title,
                       qc_dir=qc_dir,
                       report_attrs=report_attrs,
                       summary_fields=summary_fields,
+                      data_dir=data_dir,
                       relpath=relpath)
     # Styles
     report.add_css_rule(QC_REPORT_CSS_STYLES)
@@ -2025,28 +2104,40 @@ def report(project,title=None,filename=None,qc_dir=None,
         logging.debug("ZIP prefix: %s" % zip_prefix)
         zip_name = os.path.join(out_dir,"%s.zip" % zip_prefix)
         logging.debug("ZIP file: %s" % zip_name)
-        # QC directory
-        if qc_dir is None:
+        # Directory with QC artefacts
+        if data_dir:
+            qc_dir = data_dir
+        elif qc_dir is None:
             qc_dir = project.qc_dir
         else:
             if not os.path.isabs(qc_dir):
                 qc_dir = os.path.join(project.dirn,
                                       qc_dir)
+        logging.debug("report: qc_dir  = %s" % qc_dir)
         # Create ZIP archive
-        zip_file = ZipArchive(zip_name,
-                              relpath=os.path.dirname(qc_dir),
-                              prefix=zip_prefix)
-        # Add the report
-        zip_file.add_file(filename)
-        # Add the QC outputs
-        logging.debug("Adding QC outputs for %s" % project.name)
-        for f in report.output_files:
-            ff = os.path.join(qc_dir,f)
-            if os.path.exists(ff):
-                zip_file.add(ff)
-            else:
-                logging.warning("%s: missing file '%s'" % (zip_file,
-                                                           ff))
+        try:
+            tmp_zip = "%s.tmp" % zip_name
+            zip_file = ZipArchive(tmp_zip,
+                                  relpath=os.path.dirname(qc_dir),
+                                  prefix=zip_prefix)
+            # Add the report
+            zip_file.add_file(filename)
+            # Add the QC outputs
+            logging.debug("Adding QC outputs to ZIP archive '%s'" % zip_name)
+            for f in report.output_files:
+                # Output files are absolute paths
+                logging.debug("-- Adding %s" % f)
+                if os.path.exists(f):
+                    zip_file.add(f)
+                else:
+                    raise Exception("Unable to add missing file '%s'" % f)
+            # Rename temporary ZIP to final location
+            os.rename(tmp_zip,zip_name)
+        except Exception as ex:
+            # Remove temporary ZIP
+            os.remove(tmp_zip)
+            raise Exception("Failed to create ZIP archive '%s': %s" %
+                            (zip_name,ex))
     # Return the output filename
     return filename
 
