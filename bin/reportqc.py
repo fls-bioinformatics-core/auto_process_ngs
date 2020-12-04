@@ -74,6 +74,19 @@ def main():
                            dest='force',default=False,
                            help="force generation of reports even if "
                            "verification fails")
+    data_dir_group = reporting.add_mutually_exclusive_group()
+    data_dir_group.add_argument('--data-dir',action='store_true',
+                                dest='use_data_dir',
+                                help="create a data directory with copies "
+                                "of QC artefacts needed for the HTML "
+                                "report (NB data directory will always "
+                                "be created for multi-project reports, "
+                                "unless --no-data-dir is specified)")
+    data_dir_group.add_argument('--no-data-dir',action='store_true',
+                                dest='no_data_dir',
+                                help="don't a data directory with copies "
+                                "of QC artefacts (this is the default "
+                                "except for multi-project reports)")
     verification = p.add_argument_group('Verification options')
     verification.add_argument('--verify',action='store_true',dest='verify',
                               help="verify the QC products only (don't "
@@ -233,12 +246,18 @@ def main():
                     retval += 1
             else:
                 print("MultiQC: %s (already exists)" % multiqc_report)
+        # Create data directory?
+        use_data_dir = (len(projects) > 1)
+        if args.use_data_dir:
+            use_data_dir = True
+        elif args.no_data_dir:
+            use_data_dir = False
         # Generate report
         report_html = report(report_projects,
                              title=args.title,
                              filename=out_file,
                              relative_links=True,
-                             use_data_dir=True,
+                             use_data_dir=use_data_dir,
                              make_zip=args.zip)
         print("Wrote QC report to %s" % out_file)
     # Finish with appropriate exit code
