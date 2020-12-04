@@ -295,7 +295,8 @@ class QCProject(object):
       from Fastqs
     - outputs: list of QC output categories detected (see
       below for valid values)
-    - output_files: list of QC output files
+    - output_files: list of absolute paths to QC output
+      files
     - software: dictionary with information on the
       QC software packages
 
@@ -468,7 +469,8 @@ class QCProject(object):
         output_files = []
         software = {}
         print("Scanning contents of %s" % self.qc_dir)
-        files = os.listdir(self.qc_dir)
+        files = [os.path.join(self.qc_dir,f)
+                 for f in os.listdir(self.qc_dir)]
         print("\t- %d objects found" % len(files))
         logger.debug("files: %s" % files)
         # Look for screen files
@@ -495,15 +497,17 @@ class QCProject(object):
                                      (fq.read_number
                                       if fq.read_number is not None else '1')))
                         fastq_names.add(s[:-len("_%s" % name)])
-                versions.add(Fastqscreen(
-                    os.path.join(self.qc_dir,screen)).version)
+                versions.add(Fastqscreen(screen).version)
             if versions:
                 software['fastq_screen'] = sorted(list(versions))
             # Store the screen files
             output_files.extend(screens)
         # Look for fastqc outputs
         fastqcs = list(filter(lambda f:
-                              f.endswith("_fastqc.html"),
+                              f.endswith("_fastqc") and
+                              os.path.exists("%s.html" % f) and
+                              os.path.exists(os.path.join(f,"summary.txt")) and
+                              os.path.exists(os.path.join(f,"fastqc_data.txt")),
                               files))
         logger.debug("Fastqc: %s" % fastqcs)
         print("\t- %d fastqc files" % len(fastqcs))
@@ -511,7 +515,6 @@ class QCProject(object):
             versions = set()
             # Pull out the Fastq names from the Fastqc files
             for fastqc in fastqcs:
-                fastqc = os.path.splitext(fastqc)[0]
                 f = os.path.basename(fastqc)[:-len("_fastqc")]
                 fastq_names.add(f)
                 fq = self.fastq_attrs(f)
@@ -519,12 +522,21 @@ class QCProject(object):
                             (('i' if fq.is_index_read else 'r'),
                              (fq.read_number
                               if fq.read_number is not None else '1')))
-                versions.add(Fastqc(
-                    os.path.join(self.qc_dir,fastqc)).version)
+                versions.add(Fastqc(fastqc).version)
             if versions:
                 software['fastqc'] = sorted(list(versions))
-            # Store the fastqc files
-            output_files.extend(fastqcs)
+            # Store the fastqc files needed for reporting
+            output_files.extend(["%s.html" % f for f in fastqcs])
+            output_files.extend([os.path.join(f,"summary.txt")
+                                 for f in fastqcs])
+            output_files.extend([os.path.join(f,"fastqc_data.txt")
+                                 for f in fastqcs])
+            # Fastqc plot images
+            for png in ("per_base_quality",):
+                output_files.extend([os.path.join(f,
+                                                  "Images",
+                                                  "%s.png" % png)
+                                     for f in fastqcs])
         # Look for fastq_strand outputs
         fastq_strand = list(filter(lambda f:
                                    f.endswith("_fastq_strand.txt"),
@@ -539,8 +551,7 @@ class QCProject(object):
                 fastq_names.add(
                     os.path.basename(
                         os.path.splitext(f)[0])[:-len("_fastq_strand")])
-                versions.add(Fastqstrand(
-                    os.path.join(self.qc_dir,f)).version)
+                versions.add(Fastqstrand(f).version)
             if versions:
                 software['fastq_strand'] = sorted(list(versions))
             # Store the fastq_strand files
