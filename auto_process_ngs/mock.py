@@ -694,8 +694,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
         qc_info['fastq_dir'] = self._project.fastq_dir
         qc_info.save()
         # Make mock report
+        fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
         if include_report:
-            fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
             qc_name = "qc%s_report" % fastq_set_name
             self.add_file("%s.html" % qc_name)
         # MultiQC report
