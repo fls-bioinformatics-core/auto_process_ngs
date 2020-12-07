@@ -340,7 +340,7 @@ class TestReportFunction(unittest.TestCase):
             add_qc_outputs(qc_dir=qc_dir,
                            include_report=False,
                            include_zip_file=False,
-                           include_multiqc=False)
+                           include_multiqc=True)
         return project_dir
     def test_report_single_end(self):
         """report: single-end data
@@ -465,6 +465,12 @@ class TestReportFunction(unittest.TestCase):
             'PJB2_S2_R1_001_rRNA_screen.txt')
         for f in expected:
             self.assertTrue(f in contents,"%s is missing from data dir" % f)
+        self.assertTrue(os.path.exists(os.path.join(self.top_dir,
+                                                    'PJB',
+                                                    'report.SE_data',
+                                                    'Test_PJB',
+                                                    'multiqc_report.html')),
+                        "Missing multiqc_report.html")
     def test_report_single_end_make_zip_file(self):
         """report: single-end data: make ZIP file
         """
@@ -484,6 +490,7 @@ class TestReportFunction(unittest.TestCase):
         print(contents)
         expected = (
             'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/multiqc_report.html',
             'report.SE.PJB/qc/PJB1_S1_R1_001_fastqc.html',
             'report.SE.PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
             'report.SE.PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
@@ -522,6 +529,7 @@ class TestReportFunction(unittest.TestCase):
         print(contents)
         expected = (
             'report.SE.PJB/report.SE.html',
+            'report.SE.PJB/report.SE_data/Test_PJB/multiqc_report.html',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_fastqc.html',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
             'report.SE.PJB/report.SE_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
@@ -615,6 +623,7 @@ class TestReportFunction(unittest.TestCase):
         print(contents)
         expected = (
             'report.multiple_projects.PJB/report.multiple_projects.html',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/multiqc_report.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_fastqc.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.png',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
@@ -629,6 +638,7 @@ class TestReportFunction(unittest.TestCase):
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_other_organisms_screen.txt',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.png',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB/qc/PJB2_S2_R1_001_rRNA_screen.txt',
+            'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/multiqc_report.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_fastqc.html',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_model_organisms_screen.png',
             'report.multiple_projects.PJB/report.multiple_projects_data/Test_PJB2/qc/PJB1_S1_R1_001_model_organisms_screen.txt',
