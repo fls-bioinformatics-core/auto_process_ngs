@@ -1106,6 +1106,16 @@ class QCReport(Document):
         Adds entries for the project metadata to the "metadata"
         table in the report
         """
+        # Determine the root directory for QC outputs
+        if self.data_dir:
+            project_data_dir = os.path.join(self.data_dir,
+                                            sanitize_name(project.id))
+        else:
+            project_data_dir = project.dirn
+        if self.relpath:
+            project_data_dir = os.path.relpath(project_data_dir,
+                                               self.relpath)
+        # Add metadata items
         for idx,item in enumerate(self.metadata_items):
             # Try to acquire the value from QC metadata
             try:
@@ -1142,13 +1152,18 @@ class QCReport(Document):
                     elif item == 'multiqc':
                         multiqc_report = "multi%s_report.html" \
                                          % os.path.basename(project.qc_dir)
-                        value = Link(multiqc_report)
+                        value = Link(multiqc_report,
+                                     os.path.join(project_data_dir,
+                                                  multiqc_report))
                     elif item == 'icell8_stats':
                         value = Link("icell8_stats.xlsx",
-                                     os.path.join("stats",
+                                     os.path.join(project_data_dir,
+                                                  "stats",
                                                   "icell8_stats.xlsx"))
                     elif item == 'icell8_report':
-                        value = Link("icell8_processing.html")
+                        value = Link("icell8_processing.html",
+                                     os.path.join(project_data_dir,
+                                                  "icell8_processing.html"))
                     else:
                         raise Exception("Unrecognised item to report: '%s'"
                                         % item)
