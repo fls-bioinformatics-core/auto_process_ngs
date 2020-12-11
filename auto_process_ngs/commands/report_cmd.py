@@ -354,7 +354,7 @@ def report_summary(ap):
                                    processing_software['cellranger'][2])
             else:
                 value = 'Unknown'
-        elif item == 'Cellranger-atac':
+        elif item == 'Cellranger-Atac':
             if 'cellranger-atac' in processing_software:
                 value = "%s %s" % (processing_software['cellranger-atac'][1],
                                    processing_software['cellranger-atac'][2])
