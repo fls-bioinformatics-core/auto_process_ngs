@@ -807,6 +807,8 @@ class QCReport(Document):
         projects = [QCProject(p,qc_dir=qc_dir) for p in projects]
         # Flag to indicate if report references multiple projects
         self.multi_project = (len(projects) > 1)
+        # Flag to indicate if any project has single cell data
+        self.has_single_cell = any([p.is_single_cell for p in projects])
         # Primary project
         primary_project = projects[0]
         # Set up title
@@ -944,10 +946,13 @@ class QCReport(Document):
                           'user',
                           'PI',
                           'library_type',
-                          'single_cell_platform',
-                          'number_of_cells',
                           'organism',
                           'protocol',]
+        if self.has_single_cell:
+            for item in ('single_cell_platform',
+                         'number_of_cells',):
+                metadata_items.insert(metadata_items.index('organism'),
+                                      item)
         if 'cellranger_count' in self.outputs:
             metadata_items.append('cellranger_reference')
         if 'multiqc' in self.outputs:
@@ -959,10 +964,10 @@ class QCReport(Document):
         if self.multi_project:
             metadata_items[metadata_items.index('run_id')] = 'project_id'
         # Make table with one column per project
-        header = ['item']
+        columns = ['item']
         for project in projects:
-            header.append(project.id)
-        metadata_table = Table(header)
+            columns.append(project.id)
+        metadata_table = Table(columns)
         metadata_table.no_header()
         metadata_table.add_css_classes('metadata')
         # Add rows for metadata items
