@@ -311,6 +311,11 @@ class QCProject(object):
     - 'icell8_report'
     - 'cellranger_count'
     - 'multiqc'
+
+    General properties about the project:
+
+    - is_single_cell: True if the project has single cell
+        data (10xGenomics, ICELL8 etc)
     """
     def __init__(self,project,qc_dir=None):
         """
@@ -435,6 +440,13 @@ class QCProject(object):
             logger.warning("Run reference ID can't be "
                            "determined: %s (ignored)" % ex)
             return None
+
+    @property
+    def is_single_cell(self):
+        """
+        Check whether project has single cell data
+        """
+        return (self.info['single_cell_platform'] is not None)
 
     def software_info(self,pkg):
         """
