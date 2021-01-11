@@ -867,7 +867,7 @@ class TestQCPipeline(unittest.TestCase):
                                            '10xGenomics Single Cell Multiome',
                                            'Library type': 'ATAC' })
         p.create(top_dir=self.wd)
-        # Make mock multiome GEX analysis project
+        # Make mock multiome GEX analysis project (with QC outputs)
         p2 = MockAnalysisProject("PJB_GEX",("PJB1_GEX_S1_R1_001.fastq.gz",
                                             "PJB1_GEX_S1_R2_001.fastq.gz",
                                             "PJB2_GEX_S2_R1_001.fastq.gz",
@@ -877,6 +877,12 @@ class TestQCPipeline(unittest.TestCase):
                                             '10xGenomics Single Cell Multiome',
                                             'Library type': 'GEX' })
         p2.create(top_dir=self.wd)
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_qc_outputs(protocol='10x_Multiome_GEX')
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_cellranger_count_outputs(cellranger='cellranger-arc')
         # Add the 10x_multiome_libraries.info file
         with open(os.path.join(self.wd,
                                "PJB_ATAC",
@@ -948,7 +954,7 @@ class TestQCPipeline(unittest.TestCase):
                                            '10xGenomics Single Cell Multiome',
                                            'Library type': 'GEX' })
         p.create(top_dir=self.wd)
-        # Make mock multiome ATAC analysis project
+        # Make mock multiome ATAC analysis project (with QC outputs)
         p2 = MockAnalysisProject("PJB_ATAC",("PJB1_ATAC_S1_R1_001.fastq.gz",
                                              "PJB1_ATAC_S1_R2_001.fastq.gz",
                                              "PJB1_ATAC_S1_R3_001.fastq.gz",
@@ -960,6 +966,12 @@ class TestQCPipeline(unittest.TestCase):
                                             '10xGenomics Single Cell Multiome',
                                             'Library type': 'ATAC' })
         p2.create(top_dir=self.wd)
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_qc_outputs(protocol='10x_Multiome_ATAC')
+        UpdateAnalysisProject(
+            AnalysisProject(os.path.join(self.wd,p2.name))).\
+            add_cellranger_count_outputs(cellranger='cellranger-arc')
         # Add the 10x_multiome_libraries.info file
         with open(os.path.join(self.wd,
                                "PJB_GEX",
