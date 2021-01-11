@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2021 Peter Briggs
 #
 ########################################################################
 
@@ -1908,19 +1908,20 @@ sys.exit(MockMultiQC(no_outputs=%s,
         p.add_argument("--title",action="store")
         p.add_argument("--filename",action="store")
         p.add_argument("--force",action="store_true")
-        p.add_argument("analysis_directory")
+        p.add_argument("analysis_directory",nargs='+')
         args = p.parse_args(args)
         # Check input directory
-        if not os.path.exists(args.analysis_directory):
-            sys.stderr.write("""Usage: multiqc [OPTIONS] <analysis directory>
+        for d in args.analysis_directory:
+            if not os.path.exists(d):
+                sys.stderr.write("""Usage: multiqc [OPTIONS] <analysis directory>
 
 Error: Invalid value for "analysis_dir": Path "%s" does not exist.
 
 This is MultiQC v1.5
 
 For more help, run 'multiqc --help' or visit http://multiqc.info
-            """ % args.analysis_directory)
-            return 2
+""" % d)
+                return 2
         # Outputs
         if args.filename is None:
             out_file = "multiqc_report.html"
