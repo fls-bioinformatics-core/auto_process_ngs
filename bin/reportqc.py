@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2021 Peter Briggs
 #
 
 #######################################################################
@@ -14,7 +14,9 @@ import argparse
 import logging
 from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.applications import Command
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.constants import PROTOCOLS
 from auto_process_ngs.qc.outputs import expected_outputs
 from auto_process_ngs.qc.reporting import verify
@@ -102,7 +104,10 @@ def main():
                             help="deprecated: does nothing (strand stats "
                             "are automatically included if present)")
     p.add_argument('dirs',metavar="DIR",nargs='+',
-                   help="directory to report QC for")
+                   help="directory to report QC for; can be a project "
+                   "directory (in which case the default QC directory "
+                   "will be reported), or a QC directory within a "
+                   "project")
     args = p.parse_args()
 
     # Report name and version
@@ -115,29 +120,61 @@ def main():
                              "not available")
             sys.exit(1)
 
-    # Get projects from supplied directories
+    # Get projects and QC dirs from supplied directories
     projects = []
     for d in args.dirs:
-        print("\n**** Gathering project data from %s ****" % d)
-        p = AnalysisProject(os.path.abspath(d))
-        print("...project           : %s" % p.name)
-        projects.append(p)
-        # Sort out QC directory
-        print("...default QC dir    : %s" % p.qc_dir)
-        if args.qc_dir is None:
-            qc_dir = p.qc_dir
+        print("\n**** Examining directory %s ****" % d)
+        # Check if directory is a QC dir
+        qc_dir = None
+        # Look for 'qc.info' in current directory
+        if os.path.exists(os.path.join(os.path.abspath(d),'qc.info')):
+            print("...located 'qc.info', assuming this is QC dir")
+            qc_dir = os.path.abspath(d)
+            # Locate parent project dir
+            metadata_file = locate_project_info_file(qc_dir)
+            if metadata_file is not None:
+                p = AnalysisProject(os.path.dirname(metadata_file))
+                print("...located parent project: %s" % p.dirn)
+            else:
+                # Unable to locate project directory
+                print("...failed to locate parent project metadata file")
+                # Fall back to location of Fastq files
+                qc_info = AnalysisProjectQCDirInfo(
+                    os.path.join(qc_dir,'qc.info'))
+                if qc_info.fastq_dir is not None:
+                    project_dir = os.path.abspath(qc_info.fastq_dir)
+                    if os.path.basename(project_dir).startswith('fastqs'):
+                        # Use the next level up
+                        project_dir = os.path.dirname(project_dir)
+                    print("...putative parent project dir: %s (from "
+                          " Fastq dir)" % project_dir)
+                    p = AnalysisProject(project_dir)
+                else:
+                    # Failed to locate Fastqs
+                    logging.fatal("Unable to locate parent project")
+                    # Exit with an error
+                    sys.exit(1)
+            # Issue a warning if a QC dir was explicitly
+            # specified on the command line
+            if args.qc_dir is not None:
+                logging.warning("--qc_dir has been ignored for this "
+                                "directory")
         else:
-            qc_dir = args.qc_dir
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(p.dirn,qc_dir)
+            # Assume directory is a project
+            p = AnalysisProject(os.path.abspath(d))
+            print("...assuming this is a project dir")
+            # Identify the QC directory
+            if args.qc_dir is None:
+                qc_dir = p.qc_dir
+            else:
+                qc_dir = args.qc_dir
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(p.dirn,qc_dir)
+            print("...QC directory: %s" % qc_dir)
+        # Explicitly set the QC directory location)
         p.use_qc_dir(qc_dir)
-        print("...using QC dir      : %s" % p.qc_dir)
-        # Store QC protocol
+        # Locate the Fastq dir
         qc_info = p.qc_info(qc_dir)
-        print("...stored QC protocol: %s" % qc_info.protocol)
-        # Sort out fastq subdirectory
-        print("...primary Fastqs dir: %s" % p.fastq_dir)
-        print("...stored Fastqs dir : %s" % qc_info.fastq_dir)
         if args.fastq_dir is None:
             fastq_dir = qc_info.fastq_dir
             if fastq_dir is None:
@@ -149,8 +186,9 @@ def main():
                     logging.warning("Stored fastq dir mismatch "
                                     "(%s != %s)" % (fastq_dir,
                                                     qc_info.fastq_dir))
+        print("...using Fastqs dir: %s" % p.fastq_dir)
         p.use_fastq_dir(fastq_dir)
-        print("...using Fastqs dir  : %s" % p.fastq_dir)
+        projects.append(p)
 
     # Verify QC for projects
     print("\n**** Verifying QC ****")
