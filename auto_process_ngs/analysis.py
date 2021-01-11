@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -954,7 +954,8 @@ class AnalysisProject(object):
         """
         qc_dirs = []
         for d in bcf_utils.list_dirs(self.dirn):
-            if d.startswith("qc"):
+            if d.startswith("qc") and \
+               os.path.exists(os.path.join(self.dirn,d,'qc.info')):
                 qc_dirs.append(d)
         return qc_dirs
 
