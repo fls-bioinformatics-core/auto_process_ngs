@@ -1644,6 +1644,57 @@ class TestLocateProject(unittest.TestCase):
                              "%s:PJB" % self.dirn,
                              start_dir=self.dirn).dirn)
 
+class TestLocateProjectInfoFile(unittest.TestCase):
+    """
+    Tests for the 'locate_project_info_file' function
+    """
+    def setUp(self):
+        self.dirn = tempfile.mkdtemp(suffix='TestLocateProjectInfoFile')
+        self.topdir = os.path.join(self.dirn,"analysis")
+        os.mkdir(self.topdir)
+        # Make a project directory
+        p = MockAnalysisProject('PJB',('PJB1_S1_R1_001.fastq.gz',
+                                       'PJB1_S1_R2_001.fastq.gz'))
+        p.create(top_dir=self.topdir)
+        # Location of the info file
+        self.project_info_file = os.path.join(self.topdir,
+                                              'PJB','README.info')
+
+    def tearDown(self):
+        # Remove the temporary test directory
+        shutil.rmtree(self.dirn)
+
+    def test_locate_project_info_file_in_current_dir(self):
+        """
+        locate_project_info_file: find metadata file in current directory
+        """
+        # Locate the info file in project dir
+        self.assertEqual(locate_project_info_file(os.path.join(self.topdir,
+                                                               'PJB')),
+                         self.project_info_file)
+
+    def test_locate_project_info_file_from_subdir(self):
+        """
+        locate_project_info_file: find metadata file from a subdirectory
+        """
+        # Create some subdirectories
+        os.mkdir(os.path.join(self.topdir,'PJB','qc'))
+        os.mkdir(os.path.join(self.topdir,'PJB','qc','logs'))
+        # Locate the info file in project dir
+        self.assertEqual(locate_project_info_file(os.path.join(self.topdir,
+                                                               'PJB',
+                                                               'qc',
+                                                               'logs')),
+                         self.project_info_file)
+
+    def test_locate_project_info_file_not_found(self):
+        """
+        locate_project_info_file: fail to locate metadata file
+        """
+        # Info file can't be located
+        self.assertEqual(locate_project_info_file(os.path.join(self.topdir)),
+                         None)
+
 class TestCopyAnalysisProject(unittest.TestCase):
     """
     Tests for the 'copy_analysis_project' function
