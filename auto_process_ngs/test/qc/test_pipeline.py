@@ -880,9 +880,6 @@ class TestQCPipeline(unittest.TestCase):
         UpdateAnalysisProject(
             AnalysisProject(os.path.join(self.wd,p2.name))).\
             add_qc_outputs(protocol='10x_Multiome_GEX')
-        UpdateAnalysisProject(
-            AnalysisProject(os.path.join(self.wd,p2.name))).\
-            add_cellranger_count_outputs(cellranger='cellranger-arc')
         # Add the 10x_multiome_libraries.info file
         with open(os.path.join(self.wd,
                                "PJB_ATAC",
@@ -969,9 +966,6 @@ class TestQCPipeline(unittest.TestCase):
         UpdateAnalysisProject(
             AnalysisProject(os.path.join(self.wd,p2.name))).\
             add_qc_outputs(protocol='10x_Multiome_ATAC')
-        UpdateAnalysisProject(
-            AnalysisProject(os.path.join(self.wd,p2.name))).\
-            add_cellranger_count_outputs(cellranger='cellranger-arc')
         # Add the 10x_multiome_libraries.info file
         with open(os.path.join(self.wd,
                                "PJB_GEX",
