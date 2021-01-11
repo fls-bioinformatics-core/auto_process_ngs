@@ -666,8 +666,11 @@ class UpdateAnalysisProject(DirectoryUpdater):
         for fq in self._project.fastqs:
             print("Adding outputs for %s" % fq)
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
-            if protocol == 'singlecell' and \
-               self._project.fastq_attrs(fq).read_number == 1:
+            if protocol in ('singlecell',
+                            '10x_scRNAseq',
+                            '10x_snRNAseq',
+                            '10x_Multiome_GEX',) and \
+                self._project.fastq_attrs(fq).read_number == 1:
                 continue
             for screen in ("model_organisms",
                            "other_organisms",
@@ -682,7 +685,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             with open(fastq_strand_conf,'w') as fp:
                 fp.write("")
             for fq_pair in pair_fastqs_by_name(self._project.fastqs):
-                if protocol == 'singlecell':
+                if protocol in ('singlecell',
+                                '10x_scRNAseq',
+                                '10x_snRNAseq',
+                                '10x_Multiome_GEX',):
                     fq = fq_pair[1]
                 else:
                     fq = fq_pair[0]
