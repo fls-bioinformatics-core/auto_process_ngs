@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 
 """
@@ -40,8 +40,6 @@ from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
-from ..analysis import split_sample_reference
-from ..analysis import locate_project
 from ..applications import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
@@ -51,6 +49,7 @@ from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
+from ..tenx_genomics_utils import MultiomeLibraries
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import set_cell_count_for_project
 from ..utils import get_organism_list
@@ -1062,64 +1061,19 @@ class MakeCellrangerArcCountLibraries(PipelineFunctionTask):
             return
         # Read the file and get sample associations between
         # 'local' and 'remote' datasets
-        sample_mappings = dict()
-        with open(libraries_file,'rt') as fp:
-            for line in fp:
-                # Ignore comment lines
-                if line.startswith('#'):
-                    continue
-                # Lines should be 'local_sample<TAB>remote_sample'
-                local_sample,remote_sample = line.split()
-                if local_sample not in [s.name for s in self.args.project.samples]:
-                    raise Exception("Sample '%s' not found in project"
-                                    % local_sample)
-                try:
-                    sample_mappings[local_sample].append(remote_sample)
-                except KeyError:
-                    sample_mappings[local_sample] = [remote_sample,]
+        libraries = MultiomeLibraries(libraries_file)
         # Set up libraries.csv files for each sample for
         # cellranger-arc count
-        for local_sample in sample_mappings:
+        for local_sample in libraries.local_samples:
             libraries_csv = os.path.join(self.args.qc_dir,
                                          "libraries.%s.csv" % local_sample)
             print("Sample '%s': making %s" % (local_sample,
                                               libraries_csv))
-            with open(libraries_csv,'wt') as fp:
-                fp.write("fastqs,sample,library_type\n")
-                # Data for local sample
-                library_type = self.args.project.info.library_type
-                if library_type == 'ATAC':
-                    library_type = "Chromatin Accessibility"
-                elif library_type == 'GEX':
-                    library_type = "Gene Expression"
-                else:
-                    raise Exception("Unsupported library: '%s'"
-                                    % library_type)
-                fp.write("%s,%s,%s\n" % (self.args.project.fastq_dir,
-                                         local_sample,
-                                         library_type))
-                # Data for remote sample(s)
-                for remote_sample_id in sample_mappings[local_sample]:
-                    print("Locating linked sample: '%s'" % remote_sample_id)
-                    run,project,remote_sample = split_sample_reference(
-                        remote_sample_id)
-                    project = locate_project("%s:%s" % (run,project),
-                                             ascend=True)
-                    if not project:
-                        raise Exception("Failed to locate project for "
-                                        "linked sample: %s"
-                                        % remote_sample)
-                    library_type = project.info.library_type
-                    if library_type == 'ATAC':
-                        library_type = "Chromatin Accessibility"
-                    elif library_type == 'GEX':
-                        library_type = "Gene Expression"
-                    else:
-                        raise Exception("Unsupported library: '%s'"
-                                        % library_type)
-                    fp.write("%s,%s,%s\n" % (project.fastq_dir,
-                                             remote_sample,
-                                             library_type))
+            libraries.write_libraries_csv(
+                local_sample,
+                self.args.project.fastq_dir,
+                self.args.project.info.library_type,
+                filen=libraries_csv)
             print("Generated %s" % libraries_csv)
 
 class CheckCellrangerCountOutputs(PipelineFunctionTask):
