@@ -26,6 +26,7 @@ Functions:
 
 - run_reference_id:
 - split_sample_name:
+- split_sample_reference:
 - match_run_id:
 - locate_run:
 - locate_project:
