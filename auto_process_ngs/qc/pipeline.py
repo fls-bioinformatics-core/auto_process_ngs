@@ -1373,6 +1373,16 @@ class ReportQC(PipelineTask):
         """
         pass
     def setup(self):
+        # Check for 10x multiome libraries file with linked projects
+        libraries_file = os.path.join(self.args.project.dirn,
+                                      "10x_multiome_libraries.info")
+        if os.path.exists(libraries_file):
+            # Read the file and get sample associations between
+            # 'local' and 'remote' datasets
+            libraries = MultiomeLibraries(libraries_file)
+            linked_projects = libraries.linked_projects()
+        else:
+            linked_projects = None
         # Build the reportqc.py command
         project = self.args.project
         fastq_dir = self.args.fastq_dir
@@ -1394,14 +1404,29 @@ class ReportQC(PipelineTask):
         cmd = PipelineCommandWrapper(
             "Generate QC report for %s" % project.name,
             "reportqc.py",
-            "--qc_dir",self.args.qc_dir,
             "--filename",out_file,
             "--title",title)
+        if self.args.qc_dir is not None:
+            if not os.path.isabs(self.args.qc_dir):
+                # QC dir specified as a relative path
+                cmd.add_args("--qc_dir",self.args.qc_dir)
         if fastq_dir is not None:
             cmd.add_args("--fastq_dir",fastq_dir)
         if self.args.multiqc:
             cmd.add_args("--multiqc")
         if self.args.zip_outputs:
             cmd.add_args("--zip")
-        cmd.add_args(project.dirn)
+        # Add the primary project/QC directory
+        if self.args.qc_dir:
+            if os.path.isabs(self.args.qc_dir):
+                # QC dir specified as an absolute path
+                # Use this directly
+                cmd.add_args(self.args.qc_dir)
+            else:
+                # QC dir specified as a relative path
+                # Use the project directory
+                cmd.add_args(project.dirn)
+        # Append the additional linked projects
+        if linked_projects:
+            cmd.add_args(*[p.dirn for p in linked_projects])
         self.add_cmd(cmd)
