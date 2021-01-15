@@ -1052,10 +1052,14 @@ class QCReport(Document):
         """
         if not self.data_dir:
             return
-        # Create directory if it doesn't exist
-        if not os.path.exists(self.data_dir):
-            print("Creating data directory: %s" % self.data_dir)
-            os.mkdir(self.data_dir)
+        # Remove pre-existing data directory
+        if os.path.exists(self.data_dir):
+            print("Removing existing data directory: %s" %
+                  self.data_dir)
+            shutil.rmtree(self.data_dir)
+        # (Re)create directory
+        print("Creating data directory: %s" % self.data_dir)
+        os.mkdir(self.data_dir)
         # Copy QC artefacts from each project
         output_files = []
         for project in projects:
