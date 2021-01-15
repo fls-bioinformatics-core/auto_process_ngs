@@ -38,7 +38,7 @@ class TestZipArchive(unittest.TestCase):
                  'sub3/',
                  'sub3/test6')
         os.mkdir(src_dir)
-        for item in [os.path.join(self.dirn,x) for x in items]:
+        for item in [os.path.join(src_dir,x) for x in items]:
             if item.endswith('/'):
                 try:
                     os.mkdir(item)
@@ -50,8 +50,8 @@ class TestZipArchive(unittest.TestCase):
         # Create the zip archive
         zip_filename = os.path.join(self.dirn,'test.zip')
         self.assertFalse(os.path.exists(zip_filename))
-        z = ZipArchive(zip_filename,relpath=self.dirn)
-        for item in [os.path.join(self.dirn,x) for x in ('test1','sub1')]:
+        z = ZipArchive(zip_filename,relpath=src_dir)
+        for item in [os.path.join(src_dir,x) for x in ('test1','sub1')]:
             z.add(item)
         z.close()
         # Check the zip archive exists
@@ -75,6 +75,39 @@ class TestZipArchive(unittest.TestCase):
                                       'sub1/sub2/test5')),
                             "'%s' in zip file but shouldn't be"
                             % name)
+
+    def test_create_zip_archive_fails_for_files_outside_relpath(self):
+        """ZipArchive: create a new zip archive fails for item outside relpath
+        """
+        # Make an example directory to zip up
+        src_dir = os.path.join(self.dirn,'source')
+        items = ('test1',
+                 'sub1/',
+                 'sub1/test2',)
+        os.mkdir(src_dir)
+        for item in [os.path.join(src_dir,x) for x in items]:
+            if item.endswith('/'):
+                try:
+                    os.mkdir(item)
+                except OSError as ex:
+                    raise OSError("Failed to make %s" % item)
+            else:
+                with open(item,'wt') as fp:
+                    fp.write('')
+        # Make a file outside the directory
+        extra_file = os.path.join(self.dirn,'extra')
+        with open(extra_file,'wt') as fp:
+            fp.write('')
+        # Create the zip archive
+        zip_filename = os.path.join(self.dirn,'test.zip')
+        self.assertFalse(os.path.exists(zip_filename))
+        z = ZipArchive(zip_filename,relpath=src_dir)
+        for item in [os.path.join(src_dir,x) for x in ('test1','sub1')]:
+            z.add(item)
+        # Add file outside the relpath
+        self.assertRaises(Exception,
+                          z.add,
+                          extra_file)
 
 class TestOutputFiles(unittest.TestCase):
     """

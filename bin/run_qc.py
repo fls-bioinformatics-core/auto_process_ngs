@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     run_qc.py: run QC pipeline on arbitrary fastq files
-#     Copyright (C) University of Manchester 2017-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2017-2021 Peter Briggs
 #
 #########################################################################
 #
@@ -30,6 +30,7 @@ import logging
 from bcftbx.JobRunner import fetch_runner
 from bcftbx.JobRunner import SimpleJobRunner
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.metadata import AnalysisProjectInfo
 from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.fastq_utils import IlluminaFastqAttrs
@@ -93,41 +94,6 @@ def cleanup_atexit(tmp_project_dir):
         print("Removing temporary project directory: %s"
               % tmp_project_dir)
         shutil.rmtree(tmp_project_dir)
-
-def find_info_file(start_dir):
-    """
-    Locate project metadata file
-
-    Searches the current directory and its parent
-    directory for a project metadata file ('README.info'),
-    until either one is found or the root of the
-    filesystem is reached.
-
-    Arguments:
-      start_dir (str): path of directory to start
-        searching from
-
-    Returns:
-      String: path to the metadata file, or 'None' if
-        no file can be located.
-    """
-    d = os.path.abspath(start_dir)
-    while True:
-        info_file = os.path.join(d,"README.info")
-        if os.path.exists(info_file):
-            try:
-                # Try to load metadata
-                AnalysisProjectInfo().load(info_file,
-                                           fail_on_error=True)
-                return info_file
-            except Exception:
-                # Failed to load valid metadata file
-                pass
-        # Try next level up
-        d = os.path.dirname(d)
-        if d == os.path.sep:
-            # Run out of directories
-            return None
 
 #######################################################################
 # Main program
@@ -355,11 +321,11 @@ if __name__ == "__main__":
             logger.fatal("%s: no Fastqs found" % dir_path)
             sys.exit(1)
         # Look for project metadata
-        info_file = find_info_file(dir_path)
+        info_file = locate_project_info_file(dir_path)
     else:
         # Look for a metadata file based on Fastqs
         for fq in inputs:
-            info_file = find_info_file(os.path.dirname(fq))
+            info_file = locate_project_info_file(os.path.dirname(fq))
             if info_file:
                 break
     # Filter out index reads

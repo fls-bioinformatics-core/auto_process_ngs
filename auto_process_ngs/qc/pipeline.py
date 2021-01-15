@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     qc.pipeline.py: pipelines for running QC
-#     Copyright (C) University of Manchester 2019-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2019-2021 Peter Briggs
 #
 
 """
@@ -40,8 +40,6 @@ from bcftbx.utils import mkdir
 from bcftbx.utils import mkdirs
 from bcftbx.utils import find_program
 from ..analysis import copy_analysis_project
-from ..analysis import split_sample_reference
-from ..analysis import locate_project
 from ..applications import Command
 from ..fastq_utils import pair_fastqs_by_name
 from ..fastq_utils import remove_index_fastqs
@@ -51,6 +49,7 @@ from ..pipeliner import PipelineFunctionTask
 from ..pipeliner import PipelineCommandWrapper
 from ..pipeliner import PipelineParam as Param
 from ..pipeliner import PipelineFailure
+from ..tenx_genomics_utils import MultiomeLibraries
 from ..tenx_genomics_utils import add_cellranger_args
 from ..tenx_genomics_utils import set_cell_count_for_project
 from ..utils import get_organism_list
@@ -1062,64 +1061,19 @@ class MakeCellrangerArcCountLibraries(PipelineFunctionTask):
             return
         # Read the file and get sample associations between
         # 'local' and 'remote' datasets
-        sample_mappings = dict()
-        with open(libraries_file,'rt') as fp:
-            for line in fp:
-                # Ignore comment lines
-                if line.startswith('#'):
-                    continue
-                # Lines should be 'local_sample<TAB>remote_sample'
-                local_sample,remote_sample = line.split()
-                if local_sample not in [s.name for s in self.args.project.samples]:
-                    raise Exception("Sample '%s' not found in project"
-                                    % local_sample)
-                try:
-                    sample_mappings[local_sample].append(remote_sample)
-                except KeyError:
-                    sample_mappings[local_sample] = [remote_sample,]
+        libraries = MultiomeLibraries(libraries_file)
         # Set up libraries.csv files for each sample for
         # cellranger-arc count
-        for local_sample in sample_mappings:
+        for local_sample in libraries.local_samples:
             libraries_csv = os.path.join(self.args.qc_dir,
                                          "libraries.%s.csv" % local_sample)
             print("Sample '%s': making %s" % (local_sample,
                                               libraries_csv))
-            with open(libraries_csv,'wt') as fp:
-                fp.write("fastqs,sample,library_type\n")
-                # Data for local sample
-                library_type = self.args.project.info.library_type
-                if library_type == 'ATAC':
-                    library_type = "Chromatin Accessibility"
-                elif library_type == 'GEX':
-                    library_type = "Gene Expression"
-                else:
-                    raise Exception("Unsupported library: '%s'"
-                                    % library_type)
-                fp.write("%s,%s,%s\n" % (self.args.project.fastq_dir,
-                                         local_sample,
-                                         library_type))
-                # Data for remote sample(s)
-                for remote_sample_id in sample_mappings[local_sample]:
-                    print("Locating linked sample: '%s'" % remote_sample_id)
-                    run,project,remote_sample = split_sample_reference(
-                        remote_sample_id)
-                    project = locate_project("%s:%s" % (run,project),
-                                             ascend=True)
-                    if not project:
-                        raise Exception("Failed to locate project for "
-                                        "linked sample: %s"
-                                        % remote_sample)
-                    library_type = project.info.library_type
-                    if library_type == 'ATAC':
-                        library_type = "Chromatin Accessibility"
-                    elif library_type == 'GEX':
-                        library_type = "Gene Expression"
-                    else:
-                        raise Exception("Unsupported library: '%s'"
-                                        % library_type)
-                    fp.write("%s,%s,%s\n" % (project.fastq_dir,
-                                             remote_sample,
-                                             library_type))
+            libraries.write_libraries_csv(
+                local_sample,
+                self.args.project.fastq_dir,
+                self.args.project.info.library_type,
+                filen=libraries_csv)
             print("Generated %s" % libraries_csv)
 
 class CheckCellrangerCountOutputs(PipelineFunctionTask):
@@ -1419,6 +1373,16 @@ class ReportQC(PipelineTask):
         """
         pass
     def setup(self):
+        # Check for 10x multiome libraries file with linked projects
+        libraries_file = os.path.join(self.args.project.dirn,
+                                      "10x_multiome_libraries.info")
+        if os.path.exists(libraries_file):
+            # Read the file and get sample associations between
+            # 'local' and 'remote' datasets
+            libraries = MultiomeLibraries(libraries_file)
+            linked_projects = libraries.linked_projects()
+        else:
+            linked_projects = None
         # Build the reportqc.py command
         project = self.args.project
         fastq_dir = self.args.fastq_dir
@@ -1440,14 +1404,29 @@ class ReportQC(PipelineTask):
         cmd = PipelineCommandWrapper(
             "Generate QC report for %s" % project.name,
             "reportqc.py",
-            "--qc_dir",self.args.qc_dir,
             "--filename",out_file,
             "--title",title)
+        if self.args.qc_dir is not None:
+            if not os.path.isabs(self.args.qc_dir):
+                # QC dir specified as a relative path
+                cmd.add_args("--qc_dir",self.args.qc_dir)
         if fastq_dir is not None:
             cmd.add_args("--fastq_dir",fastq_dir)
         if self.args.multiqc:
             cmd.add_args("--multiqc")
         if self.args.zip_outputs:
             cmd.add_args("--zip")
-        cmd.add_args(project.dirn)
+        # Add the primary project/QC directory
+        if self.args.qc_dir:
+            if os.path.isabs(self.args.qc_dir):
+                # QC dir specified as an absolute path
+                # Use this directly
+                cmd.add_args(self.args.qc_dir)
+            else:
+                # QC dir specified as a relative path
+                # Use the project directory
+                cmd.add_args(project.dirn)
+        # Append the additional linked projects
+        if linked_projects:
+            cmd.add_args(*[p.dirn for p in linked_projects])
         self.add_cmd(cmd)

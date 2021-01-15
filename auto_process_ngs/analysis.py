@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     analysis: classes & funcs for handling analysis dirs and projects
-#     Copyright (C) University of Manchester 2018-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2018-2021 Peter Briggs
 #
 ########################################################################
 #
@@ -26,9 +26,11 @@ Functions:
 
 - run_reference_id:
 - split_sample_name:
+- split_sample_reference:
 - match_run_id:
 - locate_run:
 - locate_project:
+- locate_project_info_file:
 - copy_analysis_project:
 """
 
@@ -954,7 +956,8 @@ class AnalysisProject(object):
         """
         qc_dirs = []
         for d in bcf_utils.list_dirs(self.dirn):
-            if d.startswith("qc"):
+            if d.startswith("qc") and \
+               os.path.exists(os.path.join(self.dirn,d,'qc.info')):
                 qc_dirs.append(d)
         return qc_dirs
 
@@ -1559,6 +1562,41 @@ def locate_project(project_id,start_dir=None,ascend=False):
         if os.path.exists(d):
             return AnalysisProject(d)
     return None
+
+def locate_project_info_file(start_dir):
+    """
+    Locate project metadata file
+
+    Searches the current directory and its parents for a
+    project metadata file ('README.info'), ascending up
+    directory levels until either a valid metadata file is
+    found, or the root of the filesystem is reached.
+
+    Arguments:
+      start_dir (str): path of directory to start
+        searching from
+
+    Returns:
+      String: path to the metadata file, or 'None' if
+        no file can be located.
+    """
+    d = os.path.abspath(start_dir)
+    while True:
+        info_file = os.path.join(d,"README.info")
+        if os.path.exists(info_file):
+            try:
+                # Try to load metadata
+                AnalysisProjectInfo().load(info_file,
+                                           fail_on_error=True)
+                return info_file
+            except Exception as ex:
+                # Failed to load valid metadata file
+                pass
+        # Try next level up
+        d = os.path.dirname(d)
+        if d == os.path.sep:
+            # Run out of directories
+            return None
 
 def copy_analysis_project(project,fastq_dir=None):
     """

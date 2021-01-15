@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     reportqc.py: generate report file for Illumina NGS qc runs
-#     Copyright (C) University of Manchester 2015-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2015-2021 Peter Briggs
 #
 
 #######################################################################
@@ -14,10 +14,13 @@ import argparse
 import logging
 from bcftbx.utils import find_program
 from auto_process_ngs.analysis import AnalysisProject
+from auto_process_ngs.analysis import locate_project_info_file
 from auto_process_ngs.applications import Command
+from auto_process_ngs.metadata import AnalysisProjectQCDirInfo
 from auto_process_ngs.qc.constants import PROTOCOLS
-from auto_process_ngs.qc.reporting import QCReporter
 from auto_process_ngs.qc.outputs import expected_outputs
+from auto_process_ngs.qc.reporting import verify
+from auto_process_ngs.qc.reporting import report
 from auto_process_ngs.qc.utils import determine_qc_protocol
 from auto_process_ngs import get_version
 
@@ -73,6 +76,19 @@ def main():
                            dest='force',default=False,
                            help="force generation of reports even if "
                            "verification fails")
+    data_dir_group = reporting.add_mutually_exclusive_group()
+    data_dir_group.add_argument('--data-dir',action='store_true',
+                                dest='use_data_dir',
+                                help="create a data directory with copies "
+                                "of QC artefacts needed for the HTML "
+                                "report (NB data directory will always "
+                                "be created for multi-project reports, "
+                                "unless --no-data-dir is specified)")
+    data_dir_group.add_argument('--no-data-dir',action='store_true',
+                                dest='no_data_dir',
+                                help="don't a data directory with copies "
+                                "of QC artefacts (this is the default "
+                                "except for multi-project reports)")
     verification = p.add_argument_group('Verification options')
     verification.add_argument('--verify',action='store_true',dest='verify',
                               help="verify the QC products only (don't "
@@ -88,7 +104,10 @@ def main():
                             help="deprecated: does nothing (strand stats "
                             "are automatically included if present)")
     p.add_argument('dirs',metavar="DIR",nargs='+',
-                   help="directory to report QC for")
+                   help="directory to report QC for; can be a project "
+                   "directory (in which case the default QC directory "
+                   "will be reported), or a QC directory within a "
+                   "project")
     args = p.parse_args()
 
     # Report name and version
@@ -101,34 +120,61 @@ def main():
                              "not available")
             sys.exit(1)
 
-    # Examine projects i.e. supplied directories
-    retval = 0
+    # Get projects and QC dirs from supplied directories
+    projects = []
     for d in args.dirs:
-        dir_path = os.path.abspath(d)
-        p = AnalysisProject(dir_path)
-        print("Project           : %s" % p.name)
-        print("Primary Fastqs dir: %s" % p.fastq_dir)
-        if args.qc_dir is None:
-            qc_dir = p.qc_dir
+        print("\n**** Examining directory %s ****" % d)
+        # Check if directory is a QC dir
+        qc_dir = None
+        # Look for 'qc.info' in current directory
+        if os.path.exists(os.path.join(os.path.abspath(d),'qc.info')):
+            print("...located 'qc.info', assuming this is QC dir")
+            qc_dir = os.path.abspath(d)
+            # Locate parent project dir
+            metadata_file = locate_project_info_file(qc_dir)
+            if metadata_file is not None:
+                p = AnalysisProject(os.path.dirname(metadata_file))
+                print("...located parent project: %s" % p.dirn)
+            else:
+                # Unable to locate project directory
+                print("...failed to locate parent project metadata file")
+                # Fall back to location of Fastq files
+                qc_info = AnalysisProjectQCDirInfo(
+                    os.path.join(qc_dir,'qc.info'))
+                if qc_info.fastq_dir is not None:
+                    project_dir = os.path.abspath(qc_info.fastq_dir)
+                    if os.path.basename(project_dir).startswith('fastqs'):
+                        # Use the next level up
+                        project_dir = os.path.dirname(project_dir)
+                    print("...putative parent project dir: %s (from "
+                          " Fastq dir)" % project_dir)
+                    p = AnalysisProject(project_dir)
+                else:
+                    # Failed to locate Fastqs
+                    logging.fatal("Unable to locate parent project")
+                    # Exit with an error
+                    sys.exit(1)
+            # Issue a warning if a QC dir was explicitly
+            # specified on the command line
+            if args.qc_dir is not None:
+                logging.warning("--qc_dir has been ignored for this "
+                                "directory")
         else:
-            qc_dir = args.qc_dir
-        if not os.path.isabs(qc_dir):
-            qc_dir = os.path.join(p.dirn,qc_dir)
-        qc_base = os.path.basename(qc_dir)
-        # QC metadata
+            # Assume directory is a project
+            p = AnalysisProject(os.path.abspath(d))
+            print("...assuming this is a project dir")
+            # Identify the QC directory
+            if args.qc_dir is None:
+                qc_dir = p.qc_dir
+            else:
+                qc_dir = args.qc_dir
+            if not os.path.isabs(qc_dir):
+                qc_dir = os.path.join(p.dirn,qc_dir)
+            print("...QC directory: %s" % qc_dir)
+        # Explicitly set the QC directory location)
+        p.use_qc_dir(qc_dir)
+        # Locate the Fastq dir
         qc_info = p.qc_info(qc_dir)
-        print("QC output dir     : %s" % qc_dir)
-        print("...stored protocol: %s" % qc_info.protocol)
-        print("...stored Fastqdir: %s" % qc_info.fastq_dir)
-        # Set QC protocol
-        if args.qc_protocol is None:
-            protocol = qc_info.protocol
-            if protocol is None:
-                protocol = determine_qc_protocol(p)
-        else:
-            protocol = args.qc_protocol
-        print("QC protocol: %s" % protocol)
-        # Fastq subdirectory
         if args.fastq_dir is None:
             fastq_dir = qc_info.fastq_dir
             if fastq_dir is None:
@@ -140,19 +186,39 @@ def main():
                     logging.warning("Stored fastq dir mismatch "
                                     "(%s != %s)" % (fastq_dir,
                                                     qc_info.fastq_dir))
+        print("...using Fastqs dir: %s" % p.fastq_dir)
         p.use_fastq_dir(fastq_dir)
-        print("Fastqs dir        : %s" % p.fastq_dir)
+        projects.append(p)
+
+    # Verify QC for projects
+    print("\n**** Verifying QC ****")
+    retval = 0
+    report_projects = []
+    for p in projects:
+        print("\nProject: %s" % p.name)
         print("-"*(len('Project: ')+len(p.name)))
-        print("%d samples | %d fastqs" % (len(p.samples),len(p.fastqs)))
-        # Setup reporter
-        qc_reporter = QCReporter(p)
+        print("%d sample%s | %d fastq%s" % (len(p.samples),
+                                            's' if len(p.samples) != 1 else '',
+                                            len(p.fastqs),
+                                            's' if len(p.fastqs) != 1 else '',))
+        # QC metadata
+        qc_dir = p.qc_dir
+        qc_info = p.qc_info(qc_dir)
+        # Set QC protocol for verification
+        if args.qc_protocol is None:
+            protocol = qc_info.protocol
+            if protocol is None:
+                protocol = determine_qc_protocol(p)
+        else:
+            protocol = args.qc_protocol
+        print("Verifying against QC protocol '%s'" % protocol)
         # Verification step
         if len(p.fastqs) == 0:
             logging.critical("No Fastqs!")
             verified = False
         else:
             try:
-                verified = qc_reporter.verify(qc_dir,protocol)
+                verified = verify(p,qc_dir,protocol)
             except Exception as ex:
                 logging.critical("Error: %s" % ex)
                 verified = False
@@ -167,6 +233,13 @@ def main():
             print("Verification: OK")
             if args.verify:
                 continue
+        report_projects.append(p)
+
+    # Generate QC report
+    if report_projects:
+        # Set defaults from primary project
+        p = report_projects[0]
+        qc_base = os.path.basename(p.qc_dir)
         # Filename and location for report
         if args.filename is None:
             out_file = '%s_report.html' % qc_base
@@ -183,13 +256,14 @@ def main():
             # Check if we need to rerun MultiQC
             if os.path.exists(multiqc_report) and not args.force:
                 run_multiqc = False
-                multiqc_mtime = os.path.getmtime(multiqc_report)
-                for f in os.listdir(qc_dir):
-                    if os.path.getmtime(os.path.join(qc_dir,f)) > \
-                       multiqc_mtime:
-                        # Input is newer than report
-                        run_multiqc = True
-                        break
+                for p in report_projects:
+                    multiqc_mtime = os.path.getmtime(multiqc_report)
+                    for f in os.listdir(p.qc_dir):
+                        if os.path.getmtime(os.path.join(p.qc_dir,f)) > \
+                           multiqc_mtime:
+                            # Input is newer than report
+                            run_multiqc = True
+                            break
             else:
                 run_multiqc = True
             # (Re)run MultiQC
@@ -198,8 +272,9 @@ def main():
                     'multiqc',
                     '--title','%s' % args.title,
                     '--filename','%s' % multiqc_report,
-                    '--force',
-                    qc_dir)
+                    '--force')
+                for p in report_projects:
+                    multiqc_cmd.add_args(p.qc_dir)
                 print("Running %s" % multiqc_cmd)
                 multiqc_retval = multiqc_cmd.run_subprocess()
                 if multiqc_retval == 0 and os.path.exists(multiqc_report):
@@ -209,13 +284,19 @@ def main():
                     retval += 1
             else:
                 print("MultiQC: %s (already exists)" % multiqc_report)
+        # Create data directory?
+        use_data_dir = (len(projects) > 1)
+        if args.use_data_dir:
+            use_data_dir = True
+        elif args.no_data_dir:
+            use_data_dir = False
         # Generate report
-        report_html= qc_reporter.report(qc_dir=qc_dir,
-                                        qc_protocol=protocol,
-                                        title=args.title,
-                                        filename=out_file,
-                                        relative_links=True,
-                                        make_zip=args.zip)
+        report_html = report(report_projects,
+                             title=args.title,
+                             filename=out_file,
+                             relative_links=True,
+                             use_data_dir=use_data_dir,
+                             make_zip=args.zip)
         print("Wrote QC report to %s" % out_file)
     # Finish with appropriate exit code
     print("%s completed: exit code %s (%s)" %

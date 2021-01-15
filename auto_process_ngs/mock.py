@@ -1,5 +1,5 @@
 #     mock.py: module providing mock Illumina data for testing
-#     Copyright (C) University of Manchester 2012-2020 Peter Briggs
+#     Copyright (C) University of Manchester 2012-2021 Peter Briggs
 #
 ########################################################################
 
@@ -625,6 +625,8 @@ class UpdateAnalysisProject(DirectoryUpdater):
                        protocol="standardPE",
                        include_fastq_strand=True,
                        include_multiqc=True,
+                       include_report=True,
+                       include_zip_file=True,
                        legacy_zip_name=False):
         """
         Add mock QC outputs
@@ -640,6 +642,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             add mock fastq_strand.py outputs
           include_multiqc (bool): if True then add
             mock MultiQC outputs
+          include_report (bool): if True then add
+            mock QC report outputs
+          include_zip_file (bool): if True then add
+            mock ZIP archive for QC report
           legacy_zip_name (bool): if True then use
             old-style naming convention for ZIP file
             with QC outputs
@@ -660,8 +666,11 @@ class UpdateAnalysisProject(DirectoryUpdater):
         for fq in self._project.fastqs:
             print("Adding outputs for %s" % fq)
             MockQCOutputs.fastqc_v0_11_2(fq,self._project.qc_dir)
-            if protocol == 'singlecell' and \
-               self._project.fastq_attrs(fq).read_number == 1:
+            if protocol in ('singlecell',
+                            '10x_scRNAseq',
+                            '10x_snRNAseq',
+                            '10x_Multiome_GEX',) and \
+                self._project.fastq_attrs(fq).read_number == 1:
                 continue
             for screen in ("model_organisms",
                            "other_organisms",
@@ -676,7 +685,10 @@ class UpdateAnalysisProject(DirectoryUpdater):
             with open(fastq_strand_conf,'w') as fp:
                 fp.write("")
             for fq_pair in pair_fastqs_by_name(self._project.fastqs):
-                if protocol == 'singlecell':
+                if protocol in ('singlecell',
+                                '10x_scRNAseq',
+                                '10x_snRNAseq',
+                                '10x_Multiome_GEX',):
                     fq = fq_pair[1]
                 else:
                     fq = fq_pair[0]
@@ -689,33 +701,35 @@ class UpdateAnalysisProject(DirectoryUpdater):
         qc_info.save()
         # Make mock report
         fastq_set_name = os.path.basename(self._project.fastq_dir)[6:]
-        qc_name = "qc%s_report" % fastq_set_name
-        self.add_file("%s.html" % qc_name)
-        # Make mock ZIP archive
-        analysis_name = os.path.basename(self._parent_dir())
-        if not legacy_zip_name:
-            zip_prefix = "%s.%s%s" % (qc_name,
-                                      self._project.name,
-                                      ".%s" % self._project.info.run
-                                      if self._project.info.run else '')
-        else:
-            zip_prefix = "%s.%s.%s" % (qc_name,
-                                       self._project.name,
-                                       analysis_name)
-        report_zip = os.path.join(self._project.dirn,
-                                  "%s.zip" % zip_prefix)
-        print("Building ZIP archive: %s" % report_zip)
-        zip_file = ZipArchive(report_zip,
-                              relpath=self._project.dirn,
-                              prefix=zip_prefix)
-        zip_file.add_file(os.path.join(self._project.dirn,
-                                       "%s.html" % qc_name))
-        zip_file.add(self._project.qc_dir)
-        zip_file.close()
+        if include_report:
+            qc_name = "qc%s_report" % fastq_set_name
+            self.add_file("%s.html" % qc_name)
         # MultiQC report
         if include_multiqc:
             multiqc_name = "multiqc%s_report" % fastq_set_name
             self.add_file("%s.html" % multiqc_name)
+        # Make mock ZIP archive
+        if include_zip_file:
+            analysis_name = os.path.basename(self._parent_dir())
+            if not legacy_zip_name:
+                zip_prefix = "%s.%s%s" % (qc_name,
+                                          self._project.name,
+                                          ".%s" % self._project.info.run
+                                          if self._project.info.run else '')
+            else:
+                zip_prefix = "%s.%s.%s" % (qc_name,
+                                           self._project.name,
+                                           analysis_name)
+            report_zip = os.path.join(self._project.dirn,
+                                      "%s.zip" % zip_prefix)
+            print("Building ZIP archive: %s" % report_zip)
+            zip_file = ZipArchive(report_zip,
+                                  relpath=self._project.dirn,
+                                  prefix=zip_prefix)
+            zip_file.add_file(os.path.join(self._project.dirn,
+                                           "%s.html" % qc_name))
+            zip_file.add(self._project.qc_dir)
+            zip_file.close()
         # Reload the project
         self._reload_project()
 
@@ -1900,19 +1914,20 @@ sys.exit(MockMultiQC(no_outputs=%s,
         p.add_argument("--title",action="store")
         p.add_argument("--filename",action="store")
         p.add_argument("--force",action="store_true")
-        p.add_argument("analysis_directory")
+        p.add_argument("analysis_directory",nargs='+')
         args = p.parse_args(args)
         # Check input directory
-        if not os.path.exists(args.analysis_directory):
-            sys.stderr.write("""Usage: multiqc [OPTIONS] <analysis directory>
+        for d in args.analysis_directory:
+            if not os.path.exists(d):
+                sys.stderr.write("""Usage: multiqc [OPTIONS] <analysis directory>
 
 Error: Invalid value for "analysis_dir": Path "%s" does not exist.
 
 This is MultiQC v1.5
 
 For more help, run 'multiqc --help' or visit http://multiqc.info
-            """ % args.analysis_directory)
-            return 2
+""" % d)
+                return 2
         # Outputs
         if args.filename is None:
             out_file = "multiqc_report.html"
