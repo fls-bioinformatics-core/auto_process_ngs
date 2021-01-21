@@ -2612,6 +2612,8 @@ class Run10xMkfastq(PipelineTask):
         self.add_output('missing_fastqs',list())
     def setup(self):
         # 10xGenomics software package
+        if not self.args.pkg_exe:
+            raise Exception("No 10xGenomics executable provided")
         self.pkg = os.path.basename(self.args.pkg_exe)
         # Check if mkfastq should be skipped
         if self.args.skip_mkfastq:
