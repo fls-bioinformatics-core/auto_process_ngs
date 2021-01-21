@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #     bcl2fastq.pipeline.py: pipelines for Fastq generation
-#     Copyright (C) University of Manchester 2020 Peter Briggs
+#     Copyright (C) University of Manchester 2020-2021 Peter Briggs
 #
 
 """
@@ -2332,6 +2332,9 @@ class Get10xPackage(PipelineFunctionTask):
         """
         Initialise the Get10xPackage task
 
+        If no matching package is located then the outputs
+        are all set to 'None'.
+
         Arguments:
           require_package (str): name of the 10xGenomics
             package executable that is required (e.g. 'cellranger',
@@ -2349,25 +2352,30 @@ class Get10xPackage(PipelineFunctionTask):
         self.add_output('package_version',Param(type=str))
         self.add_output('package_info',Param())
     def setup(self):
-        print("Look for %s" % self.args.require_package)
+        print("Look for '%s'" % self.args.require_package)
         self.add_call("Check %s" % self.args.require_package,
                       self.get_10x_package,
                       self.args.require_package)
     def get_10x_package(self,require_package):
         # Look for 10xGenomics package
         package_exe = find_program(require_package)
-        if not package_exe:
-            raise Exception("No appropriate %s software located" %
-                            os.path.basename(require_package))
-        # Get information on the version etc
-        if require_package in ('cellranger',
-                               'cellranger-atac',
-                               'cellranger-arc',):
-            package_info = cellranger_info(package_exe)
-        elif require_package == 'spaceranger':
-            package_info = spaceranger_info(package_exe)
+        if package_exe:
+            # Get information on the version etc
+            if require_package in ('cellranger',
+                                   'cellranger-atac',
+                                   'cellranger-arc',):
+                package_info = cellranger_info(package_exe)
+            elif require_package == 'spaceranger':
+                package_info = spaceranger_info(package_exe)
+            else:
+                raise Exception("%s: unknown 10xGenomics package" %
+                                require_package)
         else:
-            raise Exception("%s: unknown 10xGenomics package")
+            # Unable to locate appropriate software
+            print("No appropriate %s software located" %
+                  os.path.basename(require_package))
+            package_exe = None
+            package_info = (None,None,None)
         # Return the information on the package
         return (package_exe,package_info[1],package_info[2])
     def finish(self):
