@@ -753,14 +753,23 @@ def cellranger_info(path=None,name=None):
         for line in output.split('\n'):
             if package_name in ('cellranger',
                                 'cellranger-atac',):
-                if line.startswith(package_name):
-                    # Extract version from line of the form
-                    # cellranger  (2.0.1)
-                    try:
+                try:
+                    if line.startswith("%s %s-" % (package_name,
+                                                   package_name)):
+                        # Extract version from line of the form
+                        # cellranger cellranger-5.0.1
+                        package_version = line.split('-')[-1]
+                    elif line.startswith("%s " % package_name) and \
+                         line.endswith(")"):
+                        # Extract version from line of the form
+                        # cellranger ... (2.0.1)
                         package_version = line.split('(')[-1].strip(')')
-                    except Exception as ex:
-                        logger.warning("Unable to get version from '%s': "
-                                       "%s" % (line,ex))
+                    else:
+                        # Raise an exception
+                        raise("unrecognised version format")
+                except Exception as ex:
+                    logger.warning("Unable to get version from '%s': "
+                                   "%s" % (line,ex))
             elif package_name == 'cellranger-arc':
                 # Extract version from line of the form
                 # cellranger-arc cellranger-arc-1.0.0

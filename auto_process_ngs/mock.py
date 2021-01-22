@@ -1274,6 +1274,7 @@ class Mock10xPackageExe(object):
     @staticmethod
     def create(path,exit_code=0,missing_fastqs=None,
                platform=None,assert_bases_mask=None,
+               assert_include_introns=None,
                reads=None,multiome_data=None,
                version=None):
         """
@@ -1295,6 +1296,10 @@ class Mock10xPackageExe(object):
           assert_bases_mask (str): if set then
             check that the supplied bases mask
             matches this value (not implemented)
+          assert_include_introns (bool): if set
+            to True/False then check that the
+            '--include-introns' option was/n't
+            set (ignored if set to None)
           reads (list): list of 'reads' that
             will be created
           multiome_data (str): either 'GEX' or
@@ -1314,6 +1319,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                            exit_code=%s,
                            platform=%s,
                            assert_bases_mask=%s,
+                           assert_include_introns=%s,
                            reads=%s,
                            multiome_data=%s,
                            version=%s).main(sys.argv[1:]))
@@ -1324,6 +1330,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                    ("\"%s\"" % assert_bases_mask
                     if assert_bases_mask is not None
                     else None),
+                   assert_include_introns,
                    reads,
                    ("\"%s\"" % multiome_data
                     if multiome_data is not None
@@ -1341,6 +1348,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
                  exit_code=0,
                  platform=None,
                  assert_bases_mask=None,
+                 assert_include_introns=None,
                  reads=None,
                  multiome_data=None,
                  version=None):
@@ -1351,7 +1359,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._package_name = os.path.basename(self._path)
         if version is None:
             if self._package_name == 'cellranger':
-                self._version = '3.1.0'
+                self._version = '5.0.1'
             elif self._package_name == 'cellranger-atac':
                 self._version = '1.2.0'
             elif self._package_name == 'cellranger-arc':
@@ -1363,6 +1371,7 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         self._exit_code = exit_code
         self._platform = platform
         self._assert_bases_mask = assert_bases_mask
+        self._assert_include_introns = assert_include_introns
         self._multiome_data = str(multiome_data).upper()
         if self._package_name == 'cellranger-arc':
             assert self._multiome_data is not None
@@ -1489,19 +1498,23 @@ sys.exit(Mock10xPackageExe(path=sys.argv[0],
         """
         # Store command line
         cmdline = "%s" % ' '.join(args)
+        # Split version
+        version = tuple([int(x) for x in self._version.split('.')])
         # Build generic header
         try:
             cmd = " %s" % args[0]
         except IndexError:
             cmd = ''
         # Construct header
-        if self._package_name in ('cellranger','cellranger-atac'):
+        if (self._package_name == 'cellranger' and version[0] <= 3) or \
+           self._package_name == 'cellranger-atac':
             header = """%s
 %s%s (%s)
 Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
 -------------------------------------------------------------------------------
 """ % (self._path,self._package_name,cmd,self._version)
-        elif self._package_name in ('cellranger-arc',):
+        elif self._package_name in ('cellranger',
+                                    'cellranger-arc',):
             header = "%s %s-%s" % (self._package_name,self._package_name,
                                    self._version)
         elif self._package_name in ('spaceranger,'):
@@ -1539,6 +1552,11 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         if self._package_name == "cellranger":
             count.add_argument("--transcriptome",action="store")
             count.add_argument("--chemistry",action="store")
+            if version[0] >= 5:
+                count.add_argument("--include-introns",
+                                   action="store_true")
+                count.add_argument("--r1-length",action="store")
+                count.add_argument("--r2-length",action="store")
         elif self._package_name == "cellranger-atac":
             count.add_argument("--reference",action="store")
         elif self._package_name == "cellranger-arc":
@@ -1552,6 +1570,15 @@ Copyright (c) 2018 10x Genomics, Inc.  All rights reserved.
         count.add_argument("--jobinterval",action="store")
         # Process command line
         args = p.parse_args()
+        # Check bases mask
+        if self._assert_bases_mask:
+            print("Checking bases mask: %s" % args.use_bases_mask)
+            assert(args.use_bases_mask == self._assert_bases_mask)
+        # Check --include-introns
+        if self._assert_include_introns is not None:
+            print("Checking --include-introns: %s" % args.include_introns)
+            assert(args.include_introns == self._assert_include_introns)
+        # Handle commands
         if args.command == "mkfastq":
             ##################
             # mkfastq command
