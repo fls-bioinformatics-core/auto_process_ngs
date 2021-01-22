@@ -1253,23 +1253,20 @@ class RunCellrangerCount(PipelineTask):
         # Top-level working directory
         self._working_dir = self.args.working_dir
         # Cellranger details
-        cellranger_exe = os.path.basename(self.args.cellranger_exe)
+        cellranger_exe = self.args.cellranger_exe
+        cellranger_package = os.path.basename(cellranger_exe)
         cellranger_version = self.args.cellranger_version
+        cellranger_major_version = int(cellranger_version.split('.')[0])
         # Run cellranger for each sample
         for sample in self.args.samples:
             work_dir = os.path.join(self._working_dir,
                                     "tmp.count.%s" % sample)
-            cmd = PipelineCommandWrapper(
-                "Run %s count for %s" % (cellranger_exe,sample),
-                "mkdir","-p",work_dir,
-                "&&",
-                "cd",work_dir,
-                "&&",
-                cellranger_exe,
-                "count",
-                "--id",sample)
+            # Build cellranger command
+            cmd = Command(cellranger_exe,
+                          "count",
+                          "--id",sample)
             # Add package-specific options
-            if cellranger_exe == "cellranger":
+            if cellranger_package == "cellranger":
                 # Cellranger (gene expression data)
                 cmd.add_args("--fastqs",self.args.fastq_dir,
                              "--sample",sample,
@@ -1277,8 +1274,6 @@ class RunCellrangerCount(PipelineTask):
                              self.args.reference_data_path,
                              "--chemistry",self.args.chemistry)
                 # Additional options for cellranger 5.0+
-                cellranger_major_version = \
-                    int(cellranger_version.split('.')[0])
                 if cellranger_major_version >= 5:
                     # Hard-trim the input R1 sequence to 26bp
                     cmd.add_args("--r1-length=26")
@@ -1286,13 +1281,13 @@ class RunCellrangerCount(PipelineTask):
                     # For single nuclei RNA-seq specify the
                     # --include-introns for cellranger 5.0+
                         cmd.add_args("--include-introns")
-            elif cellranger_exe == "cellranger-atac":
+            elif cellranger_package == "cellranger-atac":
                 # Cellranger-ATAC
                 cmd.add_args("--fastqs",self.args.fastq_dir,
                              "--sample",sample,
                              "--reference",
                              self.args.reference_data_path)
-            elif cellranger_exe == "cellranger-arc":
+            elif cellranger_package == "cellranger-arc":
                 # Cellranger-ARC (multiome GEX + ATAC data)
                 cmd.add_args("--reference",
                              self.args.reference_data_path,
@@ -1300,6 +1295,10 @@ class RunCellrangerCount(PipelineTask):
                              os.path.join(self.args.qc_dir,
                                           "libraries.%s.csv"
                                           % sample))
+            else:
+                # Unimplemented package
+                raise Exception("Don't know how to run 'count' "
+                                "for %s" % cellranger_package)
             # Set number of local cores
             if self.args.cellranger_localcores:
                 localcores = self.args.cellranger_localcores
@@ -1316,7 +1315,15 @@ class RunCellrangerCount(PipelineTask):
                                 jobinterval=self.args.cellranger_jobinterval,
                                 localcores=localcores,
                                 localmem=self.args.cellranger_localmem)
-            self.add_cmd(cmd)
+            # Append to command in task
+            print("Running %s" % cmd)
+            self.add_cmd(PipelineCommandWrapper(
+                "Run %s count for %s" % (cellranger_exe,sample),
+                "mkdir","-p",work_dir,
+                "&&",
+                "cd",work_dir,
+                "&&",
+                *cmd.command_line))
     def finish(self):
         # If no reference data then ignore and return
         if not self.args.reference_data_path:
