@@ -1033,6 +1033,7 @@ class GetCellrangerReferenceData(PipelineFunctionTask):
         print("Cellranger : %s" % self.args.cellranger_exe)
         print("Version    : %s" % self.args.cellranger_version)
         print("QC protocol: %s" % self.args.qc_protocol)
+        print("Organism(s): %s" % self.args.organism)
         # Check that a cellranger exe was supplied
         if self.args.cellranger_exe is None:
             print("No cellranger package supplied")
