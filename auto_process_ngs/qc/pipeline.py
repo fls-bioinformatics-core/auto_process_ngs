@@ -19,6 +19,7 @@ Pipeline task classes:
 - SetupFastqStrandConf
 - CheckFastqStrandOutputs
 - RunFastqStrand
+- DetermineRequired10xPackage
 - GetCellrangerReferenceData
 - MakeCellrangerArcCountLibraries
 - CheckCellrangerCountOutputs
@@ -104,6 +105,7 @@ class QCPipeline(Pipeline):
         self.add_param('nthreads',type=int)
         self.add_param('fastq_subset',type=int)
         self.add_param('fastq_strand_indexes',type=dict)
+        self.add_param('cellranger_exe',type=str)
         self.add_param('cellranger_chemistry',type=str)
         self.add_param('cellranger_transcriptomes',type=dict)
         self.add_param('cellranger_premrna_references',type=dict)
@@ -328,19 +330,19 @@ class QCPipeline(Pipeline):
             check_cellranger_count_requires = []
 
             # Locate cellranger
-            if qc_protocol in ("10x_scRNAseq",
-                               "10x_snRNAseq",):
-                require_cellranger_exe = "cellranger"
-            elif qc_protocol in ("10x_scATAC",):
-                require_cellranger_exe = "cellranger-atac"
-            elif qc_protocol in ("10x_Multiome_ATAC",
-                                 "10x_Multiome_GEX",):
-                require_cellranger_exe = "cellranger-arc"
+            required_cellranger = DetermineRequired10xPackage(
+                "%s: determine required 'cellranger' package" %
+                project_name,
+                qc_protocol,
+                self.params.cellranger_exe)
+            self.add_task(required_cellranger)
 
             get_cellranger = Get10xPackage(
                 "%s: get information on cellranger" % project_name,
-                require_package=require_cellranger_exe)
+                require_package=\
+                required_cellranger.output.require_cellranger)
             self.add_task(get_cellranger,
+                          requires=(required_cellranger,),
                           envmodules=self.envmodules['cellranger'])
 
             # Get reference data for cellranger
@@ -987,6 +989,48 @@ class RunFastqStrand(PipelineTask):
             cmd.add_args(*fastq_pair)
             # Add the command
             self.add_cmd(cmd)
+
+class DetermineRequired10xPackage(PipelineTask):
+    """
+    Determine which 10xGenomics software package is required
+
+    By default determines the package name based on the
+    supplied QC protocol, but this can be overridden by
+    explicitly supplying a required package (which can
+    also be a path to an executable).
+
+    The output 'require_cellranger' parameter should be
+    supplied to the 'Get10xPackage' task, which will
+    do the job of actually locating an executable.
+    """
+    def init(self,qc_protocol,require_cellranger=None):
+        """
+        Initialise the DetermineRequired10xPackage task
+
+        Argument:
+          qc_protocol (str): QC protocol to use
+          require_cellranger (str): optional package name
+            or path to an executable; if supplied then
+            overrides the automatic package determination
+
+        Outputs:
+          require_cellranger (pipelineParam): the 10xGenomics
+            software package name or path to use
+        """
+        self.add_output('require_cellranger',Param(type=str))
+    def setup(self):
+        require_cellranger = self.args.require_cellranger
+        if require_cellranger is None:
+            if self.args.qc_protocol in ("10x_scRNAseq",
+                                         "10x_snRNAseq",):
+                require_cellranger = "cellranger"
+            elif self.args.qc_protocol in ("10x_scATAC",):
+                require_cellranger = "cellranger-atac"
+            elif self.args.qc_protocol in ("10x_Multiome_ATAC",
+                                           "10x_Multiome_GEX",):
+                require_cellranger = "cellranger-arc"
+        print("Required 10x package: %s" % require_cellranger)
+        self.output.require_cellranger.set(require_cellranger)
 
 class GetCellrangerReferenceData(PipelineFunctionTask):
     """
