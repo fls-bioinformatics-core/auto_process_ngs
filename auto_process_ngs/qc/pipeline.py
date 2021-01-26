@@ -467,7 +467,8 @@ class QCPipeline(Pipeline):
             cellranger_arc_references=None,cellranger_jobmode='local',
             cellranger_maxjobs=None,cellranger_mempercore=None,
             cellranger_jobinterval=None,cellranger_localcores=None,
-            cellranger_localmem=None,working_dir=None,log_file=None,
+            cellranger_localmem=None,cellranger_exe=None,
+            working_dir=None,log_file=None,
             batch_size=None,max_jobs=1,max_slots=None,poll_interval=5,
             runners=None,default_runner=None,envmodules=None,
             verbose=False):
@@ -514,6 +515,10 @@ class QCPipeline(Pipeline):
             (default: None)
           cellranger_localmem (int): maximum memory cellranger
             can request in jobmode 'local' (default: None)
+          cellranger_exe (str): optional, explicitly specify
+            the cellrange executable to use for single
+            library analysis (default: cellranger executable
+            is determined automatically)
           working_dir (str): optional path to a working
             directory (defaults to temporary directory in
             the current directory)
@@ -589,7 +594,8 @@ class QCPipeline(Pipeline):
                                   'cellranger_mempercore': cellranger_mempercore,
                                   'cellranger_jobinterval': cellranger_jobinterval,
                                   'cellranger_localcores': cellranger_localcores,
-                                  'cellranger_localmem': cellranger_localmem
+                                  'cellranger_localmem': cellranger_localmem,
+                                  'cellranger_exe': cellranger_exe,
                               },
                               poll_interval=poll_interval,
                               max_jobs=max_jobs,
